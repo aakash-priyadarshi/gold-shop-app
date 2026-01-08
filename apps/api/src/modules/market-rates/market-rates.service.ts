@@ -13,7 +13,7 @@
  * - Never hard-fails - always returns something
  */
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -55,7 +55,7 @@ import {
 type CacheKey = `${MarketRegion}:${SupportedCurrency}`;
 
 @Injectable()
-export class MarketRatesService {
+export class MarketRatesService implements OnModuleInit {
   private readonly logger = new Logger(MarketRatesService.name);
   private readonly apiKey: string;
   private readonly baseUrl: string;
@@ -90,6 +90,50 @@ export class MarketRatesService {
 
     if (!this.apiKey) {
       this.logger.warn('METALPRICEAPI_KEY not configured - will use fallback rates');
+    }
+  }
+
+  /**
+   * On module initialization, clear any cached fallback data if API key is now available
+   * This ensures users get live data when the API key is added to an existing deployment
+   */
+  async onModuleInit(): Promise<void> {
+    if (this.apiKey) {
+      await this.clearFallbackCacheEntries();
+    }
+  }
+
+  /**
+   * Clear all cached entries that were sourced from fallback
+   * This is called on startup when API key is available to ensure fresh live data
+   */
+  private async clearFallbackCacheEntries(): Promise<void> {
+    try {
+      // Get all cached entries
+      const allSnapshots = await this.prisma.marketRateSnapshot.findMany();
+      
+      let clearedCount = 0;
+      for (const snapshot of allSnapshots) {
+        const payload = snapshot.payloadJson as unknown as MarketRatesResponse;
+        
+        // Check if this entry was sourced from fallback
+        if (payload?.source === 'fallback' || payload?.debug?.spotSource === 'fallback') {
+          await this.prisma.marketRateSnapshot.delete({
+            where: { id: snapshot.id },
+          });
+          clearedCount++;
+          this.logger.debug(`Cleared fallback cache for ${snapshot.region}/${snapshot.currency}`);
+        }
+      }
+      
+      // Also clear in-memory cache
+      this.cache.clear();
+      
+      if (clearedCount > 0) {
+        this.logger.log(`Cleared ${clearedCount} fallback cache entries - API key is now configured`);
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to clear fallback cache entries: ${error}`);
     }
   }
 
@@ -579,10 +623,17 @@ export class MarketRatesService {
 
   /**
    * Get from memory cache
+   * Skips fallback-sourced entries when API key is available
    */
   private getFromMemoryCache(key: CacheKey): { data: MarketRatesResponse; isFresh: boolean } | null {
     const cached = this.cache.get(key);
     if (!cached) return null;
+
+    // If API key is configured but cached data is from fallback, skip it
+    if (this.apiKey && (cached.data?.source === 'fallback' || cached.data?.debug?.spotSource === 'fallback')) {
+      this.logger.debug(`Skipping fallback-sourced memory cache for ${key} - API key available`);
+      return null;
+    }
 
     return {
       data: cached.data,
@@ -603,6 +654,7 @@ export class MarketRatesService {
 
   /**
    * Get from database cache
+   * Skips fallback-sourced entries when API key is available to ensure fresh data
    */
   private async getFromDbCache(
     region: MarketRegion,
@@ -621,7 +673,16 @@ export class MarketRatesService {
       });
 
       if (snapshot) {
-        return snapshot.payloadJson as unknown as MarketRatesResponse;
+        const payload = snapshot.payloadJson as unknown as MarketRatesResponse;
+        
+        // If API key is configured but cached data is from fallback, skip it
+        // This forces a fresh fetch with live API data
+        if (this.apiKey && (payload?.source === 'fallback' || payload?.debug?.spotSource === 'fallback')) {
+          this.logger.debug(`Skipping fallback-sourced cache for ${region}/${currency} - API key available`);
+          return null;
+        }
+        
+        return payload;
       }
     } catch (error) {
       this.logger.debug(`DB cache miss or error: ${error}`);
