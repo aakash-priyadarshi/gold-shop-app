@@ -51,9 +51,17 @@ async function bootstrap() {
     }),
   );
 
-  // CORS
+  // CORS - allow frontend origins
+  const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    'https://orivraa.com',
+    'https://www.orivraa.com',
+    'https://gold-shop-app-web.vercel.app',
+    'http://localhost:3000',
+  ].filter(Boolean);
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: allowedOrigins,
     credentials: true,
   });
 
