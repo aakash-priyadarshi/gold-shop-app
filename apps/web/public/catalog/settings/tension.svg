@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Ring band with gap -->
+  <path d="M 12 44 Q 12 52 32 52 Q 52 52 52 44" fill="none" stroke="#DAA520" stroke-width="4"/>
+  <!-- Tension arms -->
+  <path d="M 16 42 L 22 28" stroke="#DAA520" stroke-width="4" stroke-linecap="round"/>
+  <path d="M 48 42 L 42 28" stroke="#DAA520" stroke-width="4" stroke-linecap="round"/>
+  <!-- Floating gem -->
+  <polygon points="32,16 42,26 38,36 26,36 22,26" fill="#FF6B6B" stroke="#E05555" stroke-width="1"/>
+</svg>

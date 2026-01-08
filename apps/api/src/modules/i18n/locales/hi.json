@@ -1,0 +1,233 @@
+{
+  "common": {
+    "success": "सफल",
+    "error": "त्रुटि",
+    "loading": "लोड हो रहा है...",
+    "submit": "जमा करें",
+    "cancel": "रद्द करें",
+    "save": "सहेजें",
+    "delete": "हटाएं",
+    "edit": "संपादित करें",
+    "view": "देखें",
+    "back": "वापस",
+    "next": "अगला",
+    "previous": "पिछला",
+    "search": "खोजें",
+    "filter": "फ़िल्टर",
+    "sort": "क्रमबद्ध करें",
+    "all": "सभी",
+    "none": "कोई नहीं",
+    "yes": "हाँ",
+    "no": "नहीं",
+    "confirm": "पुष्टि करें",
+    "close": "बंद करें"
+  },
+  "auth": {
+    "login": "लॉगिन",
+    "logout": "लॉगआउट",
+    "register": "रजिस्टर करें",
+    "forgotPassword": "पासवर्ड भूल गए?",
+    "resetPassword": "पासवर्ड रीसेट करें",
+    "email": "ईमेल",
+    "password": "पासवर्ड",
+    "confirmPassword": "पासवर्ड की पुष्टि करें",
+    "name": "पूरा नाम",
+    "phone": "फोन नंबर",
+    "loginSuccess": "सफलतापूर्वक लॉगिन हुआ",
+    "logoutSuccess": "सफलतापूर्वक लॉगआउट हुआ",
+    "registerSuccess": "खाता सफलतापूर्वक बनाया गया",
+    "invalidCredentials": "गलत ईमेल या पासवर्ड",
+    "accountExists": "खाता पहले से मौजूद है",
+    "passwordMismatch": "पासवर्ड मेल नहीं खाते"
+  },
+  "roles": {
+    "customer": "ग्राहक",
+    "shopkeeper": "दुकानदार",
+    "admin": "प्रशासक",
+    "support": "सहायता"
+  },
+  "materials": {
+    "gold24k": "24K सोना (99.9%)",
+    "gold22k": "22K सोना (91.6%)",
+    "gold18k": "18K सोना (75%)",
+    "gold14k": "14K सोना (58.5%)",
+    "gold10k": "10K सोना (41.7%)",
+    "silver999": "999 चांदी",
+    "silver925": "925 स्टर्लिंग चांदी",
+    "platinum950": "950 प्लेटिनम",
+    "platinum900": "900 प्लेटिनम",
+    "palladium950": "950 पैलेडियम",
+    "brass": "पीतल",
+    "copper": "तांबा",
+    "bronze": "कांस्य",
+    "stainlessSteel": "स्टेनलेस स्टील",
+    "titanium": "टाइटेनियम",
+    "tungsten": "टंगस्टन"
+  },
+  "jewelleryTypes": {
+    "ring": "अंगूठी",
+    "necklace": "हार",
+    "pendant": "पेंडेंट",
+    "chain": "चेन",
+    "bracelet": "कंगन",
+    "bangle": "चूड़ी",
+    "earring": "कान की बाली",
+    "anklet": "पायल",
+    "noseRing": "नथ",
+    "mangalsutra": "मंगलसूत्र",
+    "tikka": "मांग टीका",
+    "waistChain": "कमरबंद",
+    "toeRing": "बिछिया"
+  },
+  "buildMethods": {
+    "methodA": "एकल कीमती धातु",
+    "methodB": "कीमती + आधार धातु",
+    "methodC": "कीमती + प्लेटिंग",
+    "methodD": "बहु-धातु",
+    "modeD1": "स्तरित",
+    "modeD2": "जड़ाऊ",
+    "modeD3": "फ्यूज़न"
+  },
+  "rfq": {
+    "title": "कोटेशन अनुरोध",
+    "createRfq": "अनुरोध बनाएं",
+    "myRequests": "मेरे अनुरोध",
+    "status": {
+      "draft": "ड्राफ्ट",
+      "submitted": "जमा किया गया",
+      "broadcast": "प्रसारित",
+      "offersReceived": "प्रस्ताव प्राप्त",
+      "offerSelected": "प्रस्ताव चयनित",
+      "booked": "बुक किया गया",
+      "converted": "ऑर्डर में बदला",
+      "expired": "समाप्त",
+      "cancelled": "रद्द"
+    },
+    "specifications": "विशेषताएं",
+    "composition": "धातु संरचना",
+    "estimatedWeight": "अनुमानित वजन",
+    "budget": "बजट सीमा",
+    "deadline": "प्रतिक्रिया समयसीमा",
+    "referenceImages": "संदर्भ चित्र",
+    "additionalNotes": "अतिरिक्त नोट"
+  },
+  "offers": {
+    "title": "प्रस्ताव",
+    "makeOffer": "प्रस्ताव दें",
+    "viewOffers": "प्रस्ताव देखें",
+    "status": {
+      "pending": "लंबित",
+      "accepted": "स्वीकृत",
+      "countered": "काउंटर प्रस्ताव",
+      "declined": "अस्वीकृत",
+      "expired": "समाप्त"
+    },
+    "pricing": {
+      "metalCost": "धातु लागत",
+      "labourCost": "श्रम लागत",
+      "wastage": "वेस्टेज",
+      "makingCharge": "बनाने का शुल्क",
+      "totalPrice": "कुल कीमत",
+      "bookingFee": "बुकिंग शुल्क"
+    },
+    "estimatedDays": "अनुमानित दिन",
+    "validUntil": "वैध तिथि"
+  },
+  "orders": {
+    "title": "ऑर्डर",
+    "myOrders": "मेरे ऑर्डर",
+    "orderHistory": "ऑर्डर इतिहास",
+    "orderDetails": "ऑर्डर विवरण",
+    "orderNumber": "ऑर्डर नंबर",
+    "status": {
+      "pendingPayment": "भुगतान लंबित",
+      "paymentReceived": "भुगतान प्राप्त",
+      "processing": "प्रोसेसिंग",
+      "bookingConfirmed": "बुकिंग पुष्टि",
+      "designInProgress": "डिज़ाइन चल रहा है",
+      "designApproved": "डिज़ाइन स्वीकृत",
+      "manufacturing": "निर्माण जारी",
+      "qualityCheck": "गुणवत्ता जांच",
+      "readyForDispatch": "भेजने के लिए तैयार",
+      "dispatched": "भेज दिया गया",
+      "inTransit": "रास्ते में",
+      "outForDelivery": "डिलीवरी के लिए निकला",
+      "delivered": "डिलीवर हुआ",
+      "cancelled": "रद्द",
+      "returnRequested": "वापसी अनुरोध",
+      "refunded": "रिफंड हुआ"
+    },
+    "tracking": "ऑर्डर ट्रैक करें",
+    "milestones": "प्रगति चरण"
+  },
+  "payments": {
+    "title": "भुगतान",
+    "payNow": "अभी भुगतान करें",
+    "paymentHistory": "भुगतान इतिहास",
+    "paymentMethod": "भुगतान विधि",
+    "methods": {
+      "razorpay": "Razorpay",
+      "esewa": "eSewa",
+      "khalti": "Khalti",
+      "cod": "डिलीवरी पर नकद",
+      "bankTransfer": "बैंक ट्रांसफर"
+    },
+    "status": {
+      "pending": "लंबित",
+      "completed": "पूर्ण",
+      "failed": "विफल",
+      "refunded": "रिफंड हुआ"
+    },
+    "amount": "राशि",
+    "total": "कुल",
+    "subtotal": "उप-योग",
+    "tax": "कर",
+    "bookingFee": "बुकिंग शुल्क",
+    "balanceDue": "बकाया राशि"
+  },
+  "shop": {
+    "title": "दुकान",
+    "myShop": "मेरी दुकान",
+    "shopDetails": "दुकान विवरण",
+    "shopName": "दुकान का नाम",
+    "shopAddress": "पता",
+    "metalRates": "धातु दरें",
+    "inventory": "इन्वेंटरी",
+    "dashboard": "डैशबोर्ड",
+    "statistics": "आंकड़े",
+    "ratings": "रेटिंग और समीक्षा"
+  },
+  "notifications": {
+    "title": "सूचनाएं",
+    "markAllRead": "सभी को पढ़ा हुआ चिह्नित करें",
+    "noNotifications": "कोई सूचना नहीं",
+    "types": {
+      "rfqReceived": "नया अनुरोध प्राप्त",
+      "offerReceived": "नया प्रस्ताव प्राप्त",
+      "offerAccepted": "प्रस्ताव स्वीकृत",
+      "paymentReceived": "भुगतान प्राप्त",
+      "orderPlaced": "ऑर्डर दिया गया",
+      "orderStatusUpdated": "ऑर्डर स्थिति अपडेट",
+      "milestone": "ऑर्डर प्रगति अपडेट"
+    }
+  },
+  "errors": {
+    "notFound": "नहीं मिला",
+    "unauthorized": "अनधिकृत पहुंच",
+    "forbidden": "पहुंच निषिद्ध",
+    "badRequest": "अमान्य अनुरोध",
+    "serverError": "सर्वर त्रुटि हुई",
+    "networkError": "नेटवर्क त्रुटि। कृपया पुन: प्रयास करें।",
+    "validationError": "कृपया अपना इनपुट जांचें",
+    "sessionExpired": "सत्र समाप्त हुआ। कृपया पुन: लॉगिन करें।"
+  },
+  "validation": {
+    "required": "यह फ़ील्ड आवश्यक है",
+    "invalidEmail": "कृपया एक वैध ईमेल दर्ज करें",
+    "minLength": "कम से कम {{min}} अक्षर होने चाहिए",
+    "maxLength": "{{max}} अक्षरों से अधिक नहीं होना चाहिए",
+    "invalidPhone": "कृपया एक वैध फोन नंबर दर्ज करें",
+    "passwordWeak": "पासवर्ड बहुत कमजोर है",
+    "invalidAmount": "कृपया एक वैध राशि दर्ज करें"
+  }
+}

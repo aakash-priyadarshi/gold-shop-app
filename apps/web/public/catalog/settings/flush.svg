@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Ring band -->
+  <ellipse cx="32" cy="44" rx="20" ry="8" fill="none" stroke="#DAA520" stroke-width="4"/>
+  <!-- Flush surface -->
+  <rect x="20" y="32" width="24" height="10" fill="#DAA520"/>
+  <!-- Gem set flush into metal -->
+  <circle cx="32" cy="34" r="6" fill="#50C878" stroke="#3DA862" stroke-width="1"/>
+  <!-- Metal rim around gem -->
+  <circle cx="32" cy="34" r="7" fill="none" stroke="#C9A010" stroke-width="1"/>
+</svg>

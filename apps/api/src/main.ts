@@ -1,0 +1,91 @@
+import { NestFactory } from '@nestjs/core';
+import { ValidationPipe, Logger } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import * as dns from 'dns';
+import { AppModule } from './app.module';
+
+/**
+ * Configure IPv4-first DNS resolution for Windows compatibility
+ * This helps avoid ENOTFOUND errors on Windows where IPv6 DNS resolution can fail
+ * 
+ * Controlled by PREFER_IPV4 environment variable:
+ * - PREFER_IPV4=true: Use IPv4-first DNS resolution (recommended for Windows dev)
+ * - PREFER_IPV4=false (default): Use system default DNS resolution
+ * 
+ * This is safe for Linux production as it only affects the order of DNS results,
+ * not the availability of IPv6 connections.
+ */
+function configureNetworking(): void {
+  const logger = new Logger('Networking');
+  const preferIpv4 = process.env.PREFER_IPV4?.toLowerCase() === 'true';
+  
+  if (preferIpv4) {
+    // Check if dns.setDefaultResultOrder is available (Node.js 16.4+)
+    if (typeof dns.setDefaultResultOrder === 'function') {
+      dns.setDefaultResultOrder('ipv4first');
+      logger.log('DNS resolution set to IPv4-first (PREFER_IPV4=true)');
+    } else {
+      logger.warn(
+        'dns.setDefaultResultOrder not available. Set NODE_OPTIONS=--dns-result-order=ipv4first for IPv4-first DNS.',
+      );
+    }
+  } else {
+    logger.debug('Using system default DNS resolution (PREFER_IPV4 not set)');
+  }
+}
+
+async function bootstrap() {
+  // Configure networking before creating the app
+  configureNetworking();
+  const app = await NestFactory.create(AppModule);
+
+  // Global validation pipe
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    }),
+  );
+
+  // CORS
+  app.enableCors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+  });
+
+  // Swagger API documentation
+  const config = new DocumentBuilder()
+    .setTitle('Gold Shop Marketplace API')
+    .setDescription(
+      'Multi-vendor jewellery marketplace API supporting inventory sales and custom manufacturing',
+    )
+    .setVersion('1.0')
+    .addTag('auth', 'Authentication endpoints')
+    .addTag('users', 'User management')
+    .addTag('shops', 'Shop management')
+    .addTag('inventory', 'Inventory items')
+    .addTag('rfq', 'Request for Quote')
+    .addTag('offers', 'RFQ Offers')
+    .addTag('orders', 'Orders')
+    .addTag('payments', 'Payment processing')
+    .addBearerAuth()
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
+
+  // Global prefix
+  app.setGlobalPrefix('api');
+
+  const port = process.env.PORT || 4000;
+  await app.listen(port);
+  
+  console.log(`🚀 Gold Shop API running on: http://localhost:${port}`);
+  console.log(`📚 API Documentation: http://localhost:${port}/api/docs`);
+}
+
+bootstrap();

@@ -1,0 +1,233 @@
+{
+  "common": {
+    "success": "Success",
+    "error": "Error",
+    "loading": "Loading...",
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "all": "All",
+    "none": "None",
+    "yes": "Yes",
+    "no": "No",
+    "confirm": "Confirm",
+    "close": "Close"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "register": "Register",
+    "forgotPassword": "Forgot Password?",
+    "resetPassword": "Reset Password",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "name": "Full Name",
+    "phone": "Phone Number",
+    "loginSuccess": "Successfully logged in",
+    "logoutSuccess": "Successfully logged out",
+    "registerSuccess": "Account created successfully",
+    "invalidCredentials": "Invalid email or password",
+    "accountExists": "Account already exists",
+    "passwordMismatch": "Passwords do not match"
+  },
+  "roles": {
+    "customer": "Customer",
+    "shopkeeper": "Shopkeeper",
+    "admin": "Admin",
+    "support": "Support"
+  },
+  "materials": {
+    "gold24k": "24K Gold (99.9%)",
+    "gold22k": "22K Gold (91.6%)",
+    "gold18k": "18K Gold (75%)",
+    "gold14k": "14K Gold (58.5%)",
+    "gold10k": "10K Gold (41.7%)",
+    "silver999": "999 Silver",
+    "silver925": "925 Sterling Silver",
+    "platinum950": "950 Platinum",
+    "platinum900": "900 Platinum",
+    "palladium950": "950 Palladium",
+    "brass": "Brass",
+    "copper": "Copper",
+    "bronze": "Bronze",
+    "stainlessSteel": "Stainless Steel",
+    "titanium": "Titanium",
+    "tungsten": "Tungsten"
+  },
+  "jewelleryTypes": {
+    "ring": "Ring",
+    "necklace": "Necklace",
+    "pendant": "Pendant",
+    "chain": "Chain",
+    "bracelet": "Bracelet",
+    "bangle": "Bangle",
+    "earring": "Earring",
+    "anklet": "Anklet",
+    "noseRing": "Nose Ring",
+    "mangalsutra": "Mangalsutra",
+    "tikka": "Maang Tikka",
+    "waistChain": "Waist Chain",
+    "toeRing": "Toe Ring"
+  },
+  "buildMethods": {
+    "methodA": "Single Precious Metal",
+    "methodB": "Precious + Base Metal",
+    "methodC": "Precious + Plating",
+    "methodD": "Multi-Metal",
+    "modeD1": "Layered",
+    "modeD2": "Inlay",
+    "modeD3": "Fusion"
+  },
+  "rfq": {
+    "title": "Request for Quote",
+    "createRfq": "Create Request",
+    "myRequests": "My Requests",
+    "status": {
+      "draft": "Draft",
+      "submitted": "Submitted",
+      "broadcast": "Broadcast",
+      "offersReceived": "Offers Received",
+      "offerSelected": "Offer Selected",
+      "booked": "Booked",
+      "converted": "Converted to Order",
+      "expired": "Expired",
+      "cancelled": "Cancelled"
+    },
+    "specifications": "Specifications",
+    "composition": "Metal Composition",
+    "estimatedWeight": "Estimated Weight",
+    "budget": "Budget Range",
+    "deadline": "Response Deadline",
+    "referenceImages": "Reference Images",
+    "additionalNotes": "Additional Notes"
+  },
+  "offers": {
+    "title": "Offers",
+    "makeOffer": "Make Offer",
+    "viewOffers": "View Offers",
+    "status": {
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "countered": "Counter Offered",
+      "declined": "Declined",
+      "expired": "Expired"
+    },
+    "pricing": {
+      "metalCost": "Metal Cost",
+      "labourCost": "Labour Cost",
+      "wastage": "Wastage",
+      "makingCharge": "Making Charge",
+      "totalPrice": "Total Price",
+      "bookingFee": "Booking Fee"
+    },
+    "estimatedDays": "Estimated Days",
+    "validUntil": "Valid Until"
+  },
+  "orders": {
+    "title": "Orders",
+    "myOrders": "My Orders",
+    "orderHistory": "Order History",
+    "orderDetails": "Order Details",
+    "orderNumber": "Order Number",
+    "status": {
+      "pendingPayment": "Pending Payment",
+      "paymentReceived": "Payment Received",
+      "processing": "Processing",
+      "bookingConfirmed": "Booking Confirmed",
+      "designInProgress": "Design in Progress",
+      "designApproved": "Design Approved",
+      "manufacturing": "Manufacturing",
+      "qualityCheck": "Quality Check",
+      "readyForDispatch": "Ready for Dispatch",
+      "dispatched": "Dispatched",
+      "inTransit": "In Transit",
+      "outForDelivery": "Out for Delivery",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled",
+      "returnRequested": "Return Requested",
+      "refunded": "Refunded"
+    },
+    "tracking": "Track Order",
+    "milestones": "Progress Milestones"
+  },
+  "payments": {
+    "title": "Payments",
+    "payNow": "Pay Now",
+    "paymentHistory": "Payment History",
+    "paymentMethod": "Payment Method",
+    "methods": {
+      "razorpay": "Razorpay",
+      "esewa": "eSewa",
+      "khalti": "Khalti",
+      "cod": "Cash on Delivery",
+      "bankTransfer": "Bank Transfer"
+    },
+    "status": {
+      "pending": "Pending",
+      "completed": "Completed",
+      "failed": "Failed",
+      "refunded": "Refunded"
+    },
+    "amount": "Amount",
+    "total": "Total",
+    "subtotal": "Subtotal",
+    "tax": "Tax",
+    "bookingFee": "Booking Fee",
+    "balanceDue": "Balance Due"
+  },
+  "shop": {
+    "title": "Shop",
+    "myShop": "My Shop",
+    "shopDetails": "Shop Details",
+    "shopName": "Shop Name",
+    "shopAddress": "Address",
+    "metalRates": "Metal Rates",
+    "inventory": "Inventory",
+    "dashboard": "Dashboard",
+    "statistics": "Statistics",
+    "ratings": "Ratings & Reviews"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark All as Read",
+    "noNotifications": "No notifications",
+    "types": {
+      "rfqReceived": "New RFQ Received",
+      "offerReceived": "New Offer Received",
+      "offerAccepted": "Offer Accepted",
+      "paymentReceived": "Payment Received",
+      "orderPlaced": "Order Placed",
+      "orderStatusUpdated": "Order Status Updated",
+      "milestone": "Order Progress Update"
+    }
+  },
+  "errors": {
+    "notFound": "Not found",
+    "unauthorized": "Unauthorized access",
+    "forbidden": "Access forbidden",
+    "badRequest": "Invalid request",
+    "serverError": "Server error occurred",
+    "networkError": "Network error. Please try again.",
+    "validationError": "Please check your input",
+    "sessionExpired": "Session expired. Please login again."
+  },
+  "validation": {
+    "required": "This field is required",
+    "invalidEmail": "Please enter a valid email",
+    "minLength": "Must be at least {{min}} characters",
+    "maxLength": "Must not exceed {{max}} characters",
+    "invalidPhone": "Please enter a valid phone number",
+    "passwordWeak": "Password is too weak",
+    "invalidAmount": "Please enter a valid amount"
+  }
+}

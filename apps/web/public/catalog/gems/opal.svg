@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <ellipse cx="32" cy="32" rx="16" ry="14" fill="url(#opalGrad)" stroke="#CCC" stroke-width="1"/>
+  <defs>
+    <radialGradient id="opalGrad">
+      <stop offset="0%" stop-color="#FFE4E1"/>
+      <stop offset="30%" stop-color="#E0FFFF"/>
+      <stop offset="60%" stop-color="#E6E6FA"/>
+      <stop offset="100%" stop-color="#FFF8DC"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="28" cy="28" rx="4" ry="3" fill="rgba(255,182,193,0.5)"/>
+  <ellipse cx="36" cy="34" rx="3" ry="2" fill="rgba(135,206,250,0.5)"/>
+</svg>

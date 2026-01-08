@@ -1,0 +1,544 @@
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
+import { ShopsService } from '../shops/shops.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { AuditService } from '../audit/audit.service';
+import { CreateRfqDto } from './dto/create-rfq.dto';
+import { BroadcastRfqDto } from './dto/broadcast-rfq.dto';
+import { RfqStatus, BuildMethod, JewelleryType } from '@prisma/client';
+import { validateComposition, validateMethodDRequirements, ValidationResult } from './validation/composition-validator';
+
+@Injectable()
+export class RfqService {
+  constructor(
+    private prisma: PrismaService,
+    private shopsService: ShopsService,
+    private notificationsService: NotificationsService,
+    private auditService: AuditService,
+  ) {}
+
+  /**
+   * Create a new RFQ (Draft)
+   */
+  async create(customerId: string, dto: CreateRfqDto) {
+    // Validate composition based on build method
+    const validationResult = this.validateBuildMethodComposition(dto);
+    
+    if (!validationResult.isValid) {
+      throw new BadRequestException({
+        message: 'Invalid composition for selected build method',
+        errors: validationResult.errors,
+      });
+    }
+
+    // Calculate estimated price range
+    const priceEstimate = await this.estimatePriceRange(dto);
+
+    const rfq = await this.prisma.rfqRequest.create({
+      data: {
+        customerId,
+        jewelleryType: dto.jewelleryType as JewelleryType,
+        buildMethod: dto.buildMethod as BuildMethod,
+        composition: JSON.parse(JSON.stringify(dto.composition)),
+        targetTotalWeightG: dto.targetTotalWeightG,
+        targetGoldWeightG: dto.targetGoldWeightG,
+        budgetMinNpr: dto.budgetMinNpr,
+        budgetMaxNpr: dto.budgetMaxNpr,
+        preferredDeliveryDays: dto.preferredDeliveryDays,
+        specialInstructions: dto.specialInstructions,
+        referenceImages: dto.referenceImages || [],
+        estimatedPriceMinNpr: priceEstimate.min,
+        estimatedPriceMaxNpr: priceEstimate.max,
+        mandatoryLabels: validationResult.mandatoryLabels,
+        status: RfqStatus.DRAFT,
+      },
+    });
+
+    await this.auditService.log({
+      userId: customerId,
+      actorType: 'USER',
+      action: 'CREATE',
+      resourceType: 'RFQ',
+      resourceId: rfq.id,
+      newValue: { buildMethod: dto.buildMethod, jewelleryType: dto.jewelleryType },
+    });
+
+    return rfq;
+  }
+
+  /**
+   * Get eligible shops for an RFQ based on capabilities
+   */
+  async getEligibleShops(rfqId: string) {
+    const rfq = await this.prisma.rfqRequest.findUnique({
+      where: { id: rfqId },
+    });
+
+    if (!rfq) {
+      throw new NotFoundException('RFQ not found');
+    }
+
+    // Filter shops by capabilities
+    const shops = await this.prisma.shop.findMany({
+      where: {
+        isActive: true,
+        isVerified: true,
+        supportedJewelleryTypes: {
+          has: rfq.jewelleryType,
+        },
+        supportedMethods: {
+          has: rfq.buildMethod,
+        },
+      },
+      select: {
+        id: true,
+        shopName: true,
+        shopNameNe: true,
+        shopNameHi: true,
+        city: true,
+        isVerified: true,
+        makingChargePercent: true,
+        codEnabled: true,
+        metalRates: true,
+        ratings: {
+          select: {
+            overall: true,
+          },
+        },
+      },
+    });
+
+    // Calculate average rating for each shop
+    return shops.map((shop) => ({
+      ...shop,
+      averageRating:
+        shop.ratings.length > 0
+          ? shop.ratings.reduce((sum, r) => sum + r.overall, 0) / shop.ratings.length
+          : null,
+      ratings: undefined,
+    }));
+  }
+
+  /**
+   * Broadcast RFQ to selected shops
+   */
+  async broadcast(rfqId: string, customerId: string, dto: BroadcastRfqDto) {
+    const rfq = await this.prisma.rfqRequest.findUnique({
+      where: { id: rfqId },
+    });
+
+    if (!rfq) {
+      throw new NotFoundException('RFQ not found');
+    }
+
+    if (rfq.customerId !== customerId) {
+      throw new ForbiddenException('Not authorized to broadcast this RFQ');
+    }
+
+    if (rfq.status !== RfqStatus.DRAFT) {
+      throw new BadRequestException('RFQ has already been broadcast');
+    }
+
+    // Validate shops exist and have capabilities
+    const eligibleShopIds = (await this.getEligibleShops(rfqId)).map((s) => s.id);
+    const invalidShops = dto.shopIds.filter((id) => !eligibleShopIds.includes(id));
+
+    if (invalidShops.length > 0) {
+      throw new BadRequestException(
+        `Some shops are not eligible for this RFQ: ${invalidShops.join(', ')}`,
+      );
+    }
+
+    // Create snapshot of RFQ at broadcast time
+    const broadcastSnapshot = {
+      ...rfq,
+      broadcastAt: new Date().toISOString(),
+      shopCount: dto.shopIds.length,
+    };
+
+    // Update RFQ and create shop targets
+    const updatedRfq = await this.prisma.$transaction(async (tx) => {
+      // Update RFQ status
+      const updated = await tx.rfqRequest.update({
+        where: { id: rfqId },
+        data: {
+          status: RfqStatus.SENT_TO_SHOPS,
+          broadcastAt: new Date(),
+          broadcastSnapshot,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        },
+      });
+
+      // Create shop targets
+      await tx.rfqShopTarget.createMany({
+        data: dto.shopIds.map((shopId) => ({
+          rfqId,
+          shopId,
+        })),
+      });
+
+      return updated;
+    });
+
+    // Send notifications to shops
+    for (const shopId of dto.shopIds) {
+      const shop = await this.prisma.shop.findUnique({
+        where: { id: shopId },
+        include: { user: true },
+      });
+
+      if (shop) {
+        await this.notificationsService.create({
+          userId: shop.userId,
+          type: 'RFQ_RECEIVED',
+          titleKey: 'notification.rfqReceived.title',
+          bodyKey: 'notification.rfqReceived.body',
+          bodyParams: {
+            jewelleryType: rfq.jewelleryType,
+            buildMethod: rfq.buildMethod,
+          },
+          referenceType: 'RFQ',
+          referenceId: rfqId,
+          channels: ['EMAIL', 'PUSH'],
+        });
+      }
+    }
+
+    await this.auditService.log({
+      userId: customerId,
+      actorType: 'USER',
+      action: 'BROADCAST',
+      resourceType: 'RFQ',
+      resourceId: rfqId,
+      newValue: { shopCount: dto.shopIds.length },
+    });
+
+    return {
+      ...updatedRfq,
+      message: `RFQ sent to ${dto.shopIds.length} shops`,
+      messageKey: 'helper.rfqSentToShops',
+      messageParams: { count: dto.shopIds.length },
+    };
+  }
+
+  /**
+   * Get RFQ by ID with offers
+   */
+  async findOne(rfqId: string, userId: string, userRole: string) {
+    const rfq = await this.prisma.rfqRequest.findUnique({
+      where: { id: rfqId },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        targetedShops: {
+          include: {
+            rfq: false,
+          },
+        },
+        offers: {
+          include: {
+            shop: {
+              select: {
+                id: true,
+                shopName: true,
+                shopNameNe: true,
+                shopNameHi: true,
+                city: true,
+                isVerified: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+        selectedOffer: true,
+      },
+    });
+
+    if (!rfq) {
+      throw new NotFoundException('RFQ not found');
+    }
+
+    // Access control
+    const isCustomer = rfq.customerId === userId;
+    const isShopkeeper = rfq.targetedShops.some(
+      (t) => t.shopId === userId, // This would need shop lookup
+    );
+    const isAdmin = userRole === 'ADMIN';
+    const isSupport = userRole === 'SUPPORT';
+
+    if (!isCustomer && !isAdmin && !isSupport) {
+      // Check if user is a targeted shopkeeper
+      const userShop = await this.prisma.shop.findFirst({
+        where: { userId },
+      });
+
+      if (!userShop || !rfq.targetedShops.some((t) => t.shopId === userShop.id)) {
+        throw new ForbiddenException('Not authorized to view this RFQ');
+      }
+    }
+
+    return rfq;
+  }
+
+  /**
+   * List RFQs for a customer
+   */
+  async findAllForCustomer(customerId: string, status?: RfqStatus) {
+    return this.prisma.rfqRequest.findMany({
+      where: {
+        customerId,
+        ...(status && { status }),
+      },
+      include: {
+        offers: {
+          select: {
+            id: true,
+            status: true,
+            totalPriceNpr: true,
+            shop: {
+              select: {
+                shopName: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  /**
+   * List RFQs for a shopkeeper
+   */
+  async findAllForShop(shopId: string) {
+    return this.prisma.rfqRequest.findMany({
+      where: {
+        targetedShops: {
+          some: {
+            shopId,
+          },
+        },
+        status: {
+          in: [RfqStatus.SENT_TO_SHOPS, RfqStatus.OFFERS_RECEIVED],
+        },
+      },
+      include: {
+        customer: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+        offers: {
+          where: {
+            shopId,
+          },
+        },
+        targetedShops: {
+          where: {
+            shopId,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  /**
+   * Validate composition based on build method
+   */
+  private validateBuildMethodComposition(dto: CreateRfqDto): ValidationResult {
+    const composition = dto.composition as any;
+    composition.method = dto.buildMethod;
+
+    // Use the shared validation
+    const result = validateComposition(composition);
+
+    // Additional METHOD_D validation
+    if (dto.buildMethod === 'METHOD_D') {
+      if (!validateMethodDRequirements(composition)) {
+        result.isValid = false;
+        result.errors.push({
+          code: 'METHOD_D_REQUIREMENTS_NOT_MET',
+          field: 'composition',
+          message: 'Method D requires pattern, mode, and at least one weight specification',
+          messageKey: 'validation.methodD.requirementsNotMet',
+        });
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Estimate price range based on current market rates
+   */
+  private async estimatePriceRange(dto: CreateRfqDto): Promise<{ min: number; max: number }> {
+    // Get average market rates
+    const marketRates = await this.prisma.marketRate.findMany({
+      where: {
+        country: 'NP', // Default to Nepal
+        validUntil: null,
+      },
+    });
+
+    // Basic estimation logic (simplified)
+    let baseRate = 0;
+    const composition = dto.composition as any;
+
+    if (dto.buildMethod === 'METHOD_A' || dto.buildMethod === 'METHOD_B') {
+      // For solid/alloy methods, use gold rate
+      const goldRate = marketRates.find((r) => r.metalCode === 'GOLD_24K');
+      baseRate = goldRate?.ratePerGram || 10000; // Default fallback
+    } else if (dto.buildMethod === 'METHOD_C') {
+      // For plated items, use base metal rate + plating cost
+      baseRate = 500; // Base metal average
+    } else if (dto.buildMethod === 'METHOD_D') {
+      // Multi-metal: weighted calculation
+      const goldRate = marketRates.find((r) => r.metalCode === 'GOLD_24K');
+      const goldPercent = composition.modeConfig?.goldPercentByWeight || 50;
+      baseRate = ((goldRate?.ratePerGram || 10000) * goldPercent) / 100 + 200;
+    }
+
+    const weight = dto.targetTotalWeightG || 10; // Default 10g
+    const basePrice = baseRate * weight;
+    const makingChargeMin = basePrice * 0.08;
+    const makingChargeMax = basePrice * 0.20;
+
+    return {
+      min: Math.round(basePrice + makingChargeMin),
+      max: Math.round(basePrice + makingChargeMax),
+    };
+  }
+
+  /**
+   * Update RFQ status when offers are received
+   */
+  async updateStatusOnOfferReceived(rfqId: string) {
+    const rfq = await this.prisma.rfqRequest.findUnique({
+      where: { id: rfqId },
+    });
+
+    if (rfq && rfq.status === RfqStatus.SENT_TO_SHOPS) {
+      await this.prisma.rfqRequest.update({
+        where: { id: rfqId },
+        data: { status: RfqStatus.OFFERS_RECEIVED },
+      });
+    }
+  }
+
+  /**
+   * Select an offer
+   */
+  async selectOffer(rfqId: string, offerId: string, customerId: string) {
+    const rfq = await this.prisma.rfqRequest.findUnique({
+      where: { id: rfqId },
+      include: { offers: true },
+    });
+
+    if (!rfq) {
+      throw new NotFoundException('RFQ not found');
+    }
+
+    if (rfq.customerId !== customerId) {
+      throw new ForbiddenException('Not authorized');
+    }
+
+    if (rfq.status !== RfqStatus.OFFERS_RECEIVED && rfq.status !== RfqStatus.SENT_TO_SHOPS) {
+      throw new BadRequestException('Cannot select offer at this stage');
+    }
+
+    const offer = rfq.offers.find((o) => o.id === offerId);
+    if (!offer) {
+      throw new BadRequestException('Offer not found for this RFQ');
+    }
+
+    if (offer.status !== 'ACCEPTED' && offer.status !== 'COUNTERED') {
+      throw new BadRequestException('Cannot select this offer');
+    }
+
+    // Update RFQ and offer
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Update RFQ
+      await tx.rfqRequest.update({
+        where: { id: rfqId },
+        data: {
+          status: RfqStatus.OFFER_SELECTED,
+          selectedOfferId: offerId,
+        },
+      });
+
+      // Update selected offer
+      await tx.rfqOffer.update({
+        where: { id: offerId },
+        data: {
+          status: 'SELECTED',
+          paymentDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        },
+      });
+
+      // Expire other offers
+      await tx.rfqOffer.updateMany({
+        where: {
+          rfqId,
+          id: { not: offerId },
+          status: { in: ['PENDING', 'ACCEPTED', 'COUNTERED'] },
+        },
+        data: { status: 'EXPIRED' },
+      });
+
+      return tx.rfqOffer.findUnique({
+        where: { id: offerId },
+        include: { shop: true },
+      });
+    });
+
+    // Notify the selected shop
+    if (result) {
+      await this.notificationsService.create({
+        userId: result.shop.userId,
+        type: 'OFFER_SELECTED',
+        titleKey: 'notification.offerSelected.title',
+        bodyKey: 'notification.offerSelected.body',
+        referenceType: 'OFFER',
+        referenceId: offerId,
+        channels: ['EMAIL', 'PUSH', 'SMS'],
+      });
+    }
+
+    await this.auditService.log({
+      userId: customerId,
+      actorType: 'USER',
+      action: 'SELECT_OFFER',
+      resourceType: 'RFQ',
+      resourceId: rfqId,
+      newValue: { offerId },
+    });
+
+    return {
+      rfqId,
+      offerId,
+      message: 'Offer selected. Please pay booking fee within 24 hours.',
+      messageKey: 'helper.offerSelected',
+      paymentDeadline: result?.paymentDeadline,
+      bookingFeeNpr: result?.bookingFeeNpr,
+    };
+  }
+}

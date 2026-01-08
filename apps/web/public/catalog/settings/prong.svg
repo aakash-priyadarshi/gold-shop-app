@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Ring band -->
+  <ellipse cx="32" cy="48" rx="20" ry="8" fill="none" stroke="#DAA520" stroke-width="4"/>
+  <!-- Prongs -->
+  <line x1="24" y1="30" x2="20" y2="42" stroke="#DAA520" stroke-width="3"/>
+  <line x1="40" y1="30" x2="44" y2="42" stroke="#DAA520" stroke-width="3"/>
+  <line x1="28" y1="26" x2="26" y2="40" stroke="#DAA520" stroke-width="3"/>
+  <line x1="36" y1="26" x2="38" y2="40" stroke="#DAA520" stroke-width="3"/>
+  <!-- Gem -->
+  <polygon points="32,12 44,24 40,36 24,36 20,24" fill="#87CEEB" stroke="#5BA3C6" stroke-width="1"/>
+</svg>

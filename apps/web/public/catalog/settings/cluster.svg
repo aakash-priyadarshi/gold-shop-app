@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Ring band -->
+  <ellipse cx="32" cy="48" rx="20" ry="8" fill="none" stroke="#DAA520" stroke-width="4"/>
+  <!-- Cluster base -->
+  <ellipse cx="32" cy="30" rx="14" ry="10" fill="#DAA520"/>
+  <!-- Center stone -->
+  <circle cx="32" cy="28" r="5" fill="#0F52BA" stroke="#0A3D8C" stroke-width="1"/>
+  <!-- Surrounding stones -->
+  <circle cx="24" cy="26" r="3" fill="#87CEEB" stroke="#5BA3C6" stroke-width="0.5"/>
+  <circle cx="40" cy="26" r="3" fill="#87CEEB" stroke="#5BA3C6" stroke-width="0.5"/>
+  <circle cx="26" cy="34" r="3" fill="#87CEEB" stroke="#5BA3C6" stroke-width="0.5"/>
+  <circle cx="38" cy="34" r="3" fill="#87CEEB" stroke="#5BA3C6" stroke-width="0.5"/>
+  <circle cx="32" cy="20" r="2.5" fill="#87CEEB" stroke="#5BA3C6" stroke-width="0.5"/>
+</svg>

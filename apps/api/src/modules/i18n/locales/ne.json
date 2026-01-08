@@ -1,0 +1,233 @@
+{
+  "common": {
+    "success": "सफल",
+    "error": "त्रुटि",
+    "loading": "लोड हुँदैछ...",
+    "submit": "पेश गर्नुहोस्",
+    "cancel": "रद्द गर्नुहोस्",
+    "save": "सुरक्षित गर्नुहोस्",
+    "delete": "मेट्नुहोस्",
+    "edit": "सम्पादन गर्नुहोस्",
+    "view": "हेर्नुहोस्",
+    "back": "पछाडि",
+    "next": "अर्को",
+    "previous": "अघिल्लो",
+    "search": "खोज्नुहोस्",
+    "filter": "फिल्टर",
+    "sort": "क्रमबद्ध",
+    "all": "सबै",
+    "none": "केही पनि छैन",
+    "yes": "हो",
+    "no": "होइन",
+    "confirm": "पुष्टि गर्नुहोस्",
+    "close": "बन्द गर्नुहोस्"
+  },
+  "auth": {
+    "login": "लगइन",
+    "logout": "लगआउट",
+    "register": "दर्ता गर्नुहोस्",
+    "forgotPassword": "पासवर्ड बिर्सनुभयो?",
+    "resetPassword": "पासवर्ड रिसेट गर्नुहोस्",
+    "email": "इमेल",
+    "password": "पासवर्ड",
+    "confirmPassword": "पासवर्ड पुष्टि गर्नुहोस्",
+    "name": "पूरा नाम",
+    "phone": "फोन नम्बर",
+    "loginSuccess": "सफलतापूर्वक लगइन भयो",
+    "logoutSuccess": "सफलतापूर्वक लगआउट भयो",
+    "registerSuccess": "खाता सफलतापूर्वक सिर्जना भयो",
+    "invalidCredentials": "गलत इमेल वा पासवर्ड",
+    "accountExists": "खाता पहिले नै छ",
+    "passwordMismatch": "पासवर्ड मेल खाँदैन"
+  },
+  "roles": {
+    "customer": "ग्राहक",
+    "shopkeeper": "पसलदार",
+    "admin": "प्रशासक",
+    "support": "सहयोग"
+  },
+  "materials": {
+    "gold24k": "२४ क्यारेट सुन (९९.९%)",
+    "gold22k": "२२ क्यारेट सुन (९१.६%)",
+    "gold18k": "१८ क्यारेट सुन (७५%)",
+    "gold14k": "१४ क्यारेट सुन (५८.५%)",
+    "gold10k": "१० क्यारेट सुन (४१.७%)",
+    "silver999": "९९९ चाँदी",
+    "silver925": "९२५ स्टर्लिङ चाँदी",
+    "platinum950": "९५० प्लाटिनम",
+    "platinum900": "९०० प्लाटिनम",
+    "palladium950": "९५० प्यालेडियम",
+    "brass": "पित्तल",
+    "copper": "तामा",
+    "bronze": "कांस्य",
+    "stainlessSteel": "स्टेनलेस स्टील",
+    "titanium": "टाइटेनियम",
+    "tungsten": "टंगस्टन"
+  },
+  "jewelleryTypes": {
+    "ring": "औंठी",
+    "necklace": "हार",
+    "pendant": "पेन्डेन्ट",
+    "chain": "चेन",
+    "bracelet": "ब्रेसलेट",
+    "bangle": "चुरा",
+    "earring": "कानको झुम्का",
+    "anklet": "पाइजेब",
+    "noseRing": "बुलाकी",
+    "mangalsutra": "मंगलसूत्र",
+    "tikka": "टिका",
+    "waistChain": "कम्मरपट्टी",
+    "toeRing": "खल्ली"
+  },
+  "buildMethods": {
+    "methodA": "एकल बहुमूल्य धातु",
+    "methodB": "बहुमूल्य + आधार धातु",
+    "methodC": "बहुमूल्य + प्लेटिङ",
+    "methodD": "बहु-धातु",
+    "modeD1": "तह",
+    "modeD2": "जडान",
+    "modeD3": "फ्युजन"
+  },
+  "rfq": {
+    "title": "मूल्य अनुरोध",
+    "createRfq": "अनुरोध सिर्जना गर्नुहोस्",
+    "myRequests": "मेरो अनुरोधहरू",
+    "status": {
+      "draft": "ड्राफ्ट",
+      "submitted": "पेश गरिएको",
+      "broadcast": "प्रसारण गरिएको",
+      "offersReceived": "प्रस्तावहरू प्राप्त",
+      "offerSelected": "प्रस्ताव छानिएको",
+      "booked": "बुकिङ गरिएको",
+      "converted": "अर्डरमा रूपान्तरण",
+      "expired": "म्याद सकिएको",
+      "cancelled": "रद्द गरिएको"
+    },
+    "specifications": "विशेषताहरू",
+    "composition": "धातु संरचना",
+    "estimatedWeight": "अनुमानित तौल",
+    "budget": "बजेट दायरा",
+    "deadline": "प्रतिक्रिया समयसीमा",
+    "referenceImages": "सन्दर्भ तस्बिरहरू",
+    "additionalNotes": "थप टिप्पणीहरू"
+  },
+  "offers": {
+    "title": "प्रस्तावहरू",
+    "makeOffer": "प्रस्ताव दिनुहोस्",
+    "viewOffers": "प्रस्तावहरू हेर्नुहोस्",
+    "status": {
+      "pending": "पर्खाइमा",
+      "accepted": "स्वीकृत",
+      "countered": "काउन्टर प्रस्ताव",
+      "declined": "अस्वीकृत",
+      "expired": "म्याद सकिएको"
+    },
+    "pricing": {
+      "metalCost": "धातु मूल्य",
+      "labourCost": "श्रम शुल्क",
+      "wastage": "वेस्टेज",
+      "makingCharge": "बनाउने शुल्क",
+      "totalPrice": "कुल मूल्य",
+      "bookingFee": "बुकिङ शुल्क"
+    },
+    "estimatedDays": "अनुमानित दिनहरू",
+    "validUntil": "मान्य समय"
+  },
+  "orders": {
+    "title": "अर्डरहरू",
+    "myOrders": "मेरो अर्डरहरू",
+    "orderHistory": "अर्डर इतिहास",
+    "orderDetails": "अर्डर विवरण",
+    "orderNumber": "अर्डर नम्बर",
+    "status": {
+      "pendingPayment": "भुक्तानी पर्खाइमा",
+      "paymentReceived": "भुक्तानी प्राप्त",
+      "processing": "प्रोसेसिङ",
+      "bookingConfirmed": "बुकिङ पुष्टि",
+      "designInProgress": "डिजाइन काम जारी",
+      "designApproved": "डिजाइन स्वीकृत",
+      "manufacturing": "निर्माण जारी",
+      "qualityCheck": "गुणस्तर जाँच",
+      "readyForDispatch": "पठाउन तयार",
+      "dispatched": "पठाइएको",
+      "inTransit": "बाटोमा",
+      "outForDelivery": "डेलिभरीमा",
+      "delivered": "डेलिभर भयो",
+      "cancelled": "रद्द गरिएको",
+      "returnRequested": "फिर्ता अनुरोध",
+      "refunded": "रिफण्ड गरिएको"
+    },
+    "tracking": "अर्डर ट्र्याक गर्नुहोस्",
+    "milestones": "प्रगति चरणहरू"
+  },
+  "payments": {
+    "title": "भुक्तानी",
+    "payNow": "अहिले तिर्नुहोस्",
+    "paymentHistory": "भुक्तानी इतिहास",
+    "paymentMethod": "भुक्तानी विधि",
+    "methods": {
+      "razorpay": "Razorpay",
+      "esewa": "eSewa",
+      "khalti": "Khalti",
+      "cod": "डेलिभरीमा नगद",
+      "bankTransfer": "बैंक ट्रान्सफर"
+    },
+    "status": {
+      "pending": "पर्खाइमा",
+      "completed": "पूरा भयो",
+      "failed": "असफल",
+      "refunded": "रिफण्ड गरिएको"
+    },
+    "amount": "रकम",
+    "total": "जम्मा",
+    "subtotal": "उपजम्मा",
+    "tax": "कर",
+    "bookingFee": "बुकिङ शुल्क",
+    "balanceDue": "बाँकी रकम"
+  },
+  "shop": {
+    "title": "पसल",
+    "myShop": "मेरो पसल",
+    "shopDetails": "पसल विवरण",
+    "shopName": "पसलको नाम",
+    "shopAddress": "ठेगाना",
+    "metalRates": "धातु दरहरू",
+    "inventory": "इन्भेन्टरी",
+    "dashboard": "ड्यासबोर्ड",
+    "statistics": "तथ्याङ्क",
+    "ratings": "रेटिङ र समीक्षा"
+  },
+  "notifications": {
+    "title": "सूचनाहरू",
+    "markAllRead": "सबै पढेको चिन्ह लगाउनुहोस्",
+    "noNotifications": "कुनै सूचना छैन",
+    "types": {
+      "rfqReceived": "नयाँ अनुरोध प्राप्त",
+      "offerReceived": "नयाँ प्रस्ताव प्राप्त",
+      "offerAccepted": "प्रस्ताव स्वीकृत",
+      "paymentReceived": "भुक्तानी प्राप्त",
+      "orderPlaced": "अर्डर राखिएको",
+      "orderStatusUpdated": "अर्डर स्थिति अद्यावधिक",
+      "milestone": "अर्डर प्रगति अद्यावधिक"
+    }
+  },
+  "errors": {
+    "notFound": "फेला परेन",
+    "unauthorized": "अनधिकृत पहुँच",
+    "forbidden": "पहुँच निषेधित",
+    "badRequest": "अमान्य अनुरोध",
+    "serverError": "सर्भर त्रुटि भयो",
+    "networkError": "नेटवर्क त्रुटि। कृपया पुन: प्रयास गर्नुहोस्।",
+    "validationError": "कृपया आफ्नो इनपुट जाँच गर्नुहोस्",
+    "sessionExpired": "सत्र समाप्त भयो। कृपया पुन: लगइन गर्नुहोस्।"
+  },
+  "validation": {
+    "required": "यो फिल्ड आवश्यक छ",
+    "invalidEmail": "कृपया मान्य इमेल प्रविष्ट गर्नुहोस्",
+    "minLength": "कम्तिमा {{min}} अक्षर हुनुपर्छ",
+    "maxLength": "{{max}} अक्षर भन्दा बढी हुनुहुँदैन",
+    "invalidPhone": "कृपया मान्य फोन नम्बर प्रविष्ट गर्नुहोस्",
+    "passwordWeak": "पासवर्ड धेरै कमजोर छ",
+    "invalidAmount": "कृपया मान्य रकम प्रविष्ट गर्नुहोस्"
+  }
+}

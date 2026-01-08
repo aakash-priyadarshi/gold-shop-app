@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Ring band -->
+  <ellipse cx="32" cy="48" rx="20" ry="8" fill="none" stroke="#DAA520" stroke-width="4"/>
+  <!-- Cathedral arches -->
+  <path d="M 18 46 Q 18 28 32 20" fill="none" stroke="#DAA520" stroke-width="3"/>
+  <path d="M 46 46 Q 46 28 32 20" fill="none" stroke="#DAA520" stroke-width="3"/>
+  <!-- Cross bar support -->
+  <line x1="22" y1="36" x2="42" y2="36" stroke="#DAA520" stroke-width="2"/>
+  <!-- Center stone -->
+  <polygon points="32,10 40,18 38,26 26,26 24,18" fill="#E0115F" stroke="#B80D4C" stroke-width="1"/>
+</svg>
