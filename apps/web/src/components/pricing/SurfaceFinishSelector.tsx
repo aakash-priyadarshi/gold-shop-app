@@ -82,7 +82,7 @@ export function SurfaceFinishSelector({
                     <Info className="h-3 w-3 text-muted-foreground flex-shrink-0 ml-1" />
                   </div>
                   <span className={`text-[10px] mt-auto ${
-                    !finish.priceNpr && finish.priceType === 'FLAT' ? 'text-green-600' : 'text-amber-600'
+                    finish.priceType === 'FLAT' && !('priceNpr' in finish && finish.priceNpr) ? 'text-green-600' : 'text-amber-600'
                   }`}>
                     {getFinishPriceDisplay(finish)}
                   </span>
