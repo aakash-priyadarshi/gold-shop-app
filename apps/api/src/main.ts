@@ -52,13 +52,13 @@ async function bootstrap() {
   );
 
   // CORS - allow frontend origins
-  const allowedOrigins = [
+  const allowedOrigins: string[] = [
     process.env.FRONTEND_URL,
     'https://orivraa.com',
     'https://www.orivraa.com',
     'https://gold-shop-app-web.vercel.app',
     'http://localhost:3000',
-  ].filter(Boolean);
+  ].filter((origin): origin is string => Boolean(origin));
 
   app.enableCors({
     origin: allowedOrigins,
