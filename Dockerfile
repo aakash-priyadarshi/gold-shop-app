@@ -26,24 +26,23 @@ WORKDIR /app/apps/api
 RUN npx prisma generate
 RUN pnpm build
 
-# Verify build output exists (NestJS outputs to dist/src/)
-RUN ls -la dist/src/ && test -f dist/src/main.js
-
-# Production stage
+# Production stage - use same image, just different workdir
 FROM node:18-alpine AS runner
 
 RUN apk add --no-cache libc6-compat
 
 WORKDIR /app
 
-# Copy built application from builder
-COPY --from=builder /app/apps/api/dist ./dist
-COPY --from=builder /app/apps/api/node_modules ./node_modules
-COPY --from=builder /app/apps/api/package.json ./
-COPY --from=builder /app/apps/api/prisma ./prisma
+# Copy the entire built workspace to preserve node_modules structure
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages ./packages
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=builder /app/apps/api/package.json ./apps/api/
+COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
+COPY --from=builder /app/package.json ./
 
-# Verify files are copied
-RUN ls -la dist/src/
+WORKDIR /app/apps/api
 
 # Expose port
 EXPOSE 3001
@@ -51,5 +50,5 @@ EXPOSE 3001
 ENV NODE_ENV=production
 ENV PORT=3001
 
-# Start the application - NestJS outputs to dist/src/main.js
+# Start the application
 CMD ["node", "dist/src/main.js"]
