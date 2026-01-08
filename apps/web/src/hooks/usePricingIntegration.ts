@@ -390,8 +390,9 @@ function calculateLocalEstimate(
   let gemstoneCost = 0;
   if (params.gemstones) {
     gemstoneCost = params.gemstones.reduce((sum, gem) => {
-      const pricePerUnit = getGemstonePrice(gem.stoneType, gem.origin);
-      const quantity = gem.sizeUnit === 'CARAT' ? gem.sizeValue : gem.sizeValue / 5; // rough conversion
+      const pricePerUnit = getGemstonePrice(gem.stoneType, gem.origin || 'NATURAL');
+      const sizeVal = typeof gem.sizeValue === 'string' ? parseFloat(gem.sizeValue) || 0 : gem.sizeValue;
+      const quantity = gem.sizeUnit === 'CARAT' ? sizeVal : sizeVal / 5; // rough conversion
       return sum + (pricePerUnit * quantity * gem.count);
     }, 0);
   }
