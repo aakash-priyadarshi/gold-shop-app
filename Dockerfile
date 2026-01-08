@@ -1,8 +1,9 @@
 # Gold Shop API - Production Dockerfile
-FROM node:18-alpine AS builder
+# Using Debian-based image for Prisma OpenSSL compatibility
+FROM node:18-slim AS builder
 
-# Install build dependencies
-RUN apk add --no-cache libc6-compat
+# Install build dependencies including OpenSSL
+RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
@@ -26,10 +27,11 @@ WORKDIR /app/apps/api
 RUN npx prisma generate
 RUN pnpm build
 
-# Production stage - use same image, just different workdir
-FROM node:18-alpine AS runner
+# Production stage - Debian slim for Prisma compatibility
+FROM node:18-slim AS runner
 
-RUN apk add --no-cache libc6-compat
+# Install runtime dependencies for Prisma
+RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
