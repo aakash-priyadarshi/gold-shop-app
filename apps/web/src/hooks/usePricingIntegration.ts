@@ -35,7 +35,7 @@ export function convertToLegacyGemstone(gem: NewGemstoneEntry): LegacyGemstoneEn
     stoneType: gem.stoneType,
     shape: gem.shape,
     size: gem.sizeUnit === 'CARAT' ? `${gem.sizeValue}ct` : `${gem.sizeValue}mm`,
-    colour: gem.colorGrade || gem.colorName || '',
+    colour: gem.color || '',
     settingStyle: gem.settingStyle,
     count: gem.count,
   };
@@ -51,13 +51,13 @@ export function convertFromLegacyGemstone(legacy: LegacyGemstoneEntry): NewGemst
   const sizeUnit = legacy.size.toLowerCase().includes('ct') ? 'CARAT' : 'MM';
 
   return {
+    id: `gem-${Date.now()}`,
     stoneType: legacy.stoneType,
     origin: determineOrigin(legacy.stoneType),
     shape: legacy.shape || 'ROUND',
-    sizeValue,
+    sizeValue: String(sizeValue),
     sizeUnit,
-    colorGrade: legacy.colour.toUpperCase().match(/[D-Z]/)?.[0] as any,
-    colorName: legacy.colour,
+    color: legacy.colour,
     clarity: undefined,
     cut: undefined,
     settingStyle: legacy.settingStyle || 'PRONG',
