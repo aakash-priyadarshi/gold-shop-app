@@ -26,8 +26,8 @@ WORKDIR /app/apps/api
 RUN npx prisma generate
 RUN pnpm build
 
-# Verify build output exists
-RUN ls -la dist/ && test -f dist/main.js
+# Verify build output exists (NestJS outputs to dist/src/)
+RUN ls -la dist/src/ && test -f dist/src/main.js
 
 # Production stage
 FROM node:18-alpine AS runner
@@ -43,7 +43,7 @@ COPY --from=builder /app/apps/api/package.json ./
 COPY --from=builder /app/apps/api/prisma ./prisma
 
 # Verify files are copied
-RUN ls -la dist/
+RUN ls -la dist/src/
 
 # Expose port
 EXPOSE 3001
@@ -51,5 +51,5 @@ EXPOSE 3001
 ENV NODE_ENV=production
 ENV PORT=3001
 
-# Start the application directly with node
-CMD ["node", "dist/main.js"]
+# Start the application - NestJS outputs to dist/src/main.js
+CMD ["node", "dist/src/main.js"]
