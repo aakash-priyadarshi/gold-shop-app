@@ -26,6 +26,12 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   Gem,
   ArrowRight,
   ArrowLeft,
@@ -39,6 +45,8 @@ import {
   AlertTriangle,
   Layers,
   Sparkles,
+  Phone,
+  ShieldCheck,
 } from 'lucide-react';
 import { usePreferencesStore, CURRENCIES, COUNTRIES, type CurrencyCode, type CountryCode } from '@/store/preferences';
 
@@ -183,6 +191,31 @@ export default function CreateRfqPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // User verification status
+  const user = (session?.user as any) || null;
+  const isLoggedIn = !!session?.user;
+  const isPhoneVerified = !!(user?.phoneVerifiedAt);
+  const isSeller = user?.role === 'SHOPKEEPER' || user?.role === 'ADMIN';
+  const isShopVerified = !!(user?.shop?.isVerified);
+  
+  // For sellers: need phone + KYC (shop verified)
+  // For customers: need phone only
+  const canSubmitOrder = isLoggedIn && isPhoneVerified && (!isSeller || isShopVerified);
+  
+  // Determine why submit is blocked (for tooltip)
+  const getSubmitBlockReason = (): string | null => {
+    if (!isLoggedIn) {
+      return 'Please log in to submit your custom jewellery request';
+    }
+    if (!isPhoneVerified) {
+      return 'Please verify your phone number in your profile settings to submit requests';
+    }
+    if (isSeller && !isShopVerified) {
+      return 'Your shop needs KYC verification (ID card & tax details) before you can submit requests. Please complete verification in your dashboard.';
+    }
+    return null;
+  };
 
   // Get currency from global preferences store (persisted across navigation)
   // IMPORTANT: Currency is for DISPLAY only (FX conversion)
@@ -704,11 +737,19 @@ export default function CreateRfqPage() {
     }
   };
 
+  // Form validation - pages 1-2 just need form data, page 3 needs auth + verification
   const canProceedToStep2 = formData.jewelleryType && formData.metalType && formData.buildMethod;
   const canProceedToStep3 = formData.description && (hasRealTemplate || formData.estimatedWeight);
-  const canSubmit = formData.budgetMin && formData.budgetMax && isVermeilValid();
+  
+  // Form data validation for submit (budget, etc.)
+  const formDataComplete = formData.budgetMin && formData.budgetMax && isVermeilValid();
+  
+  // Final submit check: form complete + user verified
+  const canSubmit = formDataComplete && canSubmitOrder;
+  const submitBlockReason = getSubmitBlockReason();
 
   return (
+    <TooltipProvider>
     <div className="flex min-h-screen flex-col">
       <Header />
 
@@ -1411,6 +1452,62 @@ export default function CreateRfqPage() {
                   </div>
                 )}
 
+                {/* Verification status notice */}
+                {step === 3 && !canSubmitOrder && (
+                  <div className={`border rounded-lg p-4 flex gap-3 ${
+                    !isLoggedIn ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'
+                  }`}>
+                    {!isLoggedIn ? (
+                      <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                    ) : !isPhoneVerified ? (
+                      <Phone className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    ) : (
+                      <ShieldCheck className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    )}
+                    <div className="flex-1">
+                      <p className={`font-medium text-sm ${
+                        !isLoggedIn ? 'text-blue-800' : 'text-amber-800'
+                      }`}>
+                        {!isLoggedIn 
+                          ? 'Sign in to Submit' 
+                          : !isPhoneVerified 
+                            ? 'Phone Verification Required' 
+                            : 'KYC Verification Required'}
+                      </p>
+                      <p className={`text-sm mt-1 ${
+                        !isLoggedIn ? 'text-blue-700' : 'text-amber-700'
+                      }`}>
+                        {submitBlockReason}
+                      </p>
+                      {!isLoggedIn ? (
+                        <Link 
+                          href="/auth/login?redirect=/rfq/create" 
+                          className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 mt-2"
+                        >
+                          Sign in now
+                          <ArrowRight className="h-4 w-4" />
+                        </Link>
+                      ) : !isPhoneVerified ? (
+                        <Link 
+                          href="/dashboard/customer" 
+                          className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 hover:text-amber-800 mt-2"
+                        >
+                          Verify phone in profile
+                          <ArrowRight className="h-4 w-4" />
+                        </Link>
+                      ) : isSeller && !isShopVerified ? (
+                        <Link 
+                          href="/dashboard/shop/verification" 
+                          className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 hover:text-amber-800 mt-2"
+                        >
+                          Complete KYC verification
+                          <ArrowRight className="h-4 w-4" />
+                        </Link>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
+
                 {error && (
                   <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
                     {error}
@@ -1422,23 +1519,44 @@ export default function CreateRfqPage() {
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back
                   </Button>
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={!canSubmit || loading}
-                    className="gold-gradient text-white"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      <>
-                        Submit Request
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
+                  
+                  {/* Submit button with tooltip for disabled state */}
+                  {!canSubmit && submitBlockReason ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-block">
+                          <Button
+                            disabled
+                            className="gold-gradient text-white pointer-events-none opacity-50"
+                          >
+                            Submit Request
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        <p>{submitBlockReason}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={!canSubmit || loading}
+                      className="gold-gradient text-white"
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        <>
+                          Submit Request
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -1448,5 +1566,6 @@ export default function CreateRfqPage() {
 
       <Footer />
     </div>
+    </TooltipProvider>
   );
 }
