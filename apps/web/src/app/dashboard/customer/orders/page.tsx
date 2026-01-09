@@ -65,7 +65,11 @@ export default function CustomerOrdersPage() {
     setIsLoading(true);
     try {
       const response = await api.get('/api/orders/my-orders');
-      setOrders(response.data);
+      let ordersArr = response.data;
+      if (!Array.isArray(ordersArr)) {
+        ordersArr = [];
+      }
+      setOrders(ordersArr);
     } catch (error) {
       console.error('Failed to load orders:', error);
     } finally {

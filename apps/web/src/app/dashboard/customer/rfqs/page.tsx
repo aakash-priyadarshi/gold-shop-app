@@ -61,7 +61,11 @@ export default function CustomerRFQsPage() {
     setIsLoading(true);
     try {
       const response = await api.get('/api/rfq/my-requests');
-      setRfqs(response.data);
+      let rfqsArr = response.data;
+      if (!Array.isArray(rfqsArr)) {
+        rfqsArr = [];
+      }
+      setRfqs(rfqsArr);
     } catch (error) {
       console.error('Failed to load RFQs:', error);
     } finally {

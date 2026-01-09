@@ -82,7 +82,11 @@ export default function ShopOrdersPage() {
     try {
       const params = statusFilter !== 'all' ? `?status=${statusFilter}` : '';
       const response = await api.get(`/api/orders/shop/${user?.shop?.id}${params}`);
-      setOrders(response.data.orders || response.data || []);
+      let ordersArr = response.data.orders || response.data || [];
+      if (!Array.isArray(ordersArr)) {
+        ordersArr = [];
+      }
+      setOrders(ordersArr);
     } catch (error) {
       console.error('Failed to load orders:', error);
       toast({

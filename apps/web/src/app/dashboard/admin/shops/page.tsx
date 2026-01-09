@@ -70,7 +70,11 @@ export default function AdminShopsPage() {
     setIsLoading(true);
     try {
       const response = await api.get('/api/shops');
-      setShops(response.data.shops || response.data || []);
+      let shopsArr = response.data.shops || response.data || [];
+      if (!Array.isArray(shopsArr)) {
+        shopsArr = [];
+      }
+      setShops(shopsArr);
     } catch (error) {
       console.error('Failed to load shops:', error);
       toast({

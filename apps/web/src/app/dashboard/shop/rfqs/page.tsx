@@ -80,7 +80,11 @@ export default function ShopRfqsPage() {
     setIsLoading(true);
     try {
       const response = await api.get('/api/rfq/shop-requests');
-      setRfqs(response.data.rfqs || response.data || []);
+      let rfqsArr = response.data.rfqs || response.data || [];
+      if (!Array.isArray(rfqsArr)) {
+        rfqsArr = [];
+      }
+      setRfqs(rfqsArr);
     } catch (error) {
       console.error('Failed to load RFQs:', error);
       toast({
