@@ -283,8 +283,8 @@ export default function ShopOrderDetailPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {order.milestones?.length > 0 ? (
-                      order.milestones.map((milestone, index) => (
+                    {(order.milestones?.length ?? 0) > 0 ? (
+                      order.milestones!.map((milestone, index) => (
                         <div key={milestone.id} className="flex gap-4">
                           <div className="flex flex-col items-center">
                             <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
