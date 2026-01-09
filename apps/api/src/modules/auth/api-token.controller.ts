@@ -95,6 +95,33 @@ export class ApiTokenController {
     return this.apiTokenService.getExpiringTokens(req.user.id);
   }
 
+  @Get(':tokenId/value')
+  @Roles('ADMIN')
+  @ApiOperation({ 
+    summary: 'Get token value (within 24h of creation)',
+    description: 'Retrieve the full token value if still within the 24-hour viewing window after creation'
+  })
+  @ApiParam({ name: 'tokenId', description: 'Token ID to retrieve value for' })
+  @ApiResponse({ status: 200, description: 'Token value retrieved' })
+  @ApiResponse({ status: 404, description: 'Token not found or viewing window expired' })
+  async getTokenValue(
+    @Request() req: any,
+    @Param('tokenId') tokenId: string,
+  ) {
+    const result = await this.apiTokenService.getTokenValue(req.user.id, tokenId);
+    if (!result) {
+      return {
+        available: false,
+        message: 'Token viewing window has expired (24 hours after creation)',
+      };
+    }
+    return {
+      available: true,
+      token: result.token,
+      viewableUntil: result.viewableUntil,
+    };
+  }
+
   @Get('scopes')
   @Roles('ADMIN')
   @ApiOperation({ 

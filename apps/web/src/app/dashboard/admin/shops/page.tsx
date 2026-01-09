@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Table,
   TableBody,
@@ -22,6 +23,22 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
   Store,
   CheckCircle,
   XCircle,
@@ -30,9 +47,10 @@ import {
   User,
   Calendar,
   Loader2,
+  Plus,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import api from '@/lib/api';
+import api, { adminApi } from '@/lib/api';
 
 interface Shop {
   id: string;
@@ -57,6 +75,20 @@ export default function AdminShopsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('pending');
   const [processingId, setProcessingId] = useState<string | null>(null);
+
+  // Create shop dialog state
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [creatingShop, setCreatingShop] = useState(false);
+  const [ownerSearchQuery, setOwnerSearchQuery] = useState('');
+  const [availableOwners, setAvailableOwners] = useState<any[]>([]);
+  const [newShop, setNewShop] = useState({
+    shopName: '',
+    ownerEmail: '',
+    country: 'NP',
+    city: '',
+    address: '',
+    currency: 'NPR',
+  });
 
   useEffect(() => {
     loadShops();
@@ -133,6 +165,58 @@ export default function AdminShopsPage() {
     }
   };
 
+  const searchOwners = async (query: string) => {
+    if (query.length < 2) {
+      setAvailableOwners([]);
+      return;
+    }
+    try {
+      const response = await api.get('/api/users', { params: { search: query, role: 'SHOPKEEPER' } });
+      const usersData = response.data.data || response.data || [];
+      setAvailableOwners(Array.isArray(usersData) ? usersData : []);
+    } catch (error) {
+      console.error('Failed to search owners:', error);
+    }
+  };
+
+  const handleCreateShop = async () => {
+    if (!newShop.shopName || !newShop.ownerEmail) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing Fields',
+        description: 'Please fill in shop name and select an owner.',
+      });
+      return;
+    }
+
+    setCreatingShop(true);
+    try {
+      await adminApi.createShop(newShop);
+      toast({
+        title: 'Shop Created',
+        description: 'The shop has been created successfully.',
+      });
+      setCreateDialogOpen(false);
+      setNewShop({
+        shopName: '',
+        ownerEmail: '',
+        country: 'NP',
+        city: '',
+        address: '',
+        currency: 'NPR',
+      });
+      loadShops();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Creation Failed',
+        description: error.response?.data?.message || 'Could not create shop.',
+      });
+    } finally {
+      setCreatingShop(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -177,6 +261,127 @@ export default function AdminShopsPage() {
                   className="pl-10 w-64"
                 />
               </div>
+              <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Shop
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle>Create New Shop</DialogTitle>
+                    <DialogDescription>
+                      Add a new shop to the platform.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="shopName">Shop Name *</Label>
+                      <Input
+                        id="shopName"
+                        value={newShop.shopName}
+                        onChange={(e) => setNewShop(prev => ({ ...prev, shopName: e.target.value }))}
+                        placeholder="e.g., Golden Jewellers"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="ownerEmail">Owner Email *</Label>
+                      <Input
+                        id="ownerEmail"
+                        type="email"
+                        value={newShop.ownerEmail}
+                        onChange={(e) => {
+                          setNewShop(prev => ({ ...prev, ownerEmail: e.target.value }));
+                          searchOwners(e.target.value);
+                        }}
+                        placeholder="Enter existing user email"
+                      />
+                      {availableOwners.length > 0 && (
+                        <div className="border rounded-md mt-1 max-h-32 overflow-y-auto">
+                          {availableOwners.map((owner: any) => (
+                            <div
+                              key={owner.id}
+                              className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
+                              onClick={() => {
+                                setNewShop(prev => ({ ...prev, ownerEmail: owner.email }));
+                                setAvailableOwners([]);
+                              }}
+                            >
+                              {owner.firstName} {owner.lastName} ({owner.email})
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="country">Country</Label>
+                        <Select
+                          value={newShop.country}
+                          onValueChange={(value) => setNewShop(prev => ({ ...prev, country: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="NP">🇳🇵 Nepal</SelectItem>
+                            <SelectItem value="IN">🇮🇳 India</SelectItem>
+                            <SelectItem value="AE">🇦🇪 UAE</SelectItem>
+                            <SelectItem value="US">🇺🇸 USA</SelectItem>
+                            <SelectItem value="UK">🇬🇧 UK</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="currency">Currency</Label>
+                        <Select
+                          value={newShop.currency}
+                          onValueChange={(value) => setNewShop(prev => ({ ...prev, currency: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="NPR">NPR</SelectItem>
+                            <SelectItem value="INR">INR</SelectItem>
+                            <SelectItem value="AED">AED</SelectItem>
+                            <SelectItem value="USD">USD</SelectItem>
+                            <SelectItem value="GBP">GBP</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="city">City</Label>
+                      <Input
+                        id="city"
+                        value={newShop.city}
+                        onChange={(e) => setNewShop(prev => ({ ...prev, city: e.target.value }))}
+                        placeholder="e.g., Kathmandu"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Address</Label>
+                      <Input
+                        id="address"
+                        value={newShop.address}
+                        onChange={(e) => setNewShop(prev => ({ ...prev, address: e.target.value }))}
+                        placeholder="Full address"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleCreateShop} disabled={creatingShop}>
+                      {creatingShop && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Create Shop
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
 

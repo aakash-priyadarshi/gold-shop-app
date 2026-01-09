@@ -6,15 +6,19 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { ApiTokenController } from './api-token.controller';
 import { ApiTokenService } from './api-token.service';
+import { OtpController } from './otp.controller';
+import { OtpService } from './otp.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { UsersModule } from '../users/users.module';
 import { AuditModule } from '../audit/audit.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     UsersModule,
     AuditModule,
+    NotificationsModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -27,8 +31,8 @@ import { AuditModule } from '../audit/audit.module';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController, ApiTokenController],
-  providers: [AuthService, ApiTokenService, JwtStrategy, LocalStrategy],
-  exports: [AuthService, ApiTokenService],
+  controllers: [AuthController, ApiTokenController, OtpController],
+  providers: [AuthService, ApiTokenService, OtpService, JwtStrategy, LocalStrategy],
+  exports: [AuthService, ApiTokenService, OtpService],
 })
 export class AuthModule {}

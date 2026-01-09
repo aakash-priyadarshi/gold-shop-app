@@ -63,10 +63,10 @@ export const authApi = {
 
 // Users API
 export const usersApi = {
-  getProfile: () => api.get('/api/users/profile'),
-  updateProfile: (data: any) => api.patch('/api/users/profile', data),
+  getProfile: () => api.get('/api/users/me'),
+  updateProfile: (data: any) => api.patch('/api/users/me', data),
   updatePassword: (data: { currentPassword: string; newPassword: string }) =>
-    api.patch('/api/users/password', data),
+    api.patch('/api/users/me/password', data),
 };
 
 // Shops API
@@ -146,6 +146,75 @@ export const notificationsApi = {
   getUnreadCount: () => api.get('/api/notifications/unread-count'),
   markAsRead: (id: string) => api.patch(`/api/notifications/${id}/read`),
   markAllAsRead: () => api.patch('/api/notifications/read-all'),
+};
+
+// OTP API
+export const otpApi = {
+  send: (type: 'EMAIL_VERIFICATION' | 'PHONE_VERIFICATION' | 'PASSWORD_RESET', target?: string) =>
+    api.post('/api/otp/send', { type, target }),
+  verify: (type: 'EMAIL_VERIFICATION' | 'PHONE_VERIFICATION' | 'PASSWORD_RESET', code: string) =>
+    api.post('/api/otp/verify', { type, code }),
+  resend: (type: 'EMAIL_VERIFICATION' | 'PHONE_VERIFICATION' | 'PASSWORD_RESET') =>
+    api.post('/api/otp/resend', { type }),
+};
+
+// Admin API
+export const adminApi = {
+  // Stats
+  getStats: () => api.get('/api/admin/stats'),
+  
+  // Verifications
+  getVerifications: (status?: string) => 
+    api.get('/api/admin/verifications', { params: status ? { status } : undefined }),
+  approveVerification: (id: string) => api.patch(`/api/admin/verifications/${id}/approve`),
+  rejectVerification: (id: string, reason: string) => 
+    api.patch(`/api/admin/verifications/${id}/reject`, { reason }),
+  
+  // Reports
+  getReports: (status?: string) => 
+    api.get('/api/admin/reports', { params: status ? { status } : undefined }),
+  resolveReport: (id: string, resolution: string) => 
+    api.patch(`/api/admin/reports/${id}/resolve`, { resolution }),
+  
+  // User management
+  createUser: (data: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+    phone?: string;
+  }) => api.post('/api/admin/users', data),
+  
+  // Shop management
+  createShop: (data: {
+    ownerEmail: string;
+    ownerPassword: string;
+    ownerFirstName: string;
+    ownerLastName: string;
+    ownerPhone?: string;
+    shopName: string;
+    city: string;
+    address: string;
+    contactPhone: string;
+    contactEmail?: string;
+    country?: string;
+  }) => api.post('/api/admin/shops', data),
+  
+  // Settings
+  getSettings: () => api.get('/api/admin/settings'),
+  updateSettings: (data: Record<string, any>) => api.patch('/api/admin/settings', data),
+  refreshMarketRates: () => api.post('/api/admin/settings/refresh-rates'),
+  clearCache: () => api.post('/api/admin/settings/clear-cache'),
+  
+  // System notifications
+  broadcastNotification: (data: {
+    title: string;
+    message: string;
+    type: string;
+    targetRoles?: string[];
+  }) => api.post('/api/admin/notifications/broadcast', data),
+  getSystemNotifications: () => api.get('/api/admin/notifications/system'),
 };
 
 // Materials API

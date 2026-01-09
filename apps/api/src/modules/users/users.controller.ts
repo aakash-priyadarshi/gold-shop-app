@@ -6,6 +6,7 @@ import {
   Body,
   Query,
   UseGuards,
+  Post,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
@@ -16,6 +17,11 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '@prisma/client';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdatePreferencesDto } from './dto/update-preferences.dto';
+
+class UpdatePasswordDto {
+  currentPassword: string;
+  newPassword: string;
+}
 
 @ApiTags('users')
 @Controller('users')
@@ -37,6 +43,15 @@ export class UsersController {
     @Body() dto: UpdateProfileDto,
   ) {
     return this.usersService.updateProfile(userId, dto);
+  }
+
+  @Patch('me/password')
+  @ApiOperation({ summary: 'Update current user password' })
+  async updatePassword(
+    @CurrentUser('id') userId: string,
+    @Body() dto: UpdatePasswordDto,
+  ) {
+    return this.usersService.updatePassword(userId, dto.currentPassword, dto.newPassword);
   }
 
   @Get('me/preferences')

@@ -4,11 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { CustomerGuard } from '@/components/auth/RouteGuard';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -21,10 +23,14 @@ import {
   Loader2,
   Sparkles,
   Info,
+  Phone,
+  CheckCircle,
+  AlertCircle,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import Link from 'next/link';
+import { PhoneVerificationDialog } from '@/components/verification/PhoneVerificationDialog';
 
 const jewelleryTypes = [
   'Ring',
@@ -53,7 +59,11 @@ const purities = {
 
 export default function NewRFQPage() {
   const router = useRouter();
+  const { user, refreshUser } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showVerificationDialog, setShowVerificationDialog] = useState(false);
+  
+  const isPhoneVerified = !!(user as any)?.phoneVerifiedAt;
   
   const [formData, setFormData] = useState({
     jewelleryType: '',
@@ -77,6 +87,17 @@ export default function NewRFQPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check phone verification
+    if (!isPhoneVerified) {
+      toast({
+        variant: 'destructive',
+        title: 'Phone Verification Required',
+        description: 'Please verify your phone number before submitting a quote request.',
+      });
+      setShowVerificationDialog(true);
+      return;
+    }
     
     if (!formData.jewelleryType || !formData.weight) {
       toast({
@@ -282,6 +303,44 @@ export default function NewRFQPage() {
                     </ul>
                   </div>
                 </div>
+
+                {/* Phone Verification Status */}
+                <div className={`rounded-lg p-4 flex items-center justify-between ${
+                  isPhoneVerified 
+                    ? 'bg-green-50 border border-green-200' 
+                    : 'bg-amber-50 border border-amber-200'
+                }`}>
+                  <div className="flex items-center gap-3">
+                    <Phone className={`h-5 w-5 ${isPhoneVerified ? 'text-green-600' : 'text-amber-600'}`} />
+                    <div>
+                      <p className={`font-medium ${isPhoneVerified ? 'text-green-800' : 'text-amber-800'}`}>
+                        {isPhoneVerified ? 'Phone Verified' : 'Phone Verification Required'}
+                      </p>
+                      <p className={`text-sm ${isPhoneVerified ? 'text-green-700' : 'text-amber-700'}`}>
+                        {isPhoneVerified 
+                          ? 'Your phone number is verified. You can submit requests.' 
+                          : 'Verify your phone to submit quote requests to shops.'
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  {isPhoneVerified ? (
+                    <Badge className="bg-green-100 text-green-700">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Verified
+                    </Badge>
+                  ) : (
+                    <Button 
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowVerificationDialog(true)}
+                      className="border-amber-500 text-amber-700 hover:bg-amber-100"
+                    >
+                      <Phone className="h-4 w-4 mr-2" />
+                      Verify Now
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
@@ -289,11 +348,20 @@ export default function NewRFQPage() {
               <Button type="button" variant="outline" asChild>
                 <Link href="/dashboard/customer/rfqs">Cancel</Link>
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || !isPhoneVerified}
+                title={!isPhoneVerified ? 'Please verify your phone number first' : ''}
+              >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Submitting...
+                  </>
+                ) : !isPhoneVerified ? (
+                  <>
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    Verify Phone First
                   </>
                 ) : (
                   'Submit Request'
@@ -301,6 +369,22 @@ export default function NewRFQPage() {
               </Button>
             </div>
           </form>
+
+          {/* Phone Verification Dialog */}
+          <PhoneVerificationDialog
+            open={showVerificationDialog}
+            onOpenChange={setShowVerificationDialog}
+            phoneNumber={user?.phone || ''}
+            onVerified={() => {
+              refreshUser();
+              toast({
+                title: 'Phone Verified!',
+                description: 'You can now submit quote requests.',
+              });
+            }}
+            title="Verify Your Phone Number"
+            description="Phone verification is required to submit custom order requests. This helps shops contact you about your orders."
+          />
         </div>
       </DashboardLayout>
     </CustomerGuard>

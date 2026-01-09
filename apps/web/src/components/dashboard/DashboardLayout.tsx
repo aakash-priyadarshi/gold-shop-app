@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth, UserRole } from '@/hooks/useAuth';
@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import {
   Gem,
   LayoutDashboard,
@@ -27,22 +28,24 @@ import {
   Menu,
   X,
   ChevronDown,
-  Bell,
   Search,
   TrendingUp,
   Shield,
   ClipboardList,
   Heart,
   CreditCard,
+  UserCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { adminApi } from '@/lib/api';
 
 interface NavItem {
   label: string;
   href: string;
   icon: React.ElementType;
   roles: UserRole[];
-  badge?: number;
+  badge?: number | 'dynamic';
+  badgeKey?: string;
 }
 
 const navItems: NavItem[] = [
@@ -50,8 +53,10 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard/admin', icon: LayoutDashboard, roles: ['ADMIN'] },
   { label: 'Users', href: '/dashboard/admin/users', icon: Users, roles: ['ADMIN'] },
   { label: 'Shops', href: '/dashboard/admin/shops', icon: Store, roles: ['ADMIN'] },
-  { label: 'Verifications', href: '/dashboard/admin/verifications', icon: Shield, roles: ['ADMIN'], badge: 3 },
-  { label: 'Reports', href: '/dashboard/admin/reports', icon: FileText, roles: ['ADMIN'] },
+  { label: 'Verifications', href: '/dashboard/admin/verifications', icon: Shield, roles: ['ADMIN'], badge: 'dynamic', badgeKey: 'pendingVerifications' },
+  { label: 'Reports', href: '/dashboard/admin/reports', icon: FileText, roles: ['ADMIN'], badge: 'dynamic', badgeKey: 'openReports' },
+  { label: 'Profile', href: '/dashboard/admin/profile', icon: UserCircle, roles: ['ADMIN'] },
+  { label: 'Settings', href: '/dashboard/admin/settings', icon: Settings, roles: ['ADMIN'] },
   
   // Shopkeeper routes
   { label: 'Dashboard', href: '/dashboard/shop', icon: LayoutDashboard, roles: ['SHOPKEEPER'] },
@@ -64,11 +69,12 @@ const navItems: NavItem[] = [
   // Customer routes
   { label: 'Dashboard', href: '/dashboard/customer', icon: LayoutDashboard, roles: ['CUSTOMER'] },
   { label: 'My Orders', href: '/dashboard/customer/orders', icon: ShoppingCart, roles: ['CUSTOMER'] },
-  { label: 'My RFQs', href: '/dashboard/customer/rfq', icon: ClipboardList, roles: ['CUSTOMER'] },
+  { label: 'My RFQs', href: '/dashboard/customer/rfqs', icon: ClipboardList, roles: ['CUSTOMER'] },
   { label: 'Wishlist', href: '/dashboard/customer/wishlist', icon: Heart, roles: ['CUSTOMER'] },
   { label: 'Payments', href: '/dashboard/customer/payments', icon: CreditCard, roles: ['CUSTOMER'] },
   { label: 'Settings', href: '/dashboard/customer/settings', icon: Settings, roles: ['CUSTOMER'] },
 ];
+
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -78,8 +84,26 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, logout, isLoading } = useAuth();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
+
+  // Fetch dynamic badge counts for admin
+  useEffect(() => {
+    if (user?.role === 'ADMIN') {
+      adminApi.getStats()
+        .then(res => {
+          setBadgeCounts({
+            pendingVerifications: res.data.pendingVerifications || 0,
+            openReports: res.data.openReports || 0,
+          });
+        })
+        .catch(() => {
+          // Silently fail
+        });
+    }
+  }, [user?.role]);
 
   if (isLoading || !user) {
+
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-600"></div>
@@ -171,6 +195,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {userNavItems.map((item) => {
             const isActive = pathname === item.href;
+            const badgeCount = item.badge === 'dynamic' && item.badgeKey 
+              ? badgeCounts[item.badgeKey] 
+              : item.badge;
             return (
               <Link
                 key={item.href}
@@ -187,9 +214,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   <item.icon className="h-5 w-5" />
                   <span>{item.label}</span>
                 </div>
-                {item.badge && (
+                {badgeCount && Number(badgeCount) > 0 && (
                   <span className="px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded-full">
-                    {item.badge}
+                    {badgeCount}
                   </span>
                 )}
               </Link>
@@ -234,12 +261,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                2
-              </span>
-            </Button>
+            <NotificationDropdown />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

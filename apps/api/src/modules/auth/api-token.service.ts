@@ -14,6 +14,9 @@ export const API_TOKEN_SCOPES = {
 
 export type ApiTokenScope = keyof typeof API_TOKEN_SCOPES;
 
+// Encryption key from environment or generate one
+const ENCRYPTION_KEY = process.env.TOKEN_ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex').substring(0, 32);
+
 @Injectable()
 export class ApiTokenService {
   private readonly logger = new Logger(ApiTokenService.name);
@@ -34,6 +37,34 @@ export class ApiTokenService {
    */
   private hashToken(token: string): string {
     return crypto.createHash('sha256').update(token).digest('hex');
+  }
+
+  /**
+   * Encrypt token for temporary storage (viewable for 24h)
+   */
+  private encryptToken(token: string): string {
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY.padEnd(32, '0').substring(0, 32)), iv);
+    let encrypted = cipher.update(token, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    return iv.toString('hex') + ':' + encrypted;
+  }
+
+  /**
+   * Decrypt token from storage
+   */
+  private decryptToken(encryptedData: string): string {
+    try {
+      const [ivHex, encrypted] = encryptedData.split(':');
+      const iv = Buffer.from(ivHex, 'hex');
+      const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY.padEnd(32, '0').substring(0, 32)), iv);
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      return decrypted;
+    } catch (error) {
+      this.logger.error('Failed to decrypt token', error);
+      throw new BadRequestException('Token cannot be decrypted');
+    }
   }
 
   /**
@@ -66,6 +97,10 @@ export class ApiTokenService {
     
     // Calculate expiry
     const expiresAt = new Date(Date.now() + this.parseDuration(dto.duration));
+    
+    // Encrypt token for 24h viewing window
+    const encryptedToken = this.encryptToken(token);
+    const tokenViewableUntil = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
     // Create in database
     const apiToken = await this.prisma.apiToken.create({
@@ -76,6 +111,8 @@ export class ApiTokenService {
         tokenPrefix,
         scopes: validScopes,
         expiresAt,
+        encryptedToken,
+        tokenViewableUntil,
       },
     });
 
@@ -91,7 +128,40 @@ export class ApiTokenService {
       createdAt: apiToken.createdAt,
       isExpired: false,
       daysUntilExpiry: Math.ceil((expiresAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000)),
+      tokenViewableUntil,
       token, // Only returned at creation time!
+    };
+  }
+
+  /**
+   * Get token value if still within viewable window (24h)
+   */
+  async getTokenValue(userId: string, tokenId: string): Promise<{ token: string; viewableUntil: Date } | null> {
+    const apiToken = await this.prisma.apiToken.findFirst({
+      where: { 
+        id: tokenId, 
+        userId,
+        revokedAt: null,
+      },
+    });
+
+    if (!apiToken) {
+      throw new NotFoundException('Token not found');
+    }
+
+    // Check if within viewing window
+    if (!apiToken.encryptedToken || !apiToken.tokenViewableUntil) {
+      return null; // Token was created before this feature
+    }
+
+    if (new Date() > apiToken.tokenViewableUntil) {
+      return null; // Viewing window expired
+    }
+
+    const token = this.decryptToken(apiToken.encryptedToken);
+    return {
+      token,
+      viewableUntil: apiToken.tokenViewableUntil,
     };
   }
 
@@ -240,6 +310,7 @@ export class ApiTokenService {
     expiresAt: Date;
     lastUsedAt: Date | null;
     createdAt: Date;
+    tokenViewableUntil?: Date | null;
   }): ApiTokenResponseDto {
     const now = new Date();
     const isExpired = token.expiresAt < now;
@@ -257,6 +328,7 @@ export class ApiTokenService {
       createdAt: token.createdAt,
       isExpired,
       daysUntilExpiry: Math.max(0, daysUntilExpiry),
+      tokenViewableUntil: token.tokenViewableUntil || null,
     };
   }
 }

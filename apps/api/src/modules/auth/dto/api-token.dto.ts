@@ -70,6 +70,9 @@ export class ApiTokenResponseDto {
 
   @ApiProperty()
   daysUntilExpiry: number;
+
+  @ApiProperty({ nullable: true, description: 'Token is viewable until this time (24h after creation)' })
+  tokenViewableUntil: Date | null;
 }
 
 export class CreateApiTokenResponseDto extends ApiTokenResponseDto {

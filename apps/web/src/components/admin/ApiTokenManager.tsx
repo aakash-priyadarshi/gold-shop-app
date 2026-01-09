@@ -33,6 +33,8 @@ import {
   ExternalLink,
   AlertTriangle,
   RefreshCw,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import api from '@/lib/api';
@@ -47,6 +49,7 @@ interface ApiToken {
   createdAt: string;
   isExpired: boolean;
   daysUntilExpiry: number;
+  tokenViewableUntil?: string; // New field
 }
 
 interface TokenStats {
@@ -83,6 +86,11 @@ export function ApiTokenManager() {
   const [tokenName, setTokenName] = useState('');
   const [tokenDuration, setTokenDuration] = useState('90d');
   const [selectedScopes, setSelectedScopes] = useState<string[]>(['health:read', 'market-rates:refresh']);
+  
+  // View token state
+  const [viewingTokenId, setViewingTokenId] = useState<string | null>(null);
+  const [viewedToken, setViewedToken] = useState<string | null>(null);
+  const [loadingTokenView, setLoadingTokenView] = useState(false);
 
   useEffect(() => {
     if (user?.role === 'ADMIN') {
@@ -184,6 +192,43 @@ export function ApiTokenManager() {
       title: 'Copied!',
       description: 'Token copied to clipboard',
     });
+  };
+
+  const handleViewToken = async (tokenId: string) => {
+    setLoadingTokenView(true);
+    setViewingTokenId(tokenId);
+    try {
+      const response = await api.get(`/api/auth/api-tokens/${tokenId}/value`);
+      if (response.data.available) {
+        setViewedToken(response.data.token);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Token Not Available',
+          description: response.data.message || 'The viewing window has expired.',
+        });
+        setViewingTokenId(null);
+      }
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to retrieve token',
+        description: error.response?.data?.message || 'Could not retrieve token value',
+      });
+      setViewingTokenId(null);
+    } finally {
+      setLoadingTokenView(false);
+    }
+  };
+
+  const closeViewToken = () => {
+    setViewingTokenId(null);
+    setViewedToken(null);
+  };
+
+  const isTokenViewable = (token: ApiToken) => {
+    if (!token.tokenViewableUntil) return false;
+    return new Date(token.tokenViewableUntil) > new Date();
   };
 
   const formatDate = (dateString: string) => {
@@ -463,9 +508,36 @@ export function ApiTokenManager() {
                   <TableRow key={token.id}>
                     <TableCell className="font-medium">{token.name}</TableCell>
                     <TableCell>
-                      <code className="text-sm bg-gray-100 px-2 py-1 rounded">
-                        {token.tokenPrefix}...
-                      </code>
+                      {viewingTokenId === token.id && viewedToken ? (
+                        <div className="flex items-center gap-2">
+                          <code className="text-sm bg-green-100 px-2 py-1 rounded break-all max-w-[200px]">
+                            {viewedToken}
+                          </code>
+                          <Button size="sm" variant="ghost" onClick={() => copyToClipboard(viewedToken)}>
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={closeViewToken}>
+                            <EyeOff className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <code className="text-sm bg-gray-100 px-2 py-1 rounded">
+                            {token.tokenPrefix}...
+                          </code>
+                          {isTokenViewable(token) && (
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => handleViewToken(token.id)}
+                              disabled={loadingTokenView}
+                              title="View full token (available for 24h after creation)"
+                            >
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">

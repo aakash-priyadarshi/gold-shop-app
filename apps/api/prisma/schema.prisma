@@ -118,6 +118,10 @@ model ApiToken {
   revokedAt    DateTime?                 // Null if active
   createdAt    DateTime  @default(now())
   
+  // Store encrypted token for recovery (viewable for 24 hours only)
+  encryptedToken    String?             // AES-256 encrypted token
+  tokenViewableUntil DateTime?          // Token is viewable until this time (24h after creation)
+  
   @@index([userId])
   @@index([tokenHash])
   @@index([tokenPrefix])
@@ -1461,5 +1465,53 @@ model Report {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   details     Json?
+}
+
+// ══════════════════════════════════════
+// OTP VERIFICATION
+// ══════════════════════════════════════
+
+enum OtpType {
+  EMAIL_VERIFICATION
+  PHONE_VERIFICATION
+  PASSWORD_RESET
+  LOGIN_2FA
+}
+
+model OtpVerification {
+  id          String   @id @default(uuid())
+  userId      String
+  type        OtpType
+  target      String   // Email or phone number
+  code        String   // Hashed OTP code
+  attempts    Int      @default(0)
+  maxAttempts Int      @default(3)
+  expiresAt   DateTime
+  verifiedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, type])
+  @@index([target, type])
+  @@index([expiresAt])
+}
+
+// ══════════════════════════════════════
+// SYSTEM NOTIFICATIONS (for admin broadcast)
+// ══════════════════════════════════════
+
+model SystemNotification {
+  id          String   @id @default(uuid())
+  title       String
+  message     String
+  type        String   // 'INFO', 'WARNING', 'SUCCESS', 'ERROR'
+  targetRoles String[] // Empty = all users
+  isActive    Boolean  @default(true)
+  expiresAt   DateTime?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([expiresAt])
 }
 

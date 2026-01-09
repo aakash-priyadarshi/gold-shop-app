@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { AdminGuard } from '@/components/auth/RouteGuard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +8,23 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Settings,
   Percent,
@@ -17,7 +34,12 @@ import {
   Bell,
   Database,
   RefreshCw,
+  Loader2,
+  Send,
 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { adminApi } from '@/lib/api';
+
 
 const supportedRegions = [
   { code: 'NP', name: 'Nepal', currency: 'NPR', flag: '🇳🇵' },
@@ -31,6 +53,85 @@ const supportedRegions = [
 const supportedCurrencies = ['NPR', 'INR', 'USD', 'GBP', 'AED', 'EUR'];
 
 export default function AdminSettingsPage() {
+  const [refreshingRates, setRefreshingRates] = useState(false);
+  const [clearingCache, setClearingCache] = useState(false);
+  const [sendingNotification, setSendingNotification] = useState(false);
+  const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
+  const [notificationData, setNotificationData] = useState({
+    title: '',
+    message: '',
+    type: 'INFO',
+    targetRoles: [] as string[],
+  });
+
+  const handleRefreshRates = async () => {
+    setRefreshingRates(true);
+    try {
+      await adminApi.refreshMarketRates();
+      toast({
+        title: 'Market Rates Refreshed',
+        description: 'Latest market rates have been fetched successfully.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Refresh Failed',
+        description: 'Could not refresh market rates. Try again later.',
+      });
+    } finally {
+      setRefreshingRates(false);
+    }
+  };
+
+  const handleClearCache = async () => {
+    setClearingCache(true);
+    try {
+      await adminApi.clearCache();
+      toast({
+        title: 'Cache Cleared',
+        description: 'Platform cache has been cleared successfully.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Clear Failed',
+        description: 'Could not clear cache. Try again later.',
+      });
+    } finally {
+      setClearingCache(false);
+    }
+  };
+
+  const handleSendNotification = async () => {
+    if (!notificationData.title || !notificationData.message) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing Fields',
+        description: 'Please fill in title and message.',
+      });
+      return;
+    }
+
+    setSendingNotification(true);
+    try {
+      await adminApi.broadcastNotification(notificationData);
+      toast({
+        title: 'Notification Sent',
+        description: 'System notification has been broadcasted.',
+      });
+      setNotificationDialogOpen(false);
+      setNotificationData({ title: '', message: '', type: 'INFO', targetRoles: [] });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Send Failed',
+        description: 'Could not send notification. Try again later.',
+      });
+    } finally {
+      setSendingNotification(false);
+    }
+  };
+
   return (
     <AdminGuard>
       <DashboardLayout>
@@ -233,22 +334,118 @@ export default function AdminSettingsPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-4">
-                  <Button variant="outline" disabled>
-                    <RefreshCw className="h-4 w-4 mr-2" />
+                  <Button 
+                    variant="outline" 
+                    onClick={handleRefreshRates}
+                    disabled={refreshingRates}
+                  >
+                    {refreshingRates ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                    )}
                     Refresh Market Rates
                   </Button>
-                  <Button variant="outline" disabled>
-                    <Database className="h-4 w-4 mr-2" />
+                  <Button 
+                    variant="outline" 
+                    onClick={handleClearCache}
+                    disabled={clearingCache}
+                  >
+                    {clearingCache ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Database className="h-4 w-4 mr-2" />
+                    )}
                     Clear Cache
                   </Button>
-                  <Button variant="outline" disabled>
-                    <Bell className="h-4 w-4 mr-2" />
-                    Send System Notification
-                  </Button>
+                  <Dialog open={notificationDialogOpen} onOpenChange={setNotificationDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline">
+                        <Bell className="h-4 w-4 mr-2" />
+                        Send System Notification
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Send System Notification</DialogTitle>
+                        <DialogDescription>
+                          Broadcast a notification to all users or specific roles.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label>Title</Label>
+                          <Input
+                            placeholder="Notification title"
+                            value={notificationData.title}
+                            onChange={(e) => setNotificationData(prev => ({ ...prev, title: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Message</Label>
+                          <Textarea
+                            placeholder="Notification message..."
+                            rows={3}
+                            value={notificationData.message}
+                            onChange={(e) => setNotificationData(prev => ({ ...prev, message: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Type</Label>
+                          <Select
+                            value={notificationData.type}
+                            onValueChange={(value) => setNotificationData(prev => ({ ...prev, type: value }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="INFO">Information</SelectItem>
+                              <SelectItem value="WARNING">Warning</SelectItem>
+                              <SelectItem value="SUCCESS">Success</SelectItem>
+                              <SelectItem value="ERROR">Error</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Target Roles (leave empty for all)</Label>
+                          <Select
+                            value={notificationData.targetRoles[0] || 'all'}
+                            onValueChange={(value) => setNotificationData(prev => ({ 
+                              ...prev, 
+                              targetRoles: value === 'all' ? [] : [value] 
+                            }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="All Users" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Users</SelectItem>
+                              <SelectItem value="ADMIN">Admins Only</SelectItem>
+                              <SelectItem value="SHOPKEEPER">Shopkeepers Only</SelectItem>
+                              <SelectItem value="CUSTOMER">Customers Only</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setNotificationDialogOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button onClick={handleSendNotification} disabled={sendingNotification}>
+                          {sendingNotification ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4 mr-2" />
+                          )}
+                          Send
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                 </div>
                 <p className="text-sm text-muted-foreground mt-4">
-                  These actions are available through the CI/CD pipeline.
-                  Use GitHub Actions for manual operations.
+                  These actions affect the entire platform. Use with caution.
                 </p>
               </CardContent>
             </Card>
