@@ -1,5 +1,44 @@
-import { IsEmail, IsString, MinLength, IsOptional, IsEnum } from 'class-validator';
+import { IsEmail, IsString, MinLength, IsOptional, IsEnum, ValidateNested, IsNotEmpty } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+
+// Shop creation DTO for shopkeeper registration
+export class CreateShopDto {
+  @ApiProperty({ example: 'Ramesh Gold House' })
+  @IsString()
+  @IsNotEmpty()
+  shopName: string;
+
+  @ApiProperty({ example: 'NP', description: 'Country code: NP, IN, AE, UK, EU, US' })
+  @IsString()
+  @IsNotEmpty()
+  country: string;
+
+  @ApiProperty({ example: 'NPR', description: 'Currency code: NPR, INR, AED, GBP, EUR, USD' })
+  @IsString()
+  @IsNotEmpty()
+  currency: string;
+
+  @ApiProperty({ example: 'Kathmandu' })
+  @IsString()
+  @IsNotEmpty()
+  city: string;
+
+  @ApiProperty({ example: 'Thamel, Kathmandu' })
+  @IsString()
+  @IsNotEmpty()
+  address: string;
+
+  @ApiProperty({ example: '+9779812345678' })
+  @IsString()
+  @IsNotEmpty()
+  contactPhone: string;
+
+  @ApiPropertyOptional({ example: 'shop@example.com' })
+  @IsOptional()
+  @IsEmail()
+  contactEmail?: string;
+}
 
 export class RegisterDto {
   @ApiProperty({ example: 'user@example.com' })
@@ -32,4 +71,13 @@ export class RegisterDto {
   @IsOptional()
   @IsEnum(['en', 'ne', 'hi'])
   preferredLanguage?: string;
+
+  @ApiPropertyOptional({ 
+    description: 'Required for SHOPKEEPER registration',
+    type: CreateShopDto 
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateShopDto)
+  shop?: CreateShopDto;
 }

@@ -12,9 +12,14 @@
     "db:generate": "cd apps/api && npx prisma generate",
     "db:migrate": "cd apps/api && npx prisma migrate dev",
     "db:seed": "cd apps/api && npx prisma db seed",
-    "db:studio": "cd apps/api && npx prisma studio"
+    "db:studio": "cd apps/api && npx prisma studio",
+    "smoke-test": "npx tsx scripts/smoke-test-backend.ts",
+    "check-migrations": "npx tsx scripts/check-migrations-safe.ts",
+    "clear-cache": "npx tsx scripts/clear-metal-cache.ts",
+    "warm-cache": "npx tsx scripts/warm-market-cache.ts"
   },
   "devDependencies": {
+    "tsx": "^4.21.0",
     "turbo": "^2.0.0",
     "typescript": "^5.3.0"
   },

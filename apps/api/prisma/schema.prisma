@@ -69,6 +69,8 @@ model User {
   rfqRequests       RfqRequest[] @relation("CustomerRfqs")
   auditLogs         AuditLog[]
   notifications     Notification[]
+  refreshTokens     RefreshToken[]
+  apiTokens         ApiToken[]
   
   // Timestamps
   emailVerifiedAt   DateTime?
@@ -82,6 +84,43 @@ model User {
   @@index([role])
 }
 
+// Refresh Token for JWT rotation
+model RefreshToken {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash    String    @unique  // Hashed token for security
+  userAgent    String?
+  ipAddress    String?
+  expiresAt    DateTime
+  revokedAt    DateTime?          // Null if active, timestamp if revoked
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+}
+
+// API Token for CI/CD and external integrations
+model ApiToken {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String                    // Human-readable name (e.g., "GitHub Actions CI/CD")
+  tokenHash    String    @unique         // Hashed token for security
+  tokenPrefix  String                    // First 8 chars of token for identification
+  scopes       String[]  @default([])    // Permissions: ["market-rates:refresh", "health:read"]
+  expiresAt    DateTime                  // Long-lived: 30, 90, 365 days
+  lastUsedAt   DateTime?
+  revokedAt    DateTime?                 // Null if active
+  createdAt    DateTime  @default(now())
+  
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([tokenPrefix])
+}
+
+// Legacy session model - kept for backward compatibility
 model Session {
   id           String   @id @default(uuid())
   userId       String

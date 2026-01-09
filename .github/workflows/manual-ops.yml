@@ -1,0 +1,292 @@
+# Manual Operations Pipeline
+# Provides manual triggers for cache management, DB operations, and debugging
+
+name: Manual Operations
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: 'Operation to perform'
+        required: true
+        type: choice
+        options:
+          - clear-metal-cache
+          - warm-market-cache
+          - db-health-check
+          - full-smoke-test
+          - force-refresh-rates
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        default: 'production'
+        options:
+          - production
+          - staging
+      region:
+        description: 'Region for cache operations (NP, IN, AE, UK, EU, US)'
+        required: false
+        default: 'NP'
+      currency:
+        description: 'Currency for cache operations (NPR, INR, AED, GBP, EUR, USD)'
+        required: false
+        default: 'NPR'
+      dry_run:
+        description: 'Dry run (no actual changes)'
+        type: boolean
+        default: false
+
+env:
+  NODE_VERSION: '18'
+  PNPM_VERSION: '10.27.0'
+
+jobs:
+  # ══════════════════════════════════════════════════════════
+  # Clear Metal Rate Cache
+  # ══════════════════════════════════════════════════════════
+  clear-cache:
+    name: 🧹 Clear Metal Rate Cache
+    runs-on: ubuntu-latest
+    if: inputs.operation == 'clear-metal-cache'
+    steps:
+      - name: Set API URL
+        id: set-url
+        run: |
+          if [[ "${{ inputs.environment }}" == "production" ]]; then
+            echo "api_url=${{ secrets.PRODUCTION_API_URL }}" >> $GITHUB_OUTPUT
+          else
+            echo "api_url=${{ secrets.STAGING_API_URL }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Clear Cache
+        run: |
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            echo "::notice::DRY RUN - Would clear cache for ${{ inputs.region }}:${{ inputs.currency }}"
+            exit 0
+          fi
+          
+          echo "Clearing market rate cache for ${{ inputs.region }}:${{ inputs.currency }}..."
+          
+          RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.ADMIN_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            "${{ steps.set-url.outputs.api_url }}/market-rates/refresh" \
+            -d '{"region": "${{ inputs.region }}", "currency": "${{ inputs.currency }}"}')
+          
+          echo "Response: $RESPONSE"
+          
+          if [[ "$RESPONSE" == *"error"* ]]; then
+            echo "::error::Cache clear failed"
+            exit 1
+          fi
+          
+          echo "::notice::✅ Cache cleared successfully"
+
+  # ══════════════════════════════════════════════════════════
+  # Warm Market Cache (all regions)
+  # ══════════════════════════════════════════════════════════
+  warm-cache:
+    name: 🔥 Warm Market Cache
+    runs-on: ubuntu-latest
+    if: inputs.operation == 'warm-market-cache'
+    steps:
+      - name: Set API URL
+        id: set-url
+        run: |
+          if [[ "${{ inputs.environment }}" == "production" ]]; then
+            echo "api_url=${{ secrets.PRODUCTION_API_URL }}" >> $GITHUB_OUTPUT
+          else
+            echo "api_url=${{ secrets.STAGING_API_URL }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Warm Cache for All Regions
+        run: |
+          REGIONS=("NP:NPR" "IN:INR" "AE:AED" "UK:GBP" "EU:EUR" "US:USD")
+          
+          for combo in "${REGIONS[@]}"; do
+            IFS=':' read -r region currency <<< "$combo"
+            
+            if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+              echo "DRY RUN - Would warm cache for $region:$currency"
+              continue
+            fi
+            
+            echo "Warming cache for $region:$currency..."
+            
+            # Just fetch the rates to warm the cache
+            RESPONSE=$(curl -s "${{ steps.set-url.outputs.api_url }}/market-rates?region=$region&currency=$currency")
+            
+            if [[ "$RESPONSE" == *"gold24k"* ]]; then
+              echo "✅ $region:$currency warmed"
+            else
+              echo "⚠️ $region:$currency may have issues"
+            fi
+            
+            sleep 2  # Rate limit protection
+          done
+          
+          echo "::notice::Cache warming complete"
+
+  # ══════════════════════════════════════════════════════════
+  # Database Health Check
+  # ══════════════════════════════════════════════════════════
+  db-health:
+    name: 🗃️ Database Health Check
+    runs-on: ubuntu-latest
+    if: inputs.operation == 'db-health-check'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        working-directory: apps/api
+        run: npx prisma generate
+
+      - name: Check Database Connection
+        working-directory: apps/api
+        run: |
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            echo "::notice::DRY RUN - Would check database connection"
+            exit 0
+          fi
+          
+          echo "Checking database connection..."
+          npx prisma db execute --stdin <<< "SELECT 1 as health_check;"
+          echo "::notice::✅ Database connection successful"
+        env:
+          DATABASE_URL: ${{ inputs.environment == 'production' && secrets.DATABASE_URL || secrets.STAGING_DATABASE_URL }}
+
+      - name: Check Migration Status
+        working-directory: apps/api
+        run: |
+          echo "Checking migration status..."
+          npx prisma migrate status
+        env:
+          DATABASE_URL: ${{ inputs.environment == 'production' && secrets.DATABASE_URL || secrets.STAGING_DATABASE_URL }}
+        continue-on-error: true
+
+  # ══════════════════════════════════════════════════════════
+  # Full Smoke Test
+  # ══════════════════════════════════════════════════════════
+  smoke-test:
+    name: 💨 Full Smoke Test
+    runs-on: ubuntu-latest
+    if: inputs.operation == 'full-smoke-test'
+    steps:
+      - name: Set API URL
+        id: set-url
+        run: |
+          if [[ "${{ inputs.environment }}" == "production" ]]; then
+            echo "api_url=${{ secrets.PRODUCTION_API_URL }}" >> $GITHUB_OUTPUT
+          else
+            echo "api_url=${{ secrets.STAGING_API_URL }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Health Endpoint
+        run: |
+          echo "Testing /health..."
+          curl -f "${{ steps.set-url.outputs.api_url }}/health" && echo "✅ Health OK" || echo "⚠️ Health endpoint not available"
+        continue-on-error: true
+
+      - name: Market Rates Endpoint
+        run: |
+          echo "Testing /market-rates..."
+          RESPONSE=$(curl -s "${{ steps.set-url.outputs.api_url }}/market-rates?region=NP&currency=NPR")
+          
+          if [[ "$RESPONSE" == *"gold24k"* ]]; then
+            echo "✅ Market rates OK"
+            echo "Response preview: $(echo $RESPONSE | head -c 500)"
+          else
+            echo "⚠️ Market rates response unexpected"
+            echo "$RESPONSE"
+          fi
+        continue-on-error: true
+
+      - name: Market Rates Status
+        run: |
+          echo "Testing /market-rates/status..."
+          RESPONSE=$(curl -s "${{ steps.set-url.outputs.api_url }}/market-rates/status")
+          echo "Status: $RESPONSE"
+        continue-on-error: true
+
+      - name: Auth Protection Check
+        run: |
+          echo "Testing auth protection..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.set-url.outputs.api_url }}/auth/profile")
+          
+          if [[ "$STATUS" == "401" ]]; then
+            echo "✅ Auth protection working (401 without token)"
+          else
+            echo "⚠️ Unexpected auth response: $STATUS"
+          fi
+        continue-on-error: true
+
+      - name: Generate Test Report
+        run: |
+          echo "## 💨 Smoke Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+
+  # ══════════════════════════════════════════════════════════
+  # Force Refresh All Rates
+  # ══════════════════════════════════════════════════════════
+  force-refresh:
+    name: 🔄 Force Refresh All Rates
+    runs-on: ubuntu-latest
+    if: inputs.operation == 'force-refresh-rates'
+    steps:
+      - name: Set API URL
+        id: set-url
+        run: |
+          if [[ "${{ inputs.environment }}" == "production" ]]; then
+            echo "api_url=${{ secrets.PRODUCTION_API_URL }}" >> $GITHUB_OUTPUT
+          else
+            echo "api_url=${{ secrets.STAGING_API_URL }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Force Refresh All Regions
+        run: |
+          REGIONS=("NP:NPR" "IN:INR" "AE:AED" "UK:GBP" "EU:EUR" "US:USD")
+          
+          for combo in "${REGIONS[@]}"; do
+            IFS=':' read -r region currency <<< "$combo"
+            
+            if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+              echo "DRY RUN - Would force refresh $region:$currency"
+              continue
+            fi
+            
+            echo "Force refreshing $region:$currency..."
+            
+            RESPONSE=$(curl -s -X POST \
+              -H "Authorization: Bearer ${{ secrets.ADMIN_API_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              "${{ steps.set-url.outputs.api_url }}/market-rates/refresh" \
+              -d "{\"region\": \"$region\", \"currency\": \"$currency\"}")
+            
+            if [[ "$RESPONSE" == *"error"* ]]; then
+              echo "⚠️ $region:$currency refresh may have issues"
+            else
+              echo "✅ $region:$currency refreshed"
+            fi
+            
+            sleep 3  # Rate limit protection
+          done
+          
+          echo "::notice::Force refresh complete"

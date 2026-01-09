@@ -20,6 +20,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { JobsModule } from './modules/jobs/jobs.module';
 import { MarketRatesModule } from './modules/market-rates/market-rates.module';
 import { PricingModule } from './modules/pricing/pricing.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { PricingModule } from './modules/pricing/pricing.module';
     PricingModule,
     AuditModule,
     JobsModule,
+    HealthModule,
   ],
 })
 export class AppModule {}

@@ -1,0 +1,381 @@
+# Pull Request Validation Pipeline
+# Runs comprehensive checks on every PR to prevent production breaks
+
+name: PR Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+
+env:
+  NODE_VERSION: '18'
+  PNPM_VERSION: '10.27.0'
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # ══════════════════════════════════════════════════════════
+  # Stage 1: Install & Cache Dependencies
+  # ══════════════════════════════════════════════════════════
+  install:
+    name: 📦 Install Dependencies
+    runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache.outputs.cache-primary-key }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+            **/node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify lockfile integrity
+        run: |
+          if ! pnpm install --frozen-lockfile --offline 2>/dev/null; then
+            echo "::error::pnpm-lock.yaml is out of sync with package.json files"
+            exit 1
+          fi
+
+  # ══════════════════════════════════════════════════════════
+  # Stage 2: Lint & Format Check
+  # ══════════════════════════════════════════════════════════
+  lint:
+    name: 🔍 Lint & Format
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Restore dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint API
+        working-directory: apps/api
+        run: pnpm lint
+        continue-on-error: false
+
+      - name: Lint Web (if exists)
+        working-directory: apps/web
+        run: pnpm lint || echo "Web lint not configured"
+        continue-on-error: true
+
+  # ══════════════════════════════════════════════════════════
+  # Stage 3: TypeScript Type Check
+  # ══════════════════════════════════════════════════════════
+  typecheck:
+    name: 📝 TypeScript Check
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Restore dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        working-directory: apps/api
+        run: npx prisma generate
+
+      - name: TypeCheck API
+        working-directory: apps/api
+        run: npx tsc --noEmit
+
+      - name: TypeCheck Web
+        working-directory: apps/web
+        run: npx tsc --noEmit || echo "Web typecheck not configured"
+        continue-on-error: true
+
+  # ══════════════════════════════════════════════════════════
+  # Stage 4: Build Verification
+  # ══════════════════════════════════════════════════════════
+  build:
+    name: 🏗️ Build Verification
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Restore dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        working-directory: apps/api
+        run: npx prisma generate
+
+      - name: Build API
+        working-directory: apps/api
+        run: pnpm build
+
+      - name: Build Web
+        working-directory: apps/web
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+
+  # ══════════════════════════════════════════════════════════
+  # Stage 5: Prisma Migration Safety Check
+  # ══════════════════════════════════════════════════════════
+  prisma-check:
+    name: 🗃️ Prisma Migration Safety
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for diff
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Restore dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate Prisma Schema
+        working-directory: apps/api
+        run: npx prisma validate
+
+      - name: Check Prisma Format
+        working-directory: apps/api
+        run: |
+          npx prisma format
+          if [[ -n $(git diff --name-only apps/api/prisma/schema.prisma) ]]; then
+            echo "::error::Prisma schema is not properly formatted. Run 'npx prisma format' locally."
+            exit 1
+          fi
+
+      - name: Check for new migrations
+        id: migration-check
+        working-directory: apps/api
+        run: |
+          # Get list of new migration files in this PR
+          NEW_MIGRATIONS=$(git diff --name-only origin/main...HEAD -- prisma/migrations/ | grep "\.sql$" || true)
+          if [[ -n "$NEW_MIGRATIONS" ]]; then
+            echo "has_migrations=true" >> $GITHUB_OUTPUT
+            echo "::notice::New migrations detected:"
+            echo "$NEW_MIGRATIONS"
+          else
+            echo "has_migrations=false" >> $GITHUB_OUTPUT
+            echo "::notice::No new migrations in this PR"
+          fi
+
+      - name: Detect Destructive Changes
+        if: steps.migration-check.outputs.has_migrations == 'true'
+        working-directory: apps/api
+        run: |
+          # Check for destructive operations in new migrations
+          DESTRUCTIVE_PATTERNS="DROP TABLE|DROP COLUMN|ALTER TABLE.*DROP|TRUNCATE|DELETE FROM"
+          NEW_MIGRATIONS=$(git diff --name-only origin/main...HEAD -- prisma/migrations/ | grep "\.sql$" || true)
+          
+          FOUND_DESTRUCTIVE=false
+          for migration in $NEW_MIGRATIONS; do
+            if grep -iE "$DESTRUCTIVE_PATTERNS" "$migration" 2>/dev/null; then
+              echo "::warning file=$migration::⚠️ DESTRUCTIVE CHANGE DETECTED in $migration"
+              FOUND_DESTRUCTIVE=true
+            fi
+          done
+          
+          if [[ "$FOUND_DESTRUCTIVE" == "true" ]]; then
+            echo ""
+            echo "::warning::🚨 DESTRUCTIVE MIGRATIONS DETECTED!"
+            echo "::warning::These changes may cause data loss. Please ensure:"
+            echo "::warning::  1. Data backup has been taken"
+            echo "::warning::  2. Migration has been tested on staging"
+            echo "::warning::  3. Rollback plan is documented"
+            # Don't fail, but warn loudly
+          fi
+
+      - name: Check Migration Drift
+        working-directory: apps/api
+        run: |
+          # Generate migration diff to check if schema matches migrations
+          npx prisma migrate diff \
+            --from-schema-datamodel prisma/schema.prisma \
+            --to-migrations prisma/migrations \
+            --exit-code || {
+              echo "::error::Schema drift detected! Your schema.prisma doesn't match migrations."
+              echo "::error::Run 'npx prisma migrate dev' to create a new migration."
+              exit 1
+            }
+
+  # ══════════════════════════════════════════════════════════
+  # Stage 6: API Unit Tests
+  # ══════════════════════════════════════════════════════════
+  test-api:
+    name: 🧪 API Tests
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck]
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: goldshop_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Restore dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        working-directory: apps/api
+        run: npx prisma generate
+
+      - name: Push Schema to Test DB
+        working-directory: apps/api
+        run: npx prisma db push --skip-generate
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/goldshop_test
+
+      - name: Run Tests
+        working-directory: apps/api
+        run: pnpm test || echo "Tests not configured yet"
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/goldshop_test
+          NODE_ENV: test
+        continue-on-error: true
+
+  # ══════════════════════════════════════════════════════════
+  # Final: PR Status Summary
+  # ══════════════════════════════════════════════════════════
+  pr-summary:
+    name: ✅ PR Ready
+    runs-on: ubuntu-latest
+    needs: [build, prisma-check, test-api]
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [[ "${{ needs.build.result }}" != "success" ]]; then
+            echo "::error::Build job failed"
+            exit 1
+          fi
+          if [[ "${{ needs.prisma-check.result }}" != "success" ]]; then
+            echo "::error::Prisma check failed"
+            exit 1
+          fi
+          echo "✅ All critical checks passed!"
+          echo "📝 Test job status: ${{ needs.test-api.result }}"

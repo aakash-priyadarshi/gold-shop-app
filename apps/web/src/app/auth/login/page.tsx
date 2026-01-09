@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -11,8 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { authApi } from '@/lib/api';
-import { Gem, Loader2 } from 'lucide-react';
+import { useAuth, getDashboardRoute } from '@/hooks/useAuth';
+import { Gem, Loader2, AlertCircle } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -23,8 +23,27 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
+  const { login, isAuthenticated, user, isLoading: authLoading, error, clearError } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const redirect = searchParams.get('redirect');
+      if (redirect) {
+        router.push(decodeURIComponent(redirect));
+      } else {
+        router.push(getDashboardRoute(user.role));
+      }
+    }
+  }, [isAuthenticated, user, router, searchParams]);
+
+  // Clear error on unmount
+  useEffect(() => {
+    return () => clearError();
+  }, [clearError]);
 
   const {
     register,
@@ -36,36 +55,33 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
+    clearError();
+    
     try {
-      const response = await authApi.login(data);
-      const { accessToken, user } = response.data;
-
-      // Store token
-      localStorage.setItem('token', accessToken);
-
+      await login(data.email, data.password);
       toast({
         title: 'Welcome back!',
-        description: `Logged in as ${user.name}`,
+        description: 'You have successfully signed in.',
       });
-
-      // Redirect based on role
-      if (user.role === 'SHOPKEEPER') {
-        router.push('/shop/manage');
-      } else if (user.role === 'ADMIN') {
-        router.push('/admin');
-      } else {
-        router.push('/dashboard');
-      }
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Login failed',
-        description: error.response?.data?.message || 'Invalid credentials',
+        description: error.message || 'Invalid credentials',
       });
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Don't render form if already authenticated
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loader2 className="h-8 w-8 animate-spin text-gold-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
@@ -83,6 +99,12 @@ export default function LoginPage() {
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
+            {error && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                <AlertCircle className="h-4 w-4" />
+                {error}
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
