@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -58,7 +58,7 @@ const countryOptions = [
   { value: 'AE', label: '🇦🇪 UAE', currency: 'AED' },
 ];
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -476,5 +476,21 @@ export default function RegisterPage() {
         </CardFooter>
       </Card>
     </div>
+  );
+}
+
+function RegisterLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <Loader2 className="h-8 w-8 animate-spin text-gold-600" />
+    </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<RegisterLoading />}>
+      <RegisterForm />
+    </Suspense>
   );
 }
