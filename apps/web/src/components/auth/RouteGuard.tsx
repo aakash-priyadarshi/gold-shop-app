@@ -84,6 +84,9 @@ export function ShopkeeperGuard({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Alias for ShopkeeperGuard
+export const ShopGuard = ShopkeeperGuard;
+
 export function CustomerGuard({ children }: { children: React.ReactNode }) {
   return (
     <RouteGuard allowedRoles={['CUSTOMER']} requireAuth={true}>
