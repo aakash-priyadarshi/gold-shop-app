@@ -20,54 +20,87 @@ import {
   Key,
 } from 'lucide-react';
 
-// Mock data - replace with real API calls
-const stats = [
-  {
-    title: 'Total Users',
-    value: '1,234',
-    change: '+12%',
-    changeType: 'positive' as const,
-    icon: Users,
-    description: 'Active users this month',
-  },
-  {
-    title: 'Active Shops',
-    value: '56',
-    change: '+3',
-    changeType: 'positive' as const,
-    icon: Store,
-    description: 'Verified shops',
-  },
-  {
-    title: 'Total Orders',
-    value: '892',
-    change: '+18%',
-    changeType: 'positive' as const,
-    icon: ShoppingCart,
-    description: 'Orders this month',
-  },
-  {
-    title: 'Revenue',
-    value: 'NPR 45.2L',
-    change: '+8%',
-    changeType: 'positive' as const,
-    icon: DollarSign,
-    description: 'Platform revenue',
-  },
-];
 
-const pendingVerifications = [
-  { id: '1', shopName: 'Shrestha Gold House', owner: 'Ramesh Shrestha', date: '2024-01-15', location: 'Kathmandu' },
-  { id: '2', shopName: 'Nepal Jewellers', owner: 'Sita Sharma', date: '2024-01-14', location: 'Pokhara' },
-  { id: '3', shopName: 'Golden Nepal', owner: 'Bikash Thapa', date: '2024-01-13', location: 'Lalitpur' },
-];
+import { useEffect, useState } from 'react';
+import api from '@/lib/api';
 
-const recentActivity = [
-  { id: '1', type: 'user_registered', message: 'New customer registered', user: 'Anita Gurung', time: '5 min ago' },
-  { id: '2', type: 'shop_verified', message: 'Shop verified', user: 'Royal Gold', time: '1 hour ago' },
-  { id: '3', type: 'order_completed', message: 'Order completed', user: 'Order #12345', time: '2 hours ago' },
-  { id: '4', type: 'rfq_created', message: 'New RFQ request', user: 'Custom Ring Design', time: '3 hours ago' },
-];
+export default function AdminDashboard() {
+  const [stats, setStats] = useState<any[]>([]);
+  const [pendingVerifications, setPendingVerifications] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchDashboardData() {
+      setLoading(true);
+      try {
+        // Fetch stats (users, shops, orders, revenue)
+        const usersRes = await api.get('/api/users?page=1&pageSize=1');
+        const shopsRes = await api.get('/api/shops?page=1&pageSize=1');
+        const ordersRes = await api.get('/api/orders?page=1&pageSize=1');
+        // Revenue: Placeholder, replace with real endpoint if available
+        const revenueRes = { data: { revenue: 'NPR 0', change: '+0%' } };
+
+        setStats([
+          {
+            title: 'Total Users',
+            value: usersRes.data?.meta?.totalCount ?? '—',
+            change: '+0%',
+            changeType: 'positive',
+            icon: Users,
+            description: 'Active users this month',
+          },
+          {
+            title: 'Active Shops',
+            value: shopsRes.data?.meta?.totalCount ?? '—',
+            change: '+0%',
+            changeType: 'positive',
+            icon: Store,
+            description: 'Verified shops',
+          },
+          {
+            title: 'Total Orders',
+            value: ordersRes.data?.meta?.totalCount ?? '—',
+            change: '+0%',
+            changeType: 'positive',
+            icon: ShoppingCart,
+            description: 'Orders this month',
+          },
+          {
+            title: 'Revenue',
+            value: revenueRes.data?.revenue ?? 'NPR 0',
+            change: revenueRes.data?.change ?? '+0%',
+            changeType: 'positive',
+            icon: DollarSign,
+            description: 'Platform revenue',
+          },
+        ]);
+
+        // Fetch pending verifications
+        const verificationsRes = await api.get('/api/admin/verifications');
+        setPendingVerifications(
+          (verificationsRes.data?.requests || []).filter((v: any) => v.status === 'PENDING')
+        );
+
+        // Fetch recent activity (use reports for now)
+        const reportsRes = await api.get('/api/admin/reports');
+        setRecentActivity(
+          (reportsRes.data?.reports || []).map((r: any) => ({
+            id: r.id,
+            type: r.type,
+            message: r.reason,
+            user: r.reporter?.email || '—',
+            time: new Date(r.createdAt).toLocaleString(),
+          }))
+        );
+      } catch (err) {
+        // Handle error, optionally show toast
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchDashboardData();
+  }, []);
 
 export default function AdminDashboard() {
   return (

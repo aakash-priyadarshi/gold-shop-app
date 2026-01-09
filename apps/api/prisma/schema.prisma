@@ -71,6 +71,9 @@ model User {
   notifications     Notification[]
   refreshTokens     RefreshToken[]
   apiTokens         ApiToken[]
+  verificationRequests VerificationRequest[] @relation("UserVerificationRequests")
+  reportsFiled      Report[] @relation("ReportReporter")
+  reportsAgainst    Report[] @relation("ReportReported")
   
   // Timestamps
   emailVerifiedAt   DateTime?
@@ -203,6 +206,7 @@ model Shop {
   rfqOffers             RfqOffer[]
   orders                Order[]
   ratings               ShopRating[]
+  verificationRequests  VerificationRequest[] @relation("ShopVerificationRequests")
   
   // Status
   isActive              Boolean  @default(true)
@@ -1426,5 +1430,36 @@ model PriceCalculationLog {
   @@index([requestId])
   @@index([shopId])
   @@index([createdAt])
+}
+
+// ══════════════════════════════════════
+// ADMIN VERIFICATION REQUESTS & REPORTS
+// ══════════════════════════════════════
+
+model VerificationRequest {
+  id          String   @id @default(uuid())
+  type        String   // 'SHOP' or 'USER'
+  status      String   // 'PENDING', 'APPROVED', 'REJECTED'
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  shopId      String?
+  shop        Shop?    @relation("ShopVerificationRequests", fields: [shopId], references: [id])
+  userId      String?
+  user        User?    @relation("UserVerificationRequests", fields: [userId], references: [id])
+  details     Json?
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  reporterId  String
+  reporter    User     @relation("ReportReporter", fields: [reporterId], references: [id])
+  reportedId  String?
+  reported    User?    @relation("ReportReported", fields: [reportedId], references: [id])
+  type        String   // e.g. 'USER', 'SHOP', 'ORDER', etc.
+  reason      String
+  status      String   // 'OPEN', 'RESOLVED', 'DISMISSED'
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  details     Json?
 }
 

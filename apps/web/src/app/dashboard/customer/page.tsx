@@ -20,52 +20,102 @@ import {
 import Link from 'next/link';
 import Image from 'next/image';
 
-// Mock data - replace with real API calls
-const recentOrders = [
-  { 
-    id: 'ORD-001', 
-    shop: 'Shrestha Gold House', 
-    items: '22K Gold Ring (5g)', 
-    amount: 'NPR 45,600', 
-    status: 'delivered',
-    date: '2024-01-15',
-    image: '/placeholder-ring.jpg'
-  },
-  { 
-    id: 'ORD-002', 
-    shop: 'Nepal Jewellers', 
-    items: '24K Gold Chain', 
-    amount: 'NPR 1,25,000', 
-    status: 'shipping',
-    date: '2024-01-12',
-    image: '/placeholder-chain.jpg'
-  },
-  { 
-    id: 'ORD-003', 
-    shop: 'Royal Gold', 
-    items: 'Silver Bracelet', 
-    amount: 'NPR 12,500', 
-    status: 'processing',
-    date: '2024-01-10',
-    image: '/placeholder-bracelet.jpg'
-  },
-];
 
-const wishlistItems = [
-  { id: '1', name: 'Diamond Studded Ring', shop: 'Shrestha Gold', price: 'NPR 2,50,000' },
-  { id: '2', name: '22K Gold Necklace Set', shop: 'Nepal Jewellers', price: 'NPR 3,45,000' },
-  { id: '3', name: 'Pearl Earrings', shop: 'Royal Gold', price: 'NPR 45,000' },
-];
+import { useEffect, useState } from 'react';
+import { ordersApi, rfqApi, shopsApi } from '@/lib/api';
 
-const rfqRequests = [
-  { id: '1', request: 'Custom engagement ring', status: 'quoted', quotes: 3, date: '2024-01-14' },
-  { id: '2', request: 'Wedding set for bride', status: 'pending', quotes: 0, date: '2024-01-10' },
-];
+interface Order {
+  id: string;
+  shop: string;
+  items: string;
+  amount: string;
+  status: string;
+  date: string;
+}
 
-const recommendedShops = [
-  { id: '1', name: 'Shrestha Gold House', location: 'Kathmandu', rating: 4.8, reviews: 234 },
-  { id: '2', name: 'Nepal Jewellers', location: 'Pokhara', rating: 4.6, reviews: 189 },
-];
+interface WishlistItem {
+  id: string;
+  name: string;
+  shop: string;
+  price: string;
+}
+
+interface RFQRequest {
+  id: string;
+  request: string;
+  status: string;
+  quotes: number;
+  date: string;
+}
+
+interface RecommendedShop {
+  id: string;
+  name: string;
+  location: string;
+  rating: number;
+  reviews: number;
+}
+
+export default function CustomerDashboard() {
+  const { user } = useAuth();
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
+  const [rfqRequests, setRfqRequests] = useState<RFQRequest[]>([]);
+  const [recommendedShops, setRecommendedShops] = useState<RecommendedShop[]>([]);
+  const [totalSpent, setTotalSpent] = useState<string>('NPR 0');
+
+  useEffect(() => {
+    if (!user) return;
+    // Fetch recent orders
+    ordersApi.getMyOrders({ page: 1, pageSize: 3 })
+      .then(res => {
+        const orders = res.data.items || res.data || [];
+        setRecentOrders(orders.map((o: any) => ({
+          id: o.id,
+          shop: o.shop?.shopName || o.shopName || 'Unknown',
+          items: o.itemsSummary || o.items?.map((i: any) => i.name).join(', ') || '',
+          amount: o.amount ? `NPR ${o.amount.toLocaleString()}` : '',
+          status: o.status,
+          date: o.createdAt ? o.createdAt.slice(0, 10) : '',
+        })));
+        // Calculate total spent
+        const total = orders.reduce((sum: number, o: any) => sum + (o.amount || 0), 0);
+        setTotalSpent(`NPR ${total.toLocaleString()}`);
+      })
+      .catch(() => setRecentOrders([]));
+
+    // Fetch wishlist items
+    // TODO: Replace with real API when available
+    setWishlistItems([]); // Placeholder, implement when endpoint exists
+
+    // Fetch RFQ requests
+    rfqApi.getMyRequests({ page: 1, pageSize: 3 })
+      .then(res => {
+        const rfqs = res.data.items || res.data || [];
+        setRfqRequests(rfqs.map((r: any) => ({
+          id: r.id,
+          request: r.request || r.title || '',
+          status: r.status,
+          quotes: r.quotesCount || r.quotes?.length || 0,
+          date: r.createdAt ? r.createdAt.slice(0, 10) : '',
+        })));
+      })
+      .catch(() => setRfqRequests([]));
+
+    // Fetch recommended shops
+    shopsApi.getAll({ recommended: true, limit: 4 })
+      .then(res => {
+        const shops = res.data.items || res.data || [];
+        setRecommendedShops(shops.map((s: any) => ({
+          id: s.id,
+          name: s.shopName || s.name,
+          location: s.city || s.location || '',
+          rating: s.rating || 0,
+          reviews: s.reviewsCount || s.reviews?.length || 0,
+        })));
+      })
+      .catch(() => setRecommendedShops([]));
+  }, [user]);
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -114,7 +164,7 @@ export default function CustomerDashboard() {
                     <ShoppingCart className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">12</p>
+                    <p className="text-2xl font-bold">{recentOrders.length}</p>
                     <p className="text-sm text-gray-500">Total Orders</p>
                   </div>
                 </div>
@@ -153,7 +203,7 @@ export default function CustomerDashboard() {
                     <TrendingUp className="h-5 w-5 text-green-600" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">NPR 4.2L</p>
+                    <p className="text-2xl font-bold">{totalSpent}</p>
                     <p className="text-sm text-gray-500">Total Spent</p>
                   </div>
                 </div>

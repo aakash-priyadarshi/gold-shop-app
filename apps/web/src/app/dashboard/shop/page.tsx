@@ -22,58 +22,131 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-// Mock data - replace with real API calls
-const stats = [
-  {
-    title: 'Total Products',
-    value: '124',
-    change: '+8',
-    changeType: 'positive' as const,
-    icon: Package,
-    description: 'Active listings',
-  },
-  {
-    title: 'Pending Orders',
-    value: '12',
-    change: '+3',
-    changeType: 'positive' as const,
-    icon: ShoppingCart,
-    description: 'Awaiting processing',
-  },
-  {
-    title: 'RFQ Requests',
-    value: '5',
-    change: '+2',
-    changeType: 'positive' as const,
-    icon: MessageSquare,
-    description: 'New inquiries',
-  },
-  {
-    title: "Today's Sales",
-    value: 'NPR 85,420',
-    change: '+15%',
-    changeType: 'positive' as const,
-    icon: DollarSign,
-    description: 'Revenue today',
-  },
-];
 
-const recentOrders = [
-  { id: 'ORD-001', customer: 'Anita Gurung', items: '22K Gold Ring', amount: 'NPR 45,600', status: 'pending' },
-  { id: 'ORD-002', customer: 'Bikash Thapa', items: '24K Gold Chain', amount: 'NPR 1,25,000', status: 'processing' },
-  { id: 'ORD-003', customer: 'Rita Sharma', items: 'Silver Bracelet', amount: 'NPR 12,500', status: 'completed' },
-];
+import { useEffect, useState } from 'react';
+import { shopsApi, ordersApi, rfqApi, inventoryApi } from '@/lib/api';
 
-const lowStockItems = [
-  { id: '1', name: '22K Gold Ring (5g)', stock: 2, minStock: 5 },
-  { id: '2', name: '24K Gold Chain (10g)', stock: 1, minStock: 3 },
-  { id: '3', name: 'Silver Anklet', stock: 3, minStock: 10 },
-];
+interface Stat {
+  title: string;
+  value: string;
+  change: string;
+  changeType: 'positive' | 'negative';
+  icon: any;
+  description: string;
+}
 
-const rfqRequests = [
-  { id: '1', customer: 'Sita Maya', request: 'Custom engagement ring with diamond', budget: 'NPR 1,50,000', date: '2 hours ago' },
-  { id: '2', customer: 'Ram Bahadur', request: 'Wedding set for bride', budget: 'NPR 5,00,000', date: '5 hours ago' },
-];
+interface Order {
+  id: string;
+  customer: string;
+  items: string;
+  amount: string;
+  status: string;
+}
+
+interface RFQRequest {
+  id: string;
+  customer: string;
+  request: string;
+  budget: string;
+  date: string;
+}
+
+interface LowStockItem {
+  id: string;
+  name: string;
+  stock: number;
+  minStock: number;
+}
+
+export default function ShopDashboard() {
+  const { user } = useAuth();
+  const [stats, setStats] = useState<Stat[]>([]);
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [rfqRequests, setRfqRequests] = useState<RFQRequest[]>([]);
+  const [lowStockItems, setLowStockItems] = useState<LowStockItem[]>([]);
+
+  useEffect(() => {
+    if (!user?.shop?.id) return;
+    const shopId = user.shop.id;
+
+    // Fetch shop stats
+    Promise.all([
+      shopsApi.getDashboard(shopId),
+      ordersApi.getShopOrders(shopId, { page: 1, pageSize: 3 }),
+      rfqApi.getReceivedRequests(shopId, { page: 1, pageSize: 3 }),
+      inventoryApi.getShopInventory(shopId, { lowStock: true, limit: 3 })
+    ]).then(([dashboardRes, ordersRes, rfqRes, lowStockRes]) => {
+      const dash = dashboardRes.data;
+      setStats([
+        {
+          title: 'Total Products',
+          value: dash.totalProducts?.toString() || '0',
+          change: dash.productsChange || '+0',
+          changeType: dash.productsChange?.startsWith('-') ? 'negative' : 'positive',
+          icon: Package,
+          description: 'Active listings',
+        },
+        {
+          title: 'Pending Orders',
+          value: dash.pendingOrders?.toString() || '0',
+          change: dash.ordersChange || '+0',
+          changeType: dash.ordersChange?.startsWith('-') ? 'negative' : 'positive',
+          icon: ShoppingCart,
+          description: 'Awaiting processing',
+        },
+        {
+          title: 'RFQ Requests',
+          value: dash.rfqRequests?.toString() || '0',
+          change: dash.rfqChange || '+0',
+          changeType: dash.rfqChange?.startsWith('-') ? 'negative' : 'positive',
+          icon: MessageSquare,
+          description: 'New inquiries',
+        },
+        {
+          title: "Today's Sales",
+          value: dash.todaysSales ? `NPR ${dash.todaysSales.toLocaleString()}` : 'NPR 0',
+          change: dash.salesChange || '+0%',
+          changeType: dash.salesChange?.startsWith('-') ? 'negative' : 'positive',
+          icon: DollarSign,
+          description: 'Revenue today',
+        },
+      ]);
+
+      // Recent orders
+      const orders = ordersRes.data.items || ordersRes.data || [];
+      setRecentOrders(orders.map((o: any) => ({
+        id: o.id,
+        customer: o.customer?.firstName || o.customerName || 'Unknown',
+        items: o.itemsSummary || o.items?.map((i: any) => i.name).join(', ') || '',
+        amount: o.amount ? `NPR ${o.amount.toLocaleString()}` : '',
+        status: o.status,
+      })));
+
+      // RFQ requests
+      const rfqs = rfqRes.data.items || rfqRes.data || [];
+      setRfqRequests(rfqs.map((r: any) => ({
+        id: r.id,
+        customer: r.customer?.firstName || r.customerName || 'Unknown',
+        request: r.request || r.title || '',
+        budget: r.budget ? `NPR ${r.budget.toLocaleString()}` : '',
+        date: r.createdAt ? r.createdAt.slice(0, 10) : '',
+      })));
+
+      // Low stock items
+      const lowStock = lowStockRes.data.items || lowStockRes.data || [];
+      setLowStockItems(lowStock.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        stock: item.stock,
+        minStock: item.minStock,
+      })));
+    }).catch(() => {
+      setStats([]);
+      setRecentOrders([]);
+      setRfqRequests([]);
+      setLowStockItems([]);
+    });
+  }, [user]);
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-800',

@@ -1,3 +1,6 @@
+# Internal deployment and checklist notes
+deployment-notes.txt
+*.prompt-checklist.txt
 # Dependencies
 node_modules/
 .pnpm-store/
