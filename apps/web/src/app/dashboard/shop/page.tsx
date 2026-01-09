@@ -12,7 +12,6 @@ import {
   ShoppingCart,
   TrendingUp,
   AlertCircle,
-  Clock,
   DollarSign,
   ArrowUpRight,
   Plus,
@@ -21,8 +20,6 @@ import {
   Star,
 } from 'lucide-react';
 import Link from 'next/link';
-
-
 import { useEffect, useState } from 'react';
 import { shopsApi, ordersApi, rfqApi, inventoryApi } from '@/lib/api';
 
@@ -58,6 +55,13 @@ interface LowStockItem {
   minStock: number;
 }
 
+const statusColors: Record<string, string> = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  processing: 'bg-blue-100 text-blue-800',
+  completed: 'bg-green-100 text-green-800',
+  cancelled: 'bg-red-100 text-red-800',
+};
+
 export default function ShopDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState<Stat[]>([]);
@@ -69,7 +73,6 @@ export default function ShopDashboard() {
     if (!user?.shop?.id) return;
     const shopId = user.shop.id;
 
-    // Fetch shop stats
     Promise.all([
       shopsApi.getDashboard(shopId),
       ordersApi.getShopOrders(shopId, { page: 1, pageSize: 3 }),
@@ -112,7 +115,6 @@ export default function ShopDashboard() {
         },
       ]);
 
-      // Recent orders
       const orders = ordersRes.data.items || ordersRes.data || [];
       setRecentOrders(orders.map((o: any) => ({
         id: o.id,
@@ -122,7 +124,6 @@ export default function ShopDashboard() {
         status: o.status,
       })));
 
-      // RFQ requests
       const rfqs = rfqRes.data.items || rfqRes.data || [];
       setRfqRequests(rfqs.map((r: any) => ({
         id: r.id,
@@ -132,7 +133,6 @@ export default function ShopDashboard() {
         date: r.createdAt ? r.createdAt.slice(0, 10) : '',
       })));
 
-      // Low stock items
       const lowStock = lowStockRes.data.items || lowStockRes.data || [];
       setLowStockItems(lowStock.map((item: any) => ({
         id: item.id,
@@ -148,26 +148,15 @@ export default function ShopDashboard() {
     });
   }, [user]);
 
-const statusColors = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  processing: 'bg-blue-100 text-blue-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
-};
-
-export default function ShopDashboard() {
-  const { user } = useAuth();
-
   return (
     <ShopkeeperGuard>
       <DashboardLayout>
         <div className="space-y-6">
-          {/* Page header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold">Shop Dashboard</h1>
               <p className="text-gray-500">
-                Welcome back, {user?.firstName}! Here's your shop overview.
+                Welcome back, {user?.firstName}! Here&apos;s your shop overview.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -186,7 +175,6 @@ export default function ShopDashboard() {
             </div>
           </div>
 
-          {/* Shop Status Banner */}
           {user?.shop && !user.shop.isVerified && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
               <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
@@ -199,7 +187,6 @@ export default function ShopDashboard() {
             </div>
           )}
 
-          {/* Stats grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map((stat) => (
               <Card key={stat.title}>
@@ -232,7 +219,6 @@ export default function ShopDashboard() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Recent Orders */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
@@ -256,7 +242,7 @@ export default function ShopDashboard() {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-medium">{order.id}</p>
-                          <Badge className={statusColors[order.status as keyof typeof statusColors]}>
+                          <Badge className={statusColors[order.status] || 'bg-gray-100'}>
                             {order.status}
                           </Badge>
                         </div>
@@ -276,7 +262,6 @@ export default function ShopDashboard() {
               </CardContent>
             </Card>
 
-            {/* RFQ Requests */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
@@ -293,10 +278,7 @@ export default function ShopDashboard() {
               <CardContent>
                 <div className="space-y-4">
                   {rfqRequests.map((rfq) => (
-                    <div
-                      key={rfq.id}
-                      className="p-3 bg-gray-50 rounded-lg"
-                    >
+                    <div key={rfq.id} className="p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="font-medium">{rfq.customer}</p>
@@ -315,7 +297,6 @@ export default function ShopDashboard() {
             </Card>
           </div>
 
-          {/* Low Stock Alert */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -335,21 +316,15 @@ export default function ShopDashboard() {
                           {item.stock} / {item.minStock} units
                         </span>
                       </div>
-                      <Progress 
-                        value={(item.stock / item.minStock) * 100} 
-                        className="h-2"
-                      />
+                      <Progress value={(item.stock / item.minStock) * 100} className="h-2" />
                     </div>
-                    <Button size="sm" variant="outline">
-                      Restock
-                    </Button>
+                    <Button size="sm" variant="outline">Restock</Button>
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
 
-          {/* Quick Actions */}
           <Card>
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>

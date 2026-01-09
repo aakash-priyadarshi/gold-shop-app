@@ -17,17 +17,39 @@ import {
   DollarSign,
   ArrowUpRight,
   ArrowDownRight,
-  Key,
 } from 'lucide-react';
-
-
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 
+interface Stat {
+  title: string;
+  value: string | number;
+  change: string;
+  changeType: 'positive' | 'negative';
+  icon: any;
+  description: string;
+}
+
+interface Verification {
+  id: string;
+  shopName: string;
+  owner: string;
+  location: string;
+  status: string;
+}
+
+interface Activity {
+  id: string;
+  type: string;
+  message: string;
+  user: string;
+  time: string;
+}
+
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<any[]>([]);
-  const [pendingVerifications, setPendingVerifications] = useState<any[]>([]);
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [stats, setStats] = useState<Stat[]>([]);
+  const [pendingVerifications, setPendingVerifications] = useState<Verification[]>([]);
+  const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -102,7 +124,6 @@ export default function AdminDashboard() {
     fetchDashboardData();
   }, []);
 
-export default function AdminDashboard() {
   return (
     <AdminGuard>
       <DashboardLayout>
@@ -110,7 +131,7 @@ export default function AdminDashboard() {
           {/* Page header */}
           <div>
             <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-            <p className="text-gray-500">Welcome back! Here's what's happening on the platform.</p>
+            <p className="text-gray-500">Welcome back! Here&apos;s what&apos;s happening on the platform.</p>
           </div>
 
           {/* Stats grid */}

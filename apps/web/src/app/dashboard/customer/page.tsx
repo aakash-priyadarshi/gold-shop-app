@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import {
   ShoppingCart,
   Heart,
-  Clock,
   Package,
   Store,
   ArrowRight,
@@ -18,9 +17,6 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
-
-
 import { useEffect, useState } from 'react';
 import { ordersApi, rfqApi, shopsApi } from '@/lib/api';
 
@@ -56,6 +52,15 @@ interface RecommendedShop {
   reviews: number;
 }
 
+const statusColors: Record<string, string> = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  processing: 'bg-blue-100 text-blue-800',
+  shipping: 'bg-purple-100 text-purple-800',
+  delivered: 'bg-green-100 text-green-800',
+  cancelled: 'bg-red-100 text-red-800',
+  quoted: 'bg-green-100 text-green-800',
+};
+
 export default function CustomerDashboard() {
   const { user } = useAuth();
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
@@ -66,6 +71,7 @@ export default function CustomerDashboard() {
 
   useEffect(() => {
     if (!user) return;
+
     // Fetch recent orders
     ordersApi.getMyOrders({ page: 1, pageSize: 3 })
       .then(res => {
@@ -116,18 +122,6 @@ export default function CustomerDashboard() {
       })
       .catch(() => setRecommendedShops([]));
   }, [user]);
-
-const statusColors = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  processing: 'bg-blue-100 text-blue-800',
-  shipping: 'bg-purple-100 text-purple-800',
-  delivered: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
-  quoted: 'bg-green-100 text-green-800',
-};
-
-export default function CustomerDashboard() {
-  const { user } = useAuth();
 
   return (
     <CustomerGuard>
@@ -239,7 +233,7 @@ export default function CustomerDashboard() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-medium truncate">{order.items}</p>
-                          <Badge className={statusColors[order.status as keyof typeof statusColors]}>
+                          <Badge className={statusColors[order.status] || 'bg-gray-100'}>
                             {order.status}
                           </Badge>
                         </div>
@@ -263,7 +257,7 @@ export default function CustomerDashboard() {
                     <Heart className="h-5 w-5 text-red-500" />
                     My Wishlist
                   </CardTitle>
-                  <CardDescription>Items you've saved</CardDescription>
+                  <CardDescription>Items you&apos;ve saved</CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
                   <Link href="/dashboard/customer/wishlist">View all</Link>
@@ -322,7 +316,7 @@ export default function CustomerDashboard() {
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <Badge className={statusColors[rfq.status as keyof typeof statusColors]}>
+                        <Badge className={statusColors[rfq.status] || 'bg-gray-100'}>
                           {rfq.status}
                         </Badge>
                         <p className="text-sm text-gray-500 mt-1">
