@@ -84,10 +84,14 @@ export default function AdminShopsPage() {
   const [newShop, setNewShop] = useState({
     shopName: '',
     ownerEmail: '',
+    ownerPassword: '',
+    ownerFirstName: '',
+    ownerLastName: '',
+    ownerPhone: '',
     country: 'NP',
     city: '',
     address: '',
-    currency: 'NPR',
+    contactPhone: '',
   });
 
   useEffect(() => {
@@ -180,11 +184,11 @@ export default function AdminShopsPage() {
   };
 
   const handleCreateShop = async () => {
-    if (!newShop.shopName || !newShop.ownerEmail) {
+    if (!newShop.shopName || !newShop.ownerEmail || !newShop.ownerPassword || !newShop.ownerFirstName || !newShop.contactPhone) {
       toast({
         variant: 'destructive',
         title: 'Missing Fields',
-        description: 'Please fill in shop name and select an owner.',
+        description: 'Please fill in all required fields.',
       });
       return;
     }
@@ -200,10 +204,14 @@ export default function AdminShopsPage() {
       setNewShop({
         shopName: '',
         ownerEmail: '',
+        ownerPassword: '',
+        ownerFirstName: '',
+        ownerLastName: '',
+        ownerPhone: '',
         country: 'NP',
         city: '',
         address: '',
-        currency: 'NPR',
+        contactPhone: '',
       });
       loadShops();
     } catch (error: any) {
@@ -272,10 +280,10 @@ export default function AdminShopsPage() {
                   <DialogHeader>
                     <DialogTitle>Create New Shop</DialogTitle>
                     <DialogDescription>
-                      Add a new shop to the platform.
+                      Add a new shop with a new owner account.
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4 py-4">
+                  <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
                     <div className="space-y-2">
                       <Label htmlFor="shopName">Shop Name *</Label>
                       <Input
@@ -285,37 +293,74 @@ export default function AdminShopsPage() {
                         placeholder="e.g., Golden Jewellers"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="ownerEmail">Owner Email *</Label>
-                      <Input
-                        id="ownerEmail"
-                        type="email"
-                        value={newShop.ownerEmail}
-                        onChange={(e) => {
-                          setNewShop(prev => ({ ...prev, ownerEmail: e.target.value }));
-                          searchOwners(e.target.value);
-                        }}
-                        placeholder="Enter existing user email"
-                      />
-                      {availableOwners.length > 0 && (
-                        <div className="border rounded-md mt-1 max-h-32 overflow-y-auto">
-                          {availableOwners.map((owner: any) => (
-                            <div
-                              key={owner.id}
-                              className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
-                              onClick={() => {
-                                setNewShop(prev => ({ ...prev, ownerEmail: owner.email }));
-                                setAvailableOwners([]);
-                              }}
-                            >
-                              {owner.firstName} {owner.lastName} ({owner.email})
-                            </div>
-                          ))}
+                    
+                    <div className="border-t pt-4">
+                      <p className="text-sm font-medium mb-3">Owner Details</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="ownerFirstName">First Name *</Label>
+                          <Input
+                            id="ownerFirstName"
+                            value={newShop.ownerFirstName}
+                            onChange={(e) => setNewShop(prev => ({ ...prev, ownerFirstName: e.target.value }))}
+                            placeholder="First name"
+                          />
                         </div>
-                      )}
+                        <div className="space-y-2">
+                          <Label htmlFor="ownerLastName">Last Name</Label>
+                          <Input
+                            id="ownerLastName"
+                            value={newShop.ownerLastName}
+                            onChange={(e) => setNewShop(prev => ({ ...prev, ownerLastName: e.target.value }))}
+                            placeholder="Last name"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2 mt-3">
+                        <Label htmlFor="ownerEmail">Owner Email *</Label>
+                        <Input
+                          id="ownerEmail"
+                          type="email"
+                          value={newShop.ownerEmail}
+                          onChange={(e) => setNewShop(prev => ({ ...prev, ownerEmail: e.target.value }))}
+                          placeholder="owner@example.com"
+                        />
+                      </div>
+                      <div className="space-y-2 mt-3">
+                        <Label htmlFor="ownerPassword">Password *</Label>
+                        <Input
+                          id="ownerPassword"
+                          type="password"
+                          value={newShop.ownerPassword}
+                          onChange={(e) => setNewShop(prev => ({ ...prev, ownerPassword: e.target.value }))}
+                          placeholder="Password for owner account"
+                        />
+                      </div>
+                      <div className="space-y-2 mt-3">
+                        <Label htmlFor="ownerPhone">Owner Phone</Label>
+                        <Input
+                          id="ownerPhone"
+                          type="tel"
+                          value={newShop.ownerPhone}
+                          onChange={(e) => setNewShop(prev => ({ ...prev, ownerPhone: e.target.value }))}
+                          placeholder="+977 98XXXXXXXX"
+                        />
+                      </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+
+                    <div className="border-t pt-4">
+                      <p className="text-sm font-medium mb-3">Shop Details</p>
                       <div className="space-y-2">
+                        <Label htmlFor="contactPhone">Contact Phone *</Label>
+                        <Input
+                          id="contactPhone"
+                          type="tel"
+                          value={newShop.contactPhone}
+                          onChange={(e) => setNewShop(prev => ({ ...prev, contactPhone: e.target.value }))}
+                          placeholder="Shop contact number"
+                        />
+                      </div>
+                      <div className="space-y-2 mt-3">
                         <Label htmlFor="country">Country</Label>
                         <Select
                           value={newShop.country}
@@ -333,42 +378,24 @@ export default function AdminShopsPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="currency">Currency</Label>
-                        <Select
-                          value={newShop.currency}
-                          onValueChange={(value) => setNewShop(prev => ({ ...prev, currency: value }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="NPR">NPR</SelectItem>
-                            <SelectItem value="INR">INR</SelectItem>
-                            <SelectItem value="AED">AED</SelectItem>
-                            <SelectItem value="USD">USD</SelectItem>
-                            <SelectItem value="GBP">GBP</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <div className="space-y-2 mt-3">
+                        <Label htmlFor="city">City</Label>
+                        <Input
+                          id="city"
+                          value={newShop.city}
+                          onChange={(e) => setNewShop(prev => ({ ...prev, city: e.target.value }))}
+                          placeholder="e.g., Kathmandu"
+                        />
                       </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="city">City</Label>
-                      <Input
-                        id="city"
-                        value={newShop.city}
-                        onChange={(e) => setNewShop(prev => ({ ...prev, city: e.target.value }))}
-                        placeholder="e.g., Kathmandu"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="address">Address</Label>
-                      <Input
-                        id="address"
-                        value={newShop.address}
-                        onChange={(e) => setNewShop(prev => ({ ...prev, address: e.target.value }))}
-                        placeholder="Full address"
-                      />
+                      <div className="space-y-2 mt-3">
+                        <Label htmlFor="address">Address</Label>
+                        <Input
+                          id="address"
+                          value={newShop.address}
+                          onChange={(e) => setNewShop(prev => ({ ...prev, address: e.target.value }))}
+                          placeholder="Full address"
+                        />
+                      </div>
                     </div>
                   </div>
                   <DialogFooter>
