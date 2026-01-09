@@ -73,7 +73,12 @@ export default function AdminUsersPage() {
     setIsLoading(true);
     try {
       const response = await api.get('/api/users');
-      setUsers(response.data.users || response.data || []);
+      let usersArr = response.data.users || response.data || [];
+      if (!Array.isArray(usersArr)) {
+        // If not array, try to parse or fallback to empty
+        usersArr = [];
+      }
+      setUsers(usersArr);
     } catch (error) {
       console.error('Failed to load users:', error);
       toast({
