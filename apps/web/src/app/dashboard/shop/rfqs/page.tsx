@@ -72,7 +72,7 @@ export default function ShopRfqsPage() {
 
   useEffect(() => {
     if (user?.shop?.id) {
-      loadRFQs();
+      loadRfqs();
     }
   }, [user?.shop?.id]);
 
