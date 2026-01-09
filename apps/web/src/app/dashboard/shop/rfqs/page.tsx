@@ -71,10 +71,10 @@ export default function ShopRfqsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (user?.shopId) {
-      loadRfqs();
+    if (user?.shop?.id) {
+      loadRFQs();
     }
-  }, [user?.shopId]);
+  }, [user?.shop?.id]);
 
   const loadRfqs = async () => {
     setIsLoading(true);

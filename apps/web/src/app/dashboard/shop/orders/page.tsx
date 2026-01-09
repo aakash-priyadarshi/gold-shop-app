@@ -72,16 +72,16 @@ export default function ShopOrdersPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
-    if (user?.shopId) {
+    if (user?.shop?.id) {
       loadOrders();
     }
-  }, [user?.shopId, statusFilter]);
+  }, [user?.shop?.id, statusFilter]);
 
   const loadOrders = async () => {
     setIsLoading(true);
     try {
       const params = statusFilter !== 'all' ? `?status=${statusFilter}` : '';
-      const response = await api.get(`/api/orders/shop/${user?.shopId}${params}`);
+      const response = await api.get(`/api/orders/shop/${user?.shop?.id}${params}`);
       setOrders(response.data.orders || response.data || []);
     } catch (error) {
       console.error('Failed to load orders:', error);

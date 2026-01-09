@@ -167,7 +167,7 @@ export default function ShopRfqDetailPage() {
   };
 
   // Check if shop has already submitted an offer
-  const myOffer = rfq?.offers?.find((o) => o.shopId === user?.shopId);
+  const myOffer = rfq?.offers?.find((o) => o.shopId === user?.shop?.id);
   const canSubmitOffer = ['PENDING', 'BROADCAST'].includes(rfq?.status || '') && !myOffer;
 
   if (isLoading) {

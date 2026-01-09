@@ -58,10 +58,10 @@ export default function ShopPricingPage() {
   const [overrides, setOverrides] = useState<Record<string, { making: string; margin: string }>>({});
 
   useEffect(() => {
-    if (user?.shopId) {
+    if (user?.shop?.id) {
       loadPricing();
     }
-  }, [user?.shopId]);
+  }, [user?.shop?.id]);
 
   const loadPricing = async () => {
     setIsLoading(true);
@@ -120,7 +120,7 @@ export default function ShopPricingPage() {
     setIsSaving(true);
     try {
       // Save default rates
-      await api.patch(`/api/shops/${user?.shopId}`, {
+      await api.patch(`/api/shops/${user?.shop?.id}`, {
         defaultMakingChargePercent: parseFloat(defaultMakingCharge) || 10,
         defaultMarginPercent: parseFloat(defaultMargin) || 2,
       });
@@ -139,7 +139,7 @@ export default function ShopPricingPage() {
         });
 
       if (metalRates.length > 0) {
-        await api.patch(`/api/shops/${user?.shopId}/metal-rates`, { metalRates });
+        await api.patch(`/api/shops/${user?.shop?.id}/metal-rates`, { metalRates });
       }
 
       toast({
