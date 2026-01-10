@@ -33,18 +33,21 @@ export function AuthBackground({
       )}
       aria-hidden="true"
     >
-      {/* Clean background - light mode: soft cream, dark mode: dark slate */}
-      <div className="absolute inset-0 bg-stone-50 dark:bg-slate-950 transition-colors duration-300" />
+      {/* Dark navy blue background - matches well with golden mandala */}
+      <div 
+        className="absolute inset-0 transition-colors duration-300" 
+        style={{ backgroundColor: 'rgb(17, 24, 39)' }}
+      />
       
-      {/* Subtle gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-white/50 via-transparent to-stone-100/30 dark:from-slate-900/50 dark:via-transparent dark:to-slate-900/30" />
+      {/* Subtle gradient overlay for depth */}
+      <div className="absolute inset-0 bg-gradient-to-b from-slate-900/30 via-transparent to-slate-950/50" />
       
       {/* Animated Golden Mandala */}
       <GoldenMandala enabled={enableMandala} size={900} />
       
       {/* Very subtle noise texture for premium feel */}
       <div 
-        className="absolute inset-0 opacity-[0.02] dark:opacity-[0.03]"
+        className="absolute inset-0 opacity-[0.03]"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
         }}
