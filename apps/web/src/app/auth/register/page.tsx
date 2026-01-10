@@ -14,7 +14,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, getDashboardRoute, UserRole } from '@/hooks/useAuth';
-import { Gem, Loader2, AlertCircle, User, Store } from 'lucide-react';
+import { BrandLogo } from '@/components/brand/BrandLogo';
+import { BRAND } from '@/config/brand';
+import { Loader2, AlertCircle, User, Store } from 'lucide-react';
 
 // Customer registration schema
 const customerSchema = z.object({
@@ -105,7 +107,7 @@ function RegisterForm() {
       
       toast({
         title: 'Account created!',
-        description: 'Welcome to Gold Shop. Start exploring jewellery!',
+        description: `Welcome to ${BRAND.name}. Start exploring jewellery!`,
       });
     } catch (error: any) {
       toast({
@@ -161,20 +163,24 @@ function RegisterForm() {
   // Don't render form if already authenticated
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="h-8 w-8 animate-spin text-gold-600" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gold-50/30">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 animate-pulse"></div>
+            <div className="absolute inset-0 w-16 h-16 rounded-2xl border-4 border-gold-200 animate-spin border-t-transparent"></div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
-      <Card className="w-full max-w-lg">
-        <CardHeader className="space-y-1 text-center">
-          <Link href="/" className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-12 h-12 bg-gold-500 rounded-lg flex items-center justify-center">
-              <Gem className="h-6 w-6 text-white" />
-            </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gold-50/20 py-8 px-4 safe-area-inset">
+      <Card className="w-full max-w-lg border-0 shadow-xl shadow-gold-500/5">
+        <CardHeader className="space-y-1 text-center pb-2">
+          <Link href="/" className="flex flex-col items-center gap-2 mb-4">
+            <BrandLogo variant="icon" size="lg" />
+            <span className="text-xl font-bold tracking-tight">{BRAND.name}</span>
           </Link>
           <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
           <CardDescription>
@@ -184,20 +190,20 @@ function RegisterForm() {
 
         <CardContent>
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'customer' | 'shopkeeper')}>
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="customer" className="flex items-center gap-2">
+            <TabsList className="grid w-full grid-cols-2 mb-6 h-12 rounded-xl p-1">
+              <TabsTrigger value="customer" className="flex items-center gap-2 rounded-lg data-[state=active]:shadow-sm">
                 <User className="h-4 w-4" />
                 Customer
               </TabsTrigger>
-              <TabsTrigger value="shopkeeper" className="flex items-center gap-2">
+              <TabsTrigger value="shopkeeper" className="flex items-center gap-2 rounded-lg data-[state=active]:shadow-sm">
                 <Store className="h-4 w-4" />
-                Shopkeeper
+                Seller
               </TabsTrigger>
             </TabsList>
 
             {error && (
-              <div className="flex items-center gap-2 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                <AlertCircle className="h-4 w-4" />
+              <div className="flex items-center gap-2 p-3 mb-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+                <AlertCircle className="h-4 w-4 shrink-0" />
                 {error}
               </div>
             )}

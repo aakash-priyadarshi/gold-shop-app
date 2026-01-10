@@ -1,48 +1,62 @@
 import Link from 'next/link';
-import { Gem, Mail, Phone, MapPin } from 'lucide-react';
+import { Mail, Phone, MapPin, Facebook, Instagram, Twitter, Youtube } from 'lucide-react';
+import { BrandLogo } from '@/components/brand/BrandLogo';
+import { BRAND } from '@/config/brand';
 
 export function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-300">
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div className="container mx-auto px-4 py-8 lg:py-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-8">
           {/* Brand */}
-          <div className="space-y-4">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gold-500 rounded-lg flex items-center justify-center">
-                <Gem className="h-5 w-5 text-white" />
-              </div>
+          <div className="col-span-2 md:col-span-1 space-y-4">
+            <Link href="/" className="flex items-center gap-2">
+              <BrandLogo variant="icon" size="md" theme="dark" />
               <span className="text-xl font-bold text-white">
-                Gold<span className="text-gold-500">Shop</span>
+                {BRAND.name}
               </span>
             </Link>
-            <p className="text-sm">
-              Nepal's premier multi-vendor jewellery marketplace. Connecting 
-              customers with trusted local artisans.
+            <p className="text-sm text-gray-400 leading-relaxed">
+              {BRAND.tagline}. Connecting customers with trusted local artisans.
             </p>
+            {/* Social Links */}
+            <div className="flex items-center gap-3 pt-2">
+              <a href="#" className="w-9 h-9 bg-gray-800 hover:bg-gold-500 rounded-lg flex items-center justify-center transition-colors">
+                <Facebook className="h-4 w-4" />
+              </a>
+              <a href="#" className="w-9 h-9 bg-gray-800 hover:bg-gold-500 rounded-lg flex items-center justify-center transition-colors">
+                <Instagram className="h-4 w-4" />
+              </a>
+              <a href="#" className="w-9 h-9 bg-gray-800 hover:bg-gold-500 rounded-lg flex items-center justify-center transition-colors">
+                <Twitter className="h-4 w-4" />
+              </a>
+              <a href="#" className="w-9 h-9 bg-gray-800 hover:bg-gold-500 rounded-lg flex items-center justify-center transition-colors">
+                <Youtube className="h-4 w-4" />
+              </a>
+            </div>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Quick Links</h3>
+            <h3 className="text-white font-semibold mb-3 lg:mb-4 text-sm uppercase tracking-wide">Quick Links</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/shop" className="hover:text-gold-500 transition-colors">
+                <Link href="/shop" className="hover:text-gold-400 transition-colors">
                   Browse Shop
                 </Link>
               </li>
               <li>
-                <Link href="/rfq/create" className="hover:text-gold-500 transition-colors">
+                <Link href="/rfq/create" className="hover:text-gold-400 transition-colors">
                   Custom Order
                 </Link>
               </li>
               <li>
-                <Link href="/shops" className="hover:text-gold-500 transition-colors">
-                  Find Shops
+                <Link href="/shops" className="hover:text-gold-400 transition-colors">
+                  Find Sellers
                 </Link>
               </li>
               <li>
-                <Link href="/about" className="hover:text-gold-500 transition-colors">
+                <Link href="/about" className="hover:text-gold-400 transition-colors">
                   About Us
                 </Link>
               </li>
@@ -51,25 +65,25 @@ export function Footer() {
 
           {/* For Businesses */}
           <div>
-            <h3 className="text-white font-semibold mb-4">For Jewellers</h3>
+            <h3 className="text-white font-semibold mb-3 lg:mb-4 text-sm uppercase tracking-wide">For Jewellers</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/partner" className="hover:text-gold-500 transition-colors">
+                <Link href="/partner" className="hover:text-gold-400 transition-colors">
                   Become a Partner
                 </Link>
               </li>
               <li>
-                <Link href="/seller-guide" className="hover:text-gold-500 transition-colors">
+                <Link href="/seller-guide" className="hover:text-gold-400 transition-colors">
                   Seller Guide
                 </Link>
               </li>
               <li>
-                <Link href="/pricing" className="hover:text-gold-500 transition-colors">
+                <Link href="/pricing" className="hover:text-gold-400 transition-colors">
                   Pricing
                 </Link>
               </li>
               <li>
-                <Link href="/support" className="hover:text-gold-500 transition-colors">
+                <Link href="/support" className="hover:text-gold-400 transition-colors">
                   Support
                 </Link>
               </li>
@@ -78,36 +92,36 @@ export function Footer() {
 
           {/* Contact */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Contact Us</h3>
+            <h3 className="text-white font-semibold mb-3 lg:mb-4 text-sm uppercase tracking-wide">Contact Us</h3>
             <ul className="space-y-3 text-sm">
-              <li className="flex items-center space-x-2">
-                <MapPin className="h-4 w-4 text-gold-500" />
-                <span>Kathmandu, Nepal</span>
+              <li className="flex items-start gap-2">
+                <MapPin className="h-4 w-4 text-gold-400 mt-0.5 shrink-0" />
+                <span className="text-gray-400">{BRAND.contact.address}</span>
               </li>
-              <li className="flex items-center space-x-2">
-                <Phone className="h-4 w-4 text-gold-500" />
-                <span>+977 1-1234567</span>
+              <li className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-gold-400 shrink-0" />
+                <span className="text-gray-400">{BRAND.contact.phone}</span>
               </li>
-              <li className="flex items-center space-x-2">
-                <Mail className="h-4 w-4 text-gold-500" />
-                <span>support@goldshop.com.np</span>
+              <li className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-gold-400 shrink-0" />
+                <span className="text-gray-400">{BRAND.contact.supportEmail}</span>
               </li>
             </ul>
           </div>
         </div>
 
-        <div className="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-          <p className="text-sm">
-            © {new Date().getFullYear()} GoldShop. All rights reserved.
+        <div className="border-t border-gray-800 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-sm text-gray-500 text-center md:text-left">
+            © {new Date().getFullYear()} {BRAND.name}. All rights reserved.
           </p>
-          <div className="flex space-x-6 text-sm">
-            <Link href="/privacy" className="hover:text-gold-500 transition-colors">
+          <div className="flex flex-wrap justify-center gap-4 md:gap-6 text-sm">
+            <Link href="/privacy" className="text-gray-400 hover:text-gold-400 transition-colors">
               Privacy Policy
             </Link>
-            <Link href="/terms" className="hover:text-gold-500 transition-colors">
+            <Link href="/terms" className="text-gray-400 hover:text-gold-400 transition-colors">
               Terms of Service
             </Link>
-            <Link href="/refund" className="hover:text-gold-500 transition-colors">
+            <Link href="/refund" className="text-gray-400 hover:text-gold-400 transition-colors">
               Refund Policy
             </Link>
           </div>

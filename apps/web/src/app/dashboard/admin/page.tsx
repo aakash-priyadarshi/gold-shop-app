@@ -127,110 +127,117 @@ export default function AdminDashboard() {
   return (
     <AdminGuard>
       <DashboardLayout>
-        <div className="space-y-6">
+        <div className="space-y-4 lg:space-y-6">
           {/* Page header */}
           <div>
-            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-            <p className="text-gray-500">Welcome back! Here&apos;s what&apos;s happening on the platform.</p>
+            <h1 className="text-xl lg:text-2xl font-bold">Admin Dashboard</h1>
+            <p className="text-sm lg:text-base text-gray-500">Welcome back! Here&apos;s what&apos;s happening on the platform.</p>
           </div>
 
-          {/* Stats grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Stats grid - Mobile: 2 cols, Desktop: 4 cols */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
             {stats.map((stat) => (
-              <Card key={stat.title}>
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-500">{stat.title}</p>
-                      <p className="text-2xl font-bold mt-1">{stat.value}</p>
+              <Card key={stat.title} className="premium-card">
+                <CardContent className="p-4 lg:pt-6">
+                  <div className="flex items-start lg:items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs lg:text-sm text-gray-500 truncate">{stat.title}</p>
+                      <p className="text-lg lg:text-2xl font-bold mt-1">{stat.value}</p>
                     </div>
-                    <div className={`p-3 rounded-full ${
+                    <div className={`p-2 lg:p-3 rounded-xl shrink-0 ${
                       stat.changeType === 'positive' ? 'bg-green-100' : 'bg-red-100'
                     }`}>
-                      <stat.icon className={`h-5 w-5 ${
+                      <stat.icon className={`h-4 w-4 lg:h-5 lg:w-5 ${
                         stat.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
                       }`} />
                     </div>
                   </div>
-                  <div className="flex items-center mt-2 text-sm">
+                  <div className="flex items-center mt-2 text-xs lg:text-sm">
                     <span className={`flex items-center ${
                       stat.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
                     }`}>
                       {stat.changeType === 'positive' ? (
-                        <ArrowUpRight className="h-4 w-4 mr-1" />
+                        <ArrowUpRight className="h-3 w-3 lg:h-4 lg:w-4 mr-0.5" />
                       ) : (
-                        <ArrowDownRight className="h-4 w-4 mr-1" />
+                        <ArrowDownRight className="h-3 w-3 lg:h-4 lg:w-4 mr-0.5" />
                       )}
                       {stat.change}
                     </span>
-                    <span className="text-gray-500 ml-2">{stat.description}</span>
+                    <span className="text-gray-500 ml-1 lg:ml-2 truncate hidden sm:inline">{stat.description}</span>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Two column layout - Stack on mobile */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
             {/* Pending Verifications */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+            <Card className="premium-card">
+              <CardHeader className="flex flex-row items-center justify-between p-4 lg:p-6">
                 <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5 text-orange-500" />
+                  <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
+                    <AlertCircle className="h-4 w-4 lg:h-5 lg:w-5 text-orange-500" />
                     Pending Verifications
                   </CardTitle>
-                  <CardDescription>Shops awaiting verification</CardDescription>
+                  <CardDescription className="text-xs lg:text-sm">Shops awaiting verification</CardDescription>
                 </div>
-                <Badge variant="secondary">{pendingVerifications.length} pending</Badge>
+                <Badge variant="secondary" className="text-xs">{pendingVerifications.length} pending</Badge>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              <CardContent className="p-4 pt-0 lg:p-6 lg:pt-0">
+                <div className="space-y-3">
                   {pendingVerifications.map((shop) => (
                     <div
                       key={shop.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50 rounded-xl"
                     >
-                      <div>
-                        <p className="font-medium">{shop.shopName}</p>
-                        <p className="text-sm text-gray-500">
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm lg:text-base truncate">{shop.shopName}</p>
+                        <p className="text-xs lg:text-sm text-gray-500 truncate">
                           {shop.owner} • {shop.location}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" variant="outline">
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button size="sm" variant="outline" className="h-8 text-xs lg:text-sm rounded-lg">
                           Review
                         </Button>
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                          <CheckCircle className="h-4 w-4 mr-1" />
+                        <Button size="sm" className="h-8 text-xs lg:text-sm rounded-lg bg-green-600 hover:bg-green-700">
+                          <CheckCircle className="h-3 w-3 lg:h-4 lg:w-4 mr-1" />
                           Verify
                         </Button>
                       </div>
                     </div>
                   ))}
+                  {pendingVerifications.length === 0 && (
+                    <div className="empty-state py-8">
+                      <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">No pending verifications</p>
+                    </div>
+                  )}
                 </div>
-                <Button variant="link" className="w-full mt-4">
+                <Button variant="link" className="w-full mt-4 text-sm">
                   View all pending verifications →
                 </Button>
               </CardContent>
             </Card>
 
             {/* Recent Activity */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-blue-500" />
+            <Card className="premium-card">
+              <CardHeader className="p-4 lg:p-6">
+                <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
+                  <Clock className="h-4 w-4 lg:h-5 lg:w-5 text-blue-500" />
                   Recent Activity
                 </CardTitle>
-                <CardDescription>Latest platform activity</CardDescription>
+                <CardDescription className="text-xs lg:text-sm">Latest platform activity</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              <CardContent className="p-4 pt-0 lg:p-6 lg:pt-0">
+                <div className="space-y-3">
                   {recentActivity.map((activity) => (
                     <div
                       key={activity.id}
-                      className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors"
+                      className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors"
                     >
-                      <div className={`p-2 rounded-full ${
+                      <div className={`p-2 rounded-xl shrink-0 ${
                         activity.type === 'user_registered' ? 'bg-blue-100' :
                         activity.type === 'shop_verified' ? 'bg-green-100' :
                         activity.type === 'order_completed' ? 'bg-purple-100' : 'bg-orange-100'
@@ -240,44 +247,50 @@ export default function AdminDashboard() {
                          activity.type === 'order_completed' ? <ShoppingCart className="h-4 w-4 text-purple-600" /> :
                          <TrendingUp className="h-4 w-4 text-orange-600" />}
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{activity.message}</p>
-                        <p className="text-sm text-gray-500">{activity.user}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs lg:text-sm font-medium truncate">{activity.message}</p>
+                        <p className="text-xs text-gray-500 truncate">{activity.user}</p>
                       </div>
-                      <span className="text-xs text-gray-400">{activity.time}</span>
+                      <span className="text-xs text-gray-400 shrink-0">{activity.time}</span>
                     </div>
                   ))}
+                  {recentActivity.length === 0 && (
+                    <div className="empty-state py-8">
+                      <Clock className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">No recent activity</p>
+                    </div>
+                  )}
                 </div>
-                <Button variant="link" className="w-full mt-4">
+                <Button variant="link" className="w-full mt-4 text-sm">
                   View all activity →
                 </Button>
               </CardContent>
             </Card>
           </div>
 
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Common administrative tasks</CardDescription>
+          {/* Quick Actions - 2 cols on mobile, 4 on desktop */}
+          <Card className="premium-card">
+            <CardHeader className="p-4 lg:p-6">
+              <CardTitle className="text-base lg:text-lg">Quick Actions</CardTitle>
+              <CardDescription className="text-xs lg:text-sm">Common administrative tasks</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2">
-                  <Users className="h-6 w-6" />
-                  <span>Manage Users</span>
+            <CardContent className="p-4 pt-0 lg:p-6 lg:pt-0">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+                <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2 rounded-xl touch-target">
+                  <Users className="h-5 w-5 lg:h-6 lg:w-6" />
+                  <span className="text-xs lg:text-sm">Manage Users</span>
                 </Button>
-                <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2">
-                  <Store className="h-6 w-6" />
-                  <span>Manage Shops</span>
+                <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2 rounded-xl touch-target">
+                  <Store className="h-5 w-5 lg:h-6 lg:w-6" />
+                  <span className="text-xs lg:text-sm">Manage Shops</span>
                 </Button>
-                <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2">
-                  <TrendingUp className="h-6 w-6" />
-                  <span>View Reports</span>
+                <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2 rounded-xl touch-target">
+                  <TrendingUp className="h-5 w-5 lg:h-6 lg:w-6" />
+                  <span className="text-xs lg:text-sm">View Reports</span>
                 </Button>
-                <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2">
-                  <DollarSign className="h-6 w-6" />
-                  <span>Price Settings</span>
+                <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2 rounded-xl touch-target">
+                  <DollarSign className="h-5 w-5 lg:h-6 lg:w-6" />
+                  <span className="text-xs lg:text-sm">Price Settings</span>
                 </Button>
               </div>
             </CardContent>

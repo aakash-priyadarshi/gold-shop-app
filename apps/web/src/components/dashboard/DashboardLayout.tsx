@@ -14,9 +14,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import {
-  Gem,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
+import { BrandLogo } from '@/components/brand/BrandLogo';
+import { BRAND } from '@/config/brand';
+import {
   LayoutDashboard,
   Users,
   Store,
@@ -26,7 +34,6 @@ import {
   Settings,
   LogOut,
   Menu,
-  X,
   ChevronDown,
   Search,
   TrendingUp,
@@ -35,6 +42,7 @@ import {
   Heart,
   CreditCard,
   UserCircle,
+  Home,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { adminApi } from '@/lib/api';
@@ -80,10 +88,131 @@ interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
+// Shared sidebar content component
+function SidebarContent({ 
+  user, 
+  userNavItems, 
+  pathname, 
+  badgeCounts, 
+  onNavClick, 
+  onLogout,
+  getRoleBadge,
+  getInitials 
+}: {
+  user: ReturnType<typeof useAuth>['user'];
+  userNavItems: NavItem[];
+  pathname: string;
+  badgeCounts: Record<string, number>;
+  onNavClick?: () => void;
+  onLogout: () => void;
+  getRoleBadge: (role: UserRole) => React.ReactNode;
+  getInitials: () => string;
+}) {
+  if (!user) return null;
+  
+  return (
+    <div className="flex flex-col h-full">
+      {/* User info */}
+      <div className="p-4 border-b border-gray-100">
+        <div className="flex items-center gap-3">
+          <Avatar className="h-12 w-12 ring-2 ring-gold-100">
+            <AvatarImage src="" />
+            <AvatarFallback className="bg-gradient-to-br from-gold-400 to-gold-600 text-white font-semibold">
+              {getInitials()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900 truncate">
+              {user.firstName} {user.lastName}
+            </p>
+            <p className="text-xs text-gray-500 truncate mb-1">{user.email}</p>
+            {getRoleBadge(user.role)}
+          </div>
+        </div>
+        {user.shop && (
+          <div className="mt-3 p-3 bg-gradient-to-r from-gold-50 to-amber-50 rounded-xl border border-gold-100">
+            <p className="text-xs text-gray-500 font-medium">Shop</p>
+            <p className="text-sm font-semibold text-gray-900 truncate">{user.shop.shopName}</p>
+            {!user.shop.isVerified && (
+              <span className="inline-flex items-center mt-1 px-2 py-0.5 text-xs font-medium text-orange-700 bg-orange-100 rounded-full">
+                Pending verification
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-thin">
+        {userNavItems.map((item) => {
+          const isActive = pathname === item.href;
+          const badgeCount = item.badge === 'dynamic' && item.badgeKey 
+            ? badgeCounts[item.badgeKey] 
+            : item.badge;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onNavClick}
+              className={cn(
+                'flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 touch-target',
+                isActive
+                  ? 'bg-gradient-to-r from-gold-500 to-gold-600 text-white shadow-lg shadow-gold-500/25'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 active:scale-[0.98]'
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <item.icon className={cn('h-5 w-5', isActive && 'text-white')} />
+                <span>{item.label}</span>
+              </div>
+              {badgeCount && Number(badgeCount) > 0 && (
+                <span className={cn(
+                  'px-2 py-0.5 text-xs font-semibold rounded-full',
+                  isActive 
+                    ? 'bg-white/20 text-white' 
+                    : 'bg-red-100 text-red-700'
+                )}>
+                  {badgeCount}
+                </span>
+              )}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Bottom actions */}
+      <div className="p-3 border-t border-gray-100 space-y-1">
+        <Link
+          href="/"
+          onClick={onNavClick}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors touch-target"
+        >
+          <Home className="h-5 w-5" />
+          <span>Browse Marketplace</span>
+        </Link>
+        <button
+          onClick={onLogout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 transition-colors touch-target"
+        >
+          <LogOut className="h-5 w-5" />
+          <span>Sign out</span>
+        </button>
+      </div>
+
+      {/* Footer */}
+      <div className="p-3 text-center">
+        <p className="text-xs text-gray-400">
+          © {new Date().getFullYear()} {BRAND.name}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, logout, isLoading } = useAuth();
   const pathname = usePathname();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
 
   // Fetch dynamic badge counts for admin
@@ -103,10 +232,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [user?.role]);
 
   if (isLoading || !user) {
-
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-600"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gold-50/30">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 animate-pulse"></div>
+            <div className="absolute inset-0 w-16 h-16 rounded-2xl border-4 border-gold-200 animate-spin border-t-transparent"></div>
+          </div>
+          <p className="text-sm text-gray-500 font-medium">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -117,11 +251,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const getRoleBadge = (role: UserRole) => {
     switch (role) {
       case 'ADMIN':
-        return <span className="px-2 py-0.5 text-xs font-semibold bg-purple-100 text-purple-800 rounded-full">Admin</span>;
+        return <span className="status-badge status-badge-purple">Admin</span>;
       case 'SHOPKEEPER':
-        return <span className="px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-800 rounded-full">Shop</span>;
+        return <span className="status-badge status-badge-blue">Seller</span>;
       case 'CUSTOMER':
-        return <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-800 rounded-full">Customer</span>;
+        return <span className="status-badge status-badge-green">Customer</span>;
     }
   };
 
@@ -130,148 +264,55 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          'fixed top-0 left-0 z-50 h-full w-64 bg-white border-r transform transition-transform duration-200 ease-in-out lg:translate-x-0',
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        )}
-      >
-        {/* Logo */}
-        <div className="flex items-center justify-between h-16 px-4 border-b">
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-gold-500 rounded-lg flex items-center justify-center">
-              <Gem className="h-5 w-5 text-white" />
-            </div>
-            <span className="font-bold text-lg">Gold Shop</span>
-          </Link>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
-
-        {/* User info */}
-        <div className="p-4 border-b">
-          <div className="flex items-center space-x-3">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src="" />
-              <AvatarFallback className="bg-gold-100 text-gold-700">{getInitials()}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">
-                {user.firstName} {user.lastName}
-              </p>
-              <div className="flex items-center gap-2">
-                {getRoleBadge(user.role)}
-              </div>
-            </div>
-          </div>
-          {user.shop && (
-            <div className="mt-2 p-2 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-500">Shop</p>
-              <p className="text-sm font-medium truncate">{user.shop.shopName}</p>
-              {!user.shop.isVerified && (
-                <span className="text-xs text-orange-600">Pending verification</span>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {userNavItems.map((item) => {
-            const isActive = pathname === item.href;
-            const badgeCount = item.badge === 'dynamic' && item.badgeKey 
-              ? badgeCounts[item.badgeKey] 
-              : item.badge;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={cn(
-                  'flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-gold-50 text-gold-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                )}
-              >
-                <div className="flex items-center space-x-3">
-                  <item.icon className="h-5 w-5" />
-                  <span>{item.label}</span>
-                </div>
-                {badgeCount && Number(badgeCount) > 0 && (
-                  <span className="px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded-full">
-                    {badgeCount}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Logout */}
-        <div className="p-4 border-t">
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-gray-600 hover:text-red-600 hover:bg-red-50"
-            onClick={logout}
-          >
-            <LogOut className="h-5 w-5 mr-3" />
-            Sign out
-          </Button>
-        </div>
-      </aside>
-
-      {/* Main content */}
-      <div className="lg:pl-64">
-        {/* Top header */}
-        <header className="sticky top-0 z-30 h-16 bg-white border-b flex items-center justify-between px-4 lg:px-6">
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-            <div className="hidden md:flex items-center space-x-2 bg-gray-100 rounded-lg px-3 py-2">
-              <Search className="h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search..."
-                className="bg-transparent border-none outline-none text-sm w-48"
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gold-50/20">
+      {/* Mobile Header */}
+      <header className="lg:hidden sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100 safe-area-top">
+        <div className="flex items-center justify-between h-14 px-4">
+          {/* Mobile Menu Button */}
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="touch-target -ml-2">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[280px] p-0">
+              <SheetHeader className="p-4 border-b border-gray-100">
+                <SheetTitle className="flex items-center gap-2">
+                  <BrandLogo variant="icon" size="sm" />
+                  <span className="font-bold text-lg">{BRAND.name}</span>
+                </SheetTitle>
+              </SheetHeader>
+              <SidebarContent 
+                user={user}
+                userNavItems={userNavItems}
+                pathname={pathname}
+                badgeCounts={badgeCounts}
+                onNavClick={() => setMobileMenuOpen(false)}
+                onLogout={logout}
+                getRoleBadge={getRoleBadge}
+                getInitials={getInitials}
               />
-            </div>
-          </div>
+            </SheetContent>
+          </Sheet>
 
-          <div className="flex items-center space-x-4">
+          {/* Mobile Logo */}
+          <Link href="/" className="flex items-center gap-2">
+            <BrandLogo variant="icon" size="sm" />
+            <span className="font-bold text-base">{BRAND.name}</span>
+          </Link>
+
+          {/* Mobile Actions */}
+          <div className="flex items-center gap-1">
             <NotificationDropdown />
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center space-x-2">
+                <Button variant="ghost" size="icon" className="touch-target">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-gold-100 text-gold-700 text-sm">
+                    <AvatarFallback className="bg-gradient-to-br from-gold-400 to-gold-600 text-white text-xs">
                       {getInitials()}
                     </AvatarFallback>
                   </Avatar>
-                  <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -291,7 +332,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <DropdownMenuItem asChild>
                   <Link href="/">
                     <Store className="h-4 w-4 mr-2" />
-                    Browse Shops
+                    Browse Marketplace
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -302,13 +343,106 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </header>
+        </div>
+      </header>
 
-        {/* Page content */}
-        <main className="p-4 lg:p-6">
-          {children}
-        </main>
+      {/* Desktop Layout */}
+      <div className="hidden lg:flex">
+        {/* Desktop Sidebar */}
+        <aside className="fixed top-0 left-0 z-40 h-screen w-72 bg-white border-r border-gray-100 shadow-sm">
+          {/* Logo */}
+          <div className="flex items-center h-16 px-6 border-b border-gray-100">
+            <Link href="/" className="flex items-center gap-3">
+              <BrandLogo variant="icon" size="md" />
+              <span className="font-bold text-xl tracking-tight">{BRAND.name}</span>
+            </Link>
+          </div>
+          
+          <SidebarContent 
+            user={user}
+            userNavItems={userNavItems}
+            pathname={pathname}
+            badgeCounts={badgeCounts}
+            onLogout={logout}
+            getRoleBadge={getRoleBadge}
+            getInitials={getInitials}
+          />
+        </aside>
+
+        {/* Desktop Main Content */}
+        <div className="flex-1 ml-72">
+          {/* Desktop Header */}
+          <header className="sticky top-0 z-30 h-16 bg-white/80 backdrop-blur-xl border-b border-gray-100 flex items-center justify-between px-6">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 bg-gray-100/80 rounded-xl px-4 py-2.5 w-72">
+                <Search className="h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  className="bg-transparent border-none outline-none text-sm w-full placeholder:text-gray-400"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <NotificationDropdown />
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center gap-2 hover:bg-gray-100 rounded-xl">
+                    <Avatar className="h-9 w-9 ring-2 ring-gold-100">
+                      <AvatarFallback className="bg-gradient-to-br from-gold-400 to-gold-600 text-white text-sm">
+                        {getInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="hidden xl:block text-left">
+                      <p className="text-sm font-medium">{user.firstName}</p>
+                      <p className="text-xs text-gray-500 capitalize">{user.role.toLowerCase()}</p>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    <div>
+                      <p className="font-medium">{user.firstName} {user.lastName}</p>
+                      <p className="text-xs text-gray-500">{user.email}</p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href={`/dashboard/${user.role.toLowerCase()}/settings`}>
+                      <Settings className="h-4 w-4 mr-2" />
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/">
+                      <Store className="h-4 w-4 mr-2" />
+                      Browse Marketplace
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={logout} className="text-red-600">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </header>
+
+          {/* Page content */}
+          <main className="p-6">
+            {children}
+          </main>
+        </div>
       </div>
+
+      {/* Mobile Main Content */}
+      <main className="lg:hidden px-4 py-4 pb-20 safe-area-bottom">
+        {children}
+      </main>
     </div>
   );
 }
