@@ -25,6 +25,12 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { BRAND } from '@/config/brand';
 import {
@@ -46,6 +52,10 @@ import {
   Sparkles,
   Building2,
   Info,
+  LayoutDashboard,
+  Package,
+  ClipboardList,
+  Shield,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import {
@@ -58,6 +68,28 @@ import {
   type Language,
   type ThemeMode,
 } from '@/store/preferences';
+
+// Role-specific quick action icons configuration
+const getRoleQuickActions = (role: string | undefined) => {
+  switch (role) {
+    case 'ADMIN':
+      return [
+        { href: '/dashboard/admin', icon: Shield, label: 'Admin Dashboard', tooltip: 'Admin Dashboard' },
+        { href: '/dashboard/admin/orders', icon: ClipboardList, label: 'Ongoing Orders', tooltip: 'View All Orders' },
+      ];
+    case 'SHOPKEEPER':
+      return [
+        { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', tooltip: 'Shopkeeper Dashboard' },
+        { href: '/dashboard/orders', icon: Package, label: 'Order Requests', tooltip: 'View Order Requests' },
+      ];
+    case 'CUSTOMER':
+    default:
+      return [
+        { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', tooltip: 'My Dashboard' },
+        { href: '/orders', icon: Package, label: 'Track Orders', tooltip: 'Track My Orders' },
+      ];
+  }
+};
 
 export function Header() {
   const { data: session, status } = useSession();
@@ -213,12 +245,15 @@ export function Header() {
               <div className="p-4 border-t border-gray-100 space-y-2">
                 {session ? (
                   <>
-                    <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
-                      <Button variant="outline" className="w-full h-12 justify-start rounded-xl text-base">
-                        <User className="mr-3 h-5 w-5" />
-                        Dashboard
-                      </Button>
-                    </Link>
+                    {/* Role-specific quick actions for mobile */}
+                    {getRoleQuickActions(session.user?.role).map((action) => (
+                      <Link key={action.href} href={action.href} onClick={() => setMobileMenuOpen(false)}>
+                        <Button variant="outline" className="w-full h-12 justify-start rounded-xl text-base">
+                          <action.icon className="mr-3 h-5 w-5" />
+                          {action.label}
+                        </Button>
+                      </Link>
+                    ))}
                     <Button
                       variant="ghost"
                       className="w-full h-12 justify-start rounded-xl text-base text-red-600 hover:bg-red-50"
@@ -347,27 +382,60 @@ export function Header() {
         </div>
 
         {/* Desktop Auth/User Menu */}
-        <div className="hidden lg:flex items-center gap-3">
+        <div className="hidden lg:flex items-center gap-2">
           {status === 'loading' ? (
             <div className="w-9 h-9 bg-gray-100 rounded-lg animate-pulse" />
           ) : session ? (
-            <>
-              <Link href="/notifications">
-                <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-lg">
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
-                    3
-                  </span>
-                </Button>
-              </Link>
+            <TooltipProvider delayDuration={200}>
+              {/* Role-specific quick action icons */}
+              {getRoleQuickActions(session.user?.role).map((action) => (
+                <Tooltip key={action.href}>
+                  <TooltipTrigger asChild>
+                    <Link href={action.href}>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg">
+                        <action.icon className="h-5 w-5" />
+                      </Button>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{action.tooltip}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+              
+              {/* Notifications */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href="/notifications">
+                    <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-lg">
+                      <Bell className="h-5 w-5" />
+                      <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
+                        3
+                      </span>
+                    </Button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Notifications</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              {/* User menu dropdown */}
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-lg p-0">
-                    <div className="w-9 h-9 bg-gradient-to-br from-gold-400 to-gold-600 rounded-lg flex items-center justify-center">
-                      <User className="h-5 w-5 text-white" />
-                    </div>
-                  </Button>
-                </DropdownMenuTrigger>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="relative h-9 w-9 rounded-lg p-0">
+                        <div className="w-9 h-9 bg-gradient-to-br from-gold-400 to-gold-600 rounded-lg flex items-center justify-center">
+                          <User className="h-5 w-5 text-white" />
+                        </div>
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Account</p>
+                  </TooltipContent>
+                </Tooltip>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
@@ -377,12 +445,15 @@ export function Header() {
                       <p className="text-xs leading-none text-muted-foreground">
                         {session.user?.email}
                       </p>
+                      <p className="text-xs leading-none text-gold-600 font-medium mt-1">
+                        {session.user?.role}
+                      </p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard">
-                      <User className="mr-2 h-4 w-4" />
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
                       Dashboard
                     </Link>
                   </DropdownMenuItem>
@@ -406,6 +477,24 @@ export function Header() {
                       </Link>
                     </DropdownMenuItem>
                   )}
+                  {session.user?.role === 'ADMIN' && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/admin">
+                          <Shield className="mr-2 h-4 w-4" />
+                          Admin Panel
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/admin/orders">
+                          <ClipboardList className="mr-2 h-4 w-4" />
+                          All Orders
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/settings">
                       <Settings className="mr-2 h-4 w-4" />
@@ -419,7 +508,7 @@ export function Header() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </>
+            </TooltipProvider>
           ) : (
             <>
               <Link href="/auth/login">
@@ -435,28 +524,37 @@ export function Header() {
         {/* Mobile Auth Icons */}
         <div className="flex lg:hidden items-center gap-1">
           {status !== 'loading' && session && (
-            <Link href="/notifications">
-              <Button variant="ghost" size="icon" className="relative touch-target">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                  3
-                </span>
-              </Button>
-            </Link>
+            <>
+              {/* First quick action for mobile */}
+              <Link href={getRoleQuickActions(session.user?.role)[0]?.href || '/dashboard'}>
+                <Button variant="ghost" size="icon" className="touch-target">
+                  {(() => {
+                    const Icon = getRoleQuickActions(session.user?.role)[0]?.icon || LayoutDashboard;
+                    return <Icon className="h-5 w-5" />;
+                  })()}
+                </Button>
+              </Link>
+              <Link href="/notifications">
+                <Button variant="ghost" size="icon" className="relative touch-target">
+                  <Bell className="h-5 w-5" />
+                  <span className="absolute top-1 right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                    3
+                  </span>
+                </Button>
+              </Link>
+              <Link href="/dashboard">
+                <Button variant="ghost" size="icon" className="touch-target">
+                  <div className="w-8 h-8 bg-gradient-to-br from-gold-400 to-gold-600 rounded-lg flex items-center justify-center">
+                    <User className="h-4 w-4 text-white" />
+                  </div>
+                </Button>
+              </Link>
+            </>
           )}
           {status !== 'loading' && !session && (
             <Link href="/auth/login">
               <Button variant="ghost" size="icon" className="touch-target">
                 <User className="h-5 w-5" />
-              </Button>
-            </Link>
-          )}
-          {status !== 'loading' && session && (
-            <Link href="/dashboard">
-              <Button variant="ghost" size="icon" className="touch-target">
-                <div className="w-8 h-8 bg-gradient-to-br from-gold-400 to-gold-600 rounded-lg flex items-center justify-center">
-                  <User className="h-4 w-4 text-white" />
-                </div>
               </Button>
             </Link>
           )}

@@ -20,6 +20,12 @@ import {
   UpdateOrderStatusDto,
   CreateMilestoneDto,
   OrderFilterDto,
+  AdminOrderFilterDto,
+  AdminCancelOrderDto,
+  AdminUpdateTimelineDto,
+  AdminVerifyPaymentDto,
+  CreateCounterOfferDto,
+  RespondToCounterOfferDto,
 } from './dto/order.dto';
 
 @ApiTags('orders')
@@ -128,5 +134,93 @@ export class OrdersController {
     @Body('reason') reason: string,
   ) {
     return this.ordersService.cancelOrder(id, userId, reason);
+  }
+
+  // ══════════════════════════════════════
+  // ADMIN ENDPOINTS
+  // ══════════════════════════════════════
+
+  @Get('admin/all')
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Get all orders (Admin)' })
+  async getAllOrders(@Query() filters: AdminOrderFilterDto) {
+    return this.ordersService.findAllOrders(filters);
+  }
+
+  @Get('admin/stats')
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Get platform-wide order statistics (Admin)' })
+  async getPlatformOrderStats() {
+    return this.ordersService.getPlatformStats();
+  }
+
+  @Post('admin/:id/cancel')
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Cancel order as admin' })
+  async adminCancelOrder(
+    @Param('id') id: string,
+    @CurrentUser('id') adminId: string,
+    @Body() dto: AdminCancelOrderDto,
+  ) {
+    return this.ordersService.adminCancelOrder(id, adminId, dto);
+  }
+
+  @Patch('admin/:id/timeline')
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Update order timeline (Admin)' })
+  async adminUpdateTimeline(
+    @Param('id') id: string,
+    @CurrentUser('id') adminId: string,
+    @Body() dto: AdminUpdateTimelineDto,
+  ) {
+    return this.ordersService.adminUpdateTimeline(id, adminId, dto);
+  }
+
+  @Post('admin/:id/verify-payment')
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Manually verify payment (Admin)' })
+  async adminVerifyPayment(
+    @Param('id') id: string,
+    @CurrentUser('id') adminId: string,
+    @Body() dto: AdminVerifyPaymentDto,
+  ) {
+    return this.ordersService.adminVerifyPayment(id, adminId, dto);
+  }
+
+  // ══════════════════════════════════════
+  // COUNTER-OFFER ENDPOINTS (Shopkeeper)
+  // ══════════════════════════════════════
+
+  @Post(':id/counter-offer')
+  @Roles('SHOPKEEPER')
+  @ApiOperation({ summary: 'Create counter-offer for custom order' })
+  async createCounterOffer(
+    @Param('id') orderId: string,
+    @CurrentUser('id') shopkeeperId: string,
+    @Body() dto: CreateCounterOfferDto,
+  ) {
+    return this.ordersService.createCounterOffer(orderId, shopkeeperId, dto);
+  }
+
+  @Get(':id/versions')
+  @ApiOperation({ summary: 'Get all versions/counter-offers for an order' })
+  async getOrderVersions(
+    @Param('id') orderId: string,
+    @CurrentUser('id') userId: string,
+    @CurrentUser('role') userRole: string,
+  ) {
+    return this.ordersService.getOrderVersions(orderId, userId, userRole);
+  }
+
+  @Post(':id/versions/:versionId/respond')
+  @Roles('CUSTOMER')
+  @ApiOperation({ summary: 'Respond to counter-offer' })
+  async respondToCounterOffer(
+    @Param('id') orderId: string,
+    @Param('versionId') versionId: string,
+    @CurrentUser('id') customerId: string,
+    @Body() dto: RespondToCounterOfferDto,
+  ) {
+    return this.ordersService.respondToCounterOffer(orderId, versionId, customerId, dto);
   }
 }

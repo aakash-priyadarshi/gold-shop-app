@@ -61,6 +61,7 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard/admin', icon: LayoutDashboard, roles: ['ADMIN'] },
   { label: 'Users', href: '/dashboard/admin/users', icon: Users, roles: ['ADMIN'] },
   { label: 'Shops', href: '/dashboard/admin/shops', icon: Store, roles: ['ADMIN'] },
+  { label: 'Orders', href: '/dashboard/admin/orders', icon: ShoppingCart, roles: ['ADMIN'], badge: 'dynamic', badgeKey: 'pendingOrders' },
   { label: 'Verifications', href: '/dashboard/admin/verifications', icon: Shield, roles: ['ADMIN'], badge: 'dynamic', badgeKey: 'pendingVerifications' },
   { label: 'Reports', href: '/dashboard/admin/reports', icon: FileText, roles: ['ADMIN'], badge: 'dynamic', badgeKey: 'openReports' },
   { label: 'Profile', href: '/dashboard/admin/profile', icon: UserCircle, roles: ['ADMIN'] },

@@ -8,6 +8,12 @@ import {
   UpdateOrderStatusDto,
   CreateMilestoneDto,
   OrderFilterDto,
+  AdminOrderFilterDto,
+  AdminCancelOrderDto,
+  AdminUpdateTimelineDto,
+  AdminVerifyPaymentDto,
+  CreateCounterOfferDto,
+  RespondToCounterOfferDto,
 } from './dto/order.dto';
 
 @Injectable()
@@ -576,5 +582,488 @@ export class OrdersService {
       completedOrders,
       totalRevenue: totalRevenue._sum?.totalNpr || 0,
     };
+  }
+
+  // ══════════════════════════════════════
+  // ADMIN METHODS
+  // ══════════════════════════════════════
+
+  // Get all orders (Admin)
+  async findAllOrders(filters: AdminOrderFilterDto) {
+    const { page = 1, limit = 20, status, paymentStatus, type, shopId, customerId, search, createdByAdmin } = filters;
+
+    const where: any = {};
+
+    if (status) where.status = status;
+    if (paymentStatus) where.paymentStatus = paymentStatus;
+    if (type) where.orderType = type;
+    if (shopId) where.shopId = shopId;
+    if (customerId) where.customerId = customerId;
+    if (createdByAdmin !== undefined) where.createdByAdmin = createdByAdmin;
+
+    if (search) {
+      where.OR = [
+        { orderNumber: { contains: search, mode: 'insensitive' } },
+        { customer: { firstName: { contains: search, mode: 'insensitive' } } },
+        { customer: { lastName: { contains: search, mode: 'insensitive' } } },
+        { customer: { email: { contains: search, mode: 'insensitive' } } },
+        { shop: { businessName: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [orders, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        include: {
+          customer: { select: { id: true, firstName: true, lastName: true, email: true } },
+          shop: { select: { id: true, shopName: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    return {
+      orders,
+      meta: {
+        page,
+        limit,
+        totalCount: total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  // Get platform-wide order statistics (Admin)
+  async getPlatformStats() {
+    const [
+      totalOrders,
+      pendingOrders,
+      inProductionOrders,
+      deliveredOrders,
+      cancelledOrders,
+      totalRevenue,
+      pendingPayments,
+    ] = await Promise.all([
+      this.prisma.order.count(),
+      this.prisma.order.count({
+        where: { status: { in: ['CREATED', 'PAYMENT_PENDING'] } },
+      }),
+      this.prisma.order.count({
+        where: { status: { in: ['IN_PRODUCTION', 'QC_PENDING', 'QC_PASSED'] } },
+      }),
+      this.prisma.order.count({
+        where: { status: 'COMPLETED' },
+      }),
+      this.prisma.order.count({
+        where: { status: 'CANCELLED' },
+      }),
+      this.prisma.order.aggregate({
+        where: { status: 'COMPLETED' },
+        _sum: { totalNpr: true },
+      }),
+      this.prisma.order.aggregate({
+        where: { paymentStatus: { in: ['PENDING', 'PARTIAL'] } },
+        _sum: { balanceDueNpr: true },
+      }),
+    ]);
+
+    return {
+      totalOrders,
+      pendingOrders,
+      inProductionOrders,
+      deliveredOrders,
+      cancelledOrders,
+      totalRevenue: totalRevenue._sum?.totalNpr || 0,
+      pendingPayments: pendingPayments._sum?.balanceDueNpr || 0,
+    };
+  }
+
+  // Cancel order as admin
+  async adminCancelOrder(orderId: string, adminId: string, dto: AdminCancelOrderDto) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        customer: { select: { id: true, firstName: true, lastName: true, email: true } },
+        shop: { select: { id: true, userId: true, shopName: true } },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.status === 'CANCELLED' || order.status === 'COMPLETED') {
+      throw new BadRequestException('Cannot cancel a completed or already cancelled order');
+    }
+
+    const updatedOrder = await this.prisma.order.update({
+      where: { id: orderId },
+      data: {
+        status: 'CANCELLED' as OrderStatus,
+        adminNotes: `[ADMIN CANCELLED] ${dto.reason}${dto.adminNotes ? '\n' + dto.adminNotes : ''}`
+      },
+    });
+
+    // Notify customer
+    await this.notificationsService.create({
+      userId: order.customerId,
+      type: 'SYSTEM_ALERT',
+      titleKey: 'notification.order.admin_cancelled.title',
+      titleParams: { orderNumber: order.orderNumber },
+      bodyKey: 'notification.order.admin_cancelled.body',
+      bodyParams: {
+        orderNumber: order.orderNumber,
+        reason: dto.reason,
+      },
+      referenceType: 'ORDER',
+      referenceId: order.id,
+      channels: ['EMAIL', 'PUSH'],
+    });
+
+    // Notify shop
+    await this.notificationsService.create({
+      userId: order.shop.userId,
+      type: 'SYSTEM_ALERT',
+      titleKey: 'notification.order.admin_cancelled.title',
+      titleParams: { orderNumber: order.orderNumber },
+      bodyKey: 'notification.order.admin_cancelled.shop_body',
+      bodyParams: {
+        orderNumber: order.orderNumber,
+        reason: dto.reason,
+      },
+      referenceType: 'ORDER',
+      referenceId: order.id,
+      channels: ['EMAIL', 'PUSH'],
+    });
+
+    return updatedOrder;
+  }
+
+  // Update order timeline (Admin)
+  async adminUpdateTimeline(orderId: string, adminId: string, dto: AdminUpdateTimelineDto) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        customer: { select: { id: true } },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    const previousDelivery = order.estimatedDelivery;
+    
+    const updatedOrder = await this.prisma.order.update({
+      where: { id: orderId },
+      data: {
+        estimatedDelivery: new Date(dto.estimatedDelivery),
+        adminNotes: dto.adminNotes ? `${order.adminNotes || ''}\n[TIMELINE UPDATED] ${dto.adminNotes}`.trim() : order.adminNotes,
+      },
+    });
+
+    // Notify customer of timeline change
+    await this.notificationsService.create({
+      userId: order.customerId,
+      type: 'SYSTEM_ALERT',
+      titleKey: 'notification.order.timeline_updated.title',
+      titleParams: { orderNumber: order.orderNumber },
+      bodyKey: 'notification.order.timeline_updated.body',
+      bodyParams: {
+        orderNumber: order.orderNumber,
+        newDate: dto.estimatedDelivery,
+      },
+      referenceType: 'ORDER',
+      referenceId: order.id,
+      channels: ['EMAIL', 'PUSH'],
+    });
+
+    return updatedOrder;
+  }
+
+  // Manually verify payment (Admin)
+  async adminVerifyPayment(orderId: string, adminId: string, dto: AdminVerifyPaymentDto) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        customer: { select: { id: true } },
+        shop: { select: { id: true, userId: true } },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.paymentStatus === 'COMPLETED') {
+      throw new BadRequestException('Payment is already marked as completed');
+    }
+
+    const updatedOrder = await this.prisma.order.update({
+      where: { id: orderId },
+      data: {
+        paymentStatus: 'COMPLETED',
+        balanceDueNpr: 0,
+        paymentVerifiedByAdmin: true,
+        paymentVerifiedAt: new Date(),
+        paymentVerifiedById: adminId,
+        adminNotes: `${order.adminNotes || ''}\n[PAYMENT VERIFIED BY ADMIN] ${dto.verificationNotes}`.trim(),
+        status: order.status === 'CREATED' ? 'PAID' as OrderStatus : order.status,
+      },
+    });
+
+    // Notify customer
+    await this.notificationsService.create({
+      userId: order.customerId,
+      type: 'SYSTEM_ALERT',
+      titleKey: 'notification.payment.verified.title',
+      titleParams: { orderNumber: order.orderNumber },
+      bodyKey: 'notification.payment.verified.body',
+      bodyParams: {
+        orderNumber: order.orderNumber,
+      },
+      referenceType: 'ORDER',
+      referenceId: order.id,
+      channels: ['EMAIL', 'PUSH'],
+    });
+
+    // Notify shop
+    await this.notificationsService.create({
+      userId: order.shop.userId,
+      type: 'SYSTEM_ALERT',
+      titleKey: 'notification.payment.verified.shop_title',
+      titleParams: { orderNumber: order.orderNumber },
+      bodyKey: 'notification.payment.verified.shop_body',
+      bodyParams: {
+        orderNumber: order.orderNumber,
+      },
+      referenceType: 'ORDER',
+      referenceId: order.id,
+      channels: ['EMAIL', 'PUSH'],
+    });
+
+    return updatedOrder;
+  }
+
+  // ══════════════════════════════════════
+  // COUNTER-OFFER METHODS
+  // ══════════════════════════════════════
+  // COUNTER-OFFER METHODS
+  // NOTE: These methods require running `npx prisma migrate dev` to create OrderVersion table
+  // ══════════════════════════════════════
+
+  // Create counter-offer for custom order
+  async createCounterOffer(orderId: string, shopkeeperId: string, dto: CreateCounterOfferDto) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        shop: { select: { id: true, userId: true, shopName: true } },
+        customer: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.shop.userId !== shopkeeperId) {
+      throw new ForbiddenException('Not authorized to modify this order');
+    }
+
+    if (order.orderType !== 'CUSTOM') {
+      throw new BadRequestException('Counter-offers are only available for custom orders');
+    }
+
+    // Get next version number
+    const existingVersions = await this.prisma.orderVersion.count({
+      where: { orderId },
+    });
+    const nextVersionNumber = existingVersions + 1;
+
+    // Extract values from DTO
+    const estimatedDeliveryDays = dto.timeline?.estimatedDays || 14;
+    const totalPriceNpr = dto.pricing?.totalNpr || 0;
+    const laborCostNpr = dto.pricing?.makingChargesNpr || 0;
+
+    // Create new version
+    const newVersion = await this.prisma.orderVersion.create({
+      data: {
+        orderId,
+        versionNumber: nextVersionNumber,
+        status: 'PENDING',
+        materials: dto.materials ? [dto.materials] : [],
+        gemstones: dto.gemstones || [],
+        finishes: dto.finishes ? [dto.finishes] : [],
+        estimatedDeliveryDays,
+        totalPriceNpr,
+        laborCostNpr,
+        notes: dto.notes,
+        createdByShopkeeper: true,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      },
+    });
+
+    // Notify customer of counter-offer
+    await this.notificationsService.create({
+      userId: order.customerId,
+      type: 'SYSTEM_ALERT',
+      titleKey: 'notification.order.counter_offer.title',
+      titleParams: { shopName: order.shop.shopName },
+      bodyKey: 'notification.order.counter_offer.body',
+      bodyParams: {
+        orderNumber: order.orderNumber,
+        newPrice: totalPriceNpr,
+      },
+      referenceType: 'ORDER',
+      referenceId: order.id,
+      channels: ['EMAIL', 'PUSH'],
+    });
+
+    return newVersion;
+  }
+
+  // Get all versions/counter-offers for an order
+  async getOrderVersions(orderId: string, userId: string, userRole: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        shop: { select: { userId: true } },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    // Check access
+    const hasAccess =
+      userRole === 'ADMIN' ||
+      order.customerId === userId ||
+      order.shop.userId === userId;
+
+    if (!hasAccess) {
+      throw new ForbiddenException('Not authorized to view this order');
+    }
+
+    const versions = await this.prisma.orderVersion.findMany({
+      where: { orderId },
+      orderBy: { versionNumber: 'desc' },
+    });
+    
+    return versions;
+  }
+
+  // Respond to counter-offer
+  async respondToCounterOffer(
+    orderId: string,
+    versionId: string,
+    customerId: string,
+    dto: RespondToCounterOfferDto,
+  ) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        shop: { select: { id: true, userId: true, shopName: true } },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.customerId !== customerId) {
+      throw new ForbiddenException('Not authorized to respond to this counter-offer');
+    }
+
+    const version = await this.prisma.orderVersion.findUnique({
+      where: { id: versionId },
+    });
+
+    if (!version || version.orderId !== orderId) {
+      throw new NotFoundException('Counter-offer not found');
+    }
+
+    if (version.status !== 'PENDING') {
+      throw new BadRequestException('This counter-offer is no longer pending');
+    }
+
+    const isAccept = dto.response === 'ACCEPT';
+    
+    if (isAccept) {
+      // Accept the counter-offer - update order with new values
+      await this.prisma.$transaction(async (tx) => {
+        // Update version status
+        await tx.orderVersion.update({
+          where: { id: versionId },
+          data: { status: 'ACCEPTED' },
+        });
+
+        // Update order with accepted version values
+        await tx.order.update({
+          where: { id: orderId },
+          data: {
+            currentVersionId: versionId,
+            totalNpr: version.totalPriceNpr,
+            estimatedDelivery: new Date(Date.now() + version.estimatedDeliveryDays * 24 * 60 * 60 * 1000),
+            status: 'PAID', // Move to PAID status to proceed with order
+          },
+        });
+
+        // Mark other pending versions as superseded
+        await tx.orderVersion.updateMany({
+          where: {
+            orderId,
+            id: { not: versionId },
+            status: 'PENDING',
+          },
+          data: { status: 'SUPERSEDED' },
+        });
+      });
+
+      // Notify shopkeeper
+      await this.notificationsService.create({
+        userId: order.shop.userId,
+        type: 'SYSTEM_ALERT',
+        titleKey: 'notification.order.counter_offer_accepted.title',
+        titleParams: { orderNumber: order.orderNumber },
+        bodyKey: 'notification.order.counter_offer_accepted.body',
+        bodyParams: { orderNumber: order.orderNumber },
+        referenceType: 'ORDER',
+        referenceId: order.id,
+        channels: ['EMAIL', 'PUSH'],
+      });
+
+      return { status: 'accepted', versionId };
+    } else {
+      // Reject the counter-offer
+      await this.prisma.orderVersion.update({
+        where: { id: versionId },
+        data: {
+          status: 'REJECTED',
+          rejectionReason: dto.notes,
+        },
+      });
+
+      // Notify shopkeeper
+      await this.notificationsService.create({
+        userId: order.shop.userId,
+        type: 'SYSTEM_ALERT',
+        titleKey: 'notification.order.counter_offer_rejected.title',
+        titleParams: { orderNumber: order.orderNumber },
+        bodyKey: 'notification.order.counter_offer_rejected.body',
+        bodyParams: {
+          orderNumber: order.orderNumber,
+          reason: dto.notes || 'No reason provided',
+        },
+        referenceType: 'ORDER',
+        referenceId: order.id,
+        channels: ['EMAIL', 'PUSH'],
+      });
+
+      return { status: 'rejected', versionId };
+    }
   }
 }

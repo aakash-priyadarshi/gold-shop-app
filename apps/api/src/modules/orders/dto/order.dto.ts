@@ -105,4 +105,128 @@ export class OrderFilterDto {
   @IsNumber()
   @IsOptional()
   limit?: number;
+
+  @ApiPropertyOptional({ description: 'Filter by payment status' })
+  @IsString()
+  @IsOptional()
+  paymentStatus?: string;
+}
+
+// Admin-specific DTOs
+
+export class AdminOrderFilterDto extends OrderFilterDto {
+  @ApiPropertyOptional({ description: 'Filter by customer ID' })
+  @IsString()
+  @IsOptional()
+  customerId?: string;
+
+  @ApiPropertyOptional({ description: 'Filter orders created by admin' })
+  @IsOptional()
+  createdByAdmin?: boolean;
+
+  @ApiPropertyOptional({ description: 'Search by order number, customer name, or shop name' })
+  @IsString()
+  @IsOptional()
+  search?: string;
+}
+
+export class AdminCancelOrderDto {
+  @ApiProperty({ description: 'Reason for cancellation' })
+  @IsString()
+  reason: string;
+
+  @ApiPropertyOptional({ description: 'Internal admin notes' })
+  @IsString()
+  @IsOptional()
+  adminNotes?: string;
+}
+
+export class AdminUpdateTimelineDto {
+  @ApiProperty({ description: 'New estimated delivery date' })
+  @IsString()
+  estimatedDelivery: string;
+
+  @ApiPropertyOptional({ description: 'Admin notes about the change' })
+  @IsString()
+  @IsOptional()
+  adminNotes?: string;
+}
+
+export class AdminVerifyPaymentDto {
+  @ApiProperty({ description: 'Payment verification notes (bank statement, transaction ID, etc.)' })
+  @IsString()
+  verificationNotes: string;
+
+  @ApiPropertyOptional({ description: 'Amount verified' })
+  @IsNumber()
+  @IsOptional()
+  amountVerified?: number;
+}
+
+export class CreateCounterOfferDto {
+  @ApiProperty({ description: 'Order ID to create counter-offer for' })
+  @IsString()
+  orderId: string;
+
+  @ApiPropertyOptional({ description: 'Updated materials specification' })
+  @IsOptional()
+  materials?: {
+    metalType?: string;
+    purity?: string;
+    weight?: number;
+  };
+
+  @ApiPropertyOptional({ description: 'Updated gemstone specifications' })
+  @IsOptional()
+  gemstones?: Array<{
+    type: string;
+    count: number;
+    carats?: number;
+    quality?: string;
+  }>;
+
+  @ApiPropertyOptional({ description: 'Updated finish options' })
+  @IsOptional()
+  finishes?: {
+    polish?: string;
+    texture?: string;
+    plating?: string;
+  };
+
+  @ApiPropertyOptional({ description: 'Updated timeline' })
+  @IsOptional()
+  timeline?: {
+    estimatedDays: number;
+    rushAvailable?: boolean;
+    rushDays?: number;
+  };
+
+  @ApiPropertyOptional({ description: 'Updated pricing' })
+  @IsOptional()
+  pricing?: {
+    subtotalNpr: number;
+    makingChargesNpr: number;
+    taxNpr: number;
+    totalNpr: number;
+  };
+
+  @ApiProperty({ description: 'Summary of changes for customer' })
+  @IsString()
+  changeSummary: string;
+
+  @ApiPropertyOptional({ description: 'Notes for the customer' })
+  @IsString()
+  @IsOptional()
+  notes?: string;
+}
+
+export class RespondToCounterOfferDto {
+  @ApiProperty({ description: 'Customer response' })
+  @IsEnum(['ACCEPT', 'REJECT', 'COUNTER'])
+  response: 'ACCEPT' | 'REJECT' | 'COUNTER';
+
+  @ApiPropertyOptional({ description: 'Customer notes' })
+  @IsString()
+  @IsOptional()
+  notes?: string;
 }

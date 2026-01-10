@@ -664,6 +664,17 @@ model Order {
   // Expiry for booking (24 hours)
   bookingExpiresAt    DateTime?
   
+  // Admin fields
+  createdByAdmin      Boolean     @default(false)  // If admin created on behalf of customer
+  adminNotes          String?                       // Internal admin notes
+  paymentVerifiedByAdmin Boolean  @default(false)  // Admin manually verified payment
+  paymentVerifiedAt   DateTime?                     // When payment was verified
+  paymentVerifiedById String?                       // Which admin verified
+  
+  // Order versioning for counter-offers
+  currentVersionId    String?     @unique          // Current active version
+  versions            OrderVersion[]                // All versions/counter-offers
+  
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
 
@@ -671,6 +682,63 @@ model Order {
   @@index([shopId])
   @@index([status])
   @@index([orderNumber])
+  @@index([createdByAdmin])
+  @@index([paymentVerifiedByAdmin])
+}
+
+// Order version for tracking counter-offers and modifications
+model OrderVersion {
+  id                  String      @id @default(uuid())
+  orderId             String
+  order               Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  versionNumber       Int                           // 1, 2, 3, etc.
+  
+  // Who created this version
+  createdByRole       String                        // CUSTOMER, SHOPKEEPER, ADMIN
+  createdById         String
+  
+  // Snapshot of order details at this version
+  productSnapshot     Json                          // Full product specs
+  
+  // Pricing at this version
+  subtotalNpr         Float
+  taxNpr              Float
+  shippingNpr         Float
+  discountNpr         Float
+  totalNpr            Float
+  makingChargesNpr    Float?
+  
+  // Custom order specs (for counter-offers)
+  materials           Json?                         // Metal type, purity, weight
+  gemstones           Json?                         // Stone details
+  finishes            Json?                         // Polish, texture, etc.
+  timeline            Json?                         // Estimated days, milestones
+  
+  // Status
+  status              OrderVersionStatus @default(PENDING)
+  
+  // Customer response
+  customerResponse    String?                       // ACCEPTED, REJECTED, COUNTER
+  customerNotes       String?
+  respondedAt         DateTime?
+  
+  // Change summary
+  changeSummary       String?                       // Human-readable summary of changes
+  
+  createdAt           DateTime    @default(now())
+  
+  @@index([orderId])
+  @@index([status])
+  @@unique([orderId, versionNumber])
+}
+
+enum OrderVersionStatus {
+  PENDING             // Awaiting customer response
+  ACCEPTED            // Customer accepted this version
+  REJECTED            // Customer rejected this version
+  SUPERSEDED          // A newer version exists
+  EXPIRED             // Response time expired
 }
 
 enum MilestoneType {
