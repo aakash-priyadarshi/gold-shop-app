@@ -2,24 +2,24 @@
 
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { GoldenRain } from './GoldenRain';
+import { GoldenMandala } from './GoldenMandala';
 
 interface AuthBackgroundProps {
   className?: string;
-  enableParticles?: boolean;
+  enableMandala?: boolean;
 }
 
 /**
  * Premium animated background for auth pages (login/register)
  * Features:
  * - Clean light/dark background
- * - CSS-based golden rain falling from above
+ * - Animated golden mandala with light traveling outward
  * - Reduced motion support
  * - Mobile-friendly and performant
  */
 export function AuthBackground({ 
   className, 
-  enableParticles = true 
+  enableMandala = true 
 }: AuthBackgroundProps) {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
@@ -50,8 +50,8 @@ export function AuthBackground({
       {/* Subtle gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-white/50 via-transparent to-stone-100/30 dark:from-slate-900/50 dark:via-transparent dark:to-slate-900/30" />
       
-      {/* CSS-based Golden rain */}
-      <GoldenRain enabled={enableParticles && !prefersReducedMotion} dropCount={100} />
+      {/* Animated Golden Mandala */}
+      <GoldenMandala enabled={enableMandala && !prefersReducedMotion} size={900} />
       
       {/* Very subtle noise texture for premium feel */}
       <div 
