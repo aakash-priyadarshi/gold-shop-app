@@ -78,10 +78,14 @@ export class UsersController {
   @ApiOperation({ summary: 'List all users (Admin/Support only)' })
   async findAll(
     @Query('role') role?: UserRole,
-    @Query('page') page = 1,
-    @Query('pageSize') pageSize = 20,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
-    return this.usersService.findAll(role, page, pageSize);
+    return this.usersService.findAll(
+      role, 
+      page ? parseInt(page, 10) : 1, 
+      pageSize ? parseInt(pageSize, 10) : 20
+    );
   }
 
   @Get(':id')
