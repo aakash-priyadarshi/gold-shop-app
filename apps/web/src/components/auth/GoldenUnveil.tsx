@@ -122,11 +122,11 @@ export function GoldenUnveil({
               : "opacity-100 translate-y-0"
           )}
         >
-          <h1 className="text-3xl font-bold tracking-tight">
-            <span className="text-foreground">Ori</span>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            <span className="text-white">Ori</span>
             <span className="gold-text-gradient">vraa</span>
           </h1>
-          <p className="text-sm text-muted-foreground mt-1 tracking-wide">
+          <p className="text-xs sm:text-sm text-gray-300 mt-1 tracking-wide">
             {BRAND.tagline}
           </p>
         </div>

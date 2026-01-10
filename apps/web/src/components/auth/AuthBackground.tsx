@@ -42,8 +42,8 @@ export function AuthBackground({
       {/* Subtle gradient overlay for depth */}
       <div className="absolute inset-0 bg-gradient-to-b from-slate-900/30 via-transparent to-slate-950/50" />
       
-      {/* Animated Golden Mandala */}
-      <GoldenMandala enabled={enableMandala} size={900} />
+      {/* Animated Golden Mandala - Large size for dramatic effect */}
+      <GoldenMandala enabled={enableMandala} size={4500} />
       
       {/* Very subtle noise texture for premium feel */}
       <div 

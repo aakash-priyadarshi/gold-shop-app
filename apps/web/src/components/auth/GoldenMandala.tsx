@@ -8,14 +8,23 @@ interface GoldenMandalaProps {
   size?: number;
 }
 
-export function GoldenMandala({ enabled = true, size = 900 }: GoldenMandalaProps) {
+export function GoldenMandala({ enabled = true, size = 4500 }: GoldenMandalaProps) {
   const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    // Check for mobile on mount and resize
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   if (!mounted || !enabled) return null;
+
+  // Responsive size - smaller on mobile for performance
+  const responsiveSize = isMobile ? size * 0.5 : size;
 
   return (
     <>
@@ -37,20 +46,19 @@ export function GoldenMandala({ enabled = true, size = 900 }: GoldenMandalaProps
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: size,
-          height: size,
+          width: responsiveSize,
+          height: responsiveSize,
           pointerEvents: 'none',
           zIndex: 0,
           opacity: 0.25,
           animation: 'rotate-cw 120s linear infinite',
-          clipPath: 'circle(50% at 50% 50%)',
         }}
       >
         <Image
           src="/mandala.svg"
           alt=""
-          width={size}
-          height={size}
+          width={responsiveSize}
+          height={responsiveSize}
           style={{ width: '100%', height: '100%' }}
           priority
         />
@@ -63,20 +71,19 @@ export function GoldenMandala({ enabled = true, size = 900 }: GoldenMandalaProps
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: size * 0.7,
-          height: size * 0.7,
+          width: responsiveSize * 0.7,
+          height: responsiveSize * 0.7,
           pointerEvents: 'none',
           zIndex: 0,
           opacity: 0.3,
           animation: 'rotate-ccw 80s linear infinite',
-          clipPath: 'circle(50% at 50% 50%)',
         }}
       >
         <Image
           src="/mandala.svg"
           alt=""
-          width={size * 0.7}
-          height={size * 0.7}
+          width={responsiveSize * 0.7}
+          height={responsiveSize * 0.7}
           style={{ width: '100%', height: '100%' }}
           priority
         />
@@ -89,20 +96,19 @@ export function GoldenMandala({ enabled = true, size = 900 }: GoldenMandalaProps
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: size * 0.4,
-          height: size * 0.4,
+          width: responsiveSize * 0.4,
+          height: responsiveSize * 0.4,
           pointerEvents: 'none',
           zIndex: 0,
           opacity: 0.35,
           animation: 'rotate-cw 50s linear infinite',
-          clipPath: 'circle(50% at 50% 50%)',
         }}
       >
         <Image
           src="/mandala.svg"
           alt=""
-          width={size * 0.4}
-          height={size * 0.4}
+          width={responsiveSize * 0.4}
+          height={responsiveSize * 0.4}
           style={{ width: '100%', height: '100%' }}
           priority
         />
