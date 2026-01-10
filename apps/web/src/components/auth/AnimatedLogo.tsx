@@ -64,13 +64,22 @@ export function AnimatedLogo({
     }
   }, [animationStage]);
 
+  // Expanded viewBox to prevent crown clipping during rotation
+  // Original: 0 0 120 96.49, expanded with padding for rotation
+  const viewBoxPadding = 40;
+  const originalWidth = 120;
+  const originalHeight = 96.49;
+  const expandedWidth = originalWidth + viewBoxPadding * 2;
+  const expandedHeight = originalHeight + viewBoxPadding * 2;
+
   return (
     <svg
-      viewBox="0 0 120 96.49"
+      viewBox={`${-viewBoxPadding} ${-viewBoxPadding} ${expandedWidth} ${expandedHeight}`}
       width={size}
-      height={size * (96.49 / 120)}
-      className={cn('animated-logo', className)}
+      height={size * (expandedHeight / expandedWidth)}
+      className={cn('animated-logo overflow-visible', className)}
       aria-label="Orivraa Logo"
+      style={{ overflow: 'visible' }}
     >
       <defs>
         {/* Gold gradient for right "O" curve */}
