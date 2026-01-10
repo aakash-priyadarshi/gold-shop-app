@@ -58,6 +58,7 @@ import {
   TruckIcon,
 } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
+import { useTheme } from 'next-themes';
 import { useAuth, getDashboardRoute, type UserRole } from '@/hooks/useAuth';
 import {
   usePreferencesStore,
@@ -101,12 +102,13 @@ export function Header() {
   const language = usePreferencesStore((state) => state.language);
   const currency = usePreferencesStore((state) => state.currency);
   const country = usePreferencesStore((state) => state.country);
-  const theme = usePreferencesStore((state) => state.theme);
   const setLanguage = usePreferencesStore((state) => state.setLanguage);
   const setCurrency = usePreferencesStore((state) => state.setCurrency);
   const setCountry = usePreferencesStore((state) => state.setCountry);
-  const setTheme = usePreferencesStore((state) => state.setTheme);
   const setAuthenticated = usePreferencesStore((state) => state.setAuthenticated);
+
+  // Use next-themes for theme management (more reliable)
+  const { theme, setTheme, resolvedTheme } = useTheme();
 
   // Sync auth state with preferences store
   useEffect(() => {
@@ -121,17 +123,13 @@ export function Header() {
     { name: 'About', href: '/about', icon: InformationCircleIcon },
   ];
 
-  // Toggle theme between light/dark
+  // Toggle theme between light/dark using next-themes
   const toggleTheme = () => {
-    if (theme === 'dark') {
-      setTheme('light');
-    } else {
-      setTheme('dark');
-    }
+    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
   };
 
-  // Determine current icon based on theme
-  const isDark = theme === 'dark' || (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  // Determine current icon based on resolved theme
+  const isDark = resolvedTheme === 'dark';
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-xl border-b border-gray-100 safe-area-top">

@@ -153,17 +153,18 @@ export const usePreferencesStore = create<PreferencesState>()(
         set({ isSyncing: true });
         try {
           const response = await api.get('/api/users/me/preferences');
-          const { language, currency, country, theme } = response.data;
+          const { language, currency, country } = response.data;
           
+          // Only sync language, currency, country - NOT theme
+          // Theme is managed by next-themes and should persist locally
           set({
             language: language || 'en',
             currency: currency || 'NPR',
             country: country || 'NP',
-            theme: theme || 'system',
             lastSyncedAt: Date.now(),
           });
           
-          applyTheme(theme || 'system');
+          // Don't override theme - let next-themes handle it
         } catch (error) {
           console.error('Failed to sync preferences from server:', error);
         } finally {

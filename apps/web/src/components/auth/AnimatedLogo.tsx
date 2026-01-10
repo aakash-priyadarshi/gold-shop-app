@@ -25,6 +25,7 @@ export function AnimatedLogo({
   animationStage = 'complete' 
 }: AnimatedLogoProps) {
   const [sparkleScale, setSparkleScale] = useState(0);
+  const [crownRotation, setCrownRotation] = useState(-180); // Start from behind/left
   
   // Animation state helpers
   const isForging = animationStage === 'forge' || animationStage === 'polish' || animationStage === 'reveal' || animationStage === 'invitation' || animationStage === 'complete';
@@ -47,6 +48,19 @@ export function AnimatedLogo({
     } else if (animationStage === 'reveal' || animationStage === 'invitation' || animationStage === 'complete') {
       // Ensure sparkle is visible in later stages
       setSparkleScale(1);
+    }
+  }, [animationStage]);
+
+  // Crown rotation animation - starts from left, sweeps around the O to final position
+  useEffect(() => {
+    if (animationStage === 'init') {
+      setCrownRotation(-180); // Start hidden on left side
+    } else if (animationStage === 'forge') {
+      // Start rotating when forging begins
+      setCrownRotation(-90); // Move to bottom
+    } else if (animationStage === 'polish' || animationStage === 'reveal' || animationStage === 'invitation' || animationStage === 'complete') {
+      // Arrive at final position
+      setCrownRotation(0);
     }
   }, [animationStage]);
 
@@ -218,14 +232,16 @@ export function AnimatedLogo({
         }}
       />
       
-      {/* Crown Ornament - Group of decorative polygons */}
+      {/* Crown Ornament - Rotates around the O from left to final position */}
       <g 
         className="logo-crown"
         style={{
-          opacity: isPolished ? 1 : 0,
-          transform: isPolished ? 'translateY(0) scale(1)' : 'translateY(-5px) scale(0.8)',
-          transformOrigin: '100px 15px',
-          transition: 'opacity 0.6s ease-out, transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          opacity: isForging ? 1 : 0,
+          transform: `rotate(${crownRotation}deg)`,
+          transformOrigin: '50px 50px', // Center of the O shape
+          transition: animationStage === 'init' 
+            ? 'none' 
+            : 'opacity 0.5s ease-out, transform 1.5s cubic-bezier(0.34, 1.2, 0.64, 1)',
         }}
       >
         <polygon fill="url(#logo-gradient-3)" points="99.66 27.64 120 17.23 111.66 14.78 99.66 27.64"/>

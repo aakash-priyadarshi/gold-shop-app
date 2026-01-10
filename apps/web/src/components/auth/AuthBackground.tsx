@@ -68,17 +68,17 @@ export function AuthBackground({
       hue: number;
     }> = [];
 
-    // Initialize particles
+    // Initialize particles - spread across visible screen for immediate visibility
     const rect = canvas.getBoundingClientRect();
     for (let i = 0; i < PARTICLE_COUNT; i++) {
       particles.push({
         x: Math.random() * rect.width,
-        y: Math.random() * rect.height - rect.height, // Start above screen
-        size: Math.random() * 2 + 0.5,
-        speed: Math.random() * 1.5 + 0.5, // Fall speed
-        opacity: Math.random() * 0.6 + 0.2,
+        y: Math.random() * rect.height, // Start spread across visible area
+        size: Math.random() * 2.5 + 1, // Slightly larger particles
+        speed: Math.random() * 2 + 1, // Faster fall speed
+        opacity: Math.random() * 0.7 + 0.3, // Higher opacity
         wobble: Math.random() * Math.PI * 2,
-        wobbleSpeed: Math.random() * 0.02 + 0.01,
+        wobbleSpeed: Math.random() * 0.03 + 0.01,
         hue: 38 + Math.random() * 15, // Gold range (38-53)
       });
     }
