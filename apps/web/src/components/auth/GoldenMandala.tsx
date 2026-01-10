@@ -64,32 +64,7 @@ export function GoldenMandala({ enabled = true, size = 4500 }: GoldenMandalaProp
         />
       </div>
 
-      {/* Layer 2 - Middle ring rotating counter-clockwise */}
-      <div
-        style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: responsiveSize * 0.7,
-          height: responsiveSize * 0.7,
-          pointerEvents: 'none',
-          zIndex: 0,
-          opacity: 0.3,
-          animation: 'rotate-ccw 80s linear infinite',
-        }}
-      >
-        <Image
-          src="/mandala.svg"
-          alt=""
-          width={responsiveSize * 0.7}
-          height={responsiveSize * 0.7}
-          style={{ width: '100%', height: '100%' }}
-          priority
-        />
-      </div>
-
-      {/* Layer 3 - Inner ring rotating clockwise (fastest) */}
+      {/* Layer 2 - Inner ring rotating clockwise (fastest) */}
       <div
         style={{
           position: 'fixed',
