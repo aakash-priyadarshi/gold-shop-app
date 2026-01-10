@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, ReactNode } from 'react';
+import Link from 'next/link';
 import { AnimatedLogo } from './AnimatedLogo';
 import { AuthBackground } from './AuthBackground';
 import { cn } from '@/lib/utils';
@@ -92,7 +93,7 @@ export function GoldenUnveil({
         className
       )}
     >
-      <AuthBackground enableParticles={animationStage === 'complete'} />
+      <AuthBackground enableParticles={animationStage !== 'init'} />
 
       {/* Logo Container */}
       <div 
@@ -101,14 +102,16 @@ export function GoldenUnveil({
           (animationStage === 'invitation' || animationStage === 'complete') && "-translate-y-5"
         )}
       >
-        <AnimatedLogo
-          size={140}
-          className={cn(
-            'transition-all duration-300',
-            animationStage === 'complete' && 'hover:scale-105 cursor-pointer'
-          )}
-          animationStage={animationStage}
-        />
+        <Link href="/" aria-label="Go to homepage">
+          <AnimatedLogo
+            size={140}
+            className={cn(
+              'transition-all duration-300',
+              animationStage === 'complete' && 'hover:scale-105 cursor-pointer'
+            )}
+            animationStage={animationStage}
+          />
+        </Link>
         
         {/* Brand Text */}
         <div

@@ -44,6 +44,9 @@ export function AnimatedLogo({
       return () => clearTimeout(timer);
     } else if (animationStage === 'init' || animationStage === 'forge') {
       setSparkleScale(0);
+    } else if (animationStage === 'reveal' || animationStage === 'invitation' || animationStage === 'complete') {
+      // Ensure sparkle is visible in later stages
+      setSparkleScale(1);
     }
   }, [animationStage]);
 
