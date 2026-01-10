@@ -885,8 +885,10 @@ export class OrdersService {
 
     // Extract values from DTO
     const estimatedDeliveryDays = dto.timeline?.estimatedDays || 14;
-    const totalPriceNpr = dto.pricing?.totalNpr || 0;
-    const laborCostNpr = dto.pricing?.makingChargesNpr || 0;
+    const totalPrice = dto.pricing?.totalNpr || 0;
+    const makingCharges = dto.pricing?.makingChargesNpr || 0;
+    const subtotal = dto.pricing?.subtotalNpr || totalPrice;
+    const tax = dto.pricing?.taxNpr || 0;
 
     // Create new version
     const newVersion = await this.prisma.orderVersion.create({
@@ -894,15 +896,20 @@ export class OrdersService {
         orderId,
         versionNumber: nextVersionNumber,
         status: 'PENDING',
-        materials: dto.materials ? [dto.materials] : [],
-        gemstones: dto.gemstones || [],
-        finishes: dto.finishes ? [dto.finishes] : [],
-        estimatedDeliveryDays,
-        totalPriceNpr,
-        laborCostNpr,
-        notes: dto.notes,
-        createdByShopkeeper: true,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        createdByRole: 'SHOPKEEPER',
+        createdById: shopkeeperId,
+        productSnapshot: {},
+        materials: dto.materials ? dto.materials : null,
+        gemstones: dto.gemstones || null,
+        finishes: dto.finishes ? dto.finishes : null,
+        timeline: { estimatedDays: estimatedDeliveryDays },
+        subtotalNpr: subtotal,
+        taxNpr: tax,
+        shippingNpr: 0,
+        discountNpr: 0,
+        totalNpr: totalPrice,
+        makingChargesNpr: makingCharges,
+        changeSummary: dto.changeSummary,
       },
     });
 
@@ -915,7 +922,7 @@ export class OrdersService {
       bodyKey: 'notification.order.counter_offer.body',
       bodyParams: {
         orderNumber: order.orderNumber,
-        newPrice: totalPriceNpr,
+        newPrice: totalPrice,
       },
       referenceType: 'ORDER',
       referenceId: order.id,
@@ -992,13 +999,21 @@ export class OrdersService {
 
     const isAccept = dto.response === 'ACCEPT';
     
+    // Parse timeline from Json field
+    const timelineData = version.timeline as { estimatedDays?: number } | null;
+    const estimatedDays = timelineData?.estimatedDays || 14;
+    
     if (isAccept) {
       // Accept the counter-offer - update order with new values
       await this.prisma.$transaction(async (tx) => {
         // Update version status
         await tx.orderVersion.update({
           where: { id: versionId },
-          data: { status: 'ACCEPTED' },
+          data: { 
+            status: 'ACCEPTED',
+            customerResponse: 'ACCEPTED',
+            respondedAt: new Date(),
+          },
         });
 
         // Update order with accepted version values
@@ -1006,8 +1021,8 @@ export class OrdersService {
           where: { id: orderId },
           data: {
             currentVersionId: versionId,
-            totalNpr: version.totalPriceNpr,
-            estimatedDelivery: new Date(Date.now() + version.estimatedDeliveryDays * 24 * 60 * 60 * 1000),
+            totalNpr: version.totalNpr,
+            estimatedDelivery: new Date(Date.now() + estimatedDays * 24 * 60 * 60 * 1000),
             status: 'PAID', // Move to PAID status to proceed with order
           },
         });
@@ -1043,7 +1058,9 @@ export class OrdersService {
         where: { id: versionId },
         data: {
           status: 'REJECTED',
-          rejectionReason: dto.notes,
+          customerResponse: 'REJECTED',
+          customerNotes: dto.notes,
+          respondedAt: new Date(),
         },
       });
 
