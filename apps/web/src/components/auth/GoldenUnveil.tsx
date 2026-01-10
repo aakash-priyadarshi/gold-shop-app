@@ -93,7 +93,7 @@ export function GoldenUnveil({
         className
       )}
     >
-      <AuthBackground enableParticles={animationStage !== 'init'} />
+      <AuthBackground enableMandala={animationStage !== 'init'} />
 
       {/* Logo Container */}
       <div 
