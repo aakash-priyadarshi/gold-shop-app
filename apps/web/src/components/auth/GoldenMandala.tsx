@@ -64,7 +64,7 @@ export function GoldenMandala({ enabled = true, size = 4500 }: GoldenMandalaProp
         />
       </div>
 
-      {/* Layer 2 - Inner ring rotating clockwise (fastest) */}
+      {/* Layer 2 - Inner ring rotating clockwise (fastest) - COMMENTED OUT
       <div
         style={{
           position: 'fixed',
@@ -88,6 +88,7 @@ export function GoldenMandala({ enabled = true, size = 4500 }: GoldenMandalaProp
           priority
         />
       </div>
+      */}
     </>
   );
 }
