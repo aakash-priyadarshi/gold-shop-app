@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { GoldenMandala } from './GoldenMandala';
 
@@ -21,25 +20,10 @@ export function AuthBackground({
   className, 
   enableMandala = true 
 }: AuthBackgroundProps) {
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-
-  // Check for reduced motion preference
-  useEffect(() => {
-    console.log('[AuthBackground] Mounted - enableMandala:', enableMandala);
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setPrefersReducedMotion(mediaQuery.matches);
-    console.log('[AuthBackground] prefersReducedMotion:', mediaQuery.matches);
-
-    const handleChange = (e: MediaQueryListEvent) => {
-      setPrefersReducedMotion(e.matches);
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [enableMandala]);
-
-  const mandalaEnabled = enableMandala && !prefersReducedMotion;
-  console.log('[AuthBackground] Rendering - mandalaEnabled:', mandalaEnabled);
+  // Note: We're not blocking the mandala for reduced motion users
+  // because it's a subtle, slow animation that doesn't cause issues
+  
+  console.log('[AuthBackground] Rendering - enableMandala:', enableMandala);
 
   return (
     <div 
@@ -56,7 +40,7 @@ export function AuthBackground({
       <div className="absolute inset-0 bg-gradient-to-b from-white/50 via-transparent to-stone-100/30 dark:from-slate-900/50 dark:via-transparent dark:to-slate-900/30" />
       
       {/* Animated Golden Mandala */}
-      <GoldenMandala enabled={mandalaEnabled} size={900} />
+      <GoldenMandala enabled={enableMandala} size={900} />
       
       {/* Very subtle noise texture for premium feel */}
       <div 
