@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 interface AnimatedLogoProps {
@@ -15,7 +16,7 @@ interface AnimatedLogoProps {
  * 
  * Animation sequence:
  * - Forge: Main "O" paths fade in with golden glow
- * - Polish: Crown ornament appears, sparkle pings
+ * - Polish: Crown ornament appears, center sparkle PINGS then normalizes
  * - Complete: Full logo visible with hover effects
  */
 export function AnimatedLogo({ 
@@ -23,10 +24,28 @@ export function AnimatedLogo({
   size = 120,
   animationStage = 'complete' 
 }: AnimatedLogoProps) {
+  const [sparkleScale, setSparkleScale] = useState(0);
+  
   // Animation state helpers
   const isForging = animationStage === 'forge' || animationStage === 'polish' || animationStage === 'reveal' || animationStage === 'invitation' || animationStage === 'complete';
   const isPolished = animationStage === 'polish' || animationStage === 'reveal' || animationStage === 'invitation' || animationStage === 'complete';
-  const isComplete = animationStage === 'complete';
+
+  // Sparkle ping animation - scales up big then normalizes
+  useEffect(() => {
+    if (animationStage === 'polish') {
+      // First: scale up BIG (the ping)
+      setSparkleScale(1.8);
+      
+      // Then: normalize to 1
+      const timer = setTimeout(() => {
+        setSparkleScale(1);
+      }, 400);
+      
+      return () => clearTimeout(timer);
+    } else if (animationStage === 'init' || animationStage === 'forge') {
+      setSparkleScale(0);
+    }
+  }, [animationStage]);
 
   return (
     <svg
@@ -213,16 +232,19 @@ export function AnimatedLogo({
         <polygon fill="url(#logo-gradient-7)" points="77.17 4.71 85.35 6.63 89.02 0 77.17 4.71"/>
       </g>
       
-      {/* Center Diamond Sparkle */}
+      {/* Center Diamond Sparkle - PINGS then normalizes */}
       <path 
         className="logo-sparkle"
         fill="url(#logo-sparkle-gradient)" 
         d="M36.23,51.73c0-1,6.92-.13,11.31-3.73,4.69-3.85,3.76-10.55,4.96-10.53,1.17.01.06,6.44,4.47,10.32,4.29,3.78,11.35,2.98,11.36,4.09,0,1.1-6.8.37-11.13,4.08-4.47,3.82-3.61,10.05-4.82,10.04-1.23-.01-.16-6.41-4.61-10.27-4.36-3.79-11.56-2.98-11.55-3.99Z"
         style={{
           opacity: isPolished ? 1 : 0,
-          transform: isPolished ? 'scale(1)' : 'scale(0)',
+          transform: `scale(${sparkleScale})`,
           transformOrigin: '52px 52px',
-          transition: 'opacity 0.5s ease-out 0.2s, transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s',
+          transition: sparkleScale === 1.8 
+            ? 'opacity 0.2s ease-out, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' 
+            : 'opacity 0.2s ease-out, transform 0.5s ease-out',
+          filter: sparkleScale > 1 ? 'drop-shadow(0 0 8px rgba(255, 254, 238, 0.9))' : 'none',
         }}
       />
     </svg>

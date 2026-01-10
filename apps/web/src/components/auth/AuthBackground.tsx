@@ -11,11 +11,10 @@ interface AuthBackgroundProps {
 /**
  * Premium animated background for auth pages (login/register)
  * Features:
- * - Gradient base with jewellery-inspired gold/amber tones
- * - Animated floating blobs (CSS-only)
- * - Optional gold dust particles
+ * - Clean light/dark background
+ * - Golden dust rain falling from above
  * - Reduced motion support
- * - Mobile-friendly and performant (GPU-accelerated animations)
+ * - Mobile-friendly and performant
  */
 export function AuthBackground({ 
   className, 
@@ -37,7 +36,7 @@ export function AuthBackground({
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  // Gold dust particles animation (canvas-based, lightweight)
+  // Golden rain particles animation
   useEffect(() => {
     if (!enableParticles || prefersReducedMotion || !canvasRef.current) return;
 
@@ -56,17 +55,17 @@ export function AuthBackground({
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
-    // Particle configuration - increased count for more visible effect
-    const PARTICLE_COUNT = 50;
+    // Golden rain particle configuration
+    const PARTICLE_COUNT = 80;
     const particles: Array<{
       x: number;
       y: number;
       size: number;
-      speedX: number;
-      speedY: number;
+      speed: number;
       opacity: number;
-      opacityDirection: number;
-      hue: number; // Add color variation
+      wobble: number;
+      wobbleSpeed: number;
+      hue: number;
     }> = [];
 
     // Initialize particles
@@ -74,19 +73,19 @@ export function AuthBackground({
     for (let i = 0; i < PARTICLE_COUNT; i++) {
       particles.push({
         x: Math.random() * rect.width,
-        y: Math.random() * rect.height,
-        size: Math.random() * 3 + 1.5, // Larger particles
-        speedX: (Math.random() - 0.5) * 0.5,
-        speedY: (Math.random() - 0.5) * 0.5 - 0.2, // Slight upward drift
-        opacity: Math.random() * 0.6 + 0.3, // Higher base opacity
-        opacityDirection: Math.random() > 0.5 ? 1 : -1,
-        hue: 40 + Math.random() * 20, // Gold to amber range
+        y: Math.random() * rect.height - rect.height, // Start above screen
+        size: Math.random() * 2 + 0.5,
+        speed: Math.random() * 1.5 + 0.5, // Fall speed
+        opacity: Math.random() * 0.6 + 0.2,
+        wobble: Math.random() * Math.PI * 2,
+        wobbleSpeed: Math.random() * 0.02 + 0.01,
+        hue: 38 + Math.random() * 15, // Gold range (38-53)
       });
     }
 
     let animationId: number;
     let lastTime = 0;
-    const FPS_INTERVAL = 1000 / 30; // Cap at 30fps for performance
+    const FPS_INTERVAL = 1000 / 60; // 60fps for smooth rain
 
     const animate = (currentTime: number) => {
       animationId = requestAnimationFrame(animate);
@@ -99,34 +98,46 @@ export function AuthBackground({
       ctx.clearRect(0, 0, currentRect.width, currentRect.height);
 
       particles.forEach((particle) => {
-        // Update position
-        particle.x += particle.speedX;
-        particle.y += particle.speedY;
+        // Update wobble
+        particle.wobble += particle.wobbleSpeed;
+        
+        // Update position - falling down with slight wobble
+        particle.y += particle.speed;
+        particle.x += Math.sin(particle.wobble) * 0.3;
 
-        // Wrap around edges
-        if (particle.x < 0) particle.x = currentRect.width;
-        if (particle.x > currentRect.width) particle.x = 0;
-        if (particle.y < 0) particle.y = currentRect.height;
-        if (particle.y > currentRect.height) particle.y = 0;
-
-        // Gentle opacity pulsing
-        particle.opacity += particle.opacityDirection * 0.003;
-        if (particle.opacity > 0.9 || particle.opacity < 0.2) {
-          particle.opacityDirection *= -1;
+        // Reset to top when reaching bottom
+        if (particle.y > currentRect.height + 10) {
+          particle.y = -10;
+          particle.x = Math.random() * currentRect.width;
+          particle.opacity = Math.random() * 0.6 + 0.2;
         }
 
-        // Draw particle with gold/amber color variation
-        const goldColor = `hsla(${particle.hue}, 80%, 55%, ${particle.opacity})`;
+        // Wrap horizontal
+        if (particle.x < 0) particle.x = currentRect.width;
+        if (particle.x > currentRect.width) particle.x = 0;
+
+        // Draw golden dust particle
+        const goldColor = `hsla(${particle.hue}, 85%, 55%, ${particle.opacity})`;
+        
+        // Main particle
         ctx.beginPath();
         ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
         ctx.fillStyle = goldColor;
         ctx.fill();
 
-        // Add larger glow effect
+        // Subtle glow
         ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.size * 3, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(${particle.hue}, 80%, 55%, ${particle.opacity * 0.15})`;
+        ctx.arc(particle.x, particle.y, particle.size * 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${particle.hue}, 85%, 60%, ${particle.opacity * 0.15})`;
         ctx.fill();
+
+        // Tiny trail effect
+        ctx.beginPath();
+        ctx.moveTo(particle.x, particle.y);
+        ctx.lineTo(particle.x - Math.sin(particle.wobble) * 2, particle.y - particle.speed * 3);
+        ctx.strokeStyle = `hsla(${particle.hue}, 85%, 60%, ${particle.opacity * 0.3})`;
+        ctx.lineWidth = particle.size * 0.5;
+        ctx.stroke();
       });
     };
 
@@ -146,117 +157,24 @@ export function AuthBackground({
       )}
       aria-hidden="true"
     >
-      {/* Base gradient - jewellery-inspired warm tones with more contrast */}
-      <div className="absolute inset-0 bg-gradient-to-br from-amber-100 via-yellow-50 to-orange-50" />
+      {/* Clean background - light mode: soft cream, dark mode: dark slate */}
+      <div className="absolute inset-0 bg-stone-50 dark:bg-slate-950 transition-colors duration-300" />
       
-      {/* Secondary gradient overlay - more vibrant */}
-      <div className="absolute inset-0 bg-gradient-to-tl from-gold-200/50 via-transparent to-amber-100/40" />
+      {/* Subtle gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-white/50 via-transparent to-stone-100/30 dark:from-slate-900/50 dark:via-transparent dark:to-slate-900/30" />
       
-      {/* Radial accent in center */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gold-100/60 via-transparent to-transparent" />
-      
-      {/* Animated floating blobs - CSS only, GPU-accelerated - MORE VISIBLE */}
-      <div 
-        className={cn(
-          "absolute -top-40 -right-40 w-96 h-96 rounded-full",
-          "bg-gradient-to-br from-gold-300/60 to-amber-300/50",
-          "blur-3xl",
-          !prefersReducedMotion && "animate-blob"
-        )} 
-      />
-      <div 
-        className={cn(
-          "absolute top-1/4 -left-20 w-80 h-80 rounded-full",
-          "bg-gradient-to-br from-yellow-300/50 to-gold-200/60",
-          "blur-3xl",
-          !prefersReducedMotion && "animate-blob animation-delay-2000"
-        )} 
-      />
-      <div 
-        className={cn(
-          "absolute -bottom-20 right-1/4 w-[28rem] h-[28rem] rounded-full",
-          "bg-gradient-to-br from-amber-200/50 to-orange-200/40",
-          "blur-3xl",
-          !prefersReducedMotion && "animate-blob animation-delay-4000"
-        )} 
-      />
-      <div 
-        className={cn(
-          "absolute bottom-1/3 left-1/3 w-72 h-72 rounded-full",
-          "bg-gradient-to-br from-gold-200/40 to-yellow-200/50",
-          "blur-3xl",
-          !prefersReducedMotion && "animate-blob animation-delay-6000"
-        )} 
-      />
-      
-      {/* Additional accent blob */}
-      <div 
-        className={cn(
-          "absolute top-1/2 right-1/3 w-64 h-64 rounded-full",
-          "bg-gradient-to-br from-amber-300/30 to-gold-300/40",
-          "blur-3xl",
-          !prefersReducedMotion && "animate-blob animation-delay-3000"
-        )} 
-      />
-      
-      {/* Diamond/gem sparkle accents - LARGER AND MORE VISIBLE */}
-      <div 
-        className={cn(
-          "absolute top-1/4 right-1/4 w-2 h-2 rounded-full bg-gold-400 shadow-lg shadow-gold-400/50",
-          !prefersReducedMotion && "animate-sparkle"
-        )} 
-      />
-      <div 
-        className={cn(
-          "absolute top-1/3 right-1/3 w-1.5 h-1.5 rounded-full bg-amber-500 shadow-lg shadow-amber-400/50",
-          !prefersReducedMotion && "animate-sparkle animation-delay-500"
-        )} 
-      />
-      <div 
-        className={cn(
-          "absolute top-2/3 left-1/4 w-2.5 h-2.5 rounded-full bg-amber-400 shadow-lg shadow-amber-400/50",
-          !prefersReducedMotion && "animate-sparkle animation-delay-1000"
-        )} 
-      />
-      <div 
-        className={cn(
-          "absolute bottom-1/4 right-1/3 w-2 h-2 rounded-full bg-yellow-400 shadow-lg shadow-yellow-400/50",
-          !prefersReducedMotion && "animate-sparkle animation-delay-3000"
-        )} 
-      />
-      <div 
-        className={cn(
-          "absolute top-1/2 left-1/5 w-1.5 h-1.5 rounded-full bg-gold-500 shadow-lg shadow-gold-400/50",
-          !prefersReducedMotion && "animate-sparkle animation-delay-2000"
-        )} 
-      />
-      <div 
-        className={cn(
-          "absolute bottom-1/3 left-2/3 w-2 h-2 rounded-full bg-amber-300 shadow-lg shadow-amber-300/50",
-          !prefersReducedMotion && "animate-sparkle animation-delay-4000"
-        )} 
-      />
-      
-      {/* Gold dust particles canvas */}
+      {/* Golden rain particles canvas */}
       {enableParticles && !prefersReducedMotion && (
         <canvas
           ref={canvasRef}
           className="absolute inset-0 w-full h-full pointer-events-none"
-          style={{ opacity: 1 }}
+          style={{ opacity: 0.9 }}
         />
       )}
       
-      {/* Shimmer overlay for premium feel */}
+      {/* Very subtle noise texture for premium feel */}
       <div 
-        className={cn(
-          "absolute inset-0 pointer-events-none",
-          !prefersReducedMotion && "animate-shimmer"
-        )}
-      />
-      
-      {/* Subtle noise texture overlay for premium feel */}
-      <div 
-        className="absolute inset-0 opacity-[0.015]"
+        className="absolute inset-0 opacity-[0.02] dark:opacity-[0.03]"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
         }}
