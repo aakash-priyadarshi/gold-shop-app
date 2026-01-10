@@ -12,8 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, getDashboardRoute } from '@/hooks/useAuth';
-import { BrandLogo } from '@/components/brand/BrandLogo';
-import { BRAND } from '@/config/brand';
+import { GoldenUnveil } from '@/components/auth/GoldenUnveil';
 import { AuthBackground } from '@/components/auth/AuthBackground';
 import {
   EnvelopeIcon,
@@ -39,6 +38,20 @@ function LoginForm() {
   const { login, isAuthenticated, user, isLoading: authLoading, error, clearError } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [hasVisited, setHasVisited] = useState(false);
+
+  // Check if user has visited before (skip intro for returning users)
+  useEffect(() => {
+    const visited = sessionStorage.getItem('orivraa_visited');
+    if (visited) {
+      setHasVisited(true);
+    }
+  }, []);
+
+  // Mark as visited after animation completes
+  const handleAnimationComplete = () => {
+    sessionStorage.setItem('orivraa_visited', 'true');
+  };
 
   // Redirect if already logged in
   useEffect(() => {
@@ -86,7 +99,7 @@ function LoginForm() {
     }
   };
 
-  // Don't render form if already authenticated or loading
+  // Loading state while checking auth
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -103,15 +116,12 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-8 px-4 safe-area-inset">
-      <AuthBackground />
-      
-      <Card className="w-full max-w-[420px] border-0 shadow-2xl shadow-gold-500/10 bg-white/95 backdrop-blur-sm z-10">
+    <GoldenUnveil 
+      skipIntro={hasVisited} 
+      onAnimationComplete={handleAnimationComplete}
+    >
+      <Card className="border-0 shadow-2xl shadow-gold-500/10 bg-white/95 backdrop-blur-sm login-form-item">
         <CardHeader className="space-y-1 text-center pb-2">
-          <Link href="/" className="flex flex-col items-center gap-3 mb-4 group">
-            <BrandLogo variant="icon" size="lg" className="transition-transform group-hover:scale-105" />
-            <span className="text-2xl font-bold tracking-tight gold-text-gradient">{BRAND.name}</span>
-          </Link>
           <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
           <CardDescription className="text-base">
             Sign in to continue your jewellery journey
@@ -122,14 +132,14 @@ function LoginForm() {
           <CardContent className="space-y-5">
             {/* Error Alert */}
             {error && (
-              <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm animate-slideUp">
+              <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm animate-slideUp login-form-item">
                 <ExclamationCircleIcon className="h-5 w-5 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
             
             {/* Email Field */}
-            <div className="space-y-2">
+            <div className="space-y-2 login-form-item">
               <Label htmlFor="email" className="text-sm font-medium">
                 Email address
               </Label>
@@ -140,7 +150,7 @@ function LoginForm() {
                   type="email"
                   placeholder="you@example.com"
                   className={cn(
-                    "h-12 pl-11 rounded-xl border-gray-200 focus:border-gold-400 focus:ring-gold-400/20",
+                    "h-12 pl-11 rounded-xl border-gray-200 transition-all duration-300",
                     errors.email && "border-red-300 focus:border-red-400 focus:ring-red-400/20"
                   )}
                   {...register('email')}
@@ -157,7 +167,7 @@ function LoginForm() {
             </div>
             
             {/* Password Field */}
-            <div className="space-y-2">
+            <div className="space-y-2 login-form-item">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password" className="text-sm font-medium">
                   Password
@@ -176,7 +186,7 @@ function LoginForm() {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   className={cn(
-                    "h-12 pl-11 pr-11 rounded-xl border-gray-200 focus:border-gold-400 focus:ring-gold-400/20",
+                    "h-12 pl-11 pr-11 rounded-xl border-gray-200 transition-all duration-300",
                     errors.password && "border-red-300 focus:border-red-400 focus:ring-red-400/20"
                   )}
                   {...register('password')}
@@ -205,7 +215,7 @@ function LoginForm() {
             </div>
           </CardContent>
           
-          <CardFooter className="flex flex-col space-y-4 pt-2">
+          <CardFooter className="flex flex-col space-y-4 pt-2 login-form-item">
             <Button 
               type="submit" 
               className="w-full h-12 rounded-xl gold-gradient text-white text-base font-semibold transition-all hover:shadow-lg hover:shadow-gold-500/25 disabled:opacity-70" 
@@ -236,7 +246,7 @@ function LoginForm() {
           </CardFooter>
         </form>
       </Card>
-    </div>
+    </GoldenUnveil>
   );
 }
 

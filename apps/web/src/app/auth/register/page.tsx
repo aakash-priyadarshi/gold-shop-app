@@ -14,9 +14,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, getDashboardRoute, UserRole } from '@/hooks/useAuth';
-import { BrandLogo } from '@/components/brand/BrandLogo';
-import { BRAND } from '@/config/brand';
+import { GoldenUnveil } from '@/components/auth/GoldenUnveil';
 import { AuthBackground } from '@/components/auth/AuthBackground';
+import { BRAND } from '@/config/brand';
 import {
   UserIcon,
   BuildingStorefrontIcon,
@@ -83,6 +83,20 @@ function RegisterForm() {
   const [activeTab, setActiveTab] = useState<'customer' | 'shopkeeper'>('customer');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [hasVisited, setHasVisited] = useState(false);
+
+  // Check if user has visited before (skip intro for returning users)
+  useEffect(() => {
+    const visited = sessionStorage.getItem('orivraa_visited');
+    if (visited) {
+      setHasVisited(true);
+    }
+  }, []);
+
+  // Mark as visited after animation completes
+  const handleAnimationComplete = () => {
+    sessionStorage.setItem('orivraa_visited', 'true');
+  };
 
   // Customer form
   const customerForm = useForm<CustomerForm>({
@@ -193,15 +207,12 @@ function RegisterForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-8 px-4 safe-area-inset">
-      <AuthBackground />
-      
-      <Card className="w-full max-w-lg border-0 shadow-2xl shadow-gold-500/10 bg-white/95 backdrop-blur-sm z-10">
+    <GoldenUnveil 
+      skipIntro={hasVisited} 
+      onAnimationComplete={handleAnimationComplete}
+    >
+      <Card className="w-full max-w-lg border-0 shadow-2xl shadow-gold-500/10 bg-white/95 backdrop-blur-sm login-form-item">
         <CardHeader className="space-y-1 text-center pb-2">
-          <Link href="/" className="flex flex-col items-center gap-3 mb-4 group">
-            <BrandLogo variant="icon" size="lg" className="transition-transform group-hover:scale-105" />
-            <span className="text-2xl font-bold tracking-tight gold-text-gradient">{BRAND.name}</span>
-          </Link>
           <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
           <CardDescription className="text-base">
             Join as a customer or register your jewellery shop
@@ -631,7 +642,7 @@ function RegisterForm() {
           </Tabs>
         </CardContent>
 
-        <CardFooter className="flex flex-col space-y-4 border-t pt-6">
+        <CardFooter className="flex flex-col space-y-4 border-t pt-6 login-form-item">
           <p className="text-sm text-center text-muted-foreground">
             Already have an account?{' '}
             <Link href="/auth/login" className="text-gold-600 hover:underline font-medium">
@@ -650,7 +661,7 @@ function RegisterForm() {
           </p>
         </CardFooter>
       </Card>
-    </div>
+    </GoldenUnveil>
   );
 }
 
