@@ -14,7 +14,16 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth, getDashboardRoute } from '@/hooks/useAuth';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { BRAND } from '@/config/brand';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { AuthBackground } from '@/components/auth/AuthBackground';
+import {
+  EnvelopeIcon,
+  LockClosedIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  ExclamationCircleIcon,
+  ArrowRightIcon,
+} from '@heroicons/react/24/outline';
+import { cn } from '@/lib/utils';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -29,6 +38,7 @@ function LoginForm() {
   const { toast } = useToast();
   const { login, isAuthenticated, user, isLoading: authLoading, error, clearError } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -76,91 +86,151 @@ function LoginForm() {
     }
   };
 
-  // Don't render form if already authenticated
+  // Don't render form if already authenticated or loading
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gold-50/30">
-        <div className="flex flex-col items-center gap-4">
+      <div className="min-h-screen flex items-center justify-center">
+        <AuthBackground />
+        <div className="flex flex-col items-center gap-4 z-10">
           <div className="relative">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 animate-pulse"></div>
             <div className="absolute inset-0 w-16 h-16 rounded-2xl border-4 border-gold-200 animate-spin border-t-transparent"></div>
           </div>
+          <p className="text-sm text-gray-500">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gold-50/20 py-8 px-4 safe-area-inset">
-      <Card className="w-full max-w-md border-0 shadow-xl shadow-gold-500/5">
+    <div className="min-h-screen flex items-center justify-center py-8 px-4 safe-area-inset">
+      <AuthBackground />
+      
+      <Card className="w-full max-w-[420px] border-0 shadow-2xl shadow-gold-500/10 bg-white/95 backdrop-blur-sm z-10">
         <CardHeader className="space-y-1 text-center pb-2">
-          <Link href="/" className="flex flex-col items-center gap-2 mb-4">
-            <BrandLogo variant="icon" size="lg" />
-            <span className="text-xl font-bold tracking-tight">{BRAND.name}</span>
+          <Link href="/" className="flex flex-col items-center gap-3 mb-4 group">
+            <BrandLogo variant="icon" size="lg" className="transition-transform group-hover:scale-105" />
+            <span className="text-2xl font-bold tracking-tight gold-text-gradient">{BRAND.name}</span>
           </Link>
           <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-          <CardDescription>
-            Enter your credentials to access your account
+          <CardDescription className="text-base">
+            Sign in to continue your jewellery journey
           </CardDescription>
         </CardHeader>
+        
         <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5">
+            {/* Error Alert */}
             {error && (
-              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                {error}
+              <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm animate-slideUp">
+                <ExclamationCircleIcon className="h-5 w-5 shrink-0" />
+                <span>{error}</span>
               </div>
             )}
+            
+            {/* Email Field */}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="name@example.com"
-                className="h-12 rounded-xl"
-                {...register('email')}
-              />
+              <Label htmlFor="email" className="text-sm font-medium">
+                Email address
+              </Label>
+              <div className="relative">
+                <EnvelopeIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  className={cn(
+                    "h-12 pl-11 rounded-xl border-gray-200 focus:border-gold-400 focus:ring-gold-400/20",
+                    errors.email && "border-red-300 focus:border-red-400 focus:ring-red-400/20"
+                  )}
+                  {...register('email')}
+                  aria-invalid={errors.email ? 'true' : 'false'}
+                  aria-describedby={errors.email ? 'email-error' : undefined}
+                />
+              </div>
               {errors.email && (
-                <p className="text-sm text-red-500">{errors.email.message}</p>
+                <p id="email-error" className="text-sm text-red-500 flex items-center gap-1.5">
+                  <ExclamationCircleIcon className="h-4 w-4" />
+                  {errors.email.message}
+                </p>
               )}
             </div>
+            
+            {/* Password Field */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-sm font-medium">
+                  Password
+                </Label>
                 <Link
                   href="/auth/forgot-password"
-                  className="text-sm text-gold-600 hover:underline"
+                  className="text-sm text-gold-600 hover:text-gold-700 hover:underline font-medium"
                 >
                   Forgot password?
                 </Link>
               </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                className="h-12 rounded-xl"
-                {...register('password')}
-              />
+              <div className="relative">
+                <LockClosedIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  className={cn(
+                    "h-12 pl-11 pr-11 rounded-xl border-gray-200 focus:border-gold-400 focus:ring-gold-400/20",
+                    errors.password && "border-red-300 focus:border-red-400 focus:ring-red-400/20"
+                  )}
+                  {...register('password')}
+                  aria-invalid={errors.password ? 'true' : 'false'}
+                  aria-describedby={errors.password ? 'password-error' : undefined}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gold-500 transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    <EyeSlashIcon className="h-5 w-5" />
+                  ) : (
+                    <EyeIcon className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
               {errors.password && (
-                <p className="text-sm text-red-500">{errors.password.message}</p>
+                <p id="password-error" className="text-sm text-red-500 flex items-center gap-1.5">
+                  <ExclamationCircleIcon className="h-4 w-4" />
+                  {errors.password.message}
+                </p>
               )}
             </div>
           </CardContent>
+          
           <CardFooter className="flex flex-col space-y-4 pt-2">
-            <Button type="submit" className="w-full h-12 rounded-xl gold-gradient text-white text-base" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              className="w-full h-12 rounded-xl gold-gradient text-white text-base font-semibold transition-all hover:shadow-lg hover:shadow-gold-500/25 disabled:opacity-70" 
+              disabled={isLoading}
+            >
               {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <span className="flex items-center gap-2">
+                  <span className="spinner spinner-sm border-white/30 border-t-white" />
                   Signing in...
-                </>
+                </span>
               ) : (
-                'Sign in'
+                <span className="flex items-center gap-2">
+                  Sign in
+                  <ArrowRightIcon className="h-4 w-4" />
+                </span>
               )}
             </Button>
+            
             <p className="text-sm text-center text-muted-foreground">
-              Don't have an account?{' '}
-              <Link href="/auth/register" className="text-gold-600 font-medium hover:underline">
-                Sign up
+              Don&apos;t have an account?{' '}
+              <Link 
+                href="/auth/register" 
+                className="text-gold-600 font-semibold hover:text-gold-700 hover:underline"
+              >
+                Create one
               </Link>
             </p>
           </CardFooter>
@@ -172,8 +242,9 @@ function LoginForm() {
 
 function LoginLoading() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gold-50/30">
-      <div className="flex flex-col items-center gap-4">
+    <div className="min-h-screen flex items-center justify-center">
+      <AuthBackground />
+      <div className="flex flex-col items-center gap-4 z-10">
         <div className="relative">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 animate-pulse"></div>
           <div className="absolute inset-0 w-16 h-16 rounded-2xl border-4 border-gold-200 animate-spin border-t-transparent"></div>

@@ -356,3 +356,96 @@
 .animate-slideIn {
   animation: slideIn 0.3s ease-out;
 }
+
+/* Auth Background Animations */
+@keyframes blob {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(20px, -30px) scale(1.05);
+  }
+  50% {
+    transform: translate(-20px, 20px) scale(0.95);
+  }
+  75% {
+    transform: translate(30px, 10px) scale(1.02);
+  }
+}
+
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 12s ease-in-out infinite;
+}
+
+.animate-sparkle {
+  animation: sparkle 4s ease-in-out infinite;
+}
+
+.animation-delay-1000 {
+  animation-delay: 1s;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-3000 {
+  animation-delay: 3s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+.animation-delay-6000 {
+  animation-delay: 6s;
+}
+
+/* CSS Loading Spinner */
+.spinner {
+  @apply inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full;
+  animation: spin 0.6s linear infinite;
+}
+
+.spinner-sm {
+  @apply w-4 h-4;
+}
+
+.spinner-lg {
+  @apply w-6 h-6;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .animate-blob,
+  .animate-sparkle,
+  .animate-shimmer,
+  .animate-fadeIn,
+  .animate-slideUp,
+  .animate-slideIn,
+  .spinner {
+    animation: none;
+  }
+  
+  .animate-blob,
+  .animate-sparkle {
+    opacity: 0.5;
+  }
+}

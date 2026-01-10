@@ -34,29 +34,29 @@ import {
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { BRAND } from '@/config/brand';
 import {
-  Menu,
-  User,
-  Store,
-  ShoppingBag,
-  Bell,
-  LogOut,
-  Settings,
-  FileText,
-  Sun,
-  Moon,
-  Globe,
-  Coins,
-  MapPin,
-  Search,
-  Home,
-  Sparkles,
-  Building2,
-  Info,
-  LayoutDashboard,
-  Package,
-  ClipboardList,
-  Shield,
-} from 'lucide-react';
+  Bars3Icon,
+  UserIcon,
+  BuildingStorefrontIcon,
+  ShoppingBagIcon,
+  BellIcon,
+  ArrowRightOnRectangleIcon,
+  Cog6ToothIcon,
+  DocumentTextIcon,
+  SunIcon,
+  MoonIcon,
+  GlobeAltIcon,
+  CurrencyDollarIcon,
+  MapPinIcon,
+  MagnifyingGlassIcon,
+  HomeIcon,
+  SparklesIcon,
+  BuildingOffice2Icon,
+  InformationCircleIcon,
+  Squares2X2Icon,
+  CubeIcon,
+  ClipboardDocumentListIcon,
+  ShieldCheckIcon,
+} from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
 import {
   usePreferencesStore,
@@ -74,19 +74,19 @@ const getRoleQuickActions = (role: string | undefined) => {
   switch (role) {
     case 'ADMIN':
       return [
-        { href: '/dashboard/admin', icon: Shield, label: 'Admin Dashboard', tooltip: 'Admin Dashboard' },
-        { href: '/dashboard/admin/orders', icon: ClipboardList, label: 'Ongoing Orders', tooltip: 'View All Orders' },
+        { href: '/dashboard/admin', icon: ShieldCheckIcon, label: 'Admin Dashboard', tooltip: 'Admin Dashboard' },
+        { href: '/dashboard/admin/orders', icon: ClipboardDocumentListIcon, label: 'Ongoing Orders', tooltip: 'View All Orders' },
       ];
     case 'SHOPKEEPER':
       return [
-        { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', tooltip: 'Shopkeeper Dashboard' },
-        { href: '/dashboard/orders', icon: Package, label: 'Order Requests', tooltip: 'View Order Requests' },
+        { href: '/dashboard', icon: Squares2X2Icon, label: 'Dashboard', tooltip: 'Shopkeeper Dashboard' },
+        { href: '/dashboard/orders', icon: CubeIcon, label: 'Order Requests', tooltip: 'View Order Requests' },
       ];
     case 'CUSTOMER':
     default:
       return [
-        { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', tooltip: 'My Dashboard' },
-        { href: '/orders', icon: Package, label: 'Track Orders', tooltip: 'Track My Orders' },
+        { href: '/dashboard', icon: Squares2X2Icon, label: 'Dashboard', tooltip: 'My Dashboard' },
+        { href: '/orders', icon: CubeIcon, label: 'Track Orders', tooltip: 'Track My Orders' },
       ];
   }
 };
@@ -114,10 +114,10 @@ export function Header() {
   }, [session, setAuthenticated]);
 
   const navigation = [
-    { name: 'Shop', href: '/shop', icon: ShoppingBag },
-    { name: 'Custom Order', href: '/rfq/create', icon: Sparkles },
-    { name: 'Sellers', href: '/shops', icon: Building2 },
-    { name: 'About', href: '/about', icon: Info },
+    { name: 'Shop', href: '/shop', icon: ShoppingBagIcon },
+    { name: 'Custom Order', href: '/rfq/create', icon: SparklesIcon },
+    { name: 'Sellers', href: '/shops', icon: BuildingOffice2Icon },
+    { name: 'About', href: '/about', icon: InformationCircleIcon },
   ];
 
   // Toggle theme between light/dark
@@ -139,7 +139,7 @@ export function Header() {
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <SheetTrigger asChild className="lg:hidden">
             <Button variant="ghost" size="icon" className="touch-target -ml-2">
-              <Menu className="h-5 w-5" />
+              <Bars3Icon className="h-5 w-5" />
               <span className="sr-only">Open menu</span>
             </Button>
           </SheetTrigger>
@@ -176,7 +176,7 @@ export function Header() {
                     {/* Language */}
                     <Select value={language} onValueChange={(v) => setLanguage(v as Language)}>
                       <SelectTrigger className="h-11 text-sm rounded-xl">
-                        <Globe className="h-4 w-4 mr-2 text-gray-400" />
+                        <GlobeAltIcon className="h-4 w-4 mr-2 text-gray-400" />
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -191,7 +191,7 @@ export function Header() {
                     {/* Currency */}
                     <Select value={currency} onValueChange={(v) => setCurrency(v as CurrencyCode)}>
                       <SelectTrigger className="h-11 text-sm rounded-xl">
-                        <Coins className="h-4 w-4 mr-2 text-gray-400" />
+                        <CurrencyDollarIcon className="h-4 w-4 mr-2 text-gray-400" />
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -209,7 +209,7 @@ export function Header() {
                     {/* Country */}
                     <Select value={country} onValueChange={(v) => setCountry(v as CountryCode)}>
                       <SelectTrigger className="flex-1 h-11 text-sm rounded-xl">
-                        <MapPin className="h-4 w-4 mr-2 text-gray-400" />
+                        <MapPinIcon className="h-4 w-4 mr-2 text-gray-400" />
                         <SelectValue>
                           {COUNTRIES[country]?.flag} {COUNTRIES[country]?.name}
                         </SelectValue>
@@ -232,9 +232,9 @@ export function Header() {
                       onClick={toggleTheme}
                     >
                       {isDark ? (
-                        <Sun className="h-5 w-5" />
+                        <SunIcon className="h-5 w-5" />
                       ) : (
-                        <Moon className="h-5 w-5" />
+                        <MoonIcon className="h-5 w-5" />
                       )}
                     </Button>
                   </div>
@@ -259,7 +259,7 @@ export function Header() {
                       className="w-full h-12 justify-start rounded-xl text-base text-red-600 hover:bg-red-50"
                       onClick={() => signOut()}
                     >
-                      <LogOut className="mr-3 h-5 w-5" />
+                      <ArrowRightOnRectangleIcon className="mr-3 h-5 w-5" />
                       Log out
                     </Button>
                   </>
@@ -311,7 +311,7 @@ export function Header() {
               {/* Language Selector */}
               <Select value={language} onValueChange={(v) => setLanguage(v as Language)}>
                 <SelectTrigger className="w-[100px] h-9 text-xs rounded-lg border-gray-200">
-                  <Globe className="h-3 w-3 mr-1 text-gray-400" />
+                  <GlobeAltIcon className="h-3 w-3 mr-1 text-gray-400" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -326,7 +326,7 @@ export function Header() {
               {/* Currency Selector */}
               <Select value={currency} onValueChange={(v) => setCurrency(v as CurrencyCode)}>
                 <SelectTrigger className="w-[90px] h-9 text-xs rounded-lg border-gray-200">
-                  <Coins className="h-3 w-3 mr-1 text-gray-400" />
+                  <CurrencyDollarIcon className="h-3 w-3 mr-1 text-gray-400" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -345,7 +345,7 @@ export function Header() {
               {/* Country Selector */}
               <Select value={country} onValueChange={(v) => setCountry(v as CountryCode)}>
                 <SelectTrigger className="w-[90px] h-9 text-xs rounded-lg border-gray-200">
-                  <MapPin className="h-3 w-3 mr-1 text-gray-400" />
+                  <MapPinIcon className="h-3 w-3 mr-1 text-gray-400" />
                   <SelectValue>
                     {COUNTRIES[country]?.flag} {country}
                   </SelectValue>
@@ -372,9 +372,9 @@ export function Header() {
                 onClick={toggleTheme}
               >
                 {isDark ? (
-                  <Sun className="h-4 w-4" />
+                  <SunIcon className="h-4 w-4" />
                 ) : (
-                  <Moon className="h-4 w-4" />
+                  <MoonIcon className="h-4 w-4" />
                 )}
               </Button>
             </>
@@ -408,7 +408,7 @@ export function Header() {
                 <TooltipTrigger asChild>
                   <Link href="/notifications">
                     <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-lg">
-                      <Bell className="h-5 w-5" />
+                      <BellIcon className="h-5 w-5" />
                       <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
                         3
                       </span>
@@ -427,7 +427,7 @@ export function Header() {
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="relative h-9 w-9 rounded-lg p-0">
                         <div className="w-9 h-9 bg-gradient-to-br from-gold-400 to-gold-600 rounded-lg flex items-center justify-center">
-                          <User className="h-5 w-5 text-white" />
+                          <UserIcon className="h-5 w-5 text-white" />
                         </div>
                       </Button>
                     </DropdownMenuTrigger>
@@ -453,26 +453,26 @@ export function Header() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard">
-                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      <Squares2X2Icon className="mr-2 h-4 w-4" />
                       Dashboard
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/orders">
-                      <ShoppingBag className="mr-2 h-4 w-4" />
+                      <ShoppingBagIcon className="mr-2 h-4 w-4" />
                       My Orders
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/rfq">
-                      <FileText className="mr-2 h-4 w-4" />
+                      <DocumentTextIcon className="mr-2 h-4 w-4" />
                       My Requests
                     </Link>
                   </DropdownMenuItem>
                   {session.user?.role === 'SHOPKEEPER' && (
                     <DropdownMenuItem asChild>
                       <Link href="/shop/manage">
-                        <Store className="mr-2 h-4 w-4" />
+                        <BuildingStorefrontIcon className="mr-2 h-4 w-4" />
                         My Shop
                       </Link>
                     </DropdownMenuItem>
@@ -482,13 +482,13 @@ export function Header() {
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
                         <Link href="/dashboard/admin">
-                          <Shield className="mr-2 h-4 w-4" />
+                          <ShieldCheckIcon className="mr-2 h-4 w-4" />
                           Admin Panel
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link href="/dashboard/admin/orders">
-                          <ClipboardList className="mr-2 h-4 w-4" />
+                          <ClipboardDocumentListIcon className="mr-2 h-4 w-4" />
                           All Orders
                         </Link>
                       </DropdownMenuItem>
@@ -497,13 +497,13 @@ export function Header() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/settings">
-                      <Settings className="mr-2 h-4 w-4" />
+                      <Cog6ToothIcon className="mr-2 h-4 w-4" />
                       Settings
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => signOut()} className="text-red-600">
-                    <LogOut className="mr-2 h-4 w-4" />
+                    <ArrowRightOnRectangleIcon className="mr-2 h-4 w-4" />
                     Log out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -529,14 +529,14 @@ export function Header() {
               <Link href={getRoleQuickActions(session.user?.role)[0]?.href || '/dashboard'}>
                 <Button variant="ghost" size="icon" className="touch-target">
                   {(() => {
-                    const Icon = getRoleQuickActions(session.user?.role)[0]?.icon || LayoutDashboard;
+                    const Icon = getRoleQuickActions(session.user?.role)[0]?.icon || Squares2X2Icon;
                     return <Icon className="h-5 w-5" />;
                   })()}
                 </Button>
               </Link>
               <Link href="/notifications">
                 <Button variant="ghost" size="icon" className="relative touch-target">
-                  <Bell className="h-5 w-5" />
+                  <BellIcon className="h-5 w-5" />
                   <span className="absolute top-1 right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
                     3
                   </span>
@@ -545,7 +545,7 @@ export function Header() {
               <Link href="/dashboard">
                 <Button variant="ghost" size="icon" className="touch-target">
                   <div className="w-8 h-8 bg-gradient-to-br from-gold-400 to-gold-600 rounded-lg flex items-center justify-center">
-                    <User className="h-4 w-4 text-white" />
+                    <UserIcon className="h-4 w-4 text-white" />
                   </div>
                 </Button>
               </Link>
@@ -554,7 +554,7 @@ export function Header() {
           {status !== 'loading' && !session && (
             <Link href="/auth/login">
               <Button variant="ghost" size="icon" className="touch-target">
-                <User className="h-5 w-5" />
+                <UserIcon className="h-5 w-5" />
               </Button>
             </Link>
           )}
