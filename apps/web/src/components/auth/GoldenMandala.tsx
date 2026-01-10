@@ -12,10 +12,18 @@ export function GoldenMandala({ enabled = true, size = 800 }: GoldenMandalaProps
   const id = useId().replace(/:/g, '');
 
   useEffect(() => {
+    console.log('[GoldenMandala] Component mounted, enabled:', enabled);
     setMounted(true);
-  }, []);
+  }, [enabled]);
 
-  if (!mounted || !enabled) return null;
+  console.log('[GoldenMandala] Render - mounted:', mounted, 'enabled:', enabled, 'size:', size);
+
+  if (!mounted || !enabled) {
+    console.log('[GoldenMandala] Not rendering - mounted:', mounted, 'enabled:', enabled);
+    return null;
+  }
+
+  console.log('[GoldenMandala] Rendering mandala SVG');
 
   const center = size / 2;
 
