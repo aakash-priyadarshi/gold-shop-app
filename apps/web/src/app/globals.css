@@ -378,9 +378,27 @@
     opacity: 0;
     transform: scale(0);
   }
+  20% {
+    opacity: 0.3;
+    transform: scale(0.5);
+  }
   50% {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1.5);
+  }
+  80% {
+    opacity: 0.3;
+    transform: scale(0.5);
+  }
+}
+
+/* Shimmer effect for premium feel */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
   }
 }
 
@@ -389,7 +407,22 @@
 }
 
 .animate-sparkle {
-  animation: sparkle 4s ease-in-out infinite;
+  animation: sparkle 3s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 8s linear infinite;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(212, 175, 55, 0.1) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+}
+
+.animation-delay-500 {
+  animation-delay: 0.5s;
 }
 
 .animation-delay-1000 {

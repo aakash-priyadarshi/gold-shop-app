@@ -56,8 +56,8 @@ export function AuthBackground({
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
-    // Particle configuration - keep count low for performance
-    const PARTICLE_COUNT = 25;
+    // Particle configuration - increased count for more visible effect
+    const PARTICLE_COUNT = 50;
     const particles: Array<{
       x: number;
       y: number;
@@ -66,6 +66,7 @@ export function AuthBackground({
       speedY: number;
       opacity: number;
       opacityDirection: number;
+      hue: number; // Add color variation
     }> = [];
 
     // Initialize particles
@@ -74,11 +75,12 @@ export function AuthBackground({
       particles.push({
         x: Math.random() * rect.width,
         y: Math.random() * rect.height,
-        size: Math.random() * 2 + 1,
-        speedX: (Math.random() - 0.5) * 0.3,
-        speedY: (Math.random() - 0.5) * 0.3 - 0.1, // Slight upward drift
-        opacity: Math.random() * 0.5 + 0.2,
+        size: Math.random() * 3 + 1.5, // Larger particles
+        speedX: (Math.random() - 0.5) * 0.5,
+        speedY: (Math.random() - 0.5) * 0.5 - 0.2, // Slight upward drift
+        opacity: Math.random() * 0.6 + 0.3, // Higher base opacity
         opacityDirection: Math.random() > 0.5 ? 1 : -1,
+        hue: 40 + Math.random() * 20, // Gold to amber range
       });
     }
 
@@ -108,21 +110,22 @@ export function AuthBackground({
         if (particle.y > currentRect.height) particle.y = 0;
 
         // Gentle opacity pulsing
-        particle.opacity += particle.opacityDirection * 0.002;
-        if (particle.opacity > 0.7 || particle.opacity < 0.1) {
+        particle.opacity += particle.opacityDirection * 0.003;
+        if (particle.opacity > 0.9 || particle.opacity < 0.2) {
           particle.opacityDirection *= -1;
         }
 
-        // Draw particle with gold color
+        // Draw particle with gold/amber color variation
+        const goldColor = `hsla(${particle.hue}, 80%, 55%, ${particle.opacity})`;
         ctx.beginPath();
         ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(212, 175, 55, ${particle.opacity})`;
+        ctx.fillStyle = goldColor;
         ctx.fill();
 
-        // Add subtle glow
+        // Add larger glow effect
         ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.size * 2, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(212, 175, 55, ${particle.opacity * 0.2})`;
+        ctx.arc(particle.x, particle.y, particle.size * 3, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${particle.hue}, 80%, 55%, ${particle.opacity * 0.15})`;
         ctx.fill();
       });
     };
@@ -143,63 +146,94 @@ export function AuthBackground({
       )}
       aria-hidden="true"
     >
-      {/* Base gradient - jewellery-inspired warm tones */}
-      <div className="absolute inset-0 bg-gradient-to-br from-amber-50 via-white to-yellow-50/80" />
+      {/* Base gradient - jewellery-inspired warm tones with more contrast */}
+      <div className="absolute inset-0 bg-gradient-to-br from-amber-100 via-yellow-50 to-orange-50" />
       
-      {/* Secondary gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-tl from-gold-100/30 via-transparent to-orange-50/20" />
+      {/* Secondary gradient overlay - more vibrant */}
+      <div className="absolute inset-0 bg-gradient-to-tl from-gold-200/50 via-transparent to-amber-100/40" />
       
-      {/* Animated floating blobs - CSS only, GPU-accelerated */}
+      {/* Radial accent in center */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gold-100/60 via-transparent to-transparent" />
+      
+      {/* Animated floating blobs - CSS only, GPU-accelerated - MORE VISIBLE */}
       <div 
         className={cn(
-          "absolute -top-40 -right-40 w-80 h-80 rounded-full",
-          "bg-gradient-to-br from-gold-200/40 to-amber-200/30",
+          "absolute -top-40 -right-40 w-96 h-96 rounded-full",
+          "bg-gradient-to-br from-gold-300/60 to-amber-300/50",
           "blur-3xl",
           !prefersReducedMotion && "animate-blob"
         )} 
       />
       <div 
         className={cn(
-          "absolute top-1/4 -left-20 w-72 h-72 rounded-full",
-          "bg-gradient-to-br from-yellow-200/30 to-gold-100/40",
+          "absolute top-1/4 -left-20 w-80 h-80 rounded-full",
+          "bg-gradient-to-br from-yellow-300/50 to-gold-200/60",
           "blur-3xl",
           !prefersReducedMotion && "animate-blob animation-delay-2000"
         )} 
       />
       <div 
         className={cn(
-          "absolute -bottom-20 right-1/4 w-96 h-96 rounded-full",
-          "bg-gradient-to-br from-amber-100/30 to-orange-100/20",
+          "absolute -bottom-20 right-1/4 w-[28rem] h-[28rem] rounded-full",
+          "bg-gradient-to-br from-amber-200/50 to-orange-200/40",
           "blur-3xl",
           !prefersReducedMotion && "animate-blob animation-delay-4000"
         )} 
       />
       <div 
         className={cn(
-          "absolute bottom-1/3 left-1/3 w-64 h-64 rounded-full",
-          "bg-gradient-to-br from-gold-100/20 to-yellow-100/30",
+          "absolute bottom-1/3 left-1/3 w-72 h-72 rounded-full",
+          "bg-gradient-to-br from-gold-200/40 to-yellow-200/50",
           "blur-3xl",
           !prefersReducedMotion && "animate-blob animation-delay-6000"
         )} 
       />
       
-      {/* Diamond/gem sparkle accents */}
+      {/* Additional accent blob */}
       <div 
         className={cn(
-          "absolute top-1/4 right-1/4 w-1 h-1 rounded-full bg-gold-400",
+          "absolute top-1/2 right-1/3 w-64 h-64 rounded-full",
+          "bg-gradient-to-br from-amber-300/30 to-gold-300/40",
+          "blur-3xl",
+          !prefersReducedMotion && "animate-blob animation-delay-3000"
+        )} 
+      />
+      
+      {/* Diamond/gem sparkle accents - LARGER AND MORE VISIBLE */}
+      <div 
+        className={cn(
+          "absolute top-1/4 right-1/4 w-2 h-2 rounded-full bg-gold-400 shadow-lg shadow-gold-400/50",
           !prefersReducedMotion && "animate-sparkle"
         )} 
       />
       <div 
         className={cn(
-          "absolute top-2/3 left-1/4 w-1.5 h-1.5 rounded-full bg-amber-400",
+          "absolute top-1/3 right-1/3 w-1.5 h-1.5 rounded-full bg-amber-500 shadow-lg shadow-amber-400/50",
+          !prefersReducedMotion && "animate-sparkle animation-delay-500"
+        )} 
+      />
+      <div 
+        className={cn(
+          "absolute top-2/3 left-1/4 w-2.5 h-2.5 rounded-full bg-amber-400 shadow-lg shadow-amber-400/50",
           !prefersReducedMotion && "animate-sparkle animation-delay-1000"
         )} 
       />
       <div 
         className={cn(
-          "absolute bottom-1/4 right-1/3 w-1 h-1 rounded-full bg-yellow-400",
+          "absolute bottom-1/4 right-1/3 w-2 h-2 rounded-full bg-yellow-400 shadow-lg shadow-yellow-400/50",
           !prefersReducedMotion && "animate-sparkle animation-delay-3000"
+        )} 
+      />
+      <div 
+        className={cn(
+          "absolute top-1/2 left-1/5 w-1.5 h-1.5 rounded-full bg-gold-500 shadow-lg shadow-gold-400/50",
+          !prefersReducedMotion && "animate-sparkle animation-delay-2000"
+        )} 
+      />
+      <div 
+        className={cn(
+          "absolute bottom-1/3 left-2/3 w-2 h-2 rounded-full bg-amber-300 shadow-lg shadow-amber-300/50",
+          !prefersReducedMotion && "animate-sparkle animation-delay-4000"
         )} 
       />
       
@@ -208,9 +242,17 @@ export function AuthBackground({
         <canvas
           ref={canvasRef}
           className="absolute inset-0 w-full h-full pointer-events-none"
-          style={{ opacity: 0.8 }}
+          style={{ opacity: 1 }}
         />
       )}
+      
+      {/* Shimmer overlay for premium feel */}
+      <div 
+        className={cn(
+          "absolute inset-0 pointer-events-none",
+          !prefersReducedMotion && "animate-shimmer"
+        )}
+      />
       
       {/* Subtle noise texture overlay for premium feel */}
       <div 

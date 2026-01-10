@@ -1,0 +1,417 @@
+You are a senior product engineer working on a live jewellery marketplace SaaS called “Orivraa”.
+The app is deployed with:
+- Frontend: Next.js (App Router)
+- Backend: NestJS
+- Auth: JWT + refresh tokens
+- DB: Postgres (Prisma)
+- Cache: Redis
+
+GOAL
+Refine the logged-in user experience and add missing operational features for CUSTOMER, SHOPKEEPER, and ADMIN roles.
+This includes:
+- Header behaviour after login
+- Role-specific actions
+- Admin-level order oversight and control
+- Shopkeeper counter-offer editing power
+- UX polish (tooltips, hover states, mobile-friendly)
+
+DO NOT break existing flows (pricing, market rates, RFQs).
+
+---
+
+## PART 1 — HEADER BEHAVIOUR (CRITICAL)
+
+### Current problem
+After login, when users navigate back to the main shop page:
+- Header still shows “Login / Sign up”
+- This is incorrect and confusing
+
+### REQUIRED FIX
+Make the header fully role-aware and auth-aware.
+
+### Global rules
+- Header must react to `useAuth()` state
+- Logged-out users see:
+  - Login
+  - Sign up
+- Logged-in users NEVER see login/signup
+
+---
+
+### CUSTOMER HEADER (Logged-in)
+
+Show icons (right side of header):
+
+1) Dashboard button  
+   - Icon: grid / layout
+   - Tooltip: “My Dashboard”
+   - Route: `/dashboard/customer`
+
+2) Track Orders button  
+   - Icon: package / truck
+   - Tooltip: “Track my orders”
+   - Route: `/dashboard/customer/orders`
+
+3) Logout button  
+   - Icon: logout / power
+   - Tooltip: “Logout”
+   - Action: logout + redirect to home
+
+---
+
+### SHOPKEEPER HEADER (Logged-in)
+
+Show:
+
+1) Dashboard  
+   - Tooltip: “Shop Dashboard”
+   - Route: `/dashboard/shop`
+
+2) Order Requests  
+   - Tooltip: “Incoming orders & RFQs”
+   - Route: `/dashboard/shop/orders`
+
+3) Logout
+
+---
+
+### ADMIN HEADER (Logged-in)
+
+Show:
+
+1) Admin Dashboard  
+   - Tooltip: “Admin Dashboard”
+   - Route: `/dashboard/admin`
+
+2) Ongoing Orders (IMPORTANT NEW FEATURE)
+   - Tooltip: “All platform orders”
+   - Route: `/dashboard/admin/orders`
+
+3) Logout
+
+---
+
+### UX REQUIREMENTS
+- All icons must show tooltip on hover
+- Header must be responsive (mobile hamburger menu)
+- Icons must be accessible (aria-labels)
+
+---
+
+## PART 2 — ADMIN “ONGOING ORDERS” PAGE (NEW CORE FEATURE)
+
+### Purpose
+Admins are platform operators.
+They must see **everything happening on Orivraa**.
+
+### Admin Orders Page (`/dashboard/admin/orders`)
+
+Admin can:
+
+#### A) View ALL customer orders
+For each order show:
+- Order ID
+- Customer name + email + phone
+- Saved address (full)
+- Jewellery specs (materials, purity, weight, stones, finishes)
+- Shop assigned (or pending)
+- Timeline (estimated delivery)
+- Total price breakdown
+- Payment status (paid / unpaid)
+- Payment method
+- Order status (pending / approved / rejected / in-progress / delivered / cancelled)
+
+#### B) Admin actions on customer orders
+Admins can:
+- Cancel order (with reason)
+- Edit timeline (delivery date)
+- Create a new order on behalf of customer:
+  - Use saved customer profile
+  - Select saved address
+  - Select payment method
+  - Mark as PAID only if payment already verified
+  - If unpaid → generate payment link and send to customer
+
+IMPORTANT:
+- “Mark as Paid” must ONLY be enabled if admin explicitly confirms payment verification.
+
+---
+
+#### C) View shopkeeper orders
+Admin must also see:
+- Orders received by each shopkeeper
+- Shopkeeper response timeline
+- Whether order is:
+  - Accepted
+  - Countered
+  - In progress
+  - Delayed
+
+Admin can:
+- Approve order for shopkeeper
+- Reject order (with reason)
+- Adjust order timeline
+
+---
+
+## PART 3 — SHOPKEEPER COUNTER-OFFER POWER (CRITICAL)
+
+### Current limitation
+Shopkeepers cannot fully modify an order once customer places it.
+
+### REQUIRED FIX
+When a shopkeeper counters an offer, they MUST be able to edit:
+
+- Materials & metal type
+- Purity (e.g., 22K → 18K)
+- Weight
+- Gemstones
+- Finishes
+- Timeline
+- Final price
+- Making charges
+- Any remarks
+
+### Rules
+- Counter-offer creates a new “version” of the order
+- Previous version remains stored (audit trail)
+- Customer must explicitly accept counter-offer
+- Admin can see all versions
+
+---
+
+## PART 4 — DATA & BACKEND CHANGES
+
+### Order model updates
+Add:
+- `createdByAdmin` (boolean)
+- `adminNotes`
+- `paymentVerifiedByAdmin`
+- `versions[]` (order history)
+- `currentVersionId`
+
+### Role enforcement
+- Only ADMIN can:
+  - Create order on behalf of customer
+  - Mark payment as paid manually
+  - Override timelines
+- Only SHOPKEEPER can:
+  - Modify material specs in counter-offer
+- CUSTOMER can only accept/reject offers
+
+---
+
+## PART 5 — UX & QUALITY POLISH (IMPORTANT)
+
+Add the following improvements:
+- Tooltips on ALL action icons
+- Disabled states with explanation
+- Confirmation modals for:
+  - Cancel order
+  - Mark as paid
+  - Reject order
+- Toast notifications for all actions
+- Mobile-friendly dashboards (stacked cards)
+
+---
+
+## PART 6 — DELIVERABLES
+
+Provide:
+1) Updated backend endpoints (NestJS)
+2) Prisma schema updates + migration notes
+3) Frontend:
+   - Header component refactor
+   - Admin orders page
+   - Shopkeeper counter-offer editor
+4) Access control notes
+5) Any assumptions made
+
+IMPORTANT:
+- Do not break pricing or market rate logic
+- Keep country = market, currency = display
+- Platform name must be “Orivraa”
+
+
+
+
+
+
+
+
+
+animation changes:
+
+You are a senior full-stack engineer working on my deployed jewellery marketplace Orivraa (Next.js frontend + NestJS backend).
+I need you to implement Heroicons across the UI and add a lightweight animated background on the Login and Register pages using code-only animation (no CDN). Prefer CSS first, but Anime.js is allowed if done cleanly and lightweight.
+
+GOALS
+
+Replace existing icon usage with Heroicons (free, local package) in the header + dashboards + auth pages.
+
+Make /login and /register look premium (not blank white) with a subtle animated background (mobile friendly, low CPU/GPU, no external assets).
+
+Ensure the app branding/name is Orivraa everywhere (title, navbar, auth screens).
+
+Ensure accessibility + good UX: tooltips on hover, focus states, reduced motion support.
+
+REQUIRED IMPLEMENTATION DETAILS
+A) Install & Use Heroicons
+
+Install: @heroicons/react
+
+Standardise icon usage across:
+
+Header/Navbar actions (Login, Sign up, Dashboard, Orders/Track, Logout)
+
+Dashboard sidebar navigation (Admin/Shopkeeper/Customer)
+
+Buttons where icon improves clarity (Approve, Reject, Edit, View, etc.)
+
+Create a small wrapper component if needed:
+
+components/ui/Icon.tsx to standardise size/className usage
+
+Use outline icons by default; solid icons only for primary CTAs if needed.
+
+Ensure icons are sized consistently (e.g., 20–24px) and aligned.
+
+B) Animated Background for /login and /register
+
+Create a reusable component:
+
+components/auth/AuthBackground.tsx
+
+Must be:
+
+Code-only, no CDN, no external images.
+
+Subtle + premium (jewellery vibe): gradient + blurred blobs + (optional) small “gold dust” particles.
+
+Mobile friendly and performant:
+
+Animate only transform and opacity (GPU-friendly)
+
+Keep particle count low (20–40)
+
+Use slow loops (8–20s), no jitter
+
+Avoid React re-render loops (no setInterval causing state updates)
+
+Respect reduced motion:
+
+If prefers-reduced-motion: reduce, disable or greatly reduce animations.
+
+Approach:
+
+Use CSS for gradient + blobs (preferred).
+
+Optional: use Anime.js for particles ONLY if needed.
+
+If Anime.js used: install via npm (no CDN), cleanup animations on unmount.
+
+UI Layout:
+
+Add a centred auth card (max width ~420px).
+
+Logo/wordmark “Orivraa” at top of card.
+
+Clean spacing, borders, shadow, responsive padding.
+
+Should look good on mobile and desktop.
+
+C) Update Login/Register Pages
+
+Update /login and /register pages to use:
+
+<AuthBackground /> behind everything (absolute, full screen)
+
+Card UI above it (z-index)
+
+Add Heroicons inside inputs/buttons:
+
+Email icon
+
+Password icon
+
+User icon (name)
+
+Shop icon (shopkeeper register flow if exists)
+
+Add “Show password” toggle with Heroicon (eye/eye-slash).
+
+Add loading spinner state on submit (simple CSS spinner).
+
+Ensure form validation errors are styled and readable.
+
+D) Header/Navbar Role-based Actions + Tooltips
+
+When user is logged in and navigates back to the main shopping page:
+
+Replace “Login / Sign up” with role-based actions:
+
+CUSTOMER:
+
+Dashboard button (icon + tooltip “Dashboard”)
+
+Track Orders button/icon (tooltip “Track Orders”)
+
+Logout icon/button (tooltip “Logout”)
+
+SHOPKEEPER:
+
+Dashboard
+
+Orders/Requests button (“Orders” or “Requests” depending on existing naming)
+
+Logout
+
+ADMIN:
+
+Dashboard
+
+“Orders Ongoing” button (tooltip “All Orders / Live Orders”)
+
+Logout
+
+Tooltip requirements:
+
+On hover/focus, show tooltip text.
+
+Implement lightweight tooltip component (no external libs required) OR use existing UI library if already in project.
+
+E) Code Quality Requirements
+
+Must not break existing pricing endpoints.
+
+Must be responsive (mobile first).
+
+Must be accessible:
+
+Keyboard navigable
+
+ARIA labels for icon-only buttons
+
+Proper focus rings
+
+Provide exact file changes:
+
+list files created/modified
+
+include full code for new components
+
+show how to integrate into pages/layout
+
+DELIVERABLES
+
+Updated auth pages with animated background and Heroicons.
+
+Reusable AuthBackground component.
+
+Updated navbar/header role-based actions with tooltips + Heroicons.
+
+Any helper components (Tooltip, Icon wrapper).
+
+Notes on installation commands and any env/config changes.
+
+Now implement this in my Next.js codebase with production-ready code and explain where each file goes.

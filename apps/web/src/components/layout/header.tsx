@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useSession, signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -56,8 +55,10 @@ import {
   CubeIcon,
   ClipboardDocumentListIcon,
   ShieldCheckIcon,
+  TruckIcon,
 } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
+import { useAuth, getDashboardRoute, type UserRole } from '@/hooks/useAuth';
 import {
   usePreferencesStore,
   CURRENCIES,
@@ -70,29 +71,29 @@ import {
 } from '@/store/preferences';
 
 // Role-specific quick action icons configuration
-const getRoleQuickActions = (role: string | undefined) => {
+const getRoleQuickActions = (role: UserRole | undefined) => {
   switch (role) {
     case 'ADMIN':
       return [
         { href: '/dashboard/admin', icon: ShieldCheckIcon, label: 'Admin Dashboard', tooltip: 'Admin Dashboard' },
-        { href: '/dashboard/admin/orders', icon: ClipboardDocumentListIcon, label: 'Ongoing Orders', tooltip: 'View All Orders' },
+        { href: '/dashboard/admin/orders', icon: ClipboardDocumentListIcon, label: 'Ongoing Orders', tooltip: 'All Platform Orders' },
       ];
     case 'SHOPKEEPER':
       return [
-        { href: '/dashboard', icon: Squares2X2Icon, label: 'Dashboard', tooltip: 'Shopkeeper Dashboard' },
-        { href: '/dashboard/orders', icon: CubeIcon, label: 'Order Requests', tooltip: 'View Order Requests' },
+        { href: '/dashboard/shop', icon: Squares2X2Icon, label: 'Dashboard', tooltip: 'Shop Dashboard' },
+        { href: '/dashboard/shop/orders', icon: CubeIcon, label: 'Order Requests', tooltip: 'Incoming Orders & RFQs' },
       ];
     case 'CUSTOMER':
     default:
       return [
-        { href: '/dashboard', icon: Squares2X2Icon, label: 'Dashboard', tooltip: 'My Dashboard' },
-        { href: '/orders', icon: CubeIcon, label: 'Track Orders', tooltip: 'Track My Orders' },
+        { href: '/dashboard/customer', icon: Squares2X2Icon, label: 'Dashboard', tooltip: 'My Dashboard' },
+        { href: '/dashboard/customer/orders', icon: TruckIcon, label: 'Track Orders', tooltip: 'Track My Orders' },
       ];
   }
 };
 
 export function Header() {
-  const { data: session, status } = useSession();
+  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -110,8 +111,8 @@ export function Header() {
   // Sync auth state with preferences store
   useEffect(() => {
     setMounted(true);
-    setAuthenticated(!!session);
-  }, [session, setAuthenticated]);
+    setAuthenticated(isAuthenticated);
+  }, [isAuthenticated, setAuthenticated]);
 
   const navigation = [
     { name: 'Shop', href: '/shop', icon: ShoppingBagIcon },
@@ -243,10 +244,10 @@ export function Header() {
 
               {/* Mobile Auth Actions */}
               <div className="p-4 border-t border-gray-100 space-y-2">
-                {session ? (
+                {isAuthenticated && user ? (
                   <>
                     {/* Role-specific quick actions for mobile */}
-                    {getRoleQuickActions(session.user?.role).map((action) => (
+                    {getRoleQuickActions(user.role).map((action) => (
                       <Link key={action.href} href={action.href} onClick={() => setMobileMenuOpen(false)}>
                         <Button variant="outline" className="w-full h-12 justify-start rounded-xl text-base">
                           <action.icon className="mr-3 h-5 w-5" />
@@ -257,7 +258,7 @@ export function Header() {
                     <Button
                       variant="ghost"
                       className="w-full h-12 justify-start rounded-xl text-base text-red-600 hover:bg-red-50"
-                      onClick={() => signOut()}
+                      onClick={() => logout()}
                     >
                       <ArrowRightOnRectangleIcon className="mr-3 h-5 w-5" />
                       Log out
@@ -383,12 +384,12 @@ export function Header() {
 
         {/* Desktop Auth/User Menu */}
         <div className="hidden lg:flex items-center gap-2">
-          {status === 'loading' ? (
+          {authLoading ? (
             <div className="w-9 h-9 bg-gray-100 rounded-lg animate-pulse" />
-          ) : session ? (
+          ) : isAuthenticated && user ? (
             <TooltipProvider delayDuration={200}>
               {/* Role-specific quick action icons */}
-              {getRoleQuickActions(session.user?.role).map((action) => (
+              {getRoleQuickActions(user.role).map((action) => (
                 <Tooltip key={action.href}>
                   <TooltipTrigger asChild>
                     <Link href={action.href}>
@@ -440,19 +441,19 @@ export function Header() {
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">
-                        {session.user?.name}
+                        {user.firstName} {user.lastName}
                       </p>
                       <p className="text-xs leading-none text-muted-foreground">
-                        {session.user?.email}
+                        {user.email}
                       </p>
                       <p className="text-xs leading-none text-gold-600 font-medium mt-1">
-                        {session.user?.role}
+                        {user.role}
                       </p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href="/dashboard">
+                    <Link href={getDashboardRoute(user.role)}>
                       <Squares2X2Icon className="mr-2 h-4 w-4" />
                       Dashboard
                     </Link>
@@ -469,7 +470,7 @@ export function Header() {
                       My Requests
                     </Link>
                   </DropdownMenuItem>
-                  {session.user?.role === 'SHOPKEEPER' && (
+                  {user.role === 'SHOPKEEPER' && (
                     <DropdownMenuItem asChild>
                       <Link href="/shop/manage">
                         <BuildingStorefrontIcon className="mr-2 h-4 w-4" />
@@ -477,7 +478,7 @@ export function Header() {
                       </Link>
                     </DropdownMenuItem>
                   )}
-                  {session.user?.role === 'ADMIN' && (
+                  {user.role === 'ADMIN' && (
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
@@ -502,7 +503,7 @@ export function Header() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => signOut()} className="text-red-600">
+                  <DropdownMenuItem onClick={() => logout()} className="text-red-600">
                     <ArrowRightOnRectangleIcon className="mr-2 h-4 w-4" />
                     Log out
                   </DropdownMenuItem>
@@ -523,13 +524,13 @@ export function Header() {
 
         {/* Mobile Auth Icons */}
         <div className="flex lg:hidden items-center gap-1">
-          {status !== 'loading' && session && (
+          {!authLoading && isAuthenticated && user && (
             <>
               {/* First quick action for mobile */}
-              <Link href={getRoleQuickActions(session.user?.role)[0]?.href || '/dashboard'}>
+              <Link href={getRoleQuickActions(user.role)[0]?.href || getDashboardRoute(user.role)}>
                 <Button variant="ghost" size="icon" className="touch-target">
                   {(() => {
-                    const Icon = getRoleQuickActions(session.user?.role)[0]?.icon || Squares2X2Icon;
+                    const Icon = getRoleQuickActions(user.role)[0]?.icon || Squares2X2Icon;
                     return <Icon className="h-5 w-5" />;
                   })()}
                 </Button>
@@ -542,7 +543,7 @@ export function Header() {
                   </span>
                 </Button>
               </Link>
-              <Link href="/dashboard">
+              <Link href={getDashboardRoute(user.role)}>
                 <Button variant="ghost" size="icon" className="touch-target">
                   <div className="w-8 h-8 bg-gradient-to-br from-gold-400 to-gold-600 rounded-lg flex items-center justify-center">
                     <UserIcon className="h-4 w-4 text-white" />
@@ -551,7 +552,7 @@ export function Header() {
               </Link>
             </>
           )}
-          {status !== 'loading' && !session && (
+          {!authLoading && !isAuthenticated && (
             <Link href="/auth/login">
               <Button variant="ghost" size="icon" className="touch-target">
                 <UserIcon className="h-5 w-5" />
