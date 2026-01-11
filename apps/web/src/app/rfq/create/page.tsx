@@ -628,7 +628,7 @@ export default function CreateRfqPage() {
     }
     
     return calculateEstimate(request);
-  }, [formData, getWeightFromTemplate, country, currency, marketRates]);
+  }, [formData, getWeightFromTemplate, country, currency, marketRates, displayWeightUnit]);
 
   // Update price estimate when relevant fields change
   useEffect(() => {
@@ -1127,20 +1127,20 @@ export default function CreateRfqPage() {
                     currency,
                     methodA: formData.buildMethod === 'METHOD_A' ? {
                       metal: formData.metalType,
-                      weightGrams: parseFloat(formData.estimatedWeight) || 0,
+                      weightGrams: getWeightFromTemplate(),
                     } : undefined,
                     methodB: formData.buildMethod === 'METHOD_B' ? {
                       baseMetal: formData.alloyConfig.baseMetal as 'GOLD' | 'SILVER',
                       karat: formData.alloyConfig.karat,
                       alloyFamily: formData.alloyConfig.alloyFamily,
                       recipePresetId: formData.alloyConfig.recipePresetId,
-                      weightGrams: parseFloat(formData.estimatedWeight) || 0,
+                      weightGrams: getWeightFromTemplate(),
                     } : undefined,
                     methodC: formData.buildMethod === 'METHOD_C' ? {
                       baseMetal: formData.methodCConfig.baseMetal,
                       platingType: formData.methodCConfig.platingType,
                       platingTier: formData.methodCConfig.platingTier,
-                      weightGrams: parseFloat(formData.estimatedWeight) || 0,
+                      weightGrams: getWeightFromTemplate(),
                     } : undefined,
                     gemstones: formData.gemstonesV2.map(g => ({
                       presetId: g.presetId,
@@ -1334,20 +1334,20 @@ export default function CreateRfqPage() {
                     currency,
                     methodA: formData.buildMethod === 'METHOD_A' ? {
                       metal: formData.metalType,
-                      weightGrams: parseFloat(formData.estimatedWeight) || getWeightFromTemplate(),
+                      weightGrams: getWeightFromTemplate(),
                     } : undefined,
                     methodB: formData.buildMethod === 'METHOD_B' ? {
                       baseMetal: formData.alloyConfig.baseMetal as 'GOLD' | 'SILVER',
                       karat: formData.alloyConfig.karat,
                       alloyFamily: formData.alloyConfig.alloyFamily,
                       recipePresetId: formData.alloyConfig.recipePresetId,
-                      weightGrams: parseFloat(formData.estimatedWeight) || getWeightFromTemplate(),
+                      weightGrams: getWeightFromTemplate(),
                     } : undefined,
                     methodC: formData.buildMethod === 'METHOD_C' ? {
                       baseMetal: formData.methodCConfig.baseMetal,
                       platingType: formData.methodCConfig.platingType,
                       platingTier: formData.methodCConfig.platingTier,
-                      weightGrams: parseFloat(formData.estimatedWeight) || getWeightFromTemplate(),
+                      weightGrams: getWeightFromTemplate(),
                     } : undefined,
                     gemstones: formData.gemstonesV2.map(g => ({
                       presetId: g.presetId,
@@ -1435,20 +1435,20 @@ export default function CreateRfqPage() {
                     currency,
                     methodA: formData.buildMethod === 'METHOD_A' ? {
                       metal: formData.metalType,
-                      weightGrams: parseFloat(formData.estimatedWeight) || getWeightFromTemplate(),
+                      weightGrams: getWeightFromTemplate(),
                     } : undefined,
                     methodB: formData.buildMethod === 'METHOD_B' ? {
                       baseMetal: formData.alloyConfig.baseMetal as 'GOLD' | 'SILVER',
                       karat: formData.alloyConfig.karat,
                       alloyFamily: formData.alloyConfig.alloyFamily,
                       recipePresetId: formData.alloyConfig.recipePresetId,
-                      weightGrams: parseFloat(formData.estimatedWeight) || getWeightFromTemplate(),
+                      weightGrams: getWeightFromTemplate(),
                     } : undefined,
                     methodC: formData.buildMethod === 'METHOD_C' ? {
                       baseMetal: formData.methodCConfig.baseMetal,
                       platingType: formData.methodCConfig.platingType,
                       platingTier: formData.methodCConfig.platingTier,
-                      weightGrams: parseFloat(formData.estimatedWeight) || getWeightFromTemplate(),
+                      weightGrams: getWeightFromTemplate(),
                     } : undefined,
                     gemstones: formData.gemstonesV2.map(g => ({
                       presetId: g.presetId,
