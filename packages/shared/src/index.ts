@@ -6,3 +6,7 @@ export * from './enums/roles';
 export * from './validation/method-validation';
 export * from './types/api';
 export * from './types/composition';
+
+// Utilities
+export * from './utils/weight-conversion';
+export * from './utils/market-config';

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SessionProvider } from 'next-auth/react';
 import { ThemeProvider } from 'next-themes';
 import { AuthProvider } from '@/hooks/useAuth';
+import { MarketProvider } from '@/hooks/useMarket';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,7 +22,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <AuthProvider>
-            {children}
+            <MarketProvider>
+              {children}
+            </MarketProvider>
           </AuthProvider>
         </ThemeProvider>
       </QueryClientProvider>

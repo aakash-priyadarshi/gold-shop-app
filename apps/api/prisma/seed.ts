@@ -573,6 +573,105 @@ async function main() {
   });
   console.log('✅ Created plating options');
 
+  // Seed Market Configurations
+  console.log('🌍 Seeding market configurations...');
+  
+  const marketConfigs = [
+    {
+      countryCode: 'NP',
+      isActive: true,
+      defaultCurrency: 'NPR',
+      supportedCurrencies: ['NPR', 'USD'],
+      defaultWeightUnit: 'TOLA',
+      supportedWeightUnits: ['TOLA', 'LAAL', 'GRAM', 'KILOGRAM'],
+      supportedPaymentMethods: ['ESEWA', 'KHALTI', 'CONNECTIPS', 'BANK_TRANSFER', 'PAID_AT_SHOP'],
+      heroHeadline: 'Discover Exquisite Jewellery From Trusted Artisans',
+      heroSubheadline: 'Connect with verified local jewellers, browse ready-made pieces, or get custom jewellery crafted exactly to your specifications.',
+      contactEmail: 'nepal@orivraa.com',
+      contactPhone: '+977 9800000000',
+      contactAddress: 'Kathmandu, Nepal',
+    },
+    {
+      countryCode: 'IN',
+      isActive: true,
+      defaultCurrency: 'INR',
+      supportedCurrencies: ['INR', 'USD'],
+      defaultWeightUnit: 'GRAM',
+      supportedWeightUnits: ['GRAM', 'TOLA', 'KILOGRAM'],
+      supportedPaymentMethods: ['UPI', 'CARD', 'BANK_TRANSFER', 'PAID_AT_SHOP'],
+      heroHeadline: 'India\'s Premier Gold & Jewellery Marketplace',
+      heroSubheadline: 'Shop from verified jewellers across India. Buy ready-made or custom-crafted jewellery with confidence.',
+      contactEmail: 'india@orivraa.com',
+      contactPhone: '+91 9000000000',
+      contactAddress: 'Mumbai, India',
+    },
+    {
+      countryCode: 'US',
+      isActive: true,
+      defaultCurrency: 'USD',
+      supportedCurrencies: ['USD'],
+      defaultWeightUnit: 'OUNCE',
+      supportedWeightUnits: ['OUNCE', 'GRAM', 'POUND'],
+      supportedPaymentMethods: ['CARD', 'STRIPE', 'PAYPAL', 'BANK_TRANSFER'],
+      heroHeadline: 'Handcrafted Jewellery from Master Artisans',
+      heroSubheadline: 'Discover unique pieces crafted by skilled jewellers. From custom designs to ready-to-wear collections.',
+      contactEmail: 'usa@orivraa.com',
+      contactPhone: '+1 800 000 0000',
+      contactAddress: 'New York, USA',
+    },
+    {
+      countryCode: 'UK',
+      isActive: true,
+      defaultCurrency: 'GBP',
+      supportedCurrencies: ['GBP', 'EUR', 'USD'],
+      defaultWeightUnit: 'GRAM',
+      supportedWeightUnits: ['GRAM', 'OUNCE'],
+      supportedPaymentMethods: ['CARD', 'STRIPE', 'PAYPAL', 'BANK_TRANSFER'],
+      heroHeadline: 'Exquisite Jewellery for Every Occasion',
+      heroSubheadline: 'Browse collections from verified British and international jewellers. Quality guaranteed.',
+      contactEmail: 'uk@orivraa.com',
+      contactPhone: '+44 20 0000 0000',
+      contactAddress: 'London, UK',
+    },
+    {
+      countryCode: 'EU',
+      isActive: true,
+      defaultCurrency: 'EUR',
+      supportedCurrencies: ['EUR', 'USD'],
+      defaultWeightUnit: 'GRAM',
+      supportedWeightUnits: ['GRAM', 'KILOGRAM'],
+      supportedPaymentMethods: ['CARD', 'STRIPE', 'PAYPAL', 'BANK_TRANSFER'],
+      heroHeadline: 'European Jewellery Excellence',
+      heroSubheadline: 'Connect with master craftsmen across Europe. From classic designs to modern masterpieces.',
+      contactEmail: 'europe@orivraa.com',
+      contactPhone: '+49 30 0000 0000',
+      contactAddress: 'Berlin, Germany',
+    },
+    {
+      countryCode: 'AE',
+      isActive: true,
+      defaultCurrency: 'AED',
+      supportedCurrencies: ['AED', 'USD'],
+      defaultWeightUnit: 'GRAM',
+      supportedWeightUnits: ['GRAM', 'TOLA', 'OUNCE'],
+      supportedPaymentMethods: ['CARD', 'BANK_TRANSFER', 'PAID_AT_SHOP'],
+      heroHeadline: 'Luxury Jewellery from the Gold Souk',
+      heroSubheadline: 'Experience the finest gold and diamond jewellery from Dubai\'s renowned craftsmen.',
+      contactEmail: 'uae@orivraa.com',
+      contactPhone: '+971 4 000 0000',
+      contactAddress: 'Dubai, UAE',
+    },
+  ];
+
+  for (const config of marketConfigs) {
+    await prisma.marketConfig.upsert({
+      where: { countryCode: config.countryCode },
+      update: config,
+      create: config,
+    });
+  }
+  console.log('✅ Created market configurations');
+
   console.log('✅ Seed completed successfully!');
   console.log('\n📋 Test Accounts:');
   console.log('Admin: admin@goldshop.com / admin123');

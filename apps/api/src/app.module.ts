@@ -22,6 +22,8 @@ import { MarketRatesModule } from './modules/market-rates/market-rates.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { HealthModule } from './modules/health/health.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { MarketConfigModule } from './modules/market-config/market-config.module';
+import { CommissionModule } from './modules/commission/commission.module';
 
 @Module({
   imports: [
@@ -68,6 +70,8 @@ import { AdminModule } from './modules/admin/admin.module';
     JobsModule,
     HealthModule,
     AdminModule,
+    MarketConfigModule,
+    CommissionModule,
   ],
 })
 export class AppModule {}

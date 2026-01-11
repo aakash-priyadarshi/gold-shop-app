@@ -206,6 +206,12 @@ model Shop {
   // Compliance
   nickelCompliantFlag   Boolean  @default(false) // For Nickel restriction compliance
   
+  // Commission compliance (for paid-at-shop settlements)
+  isOnHold              Boolean  @default(false)  // Shop is on hold for overdue commissions
+  holdReason            String?                   // Reason for hold
+  holdAt                DateTime?                 // When the shop was put on hold
+  lastComplianceCheckAt DateTime?                 // Last compliance check timestamp
+  
   // Relations
   inventoryItems        InventoryItem[]
   rfqOffers             RfqOffer[]
@@ -643,11 +649,26 @@ model Order {
   discountNpr         Float       @default(0)
   totalNpr            Float
   
-  // Payment
-  paymentMethod       String      // ONLINE, COD
-  paymentStatus       String      // PENDING, PARTIAL, COMPLETED
+  // Market context (for geo-based pricing)
+  marketCountry       MarketRegion @default(NP)     // Country where order was placed
+  displayCurrency     CurrencyCode @default(NPR)   // Currency shown to customer
+  
+  // Payment - Enhanced
+  paymentMethod       String?     // Legacy: ONLINE, COD
+  paymentMethodEnum   PaymentMethod?               // New: CARD, UPI, ESEWA, etc.
+  paymentStatus       String      // Legacy: PENDING, PARTIAL, COMPLETED
+  paymentStatusEnum   PaymentStatusEnum @default(UNPAID) // New: UNPAID, PAID, PAID_ON_SHOP
   bookingFeePaidNpr   Float?      // For custom orders
   balanceDueNpr       Float
+  
+  // Paid at shop workflow
+  paidAtShopRequested    Boolean   @default(false)  // Shopkeeper marked as paid at shop
+  paidAtShopRequestedAt  DateTime?                  // When shopkeeper marked it
+  paidAtShopConfirmed    Boolean   @default(false)  // Admin confirmed the payment
+  paidAtShopConfirmedAt  DateTime?                  // When admin confirmed
+  
+  // Detailed order status
+  detailedStatus      DetailedOrderStatus @default(PLACED)
   
   // Shipping
   shippingAddress     Json
@@ -685,6 +706,8 @@ model Order {
   @@index([orderNumber])
   @@index([createdByAdmin])
   @@index([paymentVerifiedByAdmin])
+  @@index([marketCountry])
+  @@index([detailedStatus])
 }
 
 // Order version for tracking counter-offers and modifications
@@ -1582,5 +1605,148 @@ model SystemNotification {
 
   @@index([isActive])
   @@index([expiresAt])
+}
+
+// ══════════════════════════════════════
+// MARKET CONFIGURATION (Geo-based Localisation)
+// ══════════════════════════════════════
+
+// Weight unit enum for the platform
+enum WeightUnit {
+  GRAM      // g - Base unit
+  KILOGRAM  // kg
+  TOLA      // Traditional South Asian unit
+  LAAL      // Nepal local unit (smaller than tola)
+  OUNCE     // oz (troy ounce for precious metals)
+  POUND     // lb
+}
+
+// Payment method enum (country-specific options)
+enum PaymentMethod {
+  // Universal
+  CARD
+  BANK_TRANSFER
+  CASH
+  
+  // India specific
+  UPI
+  
+  // Nepal specific
+  ESEWA
+  KHALTI
+  CONNECTIPS
+  
+  // International
+  PAYPAL
+  STRIPE
+  
+  // Shop payment
+  PAID_AT_SHOP
+}
+
+// Payment status enum
+enum PaymentStatusEnum {
+  UNPAID
+  PAID
+  PAID_ON_SHOP
+  PARTIAL
+  REFUNDED
+}
+
+// Detailed order status enum
+enum DetailedOrderStatus {
+  PLACED
+  CONFIRMED
+  IN_PROGRESS
+  READY
+  SHIPPED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+// Commission status for shop settlements
+enum CommissionStatus {
+  PENDING
+  PAID
+  OVERDUE
+  WAIVED
+}
+
+model MarketConfig {
+  id                    String       @id @default(uuid())
+  countryCode           MarketRegion @unique
+  countryName           String       // Full country name
+  
+  // Currency settings
+  defaultCurrency       CurrencyCode
+  supportedCurrencies   CurrencyCode[]
+  
+  // Weight unit settings
+  defaultWeightUnit     WeightUnit   @default(GRAM)
+  supportedWeightUnits  WeightUnit[]
+  
+  // Payment settings
+  supportedPaymentMethods PaymentMethod[]
+  
+  // Hero section copy
+  heroHeadline          String       // "Nepal's No.1 Jewellery Marketplace"
+  heroSubheadline       String?      // "Trusted by thousands"
+  
+  // Footer contact info
+  footerContactTitle    String?      // "Contact Us in Nepal"
+  contactEmail          String
+  contactPhone          String
+  contactAddress        String?
+  contactWhatsapp       String?
+  
+  // Tax settings
+  taxPercentage         Float        @default(0)
+  taxName               String?      // "VAT", "GST", etc.
+  
+  // Region multiplier for pricing
+  priceMultiplier       Float        @default(1.0)
+  
+  // Feature flags
+  codEnabled            Boolean      @default(false)
+  customOrdersEnabled   Boolean      @default(true)
+  
+  // Active status
+  isActive              Boolean      @default(true)
+  
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  @@index([countryCode])
+  @@index([isActive])
+}
+
+// Commission tracking for shop settlements (Paid at shop)
+model CommissionLedger {
+  id              String           @id @default(uuid())
+  orderId         String           @unique
+  shopId          String
+  
+  // Commission details
+  orderTotal      Float            // Total order amount
+  commissionRate  Float            @default(0.01) // 1% default
+  amount          Float            // Commission amount owed
+  currency        CurrencyCode     // Currency of the commission
+  
+  // Status tracking
+  status          CommissionStatus @default(PENDING)
+  dueAt           DateTime         // When commission is due (21 days from paid-at-shop)
+  paidAt          DateTime?        // When commission was actually paid
+  
+  // Reference
+  notes           String?
+  
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([shopId])
+  @@index([status])
+  @@index([dueAt])
 }
 

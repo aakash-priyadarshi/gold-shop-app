@@ -1083,4 +1083,238 @@ export class OrdersService {
       return { status: 'rejected', versionId };
     }
   }
+
+  // ══════════════════════════════════════
+  // ADMIN ORDER/PAYMENT STATUS CONTROLS
+  // ══════════════════════════════════════
+
+  async adminUpdateOrderStatus(orderId: string, adminId: string, dto: any) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { customer: true, shop: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    const updated = await this.prisma.order.update({
+      where: { id: orderId },
+      data: {
+        detailedStatus: dto.detailedStatus,
+        adminNotes: dto.adminNotes || order.adminNotes,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Notify customer of status change
+    await this.notificationsService.create({
+      userId: order.customerId,
+      type: 'ORDER_UPDATE',
+      titleKey: 'notification.order.status_updated.title',
+      titleParams: { orderNumber: order.orderNumber },
+      bodyKey: 'notification.order.status_updated.body',
+      bodyParams: { 
+        orderNumber: order.orderNumber,
+        status: dto.detailedStatus,
+      },
+      referenceType: 'ORDER',
+      referenceId: order.id,
+      channels: ['EMAIL', 'PUSH'],
+    });
+
+    return updated;
+  }
+
+  async adminUpdatePaymentStatus(orderId: string, adminId: string, dto: any) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { customer: true, shop: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    // Validate: PAID status requires a payment method
+    if (dto.paymentStatus === 'PAID' && !dto.paymentMethod) {
+      throw new BadRequestException('Payment method is required when marking as PAID');
+    }
+
+    const updated = await this.prisma.order.update({
+      where: { id: orderId },
+      data: {
+        paymentStatusEnum: dto.paymentStatus,
+        paymentMethodEnum: dto.paymentMethod || null,
+        paymentStatus: dto.paymentStatus === 'PAID' ? 'COMPLETED' : 
+                       dto.paymentStatus === 'PARTIAL' ? 'PARTIAL' : 'PENDING',
+        adminNotes: dto.adminNotes || order.adminNotes,
+        paymentVerifiedByAdmin: dto.paymentStatus === 'PAID',
+        paymentVerifiedAt: dto.paymentStatus === 'PAID' ? new Date() : null,
+        paymentVerifiedById: dto.paymentStatus === 'PAID' ? adminId : null,
+        updatedAt: new Date(),
+      },
+    });
+
+    return updated;
+  }
+
+  // ══════════════════════════════════════
+  // SHOPKEEPER ORDER CONTROLS
+  // ══════════════════════════════════════
+
+  async shopkeeperUpdateOrderStatus(orderId: string, shopkeeperId: string, dto: any) {
+    // First verify the shopkeeper owns this order
+    const user = await this.prisma.user.findUnique({
+      where: { id: shopkeeperId },
+      include: { shop: true },
+    });
+
+    if (!user?.shop) {
+      throw new ForbiddenException('You do not have a shop');
+    }
+
+    // Check if shop is on hold
+    if (user.shop.isOnHold) {
+      throw new ForbiddenException(
+        'Your shop is on hold due to unpaid commissions. Please settle outstanding commissions to continue.',
+      );
+    }
+
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { customer: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.shopId !== user.shop.id) {
+      throw new ForbiddenException('This order does not belong to your shop');
+    }
+
+    // Shopkeepers can only set certain statuses
+    const allowedStatuses = ['CONFIRMED', 'IN_PROGRESS', 'READY', 'SHIPPED', 'DELIVERED'];
+    if (!allowedStatuses.includes(dto.detailedStatus)) {
+      throw new BadRequestException(
+        `Shopkeepers can only set these statuses: ${allowedStatuses.join(', ')}`,
+      );
+    }
+
+    const updated = await this.prisma.order.update({
+      where: { id: orderId },
+      data: {
+        detailedStatus: dto.detailedStatus,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Notify customer of status change
+    await this.notificationsService.create({
+      userId: order.customerId,
+      type: 'ORDER_UPDATE',
+      titleKey: 'notification.order.status_updated.title',
+      titleParams: { orderNumber: order.orderNumber },
+      bodyKey: 'notification.order.status_updated.body',
+      bodyParams: { 
+        orderNumber: order.orderNumber,
+        status: dto.detailedStatus,
+      },
+      referenceType: 'ORDER',
+      referenceId: order.id,
+      channels: ['EMAIL', 'PUSH'],
+    });
+
+    return updated;
+  }
+
+  async markPaidAtShop(orderId: string, shopkeeperId: string, dto: any) {
+    // First verify the shopkeeper owns this order
+    const user = await this.prisma.user.findUnique({
+      where: { id: shopkeeperId },
+      include: { shop: true },
+    });
+
+    if (!user?.shop) {
+      throw new ForbiddenException('You do not have a shop');
+    }
+
+    // Check if shop is on hold
+    if (user.shop.isOnHold) {
+      throw new ForbiddenException(
+        'Your shop is on hold due to unpaid commissions. Please settle outstanding commissions to continue.',
+      );
+    }
+
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.shopId !== user.shop.id) {
+      throw new ForbiddenException('This order does not belong to your shop');
+    }
+
+    // Update order with paid at shop status
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // Update order
+      const updatedOrder = await tx.order.update({
+        where: { id: orderId },
+        data: {
+          paidAtShopRequested: true,
+          paidAtShopRequestedAt: new Date(),
+          paymentStatusEnum: 'PAID_ON_SHOP',
+          paymentStatus: 'COMPLETED',
+          paymentMethodEnum: 'PAID_AT_SHOP',
+          balanceDueNpr: 0,
+          updatedAt: new Date(),
+        },
+      });
+
+      // Calculate and create commission ledger
+      const commissionRate = 0.01; // 1%
+      const commissionAmount = order.totalNpr * commissionRate;
+      const dueAt = new Date();
+      dueAt.setDate(dueAt.getDate() + 21); // 21 days to settle
+
+      await tx.commissionLedger.upsert({
+        where: { orderId },
+        create: {
+          orderId,
+          shopId: user.shop!.id,
+          orderTotal: order.totalNpr,
+          commissionRate,
+          amount: commissionAmount,
+          currency: order.displayCurrency || 'NPR',
+          status: 'PENDING',
+          dueAt,
+          notes: dto.notes,
+        },
+        update: {
+          orderTotal: order.totalNpr,
+          amount: commissionAmount,
+          status: 'PENDING',
+          dueAt,
+          notes: dto.notes,
+          updatedAt: new Date(),
+        },
+      });
+
+      return updatedOrder;
+    });
+
+    return {
+      order: updated,
+      commission: {
+        amount: order.totalNpr * 0.01,
+        dueInDays: 21,
+        message: 'Commission of 1% is due within 21 days',
+      },
+    };
+  }
 }
+

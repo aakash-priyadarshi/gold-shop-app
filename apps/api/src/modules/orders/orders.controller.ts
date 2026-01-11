@@ -26,6 +26,9 @@ import {
   AdminVerifyPaymentDto,
   CreateCounterOfferDto,
   RespondToCounterOfferDto,
+  AdminUpdateOrderStatusDto,
+  AdminUpdatePaymentStatusDto,
+  ShopkeeperPaidAtShopDto,
 } from './dto/order.dto';
 
 @ApiTags('orders')
@@ -222,5 +225,57 @@ export class OrdersController {
     @Body() dto: RespondToCounterOfferDto,
   ) {
     return this.ordersService.respondToCounterOffer(orderId, versionId, customerId, dto);
+  }
+
+  // ══════════════════════════════════════
+  // ADMIN ORDER/PAYMENT STATUS CONTROLS
+  // ══════════════════════════════════════
+
+  @Patch('admin/:id/order-status')
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Update order status (Admin)' })
+  async adminUpdateOrderStatus(
+    @Param('id') id: string,
+    @CurrentUser('id') adminId: string,
+    @Body() dto: AdminUpdateOrderStatusDto,
+  ) {
+    return this.ordersService.adminUpdateOrderStatus(id, adminId, dto);
+  }
+
+  @Patch('admin/:id/payment-status')
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Update payment status and method (Admin)' })
+  async adminUpdatePaymentStatus(
+    @Param('id') id: string,
+    @CurrentUser('id') adminId: string,
+    @Body() dto: AdminUpdatePaymentStatusDto,
+  ) {
+    return this.ordersService.adminUpdatePaymentStatus(id, adminId, dto);
+  }
+
+  // ══════════════════════════════════════
+  // SHOPKEEPER ENDPOINTS
+  // ══════════════════════════════════════
+
+  @Patch('shop/:id/order-status')
+  @Roles('SHOPKEEPER')
+  @ApiOperation({ summary: 'Update order status (Shopkeeper)' })
+  async shopkeeperUpdateOrderStatus(
+    @Param('id') id: string,
+    @CurrentUser('id') shopkeeperId: string,
+    @Body() dto: AdminUpdateOrderStatusDto,
+  ) {
+    return this.ordersService.shopkeeperUpdateOrderStatus(id, shopkeeperId, dto);
+  }
+
+  @Post('shop/:id/paid-at-shop')
+  @Roles('SHOPKEEPER')
+  @ApiOperation({ summary: 'Mark order as paid at shop (triggers commission)' })
+  async markPaidAtShop(
+    @Param('id') id: string,
+    @CurrentUser('id') shopkeeperId: string,
+    @Body() dto: ShopkeeperPaidAtShopDto,
+  ) {
+    return this.ordersService.markPaidAtShop(id, shopkeeperId, dto);
   }
 }

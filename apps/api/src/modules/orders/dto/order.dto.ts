@@ -230,3 +230,75 @@ export class RespondToCounterOfferDto {
   @IsOptional()
   notes?: string;
 }
+
+// ══════════════════════════════════════
+// NEW: Order Status & Payment Status DTOs
+// ══════════════════════════════════════
+
+export enum DetailedOrderStatus {
+  PLACED = 'PLACED',
+  CONFIRMED = 'CONFIRMED',
+  IN_PROGRESS = 'IN_PROGRESS',
+  READY = 'READY',
+  SHIPPED = 'SHIPPED',
+  OUT_FOR_DELIVERY = 'OUT_FOR_DELIVERY',
+  DELIVERED = 'DELIVERED',
+  CANCELLED = 'CANCELLED',
+  REFUNDED = 'REFUNDED',
+}
+
+export enum PaymentStatus {
+  UNPAID = 'UNPAID',
+  PAID = 'PAID',
+  PAID_ON_SHOP = 'PAID_ON_SHOP',
+  PARTIAL = 'PARTIAL',
+  REFUNDED = 'REFUNDED',
+}
+
+export enum PaymentMethod {
+  CARD = 'CARD',
+  BANK_TRANSFER = 'BANK_TRANSFER',
+  CASH = 'CASH',
+  UPI = 'UPI',
+  ESEWA = 'ESEWA',
+  KHALTI = 'KHALTI',
+  CONNECTIPS = 'CONNECTIPS',
+  PAYPAL = 'PAYPAL',
+  STRIPE = 'STRIPE',
+  PAID_AT_SHOP = 'PAID_AT_SHOP',
+}
+
+export class AdminUpdateOrderStatusDto {
+  @ApiProperty({ description: 'New detailed order status', enum: DetailedOrderStatus })
+  @IsEnum(DetailedOrderStatus)
+  detailedStatus: DetailedOrderStatus;
+
+  @ApiPropertyOptional({ description: 'Admin notes' })
+  @IsString()
+  @IsOptional()
+  adminNotes?: string;
+}
+
+export class AdminUpdatePaymentStatusDto {
+  @ApiProperty({ description: 'New payment status', enum: PaymentStatus })
+  @IsEnum(PaymentStatus)
+  paymentStatus: PaymentStatus;
+
+  @ApiPropertyOptional({ description: 'Payment method used', enum: PaymentMethod })
+  @IsEnum(PaymentMethod)
+  @IsOptional()
+  paymentMethod?: PaymentMethod;
+
+  @ApiPropertyOptional({ description: 'Admin notes' })
+  @IsString()
+  @IsOptional()
+  adminNotes?: string;
+}
+
+export class ShopkeeperPaidAtShopDto {
+  @ApiPropertyOptional({ description: 'Notes about the payment' })
+  @IsString()
+  @IsOptional()
+  notes?: string;
+}
+
