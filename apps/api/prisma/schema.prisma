@@ -218,6 +218,7 @@ model Shop {
   orders                Order[]
   ratings               ShopRating[]
   verificationRequests  VerificationRequest[] @relation("ShopVerificationRequests")
+  commissionLedgers     CommissionLedger[]
   
   // Status
   isActive              Boolean  @default(true)
@@ -696,6 +697,9 @@ model Order {
   // Order versioning for counter-offers
   currentVersionId    String?     @unique          // Current active version
   versions            OrderVersion[]                // All versions/counter-offers
+  
+  // Commission tracking
+  commissionLedger    CommissionLedger?
   
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
@@ -1744,6 +1748,10 @@ model CommissionLedger {
   
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+
+  // Relations
+  order           Order            @relation(fields: [orderId], references: [id])
+  shop            Shop             @relation(fields: [shopId], references: [id])
 
   @@index([shopId])
   @@index([status])

@@ -9,9 +9,9 @@ import {
   Post,
 } from '@nestjs/common';
 import { CommissionService } from './commission.service';
-import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
-import { RolesGuard } from '../../auth/roles.guard';
-import { Roles } from '../../auth/roles.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole, CommissionStatus } from '@prisma/client';
 
 @Controller('admin/commissions')

@@ -10,9 +10,9 @@ import {
 } from '@nestjs/common';
 import { MarketConfigService } from './market-config.service';
 import { UpdateMarketConfigDto } from './dto/update-market-config.dto';
-import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
-import { RolesGuard } from '../../auth/roles.guard';
-import { Roles } from '../../auth/roles.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 
 @Controller('market')
