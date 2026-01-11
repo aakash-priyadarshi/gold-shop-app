@@ -576,9 +576,13 @@ async function main() {
   // Seed Market Configurations
   console.log('🌍 Seeding market configurations...');
   
-  const marketConfigs = [
-    {
+  // Nepal
+  await prisma.marketConfig.upsert({
+    where: { countryCode: 'NP' },
+    update: {},
+    create: {
       countryCode: 'NP',
+      countryName: 'Nepal',
       isActive: true,
       defaultCurrency: 'NPR',
       supportedCurrencies: ['NPR', 'USD'],
@@ -590,9 +594,21 @@ async function main() {
       contactEmail: 'nepal@orivraa.com',
       contactPhone: '+977 9800000000',
       contactAddress: 'Kathmandu, Nepal',
+      taxPercentage: 13,
+      taxName: 'VAT',
+      priceMultiplier: 1.245,
+      codEnabled: true,
+      customOrdersEnabled: true,
     },
-    {
+  });
+
+  // India
+  await prisma.marketConfig.upsert({
+    where: { countryCode: 'IN' },
+    update: {},
+    create: {
       countryCode: 'IN',
+      countryName: 'India',
       isActive: true,
       defaultCurrency: 'INR',
       supportedCurrencies: ['INR', 'USD'],
@@ -604,9 +620,21 @@ async function main() {
       contactEmail: 'india@orivraa.com',
       contactPhone: '+91 9000000000',
       contactAddress: 'Mumbai, India',
+      taxPercentage: 3,
+      taxName: 'GST',
+      priceMultiplier: 1.1,
+      codEnabled: true,
+      customOrdersEnabled: true,
     },
-    {
+  });
+
+  // United States
+  await prisma.marketConfig.upsert({
+    where: { countryCode: 'US' },
+    update: {},
+    create: {
       countryCode: 'US',
+      countryName: 'United States',
       isActive: true,
       defaultCurrency: 'USD',
       supportedCurrencies: ['USD'],
@@ -618,9 +646,21 @@ async function main() {
       contactEmail: 'usa@orivraa.com',
       contactPhone: '+1 800 000 0000',
       contactAddress: 'New York, USA',
+      taxPercentage: 0,
+      taxName: 'Sales Tax',
+      priceMultiplier: 1.0,
+      codEnabled: false,
+      customOrdersEnabled: true,
     },
-    {
+  });
+
+  // United Kingdom
+  await prisma.marketConfig.upsert({
+    where: { countryCode: 'UK' },
+    update: {},
+    create: {
       countryCode: 'UK',
+      countryName: 'United Kingdom',
       isActive: true,
       defaultCurrency: 'GBP',
       supportedCurrencies: ['GBP', 'EUR', 'USD'],
@@ -632,9 +672,21 @@ async function main() {
       contactEmail: 'uk@orivraa.com',
       contactPhone: '+44 20 0000 0000',
       contactAddress: 'London, UK',
+      taxPercentage: 20,
+      taxName: 'VAT',
+      priceMultiplier: 1.01,
+      codEnabled: false,
+      customOrdersEnabled: true,
     },
-    {
+  });
+
+  // Europe
+  await prisma.marketConfig.upsert({
+    where: { countryCode: 'EU' },
+    update: {},
+    create: {
       countryCode: 'EU',
+      countryName: 'Europe',
       isActive: true,
       defaultCurrency: 'EUR',
       supportedCurrencies: ['EUR', 'USD'],
@@ -646,9 +698,21 @@ async function main() {
       contactEmail: 'europe@orivraa.com',
       contactPhone: '+49 30 0000 0000',
       contactAddress: 'Berlin, Germany',
+      taxPercentage: 19,
+      taxName: 'VAT',
+      priceMultiplier: 1.01,
+      codEnabled: false,
+      customOrdersEnabled: true,
     },
-    {
+  });
+
+  // UAE
+  await prisma.marketConfig.upsert({
+    where: { countryCode: 'AE' },
+    update: {},
+    create: {
       countryCode: 'AE',
+      countryName: 'United Arab Emirates',
       isActive: true,
       defaultCurrency: 'AED',
       supportedCurrencies: ['AED', 'USD'],
@@ -660,16 +724,14 @@ async function main() {
       contactEmail: 'uae@orivraa.com',
       contactPhone: '+971 4 000 0000',
       contactAddress: 'Dubai, UAE',
+      taxPercentage: 5,
+      taxName: 'VAT',
+      priceMultiplier: 1.02,
+      codEnabled: true,
+      customOrdersEnabled: true,
     },
-  ];
+  });
 
-  for (const config of marketConfigs) {
-    await prisma.marketConfig.upsert({
-      where: { countryCode: config.countryCode },
-      update: config,
-      create: config,
-    });
-  }
   console.log('✅ Created market configurations');
 
   console.log('✅ Seed completed successfully!');

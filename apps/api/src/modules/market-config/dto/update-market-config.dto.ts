@@ -1,4 +1,5 @@
-import { IsString, IsOptional, IsArray, IsBoolean, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsArray, IsBoolean, IsNumber, IsEnum } from 'class-validator';
+import { CurrencyCode, WeightUnit, PaymentMethod } from '@prisma/client';
 
 export class UpdateMarketConfigDto {
   @IsOptional()
@@ -31,18 +32,18 @@ export class UpdateMarketConfigDto {
 
   @IsOptional()
   @IsArray()
-  @IsString({ each: true })
-  supportedCurrencies?: string[];
+  @IsEnum(CurrencyCode, { each: true })
+  supportedCurrencies?: CurrencyCode[];
 
   @IsOptional()
   @IsArray()
-  @IsString({ each: true })
-  supportedWeightUnits?: string[];
+  @IsEnum(WeightUnit, { each: true })
+  supportedWeightUnits?: WeightUnit[];
 
   @IsOptional()
   @IsArray()
-  @IsString({ each: true })
-  supportedPaymentMethods?: string[];
+  @IsEnum(PaymentMethod, { each: true })
+  supportedPaymentMethods?: PaymentMethod[];
 
   @IsOptional()
   @IsBoolean()

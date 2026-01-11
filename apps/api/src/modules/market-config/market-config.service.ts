@@ -132,7 +132,7 @@ export class MarketConfigService {
   /**
    * Get market config by country code
    */
-  async getConfig(countryCode: string) {
+  async getConfig(countryCode: string): Promise<any> {
     // Try to get from database first
     const dbConfig = await this.prisma.marketConfig.findUnique({
       where: { countryCode: countryCode as MarketRegion },
@@ -250,7 +250,21 @@ export class MarketConfigService {
       return this.prisma.marketConfig.update({
         where: { countryCode: countryCode as MarketRegion },
         data: {
-          ...dto,
+          heroHeadline: dto.heroHeadline,
+          heroSubheadline: dto.heroSubheadline,
+          footerContactTitle: dto.footerContactTitle,
+          contactEmail: dto.contactEmail,
+          contactPhone: dto.contactPhone,
+          contactAddress: dto.contactAddress,
+          contactWhatsapp: dto.contactWhatsapp,
+          supportedCurrencies: dto.supportedCurrencies,
+          supportedWeightUnits: dto.supportedWeightUnits,
+          supportedPaymentMethods: dto.supportedPaymentMethods,
+          codEnabled: dto.codEnabled,
+          customOrdersEnabled: dto.customOrdersEnabled,
+          taxPercentage: dto.taxPercentage,
+          taxName: dto.taxName,
+          isActive: dto.isActive,
           updatedAt: new Date(),
         },
       });
@@ -267,10 +281,10 @@ export class MarketConfigService {
         countryCode: countryCode as MarketRegion,
         countryName: defaultConfig.countryName,
         defaultCurrency: defaultConfig.defaultCurrency,
-        supportedCurrencies: defaultConfig.supportedCurrencies,
+        supportedCurrencies: dto.supportedCurrencies || defaultConfig.supportedCurrencies,
         defaultWeightUnit: defaultConfig.defaultWeightUnit,
-        supportedWeightUnits: defaultConfig.supportedWeightUnits,
-        supportedPaymentMethods: defaultConfig.supportedPaymentMethods,
+        supportedWeightUnits: dto.supportedWeightUnits || defaultConfig.supportedWeightUnits,
+        supportedPaymentMethods: dto.supportedPaymentMethods || defaultConfig.supportedPaymentMethods,
         heroHeadline: dto.heroHeadline || defaultConfig.heroHeadline,
         heroSubheadline: dto.heroSubheadline || defaultConfig.heroSubheadline,
         footerContactTitle: dto.footerContactTitle,
@@ -278,12 +292,12 @@ export class MarketConfigService {
         contactPhone: dto.contactPhone || defaultConfig.contactPhone,
         contactAddress: dto.contactAddress || defaultConfig.contactAddress,
         contactWhatsapp: dto.contactWhatsapp,
-        taxPercentage: defaultConfig.taxPercentage,
-        taxName: defaultConfig.taxName,
+        taxPercentage: dto.taxPercentage ?? defaultConfig.taxPercentage,
+        taxName: dto.taxName || defaultConfig.taxName,
         priceMultiplier: defaultConfig.priceMultiplier,
-        codEnabled: defaultConfig.codEnabled,
-        customOrdersEnabled: true,
-        isActive: true,
+        codEnabled: dto.codEnabled ?? defaultConfig.codEnabled,
+        customOrdersEnabled: dto.customOrdersEnabled ?? true,
+        isActive: dto.isActive ?? true,
       },
     });
   }

@@ -105,7 +105,10 @@ export class CommissionService {
         status: 'PENDING',
         dueAt: { lt: now },
       },
-      include: { },
+      include: {
+        shop: true,
+        order: true,
+      },
     });
 
     const results = {
@@ -187,6 +190,8 @@ export class CommissionService {
       this.prisma.commissionLedger.findMany({
         where,
         include: {
+          shop: true,
+          order: true,
         },
         orderBy: { dueAt: 'asc' },
         skip,
