@@ -105,7 +105,7 @@ export default function AdminShopsPage() {
   const loadShops = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/api/shops');
+      const response = await api.get('/shops');
       let shopsArr = response.data.shops || response.data || [];
       if (!Array.isArray(shopsArr)) {
         shopsArr = [];
@@ -175,7 +175,7 @@ export default function AdminShopsPage() {
       return;
     }
     try {
-      const response = await api.get('/api/users', { params: { search: query, role: 'SHOPKEEPER' } });
+      const response = await api.get('/users', { params: { search: query, role: 'SHOPKEEPER' } });
       const usersData = response.data.data || response.data || [];
       setAvailableOwners(Array.isArray(usersData) ? usersData : []);
     } catch (error) {

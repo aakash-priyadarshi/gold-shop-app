@@ -79,7 +79,7 @@ export default function ShopRfqsPage() {
   const loadRfqs = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/api/rfq/shop-requests');
+      const response = await api.get('/rfq/shop-requests');
       let rfqsArr = response.data.rfqs || response.data || [];
       if (!Array.isArray(rfqsArr)) {
         rfqsArr = [];

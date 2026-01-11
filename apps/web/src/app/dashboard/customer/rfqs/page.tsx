@@ -60,7 +60,7 @@ export default function CustomerRFQsPage() {
   const loadRFQs = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/api/rfq/my-requests');
+      const response = await api.get('/rfq/my-requests');
       let rfqsArr = response.data;
       if (!Array.isArray(rfqsArr)) {
         rfqsArr = [];

@@ -93,7 +93,7 @@ export default function CustomerSettingsPage() {
   const loadProfile = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/api/users/me');
+      const response = await api.get('/users/me');
       setProfile({
         id: response.data.id,
         name: response.data.name || '',
@@ -114,7 +114,7 @@ export default function CustomerSettingsPage() {
   const saveProfile = async () => {
     setIsSaving(true);
     try {
-      await api.patch('/api/users/me', {
+      await api.patch('/users/me', {
         name: profile.name,
         phone: profile.phone || null,
         country: profile.country || null,

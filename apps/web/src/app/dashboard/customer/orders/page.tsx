@@ -64,7 +64,7 @@ export default function CustomerOrdersPage() {
   const loadOrders = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/api/orders/my-orders');
+      const response = await api.get('/orders/my-orders');
       let ordersArr = response.data;
       if (!Array.isArray(ordersArr)) {
         ordersArr = [];

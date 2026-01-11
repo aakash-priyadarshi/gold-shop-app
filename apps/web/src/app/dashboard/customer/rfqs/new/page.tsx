@@ -122,7 +122,7 @@ export default function NewRFQPage() {
           : null,
       };
 
-      await api.post('/api/rfq', payload);
+      await api.post('/rfq', payload);
 
       toast({
         title: 'Request Submitted',

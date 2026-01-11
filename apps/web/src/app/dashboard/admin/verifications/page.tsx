@@ -38,7 +38,7 @@ export default function AdminVerificationsPage() {
   const loadRequests = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/api/admin/verifications');
+      const response = await api.get('/admin/verifications');
       let arr = response.data.requests || response.data || [];
       if (!Array.isArray(arr)) arr = [];
       setRequests(arr);

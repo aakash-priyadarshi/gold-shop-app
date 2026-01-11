@@ -66,7 +66,7 @@ export default function ShopPricingPage() {
   const loadPricing = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/api/shops/my-shop');
+      const response = await api.get('/shops/my-shop');
       const shop = response.data;
       
       if (shop.defaultMakingChargePercent) {

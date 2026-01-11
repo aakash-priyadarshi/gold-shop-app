@@ -95,7 +95,7 @@ export default function AdminUsersPage() {
   const loadUsers = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/api/users');
+      const response = await api.get('/users');
       let usersArr = response.data.users || response.data || [];
       if (!Array.isArray(usersArr)) {
         // If not array, try to parse or fallback to empty

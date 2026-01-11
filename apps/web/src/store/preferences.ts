@@ -178,7 +178,7 @@ export const usePreferencesStore = create<PreferencesState>()(
 
         set({ isSyncing: true });
         try {
-          const response = await api.get('/api/users/me/preferences');
+          const response = await api.get('/users/me/preferences');
           const { language, currency, country } = response.data;
           
           // Only sync language, currency, country - NOT theme
@@ -205,7 +205,7 @@ export const usePreferencesStore = create<PreferencesState>()(
 
         set({ isSyncing: true });
         try {
-          await api.patch('/api/users/me/preferences', {
+          await api.patch('/users/me/preferences', {
             preferredLanguage: language,
             preferredCurrency: currency,
             preferredCountry: country,

@@ -57,9 +57,9 @@ export default function AdminDashboard() {
       setLoading(true);
       try {
         // Fetch stats (users, shops, orders, revenue)
-        const usersRes = await api.get('/api/users?page=1&pageSize=1');
-        const shopsRes = await api.get('/api/shops?page=1&pageSize=1');
-        const ordersRes = await api.get('/api/orders?page=1&pageSize=1');
+        const usersRes = await api.get('/users?page=1&pageSize=1');
+        const shopsRes = await api.get('/shops?page=1&pageSize=1');
+        const ordersRes = await api.get('/orders?page=1&pageSize=1');
         // Revenue: Placeholder, replace with real endpoint if available
         const revenueRes = { data: { revenue: 'NPR 0', change: '+0%' } };
 
@@ -99,13 +99,13 @@ export default function AdminDashboard() {
         ]);
 
         // Fetch pending verifications
-        const verificationsRes = await api.get('/api/admin/verifications');
+        const verificationsRes = await api.get('/admin/verifications');
         setPendingVerifications(
           (verificationsRes.data?.requests || []).filter((v: any) => v.status === 'PENDING')
         );
 
         // Fetch recent activity (use reports for now)
-        const reportsRes = await api.get('/api/admin/reports');
+        const reportsRes = await api.get('/admin/reports');
         setRecentActivity(
           (reportsRes.data?.reports || []).map((r: any) => ({
             id: r.id,

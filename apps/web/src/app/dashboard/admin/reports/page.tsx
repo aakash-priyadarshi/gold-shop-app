@@ -33,7 +33,7 @@ export default function AdminReportsPage() {
   const loadReports = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/api/admin/reports');
+      const response = await api.get('/admin/reports');
       let arr = response.data.reports || response.data || [];
       if (!Array.isArray(arr)) arr = [];
       setReports(arr);

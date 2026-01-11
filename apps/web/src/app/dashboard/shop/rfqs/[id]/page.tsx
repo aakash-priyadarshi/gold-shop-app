@@ -123,7 +123,7 @@ export default function ShopRfqDetailPage() {
 
     setIsSubmitting(true);
     try {
-      await api.post('/api/offers', {
+      await api.post('/offers', {
         rfqId,
         price: parseFloat(offerPrice),
         currency: rfq?.currency || 'USD',
