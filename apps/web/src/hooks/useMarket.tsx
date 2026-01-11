@@ -163,13 +163,16 @@ export function MarketProvider({ children, initialCountry }: MarketProviderProps
       } else if (initialCountry) {
         detectedCountry = initialCountry;
       } else {
-        // Try to detect from API (uses Vercel/Cloudflare headers)
+        // Use Next.js API route to detect country from Vercel/Cloudflare headers
+        // This works because the Next.js API route has access to request headers
         try {
-          const response = await api.get('/market/my-config');
-          if (response.data?.countryCode) {
-            detectedCountry = response.data.countryCode;
+          const geoResponse = await fetch('/api/geo');
+          const geoData = await geoResponse.json();
+          if (geoData?.detectedCountry) {
+            detectedCountry = geoData.detectedCountry as MarketRegion;
           }
         } catch (e) {
+          console.error('Failed to detect country from geo API:', e);
           // Fallback to US
           detectedCountry = 'US';
         }

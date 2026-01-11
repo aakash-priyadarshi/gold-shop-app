@@ -49,6 +49,8 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { usePreferencesStore, CURRENCIES, COUNTRIES, type CurrencyCode, type CountryCode } from '@/store/preferences';
+import { useMarket, WEIGHT_UNIT_SYMBOLS, type WeightUnit } from '@/hooks/useMarket';
+import { toGrams, fromGrams } from '@gold-shop/shared';
 
 // New pricing components
 import { AlloyBuilder, type AlloyConfig } from '@/components/pricing/AlloyBuilder';
@@ -228,6 +230,17 @@ export default function CreateRfqPage() {
   const country = usePreferencesStore((state) => state.country);
   const countryInfo = COUNTRIES[country];
   
+  // Get weight unit from market context (country-specific default)
+  const { selectedWeightUnit, config: marketConfig, setWeightUnit } = useMarket();
+  const [displayWeightUnit, setDisplayWeightUnit] = useState<WeightUnit>(selectedWeightUnit);
+  
+  // Update display weight unit when market config loads
+  useEffect(() => {
+    if (marketConfig?.defaultWeightUnit) {
+      setDisplayWeightUnit(marketConfig.defaultWeightUnit);
+    }
+  }, [marketConfig?.defaultWeightUnit]);
+  
   // For price API: pass both currency (display) and country (tax) separately
   const apiCurrency = currency;
 
@@ -391,18 +404,50 @@ export default function CreateRfqPage() {
   const hasRealTemplate = formData.templateId && formData.templateId !== 'custom';
   const getTemplateId = () => hasRealTemplate ? formData.templateId : undefined;
 
-  // Calculate weight from template and weight category
+  // Weight unit helpers
+  const weightUnitSymbol = WEIGHT_UNIT_SYMBOLS[displayWeightUnit] || 'g';
+  const supportedWeightUnits = marketConfig?.supportedWeightUnits || ['GRAM', 'KILOGRAM'];
+  
+  // Convert user input (in display unit) to grams for API
+  const displayToGrams = useCallback((displayValue: number): number => {
+    return toGrams(displayValue, displayWeightUnit);
+  }, [displayWeightUnit]);
+  
+  // Convert grams (from template) to display unit
+  const gramsToDisplay = useCallback((grams: number): number => {
+    return fromGrams(grams, displayWeightUnit);
+  }, [displayWeightUnit]);
+  
+  // Format weight with unit symbol
+  const formatWeight = useCallback((grams: number, showUnit = true): string => {
+    const displayValue = gramsToDisplay(grams);
+    const formatted = displayValue.toLocaleString('en', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
+    return showUnit ? `${formatted} ${weightUnitSymbol}` : formatted;
+  }, [gramsToDisplay, weightUnitSymbol]);
+
+  // Calculate weight from template and weight category (returns grams)
   const getWeightFromTemplate = useCallback(() => {
-    if (!hasRealTemplate) return parseFloat(formData.estimatedWeight) || 0;
+    // User-entered weight is in display units, convert to grams
+    if (!hasRealTemplate) {
+      const displayValue = parseFloat(formData.estimatedWeight) || 0;
+      return displayToGrams(displayValue);
+    }
     const template = templates.find((t) => t.id === formData.templateId);
-    if (!template) return parseFloat(formData.estimatedWeight) || 0;
+    if (!template) {
+      const displayValue = parseFloat(formData.estimatedWeight) || 0;
+      return displayToGrams(displayValue);
+    }
+    // Template weights are always in grams
     switch (formData.weightCategory) {
       case 'LIGHT': return template.lightWeightGrams;
       case 'MEDIUM': return template.mediumWeightGrams;
       case 'HEAVY': return template.heavyWeightGrams;
       default: return template.mediumWeightGrams;
     }
-  }, [formData.templateId, formData.weightCategory, formData.estimatedWeight, templates, hasRealTemplate]);
+  }, [formData.templateId, formData.weightCategory, formData.estimatedWeight, templates, hasRealTemplate, displayToGrams]);
 
   // Fetch price estimate using the new pricing engine
   const fetchPriceEstimate = useCallback(async () => {
@@ -864,7 +909,7 @@ export default function CreateRfqPage() {
                             onClick={() => updateFormData('weightCategory', cat.value)}
                           >
                             <span className="font-semibold">{cat.label}</span>
-                            <span className="text-xs opacity-80">{weight}g</span>
+                            <span className="text-xs opacity-80">{formatWeight(weight)}</span>
                           </Button>
                         );
                       })}
@@ -875,14 +920,32 @@ export default function CreateRfqPage() {
                 {/* Manual weight input when no template */}
                 {!hasRealTemplate && (
                   <div className="space-y-2">
-                    <Label>Estimated Weight (grams)</Label>
+                    <Label>Estimated Weight ({weightUnitSymbol})</Label>
                     <Input
                       type="number"
                       step="0.1"
-                      placeholder="e.g., 10.5"
+                      placeholder={displayWeightUnit === 'GRAM' ? 'e.g., 10.5' : 'e.g., 1.0'}
                       value={formData.estimatedWeight}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateFormData('estimatedWeight', e.target.value)}
                     />
+                    {/* Weight unit selector */}
+                    {supportedWeightUnits.length > 1 && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-xs text-gray-500">Unit:</span>
+                        <Select value={displayWeightUnit} onValueChange={(v) => setDisplayWeightUnit(v as WeightUnit)}>
+                          <SelectTrigger className="h-7 w-24 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {supportedWeightUnits.map((unit) => (
+                              <SelectItem key={unit} value={unit} className="text-xs">
+                                {WEIGHT_UNIT_SYMBOLS[unit as WeightUnit]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1118,7 +1181,7 @@ export default function CreateRfqPage() {
                     </p>
                     <p className="text-sm text-gray-600">
                       <span className="font-medium">Weight ({formData.weightCategory}):</span>{' '}
-                      {getWeightFromTemplate()}g
+                      {formatWeight(getWeightFromTemplate())}
                     </p>
                   </div>
                 )}
@@ -1126,17 +1189,35 @@ export default function CreateRfqPage() {
                 {/* Manual weight input shown only if no template */}
                 {!hasRealTemplate && (
                   <div className="space-y-2">
-                    <Label>Estimated Weight (grams) *</Label>
+                    <Label>Estimated Weight ({weightUnitSymbol}) *</Label>
                     <Input
                       type="number"
                       step="0.1"
-                      placeholder="e.g., 10.5"
+                      placeholder={displayWeightUnit === 'GRAM' ? 'e.g., 10.5' : 'e.g., 1.0'}
                       value={formData.estimatedWeight}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateFormData('estimatedWeight', e.target.value)}
                     />
                     <p className="text-xs text-gray-500">
                       An approximate weight helps jewellers provide accurate quotes
                     </p>
+                    {/* Weight unit selector */}
+                    {supportedWeightUnits.length > 1 && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-xs text-gray-500">Unit:</span>
+                        <Select value={displayWeightUnit} onValueChange={(v) => setDisplayWeightUnit(v as WeightUnit)}>
+                          <SelectTrigger className="h-7 w-24 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {supportedWeightUnits.map((unit) => (
+                              <SelectItem key={unit} value={unit} className="text-xs">
+                                {WEIGHT_UNIT_SYMBOLS[unit as WeightUnit]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                 )}
 

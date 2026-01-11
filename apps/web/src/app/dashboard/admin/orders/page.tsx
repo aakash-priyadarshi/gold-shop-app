@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { AdminGuard } from '@/components/auth/RouteGuard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -63,6 +63,7 @@ import {
   Download,
   Ban,
   Wallet,
+  Loader2,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -75,6 +76,7 @@ import {
 import api from '@/lib/api';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 
 // Order status badge styles
 const statusStyles: Record<string, { color: string; icon: any; label: string }> = {
@@ -95,7 +97,40 @@ const paymentStyles: Record<string, { color: string; label: string }> = {
   PENDING: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
   PARTIAL: { color: 'bg-blue-100 text-blue-800', label: 'Partial' },
   COMPLETED: { color: 'bg-green-100 text-green-800', label: 'Paid' },
+  PAID_AT_SHOP: { color: 'bg-emerald-100 text-emerald-800', label: 'Paid at Shop' },
   REFUNDED: { color: 'bg-red-100 text-red-800', label: 'Refunded' },
+};
+
+// Order status options for dropdown
+const ORDER_STATUS_OPTIONS = Object.entries(statusStyles).map(([value, { label }]) => ({ value, label }));
+
+// Payment status options for dropdown
+const PAYMENT_STATUS_OPTIONS = Object.entries(paymentStyles).map(([value, { label }]) => ({ value, label }));
+
+// Payment methods by market
+const PAYMENT_METHODS: Record<string, { value: string; label: string }[]> = {
+  IN: [
+    { value: 'UPI', label: 'UPI' },
+    { value: 'CARD', label: 'Card' },
+    { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+    { value: 'CASH', label: 'Cash' },
+  ],
+  NP: [
+    { value: 'ESEWA', label: 'eSewa' },
+    { value: 'KHALTI', label: 'Khalti' },
+    { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+    { value: 'CASH', label: 'Cash' },
+  ],
+  US: [
+    { value: 'CARD', label: 'Card' },
+    { value: 'PAYPAL', label: 'PayPal' },
+    { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+  ],
+  DEFAULT: [
+    { value: 'CARD', label: 'Card' },
+    { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+    { value: 'CASH', label: 'Cash' },
+  ],
 };
 
 interface Order {
@@ -104,10 +139,12 @@ interface Order {
   orderType: 'INVENTORY' | 'CUSTOM';
   status: string;
   paymentStatus: string;
+  paymentMethod?: string;
   totalNpr: number;
   balanceDueNpr: number;
   createdAt: string;
   estimatedDelivery?: string;
+  marketCountry?: string;
   customer: {
     id: string;
     firstName: string;
@@ -125,60 +162,17 @@ interface Order {
 }
 
 interface OrderStats {
-  totalOrders: number;
-  pendingOrders: number;
-  inProductionOrders: number;
-  deliveredOrders: number;
-  cancelledOrders: number;
+  total: number;
+  pending: number;
+  inProduction: number;
+  delivered: number;
+  cancelled: number;
   totalRevenue: number;
   pendingPayments: number;
 }
 
-// Mock data for development - will be replaced with real API calls
-const mockOrders: Order[] = [
-  {
-    id: '1',
-    orderNumber: 'ORD-2024-001',
-    orderType: 'CUSTOM',
-    status: 'IN_PRODUCTION',
-    paymentStatus: 'PARTIAL',
-    totalNpr: 125000,
-    balanceDueNpr: 75000,
-    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    estimatedDelivery: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-    customer: { id: 'c1', firstName: 'Ram', lastName: 'Sharma', email: 'ram@email.com' },
-    shop: { id: 's1', businessName: 'Golden Jewellers' },
-    productSnapshot: { name: 'Custom Wedding Ring', metalType: '22K Gold' },
-  },
-  {
-    id: '2',
-    orderNumber: 'ORD-2024-002',
-    orderType: 'INVENTORY',
-    status: 'SHIPPED',
-    paymentStatus: 'COMPLETED',
-    totalNpr: 45000,
-    balanceDueNpr: 0,
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    customer: { id: 'c2', firstName: 'Sita', lastName: 'Thapa', email: 'sita@email.com' },
-    shop: { id: 's2', businessName: 'Himalayan Gold' },
-    productSnapshot: { name: 'Gold Necklace', metalType: '18K Gold' },
-  },
-  {
-    id: '3',
-    orderNumber: 'ORD-2024-003',
-    orderType: 'CUSTOM',
-    status: 'CREATED',
-    paymentStatus: 'PENDING',
-    totalNpr: 250000,
-    balanceDueNpr: 250000,
-    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    customer: { id: 'c3', firstName: 'Bikash', lastName: 'KC', email: 'bikash@email.com' },
-    shop: { id: 's1', businessName: 'Golden Jewellers' },
-    productSnapshot: { name: 'Custom Bridal Set', metalType: '24K Gold' },
-  },
-];
-
 export default function AdminOrdersPage() {
+  const { toast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
   const [stats, setStats] = useState<OrderStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -188,6 +182,10 @@ export default function AdminOrdersPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
+  
+  // Loading states for inline updates
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   
   // Modal states
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -203,100 +201,231 @@ export default function AdminOrdersPage() {
   const [adminNotes, setAdminNotes] = useState('');
   const [paymentVerificationNotes, setPaymentVerificationNotes] = useState('');
 
-  useEffect(() => {
-    fetchOrders();
-  }, [page, statusFilter, paymentFilter, typeFilter]);
-
-  async function fetchOrders() {
+  // Fetch orders from real API
+  const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // const response = await api.get('/api/admin/orders', {
-      //   params: { page, status: statusFilter, paymentStatus: paymentFilter, type: typeFilter }
-      // });
-      // setOrders(response.data.orders);
-      // setStats(response.data.stats);
-      // setTotalPages(response.data.totalPages);
+      const params: Record<string, string> = {
+        page: page.toString(),
+        limit: '20',
+      };
       
-      // Using mock data for now
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setOrders(mockOrders);
-      setStats({
-        totalOrders: 156,
-        pendingOrders: 23,
-        inProductionOrders: 45,
-        deliveredOrders: 78,
-        cancelledOrders: 10,
-        totalRevenue: 12500000,
-        pendingPayments: 3500000,
-      });
-      setTotalPages(5);
-    } catch (error) {
+      if (statusFilter !== 'all') params.status = statusFilter;
+      if (paymentFilter !== 'all') params.paymentStatus = paymentFilter;
+      if (typeFilter !== 'all') params.type = typeFilter;
+      if (searchQuery) params.search = searchQuery;
+
+      const response = await api.get('/orders/admin/all', { params });
+      
+      // Map the response to match our frontend shape
+      const ordersData = response.data.orders || [];
+      const mappedOrders = ordersData.map((o: any) => ({
+        ...o,
+        shop: o.shop ? {
+          id: o.shop.id,
+          businessName: o.shop.shopName || o.shop.businessName,
+        } : { id: '', businessName: 'Unknown' },
+      }));
+      
+      setOrders(mappedOrders);
+      setTotalPages(response.data.meta?.totalPages || 1);
+      setTotalOrders(response.data.meta?.totalCount || 0);
+    } catch (error: any) {
       console.error('Failed to fetch orders:', error);
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to fetch orders',
+        variant: 'destructive',
+      });
+      setOrders([]);
     } finally {
       setLoading(false);
     }
+  }, [page, statusFilter, paymentFilter, typeFilter, searchQuery, toast]);
+
+  // Fetch stats from real API
+  const fetchStats = useCallback(async () => {
+    try {
+      const response = await api.get('/orders/admin/stats');
+      // Map backend stats to frontend shape
+      setStats({
+        total: response.data.totalOrders || 0,
+        pending: response.data.pendingOrders || 0,
+        inProduction: response.data.inProductionOrders || 0,
+        delivered: response.data.deliveredOrders || 0,
+        cancelled: response.data.cancelledOrders || 0,
+        totalRevenue: response.data.totalRevenue || 0,
+        pendingPayments: response.data.pendingPayments || 0,
+      });
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchOrders();
+    fetchStats();
+  }, [fetchOrders, fetchStats]);
+
+  // Update order status (inline dropdown)
+  async function handleUpdateOrderStatus(orderId: string, newStatus: string) {
+    setUpdatingOrderId(orderId);
+    try {
+      await api.patch(`/orders/admin/${orderId}/order-status`, { status: newStatus });
+      
+      // Update local state optimistically
+      setOrders(prev => prev.map(o => 
+        o.id === orderId ? { ...o, status: newStatus } : o
+      ));
+      
+      toast({
+        title: 'Status Updated',
+        description: `Order status changed to ${statusStyles[newStatus]?.label || newStatus}`,
+      });
+      
+      fetchStats();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to update order status',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingOrderId(null);
+    }
   }
 
-  // Filter orders based on search
+  // Update payment status (inline dropdown)
+  async function handleUpdatePaymentStatus(orderId: string, newStatus: string, method?: string) {
+    setUpdatingOrderId(orderId);
+    try {
+      await api.patch(`/orders/admin/${orderId}/payment-status`, { 
+        paymentStatus: newStatus,
+        paymentMethod: method,
+      });
+      
+      // Update local state optimistically
+      setOrders(prev => prev.map(o => 
+        o.id === orderId ? { ...o, paymentStatus: newStatus, paymentMethod: method || o.paymentMethod } : o
+      ));
+      
+      toast({
+        title: 'Payment Updated',
+        description: `Payment status changed to ${paymentStyles[newStatus]?.label || newStatus}`,
+      });
+      
+      fetchStats();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to update payment status',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  }
+
+  // Filter orders based on search (client-side for quick filtering)
   const filteredOrders = useMemo(() => {
     if (!searchQuery) return orders;
     const query = searchQuery.toLowerCase();
     return orders.filter(order => 
       order.orderNumber.toLowerCase().includes(query) ||
-      order.customer.firstName.toLowerCase().includes(query) ||
-      order.customer.lastName.toLowerCase().includes(query) ||
-      order.customer.email.toLowerCase().includes(query) ||
-      order.shop.businessName.toLowerCase().includes(query)
+      order.customer?.firstName?.toLowerCase().includes(query) ||
+      order.customer?.lastName?.toLowerCase().includes(query) ||
+      order.customer?.email?.toLowerCase().includes(query) ||
+      order.shop?.businessName?.toLowerCase().includes(query)
     );
   }, [orders, searchQuery]);
 
   // Action handlers
   async function handleCancelOrder() {
     if (!selectedOrder || !cancelReason) return;
+    setUpdatingOrderId(selectedOrder.id);
     try {
-      // await api.post(`/api/admin/orders/${selectedOrder.id}/cancel`, { reason: cancelReason });
-      console.log('Cancelling order:', selectedOrder.id, 'Reason:', cancelReason);
+      await api.post(`/orders/admin/${selectedOrder.id}/cancel`, { reason: cancelReason });
+      
       setIsCancelDialogOpen(false);
       setCancelReason('');
       setSelectedOrder(null);
+      
+      toast({
+        title: 'Order Cancelled',
+        description: `Order ${selectedOrder.orderNumber} has been cancelled`,
+      });
+      
       fetchOrders();
-    } catch (error) {
-      console.error('Failed to cancel order:', error);
+      fetchStats();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to cancel order',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingOrderId(null);
     }
   }
 
   async function handleUpdateTimeline() {
     if (!selectedOrder || !newEstimatedDelivery) return;
+    setUpdatingOrderId(selectedOrder.id);
     try {
-      // await api.patch(`/api/admin/orders/${selectedOrder.id}/timeline`, { 
-      //   estimatedDelivery: newEstimatedDelivery,
-      //   adminNotes 
-      // });
-      console.log('Updating timeline:', selectedOrder.id, newEstimatedDelivery, adminNotes);
+      await api.patch(`/orders/admin/${selectedOrder.id}/timeline`, { 
+        estimatedDelivery: newEstimatedDelivery,
+        adminNotes 
+      });
+      
       setIsEditTimelineDialogOpen(false);
       setNewEstimatedDelivery('');
       setAdminNotes('');
       setSelectedOrder(null);
+      
+      toast({
+        title: 'Timeline Updated',
+        description: `Order timeline has been updated`,
+      });
+      
       fetchOrders();
-    } catch (error) {
-      console.error('Failed to update timeline:', error);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to update timeline',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingOrderId(null);
     }
   }
 
   async function handleMarkAsPaid() {
     if (!selectedOrder || !paymentVerificationNotes) return;
+    setUpdatingOrderId(selectedOrder.id);
     try {
-      // await api.post(`/api/admin/orders/${selectedOrder.id}/verify-payment`, { 
-      //   notes: paymentVerificationNotes 
-      // });
-      console.log('Marking as paid:', selectedOrder.id, paymentVerificationNotes);
+      await api.post(`/orders/admin/${selectedOrder.id}/verify-payment`, { 
+        notes: paymentVerificationNotes 
+      });
+      
       setIsMarkPaidDialogOpen(false);
       setPaymentVerificationNotes('');
       setSelectedOrder(null);
+      
+      toast({
+        title: 'Payment Verified',
+        description: `Payment has been marked as verified`,
+      });
+      
       fetchOrders();
-    } catch (error) {
-      console.error('Failed to mark as paid:', error);
+      fetchStats();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to verify payment',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingOrderId(null);
     }
   }
 
@@ -385,7 +514,7 @@ export default function AdminOrdersPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs text-muted-foreground">Total Orders</p>
-                        <p className="text-xl lg:text-2xl font-bold">{stats.totalOrders}</p>
+                        <p className="text-xl lg:text-2xl font-bold">{stats.total || 0}</p>
                       </div>
                       <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
                         <ClipboardList className="h-5 w-5 text-blue-600" />
@@ -398,7 +527,7 @@ export default function AdminOrdersPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs text-muted-foreground">In Production</p>
-                        <p className="text-xl lg:text-2xl font-bold">{stats.inProductionOrders}</p>
+                        <p className="text-xl lg:text-2xl font-bold">{stats.inProduction || 0}</p>
                       </div>
                       <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
                         <Package className="h-5 w-5 text-amber-600" />
@@ -411,7 +540,7 @@ export default function AdminOrdersPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs text-muted-foreground">Total Revenue</p>
-                        <p className="text-xl lg:text-2xl font-bold">{formatCurrency(stats.totalRevenue)}</p>
+                        <p className="text-xl lg:text-2xl font-bold">{formatCurrency(stats.totalRevenue || 0)}</p>
                       </div>
                       <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
                         <DollarSign className="h-5 w-5 text-green-600" />
@@ -424,7 +553,7 @@ export default function AdminOrdersPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs text-muted-foreground">Pending Payments</p>
-                        <p className="text-xl lg:text-2xl font-bold text-amber-600">{formatCurrency(stats.pendingPayments)}</p>
+                        <p className="text-xl lg:text-2xl font-bold text-amber-600">{formatCurrency(stats.pendingPayments || 0)}</p>
                       </div>
                       <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
                         <Wallet className="h-5 w-5 text-amber-600" />
@@ -494,7 +623,7 @@ export default function AdminOrdersPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg">All Orders</CardTitle>
                 <CardDescription>
-                  {filteredOrders.length} orders found
+                  {totalOrders} orders found • Page {page} of {totalPages}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
@@ -505,10 +634,10 @@ export default function AdminOrdersPage() {
                         <TableHead>Order #</TableHead>
                         <TableHead className="hidden md:table-cell">Customer</TableHead>
                         <TableHead className="hidden lg:table-cell">Shop</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="hidden sm:table-cell">Payment</TableHead>
+                        <TableHead>Order Status</TableHead>
+                        <TableHead>Payment</TableHead>
+                        <TableHead className="hidden sm:table-cell">Method</TableHead>
                         <TableHead className="text-right">Amount</TableHead>
-                        <TableHead className="hidden md:table-cell">Date</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -516,13 +645,14 @@ export default function AdminOrdersPage() {
                       {loading ? (
                         <TableRow>
                           <TableCell colSpan={8} className="text-center py-8">
-                            <RefreshCw className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                            <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground mt-2">Loading orders...</p>
                           </TableCell>
                         </TableRow>
                       ) : filteredOrders.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                            No orders found
+                            No orders found. Orders will appear here when customers place them.
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -530,13 +660,15 @@ export default function AdminOrdersPage() {
                           const statusStyle = statusStyles[order.status] || statusStyles.CREATED;
                           const paymentStyle = paymentStyles[order.paymentStatus] || paymentStyles.PENDING;
                           const StatusIcon = statusStyle.icon;
+                          const isUpdating = updatingOrderId === order.id;
+                          const marketMethods = PAYMENT_METHODS[order.marketCountry || 'DEFAULT'] || PAYMENT_METHODS['DEFAULT'];
                           
                           return (
-                            <TableRow key={order.id}>
+                            <TableRow key={order.id} className={isUpdating ? 'opacity-50' : ''}>
                               <TableCell>
                                 <div className="font-medium">{order.orderNumber}</div>
                                 <div className="text-xs text-muted-foreground md:hidden">
-                                  {order.customer.firstName} {order.customer.lastName}
+                                  {order.customer?.firstName} {order.customer?.lastName}
                                 </div>
                                 <Badge variant="outline" className="text-xs mt-1">
                                   {order.orderType}
@@ -549,10 +681,10 @@ export default function AdminOrdersPage() {
                                   </div>
                                   <div>
                                     <div className="font-medium text-sm">
-                                      {order.customer.firstName} {order.customer.lastName}
+                                      {order.customer?.firstName} {order.customer?.lastName}
                                     </div>
                                     <div className="text-xs text-muted-foreground">
-                                      {order.customer.email}
+                                      {order.customer?.email}
                                     </div>
                                   </div>
                                 </div>
@@ -560,19 +692,64 @@ export default function AdminOrdersPage() {
                               <TableCell className="hidden lg:table-cell">
                                 <div className="flex items-center gap-2">
                                   <Store className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-sm">{order.shop.businessName}</span>
+                                  <span className="text-sm">{order.shop?.businessName}</span>
                                 </div>
                               </TableCell>
+                              {/* Order Status Dropdown */}
                               <TableCell>
-                                <Badge className={`${statusStyle.color} gap-1`}>
-                                  <StatusIcon className="h-3 w-3" />
-                                  <span className="hidden sm:inline">{statusStyle.label}</span>
-                                </Badge>
+                                <Select
+                                  value={order.status}
+                                  onValueChange={(value) => handleUpdateOrderStatus(order.id, value)}
+                                  disabled={isUpdating}
+                                >
+                                  <SelectTrigger className="w-[140px] h-8">
+                                    <div className="flex items-center gap-1">
+                                      <StatusIcon className="h-3 w-3" />
+                                      <span className="text-xs">{statusStyle.label}</span>
+                                    </div>
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {ORDER_STATUS_OPTIONS.map(s => (
+                                      <SelectItem key={s.value} value={s.value}>
+                                        {s.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </TableCell>
+                              {/* Payment Status Dropdown */}
+                              <TableCell>
+                                <Select
+                                  value={order.paymentStatus}
+                                  onValueChange={(value) => handleUpdatePaymentStatus(order.id, value)}
+                                  disabled={isUpdating}
+                                >
+                                  <SelectTrigger className="w-[110px] h-8">
+                                    <span className="text-xs">{paymentStyle.label}</span>
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {PAYMENT_STATUS_OPTIONS.map(s => (
+                                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              {/* Payment Method Dropdown */}
                               <TableCell className="hidden sm:table-cell">
-                                <Badge className={paymentStyle.color}>
-                                  {paymentStyle.label}
-                                </Badge>
+                                <Select
+                                  value={order.paymentMethod || ''}
+                                  onValueChange={(value) => handleUpdatePaymentStatus(order.id, order.paymentStatus, value)}
+                                  disabled={isUpdating || order.paymentStatus === 'PENDING'}
+                                >
+                                  <SelectTrigger className="w-[100px] h-8">
+                                    <span className="text-xs">{order.paymentMethod || 'Select'}</span>
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {marketMethods.map(m => (
+                                      <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </TableCell>
                               <TableCell className="text-right">
                                 <div className="font-medium">{formatCurrency(order.totalNpr)}</div>
@@ -581,9 +758,6 @@ export default function AdminOrdersPage() {
                                     Due: {formatCurrency(order.balanceDueNpr)}
                                   </div>
                                 )}
-                              </TableCell>
-                              <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                                {formatDistanceToNow(new Date(order.createdAt), { addSuffix: true })}
                               </TableCell>
                               <TableCell className="text-right">
                                 <DropdownMenu>

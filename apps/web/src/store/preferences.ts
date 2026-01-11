@@ -90,10 +90,10 @@ interface PreferencesState {
 export const usePreferencesStore = create<PreferencesState>()(
   persist(
     (set, get) => ({
-      // Default state
+      // Default state - US is the safest default, will be updated by geo detection
       language: 'en',
-      currency: 'NPR',
-      country: 'NP',              // Default tax jurisdiction
+      currency: 'USD',
+      country: 'US',              // Default tax jurisdiction - updated by geo detection
       theme: 'system',
       isAuthenticated: false,
       isSyncing: false,
@@ -239,9 +239,42 @@ export const usePreferencesStore = create<PreferencesState>()(
         country: state.country,
         theme: state.theme,
       }),
+      // On rehydrate, check if we need to do geo detection
+      onRehydrateStorage: () => (state) => {
+        // After rehydration from localStorage, check if this is a fresh start
+        // (i.e., no persisted country yet - still on default 'US')
+        if (typeof window !== 'undefined') {
+          // If the localStorage didn't have anything, detect location
+          const stored = localStorage.getItem('gold-shop-preferences');
+          if (!stored) {
+            // First visit - detect country from geo API
+            initializeFromGeo();
+          }
+        }
+      },
     }
   )
 );
+
+// Initialize country/currency from geo detection (first visit only)
+async function initializeFromGeo() {
+  try {
+    const response = await fetch('/api/geo');
+    const data = await response.json();
+    const detectedCountry = data.detectedCountry as CountryCode | undefined;
+    
+    if (detectedCountry && COUNTRIES[detectedCountry]) {
+      const countryInfo = COUNTRIES[detectedCountry];
+      usePreferencesStore.setState({
+        country: detectedCountry,
+        currency: countryInfo.defaultCurrency,
+      });
+    }
+  } catch (error) {
+    console.error('Failed to detect location:', error);
+    // Keep defaults
+  }
+}
 
 // Helper to apply theme to document
 function applyTheme(theme: ThemeMode) {
