@@ -62,8 +62,9 @@ import {
   type BuildMethod,
   type EstimateRequest,
 } from '@/lib/pricing/calculate-estimate';
+import { getApiUrl } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_URL = getApiUrl();
 
 const JEWELLERY_TYPES = [
   { value: 'RING', label: 'Ring' },

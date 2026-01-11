@@ -116,7 +116,8 @@ export interface TaxSummary {
 // API CLIENT
 // ═══════════════════════════════════════════
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+import { getApiUrl } from '@/lib/api';
+const API_BASE_URL = getApiUrl();
 
 /**
  * Calculate taxes via backend API

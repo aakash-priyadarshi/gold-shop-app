@@ -8,8 +8,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { GemstoneEntry as NewGemstoneEntry } from '@/components/pricing/GemstoneEditor';
 import { usePreferencesStore } from '@/store/preferences';
+import { getApiUrl } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_URL = getApiUrl();
 
 // ═══════════════════════════════════════════
 // TYPE CONVERSIONS

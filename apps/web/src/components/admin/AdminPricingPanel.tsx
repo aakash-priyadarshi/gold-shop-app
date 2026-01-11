@@ -45,8 +45,9 @@ import {
   HelpCircle,
   TrendingUp,
 } from 'lucide-react';
+import { getApiUrl } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_URL = getApiUrl();
 
 // Types
 interface MetalPrice {

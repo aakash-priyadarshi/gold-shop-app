@@ -1,6 +1,11 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+// Ensure the API URL always ends with /api
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_BASE_URL = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
+
+// Export for use in other files that need the base URL
+export const getApiUrl = () => API_BASE_URL;
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

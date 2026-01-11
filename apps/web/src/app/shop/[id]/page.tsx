@@ -62,7 +62,8 @@ interface InventoryItem {
   };
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+import { getApiUrl } from '@/lib/api';
+const API_URL = getApiUrl();
 
 export default function ProductDetailPage() {
   const params = useParams();

@@ -24,8 +24,9 @@ import {
   Award,
 } from 'lucide-react';
 import { COUNTRIES, type CountryCode } from '@/store/preferences';
+import { getApiUrl } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_URL = getApiUrl();
 
 export interface SellerEstimate {
   shop: {
