@@ -142,6 +142,13 @@ export function MarketProvider({ children, initialCountry }: MarketProviderProps
     }
   }, []);
 
+  // Helper to read cookie value
+  const getCookie = (name: string): string | null => {
+    if (typeof document === 'undefined') return null;
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? match[2] : null;
+  };
+
   // Detect country on mount
   useEffect(() => {
     const detectAndLoadConfig = async () => {
@@ -163,18 +170,26 @@ export function MarketProvider({ children, initialCountry }: MarketProviderProps
       } else if (initialCountry) {
         detectedCountry = initialCountry;
       } else {
-        // Use Next.js API route to detect country from Vercel/Cloudflare headers
-        // This works because the Next.js API route has access to request headers
-        try {
-          const geoResponse = await fetch('/api/geo');
-          const geoData = await geoResponse.json();
-          if (geoData?.detectedCountry) {
-            detectedCountry = geoData.detectedCountry as MarketRegion;
+        // Priority 1: Read from middleware-set cookie (fastest - already set by edge middleware)
+        const cookieCountry = getCookie('orivraa_geo_country') as MarketRegion | null;
+        
+        if (cookieCountry && ['NP', 'IN', 'US', 'UK', 'EU', 'AE'].includes(cookieCountry)) {
+          detectedCountry = cookieCountry;
+          console.log('[useMarket] Country from cookie:', cookieCountry);
+        } else {
+          // Priority 2: Call API endpoint (fallback)
+          try {
+            const geoResponse = await fetch('/api/geo');
+            const geoData = await geoResponse.json();
+            if (geoData?.detectedCountry) {
+              detectedCountry = geoData.detectedCountry as MarketRegion;
+              console.log('[useMarket] Country from API:', geoData.detectedCountry, 'source:', geoData.source);
+            }
+          } catch (e) {
+            console.error('Failed to detect country from geo API:', e);
+            // Fallback to US
+            detectedCountry = 'US';
           }
-        } catch (e) {
-          console.error('Failed to detect country from geo API:', e);
-          // Fallback to US
-          detectedCountry = 'US';
         }
       }
 

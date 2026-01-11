@@ -34,32 +34,74 @@ function mapToSupportedMarket(countryCode: string): string {
 }
 
 export async function GET(request: NextRequest) {
-  // Get country from Vercel geo headers (available on Vercel deployment)
-  const vercelCountry = request.headers.get('x-vercel-ip-country');
-  const cfCountry = request.headers.get('cf-ipcountry');
+  // Priority 1: Read from middleware-set cookie (most reliable - set at edge)
+  const cookieCountry = request.cookies.get('orivraa_geo_country')?.value;
+  const cookieSource = request.cookies.get('orivraa_geo_source')?.value;
+  const cookieRaw = request.cookies.get('orivraa_geo_raw')?.value;
   
-  // For local development, check query param
+  // Priority 2: Read headers directly (fallback if middleware didn't run)
+  // Cloudflare header (most reliable when domain is behind Cloudflare)
+  const cfCountry = request.headers.get('cf-ipcountry');
+  // Vercel header (fallback)
+  const vercelCountry = request.headers.get('x-vercel-ip-country');
+  // Middleware-set header
+  const middlewareCountry = request.headers.get('x-orivraa-country');
+  
+  // Priority 3: Query param override (for testing)
   const urlCountry = request.nextUrl.searchParams.get('country');
   
   let detectedCountry = 'US';
+  let source = 'default';
+  let rawCountry = 'US';
   
   if (urlCountry) {
     // Query param override (for testing)
     detectedCountry = mapToSupportedMarket(urlCountry.toUpperCase());
-  } else if (vercelCountry) {
-    // Vercel deployment
-    detectedCountry = mapToSupportedMarket(vercelCountry);
-  } else if (cfCountry) {
-    // Cloudflare
+    source = 'query';
+    rawCountry = urlCountry.toUpperCase();
+  } else if (cookieCountry) {
+    // Middleware-set cookie (most reliable)
+    detectedCountry = cookieCountry;
+    source = cookieSource || 'cookie';
+    rawCountry = cookieRaw || cookieCountry;
+  } else if (cfCountry && cfCountry !== 'XX') {
+    // Direct Cloudflare header
     detectedCountry = mapToSupportedMarket(cfCountry);
+    source = 'cloudflare-direct';
+    rawCountry = cfCountry;
+  } else if (vercelCountry) {
+    // Vercel header
+    detectedCountry = mapToSupportedMarket(vercelCountry);
+    source = 'vercel-direct';
+    rawCountry = vercelCountry;
+  } else if (middlewareCountry) {
+    // Middleware header (shouldn't normally reach here)
+    detectedCountry = middlewareCountry;
+    source = 'middleware-header';
+    rawCountry = middlewareCountry;
   }
   
   return NextResponse.json({
     detectedCountry,
-    source: vercelCountry ? 'vercel' : cfCountry ? 'cloudflare' : urlCountry ? 'query' : 'default',
+    source,
     raw: {
-      vercel: vercelCountry,
+      country: rawCountry,
       cloudflare: cfCountry,
-    }
+      vercel: vercelCountry,
+      cookie: cookieCountry,
+      middleware: middlewareCountry,
+    },
+    debug: {
+      allHeaders: {
+        'cf-ipcountry': cfCountry,
+        'x-vercel-ip-country': vercelCountry,
+        'x-orivraa-country': middlewareCountry,
+      },
+      cookies: {
+        'orivraa_geo_country': cookieCountry,
+        'orivraa_geo_source': cookieSource,
+        'orivraa_geo_raw': cookieRaw,
+      },
+    },
   });
 }

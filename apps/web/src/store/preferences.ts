@@ -256,9 +256,30 @@ export const usePreferencesStore = create<PreferencesState>()(
   )
 );
 
+// Helper to read cookie value
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? match[2] : null;
+}
+
 // Initialize country/currency from geo detection (first visit only)
 async function initializeFromGeo() {
   try {
+    // Priority 1: Read from middleware-set cookie (fastest)
+    const cookieCountry = getCookie('orivraa_geo_country') as CountryCode | null;
+    
+    if (cookieCountry && COUNTRIES[cookieCountry]) {
+      const countryInfo = COUNTRIES[cookieCountry];
+      usePreferencesStore.setState({
+        country: cookieCountry,
+        currency: countryInfo.defaultCurrency,
+      });
+      console.log('[preferences] Country from cookie:', cookieCountry);
+      return;
+    }
+    
+    // Priority 2: Call API endpoint (fallback)
     const response = await fetch('/api/geo');
     const data = await response.json();
     const detectedCountry = data.detectedCountry as CountryCode | undefined;
@@ -269,6 +290,7 @@ async function initializeFromGeo() {
         country: detectedCountry,
         currency: countryInfo.defaultCurrency,
       });
+      console.log('[preferences] Country from API:', detectedCountry, 'source:', data.source);
     }
   } catch (error) {
     console.error('Failed to detect location:', error);
