@@ -22,8 +22,6 @@ export function AuthBackground({
 }: AuthBackgroundProps) {
   // Note: We're not blocking the mandala for reduced motion users
   // because it's a subtle, slow animation that doesn't cause issues
-  
-  console.log('[AuthBackground] Rendering - enableMandala:', enableMandala);
 
   return (
     <div 

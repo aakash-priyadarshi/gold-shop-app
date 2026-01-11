@@ -109,10 +109,6 @@ export function LivePricingPanel({
     };
     
     const result = calculateEstimate(request);
-    console.log('[LivePricingPanel] Estimate calculated:', result);
-    console.log('[LivePricingPanel] Line items:', result.lineItems);
-    console.log('[LivePricingPanel] Tax amount:', result.taxAmount);
-    console.log('[LivePricingPanel] Total:', result.total);
     return result;
   }, [formData, marketRates]);
 

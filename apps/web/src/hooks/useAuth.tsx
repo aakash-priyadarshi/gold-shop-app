@@ -166,7 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const response = await api.get('/api/auth/me');
+      const response = await api.get('/auth/me');
       const user = response.data;
       
       setState({
@@ -197,7 +197,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const response = await api.post<AuthResponse>('/api/auth/login', {
+      const response = await api.post<AuthResponse>('/auth/login', {
         email,
         password,
       });
@@ -206,7 +206,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       storeTokens(accessToken, refreshToken);
 
       // Fetch full user profile
-      const meResponse = await api.get('/api/auth/me');
+      const meResponse = await api.get('/auth/me');
       const fullUser = meResponse.data;
 
       setState({
@@ -235,12 +235,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const response = await api.post<AuthResponse>('/api/auth/register', data);
+      const response = await api.post<AuthResponse>('/auth/register', data);
       const { accessToken, refreshToken, user: userData } = response.data;
       storeTokens(accessToken, refreshToken);
 
       // Fetch full user profile
-      const meResponse = await api.get('/api/auth/me');
+      const meResponse = await api.get('/auth/me');
       const fullUser = meResponse.data;
 
       setState({
@@ -269,7 +269,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
     
     try {
-      await api.post('/api/auth/logout', { refreshToken });
+      await api.post('/auth/logout', { refreshToken });
     } catch (error) {
       console.error('Logout error:', error);
     }

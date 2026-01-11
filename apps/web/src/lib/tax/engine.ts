@@ -45,12 +45,8 @@ export function calculateTax(input: TaxCalculationInput): TaxResult {
   // DEPRECATION WARNING
   console.warn('[Tax Engine] ⚠️ DEPRECATED: Frontend tax calculation should be replaced with backend API call. Use /api/pricing/tax/calculate');
   
-  console.log('[Tax Engine] calculateTax called with:', { country, cartBreakdown, isEstimate });
-  
   // Get tax configuration for country
   const config = taxConfig || getDefaultTaxConfig(country);
-  
-  console.log('[Tax Engine] Tax config:', config);
   
   if (!config) {
     // No tax rules for this country
@@ -82,9 +78,6 @@ export function calculateTax(input: TaxCalculationInput): TaxResult {
   const lineItems: TaxLineItem[] = [];
   const subtotal = calculateSubtotal(cartBreakdown);
   
-  console.log('[Tax Engine] Subtotal:', subtotal);
-  console.log('[Tax Engine] Number of rules:', config.rules.length);
-  
   // Sort rules by priority (lower number = higher priority)
   const sortedRules = [...config.rules].sort((a, b) => 
     (a.priority || 999) - (b.priority || 999)
@@ -92,12 +85,9 @@ export function calculateTax(input: TaxCalculationInput): TaxResult {
   
   // Apply each rule
   for (const rule of sortedRules) {
-    console.log('[Tax Engine] Checking rule:', rule.id, 'applyWhen:', rule.applyWhen);
     const shouldApply = shouldApplyRule(rule, cartBreakdown);
-    console.log('[Tax Engine] Rule', rule.id, 'shouldApply:', shouldApply);
     if (shouldApply) {
       const lineItem = applyRule(rule, cartBreakdown);
-      console.log('[Tax Engine] Rule', rule.id, 'generated line item:', lineItem);
       if (lineItem && lineItem.amount > 0) {
         lineItems.push(lineItem);
       }
@@ -120,8 +110,6 @@ export function calculateTax(input: TaxCalculationInput): TaxResult {
       nonTaxableAmount: 0,
     },
   };
-  
-  console.log('[Tax Engine] Final result:', result);
   
   return result;
 }

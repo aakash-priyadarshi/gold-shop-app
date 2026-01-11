@@ -438,11 +438,6 @@ export function calculateEstimate(request: EstimateRequest): EstimateBreakdown {
                    request.methodA?.metal ?
                    request.methodA.metal.toUpperCase().includes('GOLD') : false;
     
-    console.log('[Tax Engine] Request jewelleryType:', request.jewelleryType);
-    console.log('[Tax Engine] Calculated isJewellery:', isJewellery, '(false only for bullion/bar/coin)');
-    console.log('[Tax Engine] hasGemstones:', hasGemstones);
-    console.log('[Tax Engine] isGold:', isGold);
-    
     // Build cart breakdown for tax engine
     const cartBreakdown: CartBreakdown = {
       metalSubtotal: metalCost,
@@ -458,8 +453,6 @@ export function calculateEstimate(request: EstimateRequest): EstimateBreakdown {
       hasGemstones,
     };
     
-    console.log('[Tax Engine] Cart breakdown:', cartBreakdown);
-    
     // Calculate tax using new engine
     taxResult = calculateTax({
       country: request.country,
@@ -473,8 +466,6 @@ export function calculateEstimate(request: EstimateRequest): EstimateBreakdown {
     taxRate = subtotal > 0 ? taxAmount / subtotal : 0;
     
     // Add tax line items to display
-    console.log('[Tax Engine] Tax result:', taxResult);
-    console.log('[Tax Engine] Adding', taxResult.lineItems.length, 'tax line items');
     taxResult.lineItems.forEach(item => {
       const taxLineItem: LineItem = {
         label: item.displayName || item.name,
@@ -482,7 +473,6 @@ export function calculateEstimate(request: EstimateRequest): EstimateBreakdown {
         amount: item.amount,
         details: `${(item.rate * 100).toFixed(1)}% of ${currencySymbol}${item.applicableToAmount.toLocaleString()}`,
       };
-      console.log('[Tax Engine] Adding tax line item:', taxLineItem);
       lineItems.push(taxLineItem);
     });
   } catch (error) {

@@ -161,7 +161,7 @@ export default function CustomerSettingsPage() {
 
     setIsChangingPassword(true);
     try {
-      await api.post('/api/auth/change-password', {
+      await api.post('/auth/change-password', {
         currentPassword: passwords.currentPassword,
         newPassword: passwords.newPassword,
       });

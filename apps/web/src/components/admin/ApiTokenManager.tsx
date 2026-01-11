@@ -102,10 +102,10 @@ export function ApiTokenManager() {
     setIsLoading(true);
     try {
       const [tokensRes, statsRes, expiringRes, scopesRes] = await Promise.all([
-        api.get('/api/auth/api-tokens'),
-        api.get('/api/auth/api-tokens/stats'),
-        api.get('/api/auth/api-tokens/expiring'),
-        api.get('/api/auth/api-tokens/scopes'),
+        api.get('/auth/api-tokens'),
+        api.get('/auth/api-tokens/stats'),
+        api.get('/auth/api-tokens/expiring'),
+        api.get('/auth/api-tokens/scopes'),
       ]);
       
       setTokens(tokensRes.data);
@@ -136,7 +136,7 @@ export function ApiTokenManager() {
 
     setIsCreating(true);
     try {
-      const response = await api.post('/api/auth/api-tokens', {
+      const response = await api.post('/auth/api-tokens', {
         name: tokenName,
         duration: tokenDuration,
         scopes: selectedScopes,

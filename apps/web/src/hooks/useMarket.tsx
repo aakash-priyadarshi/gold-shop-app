@@ -175,7 +175,6 @@ export function MarketProvider({ children, initialCountry }: MarketProviderProps
         
         if (cookieCountry && ['NP', 'IN', 'US', 'UK', 'EU', 'AE'].includes(cookieCountry)) {
           detectedCountry = cookieCountry;
-          console.log('[useMarket] Country from cookie:', cookieCountry);
         } else {
           // Priority 2: Call API endpoint (fallback)
           try {
@@ -183,7 +182,6 @@ export function MarketProvider({ children, initialCountry }: MarketProviderProps
             const geoData = await geoResponse.json();
             if (geoData?.detectedCountry) {
               detectedCountry = geoData.detectedCountry as MarketRegion;
-              console.log('[useMarket] Country from API:', geoData.detectedCountry, 'source:', geoData.source);
             }
           } catch (e) {
             console.error('Failed to detect country from geo API:', e);
