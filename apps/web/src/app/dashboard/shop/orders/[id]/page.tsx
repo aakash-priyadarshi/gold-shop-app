@@ -16,6 +16,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   ArrowLeft,
   Package,
   User,
@@ -28,6 +36,9 @@ import {
   DollarSign,
   Loader2,
   Calendar,
+  CreditCard,
+  Store,
+  AlertTriangle,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import api from '@/lib/api';
@@ -37,6 +48,7 @@ interface OrderDetails {
   orderNumber: string;
   status: string;
   paymentStatus: string;
+  paymentMethod?: string;
   totalAmount: number;
   currency: string;
   createdAt: string;
@@ -68,18 +80,22 @@ interface OrderDetails {
     note: string;
     createdAt: string;
   }>;
+  commissionLedger?: {
+    id: string;
+    status: string;
+    amount: number;
+    dueAt: string;
+  };
 }
 
-const statusOptions = [
-  'PAYMENT_PENDING',
-  'PAID',
+// Shopkeeper-allowed status transitions
+const shopkeeperStatusOptions = [
   'IN_PRODUCTION',
   'QC_PENDING',
   'QC_PASSED',
   'READY_TO_SHIP',
   'SHIPPED',
   'DELIVERED',
-  'COMPLETED',
 ];
 
 const statusColors: Record<string, string> = {
@@ -104,6 +120,8 @@ export default function ShopOrderDetailPage() {
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isPaidAtShopDialogOpen, setIsPaidAtShopDialogOpen] = useState(false);
+  const [isMarkingPaidAtShop, setIsMarkingPaidAtShop] = useState(false);
 
   useEffect(() => {
     if (orderId) {
@@ -145,6 +163,27 @@ export default function ShopOrderDetailPage() {
       });
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const markPaidAtShop = async () => {
+    setIsMarkingPaidAtShop(true);
+    try {
+      await api.post(`/orders/shop/${orderId}/paid-at-shop`, {});
+      toast({
+        title: 'Payment Recorded',
+        description: 'Order marked as paid at shop. A 1% commission will be due in 21 days.',
+      });
+      setIsPaidAtShopDialogOpen(false);
+      loadOrder();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to Record Payment',
+        description: error.response?.data?.message || 'Could not mark as paid at shop',
+      });
+    } finally {
+      setIsMarkingPaidAtShop(false);
     }
   };
 
@@ -327,6 +366,9 @@ export default function ShopOrderDetailPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Update Status</CardTitle>
+                  <CardDescription>
+                    Move order through production stages
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <Select
@@ -338,7 +380,7 @@ export default function ShopOrderDetailPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {statusOptions.map((status) => (
+                      {shopkeeperStatusOptions.map((status) => (
                         <SelectItem key={status} value={status}>
                           {status.replace(/_/g, ' ')}
                         </SelectItem>
@@ -350,6 +392,63 @@ export default function ShopOrderDetailPage() {
                       <Loader2 className="h-4 w-4 animate-spin" />
                       Updating...
                     </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Payment Info */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Payment</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Status</span>
+                    <Badge variant={order.paymentStatus === 'PAID' || order.paymentStatus === 'COMPLETED' ? 'default' : 'outline'}>
+                      {order.paymentStatus}
+                    </Badge>
+                  </div>
+                  {order.paymentMethod && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Method</span>
+                      <div className="flex items-center gap-1">
+                        {order.paymentMethod === 'PAID_AT_SHOP' ? (
+                          <Store className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <CreditCard className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <span className="text-sm font-medium">
+                          {order.paymentMethod.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Commission Info */}
+                  {order.commissionLedger && (
+                    <div className="mt-4 p-3 rounded-lg bg-yellow-50 border border-yellow-200">
+                      <div className="flex items-center gap-2 text-yellow-800 mb-2">
+                        <AlertTriangle className="h-4 w-4" />
+                        <span className="font-medium text-sm">Commission Due</span>
+                      </div>
+                      <div className="text-sm text-yellow-700">
+                        <p>Amount: NPR {order.commissionLedger.amount.toFixed(2)}</p>
+                        <p>Due: {new Date(order.commissionLedger.dueAt).toLocaleDateString()}</p>
+                        <p>Status: {order.commissionLedger.status}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Paid at Shop Button */}
+                  {(order.paymentStatus === 'PENDING' || order.paymentStatus === 'PARTIAL') && (
+                    <Button
+                      onClick={() => setIsPaidAtShopDialogOpen(true)}
+                      className="w-full"
+                      variant="outline"
+                    >
+                      <Store className="h-4 w-4 mr-2" />
+                      Mark as Paid at Shop
+                    </Button>
                   )}
                 </CardContent>
               </Card>
@@ -407,23 +506,69 @@ export default function ShopOrderDetailPage() {
                   </CardContent>
                 </Card>
               )}
-
-              {/* Payment Info */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Payment</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Status</span>
-                    <Badge variant={order.paymentStatus === 'PAID' ? 'default' : 'outline'}>
-                      {order.paymentStatus}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </div>
+
+          {/* Paid at Shop Dialog */}
+          <Dialog open={isPaidAtShopDialogOpen} onOpenChange={setIsPaidAtShopDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Confirm Payment at Shop</DialogTitle>
+                <DialogDescription>
+                  By marking this order as paid at shop, you agree to the following:
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="rounded-lg border p-4 space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Order Total:</span>
+                    <span className="font-bold">{formatCurrency(order?.totalAmount || 0, order?.currency || 'NPR')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Commission (1%):</span>
+                    <span className="font-medium text-orange-600">
+                      {formatCurrency((order?.totalAmount || 0) * 0.01, order?.currency || 'NPR')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Settlement Due:</span>
+                    <span className="font-medium">21 days from today</span>
+                  </div>
+                </div>
+                <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200 text-sm text-yellow-800">
+                  <p className="font-medium flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    Important Notice
+                  </p>
+                  <p className="mt-1">
+                    The 1% commission must be settled within 21 days. Failure to pay will result in your shop being placed on hold.
+                  </p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsPaidAtShopDialogOpen(false)}
+                  disabled={isMarkingPaidAtShop}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={markPaidAtShop} disabled={isMarkingPaidAtShop}>
+                  {isMarkingPaidAtShop ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Confirm Payment
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </DashboardLayout>
     </ShopGuard>

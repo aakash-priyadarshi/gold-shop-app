@@ -14,36 +14,57 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole, CommissionStatus } from '@prisma/client';
 
-@Controller('admin/commissions')
+@Controller('commission')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
 export class CommissionController {
   constructor(private readonly commissionService: CommissionService) {}
 
   /**
-   * Get all commissions with optional filters
-   * GET /api/admin/commissions?status=PENDING&shopId=xxx&page=1&limit=20
+   * Get all commissions with optional filters (admin only)
+   * GET /api/commission/admin/list?status=PENDING&shopId=xxx&page=1&limit=20
    */
-  @Get()
+  @Get('admin/list')
+  @Roles(UserRole.ADMIN)
   async getAllCommissions(
     @Query('status') status?: CommissionStatus,
     @Query('shopId') shopId?: string,
+    @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
-    return this.commissionService.getAllCommissions({
+    const result = await this.commissionService.getAllCommissions({
       status,
       shopId,
+      search,
       page: page ? parseInt(page, 10) : 1,
       limit: limit ? parseInt(limit, 10) : 20,
     });
+    
+    return {
+      commissions: result.data,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.pages,
+    };
   }
 
   /**
-   * Mark commission as paid
-   * PATCH /api/admin/commissions/:id/mark-paid
+   * Get commission stats (admin only)
+   * GET /api/commission/admin/stats
    */
-  @Patch(':id/mark-paid')
+  @Get('admin/stats')
+  @Roles(UserRole.ADMIN)
+  async getCommissionStats() {
+    return this.commissionService.getCommissionStats();
+  }
+
+  /**
+   * Mark commission as paid (admin only)
+   * POST /api/commission/admin/:id/mark-paid
+   */
+  @Post('admin/:id/mark-paid')
+  @Roles(UserRole.ADMIN)
   async markCommissionPaid(
     @Param('id') id: string,
     @Body('notes') notes?: string,
@@ -52,10 +73,21 @@ export class CommissionController {
   }
 
   /**
-   * Waive commission
-   * PATCH /api/admin/commissions/:id/waive
+   * Release shop hold (admin only)
+   * POST /api/commission/admin/shop/:shopId/release-hold
    */
-  @Patch(':id/waive')
+  @Post('admin/shop/:shopId/release-hold')
+  @Roles(UserRole.ADMIN)
+  async releaseShopHold(@Param('shopId') shopId: string) {
+    return this.commissionService.releaseShopHold(shopId);
+  }
+
+  /**
+   * Waive commission (admin only)
+   * PATCH /api/commission/admin/:id/waive
+   */
+  @Patch('admin/:id/waive')
+  @Roles(UserRole.ADMIN)
   async waiveCommission(
     @Param('id') id: string,
     @Body('reason') reason: string,
@@ -65,10 +97,31 @@ export class CommissionController {
 
   /**
    * Process overdue commissions (can be called manually or by cron)
-   * POST /api/admin/commissions/process-overdue
+   * POST /api/commission/admin/process-overdue
    */
-  @Post('process-overdue')
+  @Post('admin/process-overdue')
+  @Roles(UserRole.ADMIN)
   async processOverdueCommissions() {
     return this.commissionService.processOverdueCommissions();
+  }
+
+  /**
+   * Get shop's commission summary (for shopkeeper)
+   * GET /api/commission/shop/:shopId/summary
+   */
+  @Get('shop/:shopId/summary')
+  @Roles(UserRole.ADMIN, UserRole.SHOPKEEPER)
+  async getShopCommissionSummary(@Param('shopId') shopId: string) {
+    return this.commissionService.getShopCommissionSummary(shopId);
+  }
+
+  /**
+   * Get shop's commission ledger (for shopkeeper)
+   * GET /api/commission/shop/:shopId/ledger
+   */
+  @Get('shop/:shopId/ledger')
+  @Roles(UserRole.ADMIN, UserRole.SHOPKEEPER)
+  async getShopCommissions(@Param('shopId') shopId: string) {
+    return this.commissionService.getShopCommissions(shopId);
   }
 }

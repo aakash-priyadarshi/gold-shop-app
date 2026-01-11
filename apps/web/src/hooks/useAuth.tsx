@@ -36,6 +36,8 @@ export interface User {
     isVerified: boolean;
     isActive: boolean;
     makingChargePercent?: number;
+    isOnHold?: boolean;
+    holdReason?: string;
   };
 }
 

@@ -176,15 +176,24 @@ export class CommissionService {
   async getAllCommissions(options: {
     status?: CommissionStatus;
     shopId?: string;
+    search?: string;
     page?: number;
     limit?: number;
   }) {
-    const { status, shopId, page = 1, limit = 20 } = options;
+    const { status, shopId, search, page = 1, limit = 20 } = options;
     const skip = (page - 1) * limit;
 
     const where: any = {};
     if (status) where.status = status;
     if (shopId) where.shopId = shopId;
+    
+    // Search by shop name or order number
+    if (search) {
+      where.OR = [
+        { shop: { businessName: { contains: search, mode: 'insensitive' } } },
+        { order: { orderNumber: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
 
     const [commissions, total] = await Promise.all([
       this.prisma.commissionLedger.findMany({
@@ -285,5 +294,75 @@ export class CommissionService {
     await this.checkAndReleaseShopHold(commission.shopId);
 
     return updated;
+  }
+
+  /**
+   * Get commission stats (admin only)
+   */
+  async getCommissionStats() {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [
+      pendingStats,
+      overdueStats,
+      paidStats,
+      shopsOnHold,
+    ] = await Promise.all([
+      this.prisma.commissionLedger.aggregate({
+        where: { status: 'PENDING' },
+        _count: true,
+        _sum: { amount: true },
+      }),
+      this.prisma.commissionLedger.aggregate({
+        where: { status: 'OVERDUE' },
+        _count: true,
+        _sum: { amount: true },
+      }),
+      this.prisma.commissionLedger.aggregate({
+        where: {
+          status: 'PAID',
+          paidAt: { gte: startOfMonth },
+        },
+        _count: true,
+        _sum: { amount: true },
+      }),
+      this.prisma.shop.count({
+        where: { isOnHold: true },
+      }),
+    ]);
+
+    return {
+      totalPending: pendingStats._count,
+      totalOverdue: overdueStats._count,
+      totalPaid: paidStats._count,
+      pendingAmount: pendingStats._sum.amount || 0,
+      overdueAmount: overdueStats._sum.amount || 0,
+      paidAmount: paidStats._sum.amount || 0,
+      shopsOnHold,
+    };
+  }
+
+  /**
+   * Release shop hold (admin action)
+   */
+  async releaseShopHold(shopId: string) {
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+    });
+
+    if (!shop) {
+      throw new NotFoundException('Shop not found');
+    }
+
+    return this.prisma.shop.update({
+      where: { id: shopId },
+      data: {
+        isOnHold: false,
+        holdReason: null,
+        holdAt: null,
+        lastComplianceCheckAt: new Date(),
+      },
+    });
   }
 }
