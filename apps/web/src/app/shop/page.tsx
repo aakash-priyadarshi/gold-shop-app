@@ -85,7 +85,7 @@ export default function ShopPage() {
       params.append('sortOrder', sort.order);
       params.append('status', 'AVAILABLE');
 
-      const response = await fetch(`${API_URL}/api/inventory?${params}`);
+      const response = await fetch(`${API_URL}/inventory?${params}`);
       if (response.ok) {
         const data = await response.json();
         setItems(data.items || []);

@@ -142,7 +142,7 @@ export function useSellerComparison(params: {
     setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/api/pricing/seller-comparison`, {
+      const response = await fetch(`${API_URL}/pricing/seller-comparison`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -306,7 +306,7 @@ export function useRealTimePrice(params: RealTimePriceParams) {
     setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/api/pricing/calculate`, {
+      const response = await fetch(`${API_URL}/pricing/calculate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -305,10 +305,10 @@ export default function CreateRfqPage() {
     const fetchData = async () => {
       try {
         const [metalsRes, finishesRes, shapesRes, stylesRes] = await Promise.all([
-          fetch(`${API_URL}/api/materials/precious-metals`),
-          fetch(`${API_URL}/api/materials/surface-finishes`),
-          fetch(`${API_URL}/api/materials/gemstone-shapes`),
-          fetch(`${API_URL}/api/materials/setting-styles`),
+          fetch(`${API_URL}/materials/precious-metals`),
+          fetch(`${API_URL}/materials/surface-finishes`),
+          fetch(`${API_URL}/materials/gemstone-shapes`),
+          fetch(`${API_URL}/materials/setting-styles`),
         ]);
         if (metalsRes.ok) setMetalTypes(await metalsRes.json());
         if (finishesRes.ok) setSurfaceFinishes(await finishesRes.json());
@@ -328,7 +328,7 @@ export default function CreateRfqPage() {
       setMarketRatesWarning(null);
       try {
         // Use currency (for display) and country (for tax rates) as separate parameters
-        const res = await fetch(`${API_URL}/api/market-rates?currency=${currency}&country=${country}`);
+        const res = await fetch(`${API_URL}/market-rates?currency=${currency}&country=${country}`);
         if (res.ok) {
           const data = await res.json();
           setMarketRates(data);
@@ -361,7 +361,7 @@ export default function CreateRfqPage() {
     if (!formData.jewelleryType) return;
     const fetchTemplates = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/materials/templates?jewelleryType=${formData.jewelleryType}`);
+        const res = await fetch(`${API_URL}/materials/templates?jewelleryType=${formData.jewelleryType}`);
         if (res.ok) {
           const data = await res.json();
           setTemplates(data);
@@ -378,7 +378,7 @@ export default function CreateRfqPage() {
     if (formData.buildMethod !== 'METHOD_C') return;
     const fetchPlating = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/materials/plating-options`);
+        const res = await fetch(`${API_URL}/materials/plating-options`);
         if (res.ok) setPlatingOptions(await res.json());
       } catch (err) {
         console.error('Failed to fetch plating options:', err);
@@ -392,7 +392,7 @@ export default function CreateRfqPage() {
     if (!formData.hasGemstones) return;
     const fetchPresets = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/materials/gemstone-presets`);
+        const res = await fetch(`${API_URL}/materials/gemstone-presets`);
         if (res.ok) setGemstonePresets(await res.json());
       } catch (err) {
         console.error('Failed to fetch gemstone presets:', err);
@@ -515,7 +515,7 @@ export default function CreateRfqPage() {
           }));
       }
 
-      const res = await fetch(`${API_URL}/api/pricing/estimate`, {
+      const res = await fetch(`${API_URL}/pricing/estimate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
@@ -719,7 +719,7 @@ export default function CreateRfqPage() {
     const weight = getWeightFromTemplate();
 
     try {
-      const response = await fetch(`${API_URL}/api/rfq`, {
+      const response = await fetch(`${API_URL}/rfq`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

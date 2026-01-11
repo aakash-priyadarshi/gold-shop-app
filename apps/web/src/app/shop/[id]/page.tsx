@@ -81,7 +81,7 @@ export default function ProductDetailPage() {
 
   const fetchItem = async (id: string) => {
     try {
-      const response = await fetch(`${API_URL}/api/inventory/${id}`);
+      const response = await fetch(`${API_URL}/inventory/${id}`);
       if (response.ok) {
         const data = await response.json();
         setItem(data);

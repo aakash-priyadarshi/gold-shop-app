@@ -117,7 +117,7 @@ export function SellerComparison({
       setError(null);
 
       try {
-        const response = await fetch(`${API_URL}/api/pricing/seller-comparison`, {
+        const response = await fetch(`${API_URL}/pricing/seller-comparison`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
