@@ -69,12 +69,16 @@ interface PreferencesState {
   isSyncing: boolean;
   lastSyncedAt: number | null;
 
-  // Actions
+  // Actions (user-triggered - sets choice flag)
   setLanguage: (language: Language) => void;
   setCurrency: (currency: CurrencyCode) => void;
   setCountry: (country: CountryCode) => void;
   setTheme: (theme: ThemeMode) => void;
   setAuthenticated: (isAuthenticated: boolean) => void;
+  
+  // Internal sync actions (system-triggered - does NOT set choice flag)
+  syncCurrencyFromGeo: (currency: CurrencyCode) => void;
+  syncCountryFromGeo: (country: CountryCode) => void;
   
   // Sync with backend
   syncFromServer: () => Promise<void>;
@@ -109,8 +113,13 @@ export const usePreferencesStore = create<PreferencesState>()(
       },
 
       // Set currency (DISPLAY only - does NOT affect tax)
+      // When called directly by user action, sets a flag to prevent geo-override
       setCurrency: async (currency) => {
         set({ currency });
+        // Mark that user explicitly chose a currency (prevents geo-detection override)
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('orivraa_user_currency_choice', 'true');
+        }
         const { isAuthenticated, syncToServer } = get();
         if (isAuthenticated) {
           await syncToServer();
@@ -118,12 +127,29 @@ export const usePreferencesStore = create<PreferencesState>()(
       },
 
       // Set country (TAX jurisdiction only - does NOT affect display currency)
+      // When called directly by user action, sets a flag to prevent geo-override
       setCountry: async (country) => {
         set({ country });
+        // Mark that user explicitly chose a country (prevents geo-detection override)
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('orivraa_user_country_choice', 'true');
+        }
         const { isAuthenticated, syncToServer } = get();
         if (isAuthenticated) {
           await syncToServer();
         }
+      },
+
+      // Internal: Set currency from geo detection (does NOT set user choice flag)
+      syncCurrencyFromGeo: (currency) => {
+        set({ currency });
+        // Do NOT set user choice flag - this is auto-detected
+      },
+
+      // Internal: Set country from geo detection (does NOT set user choice flag)
+      syncCountryFromGeo: (country) => {
+        set({ country });
+        // Do NOT set user choice flag - this is auto-detected
       },
 
       // Set theme and sync to server if authenticated
