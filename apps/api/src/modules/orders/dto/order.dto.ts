@@ -97,14 +97,22 @@ export class OrderFilterDto {
   shopId?: string;
 
   @ApiPropertyOptional({ description: 'Page number' })
+  @Type(() => Number)
   @IsNumber()
   @IsOptional()
   page?: number;
 
   @ApiPropertyOptional({ description: 'Items per page' })
+  @Type(() => Number)
   @IsNumber()
   @IsOptional()
   limit?: number;
+
+  @ApiPropertyOptional({ description: 'Items per page (alias for limit)' })
+  @Type(() => Number)
+  @IsNumber()
+  @IsOptional()
+  pageSize?: number;
 
   @ApiPropertyOptional({ description: 'Filter by payment status' })
   @IsString()

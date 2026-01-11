@@ -31,18 +31,18 @@ export class ShopsController {
     @Query('city') city?: string,
     @Query('jewelleryType') jewelleryType?: string,
     @Query('method') method?: string,
-    @Query('verified') verified?: boolean,
-    @Query('page') page = 1,
-    @Query('pageSize') pageSize = 20,
+    @Query('verified') verified?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
     return this.shopsService.findAll({
       country,
       city,
       jewelleryType,
       method,
-      verified,
-      page,
-      pageSize,
+      verified: verified !== undefined ? verified === 'true' : undefined,
+      page: page ? parseInt(page, 10) : 1,
+      pageSize: pageSize ? parseInt(pageSize, 10) : 20,
     });
   }
 
