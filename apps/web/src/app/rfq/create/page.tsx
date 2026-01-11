@@ -452,7 +452,18 @@ export default function CreateRfqPage() {
 
   // Fetch price estimate using the new pricing engine
   const fetchPriceEstimate = useCallback(async () => {
-    if (!formData.metalType || !formData.buildMethod) return;
+    if (!formData.buildMethod) return;
+    
+    // Check for valid metal selection based on method
+    const hasValidMetal = () => {
+      switch (formData.buildMethod) {
+        case 'METHOD_A': return !!formData.metalType;
+        case 'METHOD_B': return !!formData.alloyConfig?.baseMetal && !!formData.alloyConfig?.karat;
+        case 'METHOD_C': return !!formData.methodCConfig?.baseMetal;
+        default: return !!formData.metalType;
+      }
+    };
+    if (!hasValidMetal()) return;
     
     const weight = getWeightFromTemplate();
     if (weight <= 0) return;
@@ -484,22 +495,27 @@ export default function CreateRfqPage() {
           totalWeightG: weight,
         };
       } else if (formData.buildMethod === 'METHOD_B') {
+        // Use alloyConfig for Method B
+        const alloy = formData.alloyConfig;
         requestBody.methodB = {
-          alloy: formData.metalType,
+          baseMetal: alloy?.baseMetal || 'GOLD',
+          karat: alloy?.karat || '18K',
+          alloyFamily: alloy?.alloyFamily,
+          recipePresetId: alloy?.recipePresetId,
           totalWeightG: weight,
         };
       } else if (formData.buildMethod === 'METHOD_C') {
+        // Use methodCConfig for Method C
+        const config = formData.methodCConfig;
         requestBody.methodC = {
-          coreMetal: formData.metalType,
+          coreMetal: config?.baseMetal || 'BRASS',
           totalWeightG: weight,
         };
-        // Add plating if selected
-        if (formData.addGoldPlating && formData.platingType) {
-          requestBody.finish = {
-            finishType: formData.platingType,
-            tier: formData.platingTier || 'STANDARD',
-          };
-        }
+        // Add plating from methodCConfig
+        requestBody.finish = {
+          finishType: config?.platingType || 'GOLD_PLATED',
+          tier: config?.platingTier || 'STANDARD',
+        };
       }
 
       // Add gemstones if any
@@ -622,7 +638,8 @@ export default function CreateRfqPage() {
     return () => clearTimeout(debounce);
   }, [formData.metalType, formData.buildMethod, formData.templateId, formData.weightCategory, 
       formData.estimatedWeight, formData.addGoldPlating, formData.platingType, 
-      formData.platingTier, formData.gemstones, currency, country, fetchPriceEstimate]);
+      formData.platingTier, formData.gemstones, formData.alloyConfig, formData.methodCConfig,
+      currency, country, displayWeightUnit, fetchPriceEstimate]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updateFormData = (field: string, value: any) => {
@@ -784,7 +801,21 @@ export default function CreateRfqPage() {
   };
 
   // Form validation - pages 1-2 just need form data, page 3 needs auth + verification
-  const canProceedToStep2 = formData.jewelleryType && formData.metalType && formData.buildMethod;
+  // For Method A: check metalType, For Method B: check alloyConfig.baseMetal, For Method C: check methodCConfig.baseMetal
+  const hasValidMetalSelection = () => {
+    if (!formData.buildMethod) return false;
+    switch (formData.buildMethod) {
+      case 'METHOD_A':
+        return !!formData.metalType;
+      case 'METHOD_B':
+        return !!formData.alloyConfig?.baseMetal && !!formData.alloyConfig?.karat;
+      case 'METHOD_C':
+        return !!formData.methodCConfig?.baseMetal && !!formData.methodCConfig?.platingType;
+      default:
+        return !!formData.metalType;
+    }
+  };
+  const canProceedToStep2 = formData.jewelleryType && formData.buildMethod && hasValidMetalSelection();
   const canProceedToStep3 = formData.description && (hasRealTemplate || formData.estimatedWeight);
   
   // Form data validation for submit (budget, etc.)
