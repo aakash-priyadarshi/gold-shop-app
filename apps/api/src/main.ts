@@ -1,3 +1,9 @@
+// Polyfill crypto for Node.js 18.x compatibility with @nestjs/schedule
+import { webcrypto } from 'crypto';
+if (typeof globalThis.crypto === 'undefined') {
+  (globalThis as any).crypto = webcrypto;
+}
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
