@@ -220,6 +220,12 @@ export const adminApi = {
     targetRoles?: string[];
   }) => api.post('/admin/notifications/broadcast', data),
   getSystemNotifications: () => api.get('/admin/notifications/system'),
+
+  // Email settings
+  getEmailStatus: () => api.get('/admin/email/status'),
+  sendTestEmail: (email: string) => api.post('/admin/email/test', { email }),
+  updateAdminEmail: (data: { email: string; currentPassword: string }) => 
+    api.patch('/admin/email/admin-address', data),
 };
 
 // Materials API

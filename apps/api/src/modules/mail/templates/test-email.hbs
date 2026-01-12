@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Email</title>
+  <style>
+    body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f5f5f5; color: #333333; line-height: 1.6; }
+    .wrapper { width: 100%; background-color: #f5f5f5; padding: 40px 0; }
+    .main { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
+    .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px 40px; text-align: center; }
+    .logo { font-size: 28px; font-weight: bold; color: #ffffff; text-decoration: none; }
+    .content { padding: 40px; }
+    .footer { background-color: #f9fafb; padding: 30px 40px; text-align: center; border-top: 1px solid #e5e7eb; }
+    .footer p { margin: 5px 0; font-size: 13px; color: #6b7280; }
+    .footer a { color: #d97706; text-decoration: none; }
+    h1 { font-size: 24px; font-weight: 600; color: #111827; margin: 0 0 20px 0; }
+    p { margin: 0 0 16px 0; color: #4b5563; }
+    .success-box { background-color: #ecfdf5; border: 2px solid #10b981; border-radius: 12px; padding: 30px; text-align: center; margin: 20px 0; }
+    .check-icon { font-size: 48px; margin-bottom: 10px; }
+    .info-box { background-color: #f0f9ff; border-left: 4px solid #0284c7; padding: 16px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+    .details-table { background-color: #f9fafb; border-radius: 8px; padding: 20px; margin: 20px 0; }
+    .detail-row { display: flex; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-key { width: 40%; color: #6b7280; font-size: 14px; }
+    .detail-value { width: 60%; color: #111827; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="main">
+      <div class="header">
+        <a href="{{appUrl}}" class="logo">✅ {{appName}}</a>
+      </div>
+      <div class="content">
+        <h1>SMTP Configuration Test</h1>
+        
+        <div class="success-box">
+          <div class="check-icon">✅</div>
+          <div style="font-size: 20px; font-weight: bold; color: #065f46;">Email Delivery Successful!</div>
+          <p style="margin: 10px 0 0 0; color: #047857;">
+            Your SMTP configuration is working correctly.
+          </p>
+        </div>
+        
+        <div class="info-box">
+          <strong>🎉 Congratulations!</strong>
+          <p style="margin: 8px 0 0 0; font-size: 14px;">
+            If you're seeing this email, it means your email system is properly configured and ready to send notifications to users.
+          </p>
+        </div>
+        
+        <div class="details-table">
+          <strong style="display: block; margin-bottom: 15px; color: #374151;">Test Details:</strong>
+          <div class="detail-row">
+            <span class="detail-key">Test Time</span>
+            <span class="detail-value">{{testTime}}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-key">Sent By</span>
+            <span class="detail-value">Admin ({{adminId}})</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-key">Platform</span>
+            <span class="detail-value">{{appName}}</span>
+          </div>
+        </div>
+        
+        <p style="font-size: 14px; color: #6b7280;">
+          This is a test email sent from the {{appName}} admin dashboard. No action is required.
+        </p>
+      </div>
+      <div class="footer">
+        <p>© {{year}} {{appName}}. All rights reserved.</p>
+        <p><a href="{{appUrl}}/dashboard/admin">Admin Dashboard</a></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -10,6 +10,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -19,6 +20,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
+import { MailService } from '../mail/mail.service';
 import * as bcrypt from 'bcryptjs';
 
 @ApiTags('admin')
@@ -26,9 +28,12 @@ import * as bcrypt from 'bcryptjs';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class AdminController {
+  private readonly logger = new Logger(AdminController.name);
+
   constructor(
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
+    private mailService: MailService,
   ) {}
 
   // ═══════════════════════════════════════
@@ -367,6 +372,114 @@ export class AdminController {
       take: 50,
     });
     return { notifications };
+  }
+
+  // ═══════════════════════════════════════
+  // EMAIL SETTINGS
+  // ═══════════════════════════════════════
+
+  @Post('email/test')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Send a test email to verify SMTP configuration' })
+  @HttpCode(HttpStatus.OK)
+  async sendTestEmail(
+    @Body() data: { email: string },
+    @CurrentUser('id') adminId: string,
+  ) {
+    if (!data.email) {
+      return { success: false, error: 'Email address is required' };
+    }
+
+    this.logger.log(`Sending test email to ${data.email} by admin ${adminId}`);
+
+    const result = await this.mailService.send({
+      to: data.email,
+      subject: '✅ Orivraa Test Email - SMTP Configuration Working',
+      template: 'test-email',
+      context: {
+        testTime: new Date().toISOString(),
+        adminId,
+      },
+    });
+
+    if (result.success) {
+      this.logger.log(`Test email sent successfully: ${result.messageId}`);
+      return { 
+        success: true, 
+        message: 'Test email sent successfully',
+        messageId: result.messageId,
+      };
+    } else {
+      this.logger.error(`Test email failed: ${result.error}`);
+      return { 
+        success: false, 
+        error: result.error || 'Failed to send test email',
+      };
+    }
+  }
+
+  @Patch('email/admin-address')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Update admin email address' })
+  async updateAdminEmail(
+    @Body() data: { email: string; currentPassword: string },
+    @CurrentUser('id') adminId: string,
+  ) {
+    if (!data.email || !data.currentPassword) {
+      return { success: false, error: 'Email and current password are required' };
+    }
+
+    // Verify current admin password
+    const admin = await this.prisma.user.findUnique({
+      where: { id: adminId },
+    });
+
+    if (!admin) {
+      return { success: false, error: 'Admin user not found' };
+    }
+
+    const isPasswordValid = await bcrypt.compare(data.currentPassword, admin.passwordHash);
+    if (!isPasswordValid) {
+      return { success: false, error: 'Current password is incorrect' };
+    }
+
+    // Check if email is already in use
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: data.email },
+    });
+
+    if (existingUser && existingUser.id !== adminId) {
+      return { success: false, error: 'Email is already in use by another user' };
+    }
+
+    // Update the admin email
+    await this.prisma.user.update({
+      where: { id: adminId },
+      data: { email: data.email },
+    });
+
+    this.logger.log(`Admin email updated to ${data.email} by ${adminId}`);
+
+    return { 
+      success: true, 
+      message: 'Admin email updated successfully',
+      newEmail: data.email,
+    };
+  }
+
+  @Get('email/status')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get email configuration status' })
+  async getEmailStatus() {
+    // Check if SMTP is configured
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpUser = process.env.SMTP_USER;
+    
+    return {
+      configured: !!(smtpHost && smtpUser),
+      smtpHost: smtpHost ? smtpHost.substring(0, 15) + '...' : null,
+      smtpUser: smtpUser ? smtpUser.replace(/(.{3}).*(@.*)/, '$1***$2') : null,
+    };
   }
 
   // ═══════════════════════════════════════

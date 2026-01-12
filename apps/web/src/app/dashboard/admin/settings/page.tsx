@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { AdminGuard } from '@/components/auth/RouteGuard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,9 +36,14 @@ import {
   RefreshCw,
   Loader2,
   Send,
+  Mail,
+  CheckCircle2,
+  XCircle,
+  KeyRound,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { adminApi } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 
 
 const supportedRegions = [
@@ -53,6 +58,7 @@ const supportedRegions = [
 const supportedCurrencies = ['NPR', 'INR', 'USD', 'GBP', 'AED', 'EUR'];
 
 export default function AdminSettingsPage() {
+  const { user } = useAuth();
   const [refreshingRates, setRefreshingRates] = useState(false);
   const [clearingCache, setClearingCache] = useState(false);
   const [sendingNotification, setSendingNotification] = useState(false);
@@ -63,6 +69,95 @@ export default function AdminSettingsPage() {
     type: 'INFO',
     targetRoles: [] as string[],
   });
+
+  // Email settings state
+  const [emailStatus, setEmailStatus] = useState<{ configured: boolean; sender: string } | null>(null);
+  const [loadingEmailStatus, setLoadingEmailStatus] = useState(true);
+  const [testEmail, setTestEmail] = useState('');
+  const [sendingTestEmail, setSendingTestEmail] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [adminEmailForm, setAdminEmailForm] = useState({
+    newEmail: '',
+    currentPassword: '',
+  });
+  const [updatingAdminEmail, setUpdatingAdminEmail] = useState(false);
+
+  // Fetch email status on mount
+  useEffect(() => {
+    const fetchEmailStatus = async () => {
+      try {
+        const response = await adminApi.getEmailStatus();
+        setEmailStatus(response.data);
+      } catch (error) {
+        console.error('Failed to fetch email status:', error);
+      } finally {
+        setLoadingEmailStatus(false);
+      }
+    };
+    fetchEmailStatus();
+  }, []);
+
+  const handleSendTestEmail = async () => {
+    if (!testEmail) {
+      toast({
+        variant: 'destructive',
+        title: 'Email Required',
+        description: 'Please enter an email address to send the test to.',
+      });
+      return;
+    }
+
+    setSendingTestEmail(true);
+    try {
+      await adminApi.sendTestEmail(testEmail);
+      toast({
+        title: 'Test Email Sent',
+        description: `Test email has been sent to ${testEmail}. Check your inbox.`,
+      });
+      setTestEmail('');
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Send Failed',
+        description: 'Could not send test email. Check SMTP configuration.',
+      });
+    } finally {
+      setSendingTestEmail(false);
+    }
+  };
+
+  const handleUpdateAdminEmail = async () => {
+    if (!adminEmailForm.newEmail || !adminEmailForm.currentPassword) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing Fields',
+        description: 'Please fill in all fields.',
+      });
+      return;
+    }
+
+    setUpdatingAdminEmail(true);
+    try {
+      await adminApi.updateAdminEmail({
+        email: adminEmailForm.newEmail,
+        currentPassword: adminEmailForm.currentPassword,
+      });
+      toast({
+        title: 'Admin Email Updated',
+        description: `Admin notification email has been updated to ${adminEmailForm.newEmail}.`,
+      });
+      setEmailDialogOpen(false);
+      setAdminEmailForm({ newEmail: '', currentPassword: '' });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Update Failed',
+        description: error?.response?.data?.message || 'Could not update admin email. Check your password.',
+      });
+    } finally {
+      setUpdatingAdminEmail(false);
+    }
+  };
 
   const handleRefreshRates = async () => {
     setRefreshingRates(true);
@@ -447,6 +542,161 @@ export default function AdminSettingsPage() {
                 <p className="text-sm text-muted-foreground mt-4">
                   These actions affect the entire platform. Use with caution.
                 </p>
+              </CardContent>
+            </Card>
+
+            {/* Email Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5" />
+                  Email Settings
+                </CardTitle>
+                <CardDescription>
+                  Configure and test email delivery
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Email Status */}
+                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    {loadingEmailStatus ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    ) : emailStatus?.configured ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    ) : (
+                      <XCircle className="h-5 w-5 text-red-500" />
+                    )}
+                    <div>
+                      <p className="font-medium">SMTP Status</p>
+                      <p className="text-sm text-muted-foreground">
+                        {loadingEmailStatus 
+                          ? 'Checking configuration...' 
+                          : emailStatus?.configured 
+                            ? `Configured • Sender: ${emailStatus.sender}`
+                            : 'Not configured - check environment variables'}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant={emailStatus?.configured ? 'default' : 'destructive'}>
+                    {loadingEmailStatus ? 'Loading' : emailStatus?.configured ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
+
+                {/* Test Email */}
+                <div className="space-y-3">
+                  <Label>Send Test Email</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Verify that email delivery is working correctly
+                  </p>
+                  <div className="flex gap-2">
+                    <Input
+                      type="email"
+                      placeholder="recipient@example.com"
+                      value={testEmail}
+                      onChange={(e) => setTestEmail(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button 
+                      onClick={handleSendTestEmail}
+                      disabled={sendingTestEmail || !emailStatus?.configured}
+                    >
+                      {sendingTestEmail ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4 mr-2" />
+                      )}
+                      Send Test
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Change Admin Email */}
+                <div className="space-y-3 pt-4 border-t">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Admin Notification Email</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Email address where admin alerts are sent
+                      </p>
+                    </div>
+                    <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline">
+                          <KeyRound className="h-4 w-4 mr-2" />
+                          Change Admin Email
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Change Admin Email</DialogTitle>
+                          <DialogDescription>
+                            Update the email address for admin notifications and alerts.
+                            You must verify your identity with your current password.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <Label>Current Email</Label>
+                            <Input
+                              value={user?.email || ''}
+                              disabled
+                              className="bg-muted"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="newEmail">New Admin Email</Label>
+                            <Input
+                              id="newEmail"
+                              type="email"
+                              placeholder="new-admin@example.com"
+                              value={adminEmailForm.newEmail}
+                              onChange={(e) => setAdminEmailForm(prev => ({ 
+                                ...prev, 
+                                newEmail: e.target.value 
+                              }))}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="currentPassword">Current Password</Label>
+                            <Input
+                              id="currentPassword"
+                              type="password"
+                              placeholder="Enter your password to confirm"
+                              value={adminEmailForm.currentPassword}
+                              onChange={(e) => setAdminEmailForm(prev => ({ 
+                                ...prev, 
+                                currentPassword: e.target.value 
+                              }))}
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => {
+                              setEmailDialogOpen(false);
+                              setAdminEmailForm({ newEmail: '', currentPassword: '' });
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            onClick={handleUpdateAdminEmail} 
+                            disabled={updatingAdminEmail}
+                          >
+                            {updatingAdminEmail ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Mail className="h-4 w-4 mr-2" />
+                            )}
+                            Update Email
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
