@@ -49,7 +49,7 @@ export class MailService {
 
   private initTransporter() {
     const host = this.configService.get<string>('SMTP_HOST');
-    const port = this.configService.get<number>('SMTP_PORT', 587);
+    const port = this.configService.get<number>('SMTP_PORT', 465);
     const user = this.configService.get<string>('SMTP_USER');
     const pass = this.configService.get<string>('SMTP_PASS');
 
@@ -58,23 +58,49 @@ export class MailService {
       return;
     }
 
+    this.logger.log(`Initializing SMTP: ${host}:${port} (user: ${user})`);
+
+    // Hostinger SMTP works best with port 465 (SSL) or 587 (STARTTLS)
+    // Railway may have issues with port 587, so we default to 465
+    const useSSL = port === 465;
+
     this.transporter = nodemailer.createTransport({
       host,
       port,
-      secure: port === 465,
+      secure: useSSL, // true for 465, false for 587
       auth: { user, pass },
       tls: {
-        rejectUnauthorized: true,
+        // Allow self-signed certificates (some SMTP servers need this)
+        rejectUnauthorized: false,
+        minVersion: 'TLSv1.2',
       },
+      // Connection settings
+      connectionTimeout: 30000, // 30 seconds
+      greetingTimeout: 30000,
+      socketTimeout: 60000,
+      // Pool settings for better reliability
       pool: true,
-      maxConnections: 5,
-      maxMessages: 100,
+      maxConnections: 3,
+      maxMessages: 50,
+      rateDelta: 1000,
+      rateLimit: 5,
     });
 
-    // Verify connection
-    this.transporter.verify()
-      .then(() => this.logger.log('SMTP connection established'))
-      .catch((err: Error) => this.logger.error('SMTP connection failed:', err.message));
+    // Verify connection asynchronously
+    this.verifyConnection();
+  }
+
+  private async verifyConnection() {
+    if (!this.transporter) return;
+
+    try {
+      await this.transporter.verify();
+      this.logger.log('✅ SMTP connection established successfully');
+    } catch (err: any) {
+      this.logger.error(`❌ SMTP connection failed: ${err.message}`);
+      this.logger.error(`SMTP Config: ${this.configService.get('SMTP_HOST')}:${this.configService.get('SMTP_PORT')}`);
+      // Don't throw - allow app to start, emails will fail gracefully
+    }
   }
 
   private registerHandlebarsHelpers() {
@@ -155,20 +181,37 @@ export class MailService {
       // Determine sender
       const from = options.from || `Orivraa <${EMAIL_SENDERS.NO_REPLY}>`;
 
-      // Send email
-      const info = await this.transporter.sendMail({
-        from,
-        to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
-        subject: options.subject,
-        html,
-        replyTo: options.replyTo,
-        attachments: options.attachments,
-      });
+      // Send email with retry logic
+      const maxRetries = 3;
+      let lastError: Error | null = null;
 
-      this.logger.log(`Email sent: ${info.messageId} to ${options.to}`);
-      return { success: true, messageId: info.messageId };
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const info = await this.transporter.sendMail({
+            from,
+            to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
+            subject: options.subject,
+            html,
+            replyTo: options.replyTo,
+            attachments: options.attachments,
+          });
+
+          this.logger.log(`✅ Email sent: ${info.messageId} to ${options.to}`);
+          return { success: true, messageId: info.messageId };
+        } catch (sendError: any) {
+          lastError = sendError;
+          this.logger.warn(`Email attempt ${attempt}/${maxRetries} failed: ${sendError.message}`);
+          
+          if (attempt < maxRetries) {
+            // Wait before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, attempt * 2000));
+          }
+        }
+      }
+
+      throw lastError;
     } catch (error: any) {
-      this.logger.error(`Failed to send email to ${options.to}:`, error.message);
+      this.logger.error(`❌ Failed to send email to ${options.to}:`, error.message);
       return { success: false, error: error.message };
     }
   }
