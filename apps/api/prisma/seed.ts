@@ -9,10 +9,10 @@ async function main() {
   // Create admin user
   const adminPassword = await bcrypt.hash('admin123', 10);
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@goldshop.com' },
+    where: { email: 'admin@orivraa.com' },
     update: {},
     create: {
-      email: 'admin@goldshop.com',
+      email: 'admin@orivraa.com',
       firstName: 'System',
       lastName: 'Admin',
       passwordHash: adminPassword,
@@ -736,7 +736,7 @@ async function main() {
 
   console.log('✅ Seed completed successfully!');
   console.log('\n📋 Test Accounts:');
-  console.log('Admin: admin@goldshop.com / admin123');
+  console.log('Admin: admin@orivraa.com / admin123');
   console.log('Customer: customer@test.com / customer123');
   console.log('Shopkeeper 1: rameshgold@test.com / shop123 (Ramesh Gold House)');
   console.log('Shopkeeper 2: sunajewellers@test.com / shop123 (Suna Jewellers)');

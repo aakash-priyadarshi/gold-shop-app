@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding admin user...');
 
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@goldshop.com';
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@orivraa.com';
   const adminPassword = process.env.ADMIN_PASSWORD || 'admin123!@#';
 
   // Check if admin already exists

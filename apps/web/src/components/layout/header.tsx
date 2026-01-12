@@ -495,7 +495,7 @@ export function Header() {
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href="/settings">
+                    <Link href={`/dashboard/${user.role === 'ADMIN' ? 'admin' : user.role === 'SHOPKEEPER' ? 'shop' : 'customer'}/settings`}>
                       <Cog6ToothIcon className="mr-2 h-4 w-4" />
                       Settings
                     </Link>

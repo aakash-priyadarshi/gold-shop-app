@@ -153,7 +153,7 @@ This starts:
 
 | Role | Email | Password |
 |------|-------|----------|
-| Admin | admin@goldshop.com | admin123 |
+| Admin | admin@orivraa.com | admin123 |
 | Customer | customer@test.com | customer123 |
 | Shopkeeper | rameshgold@test.com | shop123 |
 | Shopkeeper | sunajewellers@test.com | shop123 |

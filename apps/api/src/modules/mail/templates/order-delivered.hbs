@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Delivered</title>
+  <style>
+    body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f5f5f5; color: #333333; line-height: 1.6; }
+    .wrapper { width: 100%; background-color: #f5f5f5; padding: 40px 0; }
+    .main { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
+    .header { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); padding: 30px 40px; text-align: center; }
+    .logo { font-size: 28px; font-weight: bold; color: #ffffff; text-decoration: none; }
+    .content { padding: 40px; }
+    .footer { background-color: #f9fafb; padding: 30px 40px; text-align: center; border-top: 1px solid #e5e7eb; }
+    .footer p { margin: 5px 0; font-size: 13px; color: #6b7280; }
+    .footer a { color: #d97706; text-decoration: none; }
+    h1 { font-size: 24px; font-weight: 600; color: #111827; margin: 0 0 20px 0; }
+    p { margin: 0 0 16px 0; color: #4b5563; }
+    .button { display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 20px 0; }
+    .delivered-banner { background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-radius: 12px; padding: 30px; text-align: center; margin: 20px 0; }
+    .check-icon { font-size: 48px; margin-bottom: 10px; }
+    .rating-section { background-color: #fef3c7; border-radius: 8px; padding: 25px; margin: 30px 0; text-align: center; }
+    .stars { font-size: 32px; letter-spacing: 5px; margin: 15px 0; }
+    .info-box { background-color: #f0f9ff; border-left: 4px solid #0284c7; padding: 16px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="main">
+      <div class="header">
+        <a href="{{appUrl}}" class="logo">✨ {{appName}}</a>
+      </div>
+      <div class="content">
+        <h1>Your Order Has Been Delivered! 🎉</h1>
+        
+        <p>Hi {{customerName}},</p>
+        
+        <p>Great news! Your order <strong>#{{orderNumber}}</strong> from <strong>{{shopName}}</strong> has been delivered.</p>
+        
+        <div class="delivered-banner">
+          <div class="check-icon">✅</div>
+          <div style="font-size: 20px; font-weight: bold; color: #065f46;">Delivered Successfully!</div>
+        </div>
+        
+        <div class="rating-section">
+          <div style="font-size: 16px; font-weight: 600; color: #92400e;">How was your experience?</div>
+          <div class="stars">⭐⭐⭐⭐⭐</div>
+          <p style="font-size: 14px; color: #78350f; margin-bottom: 15px;">
+            Your feedback helps other customers and supports local jewelers.
+          </p>
+          <a href="{{appUrl}}/dashboard/customer/orders/{{orderNumber}}/review" class="button" style="margin: 0;">Leave a Review</a>
+        </div>
+        
+        <div class="info-box">
+          <strong>📦 Need help with your order?</strong>
+          <p style="margin: 8px 0 0 0; font-size: 14px;">
+            If there are any issues with your delivery or you have questions about your jewelry, please contact us at 
+            <a href="mailto:{{supportEmail}}" style="color: #d97706;">{{supportEmail}}</a>
+          </p>
+        </div>
+        
+        <p style="margin-top: 30px;">
+          Thank you for shopping with {{appName}}! We hope you love your new jewelry. ✨
+        </p>
+      </div>
+      <div class="footer">
+        <p>© {{year}} {{appName}}. All rights reserved.</p>
+        <p><a href="{{appUrl}}">Visit Website</a> • <a href="mailto:{{supportEmail}}">Contact Support</a></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -10,6 +10,7 @@ import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { MailService } from '../mail/mail.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UserRole, UserStatus, CurrencyCode } from '@prisma/client';
@@ -45,6 +46,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private auditService: AuditService,
+    private mailService: MailService,
   ) {}
 
   /**
@@ -139,6 +141,10 @@ export class AuthService {
     });
 
     this.logger.log(`New ${dto.role} registered: ${dto.email}`);
+
+    // Send welcome email (non-blocking)
+    this.mailService.sendWelcome(result.user.email, result.user.firstName)
+      .catch(err => this.logger.error(`Failed to send welcome email: ${err.message}`));
 
     // Generate tokens
     return this.generateTokens(result.user, result.shop);

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Order Has Shipped</title>
+  <style>
+    body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f5f5f5; color: #333333; line-height: 1.6; }
+    .wrapper { width: 100%; background-color: #f5f5f5; padding: 40px 0; }
+    .main { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
+    .header { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); padding: 30px 40px; text-align: center; }
+    .logo { font-size: 28px; font-weight: bold; color: #ffffff; text-decoration: none; }
+    .content { padding: 40px; }
+    .footer { background-color: #f9fafb; padding: 30px 40px; text-align: center; border-top: 1px solid #e5e7eb; }
+    .footer p { margin: 5px 0; font-size: 13px; color: #6b7280; }
+    .footer a { color: #d97706; text-decoration: none; }
+    h1 { font-size: 24px; font-weight: 600; color: #111827; margin: 0 0 20px 0; }
+    p { margin: 0 0 16px 0; color: #4b5563; }
+    .button { display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 20px 0; }
+    .shipped-banner { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; padding: 30px; text-align: center; margin: 20px 0; }
+    .truck-icon { font-size: 48px; margin-bottom: 10px; }
+    .shipping-info { background-color: #f9fafb; border-radius: 8px; padding: 20px; margin: 20px 0; }
+    .shipping-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
+    .shipping-row:last-child { border-bottom: none; }
+    .shipping-label { color: #6b7280; font-size: 14px; }
+    .shipping-value { color: #111827; font-weight: 600; font-size: 14px; }
+    .success-box { background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 16px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="main">
+      <div class="header">
+        <a href="{{appUrl}}" class="logo">✨ {{appName}}</a>
+      </div>
+      <div class="content">
+        <h1>Your Order Has Shipped! 📦</h1>
+        
+        <p>Hi {{customerName}},</p>
+        
+        <p>Great news! Your order <strong>#{{orderNumber}}</strong> is on its way to you.</p>
+        
+        <div class="shipped-banner">
+          <div class="truck-icon">🚚</div>
+          <div style="font-size: 20px; font-weight: bold; color: #92400e;">On The Way!</div>
+        </div>
+        
+        <div class="shipping-info">
+          <div class="shipping-row">
+            <span class="shipping-label">Carrier</span>
+            <span class="shipping-value">{{carrier}}</span>
+          </div>
+          <div class="shipping-row">
+            <span class="shipping-label">Tracking Number</span>
+            <span class="shipping-value">{{trackingNumber}}</span>
+          </div>
+          <div class="shipping-row">
+            <span class="shipping-label">Estimated Delivery</span>
+            <span class="shipping-value">{{estimatedDelivery}}</span>
+          </div>
+        </div>
+        
+        <div style="text-align: center;">
+          <a href="{{trackingUrl}}" class="button">Track Your Package</a>
+        </div>
+        
+        <div class="success-box">
+          <strong>💡 Tip</strong>
+          <p style="margin: 8px 0 0 0; font-size: 14px;">
+            You can track your package anytime by clicking the button above or entering your tracking number on the carrier's website.
+          </p>
+        </div>
+      </div>
+      <div class="footer">
+        <p>© {{year}} {{appName}}. All rights reserved.</p>
+        <p><a href="{{appUrl}}">Visit Website</a> • <a href="mailto:{{supportEmail}}">Contact Support</a></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

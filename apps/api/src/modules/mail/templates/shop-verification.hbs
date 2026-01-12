@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shop Verification Status</title>
+  <style>
+    body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f5f5f5; color: #333333; line-height: 1.6; }
+    .wrapper { width: 100%; background-color: #f5f5f5; padding: 40px 0; }
+    .main { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
+    .header { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); padding: 30px 40px; text-align: center; }
+    .logo { font-size: 28px; font-weight: bold; color: #ffffff; text-decoration: none; }
+    .content { padding: 40px; }
+    .footer { background-color: #f9fafb; padding: 30px 40px; text-align: center; border-top: 1px solid #e5e7eb; }
+    .footer p { margin: 5px 0; font-size: 13px; color: #6b7280; }
+    .footer a { color: #d97706; text-decoration: none; }
+    h1 { font-size: 24px; font-weight: 600; color: #111827; margin: 0 0 20px 0; }
+    p { margin: 0 0 16px 0; color: #4b5563; }
+    .button { display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 20px 0; }
+    .status-approved { background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-radius: 12px; padding: 30px; text-align: center; margin: 20px 0; border: 2px solid #10b981; }
+    .status-rejected { background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-radius: 12px; padding: 30px; text-align: center; margin: 20px 0; border: 2px solid #ef4444; }
+    .status-icon { font-size: 48px; margin-bottom: 10px; }
+    .success-box { background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 16px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+    .error-box { background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 16px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+    .next-steps { background-color: #f9fafb; border-radius: 8px; padding: 20px; margin: 20px 0; }
+    .next-steps li { margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="main">
+      <div class="header">
+        <a href="{{appUrl}}" class="logo">✨ {{appName}}</a>
+      </div>
+      <div class="content">
+        {{#eq status 'approved'}}
+        <h1>🎉 Shop Verified Successfully!</h1>
+        
+        <p>Hi {{shopOwnerName}},</p>
+        
+        <p>Great news! Your shop <strong>{{shopName}}</strong> has been verified and is now live on {{appName}}!</p>
+        
+        <div class="status-approved">
+          <div class="status-icon">✅</div>
+          <div style="font-size: 20px; font-weight: bold; color: #065f46;">Verification Approved</div>
+        </div>
+        
+        <div class="success-box">
+          <strong>🎊 Congratulations!</strong>
+          <p style="margin: 8px 0 0 0; font-size: 14px;">
+            Your shop is now visible to thousands of customers. You can start receiving orders immediately!
+          </p>
+        </div>
+        
+        <div class="next-steps">
+          <strong>Next Steps:</strong>
+          <ul style="margin: 15px 0 0 0; padding-left: 20px;">
+            <li>Add your inventory items</li>
+            <li>Set up your pricing and margins</li>
+            <li>Complete your shop profile with photos</li>
+            <li>Start accepting custom order requests</li>
+          </ul>
+        </div>
+        
+        {{else}}
+        <h1>Shop Verification Update</h1>
+        
+        <p>Hi {{shopOwnerName}},</p>
+        
+        <p>We've reviewed your shop verification request for <strong>{{shopName}}</strong>.</p>
+        
+        <div class="status-rejected">
+          <div class="status-icon">⚠️</div>
+          <div style="font-size: 20px; font-weight: bold; color: #991b1b;">Changes Required</div>
+        </div>
+        
+        <div class="error-box">
+          <strong>Reason:</strong>
+          <p style="margin: 8px 0 0 0; font-size: 14px;">
+            {{reason}}
+          </p>
+        </div>
+        
+        <p>Please address the issues mentioned above and resubmit your verification request.</p>
+        
+        <div class="next-steps">
+          <strong>How to Fix:</strong>
+          <ul style="margin: 15px 0 0 0; padding-left: 20px;">
+            <li>Review the feedback above carefully</li>
+            <li>Update your shop information accordingly</li>
+            <li>Ensure all required documents are valid</li>
+            <li>Resubmit for verification</li>
+          </ul>
+        </div>
+        {{/eq}}
+        
+        <div style="text-align: center;">
+          <a href="{{dashboardUrl}}" class="button">Go to Dashboard</a>
+        </div>
+        
+        <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
+          Need help? Contact us at <a href="mailto:{{supportEmail}}" style="color: #d97706;">{{supportEmail}}</a>
+        </p>
+      </div>
+      <div class="footer">
+        <p>© {{year}} {{appName}}. All rights reserved.</p>
+        <p><a href="{{appUrl}}">Visit Website</a> • <a href="mailto:{{supportEmail}}">Contact Support</a></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

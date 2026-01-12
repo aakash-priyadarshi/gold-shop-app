@@ -24,6 +24,25 @@ import { UserRole } from '@prisma/client';
 export class ShopsController {
   constructor(private shopsService: ShopsService) {}
 
+  // Public endpoint for verified shops listing (for /shops page)
+  @Get('public')
+  @ApiOperation({ summary: 'List all verified public shops' })
+  async findPublicShops(
+    @Query('country') country?: string,
+    @Query('state') state?: string,
+    @Query('city') city?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.shopsService.findAll({
+      country,
+      city,
+      verified: true, // Only verified shops
+      page: page ? parseInt(page, 10) : 1,
+      pageSize: pageSize ? parseInt(pageSize, 10) : 50,
+    });
+  }
+
   @Get()
   @ApiOperation({ summary: 'List all shops' })
   async findAll(

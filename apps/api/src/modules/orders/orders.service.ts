@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { MailService } from '../mail/mail.service';
 import { OrderStatus, OrderType, MilestoneType } from '@prisma/client';
 import {
   CreateInventoryOrderDto,
@@ -18,9 +19,12 @@ import {
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
+    private mailService: MailService,
   ) {}
 
   // Generate order number
@@ -122,7 +126,48 @@ export class OrdersService {
       channels: ['EMAIL', 'PUSH'],
     });
 
+    // Send email notifications (non-blocking)
+    this.sendOrderEmails(order, item, total).catch(err => 
+      this.logger.error(`Failed to send order emails: ${err.message}`)
+    );
+
     return order;
+  }
+
+  // Send order confirmation emails
+  private async sendOrderEmails(order: any, item: any, total: number) {
+    // Get full user details
+    const [customer, shopOwner] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: order.customerId }, select: { email: true, firstName: true } }),
+      this.prisma.user.findUnique({ where: { id: item.shop.userId }, select: { email: true, firstName: true } }),
+    ]);
+
+    if (!customer || !shopOwner) return;
+
+    // Send confirmation to customer
+    await this.mailService.sendOrderConfirmation(customer.email, {
+      customerName: customer.firstName,
+      orderNumber: order.orderNumber,
+      items: [{ name: item.nameEn, quantity: 1, price: item.totalPriceNpr }],
+      subtotal: item.totalPriceNpr,
+      shipping: 0,
+      tax: item.taxNpr,
+      total: total,
+      currency: 'NPR',
+      shippingAddress: 'Pending',
+      shopName: order.shop.shopName,
+    });
+
+    // Send notification to seller
+    await this.mailService.sendNewOrderNotification(shopOwner.email, {
+      shopOwnerName: shopOwner.firstName,
+      orderNumber: order.orderNumber,
+      customerName: `${order.customer.firstName} ${order.customer.lastName}`,
+      items: [{ name: item.nameEn, quantity: 1, price: item.totalPriceNpr }],
+      total: total,
+      currency: 'NPR',
+      dashboardUrl: 'https://www.orivraa.com/dashboard/shop/orders',
+    });
   }
 
   // Create custom order from RFQ

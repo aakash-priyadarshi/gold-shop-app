@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Orivraa</title>
+  <style>
+    body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f5f5f5; color: #333333; line-height: 1.6; }
+    .wrapper { width: 100%; background-color: #f5f5f5; padding: 40px 0; }
+    .main { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
+    .header { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); padding: 30px 40px; text-align: center; }
+    .logo { font-size: 28px; font-weight: bold; color: #ffffff; text-decoration: none; }
+    .content { padding: 40px; }
+    .footer { background-color: #f9fafb; padding: 30px 40px; text-align: center; border-top: 1px solid #e5e7eb; }
+    .footer p { margin: 5px 0; font-size: 13px; color: #6b7280; }
+    .footer a { color: #d97706; text-decoration: none; }
+    h1 { font-size: 24px; font-weight: 600; color: #111827; margin: 0 0 20px 0; }
+    p { margin: 0 0 16px 0; color: #4b5563; }
+    .button { display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 20px 0; }
+    .feature-list { margin: 30px 0; padding: 0; list-style: none; }
+    .feature-list li { padding: 12px 0; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; }
+    .feature-list li:last-child { border-bottom: none; }
+    .feature-icon { width: 40px; height: 40px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-size: 20px; }
+    .feature-text { flex: 1; }
+    .feature-text strong { display: block; color: #111827; font-size: 15px; }
+    .feature-text span { font-size: 13px; color: #6b7280; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="main">
+      <div class="header">
+        <a href="{{appUrl}}" class="logo">✨ {{appName}}</a>
+      </div>
+      <div class="content">
+        <h1>Welcome to {{appName}}! 🎉</h1>
+        
+        <p>Hi {{name}},</p>
+        
+        <p>Thank you for joining {{appName}} – your trusted marketplace for authentic gold and silver jewelry!</p>
+        
+        <p>Here's what you can do with your new account:</p>
+        
+        <ul class="feature-list">
+          <li>
+            <div class="feature-icon">💰</div>
+            <div class="feature-text">
+              <strong>Live Gold Prices</strong>
+              <span>Track real-time gold rates in your local currency</span>
+            </div>
+          </li>
+          <li>
+            <div class="feature-icon">🏪</div>
+            <div class="feature-text">
+              <strong>Browse Verified Sellers</strong>
+              <span>Connect with trusted jewelers worldwide</span>
+            </div>
+          </li>
+          <li>
+            <div class="feature-icon">✨</div>
+            <div class="feature-text">
+              <strong>Custom Orders</strong>
+              <span>Request personalized jewelry designs</span>
+            </div>
+          </li>
+          <li>
+            <div class="feature-icon">📦</div>
+            <div class="feature-text">
+              <strong>Track Orders</strong>
+              <span>Monitor your orders from creation to delivery</span>
+            </div>
+          </li>
+        </ul>
+        
+        <div style="text-align: center;">
+          <a href="{{appUrl}}/shops" class="button">Start Exploring</a>
+        </div>
+        
+        <p style="margin-top: 30px;">
+          Have questions? We're here to help! Simply reply to this email or contact us at 
+          <a href="mailto:{{supportEmail}}" style="color: #d97706;">{{supportEmail}}</a>
+        </p>
+        
+        <p>Happy shopping! ✨</p>
+        <p><strong>The {{appName}} Team</strong></p>
+      </div>
+      <div class="footer">
+        <p>© {{year}} {{appName}}. All rights reserved.</p>
+        <p><a href="{{appUrl}}">Visit Website</a> • <a href="mailto:{{supportEmail}}">Contact Support</a></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
