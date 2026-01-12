@@ -74,7 +74,7 @@ export class MailService {
     // Verify connection
     this.transporter.verify()
       .then(() => this.logger.log('SMTP connection established'))
-      .catch((err) => this.logger.error('SMTP connection failed:', err.message));
+      .catch((err: Error) => this.logger.error('SMTP connection failed:', err.message));
   }
 
   private registerHandlebarsHelpers() {
