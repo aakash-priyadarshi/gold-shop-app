@@ -4,6 +4,7 @@ import * as nodemailer from 'nodemailer';
 import * as handlebars from 'handlebars';
 import * as fs from 'fs';
 import * as path from 'path';
+import { Resend } from 'resend';
 
 export interface EmailOptions {
   to: string | string[];
@@ -34,34 +35,52 @@ export const EMAIL_SENDERS = {
   SUPPORT: 'support@orivraa.com',
 } as const;
 
+type EmailProvider = 'resend' | 'smtp' | 'none';
+
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private transporter: nodemailer.Transporter;
+  private transporter: nodemailer.Transporter | null = null;
+  private resend: Resend | null = null;
+  private provider: EmailProvider = 'none';
   private templateCache: Map<string, handlebars.TemplateDelegate> = new Map();
   private readonly templatesDir: string;
 
   constructor(private readonly configService: ConfigService) {
     this.templatesDir = path.join(__dirname, 'templates');
-    this.initTransporter();
+    this.initEmailProvider();
     this.registerHandlebarsHelpers();
   }
 
-  private initTransporter() {
+  private initEmailProvider() {
+    // Priority 1: Resend API (recommended for Railway)
+    const resendApiKey = this.configService.get<string>('RESEND_API_KEY');
+    if (resendApiKey) {
+      this.resend = new Resend(resendApiKey);
+      this.provider = 'resend';
+      this.logger.log('✅ Email provider: Resend API');
+      return;
+    }
+
+    // Priority 2: SMTP (fallback)
     const host = this.configService.get<string>('SMTP_HOST');
     const port = this.configService.get<number>('SMTP_PORT', 465);
     const user = this.configService.get<string>('SMTP_USER');
     const pass = this.configService.get<string>('SMTP_PASS');
 
-    if (!host || !user || !pass) {
-      this.logger.warn('SMTP configuration incomplete. Email sending will be disabled.');
+    if (host && user && pass) {
+      this.initSmtpTransporter(host, port, user, pass);
       return;
     }
 
+    this.logger.warn('⚠️ No email provider configured. Email sending disabled.');
+    this.logger.warn('Set RESEND_API_KEY (recommended) or SMTP_* variables.');
+  }
+
+  private initSmtpTransporter(host: string, port: number, user: string, pass: string) {
     this.logger.log(`Initializing SMTP: ${host}:${port} (user: ${user})`);
 
     // Hostinger SMTP works best with port 465 (SSL) or 587 (STARTTLS)
-    // Railway may have issues with port 587, so we default to 465
     const useSSL = port === 465;
 
     this.transporter = nodemailer.createTransport({
@@ -86,11 +105,13 @@ export class MailService {
       rateLimit: 5,
     });
 
+    this.provider = 'smtp';
+
     // Verify connection asynchronously
-    this.verifyConnection();
+    this.verifySmtpConnection();
   }
 
-  private async verifyConnection() {
+  private async verifySmtpConnection() {
     if (!this.transporter) return;
 
     try {
@@ -99,6 +120,7 @@ export class MailService {
     } catch (err: any) {
       this.logger.error(`❌ SMTP connection failed: ${err.message}`);
       this.logger.error(`SMTP Config: ${this.configService.get('SMTP_HOST')}:${this.configService.get('SMTP_PORT')}`);
+      this.logger.warn('⚠️ Falling back to disabled email. Consider using RESEND_API_KEY instead.');
       // Don't throw - allow app to start, emails will fail gracefully
     }
   }
@@ -156,15 +178,16 @@ export class MailService {
       this.templateCache.set(templateName, template);
       return template;
     } catch (error) {
-      this.logger.error(`Failed to load template: ${templateName}`, error);
+      this.logger.error(`Failed to load template: ${templateName}`);
+      this.logger.error(`Template path: ${templatePath}`);
       throw new Error(`Email template not found: ${templateName}`);
     }
   }
 
   async send(options: EmailOptions): Promise<SendResult> {
-    if (!this.transporter) {
-      this.logger.warn('Email sending skipped - SMTP not configured');
-      return { success: false, error: 'SMTP not configured' };
+    if (this.provider === 'none') {
+      this.logger.warn('Email sending skipped - no email provider configured');
+      return { success: false, error: 'No email provider configured' };
     }
 
     try {
@@ -180,40 +203,104 @@ export class MailService {
 
       // Determine sender
       const from = options.from || `Orivraa <${EMAIL_SENDERS.NO_REPLY}>`;
+      const to = Array.isArray(options.to) ? options.to : [options.to];
 
-      // Send email with retry logic
-      const maxRetries = 3;
-      let lastError: Error | null = null;
-
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          const info = await this.transporter.sendMail({
-            from,
-            to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
-            subject: options.subject,
-            html,
-            replyTo: options.replyTo,
-            attachments: options.attachments,
-          });
-
-          this.logger.log(`✅ Email sent: ${info.messageId} to ${options.to}`);
-          return { success: true, messageId: info.messageId };
-        } catch (sendError: any) {
-          lastError = sendError;
-          this.logger.warn(`Email attempt ${attempt}/${maxRetries} failed: ${sendError.message}`);
-          
-          if (attempt < maxRetries) {
-            // Wait before retrying (exponential backoff)
-            await new Promise(resolve => setTimeout(resolve, attempt * 2000));
-          }
-        }
+      // Use Resend if available
+      if (this.provider === 'resend' && this.resend) {
+        return this.sendWithResend(from, to, options.subject, html, options.replyTo);
       }
 
-      throw lastError;
+      // Fallback to SMTP
+      if (this.provider === 'smtp' && this.transporter) {
+        return this.sendWithSmtp(from, to, options.subject, html, options.replyTo, options.attachments);
+      }
+
+      return { success: false, error: 'No email provider available' };
     } catch (error: any) {
       this.logger.error(`❌ Failed to send email to ${options.to}:`, error.message);
       return { success: false, error: error.message };
     }
+  }
+
+  private async sendWithResend(
+    from: string,
+    to: string[],
+    subject: string,
+    html: string,
+    replyTo?: string,
+  ): Promise<SendResult> {
+    try {
+      const { data, error } = await this.resend!.emails.send({
+        from,
+        to,
+        subject,
+        html,
+        reply_to: replyTo,
+      });
+
+      if (error) {
+        this.logger.error(`❌ Resend error: ${error.message}`);
+        return { success: false, error: error.message };
+      }
+
+      this.logger.log(`✅ Email sent via Resend: ${data?.id} to ${to.join(', ')}`);
+      return { success: true, messageId: data?.id };
+    } catch (err: any) {
+      this.logger.error(`❌ Resend exception: ${err.message}`);
+      return { success: false, error: err.message };
+    }
+  }
+
+  private async sendWithSmtp(
+    from: string,
+    to: string[],
+    subject: string,
+    html: string,
+    replyTo?: string,
+    attachments?: EmailOptions['attachments'],
+  ): Promise<SendResult> {
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const info = await this.transporter!.sendMail({
+          from,
+          to: to.join(', '),
+          subject,
+          html,
+          replyTo,
+          attachments,
+        });
+
+        this.logger.log(`✅ Email sent via SMTP: ${info.messageId} to ${to.join(', ')}`);
+        return { success: true, messageId: info.messageId };
+      } catch (sendError: any) {
+        lastError = sendError;
+        this.logger.warn(`SMTP attempt ${attempt}/${maxRetries} failed: ${sendError.message}`);
+        
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, attempt * 2000));
+        }
+      }
+    }
+
+    this.logger.error(`❌ SMTP failed after ${maxRetries} attempts`);
+    return { success: false, error: lastError?.message || 'SMTP send failed' };
+  }
+
+  // Helper method to check if email is configured
+  isConfigured(): boolean {
+    return this.provider !== 'none';
+  }
+
+  // Get current provider info
+  getProviderInfo(): { provider: EmailProvider; configured: boolean; sender: string } {
+    return {
+      provider: this.provider,
+      configured: this.provider !== 'none',
+      sender: EMAIL_SENDERS.NO_REPLY,
+    };
   }
 
   // ==================== AUTH EMAILS ====================

@@ -471,14 +471,12 @@ export class AdminController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get email configuration status' })
   async getEmailStatus() {
-    // Check if SMTP is configured
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpUser = process.env.SMTP_USER;
+    const providerInfo = this.mailService.getProviderInfo();
     
     return {
-      configured: !!(smtpHost && smtpUser),
-      smtpHost: smtpHost ? smtpHost.substring(0, 15) + '...' : null,
-      smtpUser: smtpUser ? smtpUser.replace(/(.{3}).*(@.*)/, '$1***$2') : null,
+      configured: providerInfo.configured,
+      provider: providerInfo.provider,
+      sender: providerInfo.sender,
     };
   }
 
