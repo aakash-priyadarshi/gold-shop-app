@@ -7,6 +7,18 @@ import * as bcrypt from 'bcryptjs';
 type CurrencyCode = 'NPR' | 'INR' | 'AED' | 'USD' | 'GBP' | 'EUR';
 const DEFAULT_CURRENCY: CurrencyCode = 'NPR';
 
+interface UpdateProfileData {
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  phone?: string;
+  country?: string;
+  preferredLanguage?: string;
+  preferredCurrency?: CurrencyCode;
+  emailNotifications?: boolean;
+  smsNotifications?: boolean;
+}
+
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
@@ -48,16 +60,31 @@ export class UsersService {
 
   async updateProfile(
     userId: string,
-    data: {
-      firstName?: string;
-      lastName?: string;
-      phone?: string;
-      preferredLanguage?: string;
-    },
+    data: UpdateProfileData,
   ) {
+    // Handle combined 'name' field by splitting into firstName/lastName
+    let firstName = data.firstName;
+    let lastName = data.lastName;
+    
+    if (data.name && !firstName && !lastName) {
+      const nameParts = data.name.trim().split(' ');
+      firstName = nameParts[0] || '';
+      lastName = nameParts.slice(1).join(' ') || '';
+    }
+
+    // Build update data with all supported fields
+    const updateData: any = {};
+    if (firstName !== undefined) updateData.firstName = firstName;
+    if (lastName !== undefined) updateData.lastName = lastName;
+    if (data.phone !== undefined) updateData.phone = data.phone;
+    if (data.preferredLanguage !== undefined) updateData.preferredLanguage = data.preferredLanguage;
+    if (data.preferredCurrency !== undefined) updateData.preferredCurrency = data.preferredCurrency;
+    // Note: country, emailNotifications, smsNotifications would need schema updates
+    // For now, we'll store them in the existing fields or ignore
+    
     return this.prisma.user.update({
       where: { id: userId },
-      data,
+      data: updateData,
       select: {
         id: true,
         email: true,

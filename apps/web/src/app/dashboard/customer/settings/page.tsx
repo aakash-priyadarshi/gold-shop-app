@@ -7,8 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -18,10 +16,6 @@ import {
 } from '@/components/ui/select';
 import {
   User,
-  Mail,
-  Phone,
-  MapPin,
-  Bell,
   Shield,
   Save,
   Loader2,
@@ -33,13 +27,12 @@ import { useAuth } from '@/hooks/useAuth';
 
 interface UserProfile {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string | null;
-  country: string | null;
+  preferredLanguage: string;
   preferredCurrency: string;
-  emailNotifications: boolean;
-  smsNotifications: boolean;
 }
 
 const currencies = [
@@ -47,18 +40,9 @@ const currencies = [
   { value: 'EUR', label: 'EUR - Euro' },
   { value: 'GBP', label: 'GBP - British Pound' },
   { value: 'INR', label: 'INR - Indian Rupee' },
+  { value: 'NPR', label: 'NPR - Nepalese Rupee' },
   { value: 'AED', label: 'AED - UAE Dirham' },
-  { value: 'SGD', label: 'SGD - Singapore Dollar' },
 ];
-
-const countries = [
-  { value: 'US', label: 'United States' },
-  { value: 'UK', label: 'United Kingdom' },
-  { value: 'IN', label: 'India' },
-  { value: 'AE', label: 'United Arab Emirates' },
-  { value: 'SG', label: 'Singapore' },
-  { value: 'AU', label: 'Australia' },
-  { value: 'CA', label: 'Canada' },
 ];
 
 export default function CustomerSettingsPage() {
@@ -69,13 +53,12 @@ export default function CustomerSettingsPage() {
   
   const [profile, setProfile] = useState<UserProfile>({
     id: '',
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
-    country: '',
+    preferredLanguage: 'en',
     preferredCurrency: 'USD',
-    emailNotifications: true,
-    smsNotifications: false,
   });
 
   const [passwords, setPasswords] = useState({
@@ -96,13 +79,12 @@ export default function CustomerSettingsPage() {
       const response = await api.get('/users/me');
       setProfile({
         id: response.data.id,
-        name: response.data.name || '',
+        firstName: response.data.firstName || '',
+        lastName: response.data.lastName || '',
         email: response.data.email || '',
         phone: response.data.phone || '',
-        country: response.data.country || '',
+        preferredLanguage: response.data.preferredLanguage || 'en',
         preferredCurrency: response.data.preferredCurrency || 'USD',
-        emailNotifications: response.data.emailNotifications ?? true,
-        smsNotifications: response.data.smsNotifications ?? false,
       });
     } catch (error) {
       console.error('Failed to load profile:', error);
@@ -115,12 +97,10 @@ export default function CustomerSettingsPage() {
     setIsSaving(true);
     try {
       await api.patch('/users/me', {
-        name: profile.name,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
         phone: profile.phone || null,
-        country: profile.country || null,
         preferredCurrency: profile.preferredCurrency,
-        emailNotifications: profile.emailNotifications,
-        smsNotifications: profile.smsNotifications,
       });
 
       toast({
@@ -220,17 +200,25 @@ export default function CustomerSettingsPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
+                  <Label htmlFor="profile-firstName">First Name</Label>
                   <Input
-                    id="name"
-                    value={profile.name}
-                    onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                    id="profile-firstName"
+                    value={profile.firstName}
+                    onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="profile-lastName">Last Name</Label>
                   <Input
-                    id="email"
+                    id="profile-lastName"
+                    value={profile.lastName}
+                    onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="profile-email">Email</Label>
+                  <Input
+                    id="profile-email"
                     type="email"
                     value={profile.email}
                     disabled
@@ -239,32 +227,14 @@ export default function CustomerSettingsPage() {
                   <p className="text-xs text-muted-foreground">Email cannot be changed</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
+                  <Label htmlFor="profile-phone">Phone Number</Label>
                   <Input
-                    id="phone"
+                    id="profile-phone"
                     type="tel"
                     value={profile.phone || ''}
                     onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
                     placeholder="+1 (555) 000-0000"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="country">Country</Label>
-                  <Select
-                    value={profile.country || ''}
-                    onValueChange={(value) => setProfile({ ...profile, country: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select country" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {countries.map((country) => (
-                        <SelectItem key={country.value} value={country.value}>
-                          {country.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 </div>
               </div>
             </CardContent>
@@ -283,12 +253,12 @@ export default function CustomerSettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="currency">Preferred Currency</Label>
+                <Label htmlFor="pref-currency">Preferred Currency</Label>
                 <Select
                   value={profile.preferredCurrency}
                   onValueChange={(value) => setProfile({ ...profile, preferredCurrency: value })}
                 >
-                  <SelectTrigger className="w-64">
+                  <SelectTrigger id="pref-currency" className="w-64">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -302,50 +272,6 @@ export default function CustomerSettingsPage() {
                 <p className="text-xs text-muted-foreground">
                   Prices will be displayed in this currency where possible
                 </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Notifications */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                Notifications
-              </CardTitle>
-              <CardDescription>
-                Choose how you want to be notified
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Email Notifications</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Receive updates about your orders and offers via email
-                  </p>
-                </div>
-                <Switch
-                  checked={profile.emailNotifications}
-                  onCheckedChange={(checked) =>
-                    setProfile({ ...profile, emailNotifications: checked })
-                  }
-                />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>SMS Notifications</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Receive text messages for important updates
-                  </p>
-                </div>
-                <Switch
-                  checked={profile.smsNotifications}
-                  onCheckedChange={(checked) =>
-                    setProfile({ ...profile, smsNotifications: checked })
-                  }
-                />
               </div>
             </CardContent>
           </Card>
@@ -380,9 +306,9 @@ export default function CustomerSettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="currentPassword">Current Password</Label>
+                <Label htmlFor="security-currentPassword">Current Password</Label>
                 <Input
-                  id="currentPassword"
+                  id="security-currentPassword"
                   type="password"
                   value={passwords.currentPassword}
                   onChange={(e) =>
@@ -392,9 +318,9 @@ export default function CustomerSettingsPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="newPassword">New Password</Label>
+                  <Label htmlFor="security-newPassword">New Password</Label>
                   <Input
-                    id="newPassword"
+                    id="security-newPassword"
                     type="password"
                     value={passwords.newPassword}
                     onChange={(e) =>
@@ -403,9 +329,9 @@ export default function CustomerSettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                  <Label htmlFor="security-confirmPassword">Confirm New Password</Label>
                   <Input
-                    id="confirmPassword"
+                    id="security-confirmPassword"
                     type="password"
                     value={passwords.confirmPassword}
                     onChange={(e) =>
