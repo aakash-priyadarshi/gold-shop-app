@@ -64,6 +64,10 @@ export const authApi = {
   logout: () => api.post('/auth/logout'),
   me: () => api.get('/auth/me'),
   refresh: () => api.post('/auth/refresh'),
+  checkEmail: (email: string) => 
+    api.get<{ exists: boolean }>('/auth/check-email', { params: { email } }),
+  checkPhone: (phone: string) => 
+    api.get<{ exists: boolean }>('/auth/check-phone', { params: { phone } }),
 };
 
 // Users API

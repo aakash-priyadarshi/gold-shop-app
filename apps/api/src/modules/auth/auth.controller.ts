@@ -8,10 +8,11 @@ import {
   HttpStatus,
   Get,
   Res,
+  Query,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiExcludeEndpoint } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiExcludeEndpoint, ApiQuery } from '@nestjs/swagger';
 import { AuthService, AuthResponse, RegisterResponse } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -23,6 +24,8 @@ import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
+import { CheckEmailDto } from './dto/check-email.dto';
+import { CheckPhoneDto } from './dto/check-phone.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -40,6 +43,32 @@ export class AuthController {
   async register(@Body() dto: RegisterDto, @Request() req: any): Promise<RegisterResponse> {
     const ipAddress = req.ip || req.connection?.remoteAddress;
     return this.authService.register(dto, ipAddress);
+  }
+
+  @Get('check-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Check if email is already registered (uses Redis cache)' })
+  @ApiQuery({ name: 'email', required: true, description: 'Email address to check' })
+  @ApiResponse({ status: 200, description: 'Returns whether email exists' })
+  async checkEmail(@Query('email') email: string) {
+    if (!email) {
+      return { exists: false, message: 'Email is required' };
+    }
+    const result = await this.authService.checkEmailExists(email.toLowerCase().trim());
+    return { exists: result.exists };
+  }
+
+  @Get('check-phone')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Check if phone number is already registered (uses Redis cache)' })
+  @ApiQuery({ name: 'phone', required: true, description: 'Phone number to check' })
+  @ApiResponse({ status: 200, description: 'Returns whether phone exists' })
+  async checkPhone(@Query('phone') phone: string) {
+    if (!phone) {
+      return { exists: false, message: 'Phone is required' };
+    }
+    const result = await this.authService.checkPhoneExists(phone.trim());
+    return { exists: result.exists };
   }
 
   @Post('verify-email')

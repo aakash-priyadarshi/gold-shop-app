@@ -43,7 +43,6 @@ const currencies = [
   { value: 'NPR', label: 'NPR - Nepalese Rupee' },
   { value: 'AED', label: 'AED - UAE Dirham' },
 ];
-];
 
 export default function CustomerSettingsPage() {
   const { user, refreshUser } = useAuth();

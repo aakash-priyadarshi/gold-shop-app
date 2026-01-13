@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense, useRef } from 'react';
+import { useState, useEffect, Suspense, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, getDashboardRoute, UserRole, RegisterResponse } from '@/hooks/useAuth';
+import { authApi } from '@/lib/api';
 import { GoldenUnveil } from '@/components/auth/GoldenUnveil';
 import { AuthBackground } from '@/components/auth/AuthBackground';
 import { BRAND } from '@/config/brand';
@@ -159,6 +160,12 @@ function RegisterForm() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [hasVisited, setHasVisited] = useState(false);
   
+  // Real-time email/phone validation state
+  const [emailCheckState, setEmailCheckState] = useState<{ checking: boolean; exists: boolean | null }>({ checking: false, exists: null });
+  const [phoneCheckState, setPhoneCheckState] = useState<{ checking: boolean; exists: boolean | null }>({ checking: false, exists: null });
+  const emailCheckTimeout = useRef<NodeJS.Timeout | null>(null);
+  const phoneCheckTimeout = useRef<NodeJS.Timeout | null>(null);
+  
   // OTP Verification State
   const [showOtpScreen, setShowOtpScreen] = useState(false);
   const [registrationData, setRegistrationData] = useState<RegisterResponse | null>(null);
@@ -188,6 +195,64 @@ function RegisterForm() {
     sessionStorage.setItem('orivraa_visited', 'true');
   };
 
+  // Real-time email check with debounce (Redis-backed for speed)
+  const checkEmailAvailability = useCallback(async (email: string) => {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setEmailCheckState({ checking: false, exists: null });
+      return;
+    }
+
+    // Clear previous timeout
+    if (emailCheckTimeout.current) {
+      clearTimeout(emailCheckTimeout.current);
+    }
+
+    setEmailCheckState({ checking: true, exists: null });
+
+    // Debounce the API call by 500ms
+    emailCheckTimeout.current = setTimeout(async () => {
+      try {
+        const response = await authApi.checkEmail(email);
+        setEmailCheckState({ checking: false, exists: response.data.exists });
+      } catch (error) {
+        setEmailCheckState({ checking: false, exists: null });
+      }
+    }, 500);
+  }, []);
+
+  // Real-time phone check with debounce (Redis-backed for speed)
+  const checkPhoneAvailability = useCallback(async (phone: string) => {
+    if (!phone || phone.length < 7) {
+      setPhoneCheckState({ checking: false, exists: null });
+      return;
+    }
+
+    // Clear previous timeout
+    if (phoneCheckTimeout.current) {
+      clearTimeout(phoneCheckTimeout.current);
+    }
+
+    setPhoneCheckState({ checking: true, exists: null });
+
+    // Debounce the API call by 500ms
+    phoneCheckTimeout.current = setTimeout(async () => {
+      try {
+        const response = await authApi.checkPhone(phone);
+        setPhoneCheckState({ checking: false, exists: response.data.exists });
+      } catch (error) {
+        setPhoneCheckState({ checking: false, exists: null });
+      }
+    }, 500);
+  }, []);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (emailCheckTimeout.current) clearTimeout(emailCheckTimeout.current);
+      if (phoneCheckTimeout.current) clearTimeout(phoneCheckTimeout.current);
+    };
+  }, []);
+
   // Customer form
   const customerForm = useForm<CustomerForm>({
     resolver: zodResolver(customerSchema),
@@ -208,6 +273,8 @@ function RegisterForm() {
   // Clear error on tab change or unmount
   useEffect(() => {
     clearError();
+    setEmailCheckState({ checking: false, exists: null });
+    setPhoneCheckState({ checking: false, exists: null });
     return () => clearError();
   }, [activeTab, clearError]);
 
@@ -584,14 +651,44 @@ function RegisterForm() {
                       id="customer-email"
                       type="email"
                       placeholder="you@example.com"
-                      className="h-11 pl-10 rounded-xl"
-                      {...customerForm.register('email')}
+                      className={cn(
+                        "h-11 pl-10 pr-10 rounded-xl",
+                        emailCheckState.exists === true && "border-red-500 focus-visible:ring-red-500",
+                        emailCheckState.exists === false && "border-green-500 focus-visible:ring-green-500"
+                      )}
+                      {...customerForm.register('email', {
+                        onChange: (e) => checkEmailAvailability(e.target.value),
+                      })}
                     />
+                    {/* Real-time email check indicator */}
+                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
+                      {emailCheckState.checking && (
+                        <ArrowPathIcon className="h-4 w-4 text-gray-400 animate-spin" />
+                      )}
+                      {!emailCheckState.checking && emailCheckState.exists === true && (
+                        <ExclamationCircleIcon className="h-4 w-4 text-red-500" />
+                      )}
+                      {!emailCheckState.checking && emailCheckState.exists === false && (
+                        <CheckCircleIcon className="h-4 w-4 text-green-500" />
+                      )}
+                    </div>
                   </div>
                   {customerForm.formState.errors.email && (
                     <p className="text-sm text-red-500 flex items-center gap-1">
                       <ExclamationCircleIcon className="h-3.5 w-3.5" />
                       {customerForm.formState.errors.email.message}
+                    </p>
+                  )}
+                  {emailCheckState.exists === true && (
+                    <p className="text-sm text-red-500 flex items-center gap-1">
+                      <ExclamationCircleIcon className="h-3.5 w-3.5" />
+                      This email is already registered. <Link href="/auth/login" className="underline font-medium">Login instead?</Link>
+                    </p>
+                  )}
+                  {emailCheckState.exists === false && (
+                    <p className="text-sm text-green-600 flex items-center gap-1">
+                      <CheckCircleIcon className="h-3.5 w-3.5" />
+                      Email is available
                     </p>
                   )}
                 </div>
@@ -603,10 +700,34 @@ function RegisterForm() {
                       id="customer-phone"
                       type="tel"
                       placeholder={placeholders.phone}
-                      className="h-11 pl-10 rounded-xl"
-                      {...customerForm.register('phone')}
+                      className={cn(
+                        "h-11 pl-10 pr-10 rounded-xl",
+                        phoneCheckState.exists === true && "border-red-500 focus-visible:ring-red-500",
+                        phoneCheckState.exists === false && "border-green-500 focus-visible:ring-green-500"
+                      )}
+                      {...customerForm.register('phone', {
+                        onChange: (e) => checkPhoneAvailability(e.target.value),
+                      })}
                     />
+                    {/* Real-time phone check indicator */}
+                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
+                      {phoneCheckState.checking && (
+                        <ArrowPathIcon className="h-4 w-4 text-gray-400 animate-spin" />
+                      )}
+                      {!phoneCheckState.checking && phoneCheckState.exists === true && (
+                        <ExclamationCircleIcon className="h-4 w-4 text-red-500" />
+                      )}
+                      {!phoneCheckState.checking && phoneCheckState.exists === false && (
+                        <CheckCircleIcon className="h-4 w-4 text-green-500" />
+                      )}
+                    </div>
                   </div>
+                  {phoneCheckState.exists === true && (
+                    <p className="text-sm text-red-500 flex items-center gap-1">
+                      <ExclamationCircleIcon className="h-3.5 w-3.5" />
+                      This phone number is already registered
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="customer-password">Password</Label>
@@ -665,7 +786,7 @@ function RegisterForm() {
                 <Button 
                   type="submit" 
                   className="w-full h-12 rounded-xl gold-gradient text-white font-semibold transition-all hover:shadow-lg hover:shadow-gold-500/25" 
-                  disabled={isLoading}
+                  disabled={isLoading || emailCheckState.exists === true || phoneCheckState.exists === true}
                 >
                   {isLoading ? (
                     <span className="flex items-center gap-2">
@@ -755,14 +876,38 @@ function RegisterForm() {
                           id="shop-email"
                           type="email"
                           placeholder="shop@example.com"
-                          className="h-11 pl-10 rounded-xl"
-                          {...shopkeeperForm.register('email')}
+                          className={cn(
+                            "h-11 pl-10 pr-10 rounded-xl",
+                            emailCheckState.exists === true && "border-red-500 focus-visible:ring-red-500",
+                            emailCheckState.exists === false && "border-green-500 focus-visible:ring-green-500"
+                          )}
+                          {...shopkeeperForm.register('email', {
+                            onChange: (e) => checkEmailAvailability(e.target.value),
+                          })}
                         />
+                        {/* Real-time email check indicator */}
+                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
+                          {emailCheckState.checking && (
+                            <ArrowPathIcon className="h-4 w-4 text-gray-400 animate-spin" />
+                          )}
+                          {!emailCheckState.checking && emailCheckState.exists === true && (
+                            <ExclamationCircleIcon className="h-4 w-4 text-red-500" />
+                          )}
+                          {!emailCheckState.checking && emailCheckState.exists === false && (
+                            <CheckCircleIcon className="h-4 w-4 text-green-500" />
+                          )}
+                        </div>
                       </div>
                       {shopkeeperForm.formState.errors.email && (
                         <p className="text-sm text-red-500 flex items-center gap-1">
                           <ExclamationCircleIcon className="h-3.5 w-3.5" />
                           {shopkeeperForm.formState.errors.email.message}
+                        </p>
+                      )}
+                      {emailCheckState.exists === true && (
+                        <p className="text-sm text-red-500 flex items-center gap-1">
+                          <ExclamationCircleIcon className="h-3.5 w-3.5" />
+                          Email already registered
                         </p>
                       )}
                     </div>
@@ -774,14 +919,38 @@ function RegisterForm() {
                           id="shop-phone"
                           type="tel"
                           placeholder={placeholders.phone}
-                          className="h-11 pl-10 rounded-xl"
-                          {...shopkeeperForm.register('phone')}
+                          className={cn(
+                            "h-11 pl-10 pr-10 rounded-xl",
+                            phoneCheckState.exists === true && "border-red-500 focus-visible:ring-red-500",
+                            phoneCheckState.exists === false && "border-green-500 focus-visible:ring-green-500"
+                          )}
+                          {...shopkeeperForm.register('phone', {
+                            onChange: (e) => checkPhoneAvailability(e.target.value),
+                          })}
                         />
+                        {/* Real-time phone check indicator */}
+                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
+                          {phoneCheckState.checking && (
+                            <ArrowPathIcon className="h-4 w-4 text-gray-400 animate-spin" />
+                          )}
+                          {!phoneCheckState.checking && phoneCheckState.exists === true && (
+                            <ExclamationCircleIcon className="h-4 w-4 text-red-500" />
+                          )}
+                          {!phoneCheckState.checking && phoneCheckState.exists === false && (
+                            <CheckCircleIcon className="h-4 w-4 text-green-500" />
+                          )}
+                        </div>
                       </div>
                       {shopkeeperForm.formState.errors.phone && (
                         <p className="text-sm text-red-500 flex items-center gap-1">
                           <ExclamationCircleIcon className="h-3.5 w-3.5" />
                           {shopkeeperForm.formState.errors.phone.message}
+                        </p>
+                      )}
+                      {phoneCheckState.exists === true && (
+                        <p className="text-sm text-red-500 flex items-center gap-1">
+                          <ExclamationCircleIcon className="h-3.5 w-3.5" />
+                          Phone already registered
                         </p>
                       )}
                     </div>
@@ -946,7 +1115,7 @@ function RegisterForm() {
                 <Button 
                   type="submit" 
                   className="w-full h-12 rounded-xl gold-gradient text-white font-semibold transition-all hover:shadow-lg hover:shadow-gold-500/25" 
-                  disabled={isLoading}
+                  disabled={isLoading || emailCheckState.exists === true || phoneCheckState.exists === true}
                 >
                   {isLoading ? (
                     <span className="flex items-center gap-2">
