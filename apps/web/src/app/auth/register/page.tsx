@@ -17,6 +17,7 @@ import { useAuth, getDashboardRoute, UserRole, RegisterResponse } from '@/hooks/
 import { GoldenUnveil } from '@/components/auth/GoldenUnveil';
 import { AuthBackground } from '@/components/auth/AuthBackground';
 import { BRAND } from '@/config/brand';
+import { usePreferencesStore, type CountryCode } from '@/store/preferences';
 import {
   UserIcon,
   BuildingStorefrontIcon,
@@ -57,7 +58,7 @@ const shopkeeperSchema = z.object({
   confirmPassword: z.string(),
   // Shop details
   shopName: z.string().min(2, 'Shop name must be at least 2 characters'),
-  country: z.enum(['NP', 'IN', 'US', 'AE'], { required_error: 'Please select a country' }),
+  country: z.enum(['NP', 'IN', 'US', 'AE', 'UK'], { required_error: 'Please select a country' }),
   city: z.string().min(2, 'City must be at least 2 characters'),
   address: z.string().optional(),
   shopPhone: z.string().optional(),
@@ -74,13 +75,84 @@ const countryOptions = [
   { value: 'IN', label: '🇮🇳 India', currency: 'INR' },
   { value: 'US', label: '🇺🇸 United States', currency: 'USD' },
   { value: 'AE', label: '🇦🇪 UAE', currency: 'AED' },
+  { value: 'UK', label: '🇬🇧 United Kingdom', currency: 'GBP' },
 ];
+
+// Country-specific placeholder data
+const countryPlaceholders: Record<string, {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  shopName: string;
+  city: string;
+  address: string;
+  shopPhone: string;
+}> = {
+  NP: {
+    firstName: 'Ramesh',
+    lastName: 'Shrestha',
+    phone: '+977 98XXXXXXXX',
+    shopName: 'Shrestha Gold House',
+    city: 'Kathmandu',
+    address: 'New Road, Kathmandu',
+    shopPhone: '+977 01-XXXXXXX',
+  },
+  IN: {
+    firstName: 'Rajesh',
+    lastName: 'Sharma',
+    phone: '+91 98XXXXXXXX',
+    shopName: 'Sharma Jewellers',
+    city: 'Mumbai',
+    address: 'Zaveri Bazaar, Mumbai',
+    shopPhone: '+91 22-XXXXXXXX',
+  },
+  US: {
+    firstName: 'John',
+    lastName: 'Smith',
+    phone: '+1 (555) XXX-XXXX',
+    shopName: 'Smith Fine Jewelry',
+    city: 'New York',
+    address: '47th Street, New York',
+    shopPhone: '+1 (212) XXX-XXXX',
+  },
+  UK: {
+    firstName: 'James',
+    lastName: 'Williams',
+    phone: '+44 7XXX XXXXXX',
+    shopName: 'Williams Gold & Diamonds',
+    city: 'London',
+    address: 'Hatton Garden, London',
+    shopPhone: '+44 20 XXXX XXXX',
+  },
+  AE: {
+    firstName: 'Ahmed',
+    lastName: 'Al-Rashid',
+    phone: '+971 5X XXX XXXX',
+    shopName: 'Al-Rashid Gold Souq',
+    city: 'Dubai',
+    address: 'Gold Souq, Deira, Dubai',
+    shopPhone: '+971 4 XXX XXXX',
+  },
+  EU: {
+    firstName: 'Hans',
+    lastName: 'Mueller',
+    phone: '+49 1XX XXXXXXXX',
+    shopName: 'Mueller Schmuck',
+    city: 'Frankfurt',
+    address: 'Goethestraße, Frankfurt',
+    shopPhone: '+49 69 XXXXXXXX',
+  },
+};
 
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const { register: registerUser, verifyEmail, resendVerificationOtp, googleLogin, isAuthenticated, user, isLoading: authLoading, error, clearError } = useAuth();
+  
+  // Get detected country from preferences store (set by Cloudflare geo-detection)
+  const detectedCountry = usePreferencesStore((state) => state.country);
+  const placeholders = countryPlaceholders[detectedCountry] || countryPlaceholders['US'];
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'customer' | 'shopkeeper'>('customer');
   const [showPassword, setShowPassword] = useState(false);
@@ -515,7 +587,7 @@ function RegisterForm() {
                       <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                       <Input
                         id="customer-firstName"
-                        placeholder="John"
+                        placeholder={placeholders.firstName}
                         className="h-11 pl-10 rounded-xl"
                         {...customerForm.register('firstName')}
                       />
@@ -531,7 +603,7 @@ function RegisterForm() {
                     <Label htmlFor="customer-lastName">Last Name</Label>
                     <Input
                       id="customer-lastName"
-                      placeholder="Doe"
+                      placeholder={placeholders.lastName}
                       className="h-11 rounded-xl"
                       {...customerForm.register('lastName')}
                     />
@@ -569,7 +641,7 @@ function RegisterForm() {
                     <Input
                       id="customer-phone"
                       type="tel"
-                      placeholder="+977 98XXXXXXXX"
+                      placeholder={placeholders.phone}
                       className="h-11 pl-10 rounded-xl"
                       {...customerForm.register('phone')}
                     />
@@ -661,7 +733,7 @@ function RegisterForm() {
                         <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                         <Input
                           id="shop-firstName"
-                          placeholder="Ramesh"
+                          placeholder={placeholders.firstName}
                           className="h-11 pl-10 rounded-xl"
                           {...shopkeeperForm.register('firstName')}
                         />
@@ -677,7 +749,7 @@ function RegisterForm() {
                       <Label htmlFor="shop-lastName">Last Name</Label>
                       <Input
                         id="shop-lastName"
-                        placeholder="Shrestha"
+                        placeholder={placeholders.lastName}
                         className="h-11 rounded-xl"
                         {...shopkeeperForm.register('lastName')}
                       />
@@ -716,7 +788,7 @@ function RegisterForm() {
                         <Input
                           id="shop-phone"
                           type="tel"
-                          placeholder="+977 98XXXXXXXX"
+                          placeholder={placeholders.phone}
                           className="h-11 pl-10 rounded-xl"
                           {...shopkeeperForm.register('phone')}
                         />
@@ -796,7 +868,7 @@ function RegisterForm() {
                         <BuildingStorefrontIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                         <Input
                           id="shop-name"
-                          placeholder="Shrestha Gold House"
+                          placeholder={placeholders.shopName}
                           className="h-11 pl-10 rounded-xl"
                           {...shopkeeperForm.register('shopName')}
                         />
@@ -838,7 +910,7 @@ function RegisterForm() {
                           <MapPinIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                           <Input
                             id="shop-city"
-                            placeholder="Kathmandu"
+                            placeholder={placeholders.city}
                             className="h-11 pl-10 rounded-xl"
                             {...shopkeeperForm.register('city')}
                           />
@@ -857,7 +929,7 @@ function RegisterForm() {
                         <MapPinIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                         <Input
                           id="shop-address"
-                          placeholder="New Road, Kathmandu"
+                          placeholder={placeholders.address}
                           className="h-11 pl-10 rounded-xl"
                           {...shopkeeperForm.register('address')}
                         />
@@ -870,7 +942,7 @@ function RegisterForm() {
                         <Input
                           id="shop-shopPhone"
                           type="tel"
-                          placeholder="+977 01-XXXXXXX"
+                          placeholder={placeholders.shopPhone}
                           className="h-11 pl-10 rounded-xl"
                           {...shopkeeperForm.register('shopPhone')}
                         />
