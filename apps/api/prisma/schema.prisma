@@ -1,6 +1,3 @@
-// Gold Shop Marketplace - Complete Database Schema
-// Supports: Inventory Sales + Custom Manufacturing + Multi-vendor RFQ System
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,9 +8,996 @@ datasource db {
   directUrl = env("DIRECT_DATABASE_URL")
 }
 
-// ══════════════════════════════════════
-// USER & AUTHENTICATION
-// ══════════════════════════════════════
+model User {
+  id                   String                @id @default(uuid())
+  email                String                @unique
+  phone                String?               @unique
+  passwordHash         String
+  googleId             String?               @unique
+  role                 UserRole
+  status               UserStatus            @default(PENDING_VERIFICATION)
+  firstName            String
+  lastName             String
+  preferredLanguage    String                @default("en")
+  preferredCurrency    CurrencyCode          @default(NPR)
+  themeMode            String                @default("system")
+  emailVerified        Boolean               @default(false)
+  emailVerifiedAt      DateTime?
+  phoneVerifiedAt      DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  lastLoginAt          DateTime?
+  apiTokens            ApiToken[]
+  auditLogs            AuditLog[]
+  notifications        Notification[]
+  customerOrders       Order[]               @relation("CustomerOrders")
+  refreshTokens        RefreshToken[]
+  reportsAgainst       Report[]              @relation("ReportReported")
+  reportsFiled         Report[]              @relation("ReportReporter")
+  rfqRequests          RfqRequest[]          @relation("CustomerRfqs")
+  shop                 Shop?
+  verificationRequests VerificationRequest[] @relation("UserVerificationRequests")
+
+  @@index([email])
+  @@index([phone])
+  @@index([role])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  userAgent String?
+  ipAddress String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+}
+
+model ApiToken {
+  id                 String    @id @default(uuid())
+  userId             String
+  name               String
+  tokenHash          String    @unique
+  tokenPrefix        String
+  scopes             String[]  @default([])
+  expiresAt          DateTime
+  lastUsedAt         DateTime?
+  revokedAt          DateTime?
+  createdAt          DateTime  @default(now())
+  encryptedToken     String?
+  tokenViewableUntil DateTime?
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([tokenPrefix])
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  userAgent String?
+  ipAddress String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+}
+
+model Shop {
+  id                      String                @id @default(uuid())
+  userId                  String                @unique
+  shopName                String
+  shopNameNe              String?
+  shopNameHi              String?
+  description             String?
+  descriptionNe           String?
+  descriptionHi           String?
+  country                 String                @default("NP")
+  state                   String?
+  city                    String
+  address                 String
+  pincode                 String?
+  latitude                Float?
+  longitude               Float?
+  contactPhone            String
+  contactEmail            String?
+  whatsappNumber          String?
+  isVerified              Boolean               @default(false)
+  verificationDocuments   Json?
+  bisLicenseNumber        String?
+  panNumber               String?
+  vatNumber               String?
+  supportedJewelleryTypes String[]
+  supportedMethods        String[]
+  supportedMaterials      String[]
+  supportedFinishes       String[]
+  minOrderValueNpr        Float                 @default(0)
+  maxOrderValueNpr        Float?
+  maxWeightGrams          Float?
+  acceptsComplexOrders    Boolean               @default(true)
+  codEnabled              Boolean               @default(false)
+  codMaxValueNpr          Float?
+  bankAccountDetails      Json?
+  makingChargePercent     Float                 @default(10)
+  nickelCompliantFlag     Boolean               @default(false)
+  isActive                Boolean               @default(true)
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  holdAt                  DateTime?
+  holdReason              String?
+  isOnHold                Boolean               @default(false)
+  lastComplianceCheckAt   DateTime?
+  commissionLedgers       CommissionLedger[]
+  inventoryItems          InventoryItem[]
+  orders                  Order[]
+  rfqOffers               RfqOffer[]
+  user                    User                  @relation(fields: [userId], references: [id])
+  finishPricing           ShopFinishPricing[]
+  metalRates              ShopMetalRate[]
+  priceOverrides          ShopPriceOverride[]
+  ratings                 ShopRating[]
+  verificationRequests    VerificationRequest[] @relation("ShopVerificationRequests")
+
+  @@index([country, city])
+  @@index([isActive, isVerified])
+}
+
+model ShopMetalRate {
+  id             String   @id @default(uuid())
+  shopId         String
+  metalType      String
+  ratePerGramNpr Float
+  lastUpdatedAt  DateTime @default(now())
+  shop           Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, metalType])
+  @@index([shopId])
+}
+
+model ShopFinishPricing {
+  id         String @id @default(uuid())
+  shopId     String
+  finishType String
+  tier       String
+  priceNpr   Float
+  shop       Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, finishType, tier])
+  @@index([shopId])
+}
+
+model Material {
+  id               String           @id @default(uuid())
+  code             String           @unique
+  category         MaterialCategory
+  nameEn           String
+  nameNe           String?
+  nameHi           String?
+  descriptionEn    String?
+  descriptionNe    String?
+  descriptionHi    String?
+  purity           Float?
+  allowedMethods   String[]
+  complianceFlags  String[]
+  baseUnit         String           @default("gram")
+  marketRateNpr    Float?
+  lastMarketUpdate DateTime?
+  isActive         Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([category])
+  @@index([code])
+}
+
+model InventoryItem {
+  id               String          @id @default(uuid())
+  shopId           String
+  sku              String          @unique
+  jewelleryType    JewelleryType
+  nameEn           String
+  nameNe           String?
+  nameHi           String?
+  descriptionEn    String?
+  descriptionNe    String?
+  descriptionHi    String?
+  buildMethod      String
+  composition      Json
+  totalWeightGrams Float
+  dimensions       Json?
+  gemstones        Json?
+  metalValueNpr    Float
+  makingChargeNpr  Float
+  gemstoneValueNpr Float           @default(0)
+  taxNpr           Float           @default(0)
+  totalPriceNpr    Float
+  images           String[]
+  videos           String[]
+  certificateUrl   String?
+  hallmarkNumber   String?
+  hallmarkDate     DateTime?
+  purityCertUrl    String?
+  labels           String[]
+  status           InventoryStatus @default(AVAILABLE)
+  stockQuantity    Int             @default(1)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  shop             Shop            @relation(fields: [shopId], references: [id])
+
+  @@index([shopId, status])
+  @@index([jewelleryType])
+  @@index([buildMethod])
+}
+
+model RfqRequest {
+  id                    String          @id @default(uuid())
+  customerId            String
+  jewelleryType         JewelleryType
+  buildMethod           BuildMethod
+  templateId            String?
+  weightCategory        WeightCategory?
+  composition           Json
+  surfaceFinish         String?
+  addGoldPlating        Boolean         @default(false)
+  platingType           String?
+  platingTier           String?
+  targetTotalWeightG    Float?
+  targetGoldWeightG     Float?
+  budgetMinNpr          Float?
+  budgetMaxNpr          Float?
+  preferredDeliveryDays Int?
+  specialInstructions   String?
+  referenceImages       String[]
+  estimatedPriceMinNpr  Float?
+  estimatedPriceMaxNpr  Float?
+  broadcastSnapshot     Json?
+  broadcastAt           DateTime?
+  status                RfqStatus       @default(DRAFT)
+  expiresAt             DateTime?
+  selectedOfferId       String?         @unique
+  mandatoryLabels       String[]
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  gemstones             RfqGemstone[]
+  offers                RfqOffer[]
+  customer              User            @relation("CustomerRfqs", fields: [customerId], references: [id])
+  selectedOffer         RfqOffer?       @relation("SelectedOffer", fields: [selectedOfferId], references: [id])
+  targetedShops         RfqShopTarget[]
+
+  @@index([customerId])
+  @@index([status])
+}
+
+model RfqGemstone {
+  id                String     @id @default(uuid())
+  rfqId             String
+  stoneType         String
+  shape             String
+  sizeMm            Float?
+  caratWeight       Float?
+  color             String?
+  clarity           String?
+  settingStyle      String?
+  count             Int        @default(1)
+  position          String?
+  estimatedPriceNpr Float?
+  createdAt         DateTime   @default(now())
+  rfq               RfqRequest @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+
+  @@index([rfqId])
+}
+
+model RfqShopTarget {
+  id          String     @id @default(uuid())
+  rfqId       String
+  shopId      String
+  sentAt      DateTime   @default(now())
+  viewedAt    DateTime?
+  respondedAt DateTime?
+  rfq         RfqRequest @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+
+  @@unique([rfqId, shopId])
+  @@index([shopId])
+}
+
+model RfqOffer {
+  id                    String      @id @default(uuid())
+  rfqId                 String
+  shopId                String
+  offerType             String
+  declineReason         String?
+  confirmedComposition  Json
+  confirmedTotalWeightG Float?
+  confirmedGoldWeightG  Float?
+  metalCostNpr          Float
+  makingChargeNpr       Float
+  finishCostNpr         Float       @default(0)
+  gemstoneCostNpr       Float       @default(0)
+  taxNpr                Float       @default(0)
+  totalPriceNpr         Float
+  estimatedDays         Int
+  productionStartDate   DateTime?
+  bookingFeeNpr         Float
+  bookingFeePercent     Float
+  paymentDeadline       DateTime?
+  shopNotes             String?
+  status                OfferStatus @default(PENDING)
+  parentOfferId         String?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  parentOffer           RfqOffer?   @relation("OfferChain", fields: [parentOfferId], references: [id])
+  counterOffers         RfqOffer[]  @relation("OfferChain")
+  rfq                   RfqRequest  @relation(fields: [rfqId], references: [id])
+  shop                  Shop        @relation(fields: [shopId], references: [id])
+  selectedByRfq         RfqRequest? @relation("SelectedOffer")
+
+  @@index([rfqId])
+  @@index([shopId])
+  @@index([status])
+}
+
+model Order {
+  id                     String              @id @default(uuid())
+  orderNumber            String              @unique
+  orderType              OrderType
+  customerId             String
+  shopId                 String
+  inventoryItemId        String?
+  rfqOfferId             String?
+  productSnapshot        Json
+  subtotalNpr            Float
+  taxNpr                 Float
+  shippingNpr            Float               @default(0)
+  discountNpr            Float               @default(0)
+  totalNpr               Float
+  paymentMethod          String?
+  paymentStatus          String
+  bookingFeePaidNpr      Float?
+  balanceDueNpr          Float
+  shippingAddress        Json
+  shippingMethod         String?
+  trackingNumber         String?
+  estimatedDelivery      DateTime?
+  actualDelivery         DateTime?
+  status                 OrderStatus         @default(CREATED)
+  bookingExpiresAt       DateTime?
+  createdByAdmin         Boolean             @default(false)
+  adminNotes             String?
+  paymentVerifiedByAdmin Boolean             @default(false)
+  paymentVerifiedAt      DateTime?
+  paymentVerifiedById    String?
+  currentVersionId       String?             @unique
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  detailedStatus         DetailedOrderStatus @default(PLACED)
+  displayCurrency        CurrencyCode        @default(NPR)
+  marketCountry          MarketRegion        @default(NP)
+  paidAtShopConfirmed    Boolean             @default(false)
+  paidAtShopConfirmedAt  DateTime?
+  paidAtShopRequested    Boolean             @default(false)
+  paidAtShopRequestedAt  DateTime?
+  paymentMethodEnum      PaymentMethod?
+  paymentStatusEnum      PaymentStatusEnum   @default(UNPAID)
+  commissionLedger       CommissionLedger?
+  customer               User                @relation("CustomerOrders", fields: [customerId], references: [id])
+  shop                   Shop                @relation(fields: [shopId], references: [id])
+  milestones             OrderMilestone[]
+  versions               OrderVersion[]
+
+  @@index([customerId])
+  @@index([shopId])
+  @@index([status])
+  @@index([orderNumber])
+  @@index([createdByAdmin])
+  @@index([paymentVerifiedByAdmin])
+  @@index([marketCountry])
+  @@index([detailedStatus])
+}
+
+model OrderVersion {
+  id               String             @id @default(uuid())
+  orderId          String
+  versionNumber    Int
+  createdByRole    String
+  createdById      String
+  productSnapshot  Json
+  subtotalNpr      Float
+  taxNpr           Float
+  shippingNpr      Float
+  discountNpr      Float
+  totalNpr         Float
+  makingChargesNpr Float?
+  materials        Json?
+  gemstones        Json?
+  finishes         Json?
+  timeline         Json?
+  status           OrderVersionStatus @default(PENDING)
+  customerResponse String?
+  customerNotes    String?
+  respondedAt      DateTime?
+  changeSummary    String?
+  createdAt        DateTime           @default(now())
+  order            Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, versionNumber])
+  @@index([orderId])
+  @@index([status])
+}
+
+model OrderMilestone {
+  id           String        @id @default(uuid())
+  orderId      String
+  type         MilestoneType
+  title        String
+  description  String?
+  actorType    String
+  actorId      String?
+  evidenceUrls String[]
+  notes        String?
+  completedAt  DateTime      @default(now())
+  order        Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model Payment {
+  id               String        @id @default(uuid())
+  orderId          String
+  amountNpr        Float
+  currency         String        @default("NPR")
+  paymentGateway   String
+  gatewayPaymentId String?
+  gatewayOrderId   String?
+  status           PaymentStatus @default(PENDING)
+  metadata         Json?
+  failureReason    String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  completedAt      DateTime?
+
+  @@index([orderId])
+  @@index([gatewayPaymentId])
+}
+
+model ShopRating {
+  id            String   @id @default(uuid())
+  shopId        String
+  customerId    String
+  orderId       String   @unique
+  overall       Int
+  quality       Int?
+  communication Int?
+  delivery      Int?
+  accuracy      Int?
+  reviewText    String?
+  isPublic      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  shop          Shop     @relation(fields: [shopId], references: [id])
+
+  @@index([shopId])
+}
+
+model Notification {
+  id            String           @id @default(uuid())
+  userId        String
+  type          NotificationType
+  titleKey      String
+  titleParams   Json?
+  bodyKey       String
+  bodyParams    Json?
+  referenceType String?
+  referenceId   String?
+  channels      String[]
+  deliveredVia  String[]
+  isRead        Boolean          @default(false)
+  readAt        DateTime?
+  createdAt     DateTime         @default(now())
+  user          User             @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([type])
+}
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  userId        String?
+  actorType     String
+  action        String
+  resourceType  String
+  resourceId    String?
+  previousValue Json?
+  newValue      Json?
+  metadata      Json?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+  user          User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+}
+
+model SystemConfig {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     Json
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+}
+
+model MarketRate {
+  id          String    @id @default(uuid())
+  metalCode   String
+  country     String
+  ratePerGram Float
+  source      String
+  validFrom   DateTime  @default(now())
+  validUntil  DateTime?
+
+  @@index([metalCode, country])
+  @@index([validFrom])
+}
+
+model MarketRateSnapshot {
+  id          String       @id @default(uuid())
+  region      MarketRegion
+  currency    CurrencyCode
+  payloadJson Json
+  updatedAt   DateTime     @default(now())
+
+  @@unique([region, currency])
+  @@index([region, currency, updatedAt])
+}
+
+model FxRateSnapshot {
+  id        String   @id @default(uuid())
+  pair      String   @unique
+  rate      Float
+  source    String
+  updatedAt DateTime @default(now())
+
+  @@index([pair])
+  @@index([updatedAt])
+}
+
+model MaterialRate {
+  id               String   @id @default(uuid())
+  materialCode     String
+  ratePerGramUsd   Float
+  ratePerGramLocal Float
+  currency         String
+  source           String   @default("seed")
+  isRestricted     Boolean  @default(false)
+  note             String?
+  updatedAt        DateTime @default(now())
+
+  @@unique([materialCode, currency])
+  @@index([materialCode])
+}
+
+model FinishPrice {
+  id         String   @id @default(uuid())
+  finishType String
+  tier       String
+  flatFee    Float
+  currency   String
+  source     String   @default("seed")
+  note       String?
+  updatedAt  DateTime @default(now())
+
+  @@unique([finishType, tier, currency])
+  @@index([finishType])
+}
+
+model GemstoneCatalog {
+  id            String   @id @default(uuid())
+  stoneType     String
+  origin        String?
+  sizeUnit      String
+  sizeMin       Float
+  sizeMax       Float
+  qualityTier   String
+  pricePerStone Float
+  currency      String
+  source        String   @default("seed")
+  note          String?
+  updatedAt     DateTime @default(now())
+
+  @@index([stoneType, qualityTier])
+  @@index([sizeMin, sizeMax])
+}
+
+model SettingPrice {
+  id              String   @id @default(uuid())
+  settingType     String
+  flatFeePerStone Float
+  currency        String
+  source          String   @default("seed")
+  note            String?
+  updatedAt       DateTime @default(now())
+
+  @@unique([settingType, currency])
+  @@index([settingType])
+}
+
+model JewelleryTemplate {
+  id                   String           @id @default(uuid())
+  jewelleryType        JewelleryType
+  nameEn               String
+  nameNe               String?
+  nameHi               String?
+  descriptionEn        String?
+  descriptionNe        String?
+  descriptionHi        String?
+  lightWeightMin       Float
+  lightWeightMax       Float
+  mediumWeightMin      Float
+  mediumWeightMax      Float
+  heavyWeightMin       Float
+  heavyWeightMax       Float
+  defaultDimensions    Json?
+  recommendedMaterials String[]
+  imageUrl             String?
+  iconName             String?
+  sortOrder            Int              @default(0)
+  isActive             Boolean          @default(true)
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  suggestedGemstones   GemstonePreset[]
+
+  @@unique([jewelleryType, nameEn])
+  @@index([jewelleryType])
+}
+
+model GemstonePreset {
+  id           String             @id @default(uuid())
+  nameEn       String
+  nameNe       String?
+  nameHi       String?
+  stoneType    GemstoneType
+  shape        GemstoneShape
+  settingStyle SettingStyle
+  sizeOptions  Json
+  colorOptions String[]
+  defaultCount Int                @default(1)
+  imageUrl     String?
+  templateId   String?
+  basePriceNpr Float
+  isActive     Boolean            @default(true)
+  createdAt    DateTime           @default(now())
+  template     JewelleryTemplate? @relation(fields: [templateId], references: [id])
+
+  @@index([stoneType])
+  @@index([templateId])
+}
+
+model PlatingOption {
+  id               String      @id @default(uuid())
+  platingType      PlatingType
+  tier             PlatingTier
+  nameEn           String
+  nameNe           String?
+  descriptionEn    String?
+  thicknessMin     Float
+  thicknessMax     Float
+  basePriceNpr     Float
+  durabilityMonths Int?
+  isActive         Boolean     @default(true)
+
+  @@unique([platingType, tier])
+}
+
+model SystemPriceConfig {
+  id             String    @id @default(uuid())
+  version        Int       @default(1)
+  configType     String
+  configKey      String
+  configData     Json
+  isActive       Boolean   @default(true)
+  effectiveFrom  DateTime  @default(now())
+  effectiveUntil DateTime?
+  createdBy      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([configType, configKey])
+  @@index([isActive, effectiveFrom])
+}
+
+model MarketAdjustmentConfig {
+  id              String       @id @default(uuid())
+  marketRegion    MarketRegion
+  category        String
+  adjustmentType  String
+  adjustmentValue Float
+  description     String?
+  isActive        Boolean      @default(true)
+  effectiveFrom   DateTime     @default(now())
+  effectiveUntil  DateTime?
+  createdBy       String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([marketRegion])
+  @@index([marketRegion, category, isActive])
+}
+
+model TaxRuleConfig {
+  id             String       @id @default(uuid())
+  marketRegion   MarketRegion
+  taxType        String
+  taxName        String
+  category       String
+  rate           Float
+  isCompounding  Boolean      @default(false)
+  priority       Int          @default(0)
+  stateCode      String?
+  description    String?
+  isActive       Boolean      @default(true)
+  effectiveFrom  DateTime     @default(now())
+  effectiveUntil DateTime?
+  createdBy      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([marketRegion, isActive])
+  @@index([category])
+}
+
+model ShopPriceOverride {
+  id            String       @id @default(uuid())
+  shopId        String
+  overrideType  String
+  itemCode      String
+  overrideMode  String
+  overrideValue Float
+  currency      CurrencyCode @default(NPR)
+  minValue      Float?
+  maxValue      Float?
+  isActive      Boolean      @default(true)
+  approvedBy    String?
+  approvedAt    DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  shop          Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, overrideType, itemCode])
+  @@index([shopId])
+}
+
+model GemPriceConfig {
+  id             String       @id @default(uuid())
+  stoneType      String
+  origin         String?
+  qualityGrade   String
+  sizeUnit       String       @default("CARAT")
+  sizeRangeMin   Float
+  sizeRangeMax   Float
+  pricePerUnit   Float
+  currency       CurrencyCode @default(USD)
+  source         String       @default("SYSTEM")
+  notes          String?
+  isActive       Boolean      @default(true)
+  effectiveFrom  DateTime     @default(now())
+  effectiveUntil DateTime?
+  createdBy      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([stoneType, qualityGrade])
+  @@index([isActive])
+}
+
+model FinishPriceConfig {
+  id               String       @id @default(uuid())
+  finishType       String
+  tier             String
+  pricingModel     String
+  basePrice        Float
+  percentageUplift Float?
+  perGramRate      Float?
+  currency         CurrencyCode @default(USD)
+  minThickness     Float?
+  maxThickness     Float?
+  durabilityMonths Int?
+  notes            String?
+  isActive         Boolean      @default(true)
+  effectiveFrom    DateTime     @default(now())
+  effectiveUntil   DateTime?
+  createdBy        String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@unique([finishType, tier])
+  @@index([finishType])
+}
+
+model BaseMetalPriceConfig {
+  id              String    @id @default(uuid())
+  metalCode       String    @unique
+  pricePerGramUsd Float
+  source          String    @default("SYSTEM")
+  isRestricted    Boolean   @default(false)
+  complianceNotes String?
+  notes           String?
+  isActive        Boolean   @default(true)
+  effectiveFrom   DateTime  @default(now())
+  effectiveUntil  DateTime?
+  createdBy       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([isActive])
+}
+
+model MetalPurityConfig {
+  id               String   @id @default(uuid())
+  metalType        String
+  purityCode       String
+  purityMultiplier Float
+  displayName      String
+  description      String?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([metalType, purityCode])
+}
+
+model RoundingRuleConfig {
+  id             String       @id @default(uuid())
+  currency       CurrencyCode @unique
+  roundingMode   String
+  precision      Int
+  roundToNearest Float?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model PriceCalculationLog {
+  id                String       @id @default(uuid())
+  requestId         String
+  marketRegion      MarketRegion
+  displayCurrency   CurrencyCode
+  shopId            String?
+  requestPayload    Json
+  calculationSteps  Json
+  spotPricesUsed    Json?
+  fxRatesUsed       Json?
+  marketAdjustments Json?
+  shopOverrides     Json?
+  taxBreakdown      Json?
+  finalResult       Json
+  calculationTimeMs Int?
+  source            String
+  createdAt         DateTime     @default(now())
+
+  @@index([requestId])
+  @@index([shopId])
+  @@index([createdAt])
+}
+
+model VerificationRequest {
+  id        String   @id @default(uuid())
+  type      String
+  status    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  shopId    String?
+  userId    String?
+  details   Json?
+  shop      Shop?    @relation("ShopVerificationRequests", fields: [shopId], references: [id])
+  user      User?    @relation("UserVerificationRequests", fields: [userId], references: [id])
+}
+
+model Report {
+  id         String   @id @default(uuid())
+  reporterId String
+  reportedId String?
+  type       String
+  reason     String
+  status     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  details    Json?
+  reported   User?    @relation("ReportReported", fields: [reportedId], references: [id])
+  reporter   User     @relation("ReportReporter", fields: [reporterId], references: [id])
+}
+
+model OtpVerification {
+  id          String    @id @default(uuid())
+  userId      String
+  type        OtpType
+  target      String
+  code        String
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  expiresAt   DateTime
+  verifiedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId, type])
+  @@index([target, type])
+  @@index([expiresAt])
+}
+
+model SystemNotification {
+  id          String    @id @default(uuid())
+  title       String
+  message     String
+  type        String
+  targetRoles String[]
+  isActive    Boolean   @default(true)
+  expiresAt   DateTime?
+  createdBy   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([isActive])
+  @@index([expiresAt])
+}
+
+model MarketConfig {
+  id                      String          @id @default(uuid())
+  countryCode             MarketRegion    @unique
+  countryName             String
+  defaultCurrency         CurrencyCode
+  supportedCurrencies     CurrencyCode[]
+  defaultWeightUnit       WeightUnit      @default(GRAM)
+  supportedWeightUnits    WeightUnit[]
+  supportedPaymentMethods PaymentMethod[]
+  heroHeadline            String
+  heroSubheadline         String?
+  footerContactTitle      String?
+  contactEmail            String
+  contactPhone            String
+  contactAddress          String?
+  contactWhatsapp         String?
+  taxPercentage           Float           @default(0)
+  taxName                 String?
+  priceMultiplier         Float           @default(1.0)
+  codEnabled              Boolean         @default(false)
+  customOrdersEnabled     Boolean         @default(true)
+  isActive                Boolean         @default(true)
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+
+  @@index([countryCode])
+  @@index([isActive])
+}
+
+model CommissionLedger {
+  id             String           @id @default(uuid())
+  orderId        String           @unique
+  shopId         String
+  orderTotal     Float
+  commissionRate Float            @default(0.01)
+  amount         Float
+  currency       CurrencyCode
+  status         CommissionStatus @default(PENDING)
+  dueAt          DateTime
+  paidAt         DateTime?
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  order          Order            @relation(fields: [orderId], references: [id])
+  shop           Shop             @relation(fields: [shopId], references: [id])
+
+  @@index([shopId])
+  @@index([status])
+  @@index([dueAt])
+}
 
 enum UserRole {
   ADMIN
@@ -29,235 +1013,23 @@ enum UserStatus {
   DEACTIVATED
 }
 
-// Supported currencies for the platform
 enum CurrencyCode {
-  NPR  // Nepalese Rupee (default)
-  INR  // Indian Rupee
-  AED  // UAE Dirham
-  USD  // US Dollar
-  GBP  // British Pound
-  EUR  // Euro
+  NPR
+  INR
+  AED
+  USD
+  GBP
+  EUR
 }
 
-// Market regions for pricing adjustments
-// Currency → Region mapping defaults:
-// NPR → NP, INR → IN, AED → AE, GBP → UK, EUR → EU, USD → US
 enum MarketRegion {
-  NP  // Nepal (1.245 multiplier)
-  IN  // India (1.100 multiplier)
-  AE  // UAE (1.020 multiplier)
-  UK  // United Kingdom (1.010 multiplier)
-  EU  // European Union (1.010 multiplier)
-  US  // United States (1.000 multiplier - base)
+  NP
+  IN
+  AE
+  UK
+  EU
+  US
 }
-
-model User {
-  id                 String       @id @default(uuid())
-  email              String       @unique
-  phone              String?      @unique
-  passwordHash       String
-  role               UserRole
-  status             UserStatus   @default(PENDING_VERIFICATION)
-  firstName          String
-  lastName           String
-  preferredLanguage  String       @default("en") // en, ne, hi
-  preferredCurrency  CurrencyCode @default(NPR)
-  themeMode          String       @default("system") // light, dark, system
-  
-  // Relations
-  shop              Shop?
-  customerOrders    Order[]     @relation("CustomerOrders")
-  rfqRequests       RfqRequest[] @relation("CustomerRfqs")
-  auditLogs         AuditLog[]
-  notifications     Notification[]
-  refreshTokens     RefreshToken[]
-  apiTokens         ApiToken[]
-  verificationRequests VerificationRequest[] @relation("UserVerificationRequests")
-  reportsFiled      Report[] @relation("ReportReporter")
-  reportsAgainst    Report[] @relation("ReportReported")
-  
-  // Timestamps
-  emailVerifiedAt   DateTime?
-  phoneVerifiedAt   DateTime?
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-  lastLoginAt       DateTime?
-
-  @@index([email])
-  @@index([phone])
-  @@index([role])
-}
-
-// Refresh Token for JWT rotation
-model RefreshToken {
-  id           String    @id @default(uuid())
-  userId       String
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash    String    @unique  // Hashed token for security
-  userAgent    String?
-  ipAddress    String?
-  expiresAt    DateTime
-  revokedAt    DateTime?          // Null if active, timestamp if revoked
-  createdAt    DateTime  @default(now())
-
-  @@index([userId])
-  @@index([tokenHash])
-  @@index([expiresAt])
-}
-
-// API Token for CI/CD and external integrations
-model ApiToken {
-  id           String    @id @default(uuid())
-  userId       String
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name         String                    // Human-readable name (e.g., "GitHub Actions CI/CD")
-  tokenHash    String    @unique         // Hashed token for security
-  tokenPrefix  String                    // First 8 chars of token for identification
-  scopes       String[]  @default([])    // Permissions: ["market-rates:refresh", "health:read"]
-  expiresAt    DateTime                  // Long-lived: 30, 90, 365 days
-  lastUsedAt   DateTime?
-  revokedAt    DateTime?                 // Null if active
-  createdAt    DateTime  @default(now())
-  
-  // Store encrypted token for recovery (viewable for 24 hours only)
-  encryptedToken    String?             // AES-256 encrypted token
-  tokenViewableUntil DateTime?          // Token is viewable until this time (24h after creation)
-  
-  @@index([userId])
-  @@index([tokenHash])
-  @@index([tokenPrefix])
-}
-
-// Legacy session model - kept for backward compatibility
-model Session {
-  id           String   @id @default(uuid())
-  userId       String
-  token        String   @unique
-  userAgent    String?
-  ipAddress    String?
-  expiresAt    DateTime
-  createdAt    DateTime @default(now())
-
-  @@index([userId])
-  @@index([token])
-}
-
-// ══════════════════════════════════════
-// SHOP / VENDOR CONFIGURATION
-// ══════════════════════════════════════
-
-model Shop {
-  id                    String   @id @default(uuid())
-  userId                String   @unique
-  user                  User     @relation(fields: [userId], references: [id])
-  
-  // Basic Info
-  shopName              String
-  shopNameNe            String?  // Nepali name
-  shopNameHi            String?  // Hindi name
-  description           String?
-  descriptionNe         String?
-  descriptionHi         String?
-  
-  // Location
-  country               String   @default("NP") // NP, IN
-  state                 String?
-  city                  String
-  address               String
-  pincode               String?
-  latitude              Float?
-  longitude             Float?
-  
-  // Contact
-  contactPhone          String
-  contactEmail          String?
-  whatsappNumber        String?
-  
-  // Verification & Trust
-  isVerified            Boolean  @default(false)
-  verificationDocuments Json?    // Array of document URLs
-  bisLicenseNumber      String?  // For India
-  panNumber             String?
-  vatNumber             String?
-  
-  // Capabilities - stored as JSON arrays
-  supportedJewelleryTypes   String[]  // RING, NECKLACE, BRACELET, etc.
-  supportedMethods          String[]  // METHOD_A, METHOD_B, METHOD_C, METHOD_D
-  supportedMaterials        String[]  // Material IDs
-  supportedFinishes         String[]  // Finish IDs
-  
-  // Limits
-  minOrderValueNpr      Float    @default(0)
-  maxOrderValueNpr      Float?
-  maxWeightGrams        Float?
-  acceptsComplexOrders  Boolean  @default(true)
-  
-  // Payments
-  codEnabled            Boolean  @default(false)
-  codMaxValueNpr        Float?
-  bankAccountDetails    Json?
-  
-  // Pricing Configuration
-  metalRates            ShopMetalRate[]
-  finishPricing         ShopFinishPricing[]
-  priceOverrides        ShopPriceOverride[]
-  makingChargePercent   Float    @default(10) // Admin bounded: 5-25%
-  
-  // Compliance
-  nickelCompliantFlag   Boolean  @default(false) // For Nickel restriction compliance
-  
-  // Commission compliance (for paid-at-shop settlements)
-  isOnHold              Boolean  @default(false)  // Shop is on hold for overdue commissions
-  holdReason            String?                   // Reason for hold
-  holdAt                DateTime?                 // When the shop was put on hold
-  lastComplianceCheckAt DateTime?                 // Last compliance check timestamp
-  
-  // Relations
-  inventoryItems        InventoryItem[]
-  rfqOffers             RfqOffer[]
-  orders                Order[]
-  ratings               ShopRating[]
-  verificationRequests  VerificationRequest[] @relation("ShopVerificationRequests")
-  commissionLedgers     CommissionLedger[]
-  
-  // Status
-  isActive              Boolean  @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
-  @@index([country, city])
-  @@index([isActive, isVerified])
-}
-
-model ShopMetalRate {
-  id            String   @id @default(uuid())
-  shopId        String
-  shop          Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  
-  metalType     String   // GOLD_24K, GOLD_22K, SILVER_999, etc.
-  ratePerGramNpr Float
-  lastUpdatedAt DateTime @default(now())
-
-  @@unique([shopId, metalType])
-  @@index([shopId])
-}
-
-model ShopFinishPricing {
-  id            String   @id @default(uuid())
-  shopId        String
-  shop          Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  
-  finishType    String   // GOLD_PLATING, RHODIUM_PLATING, etc.
-  tier          String   // LIGHT, STANDARD, PREMIUM
-  priceNpr      Float
-  
-  @@unique([shopId, finishType, tier])
-  @@index([shopId])
-}
-
-// ══════════════════════════════════════
-// MATERIAL CLASSIFICATION (Reference Data)
-// ══════════════════════════════════════
 
 enum MaterialCategory {
   PRECIOUS_METAL
@@ -266,41 +1038,6 @@ enum MaterialCategory {
   FINISH_COATING
   GEMSTONE
 }
-
-model Material {
-  id                String           @id @default(uuid())
-  code              String           @unique // GOLD_24K, SILVER_925, etc.
-  category          MaterialCategory
-  
-  // Names in multiple languages
-  nameEn            String
-  nameNe            String?
-  nameHi            String?
-  descriptionEn     String?
-  descriptionNe     String?
-  descriptionHi     String?
-  
-  // Properties
-  purity            Float?           // e.g., 0.999 for 24K gold
-  allowedMethods    String[]         // METHOD_A, METHOD_B, etc.
-  complianceFlags   String[]         // NICKEL_FREE, HYPOALLERGENIC, etc.
-  baseUnit          String           @default("gram") // gram, piece, carat
-  
-  // Pricing
-  marketRateNpr     Float?           // Reference rate
-  lastMarketUpdate  DateTime?
-  
-  isActive          Boolean          @default(true)
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-
-  @@index([category])
-  @@index([code])
-}
-
-// ══════════════════════════════════════
-// INVENTORY ITEMS (Ready-made Jewellery)
-// ══════════════════════════════════════
 
 enum JewelleryType {
   RING
@@ -324,68 +1061,6 @@ enum InventoryStatus {
   DISCONTINUED
 }
 
-model InventoryItem {
-  id                  String          @id @default(uuid())
-  shopId              String
-  shop                Shop            @relation(fields: [shopId], references: [id])
-  
-  // Product Info
-  sku                 String          @unique
-  jewelleryType       JewelleryType
-  nameEn              String
-  nameNe              String?
-  nameHi              String?
-  descriptionEn       String?
-  descriptionNe       String?
-  descriptionHi       String?
-  
-  // Composition - STRICT
-  buildMethod         String          // METHOD_A, METHOD_B, METHOD_C, METHOD_D
-  composition         Json            // Detailed composition based on method
-  
-  // Weight & Dimensions
-  totalWeightGrams    Float
-  dimensions          Json?           // {length, width, height, innerDiameter}
-  
-  // Gemstones (if any)
-  gemstones           Json?           // Array of gemstone details
-  
-  // Pricing
-  metalValueNpr       Float
-  makingChargeNpr     Float
-  gemstoneValueNpr    Float           @default(0)
-  taxNpr              Float           @default(0)
-  totalPriceNpr       Float
-  
-  // Media
-  images              String[]        // URLs
-  videos              String[]        // URLs
-  certificateUrl      String?
-  
-  // Hallmark & Certification
-  hallmarkNumber      String?
-  hallmarkDate        DateTime?
-  purityCertUrl       String?
-  
-  // Labels (Auto-generated based on composition)
-  labels              String[]        // "Solid Gold", "Not solid gold", etc.
-  
-  // Inventory
-  status              InventoryStatus @default(AVAILABLE)
-  stockQuantity       Int             @default(1)
-  
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
-
-  @@index([shopId, status])
-  @@index([jewelleryType])
-  @@index([buildMethod])
-}
-
-// ══════════════════════════════════════
-// CUSTOM ORDER / RFQ SYSTEM
-// ══════════════════════════════════════
-
 enum RfqStatus {
   DRAFT
   SENT_TO_SHOPS
@@ -398,124 +1073,10 @@ enum RfqStatus {
 }
 
 enum BuildMethod {
-  METHOD_A  // Solid Precious Metal
-  METHOD_B  // Standard Alloy
-  METHOD_C  // Core Metal + Finish
-  METHOD_D  // Multi-Metal Construction
-}
-
-model RfqRequest {
-  id                    String      @id @default(uuid())
-  customerId            String
-  customer              User        @relation("CustomerRfqs", fields: [customerId], references: [id])
-  
-  // Request Details
-  jewelleryType         JewelleryType
-  buildMethod           BuildMethod
-  
-  // Template reference (optional)
-  templateId            String?
-  
-  // Weight category (user-friendly) - Light/Medium/Heavy
-  weightCategory        WeightCategory?
-  
-  // Composition (varies by method)
-  composition           Json        // Full composition details
-  
-  // Method D specific fields (stored in composition JSON)
-  // - multiMetalPattern: TOP_PLATE | INLAY | OUTER_SLEEVE | TWO_TONE_SPLIT
-  // - multiMetalMode: MODE_D1 | MODE_D2 | MODE_D3
-  // - goldPercentByWeight, targetGoldWeightG, partDimensions, etc.
-  
-  // Surface finish (non-coating)
-  surfaceFinish         String?     // HIGH_POLISH, MATTE, BRUSHED, etc.
-  
-  // Method C: Plating options
-  addGoldPlating        Boolean     @default(false)
-  platingType           String?     // GOLD_PLATING, VERMEIL, RHODIUM_PLATING, etc.
-  platingTier           String?     // LIGHT, STANDARD, PREMIUM
-  
-  // Target specifications
-  targetTotalWeightG    Float?
-  targetGoldWeightG     Float?
-  budgetMinNpr          Float?
-  budgetMaxNpr          Float?
-  
-  // Structured gemstone specifications
-  gemstones             RfqGemstone[]
-  
-  // Preferences
-  preferredDeliveryDays Int?
-  specialInstructions   String?
-  referenceImages       String[]    // URLs
-  
-  // System calculated
-  estimatedPriceMinNpr  Float?
-  estimatedPriceMaxNpr  Float?
-  
-  // Broadcast tracking
-  broadcastSnapshot     Json?       // Immutable snapshot of request at broadcast time
-  broadcastAt           DateTime?
-  
-  // Status
-  status                RfqStatus   @default(DRAFT)
-  expiresAt             DateTime?
-  
-  // Relations
-  targetedShops         RfqShopTarget[]
-  offers                RfqOffer[]
-  selectedOfferId       String?     @unique
-  selectedOffer         RfqOffer?   @relation("SelectedOffer", fields: [selectedOfferId], references: [id])
-  
-  // Labels (auto-generated)
-  mandatoryLabels       String[]    // "Multi-metal construction. Not solid gold unless 100% gold is selected."
-  
-  createdAt             DateTime    @default(now())
-  updatedAt             DateTime    @updatedAt
-
-  @@index([customerId])
-  @@index([status])
-}
-
-// Structured gemstone specification for RFQ
-model RfqGemstone {
-  id              String        @id @default(uuid())
-  rfqId           String
-  rfq             RfqRequest    @relation(fields: [rfqId], references: [id], onDelete: Cascade)
-  
-  stoneType       String        // GemstoneType enum value
-  shape           String        // GemstoneShape enum value
-  sizeMm          Float?        // Size in mm (diameter for round, length for others)
-  caratWeight     Float?        // Carat weight if known
-  color           String?       // Color grade or description
-  clarity         String?       // Clarity grade (for diamonds)
-  settingStyle    String?       // SettingStyle enum value
-  count           Int           @default(1)
-  
-  // Position in piece
-  position        String?       // "center", "accent", "side", etc.
-  
-  // Price estimate
-  estimatedPriceNpr Float?
-  
-  createdAt       DateTime      @default(now())
-
-  @@index([rfqId])
-}
-
-model RfqShopTarget {
-  id          String     @id @default(uuid())
-  rfqId       String
-  rfq         RfqRequest @relation(fields: [rfqId], references: [id], onDelete: Cascade)
-  shopId      String
-  
-  // Tracking
-  sentAt      DateTime   @default(now())
-  viewedAt    DateTime?
-  respondedAt DateTime?
-
-  @@unique([rfqId, shopId])
-  @@index([shopId])
+  METHOD_A
+  METHOD_B
+  METHOD_C
+  METHOD_D
 }
 
 enum OfferStatus {
@@ -528,291 +1089,52 @@ enum OfferStatus {
   WITHDRAWN
 }
 
-model RfqOffer {
-  id                    String      @id @default(uuid())
-  rfqId                 String
-  rfq                   RfqRequest  @relation(fields: [rfqId], references: [id])
-  shopId                String
-  shop                  Shop        @relation(fields: [shopId], references: [id])
-  
-  // Response type
-  offerType             String      // ACCEPT, COUNTER, DECLINE
-  declineReason         String?
-  
-  // Confirmed specifications
-  confirmedComposition  Json        // May differ from original request
-  confirmedTotalWeightG Float?
-  confirmedGoldWeightG  Float?
-  
-  // Price Breakdown
-  metalCostNpr          Float
-  makingChargeNpr       Float
-  finishCostNpr         Float       @default(0)
-  gemstoneCostNpr       Float       @default(0)
-  taxNpr                Float       @default(0)
-  totalPriceNpr         Float
-  
-  // Timeline
-  estimatedDays         Int
-  productionStartDate   DateTime?
-  
-  // Payment Terms
-  bookingFeeNpr         Float       // Deposit required
-  bookingFeePercent     Float       // Usually 10-30%
-  paymentDeadline       DateTime?   // 24 hours from offer selection
-  
-  // Notes
-  shopNotes             String?
-  
-  // Status
-  status                OfferStatus @default(PENDING)
-  
-  // Counter-offer chain
-  parentOfferId         String?
-  parentOffer           RfqOffer?   @relation("OfferChain", fields: [parentOfferId], references: [id])
-  counterOffers         RfqOffer[]  @relation("OfferChain")
-  
-  // Selected offer relation
-  selectedByRfq         RfqRequest? @relation("SelectedOffer")
-  
-  createdAt             DateTime    @default(now())
-  updatedAt             DateTime    @updatedAt
-
-  @@index([rfqId])
-  @@index([shopId])
-  @@index([status])
-}
-
-// ══════════════════════════════════════
-// ORDERS & FULFILLMENT
-// ══════════════════════════════════════
-
 enum OrderType {
   INVENTORY
   CUSTOM
 }
 
 enum OrderStatus {
-  // Common statuses
   CREATED
   PAYMENT_PENDING
   PAYMENT_FAILED
   PAID
-  
-  // Inventory order statuses
   PACKED
-  
-  // Custom order statuses
   IN_PRODUCTION
   QC_PENDING
   QC_PASSED
   QC_FAILED
   READY_TO_SHIP
-  
-  // Shipping statuses
   SHIPPED
   OUT_FOR_DELIVERY
   DELIVERED
-  
-  // Completion statuses
   COMPLETED
   CANCELLED
   REFUNDED
-  
-  // Expiry
   EXPIRED
 }
 
-model Order {
-  id                  String      @id @default(uuid())
-  orderNumber         String      @unique
-  
-  // Type
-  orderType           OrderType
-  
-  // Parties
-  customerId          String
-  customer            User        @relation("CustomerOrders", fields: [customerId], references: [id])
-  shopId              String
-  shop                Shop        @relation(fields: [shopId], references: [id])
-  
-  // Source
-  inventoryItemId     String?     // For inventory orders
-  rfqOfferId          String?     // For custom orders
-  
-  // Product Details (snapshot at order time)
-  productSnapshot     Json
-  
-  // Pricing
-  subtotalNpr         Float
-  taxNpr              Float
-  shippingNpr         Float       @default(0)
-  discountNpr         Float       @default(0)
-  totalNpr            Float
-  
-  // Market context (for geo-based pricing)
-  marketCountry       MarketRegion @default(NP)     // Country where order was placed
-  displayCurrency     CurrencyCode @default(NPR)   // Currency shown to customer
-  
-  // Payment - Enhanced
-  paymentMethod       String?     // Legacy: ONLINE, COD
-  paymentMethodEnum   PaymentMethod?               // New: CARD, UPI, ESEWA, etc.
-  paymentStatus       String      // Legacy: PENDING, PARTIAL, COMPLETED
-  paymentStatusEnum   PaymentStatusEnum @default(UNPAID) // New: UNPAID, PAID, PAID_ON_SHOP
-  bookingFeePaidNpr   Float?      // For custom orders
-  balanceDueNpr       Float
-  
-  // Paid at shop workflow
-  paidAtShopRequested    Boolean   @default(false)  // Shopkeeper marked as paid at shop
-  paidAtShopRequestedAt  DateTime?                  // When shopkeeper marked it
-  paidAtShopConfirmed    Boolean   @default(false)  // Admin confirmed the payment
-  paidAtShopConfirmedAt  DateTime?                  // When admin confirmed
-  
-  // Detailed order status
-  detailedStatus      DetailedOrderStatus @default(PLACED)
-  
-  // Shipping
-  shippingAddress     Json
-  shippingMethod      String?
-  trackingNumber      String?
-  estimatedDelivery   DateTime?
-  actualDelivery      DateTime?
-  
-  // Status
-  status              OrderStatus @default(CREATED)
-  
-  // Milestones & Timeline
-  milestones          OrderMilestone[]
-  
-  // Expiry for booking (24 hours)
-  bookingExpiresAt    DateTime?
-  
-  // Admin fields
-  createdByAdmin      Boolean     @default(false)  // If admin created on behalf of customer
-  adminNotes          String?                       // Internal admin notes
-  paymentVerifiedByAdmin Boolean  @default(false)  // Admin manually verified payment
-  paymentVerifiedAt   DateTime?                     // When payment was verified
-  paymentVerifiedById String?                       // Which admin verified
-  
-  // Order versioning for counter-offers
-  currentVersionId    String?     @unique          // Current active version
-  versions            OrderVersion[]                // All versions/counter-offers
-  
-  // Commission tracking
-  commissionLedger    CommissionLedger?
-  
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
-
-  @@index([customerId])
-  @@index([shopId])
-  @@index([status])
-  @@index([orderNumber])
-  @@index([createdByAdmin])
-  @@index([paymentVerifiedByAdmin])
-  @@index([marketCountry])
-  @@index([detailedStatus])
-}
-
-// Order version for tracking counter-offers and modifications
-model OrderVersion {
-  id                  String      @id @default(uuid())
-  orderId             String
-  order               Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  
-  versionNumber       Int                           // 1, 2, 3, etc.
-  
-  // Who created this version
-  createdByRole       String                        // CUSTOMER, SHOPKEEPER, ADMIN
-  createdById         String
-  
-  // Snapshot of order details at this version
-  productSnapshot     Json                          // Full product specs
-  
-  // Pricing at this version
-  subtotalNpr         Float
-  taxNpr              Float
-  shippingNpr         Float
-  discountNpr         Float
-  totalNpr            Float
-  makingChargesNpr    Float?
-  
-  // Custom order specs (for counter-offers)
-  materials           Json?                         // Metal type, purity, weight
-  gemstones           Json?                         // Stone details
-  finishes            Json?                         // Polish, texture, etc.
-  timeline            Json?                         // Estimated days, milestones
-  
-  // Status
-  status              OrderVersionStatus @default(PENDING)
-  
-  // Customer response
-  customerResponse    String?                       // ACCEPTED, REJECTED, COUNTER
-  customerNotes       String?
-  respondedAt         DateTime?
-  
-  // Change summary
-  changeSummary       String?                       // Human-readable summary of changes
-  
-  createdAt           DateTime    @default(now())
-  
-  @@index([orderId])
-  @@index([status])
-  @@unique([orderId, versionNumber])
-}
-
 enum OrderVersionStatus {
-  PENDING             // Awaiting customer response
-  ACCEPTED            // Customer accepted this version
-  REJECTED            // Customer rejected this version
-  SUPERSEDED          // A newer version exists
-  EXPIRED             // Response time expired
+  PENDING
+  ACCEPTED
+  REJECTED
+  SUPERSEDED
+  EXPIRED
 }
 
 enum MilestoneType {
-  // Production milestones
   CAD_APPROVED
   CASTING_STARTED
   STONE_SETTING
   POLISHING
   QUALITY_CHECK
   PACKAGING
-  
-  // Shipping milestones
   DISPATCHED
   IN_TRANSIT
   OUT_FOR_DELIVERY
   DELIVERED
-  
-  // Custom
   CUSTOM
 }
-
-model OrderMilestone {
-  id          String        @id @default(uuid())
-  orderId     String
-  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  
-  type        MilestoneType
-  title       String
-  description String?
-  
-  // Actor
-  actorType   String        // SHOP, ADMIN, SYSTEM, COURIER
-  actorId     String?
-  
-  // Evidence
-  evidenceUrls String[]     // Photos/videos
-  notes        String?
-  
-  completedAt DateTime      @default(now())
-
-  @@index([orderId])
-}
-
-// ══════════════════════════════════════
-// PAYMENTS
-// ══════════════════════════════════════
 
 enum PaymentStatus {
   PENDING
@@ -822,68 +1144,6 @@ enum PaymentStatus {
   REFUNDED
   PARTIALLY_REFUNDED
 }
-
-model Payment {
-  id                String        @id @default(uuid())
-  orderId           String
-  
-  // Amount
-  amountNpr         Float
-  currency          String        @default("NPR")
-  
-  // Gateway
-  paymentGateway    String        // RAZORPAY, STRIPE, COD
-  gatewayPaymentId  String?
-  gatewayOrderId    String?
-  
-  // Status
-  status            PaymentStatus @default(PENDING)
-  
-  // Metadata
-  metadata          Json?
-  failureReason     String?
-  
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  completedAt       DateTime?
-
-  @@index([orderId])
-  @@index([gatewayPaymentId])
-}
-
-// ══════════════════════════════════════
-// RATINGS & REVIEWS
-// ══════════════════════════════════════
-
-model ShopRating {
-  id          String   @id @default(uuid())
-  shopId      String
-  shop        Shop     @relation(fields: [shopId], references: [id])
-  customerId  String
-  orderId     String
-  
-  // Ratings (1-5)
-  overall     Int
-  quality     Int?
-  communication Int?
-  delivery    Int?
-  accuracy    Int?
-  
-  // Review
-  reviewText  String?
-  
-  // Visibility
-  isPublic    Boolean  @default(true)
-  
-  createdAt   DateTime @default(now())
-
-  @@unique([orderId])
-  @@index([shopId])
-}
-
-// ══════════════════════════════════════
-// NOTIFICATIONS & HELPER MESSAGES
-// ══════════════════════════════════════
 
 enum NotificationType {
   RFQ_SENT
@@ -902,247 +1162,11 @@ enum NotificationType {
   SYSTEM_ALERT
 }
 
-model Notification {
-  id              String           @id @default(uuid())
-  userId          String
-  user            User             @relation(fields: [userId], references: [id])
-  
-  type            NotificationType
-  
-  // Localized content (via i18n key)
-  titleKey        String
-  titleParams     Json?            // Parameters for interpolation
-  bodyKey         String
-  bodyParams      Json?
-  
-  // Reference
-  referenceType   String?          // ORDER, RFQ, OFFER, etc.
-  referenceId     String?
-  
-  // Delivery
-  channels        String[]         // EMAIL, SMS, PUSH, WHATSAPP
-  deliveredVia    String[]
-  
-  // Status
-  isRead          Boolean          @default(false)
-  readAt          DateTime?
-  
-  createdAt       DateTime         @default(now())
-
-  @@index([userId, isRead])
-  @@index([type])
-}
-
-// ══════════════════════════════════════
-// AUDIT LOGS (IMMUTABLE)
-// ══════════════════════════════════════
-
-model AuditLog {
-  id            String   @id @default(uuid())
-  
-  // Actor
-  userId        String?
-  user          User?    @relation(fields: [userId], references: [id])
-  actorType     String   // USER, SYSTEM, ADMIN
-  
-  // Action
-  action        String   // CREATE, UPDATE, DELETE, LOGIN, etc.
-  resourceType  String   // ORDER, RFQ, SHOP, etc.
-  resourceId    String?
-  
-  // Details
-  previousValue Json?
-  newValue      Json?
-  metadata      Json?
-  
-  // Request context
-  ipAddress     String?
-  userAgent     String?
-  
-  createdAt     DateTime @default(now())
-
-  @@index([userId])
-  @@index([resourceType, resourceId])
-  @@index([createdAt])
-}
-
-// ══════════════════════════════════════
-// SYSTEM CONFIGURATION
-// ══════════════════════════════════════
-
-model SystemConfig {
-  id        String   @id @default(uuid())
-  key       String   @unique
-  value     Json
-  updatedBy String?
-  updatedAt DateTime @updatedAt
-}
-
-// Market rates updated periodically
-model MarketRate {
-  id          String   @id @default(uuid())
-  metalCode   String   // GOLD_24K, SILVER_999, etc.
-  country     String   // NP, IN
-  ratePerGram Float
-  source      String   // API source or MANUAL
-  validFrom   DateTime @default(now())
-  validUntil  DateTime?
-
-  @@index([metalCode, country])
-  @@index([validFrom])
-}
-
-// Cached market rate snapshots from MetalpriceAPI
-// Keyed by region + currency for proper caching
-model MarketRateSnapshot {
-  id          String       @id @default(uuid())
-  region      MarketRegion // NP, IN, AE, UK, EU, US
-  currency    CurrencyCode // NPR, INR, AED, USD, GBP, EUR
-  payloadJson Json         // Full MarketRatesResponse JSON with debug fields
-  updatedAt   DateTime     @default(now())
-
-  // Composite unique constraint for proper cache lookup
-  @@unique([region, currency])
-  @@index([region, currency, updatedAt])
-}
-
-// Cached FX rates from Frankfurter API (with fallback providers)
-model FxRateSnapshot {
-  id        String   @id @default(uuid())
-  pair      String   @unique // USD_INR, USD_NPR, USD_AED, USD_GBP, USD_EUR, INR_NPR
-  rate      Float    // Exchange rate
-  source    String   // frankfurter, exchangerate_host, fallback
-  updatedAt DateTime @default(now())
-
-  @@index([pair])
-  @@index([updatedAt])
-}
-
-// ══════════════════════════════════════
-// PRICING ENGINE TABLES
-// ══════════════════════════════════════
-
-// Material rates for alloys and base metals (priced per gram)
-model MaterialRate {
-  id             String   @id @default(uuid())
-  materialCode   String   // COPPER, ZINC, NICKEL, BRASS, BRONZE, TITANIUM, etc.
-  ratePerGramUsd Float    // Base rate in USD
-  ratePerGramLocal Float  // Converted rate in local currency
-  currency       String   // INR or NPR
-  source         String   @default("seed") // seed, manual, calculated
-  isRestricted   Boolean  @default(false) // For Nickel compliance
-  note           String?  // Admin notes
-  updatedAt      DateTime @default(now())
-
-  @@unique([materialCode, currency])
-  @@index([materialCode])
-}
-
-// Finish/coating prices (flat fee per piece)
-model FinishPrice {
-  id         String   @id @default(uuid())
-  finishType String   // GOLD_PLATING, VERMEIL, PVD, RHODIUM_PLATING, etc.
-  tier       String   // LIGHT, STANDARD, PREMIUM
-  flatFee    Float    // Flat fee per piece
-  currency   String   // INR or NPR
-  source     String   @default("seed") // seed, manual
-  note       String?
-  updatedAt  DateTime @default(now())
-
-  @@unique([finishType, tier, currency])
-  @@index([finishType])
-}
-
-// Gemstone catalog pricing
-model GemstoneCatalog {
-  id            String   @id @default(uuid())
-  stoneType     String   // DIAMOND, MOISSANITE, CZ, RUBY, SAPPHIRE, EMERALD, PEARL, SEMI_PRECIOUS
-  origin        String?  // NATURAL, LAB (for diamonds only)
-  sizeUnit      String   // MM or CARAT
-  sizeMin       Float    // Min size for this price band
-  sizeMax       Float    // Max size for this price band
-  qualityTier   String   // BUDGET, STANDARD, PREMIUM
-  pricePerStone Float
-  currency      String   // INR or NPR
-  source        String   @default("seed") // seed, manual
-  note          String?
-  updatedAt     DateTime @default(now())
-
-  @@index([stoneType, qualityTier])
-  @@index([sizeMin, sizeMax])
-}
-
-// Stone setting prices
-model SettingPrice {
-  id              String   @id @default(uuid())
-  settingType     String   // PRONG, BEZEL, PAVE, CHANNEL, HALO, FLUSH, TENSION
-  flatFeePerStone Float
-  currency        String   // INR or NPR
-  source          String   @default("seed") // seed, manual
-  note            String?
-  updatedAt       DateTime @default(now())
-
-  @@unique([settingType, currency])
-  @@index([settingType])
-}
-
-// ══════════════════════════════════════
-// JEWELLERY TEMPLATES
-// ══════════════════════════════════════
-
 enum WeightCategory {
   LIGHT
   MEDIUM
   HEAVY
 }
-
-model JewelleryTemplate {
-  id                String        @id @default(uuid())
-  jewelleryType     JewelleryType
-  
-  // Names
-  nameEn            String
-  nameNe            String?
-  nameHi            String?
-  descriptionEn     String?
-  descriptionNe     String?
-  descriptionHi     String?
-  
-  // Weight ranges (grams)
-  lightWeightMin    Float
-  lightWeightMax    Float
-  mediumWeightMin   Float
-  mediumWeightMax   Float
-  heavyWeightMin    Float
-  heavyWeightMax    Float
-  
-  // Default dimensions (mm)
-  defaultDimensions Json?         // {length, width, thickness, innerDiameter, etc.}
-  
-  // Recommended materials
-  recommendedMaterials String[]
-  
-  // Suggested gemstones
-  suggestedGemstones GemstonePreset[]
-  
-  // Image/icon for visual reference
-  imageUrl          String?
-  iconName          String?       // Icon identifier for UI
-  
-  // Sort order for display
-  sortOrder         Int           @default(0)
-  
-  isActive          Boolean       @default(true)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-
-  @@unique([jewelleryType, nameEn])
-  @@index([jewelleryType])
-}
-
-// ══════════════════════════════════════
-// GEMSTONE PRESETS
-// ══════════════════════════════════════
 
 enum GemstoneType {
   DIAMOND_NATURAL
@@ -1193,91 +1217,20 @@ enum SettingStyle {
   INVISIBLE
 }
 
-model GemstonePreset {
-  id              String        @id @default(uuid())
-  
-  // Basic info
-  nameEn          String
-  nameNe          String?
-  nameHi          String?
-  
-  stoneType       GemstoneType
-  shape           GemstoneShape
-  settingStyle    SettingStyle
-  
-  // Size options
-  sizeOptions     Json          // Array of {label, sizeMm, caratWeight, priceNpr}
-  
-  // Color options for this preset
-  colorOptions    String[]      // ["D", "E", "F"] for diamonds, ["Red", "Pink"] for rubies, etc.
-  
-  // Default count
-  defaultCount    Int           @default(1)
-  
-  // Image for reference
-  imageUrl        String?
-  
-  // Linked to template (optional - can be general)
-  templateId      String?
-  template        JewelleryTemplate? @relation(fields: [templateId], references: [id])
-  
-  // Base price per stone (for estimate)
-  basePriceNpr    Float
-  
-  isActive        Boolean       @default(true)
-  createdAt       DateTime      @default(now())
-
-  @@index([stoneType])
-  @@index([templateId])
-}
-
-// ══════════════════════════════════════
-// PLATING TYPES & TIERS
-// ══════════════════════════════════════
-
 enum PlatingType {
   GOLD_PLATING
   ROSE_GOLD_PLATING
   RHODIUM_PLATING
   SILVER_PLATING
-  VERMEIL          // Gold over Sterling Silver only
+  VERMEIL
   PVD_COATING
 }
 
 enum PlatingTier {
-  LIGHT            // 0.5-1 micron
-  STANDARD         // 1-2.5 microns
-  PREMIUM          // 2.5-5 microns
+  LIGHT
+  STANDARD
+  PREMIUM
 }
-
-model PlatingOption {
-  id              String      @id @default(uuid())
-  platingType     PlatingType
-  tier            PlatingTier
-  
-  // Description
-  nameEn          String
-  nameNe          String?
-  descriptionEn   String?
-  
-  // Thickness in microns
-  thicknessMin    Float
-  thicknessMax    Float
-  
-  // Base price (per piece, varies by size in practice)
-  basePriceNpr    Float
-  
-  // Durability estimate
-  durabilityMonths Int?
-  
-  isActive        Boolean     @default(true)
-
-  @@unique([platingType, tier])
-}
-
-// ══════════════════════════════════════
-// SURFACE FINISHES (non-coating)
-// ══════════════════════════════════════
 
 enum SurfaceFinish {
   HIGH_POLISH
@@ -1291,10 +1244,6 @@ enum SurfaceFinish {
   DIAMOND_CUT
   ENGRAVED
 }
-
-// ══════════════════════════════════════
-// EXPANDED MATERIAL ENUMS
-// ══════════════════════════════════════
 
 enum PreciousMetal {
   GOLD_24K
@@ -1322,250 +1271,10 @@ enum BaseMetal {
 enum JewelleryAlloy {
   COPPER_ALLOY
   ZINC_ALLOY
-  NICKEL_ALLOY  // Restricted - compliance flag required
+  NICKEL_ALLOY
   BRASS_ALLOY
   BRONZE_ALLOY
 }
-
-// ══════════════════════════════════════
-// PRICING ENGINE CONFIGURATION TABLES
-// ══════════════════════════════════════
-
-// System-level pricing configuration with versioning
-model SystemPriceConfig {
-  id              String    @id @default(uuid())
-  version         Int       @default(1)
-  configType      String    // 'METAL_PURITY', 'BASE_METAL', 'FINISH', 'GEMSTONE', 'SETTING', 'TAX'
-  configKey       String    // e.g., 'GOLD_24K', 'BRASS', 'GOLD_PLATING_STANDARD'
-  configData      Json      // Flexible config data
-  isActive        Boolean   @default(true)
-  effectiveFrom   DateTime  @default(now())
-  effectiveUntil  DateTime?
-  createdBy       String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  @@index([configType, configKey])
-  @@index([isActive, effectiveFrom])
-}
-
-// Market adjustment configuration by region
-model MarketAdjustmentConfig {
-  id              String    @id @default(uuid())
-  marketRegion    MarketRegion
-  category        String    // 'PRECIOUS_METAL', 'BASE_METAL', 'GEMSTONE', 'FINISH', 'ALL'
-  adjustmentType  String    // 'MULTIPLIER', 'FIXED_ADDON', 'PERCENTAGE'
-  adjustmentValue Float
-  description     String?
-  isActive        Boolean   @default(true)
-  effectiveFrom   DateTime  @default(now())
-  effectiveUntil  DateTime?
-  createdBy       String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  @@index([marketRegion])
-  @@index([marketRegion, category, isActive])
-}
-
-// Tax rules configuration per market/category
-model TaxRuleConfig {
-  id              String       @id @default(uuid())
-  marketRegion    MarketRegion
-  taxType         String       // 'GST', 'VAT', 'SALES_TAX'
-  taxName         String       // Display name: "GST (3%)", "VAT (13%)"
-  category        String       // 'PRECIOUS_METAL', 'MAKING_CHARGE', 'GEMSTONE', 'FINISH', 'ALL'
-  rate            Float        // 0.03 for 3%
-  isCompounding   Boolean      @default(false)
-  priority        Int          @default(0)
-  stateCode       String?      // For US state-specific taxes
-  description     String?
-  isActive        Boolean      @default(true)
-  effectiveFrom   DateTime     @default(now())
-  effectiveUntil  DateTime?
-  createdBy       String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-
-  @@index([marketRegion, isActive])
-  @@index([category])
-}
-
-// Shop-level price overrides
-model ShopPriceOverride {
-  id              String    @id @default(uuid())
-  shopId          String
-  shop            Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  overrideType    String    // 'METAL_RATE', 'MAKING_CHARGE', 'FINISH', 'GEMSTONE', 'MARKUP'
-  itemCode        String    // e.g., 'GOLD_24K', 'GOLD_PLATING_PREMIUM'
-  overrideMode    String    // 'FIXED', 'PERCENTAGE', 'MULTIPLIER'
-  overrideValue   Float
-  currency        CurrencyCode @default(NPR)
-  minValue        Float?    // Admin-enforced minimum
-  maxValue        Float?    // Admin-enforced maximum
-  isActive        Boolean   @default(true)
-  approvedBy      String?
-  approvedAt      DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  @@unique([shopId, overrideType, itemCode])
-  @@index([shopId])
-}
-
-// Gemstone pricing configuration
-model GemPriceConfig {
-  id              String    @id @default(uuid())
-  stoneType       String    // 'DIAMOND_NATURAL', 'DIAMOND_LAB', 'MOISSANITE', etc.
-  origin          String?   // 'NATURAL', 'LAB' (for diamonds)
-  qualityGrade    String    // 'A', 'B', 'C' or 'BUDGET', 'STANDARD', 'PREMIUM'
-  sizeUnit        String    @default("CARAT") // 'CARAT' or 'MM'
-  sizeRangeMin    Float
-  sizeRangeMax    Float
-  pricePerUnit    Float     // Price per carat/mm in USD
-  currency        CurrencyCode @default(USD)
-  source          String    @default("SYSTEM") // 'SYSTEM', 'MARKET', 'MANUAL'
-  notes           String?
-  isActive        Boolean   @default(true)
-  effectiveFrom   DateTime  @default(now())
-  effectiveUntil  DateTime?
-  createdBy       String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  @@index([stoneType, qualityGrade])
-  @@index([isActive])
-}
-
-// Finish pricing configuration
-model FinishPriceConfig {
-  id                String    @id @default(uuid())
-  finishType        String    // 'GOLD_PLATING', 'VERMEIL', 'PVD', 'RHODIUM_PLATING', etc.
-  tier              String    // 'LIGHT', 'STANDARD', 'PREMIUM'
-  pricingModel      String    // 'FIXED', 'PERCENTAGE', 'PER_GRAM'
-  basePrice         Float     // Base price in USD
-  percentageUplift  Float?    // If PERCENTAGE model
-  perGramRate       Float?    // If PER_GRAM model
-  currency          CurrencyCode @default(USD)
-  minThickness      Float?    // Microns
-  maxThickness      Float?
-  durabilityMonths  Int?
-  notes             String?
-  isActive          Boolean   @default(true)
-  effectiveFrom     DateTime  @default(now())
-  effectiveUntil    DateTime?
-  createdBy         String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  @@unique([finishType, tier])
-  @@index([finishType])
-}
-
-// Base metal pricing configuration
-model BaseMetalPriceConfig {
-  id              String    @id @default(uuid())
-  metalCode       String    @unique // 'COPPER', 'ZINC', 'NICKEL', 'BRASS', 'BRONZE', etc.
-  pricePerGramUsd Float
-  source          String    @default("SYSTEM") // 'SYSTEM', 'LME', 'MANUAL'
-  isRestricted    Boolean   @default(false) // For Nickel compliance
-  complianceNotes String?
-  notes           String?
-  isActive        Boolean   @default(true)
-  effectiveFrom   DateTime  @default(now())
-  effectiveUntil  DateTime?
-  createdBy       String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  @@index([isActive])
-}
-
-// Metal purity multipliers configuration
-model MetalPurityConfig {
-  id               String   @id @default(uuid())
-  metalType        String   // 'GOLD', 'SILVER', 'PLATINUM', 'PALLADIUM'
-  purityCode       String   // '24K', '22K', '18K', '14K', '10K', '999', '925', 'PT950', etc.
-  purityMultiplier Float    // 1.0, 0.9167, 0.75, etc.
-  displayName      String   // 'Gold 24K (Pure)', 'Gold 22K'
-  description      String?
-  isActive         Boolean  @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  @@unique([metalType, purityCode])
-}
-
-// Rounding rules per currency
-model RoundingRuleConfig {
-  id             String       @id @default(uuid())
-  currency       CurrencyCode @unique
-  roundingMode   String       // 'ROUND', 'FLOOR', 'CEIL'
-  precision      Int          // 0 for no decimals, 2 for 2 decimals
-  roundToNearest Float?       // e.g., 1 for nearest rupee, 0.01 for nearest cent
-  isActive       Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-}
-
-// Price calculation audit log for transparency
-model PriceCalculationLog {
-  id                String   @id @default(uuid())
-  requestId         String   // Unique request identifier
-  marketRegion      MarketRegion
-  displayCurrency   CurrencyCode
-  shopId            String?
-  requestPayload    Json     // Full request
-  calculationSteps  Json     // Step-by-step breakdown
-  spotPricesUsed    Json?    // Spot prices at calculation time
-  fxRatesUsed       Json?    // FX rates at calculation time
-  marketAdjustments Json?    // Adjustments applied
-  shopOverrides     Json?    // Shop overrides applied
-  taxBreakdown      Json?    // Tax calculation details
-  finalResult       Json     // Final pricing result
-  calculationTimeMs Int?     // Time taken
-  source            String   // 'PLATFORM', 'SHOP'
-  createdAt         DateTime @default(now())
-
-  @@index([requestId])
-  @@index([shopId])
-  @@index([createdAt])
-}
-
-// ══════════════════════════════════════
-// ADMIN VERIFICATION REQUESTS & REPORTS
-// ══════════════════════════════════════
-
-model VerificationRequest {
-  id          String   @id @default(uuid())
-  type        String   // 'SHOP' or 'USER'
-  status      String   // 'PENDING', 'APPROVED', 'REJECTED'
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  shopId      String?
-  shop        Shop?    @relation("ShopVerificationRequests", fields: [shopId], references: [id])
-  userId      String?
-  user        User?    @relation("UserVerificationRequests", fields: [userId], references: [id])
-  details     Json?
-}
-
-model Report {
-  id          String   @id @default(uuid())
-  reporterId  String
-  reporter    User     @relation("ReportReporter", fields: [reporterId], references: [id])
-  reportedId  String?
-  reported    User?    @relation("ReportReported", fields: [reportedId], references: [id])
-  type        String   // e.g. 'USER', 'SHOP', 'ORDER', etc.
-  reason      String
-  status      String   // 'OPEN', 'RESOLVED', 'DISMISSED'
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  details     Json?
-}
-
-// ══════════════════════════════════════
-// OTP VERIFICATION
-// ══════════════════════════════════════
 
 enum OtpType {
   EMAIL_VERIFICATION
@@ -1574,81 +1283,28 @@ enum OtpType {
   LOGIN_2FA
 }
 
-model OtpVerification {
-  id          String   @id @default(uuid())
-  userId      String
-  type        OtpType
-  target      String   // Email or phone number
-  code        String   // Hashed OTP code
-  attempts    Int      @default(0)
-  maxAttempts Int      @default(3)
-  expiresAt   DateTime
-  verifiedAt  DateTime?
-  createdAt   DateTime @default(now())
-
-  @@index([userId, type])
-  @@index([target, type])
-  @@index([expiresAt])
-}
-
-// ══════════════════════════════════════
-// SYSTEM NOTIFICATIONS (for admin broadcast)
-// ══════════════════════════════════════
-
-model SystemNotification {
-  id          String   @id @default(uuid())
-  title       String
-  message     String
-  type        String   // 'INFO', 'WARNING', 'SUCCESS', 'ERROR'
-  targetRoles String[] // Empty = all users
-  isActive    Boolean  @default(true)
-  expiresAt   DateTime?
-  createdBy   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([isActive])
-  @@index([expiresAt])
-}
-
-// ══════════════════════════════════════
-// MARKET CONFIGURATION (Geo-based Localisation)
-// ══════════════════════════════════════
-
-// Weight unit enum for the platform
 enum WeightUnit {
-  GRAM      // g - Base unit
-  KILOGRAM  // kg
-  TOLA      // Traditional South Asian unit
-  LAAL      // Nepal local unit (smaller than tola)
-  OUNCE     // oz (troy ounce for precious metals)
-  POUND     // lb
+  GRAM
+  KILOGRAM
+  TOLA
+  LAAL
+  OUNCE
+  POUND
 }
 
-// Payment method enum (country-specific options)
 enum PaymentMethod {
-  // Universal
   CARD
   BANK_TRANSFER
   CASH
-  
-  // India specific
   UPI
-  
-  // Nepal specific
   ESEWA
   KHALTI
   CONNECTIPS
-  
-  // International
   PAYPAL
   STRIPE
-  
-  // Shop payment
   PAID_AT_SHOP
 }
 
-// Payment status enum
 enum PaymentStatusEnum {
   UNPAID
   PAID
@@ -1657,7 +1313,6 @@ enum PaymentStatusEnum {
   REFUNDED
 }
 
-// Detailed order status enum
 enum DetailedOrderStatus {
   PLACED
   CONFIRMED
@@ -1670,91 +1325,9 @@ enum DetailedOrderStatus {
   REFUNDED
 }
 
-// Commission status for shop settlements
 enum CommissionStatus {
   PENDING
   PAID
   OVERDUE
   WAIVED
 }
-
-model MarketConfig {
-  id                    String       @id @default(uuid())
-  countryCode           MarketRegion @unique
-  countryName           String       // Full country name
-  
-  // Currency settings
-  defaultCurrency       CurrencyCode
-  supportedCurrencies   CurrencyCode[]
-  
-  // Weight unit settings
-  defaultWeightUnit     WeightUnit   @default(GRAM)
-  supportedWeightUnits  WeightUnit[]
-  
-  // Payment settings
-  supportedPaymentMethods PaymentMethod[]
-  
-  // Hero section copy
-  heroHeadline          String       // "Nepal's No.1 Jewellery Marketplace"
-  heroSubheadline       String?      // "Trusted by thousands"
-  
-  // Footer contact info
-  footerContactTitle    String?      // "Contact Us in Nepal"
-  contactEmail          String
-  contactPhone          String
-  contactAddress        String?
-  contactWhatsapp       String?
-  
-  // Tax settings
-  taxPercentage         Float        @default(0)
-  taxName               String?      // "VAT", "GST", etc.
-  
-  // Region multiplier for pricing
-  priceMultiplier       Float        @default(1.0)
-  
-  // Feature flags
-  codEnabled            Boolean      @default(false)
-  customOrdersEnabled   Boolean      @default(true)
-  
-  // Active status
-  isActive              Boolean      @default(true)
-  
-  createdAt             DateTime     @default(now())
-  updatedAt             DateTime     @updatedAt
-
-  @@index([countryCode])
-  @@index([isActive])
-}
-
-// Commission tracking for shop settlements (Paid at shop)
-model CommissionLedger {
-  id              String           @id @default(uuid())
-  orderId         String           @unique
-  shopId          String
-  
-  // Commission details
-  orderTotal      Float            // Total order amount
-  commissionRate  Float            @default(0.01) // 1% default
-  amount          Float            // Commission amount owed
-  currency        CurrencyCode     // Currency of the commission
-  
-  // Status tracking
-  status          CommissionStatus @default(PENDING)
-  dueAt           DateTime         // When commission is due (21 days from paid-at-shop)
-  paidAt          DateTime?        // When commission was actually paid
-  
-  // Reference
-  notes           String?
-  
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-
-  // Relations
-  order           Order            @relation(fields: [orderId], references: [id])
-  shop            Shop             @relation(fields: [shopId], references: [id])
-
-  @@index([shopId])
-  @@index([status])
-  @@index([dueAt])
-}
-

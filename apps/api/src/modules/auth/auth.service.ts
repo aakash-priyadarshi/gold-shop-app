@@ -3,6 +3,7 @@ import {
   UnauthorizedException, 
   ConflictException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -11,6 +12,7 @@ import * as crypto from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { MailService } from '../mail/mail.service';
+import { OtpService } from './otp.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UserRole, UserStatus, CurrencyCode } from '@prisma/client';
@@ -37,6 +39,14 @@ export interface AuthResponse {
   };
 }
 
+export interface RegisterResponse {
+  success: boolean;
+  message: string;
+  userId: string;
+  email: string;
+  requiresVerification: boolean;
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -47,13 +57,15 @@ export class AuthService {
     private jwtService: JwtService,
     private auditService: AuditService,
     private mailService: MailService,
+    private otpService: OtpService,
   ) {}
 
   /**
    * Register a new user (CUSTOMER or SHOPKEEPER)
    * SHOPKEEPER registration requires shop details
+   * Returns registration info and sends verification OTP
    */
-  async register(dto: RegisterDto): Promise<AuthResponse> {
+  async register(dto: RegisterDto, ipAddress?: string): Promise<RegisterResponse> {
     // Check if email already exists
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email },
@@ -89,7 +101,7 @@ export class AuthService {
 
     // Use transaction for user + shop creation
     const result = await this.prisma.$transaction(async (tx) => {
-      // Create user
+      // Create user with emailVerified = false (pending verification)
       const user = await tx.user.create({
         data: {
           email: dto.email,
@@ -98,7 +110,8 @@ export class AuthService {
           firstName: dto.firstName,
           lastName: dto.lastName,
           role: dto.role as UserRole,
-          status: dto.role === 'SHOPKEEPER' ? UserStatus.PENDING_VERIFICATION : UserStatus.ACTIVE,
+          status: UserStatus.PENDING_VERIFICATION, // All users start pending until email verified
+          emailVerified: false,
           preferredLanguage: dto.preferredLanguage || 'en',
           preferredCurrency,
         },
@@ -142,12 +155,87 @@ export class AuthService {
 
     this.logger.log(`New ${dto.role} registered: ${dto.email}`);
 
-    // Send welcome email (non-blocking)
-    this.mailService.sendWelcome(result.user.email, result.user.firstName)
+    // Send email verification OTP (non-blocking but log errors)
+    try {
+      await this.otpService.sendVerificationOtpByEmail(
+        result.user.email,
+        result.user.id,
+        result.user.firstName,
+        ipAddress,
+      );
+    } catch (error) {
+      this.logger.error(`Failed to send verification OTP: ${error.message}`);
+      // Don't throw - user is created, they can request resend
+    }
+
+    return {
+      success: true,
+      message: 'Registration successful. Please verify your email with the OTP sent.',
+      userId: result.user.id,
+      email: result.user.email,
+      requiresVerification: true,
+    };
+  }
+
+  /**
+   * Verify email with OTP after registration
+   */
+  async verifyEmail(userId: string, code: string): Promise<AuthResponse> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { shop: true },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    if (user.emailVerified) {
+      throw new BadRequestException('Email already verified');
+    }
+
+    // Verify the OTP
+    await this.otpService.verifyOtp(userId, 'EMAIL_VERIFICATION', code);
+
+    // Update user status to active after email verification
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+        status: user.role === 'SHOPKEEPER' ? UserStatus.PENDING_VERIFICATION : UserStatus.ACTIVE,
+      },
+    });
+
+    this.logger.log(`Email verified for user: ${user.email}`);
+
+    // Send welcome email
+    this.mailService.sendWelcome(user.email, user.firstName)
       .catch(err => this.logger.error(`Failed to send welcome email: ${err.message}`));
 
-    // Generate tokens
-    return this.generateTokens(result.user, result.shop);
+    // Generate tokens and log the user in
+    return this.generateTokens(user, user.shop);
+  }
+
+  /**
+   * Resend verification OTP
+   */
+  async resendVerificationOtp(email: string, ipAddress?: string): Promise<{ success: boolean; message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      // Don't reveal if email exists
+      return { success: true, message: 'If the email exists, a verification code has been sent.' };
+    }
+
+    if (user.emailVerified) {
+      throw new BadRequestException('Email already verified');
+    }
+
+    await this.otpService.sendVerificationOtpByEmail(user.email, user.id, user.firstName, ipAddress);
+    return { success: true, message: 'Verification code sent to your email.' };
   }
 
   /**
@@ -167,6 +255,16 @@ export class AuthService {
     const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Check if email is verified
+    if (!user.emailVerified) {
+      throw new ForbiddenException({
+        message: 'Email not verified',
+        code: 'EMAIL_NOT_VERIFIED',
+        userId: user.id,
+        email: user.email,
+      });
     }
 
     // Check if user is active
@@ -196,6 +294,162 @@ export class AuthService {
     });
 
     return this.generateTokens(user, user.shop, ipAddress, userAgent);
+  }
+
+  /**
+   * Request password reset OTP
+   */
+  async forgotPassword(email: string, ipAddress?: string): Promise<{ success: boolean; message: string }> {
+    return this.otpService.sendPasswordResetOtp(email, ipAddress);
+  }
+
+  /**
+   * Reset password with OTP
+   */
+  async resetPassword(
+    email: string, 
+    code: string, 
+    newPassword: string
+  ): Promise<{ success: boolean; message: string }> {
+    // Verify OTP
+    const result = await this.otpService.verifyOtpByEmail(email, 'PASSWORD_RESET', code);
+
+    if (!result.success || !result.userId) {
+      throw new BadRequestException('Invalid or expired code');
+    }
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+
+    // Update password
+    await this.prisma.user.update({
+      where: { id: result.userId },
+      data: { passwordHash },
+    });
+
+    // Revoke all refresh tokens for security
+    await this.prisma.refreshToken.updateMany({
+      where: { userId: result.userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+
+    await this.prisma.session.deleteMany({
+      where: { userId: result.userId },
+    });
+
+    // Log audit
+    await this.auditService.log({
+      userId: result.userId,
+      actorType: 'USER',
+      action: 'PASSWORD_RESET',
+      resourceType: 'USER',
+      resourceId: result.userId,
+    });
+
+    this.logger.log(`Password reset for user: ${email}`);
+
+    return { success: true, message: 'Password reset successful. Please login with your new password.' };
+  }
+
+  /**
+   * Handle Google OAuth login/registration
+   */
+  async googleAuth(googleUser: {
+    googleId: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    picture?: string;
+  }, ipAddress?: string, userAgent?: string): Promise<AuthResponse> {
+    // Check if user exists by googleId or email
+    let user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { googleId: googleUser.googleId },
+          { email: googleUser.email },
+        ],
+      },
+      include: { shop: true },
+    });
+
+    if (user) {
+      // Link Google account if not already linked
+      if (!user.googleId) {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: { 
+            googleId: googleUser.googleId,
+            emailVerified: true, // Google verified the email
+            emailVerifiedAt: user.emailVerifiedAt || new Date(),
+            status: user.status === UserStatus.PENDING_VERIFICATION ? UserStatus.ACTIVE : user.status,
+          },
+        });
+      }
+
+      // Check if user is active
+      if (user.status === UserStatus.SUSPENDED) {
+        throw new UnauthorizedException('Account suspended. Please contact support.');
+      }
+
+      if (user.status === UserStatus.DEACTIVATED) {
+        throw new UnauthorizedException('Account deactivated');
+      }
+
+      // Update last login
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date() },
+      });
+
+      // Log audit
+      await this.auditService.log({
+        userId: user.id,
+        actorType: 'USER',
+        action: 'LOGIN',
+        resourceType: 'USER',
+        resourceId: user.id,
+        metadata: { method: 'google' },
+        ipAddress,
+        userAgent,
+      });
+
+      return this.generateTokens(user, user.shop, ipAddress, userAgent);
+    }
+
+    // Create new user from Google account
+    const newUser = await this.prisma.user.create({
+      data: {
+        email: googleUser.email,
+        googleId: googleUser.googleId,
+        firstName: googleUser.firstName,
+        lastName: googleUser.lastName,
+        passwordHash: '', // No password for OAuth users
+        role: UserRole.CUSTOMER,
+        status: UserStatus.ACTIVE,
+        emailVerified: true, // Google verified the email
+        emailVerifiedAt: new Date(),
+        preferredLanguage: 'en',
+        preferredCurrency: CurrencyCode.NPR,
+      },
+    });
+
+    // Log audit
+    await this.auditService.log({
+      userId: newUser.id,
+      actorType: 'USER',
+      action: 'REGISTER',
+      resourceType: 'USER',
+      resourceId: newUser.id,
+      newValue: { email: newUser.email, method: 'google' },
+    });
+
+    this.logger.log(`New Google OAuth user registered: ${googleUser.email}`);
+
+    // Send welcome email
+    this.mailService.sendWelcome(newUser.email, newUser.firstName)
+      .catch(err => this.logger.error(`Failed to send welcome email: ${err.message}`));
+
+    return this.generateTokens(newUser, null, ipAddress, userAgent);
   }
 
   /**

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -21,6 +21,8 @@ import {
   EyeSlashIcon,
   ExclamationCircleIcon,
   ArrowRightIcon,
+  ArrowPathIcon,
+  CheckCircleIcon,
 } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
 
@@ -35,10 +37,31 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const { login, isAuthenticated, user, isLoading: authLoading, error, clearError } = useAuth();
+  const { login, verifyEmail, resendVerificationOtp, googleLogin, isAuthenticated, user, isLoading: authLoading, error, clearError } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [hasVisited, setHasVisited] = useState(false);
+  
+  // Email verification state (when user tries to login with unverified email)
+  const [showVerification, setShowVerification] = useState(false);
+  const [verificationUserId, setVerificationUserId] = useState<string>('');
+  const [verificationEmail, setVerificationEmail] = useState<string>('');
+  const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
+  const [otpError, setOtpError] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Check URL for error param (from OAuth redirect)
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      toast({
+        variant: 'destructive',
+        title: 'Login failed',
+        description: errorParam,
+      });
+    }
+  }, [searchParams, toast]);
 
   // Check if user has visited before (skip intro for returning users)
   useEffect(() => {
@@ -47,6 +70,14 @@ function LoginForm() {
       setHasVisited(true);
     }
   }, []);
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
 
   // Mark as visited after animation completes
   const handleAnimationComplete = () => {
@@ -74,6 +105,7 @@ function LoginForm() {
     register,
     handleSubmit,
     formState: { errors },
+    getValues,
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
   });
@@ -89,13 +121,108 @@ function LoginForm() {
         description: 'You have successfully signed in.',
       });
     } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Login failed',
-        description: error.message || 'Invalid credentials',
-      });
+      // Check if email not verified
+      if (error.message === 'EMAIL_NOT_VERIFIED') {
+        setVerificationUserId(error.userId);
+        setVerificationEmail(error.email);
+        setShowVerification(true);
+        
+        // Send verification OTP
+        try {
+          await resendVerificationOtp(error.email);
+          setResendCooldown(60);
+          toast({
+            title: 'Verification required',
+            description: 'A verification code has been sent to your email.',
+          });
+        } catch {
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Failed to send verification code. Please try again.',
+          });
+        }
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Login failed',
+          description: error.message || 'Invalid credentials',
+        });
+      }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // OTP handlers
+  const handleOtpChange = (index: number, value: string) => {
+    if (value.length > 1) {
+      const digits = value.replace(/\D/g, '').slice(0, 6).split('');
+      const newOtp = [...otpCode];
+      digits.forEach((digit, i) => {
+        if (index + i < 6) newOtp[index + i] = digit;
+      });
+      setOtpCode(newOtp);
+      const lastFilledIndex = Math.min(index + digits.length - 1, 5);
+      otpInputRefs.current[lastFilledIndex]?.focus();
+      return;
+    }
+    if (!/^\d*$/.test(value)) return;
+    const newOtp = [...otpCode];
+    newOtp[index] = value;
+    setOtpCode(newOtp);
+    setOtpError('');
+    if (value && index < 5) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !otpCode[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    const code = otpCode.join('');
+    if (code.length !== 6) {
+      setOtpError('Please enter the complete 6-digit code');
+      return;
+    }
+    setIsLoading(true);
+    setOtpError('');
+    try {
+      await verifyEmail(verificationUserId, code);
+      toast({
+        title: 'Email verified!',
+        description: 'Welcome! You are now signed in.',
+      });
+    } catch (error: any) {
+      setOtpError(error.message || 'Invalid code. Please try again.');
+      setOtpCode(['', '', '', '', '', '']);
+      otpInputRefs.current[0]?.focus();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
+    try {
+      await resendVerificationOtp(verificationEmail);
+      setResendCooldown(60);
+      setOtpCode(['', '', '', '', '', '']);
+      setOtpError('');
+      toast({
+        title: 'Code resent!',
+        description: 'Please check your email for the new verification code.',
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to resend code',
+        description: error.message,
+      });
     }
   };
 
@@ -115,6 +242,112 @@ function LoginForm() {
     );
   }
 
+  // Show email verification screen
+  if (showVerification) {
+    return (
+      <GoldenUnveil skipIntro={true} onAnimationComplete={handleAnimationComplete}>
+        <Card className="w-full max-w-md border-0 shadow-2xl shadow-gold-500/10 bg-white/95 backdrop-blur-sm">
+          <CardHeader className="space-y-1 text-center pb-4">
+            <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-gold-100 to-gold-200 flex items-center justify-center mb-2">
+              <EnvelopeIcon className="w-8 h-8 text-gold-600" />
+            </div>
+            <CardTitle className="text-2xl font-bold">Verify your email</CardTitle>
+            <CardDescription className="text-base">
+              Your email hasn't been verified yet.<br />
+              Enter the 6-digit code sent to<br />
+              <span className="font-medium text-gray-900">{verificationEmail}</span>
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <div className="flex justify-center gap-2">
+                {otpCode.map((digit, index) => (
+                  <input
+                    key={index}
+                    ref={(el) => { otpInputRefs.current[index] = el; }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={digit}
+                    onChange={(e) => handleOtpChange(index, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                    className={cn(
+                      "w-12 h-14 text-center text-xl font-semibold rounded-xl border-2 transition-all",
+                      "focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500",
+                      otpError ? "border-red-300 bg-red-50" : "border-gray-200 bg-white"
+                    )}
+                    autoFocus={index === 0}
+                  />
+                ))}
+              </div>
+              {otpError && (
+                <p className="text-sm text-red-500 text-center flex items-center justify-center gap-1">
+                  <ExclamationCircleIcon className="w-4 h-4" />
+                  {otpError}
+                </p>
+              )}
+            </div>
+
+            <Button
+              onClick={handleVerifyOtp}
+              disabled={isLoading || otpCode.join('').length !== 6}
+              className="w-full h-12 rounded-xl gold-gradient text-white font-semibold"
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="spinner spinner-sm border-white/30 border-t-white" />
+                  Verifying...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <CheckCircleIcon className="w-5 h-5" />
+                  Verify & Sign In
+                </span>
+              )}
+            </Button>
+
+            <div className="text-center">
+              <p className="text-sm text-gray-500 mb-2">Didn't receive the code?</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleResendOtp}
+                disabled={resendCooldown > 0}
+                className="text-gold-600 hover:text-gold-700 hover:bg-gold-50"
+              >
+                {resendCooldown > 0 ? (
+                  <span>Resend in {resendCooldown}s</span>
+                ) : (
+                  <span className="flex items-center gap-1">
+                    <ArrowPathIcon className="w-4 h-4" />
+                    Resend Code
+                  </span>
+                )}
+              </Button>
+            </div>
+
+            <div className="text-center pt-4 border-t">
+              <Button
+                variant="link"
+                onClick={() => {
+                  setShowVerification(false);
+                  setVerificationUserId('');
+                  setVerificationEmail('');
+                  setOtpCode(['', '', '', '', '', '']);
+                  setOtpError('');
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ← Back to login
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </GoldenUnveil>
+    );
+  }
+
   return (
     <GoldenUnveil 
       skipIntro={hasVisited} 
@@ -128,8 +361,47 @@ function LoginForm() {
           </CardDescription>
         </CardHeader>
         
+        <CardContent className="space-y-5">
+          {/* Google OAuth Button */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={googleLogin}
+            className="w-full h-12 rounded-xl border-gray-200 hover:bg-gray-50 flex items-center justify-center gap-3"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24">
+              <path
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                fill="#4285F4"
+              />
+              <path
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                fill="#34A853"
+              />
+              <path
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                fill="#FBBC05"
+              />
+              <path
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                fill="#EA4335"
+              />
+            </svg>
+            Continue with Google
+          </Button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-gray-200" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white px-2 text-gray-500">Or continue with email</span>
+            </div>
+          </div>
+        </CardContent>
+
         <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-5">
+          <CardContent className="space-y-5 pt-0">
             {/* Error Alert */}
             {error && (
               <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm animate-slideUp login-form-item">

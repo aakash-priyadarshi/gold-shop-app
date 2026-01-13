@@ -50,7 +50,12 @@ export interface AuthState {
 
 export interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
+  register: (data: RegisterData) => Promise<RegisterResponse>;
+  verifyEmail: (userId: string, code: string) => Promise<void>;
+  resendVerificationOtp: (email: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
+  googleLogin: () => void;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   clearError: () => void;
@@ -73,6 +78,14 @@ export interface RegisterData {
     contactPhone?: string;
     contactEmail?: string;
   };
+}
+
+export interface RegisterResponse {
+  success: boolean;
+  message: string;
+  userId: string;
+  email: string;
+  requiresVerification: boolean;
 }
 
 interface AuthResponse {
@@ -220,7 +233,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const dashboardRoute = getDashboardRoute(fullUser.role);
       router.push(dashboardRoute);
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Login failed. Please try again.';
+      // Check if email is not verified
+      const errorData = error.response?.data;
+      if (errorData?.code === 'EMAIL_NOT_VERIFIED') {
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: null,
+        }));
+        // Throw structured error for handling in UI
+        const verificationError = new Error('EMAIL_NOT_VERIFIED') as any;
+        verificationError.userId = errorData.userId;
+        verificationError.email = errorData.email;
+        throw verificationError;
+      }
+      
+      const message = errorData?.message || 'Login failed. Please try again.';
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -230,12 +258,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [router]);
 
-  // Register function
-  const register = useCallback(async (data: RegisterData) => {
+  // Register function - returns registration response (requires email verification)
+  const register = useCallback(async (data: RegisterData): Promise<RegisterResponse> => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const response = await api.post<AuthResponse>('/auth/register', data);
+      const response = await api.post<RegisterResponse>('/auth/register', data);
+      
+      setState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: null,
+      }));
+
+      return response.data;
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Registration failed. Please try again.';
+      setState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: message,
+      }));
+      throw new Error(message);
+    }
+  }, []);
+
+  // Verify email with OTP - completes registration and logs user in
+  const verifyEmail = useCallback(async (userId: string, code: string) => {
+    setState(prev => ({ ...prev, isLoading: true, error: null }));
+
+    try {
+      const response = await api.post<AuthResponse>('/auth/verify-email', {
+        userId,
+        code,
+      });
+
       const { accessToken, refreshToken, user: userData } = response.data;
       storeTokens(accessToken, refreshToken);
 
@@ -254,7 +311,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const dashboardRoute = getDashboardRoute(fullUser.role);
       router.push(dashboardRoute);
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Registration failed. Please try again.';
+      const message = error.response?.data?.message || 'Verification failed. Please try again.';
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -263,6 +320,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error(message);
     }
   }, [router]);
+
+  // Resend verification OTP
+  const resendVerificationOtp = useCallback(async (email: string) => {
+    try {
+      await api.post('/auth/resend-verification', { email });
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to resend code. Please try again.';
+      throw new Error(message);
+    }
+  }, []);
+
+  // Forgot password - request OTP
+  const forgotPassword = useCallback(async (email: string) => {
+    try {
+      await api.post('/auth/forgot-password', { email });
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to send reset code. Please try again.';
+      throw new Error(message);
+    }
+  }, []);
+
+  // Reset password with OTP
+  const resetPassword = useCallback(async (email: string, code: string, newPassword: string) => {
+    try {
+      await api.post('/auth/reset-password', { email, code, newPassword });
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Password reset failed. Please try again.';
+      throw new Error(message);
+    }
+  }, []);
+
+  // Google OAuth login - redirects to backend OAuth endpoint
+  const googleLogin = useCallback(() => {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+    window.location.href = `${apiBaseUrl}/auth/google`;
+  }, []);
 
   // Logout function
   const logout = useCallback(async () => {
@@ -299,6 +392,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ...state,
     login,
     register,
+    verifyEmail,
+    resendVerificationOtp,
+    forgotPassword,
+    resetPassword,
+    googleLogin,
     logout,
     refreshUser,
     clearError,
