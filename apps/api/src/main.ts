@@ -8,6 +8,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as dns from 'dns';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 /**
@@ -44,6 +45,49 @@ async function bootstrap() {
   // Configure networking before creating the app
   configureNetworking();
   const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap');
+
+  // ======================
+  // Security Middleware
+  // ======================
+
+  // Helmet for security headers
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        scriptSrc: ["'self'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false, // Allow embedding for Swagger UI
+  }));
+
+  // Host validation middleware - only allow requests from known hosts
+  const allowedHosts = [
+    'orivraa.com',
+    'www.orivraa.com',
+    'api.orivraa.com',
+    'localhost',
+    '127.0.0.1',
+  ];
+
+  // In production, enforce host validation
+  if (process.env.NODE_ENV === 'production') {
+    app.use((req: any, res: any, next: any) => {
+      const host = req.hostname || req.headers.host?.split(':')[0];
+      
+      if (!host || !allowedHosts.some(allowed => host === allowed || host.endsWith(`.${allowed}`))) {
+        logger.warn(`Blocked request from unauthorized host: ${host}`);
+        return res.status(403).json({ 
+          statusCode: 403, 
+          message: 'Forbidden: Invalid host header' 
+        });
+      }
+      next();
+    });
+  }
 
   // Global validation pipe
   app.useGlobalPipes(
