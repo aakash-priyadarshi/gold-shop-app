@@ -84,6 +84,7 @@ const BUILD_METHODS = [
   { value: 'METHOD_A', label: 'Method A: Solid Precious Metal', description: 'Pure gold, silver, or platinum throughout' },
   { value: 'METHOD_B', label: 'Method B: Precious Metal Alloy', description: 'Gold/silver mixed with other metals for durability' },
   { value: 'METHOD_C', label: 'Method C: Base Metal + Plating', description: 'Not solid gold. Plated/Coated.' },
+  { value: 'METHOD_D', label: 'Method D: Italian Machine Made', description: 'Machine-made chains, bangles, and intricate patterns' },
 ];
 
 const WEIGHT_CATEGORIES = [

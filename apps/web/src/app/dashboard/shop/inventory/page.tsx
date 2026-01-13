@@ -277,6 +277,35 @@ export default function ShopInventoryPage() {
             </p>
           </div>
 
+          {/* Pricing Info Card */}
+          <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-400 text-base">
+                <Info className="h-5 w-5" />
+                How Pricing Works
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-amber-900 dark:text-amber-300 space-y-2">
+              <p>
+                <strong>Total Price = (Metal Weight × Live Market Rate) + Making Charges</strong>
+              </p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>
+                  <strong>Market Rate:</strong> Fetched live from FENEGOSIDA (Nepal Gold & Silver Dealers&apos; Association) or international sources.
+                </li>
+                <li>
+                  <strong>Making Charges:</strong> Your craftmanship fee. Set per gram below, or leave blank to use your shop&apos;s default making charge percentage (configurable in Settings).
+                </li>
+                <li>
+                  <strong>System Fallback:</strong> If you don&apos;t set making charges, the system uses 10% of metal value as default.
+                </li>
+              </ul>
+              <p className="text-xs text-amber-700 dark:text-amber-400 pt-2 italic">
+                Tip: Customers see transparent pricing breakdown with live rates + your making charges.
+              </p>
+            </CardContent>
+          </Card>
+
           <Tabs defaultValue="materials" className="space-y-4">
             <TabsList>
               <TabsTrigger value="materials">Materials</TabsTrigger>

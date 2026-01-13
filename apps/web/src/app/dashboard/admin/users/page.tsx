@@ -96,9 +96,9 @@ export default function AdminUsersPage() {
     setIsLoading(true);
     try {
       const response = await api.get('/users');
-      let usersArr = response.data.users || response.data || [];
+      // Backend returns { data: users[], meta: {...} }
+      let usersArr = response.data?.data || response.data?.users || response.data || [];
       if (!Array.isArray(usersArr)) {
-        // If not array, try to parse or fallback to empty
         usersArr = [];
       }
       setUsers(usersArr);
@@ -146,7 +146,7 @@ export default function AdminUsersPage() {
   const handleSuspend = async (userId: string) => {
     setProcessingId(userId);
     try {
-      await api.patch(`/api/users/${userId}/suspend`);
+      await api.patch(`/users/${userId}/suspend`);
       toast({
         title: 'User Suspended',
         description: 'The user has been suspended.',
@@ -166,7 +166,7 @@ export default function AdminUsersPage() {
   const handleActivate = async (userId: string) => {
     setProcessingId(userId);
     try {
-      await api.patch(`/api/users/${userId}/activate`);
+      await api.patch(`/users/${userId}/activate`);
       toast({
         title: 'User Activated',
         description: 'The user has been activated.',

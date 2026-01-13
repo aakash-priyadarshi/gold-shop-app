@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -20,70 +21,86 @@ import {
 import {
   Store,
   MapPin,
-  Clock,
   Settings,
   Save,
   Loader2,
   Globe,
   Phone,
   Mail,
+  CreditCard,
+  Building2,
+  Wallet,
+  Info,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { shopsApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 
-interface ShopSettings {
-  name: string;
-  description: string;
-  phone: string;
-  email: string;
-  website?: string;
-  address: {
-    street: string;
-    city: string;
-    state?: string;
-    postalCode: string;
-    country: string;
-  };
-  businessHours: {
-    monday?: { open: string; close: string };
-    tuesday?: { open: string; close: string };
-    wednesday?: { open: string; close: string };
-    thursday?: { open: string; close: string };
-    friday?: { open: string; close: string };
-    saturday?: { open: string; close: string };
-    sunday?: { open: string; close: string };
-  };
+interface ShopData {
+  id: string;
+  shopName: string;
+  shopNameNe?: string;
+  shopNameHi?: string;
+  description?: string;
+  descriptionNe?: string;
+  descriptionHi?: string;
+  country: string;
+  state?: string;
+  city: string;
+  address: string;
+  pincode?: string;
+  contactPhone: string;
+  contactEmail?: string;
+  whatsappNumber?: string;
+  isVerified: boolean;
   isActive: boolean;
-  acceptingOrders: boolean;
-  acceptingRfqs: boolean;
-  displayCurrency: string;
-  defaultCountry: string;
-  minOrderValueNpr?: number;
+  codEnabled: boolean;
+  codMaxValueNpr?: number;
+  makingChargePercent: number;
+  minOrderValueNpr: number;
   maxOrderValueNpr?: number;
-  avgDeliveryDays?: number;
+  bankAccountDetails?: {
+    bankName?: string;
+    accountNumber?: string;
+    accountName?: string;
+    branchName?: string;
+    swiftCode?: string;
+  };
+  user?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    phone?: string;
+    preferredCurrency: string;
+  };
 }
 
 const countries = [
-  { code: 'NP', name: 'Nepal' },
-  { code: 'IN', name: 'India' },
-  { code: 'US', name: 'United States' },
-  { code: 'GB', name: 'United Kingdom' },
-  { code: 'AU', name: 'Australia' },
-  { code: 'CA', name: 'Canada' },
+  { code: 'NP', name: 'Nepal', currency: 'NPR' },
+  { code: 'IN', name: 'India', currency: 'INR' },
+  { code: 'US', name: 'United States', currency: 'USD' },
+  { code: 'GB', name: 'United Kingdom', currency: 'GBP' },
+  { code: 'AU', name: 'Australia', currency: 'AUD' },
+  { code: 'CA', name: 'Canada', currency: 'CAD' },
+  { code: 'AE', name: 'UAE', currency: 'AED' },
+  { code: 'SG', name: 'Singapore', currency: 'SGD' },
 ];
 
 const currencies = [
-  { code: 'NPR', name: 'Nepali Rupee (NPR)' },
-  { code: 'INR', name: 'Indian Rupee (INR)' },
-  { code: 'USD', name: 'US Dollar (USD)' },
+  { code: 'NPR', name: 'Nepali Rupee (रू)', symbol: 'रू' },
+  { code: 'INR', name: 'Indian Rupee (₹)', symbol: '₹' },
+  { code: 'USD', name: 'US Dollar ($)', symbol: '$' },
+  { code: 'GBP', name: 'British Pound (£)', symbol: '£' },
+  { code: 'AUD', name: 'Australian Dollar (A$)', symbol: 'A$' },
+  { code: 'CAD', name: 'Canadian Dollar (C$)', symbol: 'C$' },
+  { code: 'AED', name: 'UAE Dirham (د.إ)', symbol: 'د.إ' },
+  { code: 'SGD', name: 'Singapore Dollar (S$)', symbol: 'S$' },
 ];
-
-const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 export default function ShopSettingsPage() {
   const { user } = useAuth();
-  const [settings, setSettings] = useState<ShopSettings | null>(null);
+  const [shopData, setShopData] = useState<ShopData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -97,7 +114,16 @@ export default function ShopSettingsPage() {
     setIsLoading(true);
     try {
       const response = await shopsApi.getSettings();
-      setSettings(response.data);
+      const data = response.data;
+      
+      // Handle both formats: { shop, user } or direct shop object
+      const shop = data.shop || data;
+      const userData = data.user || shop.user;
+      
+      setShopData({
+        ...shop,
+        user: userData,
+      });
     } catch (error) {
       console.error('Failed to load settings:', error);
       toast({
@@ -111,14 +137,33 @@ export default function ShopSettingsPage() {
   };
 
   const saveSettings = async () => {
-    if (!settings) return;
+    if (!shopData) return;
 
     setIsSaving(true);
     try {
-      await shopsApi.updateSettings(settings);
+      await shopsApi.updateSettings({
+        shopName: shopData.shopName,
+        shopNameNe: shopData.shopNameNe,
+        description: shopData.description,
+        country: shopData.country,
+        state: shopData.state,
+        city: shopData.city,
+        address: shopData.address,
+        pincode: shopData.pincode,
+        contactPhone: shopData.contactPhone,
+        contactEmail: shopData.contactEmail,
+        whatsappNumber: shopData.whatsappNumber,
+        isActive: shopData.isActive,
+        codEnabled: shopData.codEnabled,
+        codMaxValueNpr: shopData.codMaxValueNpr,
+        makingChargePercent: shopData.makingChargePercent,
+        minOrderValueNpr: shopData.minOrderValueNpr,
+        maxOrderValueNpr: shopData.maxOrderValueNpr,
+        bankAccountDetails: shopData.bankAccountDetails,
+      });
       toast({
         title: 'Settings Saved',
-        description: 'Your shop settings have been updated',
+        description: 'Your shop settings have been updated successfully',
       });
     } catch (error: any) {
       console.error('Failed to save settings:', error);
@@ -132,32 +177,17 @@ export default function ShopSettingsPage() {
     }
   };
 
-  const updateSettings = (updates: Partial<ShopSettings>) => {
-    if (settings) {
-      setSettings({ ...settings, ...updates });
+  const updateShopData = (updates: Partial<ShopData>) => {
+    if (shopData) {
+      setShopData({ ...shopData, ...updates });
     }
   };
 
-  const updateAddress = (updates: Partial<ShopSettings['address']>) => {
-    if (settings) {
-      setSettings({
-        ...settings,
-        address: { ...settings.address, ...updates },
-      });
-    }
-  };
-
-  const updateBusinessHours = (day: string, type: 'open' | 'close', value: string) => {
-    if (settings) {
-      setSettings({
-        ...settings,
-        businessHours: {
-          ...settings.businessHours,
-          [day]: {
-            ...(settings.businessHours as any)[day],
-            [type]: value,
-          },
-        },
+  const updateBankDetails = (updates: Partial<NonNullable<ShopData['bankAccountDetails']>>) => {
+    if (shopData) {
+      setShopData({
+        ...shopData,
+        bankAccountDetails: { ...shopData.bankAccountDetails, ...updates },
       });
     }
   };
@@ -174,7 +204,7 @@ export default function ShopSettingsPage() {
     );
   }
 
-  if (!settings) {
+  if (!shopData) {
     return (
       <ShopGuard>
         <DashboardLayout>
@@ -182,6 +212,9 @@ export default function ShopSettingsPage() {
             <Settings className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
             <h2 className="text-xl font-semibold">Settings Not Found</h2>
             <p className="text-muted-foreground">Could not load shop settings.</p>
+            <Button onClick={loadSettings} className="mt-4">
+              Retry
+            </Button>
           </div>
         </DashboardLayout>
       </ShopGuard>
@@ -193,34 +226,41 @@ export default function ShopSettingsPage() {
       <DashboardLayout>
         <div className="space-y-6">
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <h1 className="text-2xl font-bold">Shop Settings</h1>
               <p className="text-muted-foreground">
                 Manage your shop profile and preferences
               </p>
             </div>
-            <Button onClick={saveSettings} disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
+            <div className="flex items-center gap-2">
+              {shopData.isVerified ? (
+                <Badge variant="default" className="bg-green-500">Verified</Badge>
               ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
-                </>
+                <Badge variant="secondary">Pending Verification</Badge>
               )}
-            </Button>
+              <Button onClick={saveSettings} disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
 
           <Tabs defaultValue="profile" className="space-y-4">
-            <TabsList>
+            <TabsList className="flex-wrap h-auto">
               <TabsTrigger value="profile">Profile</TabsTrigger>
-              <TabsTrigger value="address">Address</TabsTrigger>
-              <TabsTrigger value="hours">Business Hours</TabsTrigger>
+              <TabsTrigger value="location">Location</TabsTrigger>
               <TabsTrigger value="preferences">Preferences</TabsTrigger>
+              <TabsTrigger value="payments">Payment Methods</TabsTrigger>
             </TabsList>
 
             {/* Profile Tab */}
@@ -236,34 +276,46 @@ export default function ShopSettingsPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Shop Name</Label>
-                    <Input
-                      id="name"
-                      value={settings.name}
-                      onChange={(e) => updateSettings({ name: e.target.value })}
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="shopName">Shop Name (English) *</Label>
+                      <Input
+                        id="shopName"
+                        value={shopData.shopName || ''}
+                        onChange={(e) => updateShopData({ shopName: e.target.value })}
+                        placeholder="Your Shop Name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="shopNameNe">Shop Name (नेपाली)</Label>
+                      <Input
+                        id="shopNameNe"
+                        value={shopData.shopNameNe || ''}
+                        onChange={(e) => updateShopData({ shopNameNe: e.target.value })}
+                        placeholder="तपाईंको पसलको नाम"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="description">Description</Label>
                     <Textarea
                       id="description"
-                      value={settings.description || ''}
-                      onChange={(e) => updateSettings({ description: e.target.value })}
+                      value={shopData.description || ''}
+                      onChange={(e) => updateShopData({ description: e.target.value })}
                       rows={4}
-                      placeholder="Tell customers about your shop..."
+                      placeholder="Tell customers about your shop, specialties, and history..."
                     />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="phone">
                         <Phone className="h-4 w-4 inline mr-1" />
-                        Phone Number
+                        Phone Number *
                       </Label>
                       <Input
                         id="phone"
-                        value={settings.phone || ''}
-                        onChange={(e) => updateSettings({ phone: e.target.value })}
+                        value={shopData.contactPhone || ''}
+                        onChange={(e) => updateShopData({ contactPhone: e.target.value })}
                         placeholder="+977 98XXXXXXXX"
                       />
                     </div>
@@ -275,85 +327,44 @@ export default function ShopSettingsPage() {
                       <Input
                         id="email"
                         type="email"
-                        value={settings.email || ''}
-                        onChange={(e) => updateSettings({ email: e.target.value })}
+                        value={shopData.contactEmail || ''}
+                        onChange={(e) => updateShopData({ contactEmail: e.target.value })}
                         placeholder="shop@example.com"
                       />
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="website">
-                      <Globe className="h-4 w-4 inline mr-1" />
-                      Website (optional)
-                    </Label>
-                    <Input
-                      id="website"
-                      value={settings.website || ''}
-                      onChange={(e) => updateSettings({ website: e.target.value })}
-                      placeholder="https://yourshop.com"
-                    />
+                    <div className="space-y-2">
+                      <Label htmlFor="whatsapp">WhatsApp Number</Label>
+                      <Input
+                        id="whatsapp"
+                        value={shopData.whatsappNumber || ''}
+                        onChange={(e) => updateShopData({ whatsappNumber: e.target.value })}
+                        placeholder="+977 98XXXXXXXX"
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            {/* Address Tab */}
-            <TabsContent value="address" className="space-y-4">
+            {/* Location Tab */}
+            <TabsContent value="location" className="space-y-4">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <MapPin className="h-5 w-5" />
-                    Shop Address
+                    Shop Location
                   </CardTitle>
                   <CardDescription>
                     Where customers can find your physical store
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="street">Street Address</Label>
-                    <Input
-                      id="street"
-                      value={settings.address?.street || ''}
-                      onChange={(e) => updateAddress({ street: e.target.value })}
-                      placeholder="123 Main Street"
-                    />
-                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="city">City</Label>
-                      <Input
-                        id="city"
-                        value={settings.address?.city || ''}
-                        onChange={(e) => updateAddress({ city: e.target.value })}
-                        placeholder="Kathmandu"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="state">State/Province</Label>
-                      <Input
-                        id="state"
-                        value={settings.address?.state || ''}
-                        onChange={(e) => updateAddress({ state: e.target.value })}
-                        placeholder="Bagmati"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="postalCode">Postal Code</Label>
-                      <Input
-                        id="postalCode"
-                        value={settings.address?.postalCode || ''}
-                        onChange={(e) => updateAddress({ postalCode: e.target.value })}
-                        placeholder="44600"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="country">Country</Label>
+                      <Label htmlFor="country">Country *</Label>
                       <Select
-                        value={settings.address?.country || 'NP'}
-                        onValueChange={(value) => updateAddress({ country: value })}
+                        value={shopData.country || 'NP'}
+                        onValueChange={(value) => updateShopData({ country: value })}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -366,43 +377,50 @@ export default function ShopSettingsPage() {
                           ))}
                         </SelectContent>
                       </Select>
+                      <p className="text-xs text-muted-foreground">
+                        This determines your market rates and tax rules
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="state">State/Province</Label>
+                      <Input
+                        id="state"
+                        value={shopData.state || ''}
+                        onChange={(e) => updateShopData({ state: e.target.value })}
+                        placeholder="Bagmati"
+                      />
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Business Hours Tab */}
-            <TabsContent value="hours" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Clock className="h-5 w-5" />
-                    Business Hours
-                  </CardTitle>
-                  <CardDescription>
-                    Set your shop's operating hours
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {days.map((day) => (
-                    <div key={day} className="flex items-center gap-4">
-                      <div className="w-24 capitalize font-medium">{day}</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="city">City *</Label>
                       <Input
-                        type="time"
-                        className="w-32"
-                        value={(settings.businessHours as any)[day]?.open || '09:00'}
-                        onChange={(e) => updateBusinessHours(day, 'open', e.target.value)}
-                      />
-                      <span className="text-muted-foreground">to</span>
-                      <Input
-                        type="time"
-                        className="w-32"
-                        value={(settings.businessHours as any)[day]?.close || '18:00'}
-                        onChange={(e) => updateBusinessHours(day, 'close', e.target.value)}
+                        id="city"
+                        value={shopData.city || ''}
+                        onChange={(e) => updateShopData({ city: e.target.value })}
+                        placeholder="Kathmandu"
                       />
                     </div>
-                  ))}
+                    <div className="space-y-2">
+                      <Label htmlFor="pincode">Postal Code</Label>
+                      <Input
+                        id="pincode"
+                        value={shopData.pincode || ''}
+                        onChange={(e) => updateShopData({ pincode: e.target.value })}
+                        placeholder="44600"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Full Address *</Label>
+                    <Textarea
+                      id="address"
+                      value={shopData.address || ''}
+                      onChange={(e) => updateShopData({ address: e.target.value })}
+                      rows={2}
+                      placeholder="Street address, building, floor..."
+                    />
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -428,94 +446,170 @@ export default function ShopSettingsPage() {
                       </p>
                     </div>
                     <Switch
-                      checked={settings.isActive}
-                      onCheckedChange={(checked) => updateSettings({ isActive: checked })}
+                      checked={shopData.isActive ?? true}
+                      onCheckedChange={(checked) => updateShopData({ isActive: checked })}
                     />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Accepting Orders</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Allow customers to place direct orders
-                      </p>
-                    </div>
-                    <Switch
-                      checked={settings.acceptingOrders}
-                      onCheckedChange={(checked) => updateSettings({ acceptingOrders: checked })}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Accepting RFQs</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Receive custom order requests from customers
-                      </p>
-                    </div>
-                    <Switch
-                      checked={settings.acceptingRfqs}
-                      onCheckedChange={(checked) => updateSettings({ acceptingRfqs: checked })}
-                    />
-                  </div>
+
                   <div className="border-t pt-4 space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="currency">Display Currency</Label>
-                        <Select
-                          value={settings.displayCurrency || 'NPR'}
-                          onValueChange={(value) => updateSettings({ displayCurrency: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {currencies.map((currency) => (
-                              <SelectItem key={currency.code} value={currency.code}>
-                                {currency.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="defaultCountry">Default Country</Label>
-                        <Select
-                          value={settings.defaultCountry || 'NP'}
-                          onValueChange={(value) => updateSettings({ defaultCountry: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {countries.map((country) => (
-                              <SelectItem key={country.code} value={country.code}>
-                                {country.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                    <h4 className="font-medium flex items-center gap-2">
+                      <Globe className="h-4 w-4" />
+                      Currency & Region
+                    </h4>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex gap-2">
+                      <Info className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                      <p className="text-sm text-blue-700">
+                        Your country determines market rates. Currency is for display purposes - 
+                        all prices are stored in your market's base currency and converted automatically.
+                      </p>
                     </div>
+                  </div>
+
+                  <div className="border-t pt-4 space-y-4">
+                    <h4 className="font-medium">Pricing Settings</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="minOrder">Minimum Order Value (NPR)</Label>
+                        <Label htmlFor="makingCharge">Default Making Charge (%)</Label>
+                        <Input
+                          id="makingCharge"
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.5"
+                          value={shopData.makingChargePercent ?? 10}
+                          onChange={(e) => updateShopData({ makingChargePercent: parseFloat(e.target.value) || 10 })}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Applied to all materials if not specified individually
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="minOrder">Minimum Order Value</Label>
                         <Input
                           id="minOrder"
                           type="number"
-                          value={settings.minOrderValueNpr || ''}
-                          onChange={(e) => updateSettings({ minOrderValueNpr: parseInt(e.target.value) || undefined })}
+                          value={shopData.minOrderValueNpr ?? 0}
+                          onChange={(e) => updateShopData({ minOrderValueNpr: parseInt(e.target.value) || 0 })}
                           placeholder="e.g., 10000"
                         />
                       </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Payment Methods Tab */}
+            <TabsContent value="payments" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5" />
+                    Payment Methods
+                  </CardTitle>
+                  <CardDescription>
+                    Configure how customers can pay you
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Cash on Delivery / Pay at Shop */}
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="flex items-center gap-2">
+                        <Wallet className="h-4 w-4" />
+                        Cash on Delivery / Pay at Shop
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Allow customers to pay when they collect their order
+                      </p>
+                    </div>
+                    <Switch
+                      checked={shopData.codEnabled ?? false}
+                      onCheckedChange={(checked) => updateShopData({ codEnabled: checked })}
+                    />
+                  </div>
+                  
+                  {shopData.codEnabled && (
+                    <div className="ml-6 space-y-2">
+                      <Label htmlFor="codMax">Maximum COD Value</Label>
+                      <Input
+                        id="codMax"
+                        type="number"
+                        value={shopData.codMaxValueNpr || ''}
+                        onChange={(e) => updateShopData({ codMaxValueNpr: parseInt(e.target.value) || undefined })}
+                        placeholder="e.g., 100000"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Leave empty for no limit
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="border-t pt-4">
+                    <h4 className="font-medium flex items-center gap-2 mb-4">
+                      <Building2 className="h-4 w-4" />
+                      Bank Account Details
+                    </h4>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      For receiving bank transfers from customers
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="avgDelivery">Average Delivery Days</Label>
+                        <Label htmlFor="bankName">Bank Name</Label>
                         <Input
-                          id="avgDelivery"
-                          type="number"
-                          value={settings.avgDeliveryDays || ''}
-                          onChange={(e) => updateSettings({ avgDeliveryDays: parseInt(e.target.value) || undefined })}
-                          placeholder="e.g., 14"
+                          id="bankName"
+                          value={shopData.bankAccountDetails?.bankName || ''}
+                          onChange={(e) => updateBankDetails({ bankName: e.target.value })}
+                          placeholder="Nepal Bank Limited"
                         />
                       </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="branchName">Branch Name</Label>
+                        <Input
+                          id="branchName"
+                          value={shopData.bankAccountDetails?.branchName || ''}
+                          onChange={(e) => updateBankDetails({ branchName: e.target.value })}
+                          placeholder="New Road Branch"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="accountName">Account Holder Name</Label>
+                        <Input
+                          id="accountName"
+                          value={shopData.bankAccountDetails?.accountName || ''}
+                          onChange={(e) => updateBankDetails({ accountName: e.target.value })}
+                          placeholder="Shop Owner Name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="accountNumber">Account Number</Label>
+                        <Input
+                          id="accountNumber"
+                          value={shopData.bankAccountDetails?.accountNumber || ''}
+                          onChange={(e) => updateBankDetails({ accountNumber: e.target.value })}
+                          placeholder="0123456789012345"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="swiftCode">SWIFT/BIC Code (for international)</Label>
+                        <Input
+                          id="swiftCode"
+                          value={shopData.bankAccountDetails?.swiftCode || ''}
+                          onChange={(e) => updateBankDetails({ swiftCode: e.target.value })}
+                          placeholder="NBLNPKA"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                      <h4 className="font-medium text-amber-800 mb-2">Online Payments (Coming Soon)</h4>
+                      <p className="text-sm text-amber-700">
+                        Stripe integration for accepting credit/debit cards and international payments 
+                        will be available soon. You'll be able to receive payments directly to your 
+                        connected Stripe account.
+                      </p>
                     </div>
                   </div>
                 </CardContent>
