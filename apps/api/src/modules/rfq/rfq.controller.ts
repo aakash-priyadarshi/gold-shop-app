@@ -61,9 +61,12 @@ export class RfqController {
 
   @Get(':id/eligible-shops')
   @Roles(UserRole.CUSTOMER)
-  @ApiOperation({ summary: 'Get shops eligible to receive this RFQ' })
-  async getEligibleShops(@Param('id') id: string) {
-    return this.rfqService.getEligibleShops(id);
+  @ApiOperation({ summary: 'Get shops eligible to receive this RFQ with price estimates' })
+  async getEligibleShops(
+    @Param('id') id: string,
+    @Query('customerCity') customerCity?: string,
+  ) {
+    return this.rfqService.getEligibleShops(id, customerCity);
   }
 
   @Post(':id/broadcast')

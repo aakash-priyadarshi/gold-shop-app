@@ -120,7 +120,8 @@ export const rfqApi = {
   getOffers: (id: string) => api.get(`/offers/rfq/${id}`),
   selectOffer: (id: string, offerId: string) =>
     api.post(`/rfq/${id}/select-offer`, { offerId }),
-  getEligibleShops: (id: string) => api.get(`/rfq/${id}/eligible-shops`),
+  getEligibleShops: (id: string, customerCity?: string) => 
+    api.get(`/rfq/${id}/eligible-shops`, { params: { customerCity } }),
   // For shopkeepers - use the correct endpoint
   getShopRequests: (params?: any) => api.get('/rfq/shop-requests', { params }),
 };

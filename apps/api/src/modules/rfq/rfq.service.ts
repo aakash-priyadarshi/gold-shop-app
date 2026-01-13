@@ -73,8 +73,9 @@ export class RfqService {
 
   /**
    * Get eligible shops for an RFQ based on capabilities
+   * Includes price estimation and city-based priority sorting
    */
-  async getEligibleShops(rfqId: string) {
+  async getEligibleShops(rfqId: string, customerCity?: string) {
     const rfq = await this.prisma.rfqRequest.findUnique({
       where: { id: rfqId },
     });
@@ -101,6 +102,7 @@ export class RfqService {
         shopNameNe: true,
         shopNameHi: true,
         city: true,
+        country: true,
         isVerified: true,
         makingChargePercent: true,
         codEnabled: true,
@@ -113,15 +115,66 @@ export class RfqService {
       },
     });
 
-    // Calculate average rating for each shop
-    return shops.map((shop) => ({
-      ...shop,
-      averageRating:
-        shop.ratings.length > 0
-          ? shop.ratings.reduce((sum, r) => sum + r.overall, 0) / shop.ratings.length
-          : null,
-      ratings: undefined,
-    }));
+    // Get system default gold rate for fallback
+    const systemRate = await this.prisma.marketRate.findFirst({
+      where: { metalCode: 'XAU', country: 'NP' },
+      orderBy: { validFrom: 'desc' },
+    });
+    const defaultGoldRatePerGram = systemRate?.ratePerGram || 10000;
+
+    // Calculate price estimate and rating for each shop
+    const shopsWithPrices = shops.map((shop) => {
+      // Get shop's gold rate or fall back to system rate
+      const shopGoldRate = shop.metalRates.find(r => 
+        r.metalType === 'GOLD_24K' || r.metalType === 'GOLD_22K'
+      );
+      const goldRatePerGram = shopGoldRate?.ratePerGramNpr || defaultGoldRatePerGram;
+      
+      // Estimate price based on target weight
+      const targetWeight = rfq.targetGoldWeightG || rfq.targetTotalWeightG || 10;
+      const metalCost = targetWeight * goldRatePerGram;
+      const makingCharge = metalCost * ((shop.makingChargePercent || 10) / 100);
+      const estimatedPrice = Math.round(metalCost + makingCharge);
+
+      // Calculate average rating
+      const averageRating = shop.ratings.length > 0
+        ? shop.ratings.reduce((sum, r) => sum + r.overall, 0) / shop.ratings.length
+        : null;
+
+      // Calculate location priority (1=same city, 2=same country, 3=global)
+      let locationPriority = 3;
+      if (customerCity && shop.city.toLowerCase() === customerCity.toLowerCase()) {
+        locationPriority = 1;
+      } else if (shop.country === 'NP') {
+        locationPriority = 2;
+      }
+
+      return {
+        id: shop.id,
+        shopName: shop.shopName,
+        shopNameNe: shop.shopNameNe,
+        shopNameHi: shop.shopNameHi,
+        city: shop.city,
+        country: shop.country,
+        isVerified: shop.isVerified,
+        makingChargePercent: shop.makingChargePercent,
+        codEnabled: shop.codEnabled,
+        averageRating,
+        estimatedPrice,
+        goldRatePerGram,
+        locationPriority,
+      };
+    });
+
+    // Sort by location priority (city > country > global), then by price
+    return shopsWithPrices.sort((a, b) => {
+      // First sort by location priority
+      if (a.locationPriority !== b.locationPriority) {
+        return a.locationPriority - b.locationPriority;
+      }
+      // Then sort by estimated price (cheapest first)
+      return a.estimatedPrice - b.estimatedPrice;
+    });
   }
 
   /**

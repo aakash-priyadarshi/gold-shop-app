@@ -69,6 +69,7 @@ const navItems: NavItem[] = [
   
   // Shopkeeper routes
   { label: 'Dashboard', href: '/dashboard/shop', icon: LayoutDashboard, roles: ['SHOPKEEPER'] },
+  { label: 'Products', href: '/dashboard/shop/products', icon: Store, roles: ['SHOPKEEPER'] },
   { label: 'Inventory', href: '/dashboard/shop/inventory', icon: Package, roles: ['SHOPKEEPER'] },
   { label: 'Orders', href: '/dashboard/shop/orders', icon: ShoppingCart, roles: ['SHOPKEEPER'] },
   { label: 'RFQ Requests', href: '/dashboard/shop/rfqs', icon: ClipboardList, roles: ['SHOPKEEPER'] },
