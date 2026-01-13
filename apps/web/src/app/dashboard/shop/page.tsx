@@ -68,83 +68,88 @@ export default function ShopDashboard() {
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [rfqRequests, setRfqRequests] = useState<RFQRequest[]>([]);
   const [lowStockItems, setLowStockItems] = useState<LowStockItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!user?.shop?.id) return;
     const shopId = user.shop.id;
 
+    setIsLoading(true);
     Promise.all([
-      shopsApi.getDashboard(shopId),
+      shopsApi.getDashboard(),
       ordersApi.getShopOrders(shopId, { page: 1, pageSize: 3 }),
-      rfqApi.getReceivedRequests(shopId, { page: 1, pageSize: 3 }),
+      rfqApi.getShopRequests({ page: 1, pageSize: 3 }),
       inventoryApi.getShopInventory(shopId, { lowStock: true, limit: 3 })
     ]).then(([dashboardRes, ordersRes, rfqRes, lowStockRes]) => {
-      const dash = dashboardRes.data;
+      const dash = dashboardRes.data?.stats || dashboardRes.data || {};
       setStats([
         {
-          title: 'Total Products',
-          value: dash.totalProducts?.toString() || '0',
-          change: dash.productsChange || '+0',
-          changeType: dash.productsChange?.startsWith('-') ? 'negative' : 'positive',
-          icon: Package,
-          description: 'Active listings',
-        },
-        {
-          title: 'Pending Orders',
-          value: dash.pendingOrders?.toString() || '0',
-          change: dash.ordersChange || '+0',
-          changeType: dash.ordersChange?.startsWith('-') ? 'negative' : 'positive',
+          title: 'Active Orders',
+          value: dash.activeOrders?.toString() || '0',
+          change: '+0',
+          changeType: 'positive',
           icon: ShoppingCart,
-          description: 'Awaiting processing',
+          description: 'Orders in progress',
         },
         {
-          title: 'RFQ Requests',
-          value: dash.rfqRequests?.toString() || '0',
-          change: dash.rfqChange || '+0',
-          changeType: dash.rfqChange?.startsWith('-') ? 'negative' : 'positive',
+          title: 'Pending RFQs',
+          value: dash.pendingRfqs?.toString() || '0',
+          change: '+0',
+          changeType: 'positive',
           icon: MessageSquare,
-          description: 'New inquiries',
+          description: 'Awaiting response',
         },
         {
-          title: "Today's Sales",
-          value: dash.todaysSales ? `NPR ${dash.todaysSales.toLocaleString()}` : 'NPR 0',
-          change: dash.salesChange || '+0%',
-          changeType: dash.salesChange?.startsWith('-') ? 'negative' : 'positive',
-          icon: DollarSign,
-          description: 'Revenue today',
+          title: 'Avg Rating',
+          value: dash.averageRating ? dash.averageRating.toFixed(1) : 'N/A',
+          change: '+0',
+          changeType: 'positive',
+          icon: Star,
+          description: `${dash.recentRatings || 0} reviews`,
+        },
+        {
+          title: "Shop Status",
+          value: user?.shop?.isVerified ? 'Verified' : 'Pending',
+          change: user?.shop?.isVerified ? '✓' : '!',
+          changeType: user?.shop?.isVerified ? 'positive' : 'negative',
+          icon: Package,
+          description: user?.shop?.isVerified ? 'Shop is verified' : 'Awaiting verification',
         },
       ]);
 
-      const orders = ordersRes.data.items || ordersRes.data || [];
-      setRecentOrders(orders.map((o: any) => ({
+      const orders = ordersRes.data?.items || ordersRes.data?.orders || ordersRes.data || [];
+      setRecentOrders(Array.isArray(orders) ? orders.slice(0, 3).map((o: any) => ({
         id: o.id,
         customer: o.customer?.firstName || o.customerName || 'Unknown',
-        items: o.itemsSummary || o.items?.map((i: any) => i.name).join(', ') || '',
-        amount: o.amount ? `NPR ${o.amount.toLocaleString()}` : '',
+        items: o.itemsSummary || o.items?.map((i: any) => i.name).join(', ') || o.productSnapshot?.nameEn || 'Custom Order',
+        amount: o.totalNpr ? `NPR ${o.totalNpr.toLocaleString()}` : (o.amount ? `NPR ${o.amount.toLocaleString()}` : ''),
         status: o.status,
-      })));
+      })) : []);
 
-      const rfqs = rfqRes.data.items || rfqRes.data || [];
-      setRfqRequests(rfqs.map((r: any) => ({
+      const rfqs = rfqRes.data?.items || rfqRes.data?.rfqs || rfqRes.data || [];
+      setRfqRequests(Array.isArray(rfqs) ? rfqs.slice(0, 3).map((r: any) => ({
         id: r.id,
         customer: r.customer?.firstName || r.customerName || 'Unknown',
-        request: r.request || r.title || '',
-        budget: r.budget ? `NPR ${r.budget.toLocaleString()}` : '',
+        request: r.jewelleryType || r.request || r.title || 'Custom Request',
+        budget: r.budgetMaxNpr ? `NPR ${r.budgetMaxNpr.toLocaleString()}` : (r.budget ? `NPR ${r.budget.toLocaleString()}` : 'N/A'),
         date: r.createdAt ? r.createdAt.slice(0, 10) : '',
-      })));
+      })) : []);
 
-      const lowStock = lowStockRes.data.items || lowStockRes.data || [];
-      setLowStockItems(lowStock.map((item: any) => ({
+      const lowStock = lowStockRes.data?.items || lowStockRes.data || [];
+      setLowStockItems(Array.isArray(lowStock) ? lowStock.map((item: any) => ({
         id: item.id,
-        name: item.name,
-        stock: item.stock,
-        minStock: item.minStock,
-      })));
-    }).catch(() => {
+        name: item.nameEn || item.name,
+        stock: item.stockQuantity || item.stock || 0,
+        minStock: item.minStock || 5,
+      })) : []);
+    }).catch((err) => {
+      console.error('Dashboard load error:', err);
       setStats([]);
       setRecentOrders([]);
       setRfqRequests([]);
       setLowStockItems([]);
+    }).finally(() => {
+      setIsLoading(false);
     });
   }, [user]);
 

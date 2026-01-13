@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Put,
   Param,
   Body,
   Query,
@@ -99,6 +100,91 @@ export class ShopsController {
     // This endpoint allows shopkeepers who signed up via Google OAuth to create their shop
     return this.shopsService.setupShopForOAuthUser(userId, dto);
   }
+
+  // ═══════════════════════════════════════════════════════════════
+  // MY SHOP ENDPOINTS (for authenticated shopkeeper)
+  // ═══════════════════════════════════════════════════════════════
+
+  @Get('my-shop/settings')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get shop settings' })
+  async getMyShopSettings(@CurrentUser('id') userId: string) {
+    return this.shopsService.getShopSettings(userId);
+  }
+
+  @Patch('my-shop/settings')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update shop settings' })
+  async updateMyShopSettings(
+    @CurrentUser('id') userId: string,
+    @Body() dto: UpdateShopDto,
+  ) {
+    return this.shopsService.updateShopSettings(userId, dto);
+  }
+
+  @Get('my-shop/analytics')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get shop analytics' })
+  async getMyShopAnalytics(
+    @CurrentUser('shopId') shopId: string,
+    @Query('period') period?: string,
+  ) {
+    return this.shopsService.getShopAnalytics(shopId, period);
+  }
+
+  @Get('my-shop/materials')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get shop materials inventory' })
+  async getMyShopMaterials(@CurrentUser('shopId') shopId: string) {
+    return this.shopsService.getShopMaterials(shopId);
+  }
+
+  @Put('my-shop/materials')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update shop materials inventory' })
+  async updateMyShopMaterials(
+    @CurrentUser('shopId') shopId: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: { materials: Array<{ materialCode: string; isAvailable: boolean; pricePerGramNpr?: number }> },
+  ) {
+    return this.shopsService.updateShopMaterials(shopId, userId, dto.materials);
+  }
+
+  @Get('my-shop/capabilities')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get shop capabilities (jewellery types)' })
+  async getMyShopCapabilities(@CurrentUser('shopId') shopId: string) {
+    return this.shopsService.getShopCapabilities(shopId);
+  }
+
+  @Put('my-shop/capabilities')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update shop capabilities' })
+  async updateMyShopCapabilities(
+    @CurrentUser('shopId') shopId: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: { jewelleryTypes: string[]; buildMethods?: string[] },
+  ) {
+    return this.shopsService.updateShopCapabilities(shopId, userId, dto);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PUBLIC ENDPOINTS
+  // ═══════════════════════════════════════════════════════════════
 
   @Get(':id')
   @ApiOperation({ summary: 'Get shop by ID' })

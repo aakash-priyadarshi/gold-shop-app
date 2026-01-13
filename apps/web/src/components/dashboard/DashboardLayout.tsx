@@ -71,7 +71,7 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard/shop', icon: LayoutDashboard, roles: ['SHOPKEEPER'] },
   { label: 'Inventory', href: '/dashboard/shop/inventory', icon: Package, roles: ['SHOPKEEPER'] },
   { label: 'Orders', href: '/dashboard/shop/orders', icon: ShoppingCart, roles: ['SHOPKEEPER'] },
-  { label: 'RFQ Requests', href: '/dashboard/shop/rfq', icon: ClipboardList, roles: ['SHOPKEEPER'] },
+  { label: 'RFQ Requests', href: '/dashboard/shop/rfqs', icon: ClipboardList, roles: ['SHOPKEEPER'] },
   { label: 'Analytics', href: '/dashboard/shop/analytics', icon: TrendingUp, roles: ['SHOPKEEPER'] },
   { label: 'Settings', href: '/dashboard/shop/settings', icon: Settings, roles: ['SHOPKEEPER'] },
   

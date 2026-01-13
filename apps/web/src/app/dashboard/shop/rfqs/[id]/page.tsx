@@ -15,7 +15,6 @@ import {
   ArrowLeft,
   FileQuestion,
   User,
-  Mail,
   Clock,
   CheckCircle,
   Scale,
@@ -24,22 +23,36 @@ import {
   Loader2,
   Calendar,
   MessageSquare,
+  XCircle,
+  Sparkles,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import api from '@/lib/api';
+import { rfqApi, offersApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 
 interface RfqDetails {
   id: string;
   jewelleryType: string;
-  metalType: string;
-  purity: string;
-  weight: number;
-  weightUnit: string;
-  budget?: number;
-  currency: string;
-  description?: string;
-  specifications?: Record<string, any>;
+  buildMethod: string;
+  composition: {
+    baseAlloy?: {
+      metal: string;
+      purity: string;
+    };
+    outerLayer?: {
+      metal: string;
+      purity: string;
+    };
+    [key: string]: any;
+  };
+  surfaceFinish?: string;
+  targetTotalWeightG?: number;
+  targetGoldWeightG?: number;
+  budgetMinNpr?: number;
+  budgetMaxNpr?: number;
+  preferredDeliveryDays?: number;
+  specialInstructions?: string;
+  referenceImages?: string[];
   status: string;
   createdAt: string;
   expiresAt?: string;
@@ -47,16 +60,27 @@ interface RfqDetails {
     id: string;
     firstName: string;
     lastName: string;
-    email: string;
   };
+  gemstones?: Array<{
+    id: string;
+    stoneType: string;
+    shape: string;
+    sizeMm?: number;
+    caratWeight?: number;
+    color?: string;
+    clarity?: string;
+    count: number;
+  }>;
   offers: Array<{
     id: string;
     shopId: string;
-    price: number;
-    currency: string;
-    deliveryDays: number;
-    notes?: string;
+    offerType: string;
     status: string;
+    totalPriceNpr?: number;
+    metalCostNpr?: number;
+    makingChargeNpr?: number;
+    estimatedDays?: number;
+    shopNotes?: string;
     createdAt: string;
   }>;
 }
@@ -65,6 +89,7 @@ const statusColors: Record<string, string> = {
   DRAFT: 'bg-gray-100 text-gray-700',
   PENDING: 'bg-amber-100 text-amber-700',
   BROADCAST: 'bg-blue-100 text-blue-700',
+  SENT_TO_SHOPS: 'bg-blue-100 text-blue-700',
   OFFERS_RECEIVED: 'bg-purple-100 text-purple-700',
   NEGOTIATING: 'bg-orange-100 text-orange-700',
   ACCEPTED: 'bg-green-100 text-green-700',
@@ -82,11 +107,16 @@ export default function ShopRfqDetailPage() {
   const [rfq, setRfq] = useState<RfqDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [offerType, setOfferType] = useState<'ACCEPT' | 'COUNTER' | 'DECLINE'>('ACCEPT');
   
   // Offer form state
-  const [offerPrice, setOfferPrice] = useState('');
-  const [deliveryDays, setDeliveryDays] = useState('');
-  const [offerNotes, setOfferNotes] = useState('');
+  const [metalCost, setMetalCost] = useState('');
+  const [makingCharge, setMakingCharge] = useState('');
+  const [finishCost, setFinishCost] = useState('');
+  const [gemstoneCost, setGemstoneCost] = useState('');
+  const [estimatedDays, setEstimatedDays] = useState('');
+  const [shopNotes, setShopNotes] = useState('');
+  const [declineReason, setDeclineReason] = useState('');
 
   useEffect(() => {
     if (rfqId) {
@@ -97,7 +127,7 @@ export default function ShopRfqDetailPage() {
   const loadRfq = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get(`/api/rfq/${rfqId}`);
+      const response = await rfqApi.getById(rfqId);
       setRfq(response.data);
     } catch (error) {
       console.error('Failed to load RFQ:', error);
@@ -112,33 +142,55 @@ export default function ShopRfqDetailPage() {
   };
 
   const submitOffer = async () => {
-    if (!offerPrice || !deliveryDays) {
+    if (offerType === 'DECLINE' && !declineReason) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing Reason',
+        description: 'Please provide a reason for declining',
+      });
+      return;
+    }
+
+    if (offerType !== 'DECLINE' && (!metalCost || !makingCharge || !estimatedDays)) {
       toast({
         variant: 'destructive',
         title: 'Missing Fields',
-        description: 'Please fill in price and delivery days',
+        description: 'Please fill in metal cost, making charge, and estimated days',
       });
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await api.post('/offers', {
+      await offersApi.create({
         rfqId,
-        price: parseFloat(offerPrice),
-        currency: rfq?.currency || 'USD',
-        deliveryDays: parseInt(deliveryDays),
-        notes: offerNotes || undefined,
+        offerType,
+        ...(offerType === 'DECLINE'
+          ? { declineReason }
+          : {
+              metalCostNpr: parseFloat(metalCost),
+              makingChargeNpr: parseFloat(makingCharge),
+              finishCostNpr: finishCost ? parseFloat(finishCost) : undefined,
+              gemstoneCostNpr: gemstoneCost ? parseFloat(gemstoneCost) : undefined,
+              estimatedDays: parseInt(estimatedDays),
+              shopNotes: shopNotes || undefined,
+            }),
       });
       toast({
-        title: 'Offer Submitted',
-        description: 'Your quote has been sent to the customer',
+        title: offerType === 'DECLINE' ? 'Request Declined' : 'Offer Submitted',
+        description: offerType === 'DECLINE' 
+          ? 'You have declined this request' 
+          : 'Your quote has been sent to the customer',
       });
       loadRfq();
       // Reset form
-      setOfferPrice('');
-      setDeliveryDays('');
-      setOfferNotes('');
+      setMetalCost('');
+      setMakingCharge('');
+      setFinishCost('');
+      setGemstoneCost('');
+      setEstimatedDays('');
+      setShopNotes('');
+      setDeclineReason('');
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -168,7 +220,7 @@ export default function ShopRfqDetailPage() {
 
   // Check if shop has already submitted an offer
   const myOffer = rfq?.offers?.find((o) => o.shopId === user?.shop?.id);
-  const canSubmitOffer = ['PENDING', 'BROADCAST'].includes(rfq?.status || '') && !myOffer;
+  const canSubmitOffer = ['PENDING', 'BROADCAST', 'SENT_TO_SHOPS', 'OFFERS_RECEIVED'].includes(rfq?.status || '') && !myOffer;
 
   if (isLoading) {
     return (
@@ -235,56 +287,90 @@ export default function ShopRfqDetailPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-muted-foreground">Jewellery Type</Label>
-                      <p className="font-medium">{rfq.jewelleryType}</p>
+                      <p className="font-medium">{rfq.jewelleryType?.replace(/_/g, ' ')}</p>
                     </div>
                     <div>
-                      <Label className="text-muted-foreground">Metal</Label>
-                      <p className="font-medium">{rfq.metalType} {rfq.purity}</p>
+                      <Label className="text-muted-foreground">Build Method</Label>
+                      <p className="font-medium">{rfq.buildMethod?.replace(/_/g, ' ')}</p>
                     </div>
-                    <div>
-                      <Label className="text-muted-foreground">Weight</Label>
-                      <div className="flex items-center gap-1">
-                        <Scale className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">
-                          {rfq.weight} {rfq.weightUnit}
-                        </span>
+                    {rfq.composition?.baseAlloy && (
+                      <div>
+                        <Label className="text-muted-foreground">Base Metal</Label>
+                        <p className="font-medium">
+                          {rfq.composition.baseAlloy.metal} {rfq.composition.baseAlloy.purity}
+                        </p>
                       </div>
-                    </div>
+                    )}
+                    {rfq.composition?.outerLayer && (
+                      <div>
+                        <Label className="text-muted-foreground">Outer Layer</Label>
+                        <p className="font-medium">
+                          {rfq.composition.outerLayer.metal} {rfq.composition.outerLayer.purity}
+                        </p>
+                      </div>
+                    )}
+                    {rfq.targetTotalWeightG && (
+                      <div>
+                        <Label className="text-muted-foreground">Target Weight</Label>
+                        <div className="flex items-center gap-1">
+                          <Scale className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{rfq.targetTotalWeightG}g</span>
+                        </div>
+                      </div>
+                    )}
                     <div>
-                      <Label className="text-muted-foreground">Budget</Label>
-                      {rfq.budget ? (
+                      <Label className="text-muted-foreground">Budget Range</Label>
+                      {rfq.budgetMaxNpr ? (
                         <div className="flex items-center gap-1">
                           <DollarSign className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium">
-                            {formatCurrency(rfq.budget, rfq.currency)}
+                            {rfq.budgetMinNpr ? `Rs. ${rfq.budgetMinNpr.toLocaleString()} - ` : ''}
+                            Rs. {rfq.budgetMaxNpr.toLocaleString()}
                           </span>
                         </div>
                       ) : (
                         <p className="text-muted-foreground">Not specified</p>
                       )}
                     </div>
+                    {rfq.surfaceFinish && (
+                      <div>
+                        <Label className="text-muted-foreground">Surface Finish</Label>
+                        <p className="font-medium">{rfq.surfaceFinish}</p>
+                      </div>
+                    )}
+                    {rfq.preferredDeliveryDays && (
+                      <div>
+                        <Label className="text-muted-foreground">Preferred Delivery</Label>
+                        <p className="font-medium">{rfq.preferredDeliveryDays} days</p>
+                      </div>
+                    )}
                   </div>
 
-                  {rfq.description && (
+                  {rfq.specialInstructions && (
                     <>
                       <Separator />
                       <div>
-                        <Label className="text-muted-foreground">Description</Label>
-                        <p className="mt-1">{rfq.description}</p>
+                        <Label className="text-muted-foreground">Special Instructions</Label>
+                        <p className="mt-1">{rfq.specialInstructions}</p>
                       </div>
                     </>
                   )}
 
-                  {rfq.specifications && Object.keys(rfq.specifications).length > 0 && (
+                  {rfq.gemstones && rfq.gemstones.length > 0 && (
                     <>
                       <Separator />
                       <div>
-                        <Label className="text-muted-foreground">Specifications</Label>
+                        <Label className="text-muted-foreground flex items-center gap-2">
+                          <Sparkles className="h-4 w-4" />
+                          Gemstones
+                        </Label>
                         <div className="mt-2 space-y-2">
-                          {Object.entries(rfq.specifications).map(([key, value]) => (
-                            <div key={key} className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">{key}</span>
-                              <span>{String(value)}</span>
+                          {rfq.gemstones.map((gem, idx) => (
+                            <div key={gem.id || idx} className="flex justify-between text-sm bg-gray-50 p-2 rounded">
+                              <span>{gem.stoneType} ({gem.shape})</span>
+                              <span className="text-muted-foreground">
+                                {gem.count}x {gem.caratWeight && `${gem.caratWeight}ct`}
+                              </span>
                             </div>
                           ))}
                         </div>
@@ -298,58 +384,157 @@ export default function ShopRfqDetailPage() {
               {canSubmitOffer && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Submit Your Quote</CardTitle>
+                    <CardTitle>Respond to Request</CardTitle>
                     <CardDescription>
-                      Provide your best offer for this request
+                      Accept, counter-offer, or decline this request
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    {/* Response Type Selection */}
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={offerType === 'ACCEPT' ? 'default' : 'outline'}
+                        onClick={() => setOfferType('ACCEPT')}
+                        className="flex-1"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Accept
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={offerType === 'COUNTER' ? 'default' : 'outline'}
+                        onClick={() => setOfferType('COUNTER')}
+                        className="flex-1"
+                      >
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Counter
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={offerType === 'DECLINE' ? 'destructive' : 'outline'}
+                        onClick={() => setOfferType('DECLINE')}
+                        className="flex-1"
+                      >
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Decline
+                      </Button>
+                    </div>
+
+                    {offerType === 'DECLINE' ? (
                       <div className="space-y-2">
-                        <Label htmlFor="price">Price ({rfq.currency})</Label>
-                        <Input
-                          id="price"
-                          type="number"
-                          placeholder="Enter price"
-                          value={offerPrice}
-                          onChange={(e) => setOfferPrice(e.target.value)}
+                        <Label htmlFor="declineReason">Reason for Declining</Label>
+                        <Textarea
+                          id="declineReason"
+                          placeholder="Please provide a reason..."
+                          value={declineReason}
+                          onChange={(e) => setDeclineReason(e.target.value)}
+                          rows={3}
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="delivery">Delivery (days)</Label>
-                        <Input
-                          id="delivery"
-                          type="number"
-                          placeholder="e.g., 7"
-                          value={deliveryDays}
-                          onChange={(e) => setDeliveryDays(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="notes">Notes (optional)</Label>
-                      <Textarea
-                        id="notes"
-                        placeholder="Add any additional details about your offer..."
-                        value={offerNotes}
-                        onChange={(e) => setOfferNotes(e.target.value)}
-                        rows={3}
-                      />
-                    </div>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="metalCost">Metal Cost (NPR) *</Label>
+                            <Input
+                              id="metalCost"
+                              type="number"
+                              placeholder="e.g., 50000"
+                              value={metalCost}
+                              onChange={(e) => setMetalCost(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="makingCharge">Making Charge (NPR) *</Label>
+                            <Input
+                              id="makingCharge"
+                              type="number"
+                              placeholder="e.g., 5000"
+                              value={makingCharge}
+                              onChange={(e) => setMakingCharge(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="finishCost">Finish Cost (NPR)</Label>
+                            <Input
+                              id="finishCost"
+                              type="number"
+                              placeholder="e.g., 1000"
+                              value={finishCost}
+                              onChange={(e) => setFinishCost(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="gemstoneCost">Gemstone Cost (NPR)</Label>
+                            <Input
+                              id="gemstoneCost"
+                              type="number"
+                              placeholder="e.g., 10000"
+                              value={gemstoneCost}
+                              onChange={(e) => setGemstoneCost(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="estimatedDays">Estimated Delivery (days) *</Label>
+                          <Input
+                            id="estimatedDays"
+                            type="number"
+                            placeholder="e.g., 14"
+                            value={estimatedDays}
+                            onChange={(e) => setEstimatedDays(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="shopNotes">Notes (optional)</Label>
+                          <Textarea
+                            id="shopNotes"
+                            placeholder="Add any additional details..."
+                            value={shopNotes}
+                            onChange={(e) => setShopNotes(e.target.value)}
+                            rows={3}
+                          />
+                        </div>
+                        {/* Total Preview */}
+                        {(metalCost || makingCharge || finishCost || gemstoneCost) && (
+                          <div className="bg-gray-50 p-3 rounded-md">
+                            <p className="text-sm text-muted-foreground">Estimated Total</p>
+                            <p className="text-lg font-bold">
+                              Rs. {(
+                                (parseFloat(metalCost) || 0) +
+                                (parseFloat(makingCharge) || 0) +
+                                (parseFloat(finishCost) || 0) +
+                                (parseFloat(gemstoneCost) || 0)
+                              ).toLocaleString()}
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    )}
+
                     <Button
                       onClick={submitOffer}
                       disabled={isSubmitting}
                       className="w-full"
+                      variant={offerType === 'DECLINE' ? 'destructive' : 'default'}
                     >
                       {isSubmitting ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           Submitting...
                         </>
+                      ) : offerType === 'DECLINE' ? (
+                        <>
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Decline Request
+                        </>
                       ) : (
                         <>
                           <Send className="h-4 w-4 mr-2" />
-                          Submit Quote
+                          Submit {offerType === 'COUNTER' ? 'Counter-Offer' : 'Quote'}
                         </>
                       )}
                     </Button>
@@ -359,35 +544,56 @@ export default function ShopRfqDetailPage() {
 
               {/* My Offer (if submitted) */}
               {myOffer && (
-                <Card className="border-green-200 bg-green-50">
+                <Card className={myOffer.offerType === 'DECLINE' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
                   <CardHeader>
-                    <CardTitle className="text-green-800 flex items-center gap-2">
-                      <CheckCircle className="h-5 w-5" />
-                      Your Submitted Quote
+                    <CardTitle className={`flex items-center gap-2 ${myOffer.offerType === 'DECLINE' ? 'text-red-800' : 'text-green-800'}`}>
+                      {myOffer.offerType === 'DECLINE' ? (
+                        <>
+                          <XCircle className="h-5 w-5" />
+                          You Declined This Request
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="h-5 w-5" />
+                          Your Submitted Quote
+                        </>
+                      )}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <Label className="text-muted-foreground">Price</Label>
-                        <p className="font-medium text-lg">
-                          {formatCurrency(myOffer.price, myOffer.currency)}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">Delivery</Label>
-                        <p className="font-medium">{myOffer.deliveryDays} days</p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">Status</Label>
-                        <Badge variant="outline">{myOffer.status}</Badge>
-                      </div>
-                    </div>
-                    {myOffer.notes && (
-                      <div className="mt-4">
-                        <Label className="text-muted-foreground">Your Notes</Label>
-                        <p className="text-sm mt-1">{myOffer.notes}</p>
-                      </div>
+                    {myOffer.offerType !== 'DECLINE' ? (
+                      <>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div>
+                            <Label className="text-muted-foreground">Metal Cost</Label>
+                            <p className="font-medium">Rs. {myOffer.metalCostNpr?.toLocaleString() || 0}</p>
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground">Making Charge</Label>
+                            <p className="font-medium">Rs. {myOffer.makingChargeNpr?.toLocaleString() || 0}</p>
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground">Total</Label>
+                            <p className="font-medium text-lg">Rs. {myOffer.totalPriceNpr?.toLocaleString() || 0}</p>
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground">Delivery</Label>
+                            <p className="font-medium">{myOffer.estimatedDays} days</p>
+                          </div>
+                        </div>
+                        <div className="mt-4 flex items-center gap-2">
+                          <Label className="text-muted-foreground">Status:</Label>
+                          <Badge variant="outline">{myOffer.status}</Badge>
+                        </div>
+                        {myOffer.shopNotes && (
+                          <div className="mt-4">
+                            <Label className="text-muted-foreground">Your Notes</Label>
+                            <p className="text-sm mt-1">{myOffer.shopNotes}</p>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-muted-foreground">You have declined this request.</p>
                     )}
                   </CardContent>
                 </Card>
@@ -408,14 +614,9 @@ export default function ShopRfqDetailPage() {
                     </div>
                     <div>
                       <p className="font-medium">
-                        {rfq.customer.firstName} {rfq.customer.lastName}
+                        {rfq.customer?.firstName} {rfq.customer?.lastName}
                       </p>
                     </div>
-                  </div>
-                  <Separator />
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    {rfq.customer.email}
                   </div>
                 </CardContent>
               </Card>

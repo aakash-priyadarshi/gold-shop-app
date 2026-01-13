@@ -82,10 +82,20 @@ export const usersApi = {
 export const shopsApi = {
   getAll: (params?: any) => api.get('/shops', { params }),
   getById: (id: string) => api.get(`/shops/${id}`),
+  getMyShop: () => api.get('/shops/my-shop'),
   create: (data: any) => api.post('/shops', data),
   update: (id: string, data: any) => api.patch(`/shops/${id}`, data),
-  updateRates: (id: string, data: any) => api.patch(`/shops/${id}/rates`, data),
-  getDashboard: (id: string) => api.get(`/shops/${id}/dashboard`),
+  updateRates: (id: string, data: any) => api.patch(`/shops/${id}/metal-rates`, data),
+  getDashboard: () => api.get('/shops/my-shop/dashboard'),
+  getSettings: () => api.get('/shops/my-shop/settings'),
+  updateSettings: (data: any) => api.patch('/shops/my-shop/settings', data),
+  getAnalytics: (params?: any) => api.get('/shops/my-shop/analytics', { params }),
+  // Inventory materials management
+  getMaterials: () => api.get('/shops/my-shop/materials'),
+  updateMaterials: (data: any) => api.put('/shops/my-shop/materials', data),
+  // Capabilities management
+  getCapabilities: () => api.get('/shops/my-shop/capabilities'),
+  updateCapabilities: (data: any) => api.put('/shops/my-shop/capabilities', data),
 };
 
 // Inventory API
@@ -107,21 +117,23 @@ export const rfqApi = {
   getById: (id: string) => api.get(`/rfq/${id}`),
   update: (id: string, data: any) => api.patch(`/rfq/${id}`, data),
   broadcast: (id: string, data: any) => api.post(`/rfq/${id}/broadcast`, data),
-  getOffers: (id: string) => api.get(`/rfq/${id}/offers`),
+  getOffers: (id: string) => api.get(`/offers/rfq/${id}`),
   selectOffer: (id: string, offerId: string) =>
     api.post(`/rfq/${id}/select-offer`, { offerId }),
-  // For shopkeepers
-  getReceivedRequests: (shopId: string, params?: any) =>
-    api.get(`/rfq/shop/${shopId}`, { params }),
+  getEligibleShops: (id: string) => api.get(`/rfq/${id}/eligible-shops`),
+  // For shopkeepers - use the correct endpoint
+  getShopRequests: (params?: any) => api.get('/rfq/shop-requests', { params }),
 };
 
 // Offers API
 export const offersApi = {
-  create: (rfqId: string, data: any) => api.post(`/offers/rfq/${rfqId}`, data),
+  create: (data: any) => api.post('/offers', data),
   update: (id: string, data: any) => api.patch(`/offers/${id}`, data),
   accept: (id: string) => api.post(`/offers/${id}/accept`),
   counter: (id: string, data: any) => api.post(`/offers/${id}/counter`, data),
   decline: (id: string) => api.post(`/offers/${id}/decline`),
+  getByRfq: (rfqId: string) => api.get(`/offers/rfq/${rfqId}`),
+  withdraw: (id: string) => api.patch(`/offers/${id}/withdraw`),
 };
 
 // Orders API

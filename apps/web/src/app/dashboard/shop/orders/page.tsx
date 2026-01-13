@@ -33,7 +33,7 @@ import {
   DollarSign,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import api from '@/lib/api';
+import { ordersApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 
 interface Order {
@@ -43,11 +43,11 @@ interface Order {
     firstName: string;
     lastName: string;
     email: string;
-  };
-  totalAmount: number;
-  currency: string;
+  } | null;
+  totalNpr: number;
+  displayCurrency: string;
   status: string;
-  paymentStatus: string;
+  paymentStatusEnum: string;
   createdAt: string;
 }
 
@@ -78,11 +78,15 @@ export default function ShopOrdersPage() {
   }, [user?.shop?.id, statusFilter]);
 
   const loadOrders = async () => {
+    if (!user?.shop?.id) return;
     setIsLoading(true);
     try {
-      const params = statusFilter !== 'all' ? `?status=${statusFilter}` : '';
-      const response = await api.get(`/api/orders/shop/${user?.shop?.id}${params}`);
-      let ordersArr = response.data.orders || response.data || [];
+      const params: any = { page: 1, pageSize: 50 };
+      if (statusFilter !== 'all') {
+        params.status = statusFilter;
+      }
+      const response = await ordersApi.getShopOrders(user.shop.id, params);
+      let ordersArr = response.data?.items || response.data?.orders || response.data || [];
       if (!Array.isArray(ordersArr)) {
         ordersArr = [];
       }
@@ -94,6 +98,7 @@ export default function ShopOrdersPage() {
         title: 'Failed to load orders',
         description: 'Could not fetch order data',
       });
+      setOrders([]);
     } finally {
       setIsLoading(false);
     }
@@ -211,7 +216,7 @@ export default function ShopOrdersPage() {
                           <div className="flex items-center gap-1">
                             <DollarSign className="h-3 w-3 text-muted-foreground" />
                             <span className="font-medium">
-                              {formatCurrency(order.totalAmount, order.currency)}
+                              {formatCurrency(order.totalNpr, order.displayCurrency || 'NPR')}
                             </span>
                           </div>
                         </TableCell>
@@ -222,8 +227,8 @@ export default function ShopOrdersPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={order.paymentStatus === 'PAID' ? 'default' : 'outline'}>
-                            {order.paymentStatus}
+                          <Badge variant={order.paymentStatusEnum === 'PAID' ? 'default' : 'outline'}>
+                            {order.paymentStatusEnum || 'UNPAID'}
                           </Badge>
                         </TableCell>
                         <TableCell>

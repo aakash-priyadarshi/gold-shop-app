@@ -27,29 +27,43 @@ import {
   Scale,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import api from '@/lib/api';
+import { rfqApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 
 interface Rfq {
   id: string;
   jewelleryType: string;
-  metalType: string;
-  purity: string;
-  weight: number;
-  weightUnit: string;
-  budget?: number;
-  currency: string;
-  description?: string;
+  buildMethod: string;
+  composition: {
+    baseAlloy?: {
+      metal: string;
+      purity: string;
+    };
+    outerLayer?: {
+      metal: string;
+      purity: string;
+    };
+    [key: string]: any;
+  };
+  targetTotalWeightG?: number;
+  targetGoldWeightG?: number;
+  budgetMinNpr?: number;
+  budgetMaxNpr?: number;
+  surfaceFinish?: string;
+  specialInstructions?: string;
   status: string;
   createdAt: string;
   customer: {
     firstName: string;
     lastName: string;
-    email: string;
   };
   offers?: Array<{
     id: string;
     status: string;
+  }>;
+  targetedShops?: Array<{
+    viewedAt?: string;
+    respondedAt?: string;
   }>;
 }
 
@@ -57,6 +71,7 @@ const statusColors: Record<string, string> = {
   DRAFT: 'bg-gray-100 text-gray-700',
   PENDING: 'bg-amber-100 text-amber-700',
   BROADCAST: 'bg-blue-100 text-blue-700',
+  SENT_TO_SHOPS: 'bg-blue-100 text-blue-700',
   OFFERS_RECEIVED: 'bg-purple-100 text-purple-700',
   NEGOTIATING: 'bg-orange-100 text-orange-700',
   ACCEPTED: 'bg-green-100 text-green-700',
@@ -79,8 +94,8 @@ export default function ShopRfqsPage() {
   const loadRfqs = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/rfq/shop-requests');
-      let rfqsArr = response.data.rfqs || response.data || [];
+      const response = await rfqApi.getShopRequests();
+      let rfqsArr = response.data?.rfqs || response.data || [];
       if (!Array.isArray(rfqsArr)) {
         rfqsArr = [];
       }
@@ -92,6 +107,7 @@ export default function ShopRfqsPage() {
         title: 'Failed to load RFQs',
         description: 'Could not fetch RFQ data',
       });
+      setRfqs([]);
     } finally {
       setIsLoading(false);
     }
@@ -117,6 +133,7 @@ export default function ShopRfqsPage() {
     switch (status) {
       case 'PENDING':
       case 'BROADCAST':
+      case 'SENT_TO_SHOPS':
         return <Clock className="h-3 w-3" />;
       case 'OFFERS_RECEIVED':
       case 'NEGOTIATING':
@@ -132,7 +149,7 @@ export default function ShopRfqsPage() {
     }
   };
 
-  const pendingCount = rfqs.filter((r) => ['PENDING', 'BROADCAST'].includes(r.status)).length;
+  const pendingCount = rfqs.filter((r) => ['PENDING', 'BROADCAST', 'SENT_TO_SHOPS'].includes(r.status)).length;
 
   return (
     <ShopGuard>
@@ -184,9 +201,9 @@ export default function ShopRfqsPage() {
                       <TableRow key={rfq.id}>
                         <TableCell>
                           <div>
-                            <p className="font-medium">{rfq.jewelleryType}</p>
+                            <p className="font-medium">{rfq.jewelleryType?.replace(/_/g, ' ')}</p>
                             <p className="text-xs text-muted-foreground">
-                              {rfq.metalType} {rfq.purity}
+                              {rfq.buildMethod?.replace(/_/g, ' ')}
                             </p>
                           </div>
                         </TableCell>
@@ -195,25 +212,30 @@ export default function ShopRfqsPage() {
                             <p className="text-sm">
                               {rfq.customer?.firstName} {rfq.customer?.lastName}
                             </p>
-                            <p className="text-xs text-muted-foreground">
-                              {rfq.customer?.email}
-                            </p>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Scale className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-sm">
-                              {rfq.weight} {rfq.weightUnit}
-                            </span>
+                          <div className="text-sm space-y-1">
+                            {rfq.composition?.baseAlloy && (
+                              <p>
+                                {rfq.composition.baseAlloy.metal} {rfq.composition.baseAlloy.purity}
+                              </p>
+                            )}
+                            {rfq.targetTotalWeightG && (
+                              <div className="flex items-center gap-1 text-muted-foreground">
+                                <Scale className="h-3 w-3" />
+                                <span>{rfq.targetTotalWeightG}g</span>
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
-                          {rfq.budget ? (
+                          {rfq.budgetMaxNpr ? (
                             <div className="flex items-center gap-1">
                               <DollarSign className="h-3 w-3 text-muted-foreground" />
                               <span className="text-sm">
-                                {formatCurrency(rfq.budget, rfq.currency)}
+                                {rfq.budgetMinNpr ? `Rs. ${rfq.budgetMinNpr.toLocaleString()} - ` : ''}
+                                Rs. {rfq.budgetMaxNpr.toLocaleString()}
                               </span>
                             </div>
                           ) : (
@@ -223,7 +245,7 @@ export default function ShopRfqsPage() {
                         <TableCell>
                           <Badge className={statusColors[rfq.status] || 'bg-gray-100'}>
                             {getStatusIcon(rfq.status)}
-                            <span className="ml-1">{rfq.status.replace(/_/g, ' ')}</span>
+                            <span className="ml-1">{rfq.status?.replace(/_/g, ' ')}</span>
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -235,7 +257,7 @@ export default function ShopRfqsPage() {
                           <Link href={`/dashboard/shop/rfqs/${rfq.id}`}>
                             <Button size="sm" variant="outline">
                               <Eye className="h-4 w-4 mr-1" />
-                              {['PENDING', 'BROADCAST'].includes(rfq.status)
+                              {['PENDING', 'BROADCAST', 'SENT_TO_SHOPS'].includes(rfq.status)
                                 ? 'Quote'
                                 : 'View'}
                             </Button>

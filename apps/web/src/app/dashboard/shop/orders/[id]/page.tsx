@@ -46,19 +46,39 @@ import api from '@/lib/api';
 interface OrderDetails {
   id: string;
   orderNumber: string;
+  orderType: string;
   status: string;
+  detailedStatus: string;
   paymentStatus: string;
+  paymentStatusEnum: string;
   paymentMethod?: string;
-  totalAmount: number;
-  currency: string;
+  totalNpr: number;
+  subtotalNpr: number;
+  taxNpr: number;
+  shippingNpr: number;
+  discountNpr: number;
+  balanceDueNpr: number;
+  bookingFeePaidNpr?: number;
+  displayCurrency: string;
   createdAt: string;
   updatedAt: string;
+  estimatedDelivery?: string;
+  actualDelivery?: string;
+  trackingNumber?: string;
+  shippingMethod?: string;
+  paidAtShopConfirmed: boolean;
+  paidAtShopRequested: boolean;
+  productSnapshot: any;
   customer: {
     id: string;
     firstName: string;
     lastName: string;
     email: string;
     phone?: string;
+  };
+  shop?: {
+    id: string;
+    name: string;
   };
   shippingAddress?: {
     street: string;
@@ -67,13 +87,6 @@ interface OrderDetails {
     postalCode: string;
     country: string;
   };
-  items: Array<{
-    id: string;
-    name: string;
-    quantity: number;
-    unitPrice: number;
-    totalPrice: number;
-  }>;
   milestones?: Array<{
     id: string;
     status: string;
@@ -83,7 +96,7 @@ interface OrderDetails {
   commissionLedger?: {
     id: string;
     status: string;
-    amount: number;
+    amountNpr: number;
     dueAt: string;
   };
 }
@@ -132,7 +145,7 @@ export default function ShopOrderDetailPage() {
   const loadOrder = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get(`/api/orders/${orderId}`);
+      const response = await api.get(`/orders/${orderId}`);
       setOrder(response.data);
     } catch (error) {
       console.error('Failed to load order:', error);
@@ -149,7 +162,7 @@ export default function ShopOrderDetailPage() {
   const updateStatus = async (newStatus: string) => {
     setIsUpdating(true);
     try {
-      await api.patch(`/api/orders/${orderId}/status`, { status: newStatus });
+      await api.patch(`/orders/${orderId}/status`, { status: newStatus });
       toast({
         title: 'Status Updated',
         description: `Order status changed to ${newStatus.replace(/_/g, ' ')}`,
@@ -265,52 +278,73 @@ export default function ShopOrderDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Order Items */}
+              {/* Order Details */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Order Items</CardTitle>
+                  <CardTitle>Order Details</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {order.items?.length > 0 ? (
-                      order.items.map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-center justify-between p-4 border rounded-lg"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 bg-gold-100 rounded-lg flex items-center justify-center">
-                              <Package className="h-6 w-6 text-gold-600" />
-                            </div>
-                            <div>
-                              <p className="font-medium">{item.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                Qty: {item.quantity}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-medium">
-                              {formatCurrency(item.totalPrice, order.currency)}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {formatCurrency(item.unitPrice, order.currency)} each
-                            </p>
-                          </div>
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 bg-gold-100 rounded-lg flex items-center justify-center">
+                          <Package className="h-6 w-6 text-gold-600" />
                         </div>
-                      ))
-                    ) : (
-                      <p className="text-muted-foreground text-center py-4">
-                        No items in this order
-                      </p>
-                    )}
+                        <div>
+                          <p className="font-medium">
+                            {order.productSnapshot?.jewelleryType?.replace(/_/g, ' ') || order.orderType?.replace(/_/g, ' ')}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {order.productSnapshot?.buildMethod?.replace(/_/g, ' ')}
+                          </p>
+                          {order.productSnapshot?.composition?.baseAlloy && (
+                            <p className="text-sm text-muted-foreground">
+                              {order.productSnapshot.composition.baseAlloy.metal} {order.productSnapshot.composition.baseAlloy.purity}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   <Separator className="my-4" />
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold">Total</span>
-                    <span className="text-xl font-bold">
-                      {formatCurrency(order.totalAmount, order.currency)}
-                    </span>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span>Rs. {order.subtotalNpr?.toLocaleString()}</span>
+                    </div>
+                    {order.shippingNpr > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">Shipping</span>
+                        <span>Rs. {order.shippingNpr?.toLocaleString()}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Tax</span>
+                      <span>Rs. {order.taxNpr?.toLocaleString()}</span>
+                    </div>
+                    {order.discountNpr > 0 && (
+                      <div className="flex justify-between items-center text-sm text-green-600">
+                        <span>Discount</span>
+                        <span>-Rs. {order.discountNpr?.toLocaleString()}</span>
+                      </div>
+                    )}
+                    <Separator className="my-2" />
+                    <div className="flex justify-between items-center font-bold">
+                      <span>Total</span>
+                      <span className="text-xl">Rs. {order.totalNpr?.toLocaleString()}</span>
+                    </div>
+                    {order.bookingFeePaidNpr && order.bookingFeePaidNpr > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">Booking Fee Paid</span>
+                        <span className="text-green-600">Rs. {order.bookingFeePaidNpr?.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {order.balanceDueNpr > 0 && (
+                      <div className="flex justify-between items-center text-sm font-medium text-orange-600">
+                        <span>Balance Due</span>
+                        <span>Rs. {order.balanceDueNpr?.toLocaleString()}</span>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -432,7 +466,7 @@ export default function ShopOrderDetailPage() {
                         <span className="font-medium text-sm">Commission Due</span>
                       </div>
                       <div className="text-sm text-yellow-700">
-                        <p>Amount: NPR {order.commissionLedger.amount.toFixed(2)}</p>
+                        <p>Amount: NPR {order.commissionLedger.amountNpr?.toFixed(2)}</p>
                         <p>Due: {new Date(order.commissionLedger.dueAt).toLocaleDateString()}</p>
                         <p>Status: {order.commissionLedger.status}</p>
                       </div>
@@ -522,12 +556,12 @@ export default function ShopOrderDetailPage() {
                 <div className="rounded-lg border p-4 space-y-2">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Order Total:</span>
-                    <span className="font-bold">{formatCurrency(order?.totalAmount || 0, order?.currency || 'NPR')}</span>
+                    <span className="font-bold">Rs. {(order?.totalNpr || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Commission (1%):</span>
                     <span className="font-medium text-orange-600">
-                      {formatCurrency((order?.totalAmount || 0) * 0.01, order?.currency || 'NPR')}
+                      Rs. {((order?.totalNpr || 0) * 0.01).toLocaleString()}
                     </span>
                   </div>
                   <div className="flex justify-between">

@@ -399,4 +399,367 @@ export class ShopsService {
       },
     };
   }
+
+  /**
+   * Get shop settings for the current user
+   */
+  async getShopSettings(userId: string) {
+    const shop = await this.prisma.shop.findUnique({
+      where: { userId },
+      include: {
+        metalRates: true,
+        finishPricing: true,
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            preferredCurrency: true,
+          },
+        },
+      },
+    });
+
+    if (!shop) {
+      throw new NotFoundException('Shop not found for this user');
+    }
+
+    return {
+      shop,
+      user: shop.user,
+    };
+  }
+
+  /**
+   * Update shop settings
+   */
+  async updateShopSettings(userId: string, dto: UpdateShopDto) {
+    const shop = await this.prisma.shop.findUnique({
+      where: { userId },
+    });
+
+    if (!shop) {
+      throw new NotFoundException('Shop not found for this user');
+    }
+
+    const previousValue = { ...shop };
+
+    const updated = await this.prisma.shop.update({
+      where: { id: shop.id },
+      data: dto,
+    });
+
+    await this.auditService.log({
+      userId,
+      actorType: 'USER',
+      action: 'UPDATE',
+      resourceType: 'SHOP_SETTINGS',
+      resourceId: shop.id,
+      previousValue,
+      newValue: dto,
+    });
+
+    return updated;
+  }
+
+  /**
+   * Get shop analytics
+   */
+  async getShopAnalytics(shopId: string, period?: string) {
+    if (!shopId) {
+      throw new BadRequestException('Shop ID required');
+    }
+
+    const now = new Date();
+    let startDate: Date;
+    
+    switch (period) {
+      case 'week':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'month':
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case 'year':
+        startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    }
+
+    const [
+      totalOrders,
+      pendingOrders,
+      completedOrders,
+      cancelledOrders,
+      totalRevenue,
+      ratings,
+      recentOrders,
+    ] = await Promise.all([
+      this.prisma.order.count({
+        where: { shopId, createdAt: { gte: startDate } },
+      }),
+      this.prisma.order.count({
+        where: { shopId, status: { in: ['CREATED', 'PAYMENT_PENDING', 'PAID', 'IN_PRODUCTION'] }, createdAt: { gte: startDate } },
+      }),
+      this.prisma.order.count({
+        where: { shopId, status: { in: ['DELIVERED', 'COMPLETED'] }, createdAt: { gte: startDate } },
+      }),
+      this.prisma.order.count({
+        where: { shopId, status: 'CANCELLED', createdAt: { gte: startDate } },
+      }),
+      this.prisma.order.aggregate({
+        where: { shopId, status: { in: ['DELIVERED', 'COMPLETED', 'PAID'] }, createdAt: { gte: startDate } },
+        _sum: { totalNpr: true },
+      }),
+      this.prisma.shopRating.findMany({
+        where: { shopId },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+      this.prisma.order.findMany({
+        where: { shopId, createdAt: { gte: startDate } },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        select: {
+          id: true,
+          orderNumber: true,
+          status: true,
+          totalNpr: true,
+          createdAt: true,
+          customer: {
+            select: { firstName: true, lastName: true },
+          },
+        },
+      }),
+    ]);
+
+    const avgRating = ratings.length > 0
+      ? ratings.reduce((sum, r) => sum + r.overall, 0) / ratings.length
+      : 0;
+
+    return {
+      period: period || 'month',
+      summary: {
+        totalOrders,
+        pendingOrders,
+        completedOrders,
+        cancelledOrders,
+        totalRevenue: totalRevenue._sum.totalNpr || 0,
+        averageRating: avgRating,
+        totalReviews: ratings.length,
+      },
+      recentOrders,
+    };
+  }
+
+  /**
+   * Get shop materials inventory
+   */
+  async getShopMaterials(shopId: string) {
+    if (!shopId) {
+      throw new BadRequestException('Shop ID required');
+    }
+
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: {
+        supportedMaterials: true,
+        metalRates: true,
+        makingChargePercent: true,
+      },
+    });
+
+    if (!shop) {
+      throw new NotFoundException('Shop not found');
+    }
+
+    // Get all available material codes from the system
+    const allMaterials = [
+      { code: 'GOLD_24K', name: '24K Gold', category: 'PRECIOUS_METAL', purity: 99.9 },
+      { code: 'GOLD_22K', name: '22K Gold', category: 'PRECIOUS_METAL', purity: 91.6 },
+      { code: 'GOLD_18K', name: '18K Gold', category: 'PRECIOUS_METAL', purity: 75.0 },
+      { code: 'GOLD_14K', name: '14K Gold', category: 'PRECIOUS_METAL', purity: 58.5 },
+      { code: 'SILVER_999', name: 'Pure Silver', category: 'PRECIOUS_METAL', purity: 99.9 },
+      { code: 'SILVER_925', name: 'Sterling Silver', category: 'PRECIOUS_METAL', purity: 92.5 },
+      { code: 'PLATINUM_950', name: 'Platinum 950', category: 'PRECIOUS_METAL', purity: 95.0 },
+    ];
+
+    // Map materials with shop-specific data
+    const materials = allMaterials.map(material => {
+      const isAvailable = shop.supportedMaterials.includes(material.code);
+      const shopRate = shop.metalRates.find(r => r.metalType === material.code);
+      return {
+        ...material,
+        isAvailable,
+        pricePerGramNpr: shopRate?.ratePerGramNpr || null,
+        lastUpdated: shopRate?.lastUpdatedAt || null,
+      };
+    });
+
+    return {
+      materials,
+      makingChargePercent: shop.makingChargePercent,
+    };
+  }
+
+  /**
+   * Update shop materials inventory
+   */
+  async updateShopMaterials(
+    shopId: string, 
+    userId: string, 
+    materials: Array<{ materialCode: string; isAvailable: boolean; pricePerGramNpr?: number }>
+  ) {
+    if (!shopId) {
+      throw new BadRequestException('Shop ID required');
+    }
+
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+    });
+
+    if (!shop || shop.userId !== userId) {
+      throw new ForbiddenException('Not authorized');
+    }
+
+    // Update supportedMaterials array
+    const supportedMaterials = materials
+      .filter(m => m.isAvailable)
+      .map(m => m.materialCode);
+
+    // Update metal rates for materials with custom pricing
+    const metalRateUpdates = materials
+      .filter(m => m.pricePerGramNpr !== undefined && m.pricePerGramNpr !== null)
+      .map(m => 
+        this.prisma.shopMetalRate.upsert({
+          where: {
+            shopId_metalType: {
+              shopId,
+              metalType: m.materialCode,
+            },
+          },
+          create: {
+            shopId,
+            metalType: m.materialCode,
+            ratePerGramNpr: m.pricePerGramNpr!,
+          },
+          update: {
+            ratePerGramNpr: m.pricePerGramNpr!,
+            lastUpdatedAt: new Date(),
+          },
+        })
+      );
+
+    await Promise.all([
+      this.prisma.shop.update({
+        where: { id: shopId },
+        data: { supportedMaterials },
+      }),
+      ...metalRateUpdates,
+    ]);
+
+    await this.auditService.log({
+      userId,
+      actorType: 'USER',
+      action: 'UPDATE',
+      resourceType: 'SHOP_MATERIALS',
+      resourceId: shopId,
+      newValue: { materials: supportedMaterials },
+    });
+
+    return { success: true, supportedMaterials };
+  }
+
+  /**
+   * Get shop capabilities (jewellery types they can make)
+   */
+  async getShopCapabilities(shopId: string) {
+    if (!shopId) {
+      throw new BadRequestException('Shop ID required');
+    }
+
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: {
+        supportedJewelleryTypes: true,
+        supportedMethods: true,
+        supportedFinishes: true,
+      },
+    });
+
+    if (!shop) {
+      throw new NotFoundException('Shop not found');
+    }
+
+    // All available jewellery types
+    const allJewelleryTypes = [
+      'RING', 'NECKLACE', 'BRACELET', 'BANGLE', 'EARRING', 
+      'PENDANT', 'CHAIN', 'ANKLET', 'NOSE_PIN', 'MANGALSUTRA', 
+      'MAANG_TIKKA', 'OTHER'
+    ];
+
+    const allBuildMethods = ['METHOD_A', 'METHOD_B', 'METHOD_C', 'METHOD_D'];
+
+    return {
+      jewelleryTypes: allJewelleryTypes.map(type => ({
+        code: type,
+        name: type.replace(/_/g, ' '),
+        isSupported: shop.supportedJewelleryTypes.includes(type),
+      })),
+      buildMethods: allBuildMethods.map(method => ({
+        code: method,
+        name: method.replace(/_/g, ' '),
+        isSupported: shop.supportedMethods.includes(method),
+      })),
+      supportedFinishes: shop.supportedFinishes,
+    };
+  }
+
+  /**
+   * Update shop capabilities
+   */
+  async updateShopCapabilities(
+    shopId: string, 
+    userId: string, 
+    dto: { jewelleryTypes: string[]; buildMethods?: string[] }
+  ) {
+    if (!shopId) {
+      throw new BadRequestException('Shop ID required');
+    }
+
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+    });
+
+    if (!shop || shop.userId !== userId) {
+      throw new ForbiddenException('Not authorized');
+    }
+
+    const updateData: any = {
+      supportedJewelleryTypes: dto.jewelleryTypes,
+    };
+
+    if (dto.buildMethods) {
+      updateData.supportedMethods = dto.buildMethods;
+    }
+
+    await this.prisma.shop.update({
+      where: { id: shopId },
+      data: updateData,
+    });
+
+    await this.auditService.log({
+      userId,
+      actorType: 'USER',
+      action: 'UPDATE',
+      resourceType: 'SHOP_CAPABILITIES',
+      resourceId: shopId,
+      newValue: dto,
+    });
+
+    return { success: true, ...dto };
+  }
 }

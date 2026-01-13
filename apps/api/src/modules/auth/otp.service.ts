@@ -71,15 +71,22 @@ export class OtpService {
     ipAddress?: string,
     userName?: string,
   ): Promise<{ message: string; expiresAt: Date }> {
+    // Normalize target (email to lowercase)
+    const normalizedTarget = type === 'EMAIL_VERIFICATION' || type === 'PASSWORD_RESET'
+      ? target.toLowerCase().trim()
+      : target.trim();
+
     // Rate limit checks
-    this.checkRateLimit(`otp:email:${target}`, this.rateLimitConfig.maxPerEmail);
+    this.checkRateLimit(`otp:email:${normalizedTarget}`, this.rateLimitConfig.maxPerEmail);
     if (ipAddress) {
       this.checkRateLimit(`otp:ip:${ipAddress}`, this.rateLimitConfig.maxPerIp);
     }
 
-    // Invalidate any existing OTP for this user/type
-    await this.prisma.otpVerification.deleteMany({
+    // Mark any existing OTPs as expired (don't delete - keep for audit)
+    // This allows old codes to still fail gracefully instead of "not found"
+    await this.prisma.otpVerification.updateMany({
       where: { userId, type, verifiedAt: null },
+      data: { expiresAt: new Date() }, // Expire them immediately
     });
 
     // Generate new OTP
@@ -91,11 +98,13 @@ export class OtpService {
       data: {
         userId,
         type,
-        target,
+        target: normalizedTarget,
         code: hashedOtp,
         expiresAt,
       },
     });
+
+    this.logger.debug(`OTP created for user ${userId}, type: ${type}, target: ${this.maskTarget(normalizedTarget, type)}`);
 
     // Send OTP based on type using Resend
     if (type === 'EMAIL_VERIFICATION' || type === 'PASSWORD_RESET') {
@@ -137,24 +146,31 @@ export class OtpService {
     email: string,
     ipAddress?: string,
   ): Promise<{ success: boolean; message: string }> {
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
+    
     // Rate limit first
-    this.checkRateLimit(`otp:email:${email}`, this.rateLimitConfig.maxPerEmail);
+    this.checkRateLimit(`otp:email:${normalizedEmail}`, this.rateLimitConfig.maxPerEmail);
     if (ipAddress) {
       this.checkRateLimit(`otp:ip:${ipAddress}`, this.rateLimitConfig.maxPerIp);
     }
 
-    const user = await this.prisma.user.findUnique({
-      where: { email },
+    // Look for user with case-insensitive email match
+    const user = await this.prisma.user.findFirst({
+      where: { 
+        email: { equals: normalizedEmail, mode: 'insensitive' }
+      },
     });
 
     // For privacy, always return success
     if (!user) {
-      this.logger.log(`Password reset requested for non-existent email: ${email}`);
+      this.logger.log(`Password reset requested for non-existent email: ${normalizedEmail}`);
       return { success: true, message: 'If an account exists with this email, a reset code has been sent.' };
     }
 
     try {
-      await this.sendOtp(user.id, 'PASSWORD_RESET' as OtpType, email, ipAddress, user.firstName);
+      await this.sendOtp(user.id, 'PASSWORD_RESET' as OtpType, normalizedEmail, ipAddress, user.firstName);
+      this.logger.log(`Password reset OTP sent for user ${user.id}`);
       return { success: true, message: 'If an account exists with this email, a reset code has been sent.' };
     } catch (error: any) {
       // For privacy, don't reveal errors
@@ -164,6 +180,9 @@ export class OtpService {
   }
 
   async verifyOtp(userId: string, type: OtpType, code: string): Promise<{ success: boolean; message: string }> {
+    // Trim the code to handle copy-paste whitespace issues
+    const trimmedCode = code.trim();
+    
     const otpRecord = await this.prisma.otpVerification.findFirst({
       where: {
         userId,
@@ -175,21 +194,47 @@ export class OtpService {
     });
 
     if (!otpRecord) {
-      throw new NotFoundException('No valid OTP found. Please request a new one.');
+      // Check if there's an expired OTP to provide better message
+      const expiredOtp = await this.prisma.otpVerification.findFirst({
+        where: { userId, type, verifiedAt: null },
+        orderBy: { createdAt: 'desc' },
+      });
+      
+      if (expiredOtp) {
+        this.logger.debug(`OTP expired for user ${userId}, type: ${type}`);
+        throw new BadRequestException('Your code has expired. Please request a new one.');
+      }
+      
+      // Check if OTP was already verified
+      const verifiedOtp = await this.prisma.otpVerification.findFirst({
+        where: { userId, type, verifiedAt: { not: null } },
+        orderBy: { createdAt: 'desc' },
+      });
+      
+      if (verifiedOtp) {
+        this.logger.debug(`OTP already used for user ${userId}, type: ${type}`);
+        throw new BadRequestException('This code has already been used. Please request a new one if needed.');
+      }
+      
+      this.logger.warn(`No OTP found for user ${userId}, type: ${type}`);
+      throw new NotFoundException('No valid code found. Please request a new one.');
     }
 
     if (otpRecord.attempts >= otpRecord.maxAttempts) {
-      throw new BadRequestException('Maximum attempts exceeded. Please request a new OTP.');
+      this.logger.warn(`Max OTP attempts exceeded for user ${userId}, type: ${type}`);
+      throw new BadRequestException('Maximum attempts exceeded. Please request a new code.');
     }
 
-    const isValid = await bcrypt.compare(code, otpRecord.code);
+    const isValid = await bcrypt.compare(trimmedCode, otpRecord.code);
 
     if (!isValid) {
       await this.prisma.otpVerification.update({
         where: { id: otpRecord.id },
         data: { attempts: { increment: 1 } },
       });
-      throw new BadRequestException(`Invalid OTP. ${otpRecord.maxAttempts - otpRecord.attempts - 1} attempts remaining.`);
+      const remainingAttempts = otpRecord.maxAttempts - otpRecord.attempts - 1;
+      this.logger.debug(`Invalid OTP attempt for user ${userId}, remaining: ${remainingAttempts}`);
+      throw new BadRequestException(`Invalid code. ${remainingAttempts} attempt${remainingAttempts !== 1 ? 's' : ''} remaining.`);
     }
 
     // Mark as verified
@@ -222,11 +267,18 @@ export class OtpService {
     type: OtpType, 
     code: string
   ): Promise<{ success: boolean; userId?: string; message: string }> {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
+    // Normalize email for lookup
+    const normalizedEmail = email.toLowerCase().trim();
+    
+    // Case-insensitive email lookup
+    const user = await this.prisma.user.findFirst({
+      where: { 
+        email: { equals: normalizedEmail, mode: 'insensitive' }
+      },
     });
 
     if (!user) {
+      this.logger.warn(`OTP verification attempted for non-existent email: ${normalizedEmail}`);
       throw new BadRequestException('Invalid email or code.');
     }
 
