@@ -20,6 +20,7 @@ function OAuthCallbackHandler() {
       const accessToken = searchParams.get('accessToken');
       const refreshToken = searchParams.get('refreshToken');
       const error = searchParams.get('error');
+      const setupRequired = searchParams.get('setupRequired');
 
       if (error) {
         toast({
@@ -49,6 +50,16 @@ function OAuthCallbackHandler() {
         // Fetch user profile
         const response = await api.get('/auth/me');
         const user = response.data;
+
+        // Check if shop setup is required (SHOPKEEPER via Google OAuth)
+        if (setupRequired === 'shop' || (user.role === 'SHOPKEEPER' && !user.shopId)) {
+          toast({
+            title: 'Almost there!',
+            description: 'Please complete your shop details to finish registration.',
+          });
+          router.push('/auth/complete-shop-setup');
+          return;
+        }
 
         toast({
           title: 'Welcome!',

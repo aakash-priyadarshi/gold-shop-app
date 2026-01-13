@@ -5,6 +5,7 @@ import { BullModule } from '@nestjs/bull';
 
 // Core modules
 import { PrismaModule } from './prisma/prisma.module';
+import { RedisModule } from './common/redis';
 import { HttpClientModule } from './common/http-client';
 import { MailModule } from './modules/mail/mail.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -50,6 +51,9 @@ import { CommissionModule } from './modules/commission/commission.module';
 
     // Database
     PrismaModule,
+
+    // Global Redis cache
+    RedisModule,
 
     // Shared HTTP client with retries
     HttpClientModule,

@@ -9,6 +9,7 @@ import { AuditService } from '../audit/audit.service';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
 import { UpdateMetalRatesDto } from './dto/update-metal-rates.dto';
+import { UserRole, UserStatus } from '@prisma/client';
 
 @Injectable()
 export class ShopsService {
@@ -16,6 +17,78 @@ export class ShopsService {
     private prisma: PrismaService,
     private auditService: AuditService,
   ) {}
+
+  /**
+   * Setup shop for OAuth users who signed up as SHOPKEEPER
+   * This also updates their user status to PENDING_VERIFICATION
+   */
+  async setupShopForOAuthUser(userId: string, dto: CreateShopDto) {
+    // Check if user exists and is a shopkeeper
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { shop: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.role !== UserRole.SHOPKEEPER) {
+      throw new ForbiddenException('Only shopkeeper accounts can create shops');
+    }
+
+    if (user.shop) {
+      throw new BadRequestException('User already has a shop');
+    }
+
+    // Create shop and update user phone in a transaction
+    const [shop] = await this.prisma.$transaction([
+      this.prisma.shop.create({
+        data: {
+          userId,
+          shopName: dto.shopName,
+          shopNameNe: dto.shopNameNe,
+          shopNameHi: dto.shopNameHi,
+          description: dto.description,
+          country: dto.country || 'NP',
+          state: dto.state,
+          city: dto.city,
+          address: dto.address,
+          pincode: dto.pincode,
+          contactPhone: dto.contactPhone,
+          contactEmail: dto.contactEmail || user.email,
+          whatsappNumber: dto.whatsappNumber,
+          supportedJewelleryTypes: dto.supportedJewelleryTypes || [],
+          supportedMethods: dto.supportedMethods || [],
+          supportedMaterials: dto.supportedMaterials || [],
+          supportedFinishes: dto.supportedFinishes || [],
+          codEnabled: dto.codEnabled || false,
+          makingChargePercent: dto.makingChargePercent || 10,
+        },
+      }),
+      // Update user's phone if provided
+      ...(dto.contactPhone ? [
+        this.prisma.user.update({
+          where: { id: userId },
+          data: { 
+            phone: dto.contactPhone,
+            // Keep status as PENDING_VERIFICATION until admin approves the shop
+          },
+        }),
+      ] : []),
+    ]);
+
+    await this.auditService.log({
+      userId,
+      actorType: 'USER',
+      action: 'CREATE',
+      resourceType: 'SHOP',
+      resourceId: shop.id,
+      newValue: { shopName: shop.shopName, method: 'oauth_setup' },
+    });
+
+    return shop;
+  }
 
   async create(userId: string, dto: CreateShopDto) {
     // Check if user already has a shop

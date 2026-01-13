@@ -55,7 +55,7 @@ export interface AuthContextType extends AuthState {
   resendVerificationOtp: (email: string) => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
-  googleLogin: () => void;
+  googleLogin: (role?: 'CUSTOMER' | 'SHOPKEEPER', mode?: 'login' | 'register') => void;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   clearError: () => void;
@@ -351,10 +351,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Google OAuth login - redirects to backend OAuth endpoint
-  const googleLogin = useCallback(() => {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-    window.location.href = `${apiBaseUrl}/auth/google`;
+  // Google OAuth login - redirects to backend OAuth endpoint with role and mode
+  const googleLogin = useCallback((role: 'CUSTOMER' | 'SHOPKEEPER' = 'CUSTOMER', mode: 'login' | 'register' = 'login') => {
+    // Use getApiUrl to get the correct base URL with /api
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    // Ensure we have /api in the path
+    const baseUrl = apiBaseUrl.endsWith('/api') ? apiBaseUrl : `${apiBaseUrl}/api`;
+    // Pass role and mode as query params so backend knows what type of account to create
+    // mode='login' - requires existing account, redirects to register if not found
+    // mode='register' - creates account if not exists
+    window.location.href = `${baseUrl}/auth/google?role=${role}&mode=${mode}`;
   }, []);
 
   // Logout function

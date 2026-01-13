@@ -134,6 +134,7 @@ export class AuthController {
   @ApiExcludeEndpoint() // Hide from Swagger as it's a redirect
   async googleAuth() {
     // Guard redirects to Google
+    // Role is passed as query param: /auth/google?role=SHOPKEEPER
   }
 
   @Get('google/callback')
@@ -142,22 +143,44 @@ export class AuthController {
   async googleAuthCallback(@Request() req: any, @Res() res: Response) {
     const ipAddress = req.ip || req.connection?.remoteAddress;
     const userAgent = req.headers['user-agent'];
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
     
     try {
+      const requestedRole = req.user?.requestedRole || 'CUSTOMER';
+      const mode = req.user?.mode || 'login';
       const result = await this.authService.googleAuth(req.user, ipAddress, userAgent);
       
-      // Redirect to frontend with tokens in URL params
-      const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
-      const params = new URLSearchParams({
-        accessToken: result.accessToken,
-        refreshToken: result.refreshToken,
-        expiresIn: result.expiresIn.toString(),
-      });
-      
-      res.redirect(`${frontendUrl}/auth/oauth-callback?${params.toString()}`);
+      // Check if this is a new SHOPKEEPER registration that needs shop details
+      if (requestedRole === 'SHOPKEEPER' && result.needsShopSetup) {
+        // Redirect to shop setup page with tokens
+        const params = new URLSearchParams({
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          expiresIn: result.expiresIn.toString(),
+          setupRequired: 'shop',
+        });
+        res.redirect(`${frontendUrl}/auth/oauth-callback?${params.toString()}`);
+      } else {
+        // Normal flow - redirect with tokens
+        const params = new URLSearchParams({
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          expiresIn: result.expiresIn.toString(),
+        });
+        res.redirect(`${frontendUrl}/auth/oauth-callback?${params.toString()}`);
+      }
     } catch (error) {
-      const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
-      res.redirect(`${frontendUrl}/auth/login?error=${encodeURIComponent(error.message)}`);
+      // Handle account not found error for login mode
+      if (error?.response?.code === 'ACCOUNT_NOT_FOUND') {
+        const params = new URLSearchParams({
+          error: 'account_not_found',
+          email: error?.response?.email || '',
+          message: 'No account found with this email. Please register first.',
+        });
+        res.redirect(`${frontendUrl}/auth/login?${params.toString()}`);
+      } else {
+        res.redirect(`${frontendUrl}/auth/login?error=${encodeURIComponent(error.message)}`);
+      }
     }
   }
 }

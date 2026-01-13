@@ -91,6 +91,15 @@ export class ShopsController {
     return this.shopsService.create(userId, dto);
   }
 
+  @Post('setup')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Complete shop setup for OAuth SHOPKEEPER users' })
+  async setupShop(@CurrentUser('id') userId: string, @Body() dto: CreateShopDto) {
+    // This endpoint allows shopkeepers who signed up via Google OAuth to create their shop
+    return this.shopsService.setupShopForOAuthUser(userId, dto);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get shop by ID' })
   async findOne(@Param('id') id: string) {

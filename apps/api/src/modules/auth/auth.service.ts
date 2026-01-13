@@ -4,6 +4,7 @@ import {
   ConflictException,
   BadRequestException,
   ForbiddenException,
+  NotFoundException,
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -13,6 +14,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { MailService } from '../mail/mail.service';
 import { OtpService } from './otp.service';
+import { RedisService } from '../../common/redis';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UserRole, UserStatus, CurrencyCode } from '@prisma/client';
@@ -28,6 +30,8 @@ export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
+  needsShopSetup?: boolean; // For Google OAuth shopkeeper registration
+  accountNotFound?: boolean; // For Google OAuth login when account doesn't exist
   user: {
     id: string;
     email: string;
@@ -58,7 +62,58 @@ export class AuthService {
     private auditService: AuditService,
     private mailService: MailService,
     private otpService: OtpService,
+    private redisService: RedisService,
   ) {}
+
+  /**
+   * Check if email exists (with Redis caching)
+   */
+  async checkEmailExists(email: string): Promise<{ exists: boolean; userId?: string }> {
+    // Check Redis cache first
+    const cached = await this.redisService.getCachedEmailExists(email);
+    if (cached !== null) {
+      this.logger.debug(`Email existence check from cache: ${email} -> ${cached.exists}`);
+      return cached;
+    }
+
+    // Query database
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+
+    const result = { exists: !!user, userId: user?.id };
+    
+    // Cache the result
+    await this.redisService.cacheEmailExists(email, result.exists, result.userId);
+    
+    return result;
+  }
+
+  /**
+   * Check if phone exists (with Redis caching)
+   */
+  async checkPhoneExists(phone: string): Promise<{ exists: boolean; userId?: string }> {
+    // Check Redis cache first
+    const cached = await this.redisService.getCachedPhoneExists(phone);
+    if (cached !== null) {
+      this.logger.debug(`Phone existence check from cache: ${phone} -> ${cached.exists}`);
+      return cached;
+    }
+
+    // Query database
+    const user = await this.prisma.user.findUnique({
+      where: { phone },
+      select: { id: true },
+    });
+
+    const result = { exists: !!user, userId: user?.id };
+    
+    // Cache the result
+    await this.redisService.cachePhoneExists(phone, result.exists, result.userId);
+    
+    return result;
+  }
 
   /**
    * Register a new user (CUSTOMER or SHOPKEEPER)
@@ -66,21 +121,16 @@ export class AuthService {
    * Returns registration info and sends verification OTP
    */
   async register(dto: RegisterDto, ipAddress?: string): Promise<RegisterResponse> {
-    // Check if email already exists
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
-
-    if (existingUser) {
+    // Check if email already exists (using cached check)
+    const emailCheck = await this.checkEmailExists(dto.email);
+    if (emailCheck.exists) {
       throw new ConflictException('Email already registered');
     }
 
-    // Check phone if provided
+    // Check phone if provided (using cached check)
     if (dto.phone) {
-      const existingPhone = await this.prisma.user.findUnique({
-        where: { phone: dto.phone },
-      });
-      if (existingPhone) {
+      const phoneCheck = await this.checkPhoneExists(dto.phone);
+      if (phoneCheck.exists) {
         throw new ConflictException('Phone number already registered');
       }
     }
@@ -152,6 +202,12 @@ export class AuthService {
         shopId: result.shop?.id,
       },
     });
+
+    // Invalidate cache after user creation
+    await this.redisService.invalidateEmailCache(dto.email);
+    if (dto.phone) {
+      await this.redisService.invalidatePhoneCache(dto.phone);
+    }
 
     this.logger.log(`New ${dto.role} registered: ${dto.email}`);
 
@@ -353,6 +409,9 @@ export class AuthService {
 
   /**
    * Handle Google OAuth login/registration
+   * Supports both CUSTOMER and SHOPKEEPER roles
+   * For SHOPKEEPER: creates user first, then requires shop setup on frontend
+   * For login mode: if account doesn't exist, returns accountNotFound flag
    */
   async googleAuth(googleUser: {
     googleId: string;
@@ -360,7 +419,12 @@ export class AuthService {
     firstName: string;
     lastName: string;
     picture?: string;
+    requestedRole?: string;
+    mode?: string; // 'login' or 'register'
   }, ipAddress?: string, userAgent?: string): Promise<AuthResponse> {
+    const requestedRole = googleUser.requestedRole === 'SHOPKEEPER' ? UserRole.SHOPKEEPER : UserRole.CUSTOMER;
+    const mode = googleUser.mode || 'login'; // Default to login mode
+    
     // Check if user exists by googleId or email
     let user = await this.prisma.user.findFirst({
       where: {
@@ -373,7 +437,7 @@ export class AuthService {
     });
 
     if (user) {
-      // Link Google account if not already linked
+      // Existing user - link Google account if not already linked
       if (!user.googleId) {
         await this.prisma.user.update({
           where: { id: user.id },
@@ -413,10 +477,28 @@ export class AuthService {
         userAgent,
       });
 
-      return this.generateTokens(user, user.shop, ipAddress, userAgent);
+      const tokens = await this.generateTokens(user, user.shop, ipAddress, userAgent);
+      
+      // If user is SHOPKEEPER but has no shop, they need to complete setup
+      if (user.role === UserRole.SHOPKEEPER && !user.shop) {
+        return { ...tokens, needsShopSetup: true };
+      }
+      
+      return tokens;
     }
 
-    // Create new user from Google account
+    // User doesn't exist
+    // If mode is 'login', indicate account not found instead of creating
+    if (mode === 'login') {
+      this.logger.log(`Google OAuth login attempted for non-existent account: ${googleUser.email}`);
+      throw new NotFoundException({
+        message: 'No account found with this email. Please register first.',
+        code: 'ACCOUNT_NOT_FOUND',
+        email: googleUser.email,
+      });
+    }
+
+    // Mode is 'register' - create new user from Google account
     const newUser = await this.prisma.user.create({
       data: {
         email: googleUser.email,
@@ -424,14 +506,18 @@ export class AuthService {
         firstName: googleUser.firstName,
         lastName: googleUser.lastName,
         passwordHash: '', // No password for OAuth users
-        role: UserRole.CUSTOMER,
-        status: UserStatus.ACTIVE,
+        role: requestedRole,
+        // SHOPKEEPER accounts via OAuth start as PENDING_VERIFICATION until shop is created
+        status: requestedRole === UserRole.SHOPKEEPER ? UserStatus.PENDING_VERIFICATION : UserStatus.ACTIVE,
         emailVerified: true, // Google verified the email
         emailVerifiedAt: new Date(),
         preferredLanguage: 'en',
         preferredCurrency: CurrencyCode.NPR,
       },
     });
+
+    // Invalidate email cache after user creation
+    await this.redisService.invalidateEmailCache(googleUser.email);
 
     // Log audit
     await this.auditService.log({
@@ -440,16 +526,23 @@ export class AuthService {
       action: 'REGISTER',
       resourceType: 'USER',
       resourceId: newUser.id,
-      newValue: { email: newUser.email, method: 'google' },
+      newValue: { email: newUser.email, method: 'google', role: requestedRole },
     });
 
-    this.logger.log(`New Google OAuth user registered: ${googleUser.email}`);
+    this.logger.log(`New Google OAuth user registered: ${googleUser.email} as ${requestedRole}`);
 
     // Send welcome email
     this.mailService.sendWelcome(newUser.email, newUser.firstName)
       .catch(err => this.logger.error(`Failed to send welcome email: ${err.message}`));
 
-    return this.generateTokens(newUser, null, ipAddress, userAgent);
+    const tokens = await this.generateTokens(newUser, null, ipAddress, userAgent);
+    
+    // If SHOPKEEPER, they need to complete shop setup
+    if (requestedRole === UserRole.SHOPKEEPER) {
+      return { ...tokens, needsShopSetup: true };
+    }
+
+    return tokens;
   }
 
   /**

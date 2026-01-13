@@ -54,14 +54,29 @@ function LoginForm() {
   // Check URL for error param (from OAuth redirect)
   useEffect(() => {
     const errorParam = searchParams.get('error');
-    if (errorParam) {
+    const messageParam = searchParams.get('message');
+    const emailParam = searchParams.get('email');
+    
+    if (errorParam === 'account_not_found') {
+      // Google OAuth login with non-existent account
+      toast({
+        variant: 'destructive',
+        title: 'Account not found',
+        description: messageParam || 'No account found with this email. Please register first.',
+        duration: 6000,
+      });
+      // Redirect to register page after short delay
+      setTimeout(() => {
+        router.push(`/auth/register${emailParam ? `?email=${encodeURIComponent(emailParam)}` : ''}`);
+      }, 2000);
+    } else if (errorParam) {
       toast({
         variant: 'destructive',
         title: 'Login failed',
         description: errorParam,
       });
     }
-  }, [searchParams, toast]);
+  }, [searchParams, toast, router]);
 
   // Check if user has visited before (skip intro for returning users)
   useEffect(() => {
@@ -366,7 +381,7 @@ function LoginForm() {
           <Button
             type="button"
             variant="outline"
-            onClick={googleLogin}
+            onClick={() => googleLogin('CUSTOMER', 'login')}
             className="w-full h-12 rounded-xl border-gray-200 hover:bg-gray-50 flex items-center justify-center gap-3"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
