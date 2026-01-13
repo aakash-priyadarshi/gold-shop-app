@@ -54,8 +54,7 @@ interface UserData {
   firstName: string;
   lastName: string;
   role: 'ADMIN' | 'SHOPKEEPER' | 'CUSTOMER' | 'SUPPORT';
-  status: string;
-  isActive: boolean;
+  status: 'ACTIVE' | 'SUSPENDED' | 'PENDING_VERIFICATION' | 'DEACTIVATED';
   createdAt: string;
   shop?: {
     id: string;
@@ -124,9 +123,11 @@ export default function AdminUsersPage() {
 
     // Filter by status
     if (statusFilter === 'active') {
-      filtered = filtered.filter((u) => u.isActive);
+      filtered = filtered.filter((u) => u.status === 'ACTIVE');
     } else if (statusFilter === 'suspended') {
-      filtered = filtered.filter((u) => !u.isActive);
+      filtered = filtered.filter((u) => u.status === 'SUSPENDED');
+    } else if (statusFilter === 'pending') {
+      filtered = filtered.filter((u) => u.status === 'PENDING_VERIFICATION');
     }
 
     // Filter by search
@@ -260,8 +261,9 @@ export default function AdminUsersPage() {
     admins: users.filter((u) => u.role === 'ADMIN').length,
     shopkeepers: users.filter((u) => u.role === 'SHOPKEEPER').length,
     customers: users.filter((u) => u.role === 'CUSTOMER').length,
-    active: users.filter((u) => u.isActive).length,
-    suspended: users.filter((u) => !u.isActive).length,
+    active: users.filter((u) => u.status === 'ACTIVE').length,
+    suspended: users.filter((u) => u.status === 'SUSPENDED').length,
+    pending: users.filter((u) => u.status === 'PENDING_VERIFICATION').length,
   };
 
   return (
@@ -433,12 +435,13 @@ export default function AdminUsersPage() {
                   </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[150px]">
+                  <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="pending">Pending Verification</SelectItem>
                     <SelectItem value="suspended">Suspended</SelectItem>
                   </SelectContent>
                 </Select>
@@ -495,15 +498,23 @@ export default function AdminUsersPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {user.isActive ? (
+                          {user.status === 'ACTIVE' ? (
                             <Badge className="bg-green-100 text-green-700">
                               <UserCheck className="h-3 w-3 mr-1" />
                               Active
                             </Badge>
-                          ) : (
+                          ) : user.status === 'PENDING_VERIFICATION' ? (
+                            <Badge className="bg-amber-100 text-amber-700">
+                              Pending
+                            </Badge>
+                          ) : user.status === 'SUSPENDED' ? (
                             <Badge variant="destructive">
                               <UserX className="h-3 w-3 mr-1" />
                               Suspended
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">
+                              {user.status}
                             </Badge>
                           )}
                         </TableCell>
@@ -522,7 +533,7 @@ export default function AdminUsersPage() {
                         </TableCell>
                         <TableCell>
                           {user.role !== 'ADMIN' && (
-                            user.isActive ? (
+                            user.status === 'ACTIVE' ? (
                               <Button
                                 size="sm"
                                 variant="outline"

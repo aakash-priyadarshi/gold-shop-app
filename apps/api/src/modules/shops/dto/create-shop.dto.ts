@@ -4,6 +4,7 @@ import {
   IsArray,
   IsBoolean,
   IsNumber,
+  IsObject,
   Min,
   Max,
 } from 'class-validator';
@@ -101,10 +102,39 @@ export class CreateShopDto {
   @IsBoolean()
   codEnabled?: boolean;
 
+  @ApiPropertyOptional({ example: 50000, description: 'Max COD value in NPR' })
+  @IsOptional()
+  @IsNumber()
+  codMaxValueNpr?: number;
+
   @ApiPropertyOptional({ example: 10, minimum: 5, maximum: 25 })
   @IsOptional()
   @IsNumber()
   @Min(5)
   @Max(25)
   makingChargePercent?: number;
+
+  @ApiPropertyOptional({ example: 1000, description: 'Minimum order value in NPR' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  minOrderValueNpr?: number;
+
+  @ApiPropertyOptional({ example: 500000, description: 'Maximum order value in NPR' })
+  @IsOptional()
+  @IsNumber()
+  maxOrderValueNpr?: number;
+
+  @ApiPropertyOptional({ default: true, description: 'Whether shop is active' })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+
+  @ApiPropertyOptional({ 
+    description: 'Bank account details for payments',
+    example: { bankName: 'Nepal Bank', accountNumber: '1234567890', accountName: 'Shop Owner' }
+  })
+  @IsOptional()
+  @IsObject()
+  bankAccountDetails?: Record<string, any>;
 }

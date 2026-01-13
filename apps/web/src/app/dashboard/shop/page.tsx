@@ -22,6 +22,7 @@ import {
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { shopsApi, ordersApi, rfqApi, inventoryApi } from '@/lib/api';
+import { usePreferencesStore, CURRENCIES, type CurrencyCode } from '@/store/preferences';
 
 interface Stat {
   title: string;
@@ -64,6 +65,8 @@ const statusColors: Record<string, string> = {
 
 export default function ShopDashboard() {
   const { user } = useAuth();
+  const { currency } = usePreferencesStore();
+  const currencySymbol = CURRENCIES[currency as CurrencyCode]?.symbol || 'Rs.';
   const [stats, setStats] = useState<Stat[]>([]);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [rfqRequests, setRfqRequests] = useState<RFQRequest[]>([]);
@@ -168,13 +171,13 @@ export default function ShopDashboard() {
               <Button variant="outline" asChild>
                 <Link href="/dashboard/shop/inventory">
                   <Eye className="h-4 w-4 mr-2" />
-                  View Inventory
+                  Materials & Capabilities
                 </Link>
               </Button>
               <Button asChild>
-                <Link href="/dashboard/shop/inventory/add">
+                <Link href="/dashboard/shop/products">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Product
+                  Manage Products
                 </Link>
               </Button>
             </div>
@@ -337,7 +340,7 @@ export default function ShopDashboard() {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2" asChild>
-                  <Link href="/dashboard/shop/inventory/add">
+                  <Link href="/dashboard/shop/products">
                     <Plus className="h-6 w-6" />
                     <span>Add Product</span>
                   </Link>

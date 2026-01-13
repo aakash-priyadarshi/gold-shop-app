@@ -18,10 +18,13 @@ import {
   Save,
   Loader2,
   Info,
+  TrendingUp,
+  RefreshCw,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { shopsApi } from '@/lib/api';
+import { shopsApi, materialsApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { usePreferencesStore, CURRENCIES, type CurrencyCode } from '@/store/preferences';
 
 interface Material {
   metal: string;
@@ -42,6 +45,16 @@ interface CapabilitiesData {
   buildMethods: string[];
   finishes: string[];
 }
+
+interface MarketRate {
+  metalCode: string;
+  ratePerGram: number;
+  source: string;
+  country: string;
+  validFrom: string;
+}
+
+const DEFAULT_MAKING_CHARGE_PERCENT = 10;
 
 const allMaterials = [
   { metal: 'GOLD', purity: '24K', label: 'Gold 24K (Pure)' },
@@ -90,10 +103,16 @@ const allFinishes = [
 
 export default function ShopInventoryPage() {
   const { user } = useAuth();
+  const { currency } = usePreferencesStore();
   const [materialsData, setMaterialsData] = useState<MaterialsData | null>(null);
   const [capabilitiesData, setCapabilitiesData] = useState<CapabilitiesData | null>(null);
+  const [marketRates, setMarketRates] = useState<MarketRate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshingRates, setIsRefreshingRates] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Get currency symbol
+  const currencySymbol = CURRENCIES[currency as CurrencyCode]?.symbol || 'Rs.';
 
   useEffect(() => {
     if (user?.shop?.id) {
@@ -104,12 +123,14 @@ export default function ShopInventoryPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [materialsRes, capabilitiesRes] = await Promise.all([
+      const [materialsRes, capabilitiesRes, ratesRes] = await Promise.all([
         shopsApi.getMaterials(),
         shopsApi.getCapabilities(),
+        materialsApi.getMarketRates(),
       ]);
       setMaterialsData(materialsRes.data);
       setCapabilitiesData(capabilitiesRes.data);
+      setMarketRates(ratesRes.data || []);
     } catch (error) {
       console.error('Failed to load data:', error);
       toast({
@@ -120,6 +141,40 @@ export default function ShopInventoryPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const refreshMarketRates = async () => {
+    setIsRefreshingRates(true);
+    try {
+      const ratesRes = await materialsApi.getMarketRates();
+      setMarketRates(ratesRes.data || []);
+      toast({
+        title: 'Rates Refreshed',
+        description: 'Market rates updated successfully',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Refresh Failed',
+        description: 'Could not refresh market rates',
+      });
+    } finally {
+      setIsRefreshingRates(false);
+    }
+  };
+
+  // Get market rate for a material
+  const getMarketRate = (metal: string, purity: string): number | null => {
+    const materialCode = `${metal}_${purity}`;
+    const rate = marketRates.find(r => r.metalCode === materialCode);
+    return rate?.ratePerGram ?? null;
+  };
+
+  // Calculate default making charge (10% of metal value)
+  const getDefaultMakingCharge = (metal: string, purity: string): number => {
+    const rate = getMarketRate(metal, purity);
+    if (!rate) return 0;
+    return Math.round(rate * DEFAULT_MAKING_CHARGE_PERCENT / 100);
   };
 
   const saveMaterials = async () => {
@@ -277,32 +332,56 @@ export default function ShopInventoryPage() {
             </p>
           </div>
 
-          {/* Pricing Info Card */}
-          <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+          {/* Live Market Rates Card */}
+          <Card className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30 border-amber-200 dark:border-amber-800">
             <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-400 text-base">
-                <Info className="h-5 w-5" />
-                How Pricing Works
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-400 text-base">
+                  <TrendingUp className="h-5 w-5" />
+                  Live Market Rates
+                </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={refreshMarketRates}
+                  disabled={isRefreshingRates}
+                  className="text-amber-700"
+                >
+                  {isRefreshingRates ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  <span className="ml-1">Refresh</span>
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent className="text-sm text-amber-900 dark:text-amber-300 space-y-2">
-              <p>
-                <strong>Total Price = (Metal Weight × Live Market Rate) + Making Charges</strong>
-              </p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>
-                  <strong>Market Rate:</strong> Fetched live from FENEGOSIDA (Nepal Gold & Silver Dealers&apos; Association) or international sources.
-                </li>
-                <li>
-                  <strong>Making Charges:</strong> Your craftmanship fee. Set per gram below, or leave blank to use your shop&apos;s default making charge percentage (configurable in Settings).
-                </li>
-                <li>
-                  <strong>System Fallback:</strong> If you don&apos;t set making charges, the system uses 10% of metal value as default.
-                </li>
-              </ul>
-              <p className="text-xs text-amber-700 dark:text-amber-400 pt-2 italic">
-                Tip: Customers see transparent pricing breakdown with live rates + your making charges.
-              </p>
+            <CardContent className="text-sm text-amber-900 dark:text-amber-300">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                {allMaterials.slice(0, 4).map((mat) => {
+                  const rate = getMarketRate(mat.metal, mat.purity);
+                  return (
+                    <div key={`${mat.metal}_${mat.purity}`} className="bg-white/50 dark:bg-black/20 rounded-lg p-3">
+                      <div className="text-xs text-amber-700 dark:text-amber-400">{mat.label}</div>
+                      <div className="text-lg font-bold text-amber-900 dark:text-amber-200">
+                        {rate ? `${currencySymbol} ${rate.toLocaleString()}/g` : 'N/A'}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="bg-white/30 dark:bg-black/10 rounded-lg p-3 space-y-2">
+                <p className="font-medium">
+                  <Info className="h-4 w-4 inline mr-1" />
+                  How Pricing Works:
+                </p>
+                <p><strong>Total Price = (Metal Weight × Live Rate) + Making Charges</strong></p>
+                <ul className="list-disc pl-5 space-y-1 text-xs">
+                  <li><strong>Market Rate:</strong> Fetched live from FENEGOSIDA (Nepal) or international sources.</li>
+                  <li><strong>Making Charges:</strong> Set your own per gram rate below, or leave blank for system default (10% of metal value).</li>
+                  <li><strong>Example:</strong> 10g Gold 24K at {currencySymbol} {(getMarketRate('GOLD', '24K') || 12000).toLocaleString()}/g = {currencySymbol} {((getMarketRate('GOLD', '24K') || 12000) * 10).toLocaleString()} metal + {currencySymbol} {Math.round((getMarketRate('GOLD', '24K') || 12000) * 10 * 0.1).toLocaleString()} making = {currencySymbol} {Math.round((getMarketRate('GOLD', '24K') || 12000) * 10 * 1.1).toLocaleString()} total</li>
+                </ul>
+              </div>
             </CardContent>
           </Card>
 
@@ -334,6 +413,8 @@ export default function ShopInventoryPage() {
                       const materialData = materialsData?.materials?.find(
                         (m) => m.metal === material.metal && m.purity === material.purity
                       );
+                      const liveRate = getMarketRate(material.metal, material.purity);
+                      const defaultMaking = getDefaultMakingCharge(material.metal, material.purity);
 
                       return (
                         <Card
@@ -349,21 +430,41 @@ export default function ShopInventoryPage() {
                                   checked={isSelected}
                                   onCheckedChange={() => toggleMaterial(key)}
                                 />
-                                <Label className="cursor-pointer font-medium">
-                                  {material.label}
-                                </Label>
+                                <div>
+                                  <Label className="cursor-pointer font-medium">
+                                    {material.label}
+                                  </Label>
+                                  {liveRate && (
+                                    <div className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                                      <TrendingUp className="h-3 w-3" />
+                                      Live: {currencySymbol} {liveRate.toLocaleString()}/g
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
 
                             {isSelected && (
                               <div className="mt-4 space-y-3 pl-6">
+                                {liveRate && (
+                                  <div className="bg-green-50 dark:bg-green-950/30 rounded p-2 text-xs">
+                                    <div className="flex justify-between">
+                                      <span className="text-green-700 dark:text-green-400">Live Rate:</span>
+                                      <span className="font-medium">{currencySymbol} {liveRate.toLocaleString()}/g</span>
+                                    </div>
+                                    <div className="flex justify-between text-muted-foreground">
+                                      <span>Default Making (10%):</span>
+                                      <span>{currencySymbol} {defaultMaking.toLocaleString()}/g</span>
+                                    </div>
+                                  </div>
+                                )}
                                 <div className="space-y-1">
                                   <Label className="text-xs text-muted-foreground">
-                                    Making Charge (NPR/gram)
+                                    Your Making Charge ({currencySymbol}/gram)
                                   </Label>
                                   <Input
                                     type="number"
-                                    placeholder="e.g., 500"
+                                    placeholder={`Default: ${defaultMaking || 'N/A'}`}
                                     value={materialData?.makingChargePerGram || ''}
                                     onChange={(e) =>
                                       updateMaterialPricing(
@@ -373,6 +474,9 @@ export default function ShopInventoryPage() {
                                       )
                                     }
                                   />
+                                  <p className="text-xs text-muted-foreground">
+                                    Leave blank to use default (10% of metal value)
+                                  </p>
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
                                   <div className="space-y-1">
