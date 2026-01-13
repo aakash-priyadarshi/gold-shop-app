@@ -235,7 +235,7 @@ export class MailService {
         to,
         subject,
         html,
-        reply_to: replyTo,
+        replyTo,
       });
 
       if (error) {
