@@ -115,7 +115,7 @@ export default function CompleteShopSetupPage() {
     }
 
     // If user already has a shop, redirect to dashboard
-    if (user?.shopId) {
+    if (user?.shop?.id) {
       router.push(getDashboardRoute(user.role));
     }
   }, [isAuthenticated, user, router]);
