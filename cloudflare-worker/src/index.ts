@@ -119,8 +119,15 @@ export default {
       }
 
       // Serve images (for non-public buckets)
+      // Support both /images/key and /key formats
       if (path.startsWith('/images/')) {
         const key = path.replace('/images/', '');
+        return handleServe(key, env, corsHeaders);
+      }
+
+      // Serve images from root path (e.g., /product/123.jpg)
+      if (path.startsWith('/product/') || path.startsWith('/profile/') || path.startsWith('/rfq/')) {
+        const key = path.substring(1); // Remove leading slash
         return handleServe(key, env, corsHeaders);
       }
 
