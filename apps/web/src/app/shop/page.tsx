@@ -43,6 +43,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { usePreferencesStore, CURRENCIES } from '@/store/preferences';
+import { getImageUrl } from '@/lib/image-upload';
 
 interface InventoryItem {
   id: string;
@@ -231,7 +232,7 @@ export default function ShopPage() {
                       <div className="aspect-square bg-gray-100 relative">
                         {item.images?.[0] ? (
                           <img
-                            src={item.images[0]}
+                            src={getImageUrl(item.images[0])}
                             alt={item.nameEn}
                             className="object-cover w-full h-full"
                           />
@@ -443,7 +444,7 @@ export default function ShopPage() {
                     <div className="relative aspect-square bg-gray-100">
                       {item.images?.[0] ? (
                         <img
-                          src={item.images[0]}
+                          src={getImageUrl(item.images[0])}
                           alt={item.nameEn}
                           className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
                         />

@@ -323,6 +323,17 @@ export default function ShopProductsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     
+    // Check max 3 images
+    if (formData.images.length >= 3) {
+      toast({
+        variant: 'destructive',
+        title: 'Maximum Images Reached',
+        description: 'You can upload a maximum of 3 images per product',
+      });
+      e.target.value = '';
+      return;
+    }
+    
     // Check file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast({
@@ -960,23 +971,23 @@ export default function ShopProductsPage() {
 
               {/* Images */}
               <div className="space-y-3">
-                <Label>Product Images</Label>
+                <Label>Product Images (max 3)</Label>
                 
                 {/* File Upload */}
-                <div className="border-2 border-dashed rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
+                <div className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${formData.images.length >= 3 ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary/50'}`}>
                   <input
                     type="file"
                     accept="image/*"
                     onChange={handleImageSelect}
                     className="hidden"
                     id="image-upload"
-                    disabled={isUploadingImage}
+                    disabled={isUploadingImage || formData.images.length >= 3}
                   />
-                  <label htmlFor="image-upload" className="cursor-pointer">
+                  <label htmlFor="image-upload" className={formData.images.length >= 3 ? 'cursor-not-allowed' : 'cursor-pointer'}>
                     {isUploadingImage ? (
                       <div className="flex flex-col items-center justify-center gap-2">
                         <Loader2 className="h-5 w-5 animate-spin" />
-                        <span>Uploading to cloud... {imageProgress}%</span>
+                        <span>Uploading... {imageProgress}%</span>
                         <div className="w-full max-w-xs h-2 bg-gray-200 rounded-full overflow-hidden">
                           <div 
                             className="h-full bg-primary transition-all duration-300" 
@@ -991,7 +1002,7 @@ export default function ShopProductsPage() {
                           Click to upload image (max 10MB)
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Images are stored on Cloudflare for fast delivery
+                          {formData.images.length}/3 images added
                         </p>
                       </div>
                     )}

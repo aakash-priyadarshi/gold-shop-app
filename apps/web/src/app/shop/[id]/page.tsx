@@ -34,6 +34,7 @@ import {
   Minus,
   Plus
 } from 'lucide-react';
+import { getImageUrl } from '@/lib/image-upload';
 
 interface InventoryItem {
   id: string;
@@ -41,16 +42,14 @@ interface InventoryItem {
   nameNe?: string;
   descriptionEn?: string;
   descriptionNe?: string;
-  category: string;
-  metalType: string;
-  purity?: string;
-  weightGrams: number;
+  jewelleryType: string;
+  buildMethod: string;
+  composition: any;
+  totalWeightGrams: number;
   totalPriceNpr: number;
   stockQuantity: number;
   images: string[];
   status: string;
-  finishType?: string;
-  gemstones?: any;
   shop: {
     id: string;
     shopName: string;
@@ -102,6 +101,14 @@ export default function ProductDetailPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper to extract metal info from composition
+  const getMetalInfo = () => {
+    if (!item?.composition) return { metal: 'N/A', purity: '' };
+    const metal = item.composition?.baseAlloy?.metal || item.composition?.metal || '';
+    const purity = item.composition?.baseAlloy?.purity || item.composition?.purity || '';
+    return { metal, purity };
   };
 
   // Format price in user's preferred currency
@@ -177,10 +184,11 @@ export default function ProductDetailPage() {
           <div className="grid lg:grid-cols-2 gap-8">
             {/* Image Gallery */}
             <div className="space-y-4">
-              <div className="relative aspect-square bg-white rounded-2xl overflow-hidden">
+              {/* Main Image */}
+              <div className="relative aspect-square bg-white rounded-2xl overflow-hidden shadow-lg">
                 {item.images?.[currentImageIndex] ? (
                   <img
-                    src={item.images[currentImageIndex]}
+                    src={getImageUrl(item.images[currentImageIndex])}
                     alt={item.nameEn}
                     className="object-cover w-full h-full"
                   />
@@ -195,7 +203,7 @@ export default function ProductDetailPage() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white"
                       onClick={() => setCurrentImageIndex(prev => 
                         prev === 0 ? item.images.length - 1 : prev - 1
                       )}
@@ -205,7 +213,7 @@ export default function ProductDetailPage() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white"
                       onClick={() => setCurrentImageIndex(prev => 
                         prev === item.images.length - 1 ? 0 : prev + 1
                       )}
@@ -216,18 +224,18 @@ export default function ProductDetailPage() {
                 )}
               </div>
 
-              {/* Thumbnails */}
+              {/* Thumbnails - smaller images */}
               {item.images && item.images.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto pb-2">
+                <div className="flex gap-3 overflow-x-auto pb-2">
                   {item.images.map((img, idx) => (
                     <button
                       key={idx}
                       onClick={() => setCurrentImageIndex(idx)}
-                      className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
-                        currentImageIndex === idx ? 'border-gold-500' : 'border-transparent'
+                      className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                        currentImageIndex === idx ? 'border-gold-500 ring-2 ring-gold-200' : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
-                      <img src={img} alt="" className="w-full h-full object-cover" />
+                      <img src={getImageUrl(img)} alt="" className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>
@@ -238,8 +246,8 @@ export default function ProductDetailPage() {
             <div className="space-y-6">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="outline">{item.metalType?.replace('_', ' ') || 'Unknown'}</Badge>
-                  <Badge variant="secondary">{item.category}</Badge>
+                  <Badge variant="outline">{getMetalInfo().metal} {getMetalInfo().purity && `(${getMetalInfo().purity})`}</Badge>
+                  <Badge variant="secondary">{item.jewelleryType?.replace('_', ' ') || 'Jewellery'}</Badge>
                   {item.stockQuantity <= 2 && item.stockQuantity > 0 && (
                     <Badge className="bg-orange-500">Only {item.stockQuantity} left</Badge>
                   )}
@@ -274,7 +282,7 @@ export default function ProductDetailPage() {
                   {formatPrice(item.totalPriceNpr)}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
-                  Weight: {item.weightGrams}g | {item.purity || item.metalType}
+                  Weight: {item.totalWeightGrams}g | {getMetalInfo().metal} {getMetalInfo().purity}
                 </p>
               </div>
 
@@ -410,24 +418,24 @@ export default function ProductDetailPage() {
                   <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex justify-between py-2 border-b">
                       <dt className="text-gray-500">Metal Type</dt>
-                      <dd className="font-medium">{item.metalType?.replace('_', ' ') || 'N/A'}</dd>
+                      <dd className="font-medium">{getMetalInfo().metal || 'N/A'}</dd>
                     </div>
                     <div className="flex justify-between py-2 border-b">
                       <dt className="text-gray-500">Purity</dt>
-                      <dd className="font-medium">{item.purity || 'N/A'}</dd>
+                      <dd className="font-medium">{getMetalInfo().purity || 'N/A'}</dd>
                     </div>
                     <div className="flex justify-between py-2 border-b">
                       <dt className="text-gray-500">Weight</dt>
-                      <dd className="font-medium">{item.weightGrams}g</dd>
+                      <dd className="font-medium">{item.totalWeightGrams}g</dd>
                     </div>
                     <div className="flex justify-between py-2 border-b">
-                      <dt className="text-gray-500">Category</dt>
-                      <dd className="font-medium">{item.category}</dd>
+                      <dt className="text-gray-500">Type</dt>
+                      <dd className="font-medium">{item.jewelleryType?.replace('_', ' ') || 'N/A'}</dd>
                     </div>
-                    {item.finishType && (
+                    {item.buildMethod && (
                       <div className="flex justify-between py-2 border-b">
-                        <dt className="text-gray-500">Finish</dt>
-                        <dd className="font-medium">{item.finishType}</dd>
+                        <dt className="text-gray-500">Build Method</dt>
+                        <dd className="font-medium">{item.buildMethod?.replace('_', ' ')}</dd>
                       </div>
                     )}
                   </dl>
