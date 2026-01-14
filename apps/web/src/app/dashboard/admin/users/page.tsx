@@ -104,6 +104,7 @@ interface UserData {
   updatedAt?: string;
   lastLoginAt?: string;
   shop?: ShopData;
+  shops?: ShopData[]; // Multi-shop support
 }
 
 export default function AdminUsersPage() {
@@ -857,136 +858,109 @@ export default function AdminUsersPage() {
                   </div>
                 </TabsContent>
                 
-                {selectedUser.shop && (
+                {(selectedUser.shop || selectedUser.shops?.length) && (
                   <TabsContent value="shop" className="space-y-4 mt-4">
-                    <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-lg bg-white flex items-center justify-center">
-                          <Store className="h-6 w-6 text-gold-600" />
+                    {/* Show all shops for multi-shop support */}
+                    {(selectedUser.shops || [selectedUser.shop]).filter(Boolean).map((shop, index) => (
+                      <div key={shop!.id} className={index > 0 ? 'border-t pt-4' : ''}>
+                        <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                          <div className="flex items-center gap-4">
+                            <div className="h-12 w-12 rounded-lg bg-white flex items-center justify-center">
+                              <Store className="h-6 w-6 text-gold-600" />
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-semibold">{shop!.shopName}</h3>
+                              <div className="flex items-center gap-2">
+                                {shop!.isVerified ? (
+                                  <Badge className="bg-green-100 text-green-700">
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Verified
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="bg-amber-100 text-amber-700">
+                                    Pending
+                                  </Badge>
+                                )}
+                                {shop!.isActive ? (
+                                  <Badge className="bg-blue-100 text-blue-700">Active</Badge>
+                                ) : (
+                                  <Badge variant="destructive">Inactive</Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="flex items-center gap-1">
+                              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                              <span className="font-semibold">{shop!.rating?.toFixed(1) || '0.0'}</span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {shop!.totalReviews || 0} reviews
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="text-lg font-semibold">{selectedUser.shop.shopName}</h3>
-                          <div className="flex items-center gap-2">
-                            {selectedUser.shop.isVerified ? (
-                              <Badge className="bg-green-100 text-green-700">
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Verified
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary">
-                                <XCircle className="h-3 w-3 mr-1" />
-                                Unverified
-                              </Badge>
+                        
+                        <div className="grid grid-cols-2 gap-4 mt-4">
+                          <div className="space-y-1">
+                            <Label className="text-muted-foreground text-sm">Location</Label>
+                            <p className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-muted-foreground" />
+                              {shop!.city}, {shop!.country}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-muted-foreground text-sm">Address</Label>
+                            <p>{shop!.address}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-muted-foreground text-sm">Contact Phone</Label>
+                            <p className="flex items-center gap-2">
+                              <Phone className="h-4 w-4 text-muted-foreground" />
+                              {shop!.contactPhone || '—'}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-muted-foreground text-sm">Contact Email</Label>
+                            <p className="flex items-center gap-2">
+                              <Mail className="h-4 w-4 text-muted-foreground" />
+                              {shop!.contactEmail || '—'}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {(shop!.supportedMaterials?.length || shop!.supportedJewelleryTypes?.length) && (
+                          <div className="space-y-4 pt-4 mt-4 border-t">
+                            <h4 className="font-semibold">Supported Services</h4>
+                            
+                            {(shop!.supportedMaterials?.length ?? 0) > 0 && (
+                              <div className="space-y-2">
+                                <Label className="text-muted-foreground text-sm">Materials</Label>
+                                <div className="flex flex-wrap gap-2">
+                                  {shop!.supportedMaterials?.map((material: string) => (
+                                    <Badge key={material} variant="outline">{material}</Badge>
+                                  ))}
+                                </div>
+                              </div>
                             )}
-                            {selectedUser.shop.isActive ? (
-                              <Badge className="bg-blue-100 text-blue-700">Active</Badge>
-                            ) : (
-                              <Badge variant="destructive">Inactive</Badge>
+                            
+                            {(shop!.supportedJewelleryTypes?.length ?? 0) > 0 && (
+                              <div className="space-y-2">
+                                <Label className="text-muted-foreground text-sm">Jewellery Types</Label>
+                                <div className="flex flex-wrap gap-2">
+                                  {shop!.supportedJewelleryTypes?.map((type: string) => (
+                                    <Badge key={type} variant="outline">{type}</Badge>
+                                  ))}
+                                </div>
+                              </div>
                             )}
                           </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="flex items-center gap-1">
-                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                          <span className="font-semibold">{selectedUser.shop.rating?.toFixed(1) || '0.0'}</span>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedUser.shop.totalReviews || 0} reviews
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <Label className="text-muted-foreground text-sm">Location</Label>
-                        <p className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          {selectedUser.shop.city}, {selectedUser.shop.country}
-                        </p>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-muted-foreground text-sm">Address</Label>
-                        <p>{selectedUser.shop.address}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-muted-foreground text-sm">Contact Phone</Label>
-                        <p className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
-                          {selectedUser.shop.contactPhone || '—'}
-                        </p>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-muted-foreground text-sm">Contact Email</Label>
-                        <p className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          {selectedUser.shop.contactEmail || '—'}
-                        </p>
-                      </div>
-                      {selectedUser.shop.websiteUrl && (
-                        <div className="space-y-1">
-                          <Label className="text-muted-foreground text-sm">Website</Label>
-                          <p className="flex items-center gap-2">
-                            <Globe className="h-4 w-4 text-muted-foreground" />
-                            <a href={selectedUser.shop.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                              {selectedUser.shop.websiteUrl}
-                            </a>
-                          </p>
-                        </div>
-                      )}
-                      {selectedUser.shop.codMaxValueNpr && (
-                        <div className="space-y-1">
-                          <Label className="text-muted-foreground text-sm">COD Max Value</Label>
-                          <p>NPR {selectedUser.shop.codMaxValueNpr.toLocaleString()}</p>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {(selectedUser.shop.supportedMaterials?.length || selectedUser.shop.supportedJewelleryTypes?.length || selectedUser.shop.supportedMethods?.length) && (
-                      <div className="space-y-4 pt-4 border-t">
-                        <h4 className="font-semibold">Supported Services</h4>
-                        
-                        {(selectedUser.shop.supportedMaterials?.length ?? 0) > 0 && (
-                          <div className="space-y-2">
-                            <Label className="text-muted-foreground text-sm">Materials</Label>
-                            <div className="flex flex-wrap gap-2">
-                              {selectedUser.shop.supportedMaterials?.map((material) => (
-                                <Badge key={material} variant="outline">{material}</Badge>
-                              ))}
-                            </div>
-                          </div>
                         )}
                         
-                        {(selectedUser.shop.supportedJewelleryTypes?.length ?? 0) > 0 && (
-                          <div className="space-y-2">
-                            <Label className="text-muted-foreground text-sm">Jewellery Types</Label>
-                            <div className="flex flex-wrap gap-2">
-                              {selectedUser.shop.supportedJewelleryTypes?.map((type) => (
-                                <Badge key={type} variant="outline">{type}</Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {(selectedUser.shop.supportedMethods?.length ?? 0) > 0 && (
-                          <div className="space-y-2">
-                            <Label className="text-muted-foreground text-sm">Build Methods</Label>
-                            <div className="flex flex-wrap gap-2">
-                              {selectedUser.shop.supportedMethods?.map((method) => (
-                                <Badge key={method} variant="outline">{method}</Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                        <div className="text-sm text-muted-foreground pt-4 border-t mt-4">
+                          <p>Shop created: {formatDateTime(shop!.createdAt)}</p>
+                        </div>
                       </div>
-                    )}
-                    
-                    <div className="text-sm text-muted-foreground pt-4 border-t">
-                      <p>Shop created: {formatDateTime(selectedUser.shop.createdAt)}</p>
-                      {selectedUser.shop.updatedAt && (
-                        <p>Last updated: {formatDateTime(selectedUser.shop.updatedAt)}</p>
-                      )}
-                    </div>
+                    ))}
                   </TabsContent>
                 )}
               </Tabs>

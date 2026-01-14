@@ -4,6 +4,7 @@ import {
   Post,
   Patch,
   Put,
+  Delete,
   Param,
   Body,
   Query,
@@ -234,5 +235,30 @@ export class ShopsController {
   @ApiOperation({ summary: 'Verify a shop (Admin only)' })
   async verify(@Param('id') id: string, @CurrentUser('id') adminId: string) {
     return this.shopsService.verifyShop(id, adminId);
+  }
+
+  @Patch(':id/admin')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update shop details (Admin only)' })
+  async adminUpdateShop(
+    @Param('id') id: string,
+    @CurrentUser('id') adminId: string,
+    @Body() dto: UpdateShopDto,
+  ) {
+    return this.shopsService.adminUpdateShop(id, adminId, dto);
+  }
+
+  @Delete(':id/admin')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a shop (Admin only)' })
+  async adminDeleteShop(
+    @Param('id') id: string,
+    @CurrentUser('id') adminId: string,
+  ) {
+    return this.shopsService.adminDeleteShop(id, adminId);
   }
 }

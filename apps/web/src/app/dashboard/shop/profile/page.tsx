@@ -535,32 +535,11 @@ export default function ShopkeeperProfilePage() {
                     Regional Preferences
                   </CardTitle>
                   <CardDescription>
-                    Set your preferred currency and language
+                    Set your preferred language. Currency is determined by your shop&apos;s location.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="currency">Preferred Currency</Label>
-                      <Select
-                        value={profile.preferredCurrency}
-                        onValueChange={(value) => updateProfile({ preferredCurrency: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select currency" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {currencies.map((currency) => (
-                            <SelectItem key={currency.code} value={currency.code}>
-                              {currency.symbol} - {currency.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        Used for displaying prices in your dashboard
-                      </p>
-                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="language">Preferred Language</Label>
                       <Select
@@ -578,6 +557,17 @@ export default function ShopkeeperProfilePage() {
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Currency</Label>
+                      <div className="p-3 bg-muted rounded-md text-sm">
+                        <p className="text-muted-foreground">
+                          Currency is automatically set based on your shop&apos;s country.
+                        </p>
+                        <p className="mt-1">
+                          Manage this in <a href="/dashboard/shop/settings" className="text-gold-600 hover:underline">Shop Settings</a>
+                        </p>
+                      </div>
                     </div>
                   </div>
 

@@ -48,18 +48,32 @@ import {
   Calendar,
   Loader2,
   Plus,
+  Eye,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import api, { adminApi } from '@/lib/api';
+import { Textarea } from '@/components/ui/textarea';
 
 interface Shop {
   id: string;
   shopName: string;
+  shopNameNe?: string;
+  description?: string;
   country: string;
   city: string;
+  address?: string;
+  contactPhone?: string;
+  contactEmail?: string;
   currency: string;
   isVerified: boolean;
+  isActive: boolean;
   createdAt: string;
+  supportedJewelleryTypes?: string[];
+  supportedMethods?: string[];
+  makingChargePercent?: number;
+  codEnabled?: boolean;
   owner?: {
     id: string;
     firstName: string;
@@ -75,6 +89,13 @@ export default function AdminShopsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('pending');
   const [processingId, setProcessingId] = useState<string | null>(null);
+
+  // View/Edit shop dialog state
+  const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingShop, setEditingShop] = useState<Partial<Shop>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   // Create shop dialog state
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -228,6 +249,76 @@ export default function AdminShopsPage() {
       });
     } finally {
       setCreatingShop(false);
+    }
+  };
+
+  const handleViewShop = (shop: Shop) => {
+    setSelectedShop(shop);
+    setViewDialogOpen(true);
+  };
+
+  const handleEditShop = (shop: Shop) => {
+    setSelectedShop(shop);
+    setEditingShop({
+      shopName: shop.shopName,
+      shopNameNe: shop.shopNameNe,
+      description: shop.description,
+      country: shop.country,
+      city: shop.city,
+      address: shop.address,
+      contactPhone: shop.contactPhone,
+      contactEmail: shop.contactEmail,
+      isActive: shop.isActive,
+      makingChargePercent: shop.makingChargePercent,
+      codEnabled: shop.codEnabled,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveShop = async () => {
+    if (!selectedShop) return;
+
+    setIsSaving(true);
+    try {
+      await api.patch(`/shops/${selectedShop.id}/admin`, editingShop);
+      toast({
+        title: 'Shop Updated',
+        description: 'Shop details have been updated successfully.',
+      });
+      setEditDialogOpen(false);
+      loadShops();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Update Failed',
+        description: error.response?.data?.message || 'Could not update shop.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteShop = async (shopId: string) => {
+    if (!confirm('Are you sure you want to delete this shop? This action cannot be undone.')) {
+      return;
+    }
+
+    setProcessingId(shopId);
+    try {
+      await api.delete(`/shops/${shopId}/admin`);
+      toast({
+        title: 'Shop Deleted',
+        description: 'The shop has been deleted successfully.',
+      });
+      loadShops();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Delete Failed',
+        description: error.response?.data?.message || 'Could not delete shop.',
+      });
+    } finally {
+      setProcessingId(null);
     }
   };
 
@@ -528,35 +619,56 @@ export default function AdminShopsPage() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              {!shop.isVerified && (
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleVerify(shop.id, true)}
-                                    disabled={processingId === shop.id}
-                                    className="bg-green-600 hover:bg-green-700"
-                                  >
-                                    {processingId === shop.id ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <>
-                                        <CheckCircle className="h-4 w-4 mr-1" />
-                                        Approve
-                                      </>
-                                    )}
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleVerify(shop.id, false)}
-                                    disabled={processingId === shop.id}
-                                    className="text-red-600 hover:text-red-700"
-                                  >
-                                    <XCircle className="h-4 w-4 mr-1" />
-                                    Deny
-                                  </Button>
-                                </div>
-                              )}
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleViewShop(shop)}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleEditShop(shop)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                {!shop.isVerified && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleVerify(shop.id, true)}
+                                      disabled={processingId === shop.id}
+                                      className="bg-green-600 hover:bg-green-700"
+                                    >
+                                      {processingId === shop.id ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <CheckCircle className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleVerify(shop.id, false)}
+                                      disabled={processingId === shop.id}
+                                      className="text-red-600 hover:text-red-700"
+                                    >
+                                      <XCircle className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleDeleteShop(shop.id)}
+                                  disabled={processingId === shop.id}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -568,6 +680,281 @@ export default function AdminShopsPage() {
             </TabsContent>
           </Tabs>
         </div>
+
+        {/* View Shop Dialog */}
+        <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Shop Details</DialogTitle>
+              <DialogDescription>
+                Viewing shop information and owner details
+              </DialogDescription>
+            </DialogHeader>
+            {selectedShop && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground text-sm">Shop Name</Label>
+                    <p className="font-medium">{selectedShop.shopName}</p>
+                    {selectedShop.shopNameNe && (
+                      <p className="text-sm text-muted-foreground">{selectedShop.shopNameNe}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-sm">Status</Label>
+                    <div className="flex gap-2 mt-1">
+                      {selectedShop.isVerified ? (
+                        <Badge className="bg-green-100 text-green-700">Verified</Badge>
+                      ) : (
+                        <Badge className="bg-amber-100 text-amber-700">Pending</Badge>
+                      )}
+                      {selectedShop.isActive ? (
+                        <Badge variant="outline" className="text-green-700">Active</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-red-700">Inactive</Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {selectedShop.description && (
+                  <div>
+                    <Label className="text-muted-foreground text-sm">Description</Label>
+                    <p className="text-sm">{selectedShop.description}</p>
+                  </div>
+                )}
+
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-3">Owner Information</h4>
+                  {selectedShop.owner ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-muted-foreground text-sm">Name</Label>
+                        <p>{selectedShop.owner.firstName} {selectedShop.owner.lastName}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground text-sm">Email</Label>
+                        <p>{selectedShop.owner.email}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">No owner information</p>
+                  )}
+                </div>
+
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-3">Location & Contact</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-muted-foreground text-sm">Country</Label>
+                      <p>{getCountryFlag(selectedShop.country)} {selectedShop.country}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-sm">City</Label>
+                      <p>{selectedShop.city || '—'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-sm">Address</Label>
+                      <p>{selectedShop.address || '—'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-sm">Currency</Label>
+                      <p>{selectedShop.currency}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-sm">Contact Phone</Label>
+                      <p>{selectedShop.contactPhone || '—'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-sm">Contact Email</Label>
+                      <p>{selectedShop.contactEmail || '—'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-3">Business Settings</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-muted-foreground text-sm">Making Charge %</Label>
+                      <p>{selectedShop.makingChargePercent || 10}%</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-sm">COD Enabled</Label>
+                      <p>{selectedShop.codEnabled ? 'Yes' : 'No'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-sm">Registered</Label>
+                      <p>{formatDate(selectedShop.createdAt)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
+                Close
+              </Button>
+              <Button onClick={() => {
+                setViewDialogOpen(false);
+                if (selectedShop) handleEditShop(selectedShop);
+              }}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Shop Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Shop</DialogTitle>
+              <DialogDescription>
+                Update shop details. Owner: {selectedShop?.owner?.firstName} {selectedShop?.owner?.lastName} ({selectedShop?.owner?.email})
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-shopName">Shop Name *</Label>
+                  <Input
+                    id="edit-shopName"
+                    value={editingShop.shopName || ''}
+                    onChange={(e) => setEditingShop(prev => ({ ...prev, shopName: e.target.value }))}
+                    placeholder="Shop name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-shopNameNe">Shop Name (Nepali)</Label>
+                  <Input
+                    id="edit-shopNameNe"
+                    value={editingShop.shopNameNe || ''}
+                    onChange={(e) => setEditingShop(prev => ({ ...prev, shopNameNe: e.target.value }))}
+                    placeholder="दुकानको नाम"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Description</Label>
+                <Textarea
+                  id="edit-description"
+                  value={editingShop.description || ''}
+                  onChange={(e) => setEditingShop(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Shop description..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-country">Country</Label>
+                  <Select
+                    value={editingShop.country || 'NP'}
+                    onValueChange={(value) => setEditingShop(prev => ({ ...prev, country: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NP">🇳🇵 Nepal</SelectItem>
+                      <SelectItem value="IN">🇮🇳 India</SelectItem>
+                      <SelectItem value="AE">🇦🇪 UAE</SelectItem>
+                      <SelectItem value="US">🇺🇸 USA</SelectItem>
+                      <SelectItem value="UK">🇬🇧 UK</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-city">City</Label>
+                  <Input
+                    id="edit-city"
+                    value={editingShop.city || ''}
+                    onChange={(e) => setEditingShop(prev => ({ ...prev, city: e.target.value }))}
+                    placeholder="e.g., Kathmandu"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-address">Address</Label>
+                <Input
+                  id="edit-address"
+                  value={editingShop.address || ''}
+                  onChange={(e) => setEditingShop(prev => ({ ...prev, address: e.target.value }))}
+                  placeholder="Full address"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-contactPhone">Contact Phone</Label>
+                  <Input
+                    id="edit-contactPhone"
+                    value={editingShop.contactPhone || ''}
+                    onChange={(e) => setEditingShop(prev => ({ ...prev, contactPhone: e.target.value }))}
+                    placeholder="+977 98XXXXXXXX"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-contactEmail">Contact Email</Label>
+                  <Input
+                    id="edit-contactEmail"
+                    type="email"
+                    value={editingShop.contactEmail || ''}
+                    onChange={(e) => setEditingShop(prev => ({ ...prev, contactEmail: e.target.value }))}
+                    placeholder="shop@example.com"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-makingCharge">Making Charge %</Label>
+                  <Input
+                    id="edit-makingCharge"
+                    type="number"
+                    value={editingShop.makingChargePercent || 10}
+                    onChange={(e) => setEditingShop(prev => ({ ...prev, makingChargePercent: parseFloat(e.target.value) || 10 }))}
+                    min={0}
+                    max={100}
+                  />
+                </div>
+                <div className="space-y-2 flex items-end gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingShop.codEnabled || false}
+                      onChange={(e) => setEditingShop(prev => ({ ...prev, codEnabled: e.target.checked }))}
+                      className="rounded"
+                    />
+                    <span>COD Enabled</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingShop.isActive !== false}
+                      onChange={(e) => setEditingShop(prev => ({ ...prev, isActive: e.target.checked }))}
+                      className="rounded"
+                    />
+                    <span>Active</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveShop} disabled={isSaving}>
+                {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </DashboardLayout>
     </AdminGuard>
   );

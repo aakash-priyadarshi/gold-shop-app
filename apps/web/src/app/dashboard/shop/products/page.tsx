@@ -109,6 +109,44 @@ const statusColors: Record<string, string> = {
   UNAVAILABLE: 'bg-gray-100 text-gray-700',
 };
 
+// Gemstone types (same as RFQ)
+const gemstoneTypes = [
+  { code: 'DIAMOND', name: 'Diamond' },
+  { code: 'RUBY', name: 'Ruby' },
+  { code: 'EMERALD', name: 'Emerald' },
+  { code: 'SAPPHIRE', name: 'Sapphire' },
+  { code: 'PEARL', name: 'Pearl' },
+  { code: 'AMETHYST', name: 'Amethyst' },
+  { code: 'TOPAZ', name: 'Topaz' },
+  { code: 'OPAL', name: 'Opal' },
+  { code: 'GARNET', name: 'Garnet' },
+  { code: 'TURQUOISE', name: 'Turquoise' },
+  { code: 'CORAL', name: 'Coral' },
+  { code: 'JADE', name: 'Jade' },
+  { code: 'CITRINE', name: 'Citrine' },
+  { code: 'PERIDOT', name: 'Peridot' },
+  { code: 'AQUAMARINE', name: 'Aquamarine' },
+  { code: 'OTHER', name: 'Other' },
+];
+
+// Gemstone cuts
+const gemstoneCuts = [
+  'Round', 'Princess', 'Oval', 'Marquise', 'Pear', 'Cushion', 
+  'Emerald Cut', 'Asscher', 'Radiant', 'Heart', 'Cabochon', 'Other'
+];
+
+// Weight unit conversion
+const TOLA_TO_GRAM = 11.6638;
+
+interface GemstoneData {
+  type: string;
+  cut: string;
+  caratWeight: number;
+  color?: string;
+  clarity?: string;
+  valueNpr: number;
+}
+
 interface ProductFormData {
   nameEn: string;
   descriptionEn: string;
@@ -123,6 +161,7 @@ interface ProductFormData {
   gemstoneValueNpr: string;
   stockQuantity: string;
   images: string[];
+  gemstones: GemstoneData[];
 }
 
 const emptyForm: ProductFormData = {
@@ -139,6 +178,19 @@ const emptyForm: ProductFormData = {
   gemstoneValueNpr: '0',
   stockQuantity: '1',
   images: [],
+  gemstones: [],
+};
+
+// Currency based on country
+const getCurrencyFromCountry = (country: string) => {
+  const currencies: Record<string, { code: string; symbol: string }> = {
+    NP: { code: 'NPR', symbol: 'रू' },
+    IN: { code: 'INR', symbol: '₹' },
+    AE: { code: 'AED', symbol: 'د.إ' },
+    US: { code: 'USD', symbol: '$' },
+    UK: { code: 'GBP', symbol: '£' },
+  };
+  return currencies[country] || currencies['NP'];
 };
 
 export default function ShopProductsPage() {
@@ -148,15 +200,38 @@ export default function ShopProductsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   
+  // Shop-based currency
+  const shopCountry = user?.shop?.country || 'NP';
+  const currency = getCurrencyFromCountry(shopCountry);
+  
+  // Weight unit state
+  const [weightUnit, setWeightUnit] = useState<'gram' | 'tola'>('gram');
+  
   // Form state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingProduct, setEditingProduct] = useState<InventoryItem | null>(null);
   const [formData, setFormData] = useState<ProductFormData>(emptyForm);
   const [newImageUrl, setNewImageUrl] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   
   // Delete confirmation
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  // Weight conversion helpers
+  const gramsToTola = (grams: number) => grams / TOLA_TO_GRAM;
+  const tolaToGrams = (tola: number) => tola * TOLA_TO_GRAM;
+  
+  const getDisplayWeight = (grams: number) => {
+    if (weightUnit === 'tola') {
+      return gramsToTola(grams).toFixed(2);
+    }
+    return grams.toFixed(2);
+  };
+
+  const getWeightLabel = () => weightUnit === 'tola' ? 'tola' : 'g';
 
   useEffect(() => {
     if (user?.shop?.id) {
@@ -214,8 +289,126 @@ export default function ShopProductsPage() {
       gemstoneValueNpr: product.gemstoneValueNpr.toString(),
       stockQuantity: product.stockQuantity.toString(),
       images: product.images || [],
+      gemstones: [],
     });
     setIsDialogOpen(true);
+  };
+
+  // Image compression/optimization
+  const compressImage = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Max dimensions for optimization
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1200;
+          let { width, height } = img;
+          
+          if (width > MAX_WIDTH) {
+            height = (height * MAX_WIDTH) / width;
+            width = MAX_WIDTH;
+          }
+          if (height > MAX_HEIGHT) {
+            width = (width * MAX_HEIGHT) / height;
+            height = MAX_HEIGHT;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // Convert to JPEG with 80% quality for smaller file size
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          resolve(dataUrl);
+        };
+        img.onerror = reject;
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Check file size (max 5MB before compression)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        variant: 'destructive',
+        title: 'File Too Large',
+        description: 'Please select an image smaller than 5MB',
+      });
+      return;
+    }
+    
+    setImageFile(file);
+    setIsUploadingImage(true);
+    
+    try {
+      const compressedDataUrl = await compressImage(file);
+      setImagePreview(compressedDataUrl);
+      // Add to images array
+      setFormData({
+        ...formData,
+        images: [...formData.images, compressedDataUrl],
+      });
+      toast({
+        title: 'Image Added',
+        description: 'Image optimized and added successfully',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Image Error',
+        description: 'Failed to process image',
+      });
+    } finally {
+      setIsUploadingImage(false);
+      setImageFile(null);
+      setImagePreview(null);
+    }
+  };
+
+  // Gemstone helpers
+  const addGemstone = () => {
+    setFormData({
+      ...formData,
+      gemstones: [
+        ...formData.gemstones,
+        { type: '', cut: '', caratWeight: 0, valueNpr: 0 },
+      ],
+    });
+  };
+
+  const updateGemstone = (index: number, field: string, value: any) => {
+    const newGemstones = [...formData.gemstones];
+    newGemstones[index] = { ...newGemstones[index], [field]: value };
+    setFormData({ ...formData, gemstones: newGemstones });
+    
+    // Update total gemstone value
+    const totalGemstoneValue = newGemstones.reduce((sum, g) => sum + (g.valueNpr || 0), 0);
+    setFormData((prev) => ({
+      ...prev,
+      gemstones: newGemstones,
+      gemstoneValueNpr: totalGemstoneValue.toString(),
+    }));
+  };
+
+  const removeGemstone = (index: number) => {
+    const newGemstones = formData.gemstones.filter((_, i) => i !== index);
+    const totalGemstoneValue = newGemstones.reduce((sum, g) => sum + (g.valueNpr || 0), 0);
+    setFormData({
+      ...formData,
+      gemstones: newGemstones,
+      gemstoneValueNpr: totalGemstoneValue.toString(),
+    });
   };
 
   const handleSubmit = async () => {
@@ -231,6 +424,11 @@ export default function ShopProductsPage() {
       return;
     }
 
+    // Convert weight if in tola
+    const weightInGrams = weightUnit === 'tola' 
+      ? tolaToGrams(parseFloat(formData.totalWeightGrams))
+      : parseFloat(formData.totalWeightGrams);
+
     setIsSubmitting(true);
     try {
       const dto = {
@@ -244,8 +442,9 @@ export default function ShopProductsPage() {
             metal: formData.metalType,
             purity: formData.purity,
           },
+          gemstones: formData.gemstones.filter((g) => g.type),
         },
-        totalWeightGrams: parseFloat(formData.totalWeightGrams),
+        totalWeightGrams: weightInGrams,
         metalValueNpr: parseFloat(formData.metalValueNpr) || 0,
         makingChargeNpr: parseFloat(formData.makingChargeNpr) || 0,
         gemstoneValueNpr: parseFloat(formData.gemstoneValueNpr) || 0,
@@ -438,14 +637,13 @@ export default function ShopProductsPage() {
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Scale className="h-3 w-3 text-muted-foreground" />
-                            <span>{product.totalWeightGrams}g</span>
+                            <span>{getDisplayWeight(product.totalWeightGrams)} {getWeightLabel()}</span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            <DollarSign className="h-3 w-3 text-muted-foreground" />
                             <span className="font-medium">
-                              Rs. {product.totalPriceNpr?.toLocaleString() || 0}
+                              {currency.symbol} {product.totalPriceNpr?.toLocaleString() || 0}
                             </span>
                           </div>
                         </TableCell>
@@ -613,18 +811,45 @@ export default function ShopProductsPage() {
                 </div>
               </div>
 
-              {/* Pricing */}
+              {/* Weight & Stock */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="weight">Total Weight (grams) *</Label>
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="weight">Total Weight *</Label>
+                    <div className="flex gap-1 text-xs">
+                      <Button
+                        type="button"
+                        variant={weightUnit === 'gram' ? 'default' : 'outline'}
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => setWeightUnit('gram')}
+                      >
+                        Gram
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={weightUnit === 'tola' ? 'default' : 'outline'}
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => setWeightUnit('tola')}
+                      >
+                        Tola
+                      </Button>
+                    </div>
+                  </div>
                   <Input
                     id="weight"
                     type="number"
                     step="0.01"
                     value={formData.totalWeightGrams}
                     onChange={(e) => setFormData({ ...formData, totalWeightGrams: e.target.value })}
-                    placeholder="e.g., 5.5"
+                    placeholder={weightUnit === 'gram' ? 'e.g., 5.5g' : 'e.g., 0.47 tola'}
                   />
+                  {formData.totalWeightGrams && (
+                    <p className="text-xs text-muted-foreground">
+                      = {getDisplayWeight(parseFloat(formData.totalWeightGrams) || 0)} {getWeightLabel()}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="stock">Stock Quantity</Label>
@@ -638,9 +863,93 @@ export default function ShopProductsPage() {
                 </div>
               </div>
 
+              {/* Gemstones Section */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <Label>Gemstones</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addGemstone}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add Gemstone
+                  </Button>
+                </div>
+                {formData.gemstones.length > 0 && (
+                  <div className="space-y-3">
+                    {formData.gemstones.map((gem, idx) => (
+                      <div key={idx} className="border rounded-lg p-3 space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium">Gemstone #{idx + 1}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 h-6"
+                            onClick={() => removeGemstone(idx)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Select
+                            value={gem.type}
+                            onValueChange={(v) => updateGemstone(idx, 'type', v)}
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue placeholder="Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {gemstoneTypes.map((type) => (
+                                <SelectItem key={type.code} value={type.code}>
+                                  {type.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select
+                            value={gem.cut || ''}
+                            onValueChange={(v) => updateGemstone(idx, 'cut', v)}
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue placeholder="Cut" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {gemstoneCuts.map((cut) => (
+                                <SelectItem key={cut} value={cut}>
+                                  {cut}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="Carat weight"
+                            className="h-9"
+                            value={gem.caratWeight || ''}
+                            onChange={(e) => updateGemstone(idx, 'caratWeight', parseFloat(e.target.value) || 0)}
+                          />
+                          <Input
+                            type="number"
+                            placeholder={`Value (${currency.code})`}
+                            className="h-9"
+                            value={gem.valueNpr || ''}
+                            onChange={(e) => updateGemstone(idx, 'valueNpr', parseFloat(e.target.value) || 0)}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Pricing */}
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="metalValue">Metal Value (NPR)</Label>
+                  <Label htmlFor="metalValue">Metal Value ({currency.code})</Label>
                   <Input
                     id="metalValue"
                     type="number"
@@ -650,7 +959,7 @@ export default function ShopProductsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="makingCharge">Making Charge (NPR)</Label>
+                  <Label htmlFor="makingCharge">Making Charge ({currency.code})</Label>
                   <Input
                     id="makingCharge"
                     type="number"
@@ -660,14 +969,18 @@ export default function ShopProductsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="gemstoneValue">Gemstone Value (NPR)</Label>
+                  <Label htmlFor="gemstoneValue">Gemstone Value ({currency.code})</Label>
                   <Input
                     id="gemstoneValue"
                     type="number"
                     value={formData.gemstoneValueNpr}
                     onChange={(e) => setFormData({ ...formData, gemstoneValueNpr: e.target.value })}
                     placeholder="e.g., 10000"
+                    readOnly={formData.gemstones.length > 0}
                   />
+                  {formData.gemstones.length > 0 && (
+                    <p className="text-xs text-muted-foreground">Auto-calculated from gemstones</p>
+                  )}
                 </div>
               </div>
 
@@ -676,17 +989,49 @@ export default function ShopProductsPage() {
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Total Price</span>
                   <span className="text-xl font-bold">
-                    Rs. {calculateTotal().toLocaleString()}
+                    {currency.symbol} {calculateTotal().toLocaleString()}
                   </span>
                 </div>
               </div>
 
               {/* Images */}
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Label>Product Images</Label>
+                
+                {/* File Upload */}
+                <div className="border-2 border-dashed rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                    id="image-upload"
+                    disabled={isUploadingImage}
+                  />
+                  <label htmlFor="image-upload" className="cursor-pointer">
+                    {isUploadingImage ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <span>Processing...</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          Click to upload image (max 5MB)
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Images will be automatically optimized
+                        </p>
+                      </div>
+                    )}
+                  </label>
+                </div>
+
+                {/* URL Input (fallback) */}
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Enter image URL"
+                    placeholder="Or enter image URL"
                     value={newImageUrl}
                     onChange={(e) => setNewImageUrl(e.target.value)}
                   />
@@ -694,6 +1039,8 @@ export default function ShopProductsPage() {
                     Add
                   </Button>
                 </div>
+
+                {/* Image Preview Grid */}
                 {formData.images.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {formData.images.map((url, idx) => (
@@ -701,7 +1048,7 @@ export default function ShopProductsPage() {
                         <img
                           src={url}
                           alt={`Product ${idx + 1}`}
-                          className="w-16 h-16 object-cover rounded-lg"
+                          className="w-20 h-20 object-cover rounded-lg border"
                         />
                         <button
                           type="button"

@@ -247,7 +247,30 @@ export default function ShopInventoryPage() {
 
     setIsSaving(true);
     try {
-      await shopsApi.updateMaterials(materialsData);
+      // Transform data to match backend expected format
+      const transformedMaterials = materialsData.materials.map((m) => ({
+        materialCode: `${m.metal}_${m.purity}`,
+        isAvailable: materialsData.supportedMaterials.includes(`${m.metal}_${m.purity}`),
+        pricePerGramNpr: m.makingChargePerGram,
+        minWeightGrams: m.minWeightGrams,
+        maxWeightGrams: m.maxWeightGrams,
+      }));
+
+      // Also add supported materials that might not have pricing data
+      const existingCodes = new Set(transformedMaterials.map(m => m.materialCode));
+      for (const code of materialsData.supportedMaterials) {
+        if (!existingCodes.has(code)) {
+          transformedMaterials.push({
+            materialCode: code,
+            isAvailable: true,
+            pricePerGramNpr: undefined,
+            minWeightGrams: undefined,
+            maxWeightGrams: undefined,
+          });
+        }
+      }
+
+      await shopsApi.updateMaterials({ materials: transformedMaterials });
       toast({
         title: 'Materials Saved',
         description: 'Your material settings have been updated',

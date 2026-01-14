@@ -163,12 +163,25 @@ export class ShopsService {
           shopNameNe: true,
           shopNameHi: true,
           city: true,
+          address: true,
           country: true,
+          contactPhone: true,
+          contactEmail: true,
           isVerified: true,
+          isActive: true,
+          createdAt: true,
           supportedJewelleryTypes: true,
           supportedMethods: true,
           codEnabled: true,
           makingChargePercent: true,
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
           ratings: {
             select: { overall: true },
           },
@@ -179,8 +192,11 @@ export class ShopsService {
     ]);
 
     return {
-      data: shops.map((shop) => ({
+      shops: shops.map((shop) => ({
         ...shop,
+        owner: shop.user,
+        user: undefined,
+        currency: shop.country === 'IN' ? 'INR' : shop.country === 'AE' ? 'AED' : shop.country === 'US' ? 'USD' : shop.country === 'UK' ? 'GBP' : 'NPR',
         averageRating:
           shop.ratings.length > 0
             ? shop.ratings.reduce((sum, r) => sum + r.overall, 0) / shop.ratings.length
@@ -837,5 +853,74 @@ export class ShopsService {
     });
 
     return { success: true, ...dto };
+  }
+
+  /**
+   * Admin: Update any shop
+   */
+  async adminUpdateShop(shopId: string, adminId: string, dto: UpdateShopDto) {
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+    });
+
+    if (!shop) {
+      throw new NotFoundException('Shop not found');
+    }
+
+    const previousValue = { ...shop };
+
+    const updated = await this.prisma.shop.update({
+      where: { id: shopId },
+      data: dto,
+    });
+
+    await this.auditService.log({
+      userId: adminId,
+      actorType: 'ADMIN',
+      action: 'UPDATE',
+      resourceType: 'SHOP',
+      resourceId: shopId,
+      previousValue,
+      newValue: dto,
+    });
+
+    return updated;
+  }
+
+  /**
+   * Admin: Delete any shop
+   */
+  async adminDeleteShop(shopId: string, adminId: string) {
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      include: { user: true },
+    });
+
+    if (!shop) {
+      throw new NotFoundException('Shop not found');
+    }
+
+    // Delete shop and related data in transaction
+    await this.prisma.$transaction(async (tx) => {
+      // Delete metal rates
+      await tx.shopMetalRate.deleteMany({ where: { shopId } });
+      // Delete finish pricing
+      await tx.shopFinishPricing.deleteMany({ where: { shopId } });
+      // Delete verification requests
+      await tx.verificationRequest.deleteMany({ where: { shopId } });
+      // Delete shop
+      await tx.shop.delete({ where: { id: shopId } });
+    });
+
+    await this.auditService.log({
+      userId: adminId,
+      actorType: 'ADMIN',
+      action: 'DELETE',
+      resourceType: 'SHOP',
+      resourceId: shopId,
+      previousValue: { shopName: shop.shopName, userId: shop.userId },
+    });
+
+    return { success: true, message: 'Shop deleted successfully' };
   }
 }
