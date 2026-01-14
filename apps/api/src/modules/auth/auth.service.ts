@@ -239,7 +239,7 @@ export class AuthService {
   async verifyEmail(userId: string, code: string): Promise<AuthResponse> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { shop: true },
+      include: { shops: true },
     });
 
     if (!user) {
@@ -270,7 +270,9 @@ export class AuthService {
       .catch(err => this.logger.error(`Failed to send welcome email: ${err.message}`));
 
     // Generate tokens and log the user in
-    return this.generateTokens(user, user.shop);
+    // Get the active shop for the user (first shop or by activeShopId)
+    const activeShop = user.shops?.[0] || null;
+    return this.generateTokens(user, activeShop);
   }
 
   /**
@@ -300,7 +302,7 @@ export class AuthService {
   async login(dto: LoginDto, ipAddress?: string, userAgent?: string): Promise<AuthResponse> {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
-      include: { shop: true },
+      include: { shops: true },
     });
 
     if (!user) {
@@ -349,7 +351,7 @@ export class AuthService {
       userAgent,
     });
 
-    return this.generateTokens(user, user.shop, ipAddress, userAgent);
+    return this.generateTokens(user, user.shops?.[0] || null, ipAddress, userAgent);
   }
 
   /**
@@ -433,7 +435,7 @@ export class AuthService {
           { email: googleUser.email },
         ],
       },
-      include: { shop: true },
+      include: { shops: true },
     });
 
     if (user) {
@@ -477,10 +479,10 @@ export class AuthService {
         userAgent,
       });
 
-      const tokens = await this.generateTokens(user, user.shop, ipAddress, userAgent);
+      const tokens = await this.generateTokens(user, user.shops?.[0] || null, ipAddress, userAgent);
       
       // If user is SHOPKEEPER but has no shop, they need to complete setup
-      if (user.role === UserRole.SHOPKEEPER && !user.shop) {
+      if (user.role === UserRole.SHOPKEEPER && !user.shops?.length) {
         return { ...tokens, needsShopSetup: true };
       }
       
@@ -555,7 +557,7 @@ export class AuthService {
     // Check RefreshToken table
     const storedToken = await this.prisma.refreshToken.findUnique({
       where: { tokenHash },
-      include: { user: { include: { shop: true } } },
+      include: { user: { include: { shops: true } } },
     });
 
     if (storedToken) {
@@ -580,7 +582,7 @@ export class AuthService {
         data: { revokedAt: new Date() },
       });
 
-      return this.generateTokens(user, user.shop, ipAddress, userAgent);
+      return this.generateTokens(user, user.shops?.[0] || null, ipAddress, userAgent);
     }
 
     // Fall back to legacy Session table
@@ -594,7 +596,7 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: session.userId },
-      include: { shop: true },
+      include: { shops: true },
     });
 
     if (!user) {
@@ -606,7 +608,7 @@ export class AuthService {
       where: { id: session.id },
     });
 
-    return this.generateTokens(user, user.shop, ipAddress, userAgent);
+    return this.generateTokens(user, user.shops?.[0] || null, ipAddress, userAgent);
   }
 
   /**
@@ -616,7 +618,7 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { 
-        shop: {
+        shops: {
           select: {
             id: true,
             shopName: true,
@@ -648,7 +650,7 @@ export class AuthService {
       emailVerifiedAt: user.emailVerifiedAt,
       createdAt: user.createdAt,
       lastLoginAt: user.lastLoginAt,
-      shop: user.shop,
+      shop: user.shops?.[0] || null,
     };
   }
 
@@ -669,7 +671,7 @@ export class AuthService {
       const payload = this.jwtService.verify<JwtPayload>(token);
       return this.prisma.user.findUnique({
         where: { id: payload.sub },
-        include: { shop: true },
+        include: { shops: true },
       });
     } catch {
       return null;

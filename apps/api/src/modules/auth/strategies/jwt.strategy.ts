@@ -21,7 +21,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: JwtPayload) {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      include: { shop: true },
+      include: { shops: true },
     });
 
     if (!user) {
@@ -32,13 +32,18 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Account is not active');
     }
 
+    // Get active shop from user's shops (prefer activeShopId if set)
+    const activeShop = user.activeShopId 
+      ? user.shops?.find(s => s.id === user.activeShopId) 
+      : user.shops?.[0];
+
     return {
       id: user.id,
       email: user.email,
       role: user.role,
       firstName: user.firstName,
       lastName: user.lastName,
-      shopId: user.shop?.id,
+      shopId: activeShop?.id,
       preferredLanguage: user.preferredLanguage,
     };
   }

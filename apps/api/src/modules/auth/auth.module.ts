@@ -8,6 +8,8 @@ import { ApiTokenController } from './api-token.controller';
 import { ApiTokenService } from './api-token.service';
 import { OtpController } from './otp.controller';
 import { OtpService } from './otp.service';
+import { TwoFactorController } from './two-factor.controller';
+import { TwoFactorService } from './two-factor.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
@@ -34,8 +36,8 @@ import { MailModule } from '../mail/mail.module';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController, ApiTokenController, OtpController],
-  providers: [AuthService, ApiTokenService, OtpService, JwtStrategy, LocalStrategy, GoogleStrategy],
-  exports: [AuthService, ApiTokenService, OtpService],
+  controllers: [AuthController, ApiTokenController, OtpController, TwoFactorController],
+  providers: [AuthService, ApiTokenService, OtpService, TwoFactorService, JwtStrategy, LocalStrategy, GoogleStrategy],
+  exports: [AuthService, ApiTokenService, OtpService, TwoFactorService],
 })
 export class AuthModule {}

@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/sheet';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { BrandLogo } from '@/components/brand/BrandLogo';
+import { ShopSwitcher } from '@/components/dashboard/ShopSwitcher';
 import { BRAND } from '@/config/brand';
 import {
   LayoutDashboard,
@@ -74,7 +75,8 @@ const navItems: NavItem[] = [
   { label: 'Orders', href: '/dashboard/shop/orders', icon: ShoppingCart, roles: ['SHOPKEEPER'] },
   { label: 'RFQ Requests', href: '/dashboard/shop/rfqs', icon: ClipboardList, roles: ['SHOPKEEPER'] },
   { label: 'Analytics', href: '/dashboard/shop/analytics', icon: TrendingUp, roles: ['SHOPKEEPER'] },
-  { label: 'Settings', href: '/dashboard/shop/settings', icon: Settings, roles: ['SHOPKEEPER'] },
+  { label: 'Profile', href: '/dashboard/shop/profile', icon: UserCircle, roles: ['SHOPKEEPER'] },
+  { label: 'Shop Settings', href: '/dashboard/shop/settings', icon: Settings, roles: ['SHOPKEEPER'] },
   
   // Customer routes
   { label: 'Dashboard', href: '/dashboard/customer', icon: LayoutDashboard, roles: ['CUSTOMER'] },
@@ -133,10 +135,10 @@ function SidebarContent({
         </div>
         {user.shop && (
           <div className="mt-3 p-3 bg-gradient-to-r from-gold-50 to-amber-50 rounded-xl border border-gold-100">
-            <p className="text-xs text-gray-500 font-medium">Shop</p>
-            <p className="text-sm font-semibold text-gray-900 truncate">{user.shop.shopName}</p>
+            <p className="text-xs text-gray-500 font-medium mb-2">Active Shop</p>
+            <ShopSwitcher currentShopId={user.shop.id} />
             {!user.shop.isVerified && (
-              <span className="inline-flex items-center mt-1 px-2 py-0.5 text-xs font-medium text-orange-700 bg-orange-100 rounded-full">
+              <span className="inline-flex items-center mt-2 px-2 py-0.5 text-xs font-medium text-orange-700 bg-orange-100 rounded-full">
                 Pending verification
               </span>
             )}

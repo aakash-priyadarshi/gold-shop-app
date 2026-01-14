@@ -364,10 +364,9 @@ async function seedSellerPricing() {
       },
     });
 
-    const shop = await prisma.shop.upsert({
-      where: { userId: shopkeeper.id },
-      update: {},
-      create: {
+    const existingShop = await prisma.shop.findFirst({ where: { userId: shopkeeper.id } });
+    const shop = existingShop || await prisma.shop.create({
+      data: {
         userId: shopkeeper.id,
         shopName: shopData.shop.shopName,
         shopNameNe: shopData.shop.shopNameNe,

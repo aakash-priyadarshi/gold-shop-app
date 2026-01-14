@@ -74,6 +74,15 @@ export class ShopsController {
     return this.shopsService.findByUserId(userId);
   }
 
+  @Get('my-shops')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all shops owned by current user' })
+  async getMyShops(@CurrentUser('id') userId: string) {
+    return this.shopsService.findAllByUserId(userId);
+  }
+
   @Get('my-shop/dashboard')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SHOPKEEPER)

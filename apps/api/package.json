@@ -42,9 +42,11 @@
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
+    "qrcode": "^1.5.4",
     "reflect-metadata": "^0.2.1",
     "resend": "^6.7.0",
     "rxjs": "^7.8.1",
+    "speakeasy": "^2.0.0",
     "uuid": "^9.0.0"
   },
   "devDependencies": {
@@ -59,6 +61,8 @@
     "@types/nodemailer": "^7.0.5",
     "@types/passport-jwt": "^4.0.0",
     "@types/passport-local": "^1.0.38",
+    "@types/qrcode": "^1.5.6",
+    "@types/speakeasy": "^2.0.10",
     "@types/uuid": "^9.0.7",
     "@typescript-eslint/eslint-plugin": "^6.18.0",
     "@typescript-eslint/parser": "^6.18.0",

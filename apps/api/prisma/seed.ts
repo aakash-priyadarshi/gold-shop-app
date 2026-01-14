@@ -88,10 +88,9 @@ async function main() {
   console.log('✅ Created shopkeeper 1:', shopkeeper1.email);
 
   // Create Shop 1 - Ramesh Gold House
-  const shop1 = await prisma.shop.upsert({
-    where: { userId: shopkeeper1.id },
-    update: {},
-    create: {
+  const existingShop1 = await prisma.shop.findFirst({ where: { userId: shopkeeper1.id } });
+  const shop1 = existingShop1 || await prisma.shop.create({
+    data: {
       userId: shopkeeper1.id,
       shopName: 'Ramesh Gold House',
       shopNameNe: 'रमेश गोल्ड हाउस',
@@ -164,10 +163,9 @@ async function main() {
   console.log('✅ Created shopkeeper 2:', shopkeeper2.email);
 
   // Create Shop 2 - Suna Jewellers
-  const shop2 = await prisma.shop.upsert({
-    where: { userId: shopkeeper2.id },
-    update: {},
-    create: {
+  const existingShop2 = await prisma.shop.findFirst({ where: { userId: shopkeeper2.id } });
+  const shop2 = existingShop2 || await prisma.shop.create({
+    data: {
       userId: shopkeeper2.id,
       shopName: 'Suna Jewellers',
       shopNameNe: 'सुन ज्वेलर्स',

@@ -80,15 +80,14 @@ interface ShopData {
   websiteUrl?: string;
   isVerified: boolean;
   isActive: boolean;
-  rating: number;
-  totalReviews: number;
+  rating?: number;
+  totalReviews?: number;
   createdAt: string;
   updatedAt: string;
-  supportedMetals?: string[];
+  supportedMaterials?: string[];
   supportedJewelleryTypes?: string[];
-  supportedBuildMethods?: string[];
+  supportedMethods?: string[];
   codMaxValueNpr?: number;
-  operatingHours?: any;
 }
 
 interface UserData {
@@ -943,37 +942,37 @@ export default function AdminUsersPage() {
                       )}
                     </div>
                     
-                    {(selectedUser.shop.supportedMetals?.length || selectedUser.shop.supportedJewelleryTypes?.length || selectedUser.shop.supportedBuildMethods?.length) && (
+                    {(selectedUser.shop.supportedMaterials?.length || selectedUser.shop.supportedJewelleryTypes?.length || selectedUser.shop.supportedMethods?.length) && (
                       <div className="space-y-4 pt-4 border-t">
                         <h4 className="font-semibold">Supported Services</h4>
                         
-                        {selectedUser.shop.supportedMetals?.length > 0 && (
+                        {(selectedUser.shop.supportedMaterials?.length ?? 0) > 0 && (
                           <div className="space-y-2">
-                            <Label className="text-muted-foreground text-sm">Metals</Label>
+                            <Label className="text-muted-foreground text-sm">Materials</Label>
                             <div className="flex flex-wrap gap-2">
-                              {selectedUser.shop.supportedMetals.map((metal) => (
-                                <Badge key={metal} variant="outline">{metal}</Badge>
+                              {selectedUser.shop.supportedMaterials?.map((material) => (
+                                <Badge key={material} variant="outline">{material}</Badge>
                               ))}
                             </div>
                           </div>
                         )}
                         
-                        {selectedUser.shop.supportedJewelleryTypes?.length > 0 && (
+                        {(selectedUser.shop.supportedJewelleryTypes?.length ?? 0) > 0 && (
                           <div className="space-y-2">
                             <Label className="text-muted-foreground text-sm">Jewellery Types</Label>
                             <div className="flex flex-wrap gap-2">
-                              {selectedUser.shop.supportedJewelleryTypes.map((type) => (
+                              {selectedUser.shop.supportedJewelleryTypes?.map((type) => (
                                 <Badge key={type} variant="outline">{type}</Badge>
                               ))}
                             </div>
                           </div>
                         )}
                         
-                        {selectedUser.shop.supportedBuildMethods?.length > 0 && (
+                        {(selectedUser.shop.supportedMethods?.length ?? 0) > 0 && (
                           <div className="space-y-2">
                             <Label className="text-muted-foreground text-sm">Build Methods</Label>
                             <div className="flex flex-wrap gap-2">
-                              {selectedUser.shop.supportedBuildMethods.map((method) => (
+                              {selectedUser.shop.supportedMethods?.map((method) => (
                                 <Badge key={method} variant="outline">{method}</Badge>
                               ))}
                             </div>

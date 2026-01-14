@@ -36,11 +36,12 @@ export class UsersService {
         status: true,
         preferredLanguage: true,
         createdAt: true,
-        shop: {
+        shops: {
           select: {
             id: true,
             shopName: true,
           },
+          take: 1,
         },
       },
     });
@@ -49,7 +50,11 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    return user;
+    // Transform to maintain backward compatibility
+    return {
+      ...user,
+      shop: user.shops?.[0] || null,
+    };
   }
 
   async findByEmail(email: string) {
@@ -112,12 +117,13 @@ export class UsersService {
           role: true,
           status: true,
           createdAt: true,
-          shop: {
+          shops: {
             select: {
               id: true,
               shopName: true,
               isVerified: true,
             },
+            take: 1,
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -127,8 +133,14 @@ export class UsersService {
       }),
     ]);
 
+    // Transform to maintain backward compatibility
+    const transformedUsers = users.map(user => ({
+      ...user,
+      shop: user.shops?.[0] || null,
+    }));
+
     return {
-      data: users,
+      data: transformedUsers,
       meta: {
         page,
         pageSize,
@@ -217,6 +229,34 @@ export class UsersService {
       language: updated.preferredLanguage || 'en',
       currency: (updated as any).preferredCurrency || DEFAULT_CURRENCY,
       theme: (updated as any).themeMode || 'system',
+    };
+  }
+
+  /**
+   * Set active shop for multi-shop users
+   */
+  async setActiveShop(userId: string, shopId: string) {
+    // Verify the shop belongs to the user
+    const shop = await this.prisma.shop.findFirst({
+      where: {
+        id: shopId,
+        userId: userId,
+      },
+    });
+
+    if (!shop) {
+      throw new NotFoundException('Shop not found or not owned by user');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { activeShopId: shopId },
+    });
+
+    return {
+      message: 'Active shop updated',
+      activeShopId: shopId,
+      shopName: shop.shopName,
     };
   }
 

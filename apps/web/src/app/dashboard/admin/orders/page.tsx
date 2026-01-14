@@ -159,6 +159,14 @@ interface Order {
   adminNotes?: string;
   createdByAdmin?: boolean;
   paymentVerifiedByAdmin?: boolean;
+  commissionBreakdown?: {
+    shopkeeperAmount: number;
+    platformCommission: number;
+    commissionRate: number;
+    commissionStatus: string;
+    commissionDueAt?: string;
+    commissionPaidAt?: string;
+  };
 }
 
 interface OrderStats {
@@ -638,20 +646,21 @@ export default function AdminOrdersPage() {
                         <TableHead>Payment</TableHead>
                         <TableHead className="hidden sm:table-cell">Method</TableHead>
                         <TableHead className="text-right">Amount</TableHead>
+                        <TableHead className="hidden xl:table-cell text-right">Commission</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {loading ? (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8">
+                          <TableCell colSpan={9} className="text-center py-8">
                             <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                             <p className="text-sm text-muted-foreground mt-2">Loading orders...</p>
                           </TableCell>
                         </TableRow>
                       ) : filteredOrders.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                             No orders found. Orders will appear here when customers place them.
                           </TableCell>
                         </TableRow>
@@ -758,6 +767,35 @@ export default function AdminOrdersPage() {
                                     Due: {formatCurrency(order.balanceDueNpr)}
                                   </div>
                                 )}
+                              </TableCell>
+                              {/* Commission Breakdown */}
+                              <TableCell className="hidden xl:table-cell text-right">
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="cursor-help">
+                                        <div className="text-xs text-green-600 font-medium">
+                                          Shop: {formatCurrency(order.commissionBreakdown?.shopkeeperAmount || order.totalNpr * 0.99)}
+                                        </div>
+                                        <div className="text-xs text-blue-600">
+                                          Platform: {formatCurrency(order.commissionBreakdown?.platformCommission || order.totalNpr * 0.01)}
+                                        </div>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left" className="max-w-xs">
+                                      <div className="space-y-1">
+                                        <p className="font-medium">Commission Breakdown (1%)</p>
+                                        <p className="text-xs">Shopkeeper (99%): {formatCurrency(order.commissionBreakdown?.shopkeeperAmount || order.totalNpr * 0.99)}</p>
+                                        <p className="text-xs">Platform Fee (1%): {formatCurrency(order.commissionBreakdown?.platformCommission || order.totalNpr * 0.01)}</p>
+                                        {order.commissionBreakdown?.commissionStatus && (
+                                          <Badge variant={order.commissionBreakdown.commissionStatus === 'PAID' ? 'default' : order.commissionBreakdown.commissionStatus === 'OVERDUE' ? 'destructive' : 'secondary'} className="text-xs mt-1">
+                                            {order.commissionBreakdown.commissionStatus}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               </TableCell>
                               <TableCell className="text-right">
                                 <DropdownMenu>

@@ -53,6 +53,15 @@ export class UsersController {
     return this.usersService.updateProfile(userId, dto);
   }
 
+  @Patch('me/active-shop')
+  @ApiOperation({ summary: 'Set active shop for multi-shop users' })
+  async setActiveShop(
+    @CurrentUser('id') userId: string,
+    @Body() dto: { shopId: string },
+  ) {
+    return this.usersService.setActiveShop(userId, dto.shopId);
+  }
+
   @Patch('me/password')
   @ApiOperation({ summary: 'Update current user password' })
   async updatePassword(
@@ -139,7 +148,7 @@ export class UsersController {
         createdAt: true,
         updatedAt: true,
         lastLoginAt: true,
-        shop: {
+        shops: {
           select: {
             id: true,
             shopName: true,
@@ -148,19 +157,16 @@ export class UsersController {
             country: true,
             contactPhone: true,
             contactEmail: true,
-            websiteUrl: true,
             isVerified: true,
             isActive: true,
-            rating: true,
-            totalReviews: true,
             createdAt: true,
             updatedAt: true,
-            supportedMetals: true,
+            supportedMaterials: true,
             supportedJewelleryTypes: true,
-            supportedBuildMethods: true,
+            supportedMethods: true,
             codMaxValueNpr: true,
-            operatingHours: true,
           },
+          take: 1,
         },
       },
     });
@@ -169,7 +175,12 @@ export class UsersController {
       throw new NotFoundException('User not found');
     }
 
-    return user;
+    // Transform for backward compatibility
+    const result = user as any;
+    return {
+      ...result,
+      shop: result.shops?.[0] || null,
+    };
   }
 
   @Patch(':id/admin-update')
@@ -240,7 +251,7 @@ export class UsersController {
     // Check if user exists
     const user = await this.prisma.user.findUnique({ 
       where: { id },
-      include: { shop: true },
+      include: { shops: true },
     });
     if (!user) {
       throw new NotFoundException('User not found');
@@ -254,16 +265,16 @@ export class UsersController {
       }
     }
 
-    // Delete user and associated shop (cascade)
+    // Delete user and associated shops (cascade)
     await this.prisma.$transaction(async (tx) => {
-      // If user has a shop, delete shop-related data first
-      if (user.shop) {
-        // Delete shop materials
-        await tx.shopMaterial.deleteMany({ where: { shopId: user.shop.id } });
+      // If user has shops, delete shop-related data first
+      for (const shop of user.shops) {
+        // Delete shop metal rates
+        await tx.shopMetalRate.deleteMany({ where: { shopId: shop.id } });
         // Delete verification requests
-        await tx.verificationRequest.deleteMany({ where: { shopId: user.shop.id } });
+        await tx.verificationRequest.deleteMany({ where: { shopId: shop.id } });
         // Delete shop
-        await tx.shop.delete({ where: { id: user.shop.id } });
+        await tx.shop.delete({ where: { id: shop.id } });
       }
 
       // Delete user's notifications

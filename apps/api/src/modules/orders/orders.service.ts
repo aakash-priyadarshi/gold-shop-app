@@ -662,6 +662,7 @@ export class OrdersService {
         include: {
           customer: { select: { id: true, firstName: true, lastName: true, email: true } },
           shop: { select: { id: true, shopName: true } },
+          commissionLedger: { select: { id: true, amount: true, status: true, dueAt: true, paidAt: true } },
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
@@ -670,8 +671,27 @@ export class OrdersService {
       this.prisma.order.count({ where }),
     ]);
 
+    // Calculate commission breakdown for each order
+    const ordersWithCommission = orders.map(order => {
+      const commission = order.commissionLedger;
+      const shopkeeperAmount = order.totalNpr ? order.totalNpr * 0.99 : 0; // 99% to shopkeeper
+      const platformAmount = order.totalNpr ? order.totalNpr * 0.01 : 0; // 1% to platform
+      
+      return {
+        ...order,
+        commissionBreakdown: {
+          shopkeeperAmount: Math.round(shopkeeperAmount * 100) / 100,
+          platformCommission: Math.round(platformAmount * 100) / 100,
+          commissionRate: 0.01, // 1%
+          commissionStatus: commission?.status || 'NOT_CREATED',
+          commissionDueAt: commission?.dueAt || null,
+          commissionPaidAt: commission?.paidAt || null,
+        },
+      };
+    });
+
     return {
-      orders,
+      orders: ordersWithCommission,
       meta: {
         page,
         limit,
@@ -1212,15 +1232,16 @@ export class OrdersService {
     // First verify the shopkeeper owns this order
     const user = await this.prisma.user.findUnique({
       where: { id: shopkeeperId },
-      include: { shop: true },
+      include: { shops: true },
     });
 
-    if (!user?.shop) {
+    const activeShop = user?.shops?.[0];
+    if (!activeShop) {
       throw new ForbiddenException('You do not have a shop');
     }
 
     // Check if shop is on hold
-    if (user.shop.isOnHold) {
+    if (activeShop.isOnHold) {
       throw new ForbiddenException(
         'Your shop is on hold due to unpaid commissions. Please settle outstanding commissions to continue.',
       );
@@ -1235,7 +1256,7 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
 
-    if (order.shopId !== user.shop.id) {
+    if (order.shopId !== activeShop.id) {
       throw new ForbiddenException('This order does not belong to your shop');
     }
 
@@ -1278,15 +1299,16 @@ export class OrdersService {
     // First verify the shopkeeper owns this order
     const user = await this.prisma.user.findUnique({
       where: { id: shopkeeperId },
-      include: { shop: true },
+      include: { shops: true },
     });
 
-    if (!user?.shop) {
+    const activeShop = user?.shops?.[0];
+    if (!activeShop) {
       throw new ForbiddenException('You do not have a shop');
     }
 
     // Check if shop is on hold
-    if (user.shop.isOnHold) {
+    if (activeShop.isOnHold) {
       throw new ForbiddenException(
         'Your shop is on hold due to unpaid commissions. Please settle outstanding commissions to continue.',
       );
@@ -1300,7 +1322,7 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
 
-    if (order.shopId !== user.shop.id) {
+    if (order.shopId !== activeShop.id) {
       throw new ForbiddenException('This order does not belong to your shop');
     }
 
@@ -1330,7 +1352,7 @@ export class OrdersService {
         where: { orderId },
         create: {
           orderId,
-          shopId: user.shop!.id,
+          shopId: activeShop.id,
           orderTotal: order.totalNpr,
           commissionRate,
           amount: commissionAmount,

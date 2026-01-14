@@ -27,6 +27,12 @@ model User {
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   lastLoginAt          DateTime?
+  // Multi-shop support
+  activeShopId         String?
+  // 2FA support
+  twoFactorEnabled     Boolean               @default(false)
+  twoFactorSecret      String?
+  twoFactorBackupCodes String[]
   apiTokens            ApiToken[]
   auditLogs            AuditLog[]
   notifications        Notification[]
@@ -35,12 +41,13 @@ model User {
   reportsAgainst       Report[]              @relation("ReportReported")
   reportsFiled         Report[]              @relation("ReportReporter")
   rfqRequests          RfqRequest[]          @relation("CustomerRfqs")
-  shop                 Shop?
+  shops                Shop[]
   verificationRequests VerificationRequest[] @relation("UserVerificationRequests")
 
   @@index([email])
   @@index([phone])
   @@index([role])
+  @@index([activeShopId])
 }
 
 model RefreshToken {
@@ -94,7 +101,7 @@ model Session {
 
 model Shop {
   id                      String                @id @default(uuid())
-  userId                  String                @unique
+  userId                  String
   shopName                String
   shopNameNe              String?
   shopNameHi              String?
@@ -119,6 +126,7 @@ model Shop {
   supportedJewelleryTypes String[]
   supportedMethods        String[]
   supportedMaterials      String[]
+  supportedGemstones      String[]
   supportedFinishes       String[]
   minOrderValueNpr        Float                 @default(0)
   maxOrderValueNpr        Float?
@@ -147,6 +155,7 @@ model Shop {
   ratings                 ShopRating[]
   verificationRequests    VerificationRequest[] @relation("ShopVerificationRequests")
 
+  @@index([userId])
   @@index([country, city])
   @@index([isActive, isVerified])
 }

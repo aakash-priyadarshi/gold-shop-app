@@ -26,7 +26,7 @@ export class ShopsService {
     // Check if user exists and is a shopkeeper
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { shop: true },
+      include: { shops: true },
     });
 
     if (!user) {
@@ -37,7 +37,7 @@ export class ShopsService {
       throw new ForbiddenException('Only shopkeeper accounts can create shops');
     }
 
-    if (user.shop) {
+    if (user.shops && user.shops.length > 0) {
       throw new BadRequestException('User already has a shop');
     }
 
@@ -91,14 +91,8 @@ export class ShopsService {
   }
 
   async create(userId: string, dto: CreateShopDto) {
-    // Check if user already has a shop
-    const existingShop = await this.prisma.shop.findUnique({
-      where: { userId },
-    });
-
-    if (existingShop) {
-      throw new BadRequestException('User already has a shop');
-    }
+    // Multi-shop support: Allow multiple shops per user
+    // No longer checking for existing shop
 
     const shop = await this.prisma.shop.create({
       data: {
@@ -236,19 +230,62 @@ export class ShopsService {
   }
 
   async findByUserId(userId: string) {
-    const shop = await this.prisma.shop.findUnique({
-      where: { userId },
-      include: {
-        metalRates: true,
-        finishPricing: true,
-      },
+    // For multi-shop support, find the user's active shop or the first shop
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { activeShopId: true },
     });
+
+    let shop;
+    if (user?.activeShopId) {
+      shop = await this.prisma.shop.findUnique({
+        where: { id: user.activeShopId, userId },
+        include: {
+          metalRates: true,
+          finishPricing: true,
+        },
+      });
+    }
+
+    if (!shop) {
+      // Fallback to first shop owned by user
+      shop = await this.prisma.shop.findFirst({
+        where: { userId },
+        include: {
+          metalRates: true,
+          finishPricing: true,
+        },
+      });
+    }
 
     if (!shop) {
       throw new NotFoundException('Shop not found for this user');
     }
 
     return shop;
+  }
+
+  async findAllByUserId(userId: string) {
+    const shops = await this.prisma.shop.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        shopName: true,
+        isVerified: true,
+        city: true,
+        country: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Transform to match frontend expectations
+    return shops.map(shop => ({
+      ...shop,
+      name: shop.shopName,
+      slug: shop.id, // Using ID as slug placeholder
+      status: shop.isVerified ? 'ACTIVE' : 'PENDING',
+    }));
   }
 
   async update(shopId: string, userId: string, dto: UpdateShopDto) {
@@ -404,8 +441,16 @@ export class ShopsService {
    * Get shop settings for the current user
    */
   async getShopSettings(userId: string) {
-    const shop = await this.prisma.shop.findUnique({
-      where: { userId },
+    // For multi-shop support: get active shop or first shop for user
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { activeShopId: true },
+    });
+
+    const shop = await this.prisma.shop.findFirst({
+      where: user?.activeShopId 
+        ? { id: user.activeShopId, userId } 
+        : { userId },
       include: {
         metalRates: true,
         finishPricing: true,
@@ -436,8 +481,16 @@ export class ShopsService {
    * Update shop settings
    */
   async updateShopSettings(userId: string, dto: UpdateShopDto) {
-    const shop = await this.prisma.shop.findUnique({
-      where: { userId },
+    // For multi-shop support: get active shop or first shop
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { activeShopId: true },
+    });
+
+    const shop = await this.prisma.shop.findFirst({
+      where: user?.activeShopId 
+        ? { id: user.activeShopId, userId } 
+        : { userId },
     });
 
     if (!shop) {
@@ -687,6 +740,7 @@ export class ShopsService {
         supportedJewelleryTypes: true,
         supportedMethods: true,
         supportedFinishes: true,
+        supportedGemstones: true,
       },
     });
 
@@ -703,6 +757,13 @@ export class ShopsService {
 
     const allBuildMethods = ['METHOD_A', 'METHOD_B', 'METHOD_C', 'METHOD_D'];
 
+    // All available gemstone types
+    const allGemstoneTypes = [
+      'DIAMOND_NATURAL', 'DIAMOND_LAB', 'MOISSANITE', 'CUBIC_ZIRCONIA',
+      'RUBY', 'SAPPHIRE', 'EMERALD', 'PEARL', 'AMETHYST', 'TOPAZ',
+      'GARNET', 'OPAL', 'TURQUOISE', 'AQUAMARINE', 'PERIDOT', 'CITRINE'
+    ];
+
     return {
       jewelleryTypes: allJewelleryTypes.map(type => ({
         code: type,
@@ -715,6 +776,11 @@ export class ShopsService {
         isSupported: shop.supportedMethods.includes(method),
       })),
       supportedFinishes: shop.supportedFinishes,
+      gemstones: allGemstoneTypes.map(type => ({
+        code: type,
+        name: type.replace(/_/g, ' '),
+        isSupported: (shop.supportedGemstones || []).includes(type),
+      })),
     };
   }
 
@@ -724,7 +790,7 @@ export class ShopsService {
   async updateShopCapabilities(
     shopId: string, 
     userId: string, 
-    dto: { jewelleryTypes: string[]; buildMethods?: string[] }
+    dto: { jewelleryTypes?: string[]; buildMethods?: string[]; finishes?: string[]; gemstones?: string[] }
   ) {
     if (!shopId) {
       throw new BadRequestException('Shop ID required');
@@ -738,12 +804,22 @@ export class ShopsService {
       throw new ForbiddenException('Not authorized');
     }
 
-    const updateData: any = {
-      supportedJewelleryTypes: dto.jewelleryTypes,
-    };
+    const updateData: any = {};
+
+    if (dto.jewelleryTypes) {
+      updateData.supportedJewelleryTypes = dto.jewelleryTypes;
+    }
 
     if (dto.buildMethods) {
       updateData.supportedMethods = dto.buildMethods;
+    }
+
+    if (dto.finishes) {
+      updateData.supportedFinishes = dto.finishes;
+    }
+
+    if (dto.gemstones) {
+      updateData.supportedGemstones = dto.gemstones;
     }
 
     await this.prisma.shop.update({

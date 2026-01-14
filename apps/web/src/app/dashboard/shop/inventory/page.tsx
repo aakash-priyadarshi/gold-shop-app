@@ -44,6 +44,7 @@ interface CapabilitiesData {
   jewelleryTypes: string[];
   buildMethods: string[];
   finishes: string[];
+  gemstones: string[];
 }
 
 interface MarketRate {
@@ -51,7 +52,7 @@ interface MarketRate {
   ratePerGram: number;
   source: string;
   country: string;
-  validFrom: string;
+  validFrom?: string;
 }
 
 const DEFAULT_MAKING_CHARGE_PERCENT = 10;
@@ -101,6 +102,34 @@ const allFinishes = [
   'TWO_TONE',
 ];
 
+// Gemstones grouped by category
+const allGemstones = [
+  { id: 'DIAMOND_NATURAL', name: 'Diamond (Natural)', category: 'precious' },
+  { id: 'DIAMOND_LAB', name: 'Diamond (Lab-Grown)', category: 'precious' },
+  { id: 'RUBY', name: 'Ruby', category: 'precious' },
+  { id: 'SAPPHIRE', name: 'Sapphire', category: 'precious' },
+  { id: 'EMERALD', name: 'Emerald', category: 'precious' },
+  { id: 'MOISSANITE', name: 'Moissanite', category: 'alternative' },
+  { id: 'CUBIC_ZIRCONIA', name: 'Cubic Zirconia (CZ)', category: 'simulant' },
+  { id: 'PEARL', name: 'Pearl', category: 'organic' },
+  { id: 'AMETHYST', name: 'Amethyst', category: 'semi-precious' },
+  { id: 'TOPAZ', name: 'Topaz', category: 'semi-precious' },
+  { id: 'GARNET', name: 'Garnet', category: 'semi-precious' },
+  { id: 'OPAL', name: 'Opal', category: 'semi-precious' },
+  { id: 'TURQUOISE', name: 'Turquoise', category: 'semi-precious' },
+  { id: 'AQUAMARINE', name: 'Aquamarine', category: 'semi-precious' },
+  { id: 'PERIDOT', name: 'Peridot', category: 'semi-precious' },
+  { id: 'CITRINE', name: 'Citrine', category: 'semi-precious' },
+];
+
+const gemstoneCategories = [
+  { id: 'precious', name: 'Precious Stones', description: 'High-value natural gemstones' },
+  { id: 'alternative', name: 'Alternatives', description: 'Diamond alternatives and simulants' },
+  { id: 'simulant', name: 'Simulants', description: 'Synthetic gemstones' },
+  { id: 'organic', name: 'Organic', description: 'Naturally formed organic gems' },
+  { id: 'semi-precious', name: 'Semi-Precious', description: 'Beautiful colored gemstones' },
+];
+
 export default function ShopInventoryPage() {
   const { user } = useAuth();
   const { currency } = usePreferencesStore();
@@ -134,7 +163,14 @@ export default function ShopInventoryPage() {
         materialsApi.getMarketRates({ currency: shopCurrency, country: shopCountry }),
       ]);
       setMaterialsData(materialsRes.data);
-      setCapabilitiesData(capabilitiesRes.data);
+      // Ensure gemstones is always an array even if not returned from API
+      const capabilities = capabilitiesRes.data || {};
+      setCapabilitiesData({
+        jewelleryTypes: capabilities.jewelleryTypes || [],
+        buildMethods: capabilities.buildMethods || [],
+        finishes: capabilities.supportedFinishes || capabilities.finishes || [],
+        gemstones: capabilities.gemstones?.map((g: any) => g.code || g) || capabilities.supportedGemstones || [],
+      });
       // Market rates response has metals object, not array
       const ratesData = ratesRes.data?.metals || ratesRes.data || [];
       if (Array.isArray(ratesData)) {
@@ -337,6 +373,45 @@ export default function ShopInventoryPage() {
     });
   };
 
+  const toggleGemstone = (gemstoneId: string) => {
+    if (!capabilitiesData) return;
+
+    const current = new Set(capabilitiesData.gemstones || []);
+    if (current.has(gemstoneId)) {
+      current.delete(gemstoneId);
+    } else {
+      current.add(gemstoneId);
+    }
+
+    setCapabilitiesData({
+      ...capabilitiesData,
+      gemstones: Array.from(current),
+    });
+  };
+
+  const toggleAllGemstonesInCategory = (category: string) => {
+    if (!capabilitiesData) return;
+
+    const gemstonesInCategory = allGemstones.filter(g => g.category === category).map(g => g.id);
+    const current = new Set(capabilitiesData.gemstones || []);
+    
+    // Check if all in category are selected
+    const allSelected = gemstonesInCategory.every(id => current.has(id));
+    
+    if (allSelected) {
+      // Remove all in category
+      gemstonesInCategory.forEach(id => current.delete(id));
+    } else {
+      // Add all in category
+      gemstonesInCategory.forEach(id => current.add(id));
+    }
+
+    setCapabilitiesData({
+      ...capabilitiesData,
+      gemstones: Array.from(current),
+    });
+  };
+
   if (isLoading) {
     return (
       <ShopGuard>
@@ -417,6 +492,7 @@ export default function ShopInventoryPage() {
           <Tabs defaultValue="materials" className="space-y-4">
             <TabsList>
               <TabsTrigger value="materials">Materials</TabsTrigger>
+              <TabsTrigger value="gemstones">Gemstones</TabsTrigger>
               <TabsTrigger value="jewellery">Jewellery Types</TabsTrigger>
               <TabsTrigger value="methods">Build Methods</TabsTrigger>
               <TabsTrigger value="finishes">Finishes</TabsTrigger>
@@ -559,6 +635,83 @@ export default function ShopInventoryPage() {
                         <Save className="h-4 w-4 mr-2" />
                       )}
                       Save Materials
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Gemstones Tab */}
+            <TabsContent value="gemstones" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Gem className="h-5 w-5" />
+                    Supported Gemstones
+                  </CardTitle>
+                  <CardDescription>
+                    Select the gemstones you can work with or source
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {gemstoneCategories.map((category) => {
+                    const gemstonesInCategory = allGemstones.filter(g => g.category === category.id);
+                    const selectedCount = gemstonesInCategory.filter(g => 
+                      (capabilitiesData?.gemstones || []).includes(g.id)
+                    ).length;
+                    const allSelected = selectedCount === gemstonesInCategory.length;
+                    
+                    return (
+                      <div key={category.id} className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-medium text-sm flex items-center gap-2">
+                              {category.name}
+                              <Badge variant="secondary" className="text-xs">
+                                {selectedCount}/{gemstonesInCategory.length}
+                              </Badge>
+                            </h3>
+                            <p className="text-xs text-muted-foreground">{category.description}</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleAllGemstonesInCategory(category.id)}
+                          >
+                            {allSelected ? 'Deselect All' : 'Select All'}
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                          {gemstonesInCategory.map((gemstone) => {
+                            const isSelected = (capabilitiesData?.gemstones || []).includes(gemstone.id);
+                            return (
+                              <div
+                                key={gemstone.id}
+                                className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${
+                                  isSelected ? 'border-primary bg-primary/5' : 'hover:border-gray-300'
+                                }`}
+                                onClick={() => toggleGemstone(gemstone.id)}
+                              >
+                                <Checkbox checked={isSelected} />
+                                <Label className="cursor-pointer text-sm">
+                                  {gemstone.name}
+                                </Label>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  <div className="flex justify-end pt-4">
+                    <Button onClick={saveCapabilities} disabled={isSaving}>
+                      {isSaving ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-2" />
+                      )}
+                      Save Gemstones
                     </Button>
                   </div>
                 </CardContent>
