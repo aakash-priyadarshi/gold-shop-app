@@ -6,6 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ApiTokenManager } from '@/components/admin/ApiTokenManager';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Users,
   Store,
@@ -17,9 +25,14 @@ import {
   DollarSign,
   ArrowUpRight,
   ArrowDownRight,
+  Globe,
+  BarChart3,
+  Package,
+  MapPin,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
+import Link from 'next/link';
 
 interface Stat {
   title: string;
@@ -28,6 +41,17 @@ interface Stat {
   changeType: 'positive' | 'negative';
   icon: any;
   description: string;
+}
+
+interface CountryData {
+  country: string;
+  countryName: string;
+  flag: string;
+  users: number;
+  shops: number;
+  orders: number;
+  revenue: number;
+  currency: string;
 }
 
 interface Verification {
@@ -46,11 +70,22 @@ interface Activity {
   time: string;
 }
 
+// Country info mapping
+const COUNTRY_INFO: Record<string, { name: string; flag: string; currency: string }> = {
+  NP: { name: 'Nepal', flag: '🇳🇵', currency: 'NPR' },
+  IN: { name: 'India', flag: '🇮🇳', currency: 'INR' },
+  US: { name: 'United States', flag: '🇺🇸', currency: 'USD' },
+  UK: { name: 'United Kingdom', flag: '🇬🇧', currency: 'GBP' },
+  AE: { name: 'UAE', flag: '🇦🇪', currency: 'AED' },
+};
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stat[]>([]);
+  const [countryStats, setCountryStats] = useState<CountryData[]>([]);
   const [pendingVerifications, setPendingVerifications] = useState<Verification[]>([]);
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'year'>('month');
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -60,13 +95,19 @@ export default function AdminDashboard() {
         const usersRes = await api.get('/users?page=1&pageSize=1');
         const shopsRes = await api.get('/shops?page=1&pageSize=1');
         const ordersRes = await api.get('/orders?page=1&pageSize=1');
-        // Revenue: Placeholder, replace with real endpoint if available
-        const revenueRes = { data: { revenue: 'NPR 0', change: '+0%' } };
+        
+        // Get all shops to compute country data
+        const allShopsRes = await api.get('/shops?pageSize=1000');
+        const allShops = allShopsRes.data?.shops || allShopsRes.data || [];
+        
+        // Get all users to compute country data
+        const allUsersRes = await api.get('/users?pageSize=1000');
+        const allUsers = allUsersRes.data?.users || allUsersRes.data || [];
 
         setStats([
           {
             title: 'Total Users',
-            value: usersRes.data?.meta?.totalCount ?? '—',
+            value: usersRes.data?.meta?.totalCount ?? allUsers.length ?? '—',
             change: '+0%',
             changeType: 'positive',
             icon: Users,
@@ -74,7 +115,7 @@ export default function AdminDashboard() {
           },
           {
             title: 'Active Shops',
-            value: shopsRes.data?.meta?.totalCount ?? '—',
+            value: shopsRes.data?.meta?.totalCount ?? allShops.length ?? '—',
             change: '+0%',
             changeType: 'positive',
             icon: Store,
@@ -89,14 +130,74 @@ export default function AdminDashboard() {
             description: 'Orders this month',
           },
           {
-            title: 'Revenue',
-            value: revenueRes.data?.revenue ?? 'NPR 0',
-            change: revenueRes.data?.change ?? '+0%',
+            title: 'Pending Shops',
+            value: allShops.filter((s: any) => !s.isVerified).length,
+            change: '',
             changeType: 'positive',
-            icon: DollarSign,
-            description: 'Platform revenue',
+            icon: AlertCircle,
+            description: 'Awaiting verification',
           },
         ]);
+
+        // Compute country-wise statistics
+        const countryMap = new Map<string, CountryData>();
+        
+        // Initialize countries
+        for (const country of Object.keys(COUNTRY_INFO)) {
+          countryMap.set(country, {
+            country,
+            countryName: COUNTRY_INFO[country].name,
+            flag: COUNTRY_INFO[country].flag,
+            users: 0,
+            shops: 0,
+            orders: 0,
+            revenue: 0,
+            currency: COUNTRY_INFO[country].currency,
+          });
+        }
+
+        // Count shops by country
+        for (const shop of allShops) {
+          const country = shop.country || 'NP';
+          if (!countryMap.has(country)) {
+            countryMap.set(country, {
+              country,
+              countryName: country,
+              flag: '🌍',
+              users: 0,
+              shops: 0,
+              orders: 0,
+              revenue: 0,
+              currency: 'USD',
+            });
+          }
+          const data = countryMap.get(country)!;
+          data.shops++;
+          // Add order count and revenue if available
+          if (shop._count?.orders) {
+            data.orders += shop._count.orders;
+          }
+        }
+
+        // Count users by shop location (approximate)
+        for (const user of allUsers) {
+          if (user.shop?.country) {
+            const country = user.shop.country;
+            if (countryMap.has(country)) {
+              countryMap.get(country)!.users++;
+            }
+          } else if (user.role === 'CUSTOMER') {
+            // Default customers to NP if no shop
+            countryMap.get('NP')!.users++;
+          }
+        }
+
+        // Convert to array and sort by shops count
+        const countryData = Array.from(countryMap.values())
+          .filter(c => c.shops > 0 || c.users > 0)
+          .sort((a, b) => b.shops - a.shops);
+        
+        setCountryStats(countryData);
 
         // Fetch pending verifications
         const verificationsRes = await api.get('/admin/verifications');
@@ -116,13 +217,13 @@ export default function AdminDashboard() {
           }))
         );
       } catch (err) {
-        // Handle error, optionally show toast
+        console.error('Dashboard load error:', err);
       } finally {
         setLoading(false);
       }
     }
     fetchDashboardData();
-  }, []);
+  }, [dateRange]);
 
   return (
     <AdminGuard>
@@ -169,6 +270,81 @@ export default function AdminDashboard() {
               </Card>
             ))}
           </div>
+
+          {/* Country-wise Analytics */}
+          <Card className="premium-card">
+            <CardHeader className="p-4 lg:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
+                    <Globe className="h-4 w-4 lg:h-5 lg:w-5 text-blue-500" />
+                    Country-wise Analytics
+                  </CardTitle>
+                  <CardDescription className="text-xs lg:text-sm">
+                    Platform statistics by country
+                  </CardDescription>
+                </div>
+                <Select value={dateRange} onValueChange={(v) => setDateRange(v as typeof dateRange)}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Select period" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="week">This Week</SelectItem>
+                    <SelectItem value="month">This Month</SelectItem>
+                    <SelectItem value="year">This Year</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 pt-0 lg:p-6 lg:pt-0">
+              {countryStats.length > 0 ? (
+                <div className="space-y-3">
+                  {countryStats.map((country) => (
+                    <div
+                      key={country.country}
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="text-3xl">{country.flag}</div>
+                        <div>
+                          <p className="font-medium">{country.countryName}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {country.currency}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-8 text-center">
+                        <div>
+                          <p className="text-lg font-bold text-blue-600">{country.users}</p>
+                          <p className="text-xs text-muted-foreground">Users</p>
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-amber-600">{country.shops}</p>
+                          <p className="text-xs text-muted-foreground">Shops</p>
+                        </div>
+                        <div className="hidden sm:block">
+                          <p className="text-lg font-bold text-green-600">{country.orders}</p>
+                          <p className="text-xs text-muted-foreground">Orders</p>
+                        </div>
+                        <div className="hidden sm:block">
+                          <p className="text-lg font-bold text-purple-600">
+                            {country.revenue > 0 ? country.revenue.toLocaleString() : '—'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Revenue</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Globe className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No country data available</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Two column layout - Stack on mobile */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
@@ -276,22 +452,30 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent className="p-4 pt-0 lg:p-6 lg:pt-0">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-                <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2 rounded-xl touch-target">
-                  <Users className="h-5 w-5 lg:h-6 lg:w-6" />
-                  <span className="text-xs lg:text-sm">Manage Users</span>
-                </Button>
-                <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2 rounded-xl touch-target">
-                  <Store className="h-5 w-5 lg:h-6 lg:w-6" />
-                  <span className="text-xs lg:text-sm">Manage Shops</span>
-                </Button>
-                <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2 rounded-xl touch-target">
-                  <TrendingUp className="h-5 w-5 lg:h-6 lg:w-6" />
-                  <span className="text-xs lg:text-sm">View Reports</span>
-                </Button>
-                <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2 rounded-xl touch-target">
-                  <DollarSign className="h-5 w-5 lg:h-6 lg:w-6" />
-                  <span className="text-xs lg:text-sm">Price Settings</span>
-                </Button>
+                <Link href="/dashboard/admin/users">
+                  <Button variant="outline" className="w-full h-auto py-4 flex flex-col items-center gap-2 rounded-xl touch-target">
+                    <Users className="h-5 w-5 lg:h-6 lg:w-6" />
+                    <span className="text-xs lg:text-sm">Manage Users</span>
+                  </Button>
+                </Link>
+                <Link href="/dashboard/admin/shops">
+                  <Button variant="outline" className="w-full h-auto py-4 flex flex-col items-center gap-2 rounded-xl touch-target">
+                    <Store className="h-5 w-5 lg:h-6 lg:w-6" />
+                    <span className="text-xs lg:text-sm">Manage Shops</span>
+                  </Button>
+                </Link>
+                <Link href="/dashboard/admin/reports">
+                  <Button variant="outline" className="w-full h-auto py-4 flex flex-col items-center gap-2 rounded-xl touch-target">
+                    <TrendingUp className="h-5 w-5 lg:h-6 lg:w-6" />
+                    <span className="text-xs lg:text-sm">View Reports</span>
+                  </Button>
+                </Link>
+                <Link href="/dashboard/admin/settings/market">
+                  <Button variant="outline" className="w-full h-auto py-4 flex flex-col items-center gap-2 rounded-xl touch-target">
+                    <DollarSign className="h-5 w-5 lg:h-6 lg:w-6" />
+                    <span className="text-xs lg:text-sm">Price Settings</span>
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>

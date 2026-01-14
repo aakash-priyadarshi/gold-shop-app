@@ -56,6 +56,7 @@ import {
   ClipboardDocumentListIcon,
   ShieldCheckIcon,
   TruckIcon,
+  ShoppingCartIcon,
 } from '@heroicons/react/24/outline';
 import { useState, useEffect, useCallback } from 'react';
 import { useTheme } from 'next-themes';
@@ -71,6 +72,7 @@ import {
   type Language,
   type ThemeMode,
 } from '@/store/preferences';
+import { useCart } from '@/contexts/CartContext';
 
 // Role-specific quick action icons configuration
 const getRoleQuickActions = (role: UserRole | undefined) => {
@@ -96,6 +98,7 @@ const getRoleQuickActions = (role: UserRole | undefined) => {
 
 export function Header() {
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const { itemCount } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
@@ -426,6 +429,25 @@ export function Header() {
                 </Tooltip>
               ))}
               
+              {/* Cart */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href="/cart">
+                    <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-lg">
+                      <ShoppingCartIcon className="h-5 w-5" />
+                      {itemCount > 0 && (
+                        <span className="absolute -top-1 -right-1 h-5 w-5 bg-amber-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
+                          {itemCount > 9 ? '9+' : itemCount}
+                        </span>
+                      )}
+                    </Button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Cart ({itemCount})</p>
+                </TooltipContent>
+              </Tooltip>
+              
               {/* Notifications */}
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -536,6 +558,17 @@ export function Header() {
             </TooltipProvider>
           ) : (
             <>
+              {/* Cart for non-authenticated users */}
+              <Link href="/cart">
+                <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-lg">
+                  <ShoppingCartIcon className="h-5 w-5" />
+                  {itemCount > 0 && (
+                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-amber-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
+                      {itemCount > 9 ? '9+' : itemCount}
+                    </span>
+                  )}
+                </Button>
+              </Link>
               <Link href="/auth/login">
                 <Button variant="ghost" className="h-9 rounded-lg">Log in</Button>
               </Link>

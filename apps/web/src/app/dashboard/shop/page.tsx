@@ -66,7 +66,12 @@ const statusColors: Record<string, string> = {
 export default function ShopDashboard() {
   const { user } = useAuth();
   const { currency } = usePreferencesStore();
-  const currencySymbol = CURRENCIES[currency as CurrencyCode]?.symbol || 'Rs.';
+  
+  // Get shop-based currency from shop's country
+  const shopCountry = user?.shop?.country || 'NP';
+  const shopCurrency = shopCountry === 'IN' ? 'INR' : shopCountry === 'AE' ? 'AED' : shopCountry === 'US' ? 'USD' : shopCountry === 'UK' ? 'GBP' : 'NPR';
+  const currencySymbol = CURRENCIES[shopCurrency as CurrencyCode]?.symbol || CURRENCIES[currency as CurrencyCode]?.symbol || 'Rs.';
+  
   const [stats, setStats] = useState<Stat[]>([]);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [rfqRequests, setRfqRequests] = useState<RFQRequest[]>([]);
@@ -125,7 +130,7 @@ export default function ShopDashboard() {
         id: o.id,
         customer: o.customer?.firstName || o.customerName || 'Unknown',
         items: o.itemsSummary || o.items?.map((i: any) => i.name).join(', ') || o.productSnapshot?.nameEn || 'Custom Order',
-        amount: o.totalNpr ? `NPR ${o.totalNpr.toLocaleString()}` : (o.amount ? `NPR ${o.amount.toLocaleString()}` : ''),
+        amount: o.totalNpr ? `${shopCurrency} ${o.totalNpr.toLocaleString()}` : (o.amount ? `${shopCurrency} ${o.amount.toLocaleString()}` : ''),
         status: o.status,
       })) : []);
 
@@ -134,7 +139,7 @@ export default function ShopDashboard() {
         id: r.id,
         customer: r.customer?.firstName || r.customerName || 'Unknown',
         request: r.jewelleryType || r.request || r.title || 'Custom Request',
-        budget: r.budgetMaxNpr ? `NPR ${r.budgetMaxNpr.toLocaleString()}` : (r.budget ? `NPR ${r.budget.toLocaleString()}` : 'N/A'),
+        budget: r.budgetMaxNpr ? `${shopCurrency} ${r.budgetMaxNpr.toLocaleString()}` : (r.budget ? `${shopCurrency} ${r.budget.toLocaleString()}` : 'N/A'),
         date: r.createdAt ? r.createdAt.slice(0, 10) : '',
       })) : []);
 
@@ -154,7 +159,7 @@ export default function ShopDashboard() {
     }).finally(() => {
       setIsLoading(false);
     });
-  }, [user]);
+  }, [user, shopCurrency]);
 
   return (
     <ShopkeeperGuard>

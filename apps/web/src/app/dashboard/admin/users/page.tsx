@@ -43,6 +43,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Users,
   UserCheck,
@@ -147,6 +148,25 @@ export default function AdminUsersPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
   const [deletingUser, setDeletingUser] = useState(false);
+
+  // Add shop dialog state
+  const [addShopDialogOpen, setAddShopDialogOpen] = useState(false);
+  const [addingShop, setAddingShop] = useState(false);
+  const [newShopForm, setNewShopForm] = useState({
+    shopName: '',
+    city: '',
+    address: '',
+    contactPhone: '',
+    contactEmail: '',
+    country: 'NP',
+    state: '',
+    pincode: '',
+    isVerified: true,
+  });
+
+  // Delete shop confirmation
+  const [deleteShopId, setDeleteShopId] = useState<string | null>(null);
+  const [deletingShop, setDeletingShop] = useState(false);
 
   useEffect(() => {
     loadUsers();
@@ -283,6 +303,86 @@ export default function AdminUsersPage() {
       });
     } finally {
       setDeletingUser(false);
+    }
+  };
+
+  // Add shop for user
+  const handleAddShop = async () => {
+    if (!selectedUser) return;
+    
+    if (!newShopForm.shopName || !newShopForm.city || !newShopForm.address || !newShopForm.contactPhone) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing Fields',
+        description: 'Please fill in all required fields',
+      });
+      return;
+    }
+
+    setAddingShop(true);
+    try {
+      const response = await api.post(`/admin/users/${selectedUser.id}/shops`, newShopForm);
+      if (response.data?.success) {
+        toast({
+          title: 'Shop Created',
+          description: 'The shop has been created successfully.',
+        });
+        setAddShopDialogOpen(false);
+        setNewShopForm({
+          shopName: '',
+          city: '',
+          address: '',
+          contactPhone: '',
+          contactEmail: '',
+          country: 'NP',
+          state: '',
+          pincode: '',
+          isVerified: true,
+        });
+        // Refresh user details
+        handleViewUser(selectedUser);
+        loadUsers();
+      } else {
+        throw new Error(response.data?.error || 'Failed to create shop');
+      }
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.response?.data?.message || error.message || 'Could not create shop',
+      });
+    } finally {
+      setAddingShop(false);
+    }
+  };
+
+  // Delete shop from user
+  const handleDeleteShop = async () => {
+    if (!selectedUser || !deleteShopId) return;
+
+    setDeletingShop(true);
+    try {
+      const response = await api.delete(`/admin/users/${selectedUser.id}/shops/${deleteShopId}`);
+      if (response.data?.success) {
+        toast({
+          title: 'Shop Deleted',
+          description: 'The shop has been deleted successfully.',
+        });
+        setDeleteShopId(null);
+        // Refresh user details
+        handleViewUser(selectedUser);
+        loadUsers();
+      } else {
+        throw new Error(response.data?.error || 'Failed to delete shop');
+      }
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.response?.data?.message || error.message || 'Could not delete shop',
+      });
+    } finally {
+      setDeletingShop(false);
     }
   };
 
@@ -858,10 +958,23 @@ export default function AdminUsersPage() {
                   </div>
                 </TabsContent>
                 
-                {(selectedUser.shop || selectedUser.shops?.length) && (
-                  <TabsContent value="shop" className="space-y-4 mt-4">
-                    {/* Show all shops for multi-shop support */}
-                    {(selectedUser.shops || [selectedUser.shop]).filter(Boolean).map((shop, index) => (
+                {/* Shop Tab - Always show for admin to add shops */}
+                <TabsContent value="shop" className="space-y-4 mt-4">
+                  {/* Add Shop Button */}
+                  <div className="flex justify-end">
+                    <Button
+                      size="sm"
+                      onClick={() => setAddShopDialogOpen(true)}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Shop
+                    </Button>
+                  </div>
+                  
+                  {/* Show all shops for multi-shop support */}
+                  {(selectedUser.shop || selectedUser.shops?.length) ? (
+                    (selectedUser.shops || [selectedUser.shop]).filter(Boolean).map((shop, index) => (
                       <div key={shop!.id} className={index > 0 ? 'border-t pt-4' : ''}>
                         <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
                           <div className="flex items-center gap-4">
@@ -889,14 +1002,23 @@ export default function AdminUsersPage() {
                               </div>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className="flex items-center gap-1">
-                              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                              <span className="font-semibold">{shop!.rating?.toFixed(1) || '0.0'}</span>
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <div className="flex items-center gap-1">
+                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                <span className="font-semibold">{shop!.rating?.toFixed(1) || '0.0'}</span>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {shop!.totalReviews || 0} reviews
+                              </p>
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                              {shop!.totalReviews || 0} reviews
-                            </p>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => setDeleteShopId(shop!.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
                         
@@ -960,9 +1082,15 @@ export default function AdminUsersPage() {
                           <p>Shop created: {formatDateTime(shop!.createdAt)}</p>
                         </div>
                       </div>
-                    ))}
-                  </TabsContent>
-                )}
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Store className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>This user doesn't have any shops yet.</p>
+                      <p className="text-sm">Click "Add Shop" to create one.</p>
+                    </div>
+                  )}
+                </TabsContent>
               </Tabs>
             ) : null}
             
@@ -1076,7 +1204,7 @@ export default function AdminUsersPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Delete Confirmation Dialog */}
+        {/* Delete User Confirmation Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -1104,6 +1232,151 @@ export default function AdminUsersPage() {
               >
                 {deletingUser && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Delete User
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Add Shop Dialog */}
+        <Dialog open={addShopDialogOpen} onOpenChange={setAddShopDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Add Shop for {selectedUser?.firstName} {selectedUser?.lastName}</DialogTitle>
+              <DialogDescription>
+                Create a new shop for this user
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+              <div className="space-y-2">
+                <Label htmlFor="shop-name">Shop Name *</Label>
+                <Input
+                  id="shop-name"
+                  value={newShopForm.shopName}
+                  onChange={(e) => setNewShopForm({ ...newShopForm, shopName: e.target.value })}
+                  placeholder="Enter shop name"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="shop-country">Country *</Label>
+                  <Select
+                    value={newShopForm.country}
+                    onValueChange={(value) => setNewShopForm({ ...newShopForm, country: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NP">Nepal</SelectItem>
+                      <SelectItem value="IN">India</SelectItem>
+                      <SelectItem value="US">United States</SelectItem>
+                      <SelectItem value="UK">United Kingdom</SelectItem>
+                      <SelectItem value="AE">UAE</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="shop-state">State/Province</Label>
+                  <Input
+                    id="shop-state"
+                    value={newShopForm.state}
+                    onChange={(e) => setNewShopForm({ ...newShopForm, state: e.target.value })}
+                    placeholder="Enter state"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="shop-city">City *</Label>
+                  <Input
+                    id="shop-city"
+                    value={newShopForm.city}
+                    onChange={(e) => setNewShopForm({ ...newShopForm, city: e.target.value })}
+                    placeholder="Enter city"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="shop-pincode">Pincode</Label>
+                  <Input
+                    id="shop-pincode"
+                    value={newShopForm.pincode}
+                    onChange={(e) => setNewShopForm({ ...newShopForm, pincode: e.target.value })}
+                    placeholder="Enter pincode"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="shop-address">Full Address *</Label>
+                <Input
+                  id="shop-address"
+                  value={newShopForm.address}
+                  onChange={(e) => setNewShopForm({ ...newShopForm, address: e.target.value })}
+                  placeholder="Enter full address"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="shop-phone">Contact Phone *</Label>
+                  <Input
+                    id="shop-phone"
+                    value={newShopForm.contactPhone}
+                    onChange={(e) => setNewShopForm({ ...newShopForm, contactPhone: e.target.value })}
+                    placeholder="+977 98..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="shop-email">Contact Email</Label>
+                  <Input
+                    id="shop-email"
+                    type="email"
+                    value={newShopForm.contactEmail}
+                    onChange={(e) => setNewShopForm({ ...newShopForm, contactEmail: e.target.value })}
+                    placeholder="shop@example.com"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="shop-verified"
+                  checked={newShopForm.isVerified}
+                  onCheckedChange={(checked) => setNewShopForm({ ...newShopForm, isVerified: !!checked })}
+                />
+                <Label htmlFor="shop-verified">Mark as Verified</Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAddShopDialogOpen(false)} disabled={addingShop}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddShop} disabled={addingShop} className="bg-green-600 hover:bg-green-700">
+                {addingShop && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Create Shop
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Shop Confirmation Dialog */}
+        <AlertDialog open={!!deleteShopId} onOpenChange={(open) => !open && setDeleteShopId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Shop?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete this shop and all its associated data including products, inventory, and orders.
+                <span className="block mt-2 text-amber-600">
+                  ⚠️ This action cannot be undone.
+                </span>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deletingShop}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteShop}
+                disabled={deletingShop}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {deletingShop && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Delete Shop
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

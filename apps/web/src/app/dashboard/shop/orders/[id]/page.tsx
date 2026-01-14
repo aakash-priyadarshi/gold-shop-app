@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { ShopGuard } from '@/components/auth/RouteGuard';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,6 +43,18 @@ import {
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+
+// Currency based on country
+const getCurrencySymbol = (country: string) => {
+  const symbols: Record<string, string> = {
+    NP: 'रू',
+    IN: '₹',
+    AE: 'د.إ',
+    US: '$',
+    UK: '£',
+  };
+  return symbols[country] || 'Rs.';
+};
 
 interface OrderDetails {
   id: string;
@@ -128,7 +141,12 @@ const statusColors: Record<string, string> = {
 export default function ShopOrderDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const orderId = params.id as string;
+  
+  // Shop-based currency
+  const shopCountry = user?.shop?.country || 'NP';
+  const currencySymbol = getCurrencySymbol(shopCountry);
   
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -310,39 +328,39 @@ export default function ShopOrderDetailPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span>Rs. {order.subtotalNpr?.toLocaleString()}</span>
+                      <span>{currencySymbol} {order.subtotalNpr?.toLocaleString()}</span>
                     </div>
                     {order.shippingNpr > 0 && (
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-muted-foreground">Shipping</span>
-                        <span>Rs. {order.shippingNpr?.toLocaleString()}</span>
+                        <span>{currencySymbol} {order.shippingNpr?.toLocaleString()}</span>
                       </div>
                     )}
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">Tax</span>
-                      <span>Rs. {order.taxNpr?.toLocaleString()}</span>
+                      <span>{currencySymbol} {order.taxNpr?.toLocaleString()}</span>
                     </div>
                     {order.discountNpr > 0 && (
                       <div className="flex justify-between items-center text-sm text-green-600">
                         <span>Discount</span>
-                        <span>-Rs. {order.discountNpr?.toLocaleString()}</span>
+                        <span>-{currencySymbol} {order.discountNpr?.toLocaleString()}</span>
                       </div>
                     )}
                     <Separator className="my-2" />
                     <div className="flex justify-between items-center font-bold">
                       <span>Total</span>
-                      <span className="text-xl">Rs. {order.totalNpr?.toLocaleString()}</span>
+                      <span className="text-xl">{currencySymbol} {order.totalNpr?.toLocaleString()}</span>
                     </div>
                     {order.bookingFeePaidNpr && order.bookingFeePaidNpr > 0 && (
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-muted-foreground">Booking Fee Paid</span>
-                        <span className="text-green-600">Rs. {order.bookingFeePaidNpr?.toLocaleString()}</span>
+                        <span className="text-green-600">{currencySymbol} {order.bookingFeePaidNpr?.toLocaleString()}</span>
                       </div>
                     )}
                     {order.balanceDueNpr > 0 && (
                       <div className="flex justify-between items-center text-sm font-medium text-orange-600">
                         <span>Balance Due</span>
-                        <span>Rs. {order.balanceDueNpr?.toLocaleString()}</span>
+                        <span>{currencySymbol} {order.balanceDueNpr?.toLocaleString()}</span>
                       </div>
                     )}
                   </div>
@@ -466,7 +484,7 @@ export default function ShopOrderDetailPage() {
                         <span className="font-medium text-sm">Commission Due</span>
                       </div>
                       <div className="text-sm text-yellow-700">
-                        <p>Amount: NPR {order.commissionLedger.amountNpr?.toFixed(2)}</p>
+                        <p>Amount: {currencySymbol} {order.commissionLedger.amountNpr?.toFixed(2)}</p>
                         <p>Due: {new Date(order.commissionLedger.dueAt).toLocaleDateString()}</p>
                         <p>Status: {order.commissionLedger.status}</p>
                       </div>

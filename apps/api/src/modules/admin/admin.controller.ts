@@ -282,6 +282,125 @@ export class AdminController {
     };
   }
 
+  @Post('users/:userId/shops')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Create a new shop for an existing user' })
+  async createShopForUser(
+    @Param('userId') userId: string,
+    @CurrentUser('id') adminId: string,
+    @Body() data: {
+      shopName: string;
+      city: string;
+      address: string;
+      contactPhone: string;
+      contactEmail?: string;
+      country?: string;
+      state?: string;
+      pincode?: string;
+      isVerified?: boolean;
+    },
+  ) {
+    // Check if user exists
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return { success: false, error: 'User not found' };
+    }
+
+    // Update user role to SHOPKEEPER if they're a CUSTOMER
+    if (user.role === 'CUSTOMER') {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { role: 'SHOPKEEPER' },
+      });
+    }
+
+    // Create the shop
+    const shop = await this.prisma.shop.create({
+      data: {
+        userId,
+        shopName: data.shopName,
+        city: data.city,
+        address: data.address,
+        contactPhone: data.contactPhone,
+        contactEmail: data.contactEmail,
+        country: data.country || 'NP',
+        state: data.state,
+        pincode: data.pincode,
+        isVerified: data.isVerified ?? true, // Admin created = verified by default
+      },
+    });
+
+    // Set as active shop if user doesn't have one
+    if (!user.activeShopId) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { activeShopId: shop.id },
+      });
+    }
+
+    // Log audit
+    this.logger.log(`Admin ${adminId} created shop ${shop.id} for user ${userId}`);
+
+    return {
+      success: true,
+      shop: {
+        id: shop.id,
+        shopName: shop.shopName,
+        city: shop.city,
+        country: shop.country,
+        isVerified: shop.isVerified,
+      },
+    };
+  }
+
+  @Delete('users/:userId/shops/:shopId')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Delete a shop from a user' })
+  async deleteUserShop(
+    @Param('userId') userId: string,
+    @Param('shopId') shopId: string,
+    @CurrentUser('id') adminId: string,
+  ) {
+    // Check if shop exists and belongs to user
+    const shop = await this.prisma.shop.findFirst({
+      where: { id: shopId, userId },
+    });
+
+    if (!shop) {
+      return { success: false, error: 'Shop not found or does not belong to this user' };
+    }
+
+    // Delete shop and related data in transaction
+    await this.prisma.$transaction(async (tx) => {
+      // Delete metal rates
+      await tx.shopMetalRate.deleteMany({ where: { shopId } });
+      // Delete finish pricing
+      await tx.shopFinishPricing.deleteMany({ where: { shopId } });
+      // Delete verification requests
+      await tx.verificationRequest.deleteMany({ where: { shopId } });
+      // Delete shop
+      await tx.shop.delete({ where: { id: shopId } });
+      
+      // Clear active shop if this was the active one
+      const user = await tx.user.findUnique({ where: { id: userId } });
+      if (user?.activeShopId === shopId) {
+        // Find another shop for this user
+        const otherShop = await tx.shop.findFirst({ where: { userId } });
+        await tx.user.update({
+          where: { id: userId },
+          data: { activeShopId: otherShop?.id || null },
+        });
+      }
+    });
+
+    this.logger.log(`Admin ${adminId} deleted shop ${shopId} from user ${userId}`);
+
+    return { success: true, message: 'Shop deleted successfully' };
+  }
+
   // ═══════════════════════════════════════
   // PLATFORM SETTINGS
   // ═══════════════════════════════════════

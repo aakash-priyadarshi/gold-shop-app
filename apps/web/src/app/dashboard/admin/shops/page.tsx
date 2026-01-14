@@ -56,6 +56,15 @@ import { toast } from '@/hooks/use-toast';
 import api, { adminApi } from '@/lib/api';
 import { Textarea } from '@/components/ui/textarea';
 
+interface ShopMaterial {
+  materialCode: string;
+  materialName?: string;
+  makingChargePerGram?: number;
+  wastagePercentage?: number;
+  useCustomPricing: boolean;
+  customRatePerGram?: number;
+}
+
 interface Shop {
   id: string;
   shopName: string;
@@ -64,6 +73,8 @@ interface Shop {
   country: string;
   city: string;
   address?: string;
+  state?: string;
+  pincode?: string;
   contactPhone?: string;
   contactEmail?: string;
   currency: string;
@@ -71,9 +82,19 @@ interface Shop {
   isActive: boolean;
   createdAt: string;
   supportedJewelleryTypes?: string[];
+  supportedMaterials?: string[];
   supportedMethods?: string[];
+  supportedFinishes?: string[];
   makingChargePercent?: number;
   codEnabled?: boolean;
+  rating?: number;
+  totalReviews?: number;
+  shopMaterials?: ShopMaterial[];
+  _count?: {
+    inventory?: number;
+    orders?: number;
+    rfqs?: number;
+  };
   owner?: {
     id: string;
     firstName: string;
@@ -547,7 +568,8 @@ export default function AdminShopsPage() {
                           <TableHead>Shop</TableHead>
                           <TableHead>Owner</TableHead>
                           <TableHead>Location</TableHead>
-                          <TableHead>Currency</TableHead>
+                          <TableHead>Materials</TableHead>
+                          <TableHead>Products</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Registered</TableHead>
                           <TableHead>Actions</TableHead>
@@ -598,7 +620,22 @@ export default function AdminShopsPage() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline">{shop.currency}</Badge>
+                              <div className="flex flex-wrap gap-1">
+                                {(shop.supportedMaterials || shop.shopMaterials?.map(m => m.materialCode) || []).slice(0, 3).map((material: string) => (
+                                  <Badge key={material} variant="outline" className="text-xs">{material}</Badge>
+                                ))}
+                                {((shop.supportedMaterials?.length || shop.shopMaterials?.length || 0) > 3) && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    +{(shop.supportedMaterials?.length || shop.shopMaterials?.length || 0) - 3}
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-center">
+                                <p className="font-medium">{shop._count?.inventory || 0}</p>
+                                <p className="text-xs text-muted-foreground">items</p>
+                              </div>
                             </TableCell>
                             <TableCell>
                               {shop.isVerified ? (
@@ -784,11 +821,112 @@ export default function AdminShopsPage() {
                       <p>{selectedShop.codEnabled ? 'Yes' : 'No'}</p>
                     </div>
                     <div>
+                      <Label className="text-muted-foreground text-sm">Rating</Label>
+                      <p>{selectedShop.rating?.toFixed(1) || 'N/A'} ({selectedShop.totalReviews || 0} reviews)</p>
+                    </div>
+                    <div>
                       <Label className="text-muted-foreground text-sm">Registered</Label>
                       <p>{formatDate(selectedShop.createdAt)}</p>
                     </div>
                   </div>
                 </div>
+
+                {/* Statistics */}
+                {selectedShop._count && (
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-3">Statistics</h4>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="text-center p-3 rounded-lg bg-muted">
+                        <p className="text-2xl font-bold">{selectedShop._count.inventory || 0}</p>
+                        <p className="text-sm text-muted-foreground">Products</p>
+                      </div>
+                      <div className="text-center p-3 rounded-lg bg-muted">
+                        <p className="text-2xl font-bold">{selectedShop._count.orders || 0}</p>
+                        <p className="text-sm text-muted-foreground">Orders</p>
+                      </div>
+                      <div className="text-center p-3 rounded-lg bg-muted">
+                        <p className="text-2xl font-bold">{selectedShop._count.rfqs || 0}</p>
+                        <p className="text-sm text-muted-foreground">RFQs</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Supported Materials */}
+                {(selectedShop.supportedMaterials?.length || selectedShop.shopMaterials?.length) ? (
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-3">Supported Materials</h4>
+                    {selectedShop.shopMaterials?.length ? (
+                      <div className="space-y-2">
+                        {selectedShop.shopMaterials.map((material) => (
+                          <div key={material.materialCode} className="flex items-center justify-between p-3 rounded-lg bg-muted">
+                            <div>
+                              <p className="font-medium">{material.materialName || material.materialCode}</p>
+                              <div className="text-sm text-muted-foreground">
+                                {material.useCustomPricing ? (
+                                  <span className="text-amber-600">Custom Rate: {selectedShop.currency} {material.customRatePerGram}/g</span>
+                                ) : (
+                                  <span>Using market rate</span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right text-sm">
+                              <p>Making: {material.makingChargePerGram || 0}/g</p>
+                              <p>Wastage: {material.wastagePercentage || 0}%</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedShop.supportedMaterials?.map((material) => (
+                          <Badge key={material} variant="outline">{material}</Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+
+                {/* Supported Jewellery Types */}
+                {selectedShop.supportedJewelleryTypes?.length ? (
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-3">Jewellery Types</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedShop.supportedJewelleryTypes.map((type) => (
+                        <Badge key={type} variant="outline" className="bg-gold-50 text-gold-700">{type}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Build Methods & Finishes */}
+                {(selectedShop.supportedMethods?.length || selectedShop.supportedFinishes?.length) ? (
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-3">Capabilities</h4>
+                    <div className="space-y-3">
+                      {selectedShop.supportedMethods?.length ? (
+                        <div>
+                          <Label className="text-muted-foreground text-sm">Build Methods</Label>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {selectedShop.supportedMethods.map((method) => (
+                              <Badge key={method} variant="secondary">{method}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                      {selectedShop.supportedFinishes?.length ? (
+                        <div>
+                          <Label className="text-muted-foreground text-sm">Finishes</Label>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {selectedShop.supportedFinishes.map((finish) => (
+                              <Badge key={finish} variant="secondary">{finish}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             )}
             <DialogFooter>

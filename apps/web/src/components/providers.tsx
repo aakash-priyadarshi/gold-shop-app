@@ -7,6 +7,7 @@ import { ThemeProvider } from 'next-themes';
 import { AuthProvider } from '@/hooks/useAuth';
 import { MarketProvider, useMarket, type MarketRegion, type CurrencyCode as MarketCurrency } from '@/hooks/useMarket';
 import { usePreferencesStore, type CountryCode, type CurrencyCode } from '@/store/preferences';
+import { CartProvider } from '@/contexts/CartContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,11 +84,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <AuthProvider>
-            <MarketProvider>
-              <MarketPreferencesSync>
-                {children}
-              </MarketPreferencesSync>
-            </MarketProvider>
+            <CartProvider>
+              <MarketProvider>
+                <MarketPreferencesSync>
+                  {children}
+                </MarketPreferencesSync>
+              </MarketProvider>
+            </CartProvider>
           </AuthProvider>
         </ThemeProvider>
       </QueryClientProvider>
