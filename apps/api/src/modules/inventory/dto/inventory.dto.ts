@@ -161,6 +161,42 @@ export class UpdateInventoryItemDto {
   @IsOptional()
   descriptionHi?: string;
 
+  @ApiPropertyOptional({ description: 'SKU code' })
+  @IsString()
+  @IsOptional()
+  sku?: string;
+
+  @ApiPropertyOptional({ description: 'Jewellery type' })
+  @IsString()
+  @IsOptional()
+  jewelleryType?: string;
+
+  @ApiPropertyOptional({ description: 'Build method used (METHOD_A, METHOD_B, METHOD_C, METHOD_D)' })
+  @IsString()
+  @IsOptional()
+  buildMethod?: string;
+
+  @ApiPropertyOptional({ description: 'Composition details (JSON)' })
+  @IsObject()
+  @IsOptional()
+  composition?: Record<string, unknown>;
+
+  @ApiPropertyOptional({ description: 'Total weight in grams' })
+  @IsNumber()
+  @Min(0.01)
+  @IsOptional()
+  totalWeightGrams?: number;
+
+  @ApiPropertyOptional({ description: 'Dimensions (JSON)' })
+  @IsObject()
+  @IsOptional()
+  dimensions?: Record<string, unknown>;
+
+  @ApiPropertyOptional({ description: 'Gemstones details (JSON)' })
+  @IsObject()
+  @IsOptional()
+  gemstones?: Record<string, unknown>;
+
   @ApiPropertyOptional()
   @IsNumber()
   @IsOptional()
@@ -208,6 +244,21 @@ export class UpdateInventoryItemDto {
   @IsNumber()
   @IsOptional()
   taxNpr?: number;
+
+  @ApiPropertyOptional({ description: 'Certificate URL' })
+  @IsString()
+  @IsOptional()
+  certificateUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Hallmark number' })
+  @IsString()
+  @IsOptional()
+  hallmarkNumber?: string;
+
+  @ApiPropertyOptional({ description: 'Purity certificate URL' })
+  @IsString()
+  @IsOptional()
+  purityCertUrl?: string;
 }
 
 export class InventoryFilterDto {
