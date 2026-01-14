@@ -60,6 +60,8 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { inventoryApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { useImageUpload } from '@/hooks/useImageUpload';
+import { getImageUrl } from '@/lib/image-upload';
 
 interface InventoryItem {
   id: string;
@@ -213,9 +215,31 @@ export default function ShopProductsPage() {
   const [editingProduct, setEditingProduct] = useState<InventoryItem | null>(null);
   const [formData, setFormData] = useState<ProductFormData>(emptyForm);
   const [newImageUrl, setNewImageUrl] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  
+  // Image upload hook
+  const { uploading: isUploadingImage, progress: imageProgress, upload: uploadImage } = useImageUpload({
+    type: 'product',
+    onSuccess: (result) => {
+      if (result.url) {
+        setFormData(prev => ({
+          ...prev,
+          images: [...prev.images, result.url!],
+        }));
+        toast({
+          title: 'Image Uploaded',
+          description: 'Image uploaded to cloud successfully',
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        variant: 'destructive',
+        title: 'Upload Failed',
+        description: error,
+      });
+    },
+  });
   
   // Delete confirmation
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -294,86 +318,26 @@ export default function ShopProductsPage() {
     setIsDialogOpen(true);
   };
 
-  // Image compression/optimization
-  const compressImage = async (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          
-          // Max dimensions for optimization
-          const MAX_WIDTH = 1200;
-          const MAX_HEIGHT = 1200;
-          let { width, height } = img;
-          
-          if (width > MAX_WIDTH) {
-            height = (height * MAX_WIDTH) / width;
-            width = MAX_WIDTH;
-          }
-          if (height > MAX_HEIGHT) {
-            width = (width * MAX_HEIGHT) / height;
-            height = MAX_HEIGHT;
-          }
-          
-          canvas.width = width;
-          canvas.height = height;
-          ctx?.drawImage(img, 0, 0, width, height);
-          
-          // Convert to JPEG with 80% quality for smaller file size
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-          resolve(dataUrl);
-        };
-        img.onerror = reject;
-        img.src = e.target?.result as string;
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
+  // Handle image file selection and upload to R2
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // Check file size (max 5MB before compression)
-    if (file.size > 5 * 1024 * 1024) {
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
       toast({
         variant: 'destructive',
         title: 'File Too Large',
-        description: 'Please select an image smaller than 5MB',
+        description: 'Please select an image smaller than 10MB',
       });
       return;
     }
     
-    setImageFile(file);
-    setIsUploadingImage(true);
+    // Upload to Cloudflare R2
+    await uploadImage(file);
     
-    try {
-      const compressedDataUrl = await compressImage(file);
-      setImagePreview(compressedDataUrl);
-      // Add to images array
-      setFormData({
-        ...formData,
-        images: [...formData.images, compressedDataUrl],
-      });
-      toast({
-        title: 'Image Added',
-        description: 'Image optimized and added successfully',
-      });
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Image Error',
-        description: 'Failed to process image',
-      });
-    } finally {
-      setIsUploadingImage(false);
-      setImageFile(null);
-      setImagePreview(null);
-    }
+    // Reset the input
+    e.target.value = '';
   };
 
   // Gemstone helpers
@@ -615,7 +579,7 @@ export default function ShopProductsPage() {
                             <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
                               {product.images?.[0] ? (
                                 <img
-                                  src={product.images[0]}
+                                  src={getImageUrl(product.images[0], 'thumbnail')}
                                   alt={product.nameEn}
                                   className="w-full h-full object-cover"
                                 />
@@ -1010,18 +974,24 @@ export default function ShopProductsPage() {
                   />
                   <label htmlFor="image-upload" className="cursor-pointer">
                     {isUploadingImage ? (
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex flex-col items-center justify-center gap-2">
                         <Loader2 className="h-5 w-5 animate-spin" />
-                        <span>Processing...</span>
+                        <span>Uploading to cloud... {imageProgress}%</span>
+                        <div className="w-full max-w-xs h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-primary transition-all duration-300" 
+                            style={{ width: `${imageProgress}%` }}
+                          />
+                        </div>
                       </div>
                     ) : (
                       <div className="space-y-2">
                         <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground" />
                         <p className="text-sm text-muted-foreground">
-                          Click to upload image (max 5MB)
+                          Click to upload image (max 10MB)
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Images will be automatically optimized
+                          Images are stored on Cloudflare for fast delivery
                         </p>
                       </div>
                     )}
@@ -1046,7 +1016,7 @@ export default function ShopProductsPage() {
                     {formData.images.map((url, idx) => (
                       <div key={idx} className="relative group">
                         <img
-                          src={url}
+                          src={getImageUrl(url, 'thumbnail')}
                           alt={`Product ${idx + 1}`}
                           className="w-20 h-20 object-cover rounded-lg border"
                         />

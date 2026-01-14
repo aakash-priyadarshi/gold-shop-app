@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
@@ -47,10 +47,13 @@ import {
   Sparkles,
   Phone,
   ShieldCheck,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { usePreferencesStore, CURRENCIES, COUNTRIES, type CurrencyCode, type CountryCode } from '@/store/preferences';
 import { useMarket, WEIGHT_UNIT_SYMBOLS, type WeightUnit } from '@/hooks/useMarket';
 import { toGrams, fromGrams } from '@gold-shop/shared';
+import { useImageUpload } from '@/hooks/useImageUpload';
+import { getImageUrl } from '@/lib/image-upload';
 
 // New pricing components
 import { AlloyBuilder, type AlloyConfig } from '@/components/pricing/AlloyBuilder';
@@ -260,6 +263,49 @@ export default function CreateRfqPage() {
   const [marketRates, setMarketRates] = useState<MarketRates | null>(null);
   const [marketRatesLoading, setMarketRatesLoading] = useState(false);
   const [marketRatesWarning, setMarketRatesWarning] = useState<string | null>(null);
+  
+  // Image upload for reference images
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { uploading: isUploadingImage, progress: uploadProgress, upload: uploadImageToR2 } = useImageUpload({
+    type: 'rfq',
+    onSuccess: (result) => {
+      if (result.url) {
+        setFormData(prev => ({
+          ...prev,
+          referenceImages: [...prev.referenceImages, result.url!],
+        }));
+      }
+    },
+    onError: (error) => {
+      setError(`Image upload failed: ${error}`);
+    },
+  });
+  
+  const handleReferenceImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    
+    // Upload each file
+    for (const file of Array.from(files)) {
+      if (file.size > 10 * 1024 * 1024) {
+        setError('Each image must be smaller than 10MB');
+        continue;
+      }
+      await uploadImageToR2(file);
+    }
+    
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+  
+  const removeReferenceImage = (url: string) => {
+    setFormData(prev => ({
+      ...prev,
+      referenceImages: prev.referenceImages.filter(img => img !== url),
+    }));
+  };
 
   const [formData, setFormData] = useState({
     jewelleryType: '',
@@ -1301,18 +1347,67 @@ export default function CreateRfqPage() {
 
                 <div className="space-y-2">
                   <Label>Reference Images (Optional)</Label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                    <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-600 mb-2">
-                      Upload images of designs you like
-                    </p>
-                    <Button variant="outline" size="sm">
-                      Browse Files
-                    </Button>
-                    <p className="text-xs text-gray-400 mt-2">
-                      PNG, JPG up to 5MB each
-                    </p>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleReferenceImageUpload}
+                      className="hidden"
+                      id="rfq-image-upload"
+                      disabled={isUploadingImage}
+                    />
+                    <label htmlFor="rfq-image-upload" className="cursor-pointer block">
+                      {isUploadingImage ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                          <p className="text-sm text-gray-600">Uploading... {uploadProgress}%</p>
+                          <div className="w-full max-w-xs h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-primary transition-all duration-300" 
+                              style={{ width: `${uploadProgress}%` }}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                          <p className="text-sm text-gray-600 mb-2">
+                            Upload images of designs you like
+                          </p>
+                          <Button type="button" variant="outline" size="sm" asChild>
+                            <span>Browse Files</span>
+                          </Button>
+                          <p className="text-xs text-gray-400 mt-2">
+                            PNG, JPG, WebP up to 10MB each
+                          </p>
+                        </>
+                      )}
+                    </label>
                   </div>
+                  
+                  {/* Preview uploaded images */}
+                  {formData.referenceImages.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {formData.referenceImages.map((url, idx) => (
+                        <div key={idx} className="relative group">
+                          <img
+                            src={getImageUrl(url, 'thumbnail')}
+                            alt={`Reference ${idx + 1}`}
+                            className="w-20 h-20 object-cover rounded-lg border"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeReferenceImage(url)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
