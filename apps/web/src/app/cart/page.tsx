@@ -45,6 +45,7 @@ import { toast } from '@/hooks/use-toast';
 import { useCart, type DeliveryAddress, type DeliveryEstimate } from '@/contexts/CartContext';
 import { useAuth } from '@/hooks/useAuth';
 import api from '@/lib/api';
+import { usePreferencesStore, CURRENCIES } from '@/store/preferences';
 
 const COUNTRIES = [
   { code: 'NP', name: 'Nepal', flag: '🇳🇵' },
@@ -81,6 +82,32 @@ export default function CartPage() {
     setSelectedAddress,
     estimateDelivery,
   } = useCart();
+
+  // Currency from preferences
+  const currency = usePreferencesStore((state) => state.currency);
+  const currencyInfo = CURRENCIES[currency];
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Format price in user's preferred currency
+  const formatPrice = (priceNpr: number) => {
+    if (!mounted) {
+      return new Intl.NumberFormat('ne-NP', {
+        style: 'currency',
+        currency: 'NPR',
+        minimumFractionDigits: 0,
+      }).format(priceNpr);
+    }
+    
+    return new Intl.NumberFormat(currencyInfo?.locale || 'en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 0,
+    }).format(priceNpr);
+  };
 
   const [shopInfos, setShopInfos] = useState<Record<string, ShopInfo>>({});
   const [deliveryEstimates, setDeliveryEstimates] = useState<Record<string, DeliveryEstimate>>({});
@@ -363,7 +390,7 @@ export default function CartPage() {
 
                         <div className="flex flex-col items-end gap-2">
                           <p className="font-semibold">
-                            रू {(item.product.price * item.quantity).toLocaleString()}
+                            {formatPrice(item.product.price * item.quantity)}
                           </p>
                           
                           <div className="flex items-center gap-1 border rounded-md">
@@ -624,7 +651,7 @@ export default function CartPage() {
               <CardContent className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal ({itemCount} items)</span>
-                  <span>रू {subtotal.toLocaleString()}</span>
+                  <span>{formatPrice(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Shipping</span>
@@ -637,7 +664,7 @@ export default function CartPage() {
                 <Separator />
                 <div className="flex justify-between font-semibold text-lg">
                   <span>Total</span>
-                  <span>रू {subtotal.toLocaleString()}+</span>
+                  <span>{formatPrice(subtotal)}+</span>
                 </div>
               </CardContent>
               <CardFooter>

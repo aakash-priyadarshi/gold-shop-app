@@ -151,7 +151,7 @@ export default function CustomerSettingsPage() {
         lastName: profile.lastName,
         phone: profile.phone || null,
         preferredCurrency: profile.preferredCurrency,
-        preferredCountry: profile.preferredCountry,
+        country: profile.preferredCountry, // Backend uses 'country', not 'preferredCountry'
       });
 
       // Update global preferences store
