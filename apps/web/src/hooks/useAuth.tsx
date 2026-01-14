@@ -26,6 +26,7 @@ export interface User {
   preferredCurrency: string;
   themeMode: string;
   emailVerifiedAt?: string;
+  phoneVerifiedAt?: string;
   createdAt: string;
   lastLoginAt?: string;
   shop?: {

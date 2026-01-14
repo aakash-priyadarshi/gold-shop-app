@@ -126,13 +126,19 @@ export const usePreferencesStore = create<PreferencesState>()(
         }
       },
 
-      // Set country (TAX jurisdiction only - does NOT affect display currency)
+      // Set country (TAX jurisdiction) - also updates currency to country's default
       // When called directly by user action, sets a flag to prevent geo-override
       setCountry: async (country) => {
-        set({ country });
+        // Get the default currency for the selected country
+        const defaultCurrency = COUNTRIES[country]?.defaultCurrency || 'USD';
+        
+        // Update both country and currency together
+        set({ country, currency: defaultCurrency });
+        
         // Mark that user explicitly chose a country (prevents geo-detection override)
         if (typeof window !== 'undefined') {
           localStorage.setItem('orivraa_user_country_choice', 'true');
+          localStorage.setItem('orivraa_user_currency_choice', 'true');
         }
         const { isAuthenticated, syncToServer } = get();
         if (isAuthenticated) {

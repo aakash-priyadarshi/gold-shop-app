@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
@@ -191,14 +191,13 @@ interface MarketRates {
 
 export default function CreateRfqPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // User verification status
-  const user = (session?.user as any) || null;
-  const isLoggedIn = !!session?.user;
+  // User verification status - use useAuth hook instead of useSession
+  const isLoggedIn = isAuthenticated && !!user;
   const isPhoneVerified = !!(user?.phoneVerifiedAt);
   const isSeller = user?.role === 'SHOPKEEPER' || user?.role === 'ADMIN';
   const isShopVerified = !!(user?.shop?.isVerified);
@@ -735,13 +734,14 @@ export default function CreateRfqPage() {
     setError('');
 
     const weight = getWeightFromTemplate();
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
     try {
       const response = await fetch(`${API_URL}/rfq`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.accessToken}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           jewelleryType: formData.jewelleryType,

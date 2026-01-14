@@ -57,7 +57,7 @@ function OAuthCallbackHandler() {
             title: 'Almost there!',
             description: 'Please complete your shop details to finish registration.',
           });
-          router.push('/auth/complete-shop-setup');
+          window.location.href = '/auth/complete-shop-setup';
           return;
         }
 
@@ -67,8 +67,10 @@ function OAuthCallbackHandler() {
         });
 
         // Redirect to appropriate dashboard
+        // Use window.location.href instead of router.push to force full page reload
+        // This ensures NextAuth session and all auth state is properly refreshed
         const dashboardRoute = getDashboardRoute(user.role as UserRole);
-        router.push(dashboardRoute);
+        window.location.href = dashboardRoute;
       } catch (error: any) {
         console.error('OAuth callback error:', error);
         localStorage.removeItem(TOKEN_KEY);
