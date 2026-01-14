@@ -57,9 +57,10 @@ import {
   ShieldCheckIcon,
   TruckIcon,
 } from '@heroicons/react/24/outline';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTheme } from 'next-themes';
 import { useAuth, getDashboardRoute, type UserRole } from '@/hooks/useAuth';
+import { notificationsApi } from '@/lib/api';
 import {
   usePreferencesStore,
   CURRENCIES,
@@ -97,6 +98,7 @@ export function Header() {
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   // Get preferences from store
   const language = usePreferencesStore((state) => state.language);
@@ -115,6 +117,28 @@ export function Header() {
     setMounted(true);
     setAuthenticated(isAuthenticated);
   }, [isAuthenticated, setAuthenticated]);
+
+  // Fetch unread notification count
+  const fetchNotificationCount = useCallback(async () => {
+    if (!isAuthenticated) {
+      setUnreadNotifications(0);
+      return;
+    }
+    try {
+      const response = await notificationsApi.getUnreadCount();
+      setUnreadNotifications(response.data?.count || 0);
+    } catch (error) {
+      console.error('Failed to fetch notification count:', error);
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    fetchNotificationCount();
+    
+    // Poll for new notifications every 30 seconds
+    const interval = setInterval(fetchNotificationCount, 30000);
+    return () => clearInterval(interval);
+  }, [fetchNotificationCount]);
 
   const navigation = [
     { name: 'Shop', href: '/shop', icon: ShoppingBagIcon },
@@ -408,9 +432,11 @@ export function Header() {
                   <Link href="/notifications">
                     <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-lg">
                       <BellIcon className="h-5 w-5" />
-                      <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
-                        3
-                      </span>
+                      {unreadNotifications > 0 && (
+                        <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
+                          {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                        </span>
+                      )}
                     </Button>
                   </Link>
                 </TooltipTrigger>
@@ -536,9 +562,11 @@ export function Header() {
               <Link href="/notifications">
                 <Button variant="ghost" size="icon" className="relative touch-target">
                   <BellIcon className="h-5 w-5" />
-                  <span className="absolute top-1 right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                    3
-                  </span>
+                  {unreadNotifications > 0 && (
+                    <span className="absolute top-1 right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                      {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                    </span>
+                  )}
                 </Button>
               </Link>
               <Link href={getDashboardRoute(user.role)}>
