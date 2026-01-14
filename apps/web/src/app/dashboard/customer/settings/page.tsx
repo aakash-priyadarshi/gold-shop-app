@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -20,10 +21,30 @@ import {
   Save,
   Loader2,
   Globe,
+  MapPin,
+  Phone,
+  Plus,
+  Trash2,
+  Home,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { usePreferencesStore, CURRENCIES, COUNTRIES, CurrencyCode, CountryCode } from '@/store/preferences';
+
+interface DeliveryAddress {
+  id?: string;
+  label: string;
+  fullName: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  isDefault: boolean;
+}
 
 interface UserProfile {
   id: string;
@@ -33,22 +54,30 @@ interface UserProfile {
   phone: string | null;
   preferredLanguage: string;
   preferredCurrency: string;
+  preferredCountry?: string;
+  deliveryAddresses?: DeliveryAddress[];
 }
 
-const currencies = [
-  { value: 'USD', label: 'USD - US Dollar' },
-  { value: 'EUR', label: 'EUR - Euro' },
-  { value: 'GBP', label: 'GBP - British Pound' },
-  { value: 'INR', label: 'INR - Indian Rupee' },
-  { value: 'NPR', label: 'NPR - Nepalese Rupee' },
-  { value: 'AED', label: 'AED - UAE Dirham' },
+const countries = [
+  { value: 'NP', label: 'Nepal', flag: '🇳🇵' },
+  { value: 'IN', label: 'India', flag: '🇮🇳' },
+  { value: 'AE', label: 'UAE', flag: '🇦🇪' },
+  { value: 'UK', label: 'United Kingdom', flag: '🇬🇧' },
+  { value: 'EU', label: 'Europe', flag: '🇪🇺' },
+  { value: 'US', label: 'United States', flag: '🇺🇸' },
 ];
 
 export default function CustomerSettingsPage() {
   const { user, refreshUser } = useAuth();
+  const setCurrency = usePreferencesStore((state) => state.setCurrency);
+  const setCountry = usePreferencesStore((state) => state.setCountry);
+  const currentCurrency = usePreferencesStore((state) => state.currency);
+  const currentCountry = usePreferencesStore((state) => state.country);
+  
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
   
   const [profile, setProfile] = useState<UserProfile>({
     id: '',
@@ -58,6 +87,24 @@ export default function CustomerSettingsPage() {
     phone: '',
     preferredLanguage: 'en',
     preferredCurrency: 'USD',
+    preferredCountry: 'US',
+    deliveryAddresses: [],
+  });
+
+  const [addresses, setAddresses] = useState<DeliveryAddress[]>([]);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<DeliveryAddress | null>(null);
+  const [newAddress, setNewAddress] = useState<DeliveryAddress>({
+    label: 'Home',
+    fullName: '',
+    phone: '',
+    addressLine1: '',
+    addressLine2: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    country: 'NP',
+    isDefault: false,
   });
 
   const [passwords, setPasswords] = useState({
@@ -83,8 +130,12 @@ export default function CustomerSettingsPage() {
         email: response.data.email || '',
         phone: response.data.phone || '',
         preferredLanguage: response.data.preferredLanguage || 'en',
-        preferredCurrency: response.data.preferredCurrency || 'USD',
+        preferredCurrency: response.data.preferredCurrency || currentCurrency,
+        preferredCountry: response.data.preferredCountry || currentCountry,
+        deliveryAddresses: response.data.deliveryAddresses || [],
       });
+      // Load delivery addresses
+      setAddresses(response.data.deliveryAddresses || []);
     } catch (error) {
       console.error('Failed to load profile:', error);
     } finally {
@@ -100,7 +151,14 @@ export default function CustomerSettingsPage() {
         lastName: profile.lastName,
         phone: profile.phone || null,
         preferredCurrency: profile.preferredCurrency,
+        preferredCountry: profile.preferredCountry,
       });
+
+      // Update global preferences store
+      setCurrency(profile.preferredCurrency as CurrencyCode);
+      if (profile.preferredCountry) {
+        setCountry(profile.preferredCountry as CountryCode);
+      }
 
       toast({
         title: 'Profile Updated',
@@ -116,6 +174,85 @@ export default function CustomerSettingsPage() {
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const saveAddress = async () => {
+    setIsSavingAddress(true);
+    try {
+      const addressData = editingAddress || newAddress;
+      
+      if (editingAddress?.id) {
+        // Update existing address
+        await api.patch(`/users/me/addresses/${editingAddress.id}`, addressData);
+        setAddresses(addresses.map(a => a.id === editingAddress.id ? { ...addressData, id: editingAddress.id } : a));
+      } else {
+        // Create new address
+        const response = await api.post('/users/me/addresses', addressData);
+        setAddresses([...addresses, response.data]);
+      }
+
+      toast({
+        title: editingAddress ? 'Address Updated' : 'Address Added',
+        description: 'Your delivery address has been saved',
+      });
+
+      setShowAddressForm(false);
+      setEditingAddress(null);
+      setNewAddress({
+        label: 'Home',
+        fullName: '',
+        phone: '',
+        addressLine1: '',
+        addressLine2: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: 'NP',
+        isDefault: false,
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to save address',
+        description: error.response?.data?.message || 'Could not save address',
+      });
+    } finally {
+      setIsSavingAddress(false);
+    }
+  };
+
+  const deleteAddress = async (addressId: string) => {
+    try {
+      await api.delete(`/users/me/addresses/${addressId}`);
+      setAddresses(addresses.filter(a => a.id !== addressId));
+      toast({
+        title: 'Address Deleted',
+        description: 'The delivery address has been removed',
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Delete Failed',
+        description: error.response?.data?.message || 'Could not delete address',
+      });
+    }
+  };
+
+  const setDefaultAddress = async (addressId: string) => {
+    try {
+      await api.patch(`/users/me/addresses/${addressId}/default`);
+      setAddresses(addresses.map(a => ({ ...a, isDefault: a.id === addressId })));
+      toast({
+        title: 'Default Address Updated',
+        description: 'Your default delivery address has been set',
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Update Failed',
+        description: error.response?.data?.message || 'Could not set default address',
+      });
     }
   };
 
@@ -251,26 +388,59 @@ export default function CustomerSettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="pref-currency">Preferred Currency</Label>
-                <Select
-                  value={profile.preferredCurrency}
-                  onValueChange={(value) => setProfile({ ...profile, preferredCurrency: value })}
-                >
-                  <SelectTrigger id="pref-currency" className="w-64">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {currencies.map((currency) => (
-                      <SelectItem key={currency.value} value={currency.value}>
-                        {currency.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Prices will be displayed in this currency where possible
-                </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="pref-country">Country</Label>
+                  <Select
+                    value={profile.preferredCountry || 'US'}
+                    onValueChange={(value) => {
+                      setProfile({ ...profile, preferredCountry: value });
+                      // Auto-update currency based on country
+                      const countryInfo = COUNTRIES[value as CountryCode];
+                      if (countryInfo?.defaultCurrency) {
+                        setProfile(prev => ({ ...prev, preferredCountry: value, preferredCurrency: countryInfo.defaultCurrency }));
+                      }
+                    }}
+                  >
+                    <SelectTrigger id="pref-country" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map((country) => (
+                        <SelectItem key={country.value} value={country.value}>
+                          <span className="flex items-center gap-2">
+                            <span>{country.flag}</span>
+                            <span>{country.label}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Used for tax calculations and regional pricing
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pref-currency">Preferred Currency</Label>
+                  <Select
+                    value={profile.preferredCurrency}
+                    onValueChange={(value) => setProfile({ ...profile, preferredCurrency: value })}
+                  >
+                    <SelectTrigger id="pref-currency" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(CURRENCIES).map(([code, info]) => (
+                        <SelectItem key={code} value={code}>
+                          {info.symbol} {code} - {info.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Prices will be displayed in this currency
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -291,6 +461,284 @@ export default function CustomerSettingsPage() {
               )}
             </Button>
           </div>
+
+          {/* Delivery Addresses */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5" />
+                    Delivery Addresses
+                  </CardTitle>
+                  <CardDescription>
+                    Manage your delivery addresses for orders
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEditingAddress(null);
+                    setShowAddressForm(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Address
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {addresses.length === 0 && !showAddressForm && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No delivery addresses saved yet</p>
+                  <p className="text-sm">Add an address for faster checkout</p>
+                </div>
+              )}
+
+              {/* Existing Addresses */}
+              {addresses.map((address) => (
+                <div
+                  key={address.id}
+                  className={`border rounded-lg p-4 ${address.isDefault ? 'border-gold-500 bg-gold-50' : ''}`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Home className="h-4 w-4" />
+                        <span className="font-medium">{address.label}</span>
+                        {address.isDefault && (
+                          <span className="text-xs bg-gold-100 text-gold-800 px-2 py-0.5 rounded">Default</span>
+                        )}
+                      </div>
+                      <p className="text-sm">{address.fullName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {address.addressLine1}
+                        {address.addressLine2 && `, ${address.addressLine2}`}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {address.city}, {address.state} {address.postalCode}
+                      </p>
+                      <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        <Phone className="h-3 w-3" />
+                        {address.phone}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      {!address.isDefault && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDefaultAddress(address.id!)}
+                        >
+                          Set Default
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setEditingAddress(address);
+                          setShowAddressForm(true);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => deleteAddress(address.id!)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Add/Edit Address Form */}
+              {showAddressForm && (
+                <div className="border rounded-lg p-4 space-y-4">
+                  <h4 className="font-medium">{editingAddress ? 'Edit Address' : 'New Address'}</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Label</Label>
+                      <Select
+                        value={(editingAddress || newAddress).label}
+                        onValueChange={(value) => {
+                          if (editingAddress) {
+                            setEditingAddress({ ...editingAddress, label: value });
+                          } else {
+                            setNewAddress({ ...newAddress, label: value });
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Home">Home</SelectItem>
+                          <SelectItem value="Work">Work</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Full Name</Label>
+                      <Input
+                        value={(editingAddress || newAddress).fullName}
+                        onChange={(e) => {
+                          if (editingAddress) {
+                            setEditingAddress({ ...editingAddress, fullName: e.target.value });
+                          } else {
+                            setNewAddress({ ...newAddress, fullName: e.target.value });
+                          }
+                        }}
+                        placeholder="John Doe"
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Phone Number</Label>
+                      <Input
+                        value={(editingAddress || newAddress).phone}
+                        onChange={(e) => {
+                          if (editingAddress) {
+                            setEditingAddress({ ...editingAddress, phone: e.target.value });
+                          } else {
+                            setNewAddress({ ...newAddress, phone: e.target.value });
+                          }
+                        }}
+                        placeholder="+977 98XXXXXXXX"
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Address Line 1</Label>
+                      <Input
+                        value={(editingAddress || newAddress).addressLine1}
+                        onChange={(e) => {
+                          if (editingAddress) {
+                            setEditingAddress({ ...editingAddress, addressLine1: e.target.value });
+                          } else {
+                            setNewAddress({ ...newAddress, addressLine1: e.target.value });
+                          }
+                        }}
+                        placeholder="Street address, P.O. box"
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Address Line 2 (Optional)</Label>
+                      <Input
+                        value={(editingAddress || newAddress).addressLine2 || ''}
+                        onChange={(e) => {
+                          if (editingAddress) {
+                            setEditingAddress({ ...editingAddress, addressLine2: e.target.value });
+                          } else {
+                            setNewAddress({ ...newAddress, addressLine2: e.target.value });
+                          }
+                        }}
+                        placeholder="Apartment, suite, unit, building, floor"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>City</Label>
+                      <Input
+                        value={(editingAddress || newAddress).city}
+                        onChange={(e) => {
+                          if (editingAddress) {
+                            setEditingAddress({ ...editingAddress, city: e.target.value });
+                          } else {
+                            setNewAddress({ ...newAddress, city: e.target.value });
+                          }
+                        }}
+                        placeholder="Kathmandu"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>State/Province</Label>
+                      <Input
+                        value={(editingAddress || newAddress).state}
+                        onChange={(e) => {
+                          if (editingAddress) {
+                            setEditingAddress({ ...editingAddress, state: e.target.value });
+                          } else {
+                            setNewAddress({ ...newAddress, state: e.target.value });
+                          }
+                        }}
+                        placeholder="Bagmati"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Postal Code</Label>
+                      <Input
+                        value={(editingAddress || newAddress).postalCode}
+                        onChange={(e) => {
+                          if (editingAddress) {
+                            setEditingAddress({ ...editingAddress, postalCode: e.target.value });
+                          } else {
+                            setNewAddress({ ...newAddress, postalCode: e.target.value });
+                          }
+                        }}
+                        placeholder="44600"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Country</Label>
+                      <Select
+                        value={(editingAddress || newAddress).country}
+                        onValueChange={(value) => {
+                          if (editingAddress) {
+                            setEditingAddress({ ...editingAddress, country: value });
+                          } else {
+                            setNewAddress({ ...newAddress, country: value });
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {countries.map((country) => (
+                            <SelectItem key={country.value} value={country.value}>
+                              <span className="flex items-center gap-2">
+                                <span>{country.flag}</span>
+                                <span>{country.label}</span>
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowAddressForm(false);
+                        setEditingAddress(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button onClick={saveAddress} disabled={isSavingAddress}>
+                      {isSavingAddress ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          {editingAddress ? 'Update Address' : 'Save Address'}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Security */}
           <Card>

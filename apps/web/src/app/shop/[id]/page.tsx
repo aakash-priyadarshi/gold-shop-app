@@ -63,6 +63,8 @@ interface InventoryItem {
 }
 
 import { getApiUrl } from '@/lib/api';
+import { usePreferencesStore, CURRENCIES } from '@/store/preferences';
+
 const API_URL = getApiUrl();
 
 export default function ProductDetailPage() {
@@ -72,6 +74,15 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [mounted, setMounted] = useState(false);
+  
+  // Get currency from global preferences store
+  const currency = usePreferencesStore((state) => state.currency);
+  const currencyInfo = CURRENCIES[currency];
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (params.id) {
@@ -93,12 +104,23 @@ export default function ProductDetailPage() {
     }
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('ne-NP', {
+  // Format price in user's preferred currency
+  const formatPrice = (priceNpr: number) => {
+    // TODO: Convert from NPR to user's currency using exchange rates
+    // For now, show in NPR with indication of user's currency preference
+    if (!mounted) {
+      return new Intl.NumberFormat('ne-NP', {
+        style: 'currency',
+        currency: 'NPR',
+        minimumFractionDigits: 0,
+      }).format(priceNpr);
+    }
+    
+    return new Intl.NumberFormat(currencyInfo?.locale || 'en-US', {
       style: 'currency',
-      currency: 'NPR',
+      currency: currency,
       minimumFractionDigits: 0,
-    }).format(price);
+    }).format(priceNpr);
   };
 
   if (loading) {
@@ -216,7 +238,7 @@ export default function ProductDetailPage() {
             <div className="space-y-6">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="outline">{item.metalType.replace('_', ' ')}</Badge>
+                  <Badge variant="outline">{item.metalType?.replace('_', ' ') || 'Unknown'}</Badge>
                   <Badge variant="secondary">{item.category}</Badge>
                   {item.stockQuantity <= 2 && item.stockQuantity > 0 && (
                     <Badge className="bg-orange-500">Only {item.stockQuantity} left</Badge>
@@ -388,7 +410,7 @@ export default function ProductDetailPage() {
                   <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex justify-between py-2 border-b">
                       <dt className="text-gray-500">Metal Type</dt>
-                      <dd className="font-medium">{item.metalType.replace('_', ' ')}</dd>
+                      <dd className="font-medium">{item.metalType?.replace('_', ' ') || 'N/A'}</dd>
                     </div>
                     <div className="flex justify-between py-2 border-b">
                       <dt className="text-gray-500">Purity</dt>

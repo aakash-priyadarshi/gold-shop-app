@@ -42,6 +42,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import { usePreferencesStore, CURRENCIES } from '@/store/preferences';
 
 interface InventoryItem {
   id: string;
@@ -77,6 +78,15 @@ export default function ShopPage() {
   const [sortBy, setSortBy] = useState('newest');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 500000]);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  
+  // Get currency from global preferences store
+  const currency = usePreferencesStore((state) => state.currency);
+  const currencyInfo = CURRENCIES[currency];
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     fetchItems();
@@ -159,12 +169,21 @@ export default function ShopPage() {
     return matchesSearch && matchesPrice && matchesMetal;
   });
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('ne-NP', {
+  const formatPrice = (priceNpr: number) => {
+    // Use user's preferred currency for display
+    if (!mounted) {
+      return new Intl.NumberFormat('ne-NP', {
+        style: 'currency',
+        currency: 'NPR',
+        minimumFractionDigits: 0,
+      }).format(priceNpr);
+    }
+    
+    return new Intl.NumberFormat(currencyInfo?.locale || 'en-US', {
       style: 'currency',
-      currency: 'NPR',
+      currency: currency,
       minimumFractionDigits: 0,
-    }).format(price);
+    }).format(priceNpr);
   };
 
   const clearFilters = () => {
