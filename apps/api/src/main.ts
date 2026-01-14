@@ -7,9 +7,9 @@ if (typeof globalThis.crypto === 'undefined') {
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import * as dns from 'dns';
 import helmet from 'helmet';
-import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 
 /**
@@ -45,9 +45,9 @@ function configureNetworking(): void {
 async function bootstrap() {
   // Configure networking before creating the app
   configureNetworking();
-  const app = await NestFactory.create(AppModule, {
-    // Increase body parser limit for image uploads
-    bodyParser: false, // Disable default body parser to use custom config
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    // Increase body parser limit for image uploads (10MB for base64 encoded images)
+    bodyParser: true,
   });
   const logger = new Logger('Bootstrap');
 
@@ -55,8 +55,8 @@ async function bootstrap() {
   // Body Parser Configuration
   // ======================
   // Increase limit for JSON payloads (for base64 encoded images)
-  app.use(json({ limit: '10mb' }));
-  app.use(urlencoded({ limit: '10mb', extended: true }));
+  app.useBodyParser('json', { limit: '10mb' });
+  app.useBodyParser('urlencoded', { limit: '10mb', extended: true });
 
   // ======================
   // Security Middleware
