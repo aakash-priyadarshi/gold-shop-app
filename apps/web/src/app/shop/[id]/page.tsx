@@ -32,12 +32,33 @@ import {
   ChevronLeft,
   ChevronRight,
   Minus,
-  Plus
+  Plus,
+  Info,
+  Sparkles,
+  CircleDot,
+  Ruler,
+  Weight,
+  Palette,
+  Diamond,
 } from 'lucide-react';
 import { getImageUrl } from '@/lib/image-upload';
+import { useCart } from '@/contexts/CartContext';
+import { toast } from '@/hooks/use-toast';
+
+interface GemstoneDetail {
+  type: string;
+  cut?: string;
+  caratWeight?: number;
+  color?: string;
+  clarity?: string;
+  setting?: string;
+  count?: number;
+  valueNpr?: number;
+}
 
 interface InventoryItem {
   id: string;
+  sku?: string;
   nameEn: string;
   nameNe?: string;
   descriptionEn?: string;
@@ -46,10 +67,18 @@ interface InventoryItem {
   buildMethod: string;
   composition: any;
   totalWeightGrams: number;
+  metalValueNpr?: number;
+  makingChargeNpr?: number;
+  gemstoneValueNpr?: number;
   totalPriceNpr: number;
   stockQuantity: number;
   images: string[];
   status: string;
+  gemstones?: GemstoneDetail[];
+  gender?: string;
+  occasion?: string;
+  collection?: string;
+  size?: string;
   shop: {
     id: string;
     shopName: string;
@@ -74,6 +103,10 @@ export default function ProductDetailPage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [mounted, setMounted] = useState(false);
+  const [addingToCart, setAddingToCart] = useState(false);
+  
+  // Cart context
+  const { addToCart } = useCart();
   
   // Get currency from global preferences store
   const currency = usePreferencesStore((state) => state.currency);
@@ -109,6 +142,79 @@ export default function ProductDetailPage() {
     const metal = item.composition?.baseAlloy?.metal || item.composition?.metal || '';
     const purity = item.composition?.baseAlloy?.purity || item.composition?.purity || '';
     return { metal, purity };
+  };
+
+  // Helper to get build method description
+  const getBuildMethodInfo = (method: string) => {
+    const methods: Record<string, { label: string; description: string }> = {
+      'METHOD_A': { 
+        label: 'Solid Pure Metal', 
+        description: 'Handcrafted from solid gold/silver without any base metal. Highest purity with traditional craftsmanship.' 
+      },
+      'METHOD_B': { 
+        label: 'Gold/Silver Alloy', 
+        description: 'Mixed with other metals for enhanced durability. Standard jewellery making method used by most jewellers worldwide.' 
+      },
+      'METHOD_C': { 
+        label: 'Plated/Coated', 
+        description: 'Base metal coated with gold/silver layer. An affordable option that maintains a similar luxurious appearance.' 
+      },
+      'METHOD_D': { 
+        label: 'Machine Made', 
+        description: 'Factory manufactured with precision machinery. Ensures consistent quality and enables modern intricate designs.' 
+      },
+    };
+    return methods[method] || { label: method?.replace('_', ' ') || 'Unknown', description: 'Standard manufacturing process.' };
+  };
+
+  // Get metal color from composition
+  const getMetalColor = () => {
+    const metal = getMetalInfo().metal?.toLowerCase() || '';
+    if (metal.includes('gold')) return 'Yellow';
+    if (metal.includes('white gold')) return 'White';
+    if (metal.includes('rose gold')) return 'Rose';
+    if (metal.includes('silver')) return 'Silver';
+    if (metal.includes('platinum')) return 'Silver';
+    return 'Yellow';
+  };
+
+  // Calculate price per gram (for metal rate display)
+  const getPricePerGram = () => {
+    if (!item?.metalValueNpr || !item?.totalWeightGrams) return 0;
+    return item.metalValueNpr / item.totalWeightGrams;
+  };
+
+  // Handle add to cart
+  const handleAddToCart = async () => {
+    if (!item) return;
+    
+    setAddingToCart(true);
+    try {
+      await addToCart({
+        productId: item.id,
+        shopId: item.shop.id,
+        quantity: quantity,
+        product: {
+          name: item.nameEn,
+          sku: item.sku || item.id,
+          price: item.totalPriceNpr,
+          image: item.images?.[0],
+          weight: item.totalWeightGrams,
+        }
+      });
+      toast({
+        title: 'Added to Cart',
+        description: `${item.nameEn} has been added to your cart.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to add item to cart. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setAddingToCart(false);
+    }
   };
 
   // Format price in user's preferred currency
@@ -345,9 +451,18 @@ export default function ProductDetailPage() {
                 </div>
 
                 <div className="flex gap-3">
-                  <Button className="flex-1 gold-gradient text-white" size="lg">
-                    <ShoppingCart className="h-5 w-5 mr-2" />
-                    Add to Cart
+                  <Button 
+                    className="flex-1 gold-gradient text-white" 
+                    size="lg"
+                    onClick={handleAddToCart}
+                    disabled={addingToCart || item.stockQuantity === 0}
+                  >
+                    {addingToCart ? (
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    ) : (
+                      <ShoppingCart className="h-5 w-5 mr-2" />
+                    )}
+                    {item.stockQuantity === 0 ? 'Out of Stock' : 'Add to Cart'}
                   </Button>
                   <Button size="lg" variant="outline">
                     <Heart className="h-5 w-5" />
@@ -378,19 +493,25 @@ export default function ProductDetailPage() {
 
           {/* Product Details Tabs */}
           <div className="mt-12">
-            <Tabs defaultValue="description">
-              <TabsList className="w-full justify-start border-b bg-transparent h-auto p-0">
+            <Tabs defaultValue="details">
+              <TabsList className="w-full justify-start border-b bg-transparent h-auto p-0 flex-wrap">
+                <TabsTrigger 
+                  value="details"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-gold-500"
+                >
+                  Product Details
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="pricing"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-gold-500"
+                >
+                  Price Breakdown
+                </TabsTrigger>
                 <TabsTrigger 
                   value="description"
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-gold-500"
                 >
                   Description
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="specifications"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-gold-500"
-                >
-                  Specifications
                 </TabsTrigger>
                 <TabsTrigger 
                   value="reviews"
@@ -400,46 +521,324 @@ export default function ProductDetailPage() {
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="description" className="mt-6">
-                <div className="bg-white rounded-xl p-6">
-                  <p className="text-gray-600 leading-relaxed">
-                    {item.descriptionEn || 'No description available for this item.'}
-                  </p>
-                  {item.descriptionNe && (
-                    <p className="text-gray-600 leading-relaxed mt-4">
-                      {item.descriptionNe}
-                    </p>
+              {/* Product Details Tab */}
+              <TabsContent value="details" className="mt-6">
+                <div className="space-y-6">
+                  {/* 1. Metal Details */}
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-8 h-8 rounded-full bg-gold-100 flex items-center justify-center">
+                          <span className="text-gold-600 font-bold text-sm">1</span>
+                        </div>
+                        <h3 className="text-lg font-semibold">METAL DETAILS</h3>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-gray-900">{getMetalInfo().purity || 'N/A'}</p>
+                          <p className="text-sm text-gray-500">Karatage</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-gray-900">{getMetalColor()}</p>
+                          <p className="text-sm text-gray-500">Material Colour</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-gray-900">{item.totalWeightGrams}g</p>
+                          <p className="text-sm text-gray-500">Gross Weight</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-gray-900">{getMetalInfo().metal || 'Gold'}</p>
+                          <p className="text-sm text-gray-500">Metal</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-gray-900">{item.size || 'Standard'}</p>
+                          <p className="text-sm text-gray-500">Size</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 2. Gemstone Details (if applicable) */}
+                  {item.gemstones && item.gemstones.length > 0 && (
+                    <Card>
+                      <CardContent className="p-6">
+                        <div className="flex items-center gap-2 mb-4">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                            <span className="text-blue-600 font-bold text-sm">2</span>
+                          </div>
+                          <h3 className="text-lg font-semibold">
+                            {item.gemstones[0]?.type?.toUpperCase() || 'GEMSTONE'} DETAILS
+                          </h3>
+                        </div>
+                        {item.gemstones.map((gem, idx) => (
+                          <div key={idx} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-4">
+                            {gem.clarity && (
+                              <div className="text-center">
+                                <p className="text-2xl font-bold text-gray-900">{gem.clarity}</p>
+                                <p className="text-sm text-gray-500">{gem.type} Clarity</p>
+                              </div>
+                            )}
+                            {gem.color && (
+                              <div className="text-center">
+                                <p className="text-2xl font-bold text-gray-900">{gem.color}</p>
+                                <p className="text-sm text-gray-500">{gem.type} Color</p>
+                              </div>
+                            )}
+                            {gem.count && (
+                              <div className="text-center">
+                                <p className="text-2xl font-bold text-gray-900">{String(gem.count).padStart(2, '0')}</p>
+                                <p className="text-sm text-gray-500">No Of {gem.type}s</p>
+                              </div>
+                            )}
+                            {gem.setting && (
+                              <div className="text-center">
+                                <p className="text-2xl font-bold text-gray-900">{gem.setting}</p>
+                                <p className="text-sm text-gray-500">{gem.type} Setting</p>
+                              </div>
+                            )}
+                            {gem.cut && (
+                              <div className="text-center">
+                                <p className="text-2xl font-bold text-gray-900">{gem.cut}</p>
+                                <p className="text-sm text-gray-500">{gem.type} Shape</p>
+                              </div>
+                            )}
+                            {gem.caratWeight && (
+                              <div className="text-center">
+                                <p className="text-2xl font-bold text-gray-900">{gem.caratWeight} ct</p>
+                                <p className="text-sm text-gray-500">Carat Weight</p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
                   )}
+
+                  {/* 3. General Details */}
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                          <span className="text-purple-600 font-bold text-sm">{item.gemstones?.length ? '3' : '2'}</span>
+                        </div>
+                        <h3 className="text-lg font-semibold">GENERAL DETAILS</h3>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-gray-900 capitalize">
+                            {item.jewelleryType?.replace(/_/g, ' ').toLowerCase() || 'Jewellery'}
+                          </p>
+                          <p className="text-sm text-gray-500">Jewellery Type</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-gray-900">{item.shop.shopName}</p>
+                          <p className="text-sm text-gray-500">Brand</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-gray-900">{item.collection || 'Classic'}</p>
+                          <p className="text-sm text-gray-500">Collection</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-gray-900 capitalize">{item.gender || 'Unisex'}</p>
+                          <p className="text-sm text-gray-500">Gender</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-gray-900 capitalize">{item.occasion || 'All Occasions'}</p>
+                          <p className="text-sm text-gray-500">Occasion</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 4. Build Method */}
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                          <span className="text-green-600 font-bold text-sm">{item.gemstones?.length ? '4' : '3'}</span>
+                        </div>
+                        <h3 className="text-lg font-semibold">CRAFTSMANSHIP</h3>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 rounded-full bg-gold-100 flex items-center justify-center flex-shrink-0">
+                            <Sparkles className="h-6 w-6 text-gold-600" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-lg">{getBuildMethodInfo(item.buildMethod).label}</p>
+                            <p className="text-gray-600 mt-1">{getBuildMethodInfo(item.buildMethod).description}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               </TabsContent>
 
-              <TabsContent value="specifications" className="mt-6">
-                <div className="bg-white rounded-xl p-6">
-                  <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex justify-between py-2 border-b">
-                      <dt className="text-gray-500">Metal Type</dt>
-                      <dd className="font-medium">{getMetalInfo().metal || 'N/A'}</dd>
+              {/* Price Breakdown Tab */}
+              <TabsContent value="pricing" className="mt-6">
+                <Card>
+                  <CardContent className="p-0">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b bg-gray-50">
+                          <th className="text-left p-4 text-sm font-medium text-gray-500">PRODUCT DETAILS</th>
+                          <th className="text-center p-4 text-sm font-medium text-gray-500">RATE</th>
+                          <th className="text-center p-4 text-sm font-medium text-gray-500">WEIGHT</th>
+                          <th className="text-center p-4 text-sm font-medium text-gray-500">DISCOUNT</th>
+                          <th className="text-right p-4 text-sm font-medium text-gray-500">VALUE</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {/* Metal Row */}
+                        <tr className="border-b">
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-500" />
+                              <div>
+                                <p className="font-medium">{getMetalColor()} {getMetalInfo().metal}</p>
+                                <p className="text-sm text-gray-500">{getMetalInfo().purity}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="text-center p-4">
+                            {item.metalValueNpr && item.totalWeightGrams ? (
+                              <span>{formatPrice(getPricePerGram())}/g</span>
+                            ) : '-'}
+                          </td>
+                          <td className="text-center p-4">{item.totalWeightGrams}g</td>
+                          <td className="text-center p-4">-</td>
+                          <td className="text-right p-4 font-medium">
+                            {item.metalValueNpr ? formatPrice(item.metalValueNpr) : formatPrice(item.totalPriceNpr * 0.6)}
+                          </td>
+                        </tr>
+
+                        {/* Stone Row (if gemstones exist) */}
+                        {item.gemstones && item.gemstones.length > 0 && (
+                          <tr className="border-b">
+                            <td className="p-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-200 to-gray-400" />
+                                <span className="font-medium">{item.gemstones[0]?.type || 'Stone'}</span>
+                              </div>
+                            </td>
+                            <td className="text-center p-4">-</td>
+                            <td className="text-center p-4">
+                              {item.gemstones[0]?.caratWeight ? `${item.gemstones[0].caratWeight} ct` : '-'}
+                            </td>
+                            <td className="text-center p-4">-</td>
+                            <td className="text-right p-4 font-medium">
+                              {item.gemstoneValueNpr ? formatPrice(item.gemstoneValueNpr) : '-'}
+                            </td>
+                          </tr>
+                        )}
+
+                        {/* Making Charges Row */}
+                        <tr className="border-b">
+                          <td className="p-4 font-medium">Making Charges</td>
+                          <td className="text-center p-4">-</td>
+                          <td className="text-center p-4">-</td>
+                          <td className="text-center p-4">-</td>
+                          <td className="text-right p-4 font-medium">
+                            {item.makingChargeNpr ? formatPrice(item.makingChargeNpr) : formatPrice(item.totalPriceNpr * 0.1)}
+                          </td>
+                        </tr>
+
+                        {/* Sub Total Row */}
+                        <tr className="border-b bg-gray-50">
+                          <td className="p-4 font-medium">Sub Total</td>
+                          <td className="text-center p-4">-</td>
+                          <td className="text-center p-4 font-medium">
+                            {item.totalWeightGrams}g<br/>
+                            <span className="text-sm text-gray-500">Gross Wt.</span>
+                          </td>
+                          <td className="text-center p-4">-</td>
+                          <td className="text-right p-4 font-bold">{formatPrice(item.totalPriceNpr)}</td>
+                        </tr>
+
+                        {/* Discount Row (placeholder) */}
+                        <tr className="border-b">
+                          <td className="p-4 font-medium">Discount</td>
+                          <td className="text-center p-4">-</td>
+                          <td className="text-center p-4">-</td>
+                          <td className="text-center p-4 text-red-500 font-medium">-{formatPrice(0)}</td>
+                          <td className="text-right p-4">-</td>
+                        </tr>
+
+                        {/* Subtotal after Discount */}
+                        <tr className="border-b">
+                          <td className="p-4 font-medium">Subtotal after Discount</td>
+                          <td className="text-center p-4">-</td>
+                          <td className="text-center p-4">-</td>
+                          <td className="text-center p-4">-</td>
+                          <td className="text-right p-4 font-medium">{formatPrice(item.totalPriceNpr)}</td>
+                        </tr>
+
+                        {/* Tax Row */}
+                        <tr className="border-b">
+                          <td className="p-4 font-medium">GST / VAT (3%)</td>
+                          <td className="text-center p-4">-</td>
+                          <td className="text-center p-4">-</td>
+                          <td className="text-center p-4">-</td>
+                          <td className="text-right p-4 font-medium">{formatPrice(item.totalPriceNpr * 0.03)}</td>
+                        </tr>
+                      </tbody>
+                      <tfoot>
+                        <tr className="bg-gray-900 text-white">
+                          <td colSpan={4} className="p-4 font-bold text-lg">Grand Total</td>
+                          <td className="text-right p-4 font-bold text-xl text-gold-400">
+                            {formatPrice(item.totalPriceNpr * 1.03)}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Description Tab */}
+              <TabsContent value="description" className="mt-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Info className="h-5 w-5 text-gray-500" />
+                      <h3 className="text-lg font-semibold">Product Description</h3>
                     </div>
-                    <div className="flex justify-between py-2 border-b">
-                      <dt className="text-gray-500">Purity</dt>
-                      <dd className="font-medium">{getMetalInfo().purity || 'N/A'}</dd>
+                    <div className="prose max-w-none">
+                      <p className="text-gray-600 leading-relaxed">
+                        {item.descriptionEn || `This beautiful ${item.jewelleryType?.replace(/_/g, ' ').toLowerCase() || 'piece'} is crafted with ${getMetalInfo().purity || ''} ${getMetalInfo().metal || 'precious metal'}, weighing ${item.totalWeightGrams}g. ${getBuildMethodInfo(item.buildMethod).description}`}
+                      </p>
+                      {item.descriptionNe && (
+                        <p className="text-gray-600 leading-relaxed mt-4 border-t pt-4">
+                          {item.descriptionNe}
+                        </p>
+                      )}
                     </div>
-                    <div className="flex justify-between py-2 border-b">
-                      <dt className="text-gray-500">Weight</dt>
-                      <dd className="font-medium">{item.totalWeightGrams}g</dd>
+                    
+                    {/* Additional Info */}
+                    <div className="mt-6 pt-6 border-t">
+                      <h4 className="font-semibold mb-3">Why Choose This Product?</h4>
+                      <ul className="space-y-2">
+                        <li className="flex items-center gap-2 text-gray-600">
+                          <Shield className="h-4 w-4 text-green-600" />
+                          <span>BIS Hallmarked for assured purity</span>
+                        </li>
+                        <li className="flex items-center gap-2 text-gray-600">
+                          <Sparkles className="h-4 w-4 text-gold-600" />
+                          <span>{getBuildMethodInfo(item.buildMethod).label} craftsmanship</span>
+                        </li>
+                        <li className="flex items-center gap-2 text-gray-600">
+                          <Truck className="h-4 w-4 text-blue-600" />
+                          <span>Insured delivery to your doorstep</span>
+                        </li>
+                        <li className="flex items-center gap-2 text-gray-600">
+                          <Phone className="h-4 w-4 text-purple-600" />
+                          <span>Lifetime maintenance support</span>
+                        </li>
+                      </ul>
                     </div>
-                    <div className="flex justify-between py-2 border-b">
-                      <dt className="text-gray-500">Type</dt>
-                      <dd className="font-medium">{item.jewelleryType?.replace('_', ' ') || 'N/A'}</dd>
-                    </div>
-                    {item.buildMethod && (
-                      <div className="flex justify-between py-2 border-b">
-                        <dt className="text-gray-500">Build Method</dt>
-                        <dd className="font-medium">{item.buildMethod?.replace('_', ' ')}</dd>
-                      </div>
-                    )}
-                  </dl>
-                </div>
+                  </CardContent>
+                </Card>
               </TabsContent>
 
               <TabsContent value="reviews" className="mt-6">

@@ -56,6 +56,7 @@ import {
   DollarSign,
   Scale,
   Tag,
+  GripVertical,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { inventoryApi } from '@/lib/api';
@@ -98,10 +99,10 @@ const jewelleryTypes = [
 ];
 
 const buildMethods = [
-  { value: 'METHOD_A', label: 'Method A - Solid Gold/Silver' },
-  { value: 'METHOD_B', label: 'Method B - Gold Alloy' },
-  { value: 'METHOD_C', label: 'Method C - Plated/Coated' },
-  { value: 'METHOD_D', label: 'Method D - Machine Made' },
+  { value: 'METHOD_A', label: 'Method A - Solid Pure Metal', description: 'Handcrafted from solid gold/silver without any base metal. Highest purity, traditional craftsmanship.' },
+  { value: 'METHOD_B', label: 'Method B - Gold/Silver Alloy', description: 'Mixed with other metals for durability. Standard jewellery making method used by most jewellers.' },
+  { value: 'METHOD_C', label: 'Method C - Plated/Coated', description: 'Base metal coated with gold/silver layer. Affordable option with similar appearance.' },
+  { value: 'METHOD_D', label: 'Method D - Machine Made', description: 'Factory manufactured with precision. Consistent quality and modern designs.' },
 ];
 
 const statusColors: Record<string, string> = {
@@ -1021,25 +1022,64 @@ export default function ShopProductsPage() {
                   </Button>
                 </div>
 
-                {/* Image Preview Grid */}
+                {/* Image Preview Grid - Drag to reorder, first image is primary */}
                 {formData.images.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {formData.images.map((url, idx) => (
-                      <div key={idx} className="relative group">
-                        <img
-                          src={getImageUrl(url, 'thumbnail')}
-                          alt={`Product ${idx + 1}`}
-                          className="w-20 h-20 object-cover rounded-lg border"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeImage(url)}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  <div className="space-y-2 mt-2">
+                    <p className="text-xs text-muted-foreground">
+                      Drag to reorder • First image will be shown as primary
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.images.map((url, idx) => (
+                        <div 
+                          key={url} 
+                          className={`relative group cursor-move ${idx === 0 ? 'ring-2 ring-gold-500 ring-offset-2' : ''}`}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('text/plain', idx.toString());
+                          }}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            e.currentTarget.classList.add('opacity-50');
+                          }}
+                          onDragLeave={(e) => {
+                            e.currentTarget.classList.remove('opacity-50');
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.currentTarget.classList.remove('opacity-50');
+                            const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+                            const toIdx = idx;
+                            if (fromIdx !== toIdx) {
+                              const newImages = [...formData.images];
+                              const [moved] = newImages.splice(fromIdx, 1);
+                              newImages.splice(toIdx, 0, moved);
+                              setFormData({ ...formData, images: newImages });
+                            }
+                          }}
                         >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
+                          <div className="absolute top-1 left-1 z-10 bg-black/50 rounded p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <GripVertical className="h-3 w-3 text-white" />
+                          </div>
+                          {idx === 0 && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-gold-500 text-white text-[10px] text-center py-0.5">
+                              Primary
+                            </div>
+                          )}
+                          <img
+                            src={getImageUrl(url, 'thumbnail')}
+                            alt={`Product ${idx + 1}`}
+                            className="w-20 h-20 object-cover rounded-lg border"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeImage(url)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

@@ -32,7 +32,7 @@ function MarketPreferencesSync({ children }: { children: React.ReactNode }) {
     // Only sync once per session and when market is loaded
     if (isLoading || syncedRef.current) return;
     
-    if (selectedCountry && detectedCountry) {
+    if (detectedCountry) {
       // Check if user has explicitly set preferences (user_choice flag in localStorage)
       const userCountryChoice = typeof window !== 'undefined' 
         ? localStorage.getItem('orivraa_user_country_choice') 
@@ -44,36 +44,48 @@ function MarketPreferencesSync({ children }: { children: React.ReactNode }) {
       // Valid country codes for preferences
       const validCountries: CountryCode[] = ['NP', 'IN', 'AE', 'UK', 'EU', 'US'];
       
+      // Currency map based on detected country
+      const currencyMap: Record<string, CurrencyCode> = {
+        NP: 'NPR',
+        IN: 'INR',
+        US: 'USD',
+        UK: 'GBP',
+        EU: 'EUR',
+        AE: 'AED',
+      };
+      
       // Sync detected country to preferences if user hasn't explicitly chosen
       if (validCountries.includes(detectedCountry as CountryCode)) {
-        if (userCountryChoice !== 'true' && prefsCountry !== detectedCountry) {
-          console.log('[MarketPreferencesSync] Syncing detected country:', detectedCountry, '(was:', prefsCountry, ')');
-          syncCountryFromGeo(detectedCountry as CountryCode);
-        } else if (userCountryChoice === 'true') {
+        // IMPORTANT: Sync BOTH country and currency together from detected country
+        // This fixes the mismatch where currency is INR but country shows Nepal
+        if (userCountryChoice !== 'true') {
+          if (prefsCountry !== detectedCountry) {
+            console.log('[MarketPreferencesSync] Syncing detected country:', detectedCountry, '(was:', prefsCountry, ')');
+            syncCountryFromGeo(detectedCountry as CountryCode);
+          }
+          
+          // Also sync currency to match the detected country (unless user chose a different currency)
+          const expectedCurrency = currencyMap[detectedCountry];
+          if (userCurrencyChoice !== 'true' && expectedCurrency && prefsCurrency !== expectedCurrency) {
+            console.log('[MarketPreferencesSync] Syncing currency to match country:', expectedCurrency, '(was:', prefsCurrency, ')');
+            syncCurrencyFromGeo(expectedCurrency);
+          }
+        } else {
           console.log('[MarketPreferencesSync] User has explicit country choice, keeping:', prefsCountry);
-        }
-        
-        // Also sync currency based on detected country if user hasn't explicitly chosen
-        const currencyMap: Record<MarketRegion, CurrencyCode> = {
-          NP: 'NPR',
-          IN: 'INR',
-          US: 'USD',
-          UK: 'GBP',
-          EU: 'EUR',
-          AE: 'AED',
-        };
-        const expectedCurrency = currencyMap[detectedCountry];
-        if (userCurrencyChoice !== 'true' && expectedCurrency && prefsCurrency !== expectedCurrency) {
-          console.log('[MarketPreferencesSync] Syncing currency:', expectedCurrency, '(was:', prefsCurrency, ')');
-          syncCurrencyFromGeo(expectedCurrency);
-        } else if (userCurrencyChoice === 'true') {
-          console.log('[MarketPreferencesSync] User has explicit currency choice, keeping:', prefsCurrency);
+          // If user chose a country but not currency, sync currency to user's chosen country
+          if (userCurrencyChoice !== 'true') {
+            const expectedCurrency = currencyMap[prefsCountry];
+            if (expectedCurrency && prefsCurrency !== expectedCurrency) {
+              console.log('[MarketPreferencesSync] Syncing currency to user country:', expectedCurrency);
+              syncCurrencyFromGeo(expectedCurrency);
+            }
+          }
         }
       }
       
       syncedRef.current = true;
     }
-  }, [isLoading, selectedCountry, detectedCountry, prefsCountry, prefsCurrency, syncCountryFromGeo, syncCurrencyFromGeo]);
+  }, [isLoading, detectedCountry, prefsCountry, prefsCurrency, syncCountryFromGeo, syncCurrencyFromGeo]);
 
   return <>{children}</>;
 }
