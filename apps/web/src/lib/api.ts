@@ -208,6 +208,19 @@ export const adminApi = {
     phone?: string;
   }) => api.post('/admin/users', data),
   
+  getUserDetails: (userId: string) => api.get(`/users/${userId}/details`),
+  
+  updateUser: (userId: string, data: {
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    role?: string;
+    status?: string;
+  }) => api.patch(`/users/${userId}/admin-update`, data),
+  
+  deleteUser: (userId: string) => api.delete(`/users/${userId}`),
+  
   // Shop management
   createShop: (data: {
     ownerEmail: string;
@@ -252,7 +265,8 @@ export const materialsApi = {
   getBaseMetals: () => api.get('/materials/base-metals'),
   getJewelleryTypes: () => api.get('/materials/jewellery-types'),
   getBuildMethods: () => api.get('/materials/build-methods'),
-  getMarketRates: () => api.get('/materials/market-rates'),
+  getMarketRates: (params?: { currency?: string; country?: string }) => 
+    api.get('/market-rates', { params }),
 };
 
 export default api;

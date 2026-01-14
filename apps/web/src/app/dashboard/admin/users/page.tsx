@@ -33,6 +33,17 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
   Users,
   UserCheck,
   UserX,
@@ -44,22 +55,56 @@ import {
   Store,
   User,
   Plus,
+  Eye,
+  Pencil,
+  Trash2,
+  Phone,
+  MapPin,
+  Globe,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Star,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import api, { adminApi } from '@/lib/api';
+
+interface ShopData {
+  id: string;
+  shopName: string;
+  city: string;
+  address: string;
+  country: string;
+  contactPhone: string;
+  contactEmail: string;
+  websiteUrl?: string;
+  isVerified: boolean;
+  isActive: boolean;
+  rating: number;
+  totalReviews: number;
+  createdAt: string;
+  updatedAt: string;
+  supportedMetals?: string[];
+  supportedJewelleryTypes?: string[];
+  supportedBuildMethods?: string[];
+  codMaxValueNpr?: number;
+  operatingHours?: any;
+}
 
 interface UserData {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
+  phone?: string;
   role: 'ADMIN' | 'SHOPKEEPER' | 'CUSTOMER' | 'SUPPORT';
   status: 'ACTIVE' | 'SUSPENDED' | 'PENDING_VERIFICATION' | 'DEACTIVATED';
+  preferredLanguage?: string;
+  preferredCurrency?: string;
   createdAt: string;
-  shop?: {
-    id: string;
-    shopName: string;
-  };
+  updatedAt?: string;
+  lastLoginAt?: string;
+  shop?: ShopData;
 }
 
 export default function AdminUsersPage() {
@@ -83,6 +128,26 @@ export default function AdminUsersPage() {
     role: 'CUSTOMER' as 'ADMIN' | 'SHOPKEEPER' | 'CUSTOMER' | 'SUPPORT',
   });
 
+  // View/Edit user dialog state
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
+  const [loadingUserDetails, setLoadingUserDetails] = useState(false);
+  const [editForm, setEditForm] = useState({
+    email: '',
+    firstName: '',
+    lastName: '',
+    phone: '',
+    role: 'CUSTOMER' as string,
+    status: 'ACTIVE' as string,
+  });
+  const [savingUser, setSavingUser] = useState(false);
+
+  // Delete confirmation dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
+  const [deletingUser, setDeletingUser] = useState(false);
+
   useEffect(() => {
     loadUsers();
   }, []);
@@ -95,7 +160,6 @@ export default function AdminUsersPage() {
     setIsLoading(true);
     try {
       const response = await api.get('/users');
-      // Backend returns { data: users[], meta: {...} }
       let usersArr = response.data?.data || response.data?.users || response.data || [];
       if (!Array.isArray(usersArr)) {
         usersArr = [];
@@ -116,12 +180,10 @@ export default function AdminUsersPage() {
   const filterUsers = () => {
     let filtered = [...users];
 
-    // Filter by role
     if (roleFilter !== 'all') {
       filtered = filtered.filter((u) => u.role === roleFilter);
     }
 
-    // Filter by status
     if (statusFilter === 'active') {
       filtered = filtered.filter((u) => u.status === 'ACTIVE');
     } else if (statusFilter === 'suspended') {
@@ -130,7 +192,6 @@ export default function AdminUsersPage() {
       filtered = filtered.filter((u) => u.status === 'PENDING_VERIFICATION');
     }
 
-    // Filter by search
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -142,6 +203,87 @@ export default function AdminUsersPage() {
     }
 
     setFilteredUsers(filtered);
+  };
+
+  const handleViewUser = async (user: UserData) => {
+    setSelectedUser(null);
+    setViewDialogOpen(true);
+    setLoadingUserDetails(true);
+    
+    try {
+      const response = await adminApi.getUserDetails(user.id);
+      setSelectedUser(response.data);
+    } catch (error) {
+      console.error('Failed to load user details:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Failed to load user details',
+        description: 'Could not fetch full user information',
+      });
+      setViewDialogOpen(false);
+    } finally {
+      setLoadingUserDetails(false);
+    }
+  };
+
+  const handleEditUser = (user: UserData) => {
+    setSelectedUser(user);
+    setEditForm({
+      email: user.email,
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      phone: user.phone || '',
+      role: user.role,
+      status: user.status,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveUser = async () => {
+    if (!selectedUser) return;
+    
+    setSavingUser(true);
+    try {
+      await adminApi.updateUser(selectedUser.id, editForm);
+      toast({
+        title: 'User Updated',
+        description: 'User information has been updated successfully.',
+      });
+      setEditDialogOpen(false);
+      loadUsers();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Update Failed',
+        description: error.response?.data?.message || 'Could not update user',
+      });
+    } finally {
+      setSavingUser(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    
+    setDeletingUser(true);
+    try {
+      await adminApi.deleteUser(userToDelete.id);
+      toast({
+        title: 'User Deleted',
+        description: 'The user has been deleted successfully.',
+      });
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+      loadUsers();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Delete Failed',
+        description: error.response?.data?.message || 'Could not delete user',
+      });
+    } finally {
+      setDeletingUser(false);
+    }
   };
 
   const handleSuspend = async (userId: string) => {
@@ -227,6 +369,16 @@ export default function AdminUsersPage() {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
+    });
+  };
+
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
@@ -532,42 +684,78 @@ export default function AdminUsersPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {user.role !== 'ADMIN' && (
-                            user.status === 'ACTIVE' ? (
+                          <div className="flex items-center gap-2">
+                            {/* View Details */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleViewUser(user)}
+                              title="View Details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            
+                            {/* Edit User */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleEditUser(user)}
+                              title="Edit User"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            
+                            {/* Suspend/Activate */}
+                            {user.role !== 'ADMIN' && (
+                              user.status === 'ACTIVE' ? (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleSuspend(user.id)}
+                                  disabled={processingId === user.id}
+                                  className="text-amber-600 hover:text-amber-700"
+                                  title="Suspend User"
+                                >
+                                  {processingId === user.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <UserX className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleActivate(user.id)}
+                                  disabled={processingId === user.id}
+                                  className="text-green-600 hover:text-green-700"
+                                  title="Activate User"
+                                >
+                                  {processingId === user.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <UserCheck className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              )
+                            )}
+                            
+                            {/* Delete User */}
+                            {user.role !== 'ADMIN' && (
                               <Button
                                 size="sm"
-                                variant="outline"
-                                onClick={() => handleSuspend(user.id)}
-                                disabled={processingId === user.id}
+                                variant="ghost"
+                                onClick={() => {
+                                  setUserToDelete(user);
+                                  setDeleteDialogOpen(true);
+                                }}
                                 className="text-red-600 hover:text-red-700"
+                                title="Delete User"
                               >
-                                {processingId === user.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <>
-                                    <UserX className="h-4 w-4 mr-1" />
-                                    Suspend
-                                  </>
-                                )}
+                                <Trash2 className="h-4 w-4" />
                               </Button>
-                            ) : (
-                              <Button
-                                size="sm"
-                                onClick={() => handleActivate(user.id)}
-                                disabled={processingId === user.id}
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                {processingId === user.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <>
-                                    <UserCheck className="h-4 w-4 mr-1" />
-                                    Activate
-                                  </>
-                                )}
-                              </Button>
-                            )
-                          )}
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -577,6 +765,376 @@ export default function AdminUsersPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* View User Details Dialog */}
+        <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+          <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>User Details</DialogTitle>
+              <DialogDescription>
+                Complete information about this user
+              </DialogDescription>
+            </DialogHeader>
+            
+            {loadingUserDetails ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : selectedUser ? (
+              <Tabs defaultValue="profile" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="profile">Profile</TabsTrigger>
+                  {selectedUser.shop && (
+                    <TabsTrigger value="shop">Shop Details</TabsTrigger>
+                  )}
+                </TabsList>
+                
+                <TabsContent value="profile" className="space-y-4 mt-4">
+                  <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
+                    <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center">
+                      {getRoleIcon(selectedUser.role)}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold">
+                        {selectedUser.firstName} {selectedUser.lastName}
+                      </h3>
+                      <Badge className={getRoleBadgeColor(selectedUser.role)}>
+                        {selectedUser.role}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-muted-foreground text-sm">Email</Label>
+                      <p className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        {selectedUser.email}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-muted-foreground text-sm">Phone</Label>
+                      <p className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        {selectedUser.phone || '—'}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-muted-foreground text-sm">Status</Label>
+                      <p>
+                        {selectedUser.status === 'ACTIVE' ? (
+                          <Badge className="bg-green-100 text-green-700">Active</Badge>
+                        ) : selectedUser.status === 'SUSPENDED' ? (
+                          <Badge variant="destructive">Suspended</Badge>
+                        ) : (
+                          <Badge variant="secondary">{selectedUser.status}</Badge>
+                        )}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-muted-foreground text-sm">Language</Label>
+                      <p>{selectedUser.preferredLanguage || 'en'}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-muted-foreground text-sm">Currency</Label>
+                      <p>{selectedUser.preferredCurrency || 'NPR'}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-muted-foreground text-sm">Joined</Label>
+                      <p className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        {formatDateTime(selectedUser.createdAt)}
+                      </p>
+                    </div>
+                    {selectedUser.lastLoginAt && (
+                      <div className="space-y-1">
+                        <Label className="text-muted-foreground text-sm">Last Login</Label>
+                        <p className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          {formatDateTime(selectedUser.lastLoginAt)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+                
+                {selectedUser.shop && (
+                  <TabsContent value="shop" className="space-y-4 mt-4">
+                    <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-lg bg-white flex items-center justify-center">
+                          <Store className="h-6 w-6 text-gold-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold">{selectedUser.shop.shopName}</h3>
+                          <div className="flex items-center gap-2">
+                            {selectedUser.shop.isVerified ? (
+                              <Badge className="bg-green-100 text-green-700">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Verified
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary">
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Unverified
+                              </Badge>
+                            )}
+                            {selectedUser.shop.isActive ? (
+                              <Badge className="bg-blue-100 text-blue-700">Active</Badge>
+                            ) : (
+                              <Badge variant="destructive">Inactive</Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="flex items-center gap-1">
+                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                          <span className="font-semibold">{selectedUser.shop.rating?.toFixed(1) || '0.0'}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedUser.shop.totalReviews || 0} reviews
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <Label className="text-muted-foreground text-sm">Location</Label>
+                        <p className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          {selectedUser.shop.city}, {selectedUser.shop.country}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-muted-foreground text-sm">Address</Label>
+                        <p>{selectedUser.shop.address}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-muted-foreground text-sm">Contact Phone</Label>
+                        <p className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          {selectedUser.shop.contactPhone || '—'}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-muted-foreground text-sm">Contact Email</Label>
+                        <p className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          {selectedUser.shop.contactEmail || '—'}
+                        </p>
+                      </div>
+                      {selectedUser.shop.websiteUrl && (
+                        <div className="space-y-1">
+                          <Label className="text-muted-foreground text-sm">Website</Label>
+                          <p className="flex items-center gap-2">
+                            <Globe className="h-4 w-4 text-muted-foreground" />
+                            <a href={selectedUser.shop.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                              {selectedUser.shop.websiteUrl}
+                            </a>
+                          </p>
+                        </div>
+                      )}
+                      {selectedUser.shop.codMaxValueNpr && (
+                        <div className="space-y-1">
+                          <Label className="text-muted-foreground text-sm">COD Max Value</Label>
+                          <p>NPR {selectedUser.shop.codMaxValueNpr.toLocaleString()}</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {(selectedUser.shop.supportedMetals?.length || selectedUser.shop.supportedJewelleryTypes?.length || selectedUser.shop.supportedBuildMethods?.length) && (
+                      <div className="space-y-4 pt-4 border-t">
+                        <h4 className="font-semibold">Supported Services</h4>
+                        
+                        {selectedUser.shop.supportedMetals?.length > 0 && (
+                          <div className="space-y-2">
+                            <Label className="text-muted-foreground text-sm">Metals</Label>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedUser.shop.supportedMetals.map((metal) => (
+                                <Badge key={metal} variant="outline">{metal}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {selectedUser.shop.supportedJewelleryTypes?.length > 0 && (
+                          <div className="space-y-2">
+                            <Label className="text-muted-foreground text-sm">Jewellery Types</Label>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedUser.shop.supportedJewelleryTypes.map((type) => (
+                                <Badge key={type} variant="outline">{type}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {selectedUser.shop.supportedBuildMethods?.length > 0 && (
+                          <div className="space-y-2">
+                            <Label className="text-muted-foreground text-sm">Build Methods</Label>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedUser.shop.supportedBuildMethods.map((method) => (
+                                <Badge key={method} variant="outline">{method}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    <div className="text-sm text-muted-foreground pt-4 border-t">
+                      <p>Shop created: {formatDateTime(selectedUser.shop.createdAt)}</p>
+                      {selectedUser.shop.updatedAt && (
+                        <p>Last updated: {formatDateTime(selectedUser.shop.updatedAt)}</p>
+                      )}
+                    </div>
+                  </TabsContent>
+                )}
+              </Tabs>
+            ) : null}
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
+                Close
+              </Button>
+              {selectedUser && (
+                <Button onClick={() => {
+                  setViewDialogOpen(false);
+                  handleEditUser(selectedUser);
+                }}>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit User
+                </Button>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit User Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Edit User</DialogTitle>
+              <DialogDescription>
+                Update user information
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-firstName">First Name</Label>
+                  <Input
+                    id="edit-firstName"
+                    value={editForm.firstName}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, firstName: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-lastName">Last Name</Label>
+                  <Input
+                    id="edit-lastName"
+                    value={editForm.lastName}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, lastName: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-phone">Phone</Label>
+                <Input
+                  id="edit-phone"
+                  type="tel"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-role">Role</Label>
+                <Select
+                  value={editForm.role}
+                  onValueChange={(value) => setEditForm(prev => ({ ...prev, role: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CUSTOMER">Customer</SelectItem>
+                    <SelectItem value="SHOPKEEPER">Shopkeeper</SelectItem>
+                    <SelectItem value="SUPPORT">Support</SelectItem>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-status">Status</Label>
+                <Select
+                  value={editForm.status}
+                  onValueChange={(value) => setEditForm(prev => ({ ...prev, status: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ACTIVE">Active</SelectItem>
+                    <SelectItem value="SUSPENDED">Suspended</SelectItem>
+                    <SelectItem value="PENDING_VERIFICATION">Pending Verification</SelectItem>
+                    <SelectItem value="DEACTIVATED">Deactivated</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveUser} disabled={savingUser}>
+                {savingUser && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete the user{' '}
+                <strong>{userToDelete?.firstName} {userToDelete?.lastName}</strong>{' '}
+                ({userToDelete?.email}).
+                {userToDelete?.shop && (
+                  <span className="block mt-2 text-amber-600">
+                    ⚠️ This user has a shop ({userToDelete.shop.shopName}) which will also be deleted.
+                  </span>
+                )}
+                <span className="block mt-2">
+                  This action cannot be undone.
+                </span>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deletingUser}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteUser}
+                disabled={deletingUser}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {deletingUser && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Delete User
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DashboardLayout>
     </AdminGuard>
   );

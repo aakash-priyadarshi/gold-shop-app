@@ -7,6 +7,10 @@ import {
   Query,
   UseGuards,
   Post,
+  Delete,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
@@ -17,6 +21,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '@prisma/client';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdatePreferencesDto } from './dto/update-preferences.dto';
+import { PrismaService } from '../../prisma/prisma.service';
 
 class UpdatePasswordDto {
   currentPassword: string;
@@ -28,7 +33,10 @@ class UpdatePasswordDto {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class UsersController {
-  constructor(private usersService: UsersService) {}
+  constructor(
+    private usersService: UsersService,
+    private prisma: PrismaService,
+  ) {}
 
   @Get('me')
   @ApiOperation({ summary: 'Get current user profile' })
@@ -110,5 +118,160 @@ export class UsersController {
   @ApiOperation({ summary: 'Activate a user (Admin only)' })
   async activateUser(@Param('id') id: string) {
     return this.usersService.activateUser(id);
+  }
+
+  @Get(':id/details')
+  @Roles(UserRole.ADMIN, UserRole.SUPPORT)
+  @ApiOperation({ summary: 'Get full user details including shop info (Admin/Support only)' })
+  async getUserDetails(@Param('id') id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        status: true,
+        preferredLanguage: true,
+        preferredCurrency: true,
+        createdAt: true,
+        updatedAt: true,
+        lastLoginAt: true,
+        shop: {
+          select: {
+            id: true,
+            shopName: true,
+            city: true,
+            address: true,
+            country: true,
+            contactPhone: true,
+            contactEmail: true,
+            websiteUrl: true,
+            isVerified: true,
+            isActive: true,
+            rating: true,
+            totalReviews: true,
+            createdAt: true,
+            updatedAt: true,
+            supportedMetals: true,
+            supportedJewelleryTypes: true,
+            supportedBuildMethods: true,
+            codMaxValueNpr: true,
+            operatingHours: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
+
+  @Patch(':id/admin-update')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Update user details (Admin only)' })
+  async adminUpdateUser(
+    @Param('id') id: string,
+    @Body() data: {
+      email?: string;
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
+      role?: UserRole;
+      status?: string;
+    },
+  ) {
+    // Check if user exists
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Prevent changing the last admin's role
+    if (user.role === UserRole.ADMIN && data.role && data.role !== UserRole.ADMIN) {
+      const adminCount = await this.prisma.user.count({ where: { role: UserRole.ADMIN } });
+      if (adminCount <= 1) {
+        throw new ForbiddenException('Cannot change role of the last admin');
+      }
+    }
+
+    const updateData: any = {};
+    if (data.email !== undefined) updateData.email = data.email;
+    if (data.firstName !== undefined) updateData.firstName = data.firstName;
+    if (data.lastName !== undefined) updateData.lastName = data.lastName;
+    if (data.phone !== undefined) updateData.phone = data.phone;
+    if (data.role !== undefined) updateData.role = data.role;
+    if (data.status !== undefined) updateData.status = data.status;
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        role: true,
+        status: true,
+      },
+    });
+
+    return { success: true, user: updated };
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Delete a user (Admin only)' })
+  async deleteUser(
+    @Param('id') id: string,
+    @CurrentUser('id') adminId: string,
+  ) {
+    // Prevent self-deletion
+    if (id === adminId) {
+      throw new ForbiddenException('Cannot delete your own account');
+    }
+
+    // Check if user exists
+    const user = await this.prisma.user.findUnique({ 
+      where: { id },
+      include: { shop: true },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Prevent deleting the last admin
+    if (user.role === UserRole.ADMIN) {
+      const adminCount = await this.prisma.user.count({ where: { role: UserRole.ADMIN } });
+      if (adminCount <= 1) {
+        throw new ForbiddenException('Cannot delete the last admin');
+      }
+    }
+
+    // Delete user and associated shop (cascade)
+    await this.prisma.$transaction(async (tx) => {
+      // If user has a shop, delete shop-related data first
+      if (user.shop) {
+        // Delete shop materials
+        await tx.shopMaterial.deleteMany({ where: { shopId: user.shop.id } });
+        // Delete verification requests
+        await tx.verificationRequest.deleteMany({ where: { shopId: user.shop.id } });
+        // Delete shop
+        await tx.shop.delete({ where: { id: user.shop.id } });
+      }
+
+      // Delete user's notifications
+      await tx.notification.deleteMany({ where: { userId: id } });
+      // Delete user
+      await tx.user.delete({ where: { id } });
+    });
+
+    return { success: true, message: 'User deleted successfully' };
   }
 }

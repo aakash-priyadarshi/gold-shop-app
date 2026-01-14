@@ -111,14 +111,19 @@ export default function ShopInventoryPage() {
   const [isRefreshingRates, setIsRefreshingRates] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Get shop's country for market rates - default to user preference
+  const shopCountry = user?.shop?.country || 'NP';
+  // Map country to currency
+  const shopCurrency = shopCountry === 'IN' ? 'INR' : shopCountry === 'AE' ? 'AED' : shopCountry === 'US' ? 'USD' : shopCountry === 'UK' ? 'GBP' : shopCountry === 'EU' ? 'EUR' : 'NPR';
+  
   // Get currency symbol
-  const currencySymbol = CURRENCIES[currency as CurrencyCode]?.symbol || 'Rs.';
+  const currencySymbol = CURRENCIES[shopCurrency as CurrencyCode]?.symbol || CURRENCIES[currency as CurrencyCode]?.symbol || 'Rs.';
 
   useEffect(() => {
     if (user?.shop?.id) {
       loadData();
     }
-  }, [user?.shop?.id]);
+  }, [user?.shop?.id, shopCountry]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -126,11 +131,24 @@ export default function ShopInventoryPage() {
       const [materialsRes, capabilitiesRes, ratesRes] = await Promise.all([
         shopsApi.getMaterials(),
         shopsApi.getCapabilities(),
-        materialsApi.getMarketRates(),
+        materialsApi.getMarketRates({ currency: shopCurrency, country: shopCountry }),
       ]);
       setMaterialsData(materialsRes.data);
       setCapabilitiesData(capabilitiesRes.data);
-      setMarketRates(ratesRes.data || []);
+      // Market rates response has metals object, not array
+      const ratesData = ratesRes.data?.metals || ratesRes.data || [];
+      if (Array.isArray(ratesData)) {
+        setMarketRates(ratesData);
+      } else {
+        // Convert metals object to array format
+        const ratesArray = Object.entries(ratesData).map(([key, value]) => ({
+          metalCode: key,
+          ratePerGram: value as number,
+          source: ratesRes.data?.source || 'live',
+          country: shopCountry,
+        }));
+        setMarketRates(ratesArray);
+      }
     } catch (error) {
       console.error('Failed to load data:', error);
       toast({
@@ -146,8 +164,19 @@ export default function ShopInventoryPage() {
   const refreshMarketRates = async () => {
     setIsRefreshingRates(true);
     try {
-      const ratesRes = await materialsApi.getMarketRates();
-      setMarketRates(ratesRes.data || []);
+      const ratesRes = await materialsApi.getMarketRates({ currency: shopCurrency, country: shopCountry });
+      const ratesData = ratesRes.data?.metals || ratesRes.data || [];
+      if (Array.isArray(ratesData)) {
+        setMarketRates(ratesData);
+      } else {
+        const ratesArray = Object.entries(ratesData).map(([key, value]) => ({
+          metalCode: key,
+          ratePerGram: value as number,
+          source: ratesRes.data?.source || 'live',
+          country: shopCountry,
+        }));
+        setMarketRates(ratesArray);
+      }
       toast({
         title: 'Rates Refreshed',
         description: 'Market rates updated successfully',
