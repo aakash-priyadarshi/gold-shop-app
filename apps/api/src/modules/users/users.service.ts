@@ -112,6 +112,13 @@ export class UsersService {
           role: true,
           status: true,
           createdAt: true,
+          shop: {
+            select: {
+              id: true,
+              shopName: true,
+              isVerified: true,
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
       }),

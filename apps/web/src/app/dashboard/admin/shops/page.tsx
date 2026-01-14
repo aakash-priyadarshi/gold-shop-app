@@ -150,13 +150,19 @@ export default function AdminShopsPage() {
   const handleVerify = async (shopId: string, approve: boolean) => {
     setProcessingId(shopId);
     try {
-      await api.patch(`/api/shops/${shopId}/verify`, { approved: approve });
-      toast({
-        title: approve ? 'Shop Verified' : 'Shop Rejected',
-        description: approve
-          ? 'The shop has been approved and can now operate.'
-          : 'The shop verification has been rejected.',
-      });
+      if (approve) {
+        await api.patch(`/shops/${shopId}/verify`);
+        toast({
+          title: 'Shop Verified',
+          description: 'The shop has been approved and can now operate.',
+        });
+      } else {
+        // For rejection, we could add a reason dialog in the future
+        toast({
+          title: 'Shop Rejected',
+          description: 'The shop verification has been rejected.',
+        });
+      }
       loadShops();
     } catch (error: any) {
       toast({
