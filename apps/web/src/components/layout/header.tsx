@@ -435,7 +435,7 @@ export function Header() {
                   <Link href="/cart">
                     <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-lg">
                       <ShoppingCartIcon className="h-5 w-5" />
-                      {itemCount > 0 && (
+                      {mounted && itemCount > 0 && (
                         <span className="absolute -top-1 -right-1 h-5 w-5 bg-amber-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
                           {itemCount > 9 ? '9+' : itemCount}
                         </span>
@@ -444,7 +444,7 @@ export function Header() {
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Cart ({itemCount})</p>
+                  <p>Cart ({mounted ? itemCount : 0})</p>
                 </TooltipContent>
               </Tooltip>
               
@@ -562,7 +562,7 @@ export function Header() {
               <Link href="/cart">
                 <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-lg">
                   <ShoppingCartIcon className="h-5 w-5" />
-                  {itemCount > 0 && (
+                  {mounted && itemCount > 0 && (
                     <span className="absolute -top-1 -right-1 h-5 w-5 bg-amber-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
                       {itemCount > 9 ? '9+' : itemCount}
                     </span>

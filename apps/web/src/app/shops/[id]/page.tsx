@@ -66,7 +66,9 @@ interface Shop {
   supportedJewelleryTypes: string[];
   averageRating?: number;
   totalRatings?: number;
+  userId?: string; // Owner's user ID
   user?: {
+    id?: string;
     firstName: string;
     lastName: string;
   };
@@ -113,6 +115,7 @@ export default function ShopDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [productsLoading, setProductsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
   
   // Custom order dialog
   const [customOrderOpen, setCustomOrderOpen] = useState(false);
@@ -129,12 +132,24 @@ export default function ShopDetailPage() {
   // Product quantity state for cart
   const [quantities, setQuantities] = useState<Record<string, number>>({});
 
+  // Fix hydration - mark as mounted after client load
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (shopId) {
       loadShopDetails();
       loadShopProducts();
     }
   }, [shopId]);
+
+  // Check if current user is the shop owner
+  const isShopOwner = mounted && isAuthenticated && user && shop && (
+    user.shop?.id === shop.id || 
+    shop.userId === user.id || 
+    shop.user?.id === user.id
+  );
 
   const loadShopDetails = async () => {
     setIsLoading(true);
@@ -192,6 +207,16 @@ export default function ShopDetailPage() {
   };
 
   const handleAddToCart = async (product: Product) => {
+    // Check if user is the shop owner
+    if (isShopOwner) {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot Add to Cart',
+        description: 'You cannot purchase products from your own shop',
+      });
+      return;
+    }
+
     const quantity = quantities[product.id] || 1;
     try {
       await addToCart({
@@ -325,6 +350,25 @@ export default function ShopDetailPage() {
       <Header />
       
       <main className="flex-1">
+        {/* Owner Banner */}
+        {isShopOwner && (
+          <div className="bg-blue-600 text-white py-3">
+            <div className="container mx-auto px-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BuildingStorefrontIcon className="h-5 w-5" />
+                <span className="font-medium">You are viewing your own shop</span>
+              </div>
+              <Button 
+                variant="secondary" 
+                size="sm"
+                onClick={() => router.push('/dashboard/shop')}
+              >
+                Go to Dashboard
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Hero Section */}
         <div className="bg-gradient-to-br from-amber-600 to-amber-800 text-white py-12">
           <div className="container mx-auto px-4">
@@ -566,41 +610,53 @@ export default function ShopDetailPage() {
                             </div>
 
                             <div className="flex items-center gap-2">
-                              <div className="flex items-center border rounded-md">
+                              {!isShopOwner && (
+                                <div className="flex items-center border rounded-md">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => setQuantities({
+                                      ...quantities,
+                                      [product.id]: Math.max(1, (quantities[product.id] || 1) - 1)
+                                    })}
+                                  >
+                                    <Minus className="h-3 w-3" />
+                                  </Button>
+                                  <span className="w-8 text-center text-sm">
+                                    {quantities[product.id] || 1}
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => setQuantities({
+                                      ...quantities,
+                                      [product.id]: Math.min(product.stockQuantity, (quantities[product.id] || 1) + 1)
+                                    })}
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              )}
+                              {isShopOwner ? (
                                 <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                  onClick={() => setQuantities({
-                                    ...quantities,
-                                    [product.id]: Math.max(1, (quantities[product.id] || 1) - 1)
-                                  })}
+                                  className="flex-1"
+                                  variant="secondary"
+                                  disabled
                                 >
-                                  <Minus className="h-3 w-3" />
+                                  Your Product
                                 </Button>
-                                <span className="w-8 text-center text-sm">
-                                  {quantities[product.id] || 1}
-                                </span>
+                              ) : (
                                 <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                  onClick={() => setQuantities({
-                                    ...quantities,
-                                    [product.id]: Math.min(product.stockQuantity, (quantities[product.id] || 1) + 1)
-                                  })}
+                                  className="flex-1"
+                                  onClick={() => handleAddToCart(product)}
+                                  disabled={product.stockQuantity <= 0}
                                 >
-                                  <Plus className="h-3 w-3" />
+                                  <ShoppingCartIcon className="h-4 w-4 mr-2" />
+                                  Add to Cart
                                 </Button>
-                              </div>
-                              <Button
-                                className="flex-1"
-                                onClick={() => handleAddToCart(product)}
-                                disabled={product.stockQuantity <= 0}
-                              >
-                                <ShoppingCartIcon className="h-4 w-4 mr-2" />
-                                Add to Cart
-                              </Button>
+                              )}
                             </div>
                           </CardContent>
                         </Card>
@@ -741,7 +797,7 @@ export default function ShopDetailPage() {
                     <div className="flex flex-wrap gap-2">
                       {shop.supportedMaterials.map((material) => (
                         <Badge key={material} variant="outline">
-                          {material.replace(/_/g, ' ')}
+                          {material?.replace(/_/g, ' ') || material}
                         </Badge>
                       ))}
                     </div>
@@ -759,7 +815,7 @@ export default function ShopDetailPage() {
                     <div className="flex flex-wrap gap-2">
                       {shop.supportedJewelleryTypes.map((type) => (
                         <Badge key={type} variant="secondary">
-                          {type.replace(/_/g, ' ')}
+                          {type?.replace(/_/g, ' ') || type}
                         </Badge>
                       ))}
                     </div>

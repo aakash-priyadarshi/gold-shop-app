@@ -441,19 +441,19 @@ export default function ShopsPage() {
                   <div className="flex flex-wrap gap-1">
                     {shop.supportedMaterials?.slice(0, 3).map((material) => (
                       <Badge key={material} variant="secondary" className="text-xs">
-                        {material.replace('_', ' ')}
+                        {material?.replace('_', ' ') || material}
                       </Badge>
                     ))}
                     {(shop.supportedMaterials?.length || 0) > 3 && (
                       <Badge variant="secondary" className="text-xs">
-                        +{shop.supportedMaterials.length - 3} more
+                        +{(shop.supportedMaterials?.length || 0) - 3} more
                       </Badge>
                     )}
                   </div>
 
                   {/* Actions */}
                   <div className="flex items-center gap-2 pt-2">
-                    <Link href={`/shop/${shop.id}`} className="flex-1">
+                    <Link href={`/shops/${shop.id}`} className="flex-1">
                       <Button className="w-full gold-gradient text-white">
                         View Shop
                       </Button>
