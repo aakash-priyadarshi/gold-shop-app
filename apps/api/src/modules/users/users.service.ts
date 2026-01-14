@@ -177,7 +177,7 @@ export class UsersService {
   }
 
   /**
-   * Get user preferences (language, currency, theme)
+   * Get user preferences (language, currency, country, theme)
    */
   async getPreferences(userId: string) {
     // Use raw query approach to handle new fields that TypeScript may not recognize yet
@@ -192,6 +192,7 @@ export class UsersService {
     return {
       language: user.preferredLanguage || 'en',
       currency: (user as any).preferredCurrency || DEFAULT_CURRENCY,
+      country: (user as any).preferredCountry || 'US',
       theme: (user as any).themeMode || 'system',
     };
   }
@@ -204,6 +205,7 @@ export class UsersService {
     data: {
       preferredLanguage?: string;
       preferredCurrency?: CurrencyCode;
+      preferredCountry?: string;
       themeMode?: string;
     },
   ) {
@@ -221,6 +223,7 @@ export class UsersService {
       data: {
         ...(data.preferredLanguage && { preferredLanguage: data.preferredLanguage }),
         ...(data.preferredCurrency && { preferredCurrency: data.preferredCurrency } as any),
+        ...(data.preferredCountry && { preferredCountry: data.preferredCountry } as any),
         ...(data.themeMode && { themeMode: data.themeMode } as any),
       },
     });
@@ -228,6 +231,7 @@ export class UsersService {
     return {
       language: updated.preferredLanguage || 'en',
       currency: (updated as any).preferredCurrency || DEFAULT_CURRENCY,
+      country: (updated as any).preferredCountry || 'US',
       theme: (updated as any).themeMode || 'system',
     };
   }

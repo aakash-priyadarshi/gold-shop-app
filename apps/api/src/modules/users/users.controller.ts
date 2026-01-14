@@ -86,6 +86,7 @@ export class UsersController {
     return this.usersService.updatePreferences(userId, {
       preferredLanguage: dto.preferredLanguage,
       preferredCurrency: dto.preferredCurrency,
+      preferredCountry: dto.preferredCountry,
       themeMode: dto.themeMode,
     });
   }

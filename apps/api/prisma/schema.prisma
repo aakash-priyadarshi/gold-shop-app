@@ -20,6 +20,7 @@ model User {
   lastName             String
   preferredLanguage    String                @default("en")
   preferredCurrency    CurrencyCode          @default(NPR)
+  preferredCountry     String                @default("US")
   themeMode            String                @default("system")
   emailVerified        Boolean               @default(false)
   emailVerifiedAt      DateTime?

@@ -65,11 +65,14 @@ import {
   ShoppingCartIcon,
   XMarkIcon,
   TrashIcon,
+  HeartIcon,
+  CreditCardIcon,
+  ChevronRightIcon,
 } from '@heroicons/react/24/outline';
 import { useState, useEffect, useCallback } from 'react';
 import { useTheme } from 'next-themes';
 import { useAuth, getDashboardRoute, type UserRole } from '@/hooks/useAuth';
-import { notificationsApi } from '@/lib/api';
+import { notificationsApi, ordersApi } from '@/lib/api';
 import {
   usePreferencesStore,
   CURRENCIES,
@@ -120,6 +123,15 @@ export function Header() {
   }>>([]);
   const [cartPopoverOpen, setCartPopoverOpen] = useState(false);
   const [notifPopoverOpen, setNotifPopoverOpen] = useState(false);
+  const [dashboardPopoverOpen, setDashboardPopoverOpen] = useState(false);
+  const [ordersPopoverOpen, setOrdersPopoverOpen] = useState(false);
+  const [recentOrders, setRecentOrders] = useState<Array<{
+    id: string;
+    status: string;
+    totalPriceNpr: number;
+    createdAt: string;
+    items?: Array<{ product?: { name: string } }>;
+  }>>([]);
 
   // Get preferences from store
   const language = usePreferencesStore((state) => state.language);
@@ -165,6 +177,24 @@ export function Header() {
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, [fetchNotifications]);
+
+  // Fetch recent orders for the orders popover
+  const fetchRecentOrders = useCallback(async () => {
+    if (!isAuthenticated || user?.role !== 'CUSTOMER') {
+      setRecentOrders([]);
+      return;
+    }
+    try {
+      const response = await ordersApi.getMyOrders({ page: 1, pageSize: 5 });
+      setRecentOrders(response.data?.orders || response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch recent orders:', error);
+    }
+  }, [isAuthenticated, user?.role]);
+
+  useEffect(() => {
+    fetchRecentOrders();
+  }, [fetchRecentOrders]);
 
   const navigation = [
     { name: 'Shop', href: '/shop', icon: ShoppingBagIcon },
@@ -463,21 +493,184 @@ export function Header() {
             <div className="w-9 h-9 bg-gray-100 rounded-lg animate-pulse" />
           ) : isAuthenticated && user ? (
             <TooltipProvider delayDuration={200}>
-              {/* Role-specific quick action icons */}
-              {getRoleQuickActions(user.role).map((action) => (
-                <Tooltip key={action.href}>
+              {/* Dashboard Popover */}
+              {user.role === 'CUSTOMER' ? (
+                <Popover open={dashboardPopoverOpen} onOpenChange={setDashboardPopoverOpen}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg">
+                          <Squares2X2Icon className="h-5 w-5" />
+                        </Button>
+                      </PopoverTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Dashboard</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <PopoverContent className="w-56 p-2" align="end">
+                    <div className="space-y-1">
+                      <Link href="/dashboard/customer" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <Squares2X2Icon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">Dashboard</span>
+                        </div>
+                      </Link>
+                      <Link href="/dashboard/customer/orders" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <ShoppingCartIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">My Orders</span>
+                        </div>
+                      </Link>
+                      <Link href="/dashboard/customer/rfqs" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <ClipboardDocumentListIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">My RFQs</span>
+                        </div>
+                      </Link>
+                      <Link href="/dashboard/customer/wishlist" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <HeartIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">Wishlist</span>
+                        </div>
+                      </Link>
+                      <Link href="/dashboard/customer/payments" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <CreditCardIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">Payments</span>
+                        </div>
+                      </Link>
+                      <div className="border-t my-1" />
+                      <Link href="/dashboard/customer/settings" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <Cog6ToothIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">Settings</span>
+                        </div>
+                      </Link>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                // For non-customer roles, use the first quick action as a simple link
+                <Tooltip>
                   <TooltipTrigger asChild>
-                    <Link href={action.href}>
+                    <Link href={getRoleQuickActions(user.role)[0]?.href || getDashboardRoute(user.role)}>
                       <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg">
-                        <action.icon className="h-5 w-5" />
+                        {(() => {
+                          const Icon = getRoleQuickActions(user.role)[0]?.icon || Squares2X2Icon;
+                          return <Icon className="h-5 w-5" />;
+                        })()}
                       </Button>
                     </Link>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{action.tooltip}</p>
+                    <p>{getRoleQuickActions(user.role)[0]?.tooltip || 'Dashboard'}</p>
                   </TooltipContent>
                 </Tooltip>
-              ))}
+              )}
+
+              {/* Track Orders Popover (Customer only) */}
+              {user.role === 'CUSTOMER' ? (
+                <Popover open={ordersPopoverOpen} onOpenChange={setOrdersPopoverOpen}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg">
+                          <TruckIcon className="h-5 w-5" />
+                        </Button>
+                      </PopoverTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Track Orders</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <PopoverContent className="w-80 p-0" align="end">
+                    <div className="flex items-center justify-between p-3 border-b">
+                      <h3 className="font-semibold">Recent Orders</h3>
+                      <span className="text-xs text-muted-foreground">{recentOrders.length} order{recentOrders.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    <ScrollArea className="h-[280px]">
+                      {recentOrders.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center p-6 text-center">
+                          <TruckIcon className="h-12 w-12 text-gray-300 mb-3" />
+                          <p className="text-muted-foreground">No orders yet</p>
+                          <Link href="/shop" onClick={() => setOrdersPopoverOpen(false)}>
+                            <Button variant="link" className="mt-2 text-amber-600">
+                              Start Shopping
+                            </Button>
+                          </Link>
+                        </div>
+                      ) : (
+                        <div className="divide-y">
+                          {recentOrders.map((order) => (
+                            <Link 
+                              key={order.id} 
+                              href={`/dashboard/customer/orders/${order.id}`}
+                              onClick={() => setOrdersPopoverOpen(false)}
+                            >
+                              <div className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-sm font-medium truncate">
+                                      Order #{order.id.slice(0, 8)}
+                                    </p>
+                                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                      order.status === 'DELIVERED' ? 'bg-green-100 text-green-700' :
+                                      order.status === 'SHIPPED' ? 'bg-blue-100 text-blue-700' :
+                                      order.status === 'PROCESSING' ? 'bg-amber-100 text-amber-700' :
+                                      order.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
+                                      'bg-gray-100 text-gray-700'
+                                    }`}>
+                                      {order.status}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {order.items?.[0]?.product?.name || 'Custom Order'}
+                                    {order.items && order.items.length > 1 && ` +${order.items.length - 1} more`}
+                                  </p>
+                                  <div className="flex items-center justify-between mt-1">
+                                    <span className="text-xs text-gray-400">
+                                      {new Date(order.createdAt).toLocaleDateString()}
+                                    </span>
+                                    <span className="text-sm font-semibold text-amber-600">
+                                      {formatPrice(order.totalPriceNpr)}
+                                    </span>
+                                  </div>
+                                </div>
+                                <ChevronRightIcon className="h-4 w-4 text-gray-400" />
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </ScrollArea>
+                    <div className="border-t p-3">
+                      <Link href="/dashboard/customer/orders" onClick={() => setOrdersPopoverOpen(false)}>
+                        <Button variant="outline" className="w-full">
+                          See All Orders
+                        </Button>
+                      </Link>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                // For non-customer roles, use the second quick action as a simple link
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link href={getRoleQuickActions(user.role)[1]?.href || getDashboardRoute(user.role)}>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg">
+                        {(() => {
+                          const Icon = getRoleQuickActions(user.role)[1]?.icon || TruckIcon;
+                          return <Icon className="h-5 w-5" />;
+                        })()}
+                      </Button>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{getRoleQuickActions(user.role)[1]?.tooltip || 'Orders'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
               
               {/* Cart Popover */}
               <Popover open={cartPopoverOpen} onOpenChange={setCartPopoverOpen}>

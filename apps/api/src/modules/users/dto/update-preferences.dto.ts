@@ -20,6 +20,14 @@ export class UpdatePreferencesDto {
   preferredCurrency?: CurrencyCode;
 
   @ApiPropertyOptional({ 
+    enum: ['NP', 'IN', 'AE', 'UK', 'EU', 'US'],
+    description: 'Preferred country for tax jurisdiction'
+  })
+  @IsOptional()
+  @IsEnum(['NP', 'IN', 'AE', 'UK', 'EU', 'US'])
+  preferredCountry?: string;
+
+  @ApiPropertyOptional({ 
     enum: ['light', 'dark', 'system'],
     description: 'Theme mode preference'
   })
