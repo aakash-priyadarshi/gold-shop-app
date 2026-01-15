@@ -1276,7 +1276,9 @@ export class OrdersService {
     }
 
     // Shopkeepers can only set certain statuses (DetailedOrderStatus values)
-    const allowedStatuses = ['CONFIRMED', 'IN_PROGRESS', 'READY', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
+    // For INVENTORY orders: CONFIRMED -> PACKED -> SHIPPED -> OUT_FOR_DELIVERY -> DELIVERED
+    // For CUSTOM orders: CONFIRMED -> IN_PROGRESS -> READY -> SHIPPED -> OUT_FOR_DELIVERY -> DELIVERED
+    const allowedStatuses = ['CONFIRMED', 'IN_PROGRESS', 'READY', 'PACKED', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
     if (!allowedStatuses.includes(dto.detailedStatus)) {
       throw new BadRequestException(
         `Shopkeepers can only set these statuses: ${allowedStatuses.join(', ')}`,

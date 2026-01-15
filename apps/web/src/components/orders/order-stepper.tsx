@@ -58,24 +58,29 @@ export type OrderType = 'INVENTORY' | 'CUSTOM';
 
 // Map backend DetailedOrderStatus to our step keys
 const STATUS_MAP: Record<string, string> = {
-  // Prebuilt flow
+  // Prebuilt (Inventory) flow mapping
   PLACED: 'ORDERED',
-  CONFIRMED: 'ORDERED',
+  CONFIRMED: 'ORDERED',      // After payment/confirmation, still in "Ordered" step visually
   PAID: 'ORDERED',
   PACKED: 'PACKED',
   SHIPPED: 'SHIPPED',
   OUT_FOR_DELIVERY: 'OUT_FOR_DELIVERY',
   DELIVERED: 'DELIVERED',
-  // Custom flow
-  IN_PROGRESS: 'FORGING',
+  
+  // Custom flow mapping
+  IN_PROGRESS: 'FORGING',    // Maps to "Forging / Being made"
   IN_PRODUCTION: 'FORGING',
   QC_PENDING: 'FORGING',
   QC_PASSED: 'FORGING',
+  READY: 'PACKED',           // Ready means it's packed for custom orders
   READY_TO_SHIP: 'PACKED',
-  READY: 'PACKED',
-  // Legacy/combined
+  
+  // Initial states
   CREATED: 'ORDERED',
   PAYMENT_PENDING: 'ORDERED',
+  
+  // Custom flow - first step after placed
+  ORDER_ACCEPTED: 'ORDER_ACCEPTED',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

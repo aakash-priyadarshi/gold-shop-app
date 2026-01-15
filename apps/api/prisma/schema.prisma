@@ -1324,13 +1324,19 @@ enum PaymentStatusEnum {
 }
 
 enum DetailedOrderStatus {
-  PLACED
-  CONFIRMED
-  IN_PROGRESS
-  READY
-  SHIPPED
-  OUT_FOR_DELIVERY
-  DELIVERED
+  // Prebuilt (Inventory) Order Flow
+  PLACED        // Initial state when order is created
+  CONFIRMED     // Payment confirmed / Order accepted
+  PACKED        // Item is packed and ready
+  SHIPPED       // Item has been shipped
+  OUT_FOR_DELIVERY  // Out for delivery
+  DELIVERED     // Successfully delivered
+  
+  // Custom Order Flow (additional states)
+  IN_PROGRESS   // Custom: Forging / Being made
+  READY         // Custom: QC passed, ready to pack
+  
+  // Terminal states
   CANCELLED
   REFUNDED
 }

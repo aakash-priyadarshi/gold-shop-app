@@ -94,7 +94,7 @@ export default function CustomerOrderDetailPage() {
   const loadOrder = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get(`/api/orders/${params.id}`);
+      const response = await api.get(`/orders/${params.id}`);
       setOrder(response.data);
     } catch (error) {
       console.error('Failed to load order:', error);

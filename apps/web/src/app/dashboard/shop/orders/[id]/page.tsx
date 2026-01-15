@@ -115,14 +115,25 @@ interface OrderDetails {
   };
 }
 
-// Shopkeeper-allowed status transitions - matches DetailedOrderStatus enum
-const shopkeeperStatusOptions = [
-  'CONFIRMED',
-  'IN_PROGRESS',
-  'READY',
-  'SHIPPED',
-  'OUT_FOR_DELIVERY',
-  'DELIVERED',
+// Shopkeeper-allowed status transitions based on order type
+// Prebuilt (INVENTORY): CONFIRMED → PACKED → SHIPPED → OUT_FOR_DELIVERY → DELIVERED
+// Custom: CONFIRMED → IN_PROGRESS → READY → PACKED → SHIPPED → OUT_FOR_DELIVERY → DELIVERED
+const PREBUILT_STATUS_OPTIONS = [
+  { value: 'CONFIRMED', label: 'Confirmed' },
+  { value: 'PACKED', label: 'Packed' },
+  { value: 'SHIPPED', label: 'Shipped' },
+  { value: 'OUT_FOR_DELIVERY', label: 'Out for Delivery' },
+  { value: 'DELIVERED', label: 'Delivered' },
+];
+
+const CUSTOM_STATUS_OPTIONS = [
+  { value: 'CONFIRMED', label: 'Order Accepted' },
+  { value: 'IN_PROGRESS', label: 'Forging / Being Made' },
+  { value: 'READY', label: 'Ready' },
+  { value: 'PACKED', label: 'Packed' },
+  { value: 'SHIPPED', label: 'Shipped' },
+  { value: 'OUT_FOR_DELIVERY', label: 'Out for Delivery' },
+  { value: 'DELIVERED', label: 'Delivered' },
 ];
 
 const statusColors: Record<string, string> = {
@@ -447,7 +458,7 @@ export default function ShopOrderDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <Select
-                    value={order.status}
+                    value={order.detailedStatus || order.status}
                     onValueChange={updateStatus}
                     disabled={isUpdating}
                   >
@@ -455,9 +466,9 @@ export default function ShopOrderDetailPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {shopkeeperStatusOptions.map((status) => (
-                        <SelectItem key={status} value={status}>
-                          {status.replace(/_/g, ' ')}
+                      {(order.orderType === 'CUSTOM' ? CUSTOM_STATUS_OPTIONS : PREBUILT_STATUS_OPTIONS).map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
