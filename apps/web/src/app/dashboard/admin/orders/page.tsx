@@ -78,17 +78,16 @@ import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
-// Order status badge styles
+// Order status badge styles - matches DetailedOrderStatus enum
 const statusStyles: Record<string, { color: string; icon: any; label: string }> = {
-  CREATED: { color: 'bg-blue-100 text-blue-800', icon: Clock, label: 'Created' },
+  PLACED: { color: 'bg-blue-100 text-blue-800', icon: Clock, label: 'Placed' },
   CONFIRMED: { color: 'bg-indigo-100 text-indigo-800', icon: CheckCircle, label: 'Confirmed' },
-  IN_PRODUCTION: { color: 'bg-amber-100 text-amber-800', icon: Package, label: 'In Production' },
-  QUALITY_CHECK: { color: 'bg-purple-100 text-purple-800', icon: CheckCircle, label: 'Quality Check' },
-  READY_TO_SHIP: { color: 'bg-teal-100 text-teal-800', icon: Package, label: 'Ready to Ship' },
+  IN_PROGRESS: { color: 'bg-amber-100 text-amber-800', icon: Package, label: 'In Progress' },
+  READY: { color: 'bg-teal-100 text-teal-800', icon: Package, label: 'Ready' },
   SHIPPED: { color: 'bg-cyan-100 text-cyan-800', icon: Truck, label: 'Shipped' },
+  OUT_FOR_DELIVERY: { color: 'bg-purple-100 text-purple-800', icon: Truck, label: 'Out for Delivery' },
   DELIVERED: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Delivered' },
   CANCELLED: { color: 'bg-red-100 text-red-800', icon: XCircle, label: 'Cancelled' },
-  EXPIRED: { color: 'bg-gray-100 text-gray-800', icon: AlertTriangle, label: 'Expired' },
   REFUNDED: { color: 'bg-orange-100 text-orange-800', icon: DollarSign, label: 'Refunded' },
 };
 
@@ -138,24 +137,63 @@ interface Order {
   orderNumber: string;
   orderType: 'INVENTORY' | 'CUSTOM';
   status: string;
+  detailedStatus?: string;
   paymentStatus: string;
   paymentMethod?: string;
   totalNpr: number;
+  subtotalNpr?: number;
+  taxNpr?: number;
+  shippingNpr?: number;
+  discountNpr?: number;
   balanceDueNpr: number;
+  bookingFeePaidNpr?: number;
+  displayCurrency?: string;
   createdAt: string;
   estimatedDelivery?: string;
+  actualDelivery?: string;
+  trackingNumber?: string;
+  shippingMethod?: string;
   marketCountry?: string;
   customer: {
     id: string;
     firstName: string;
     lastName: string;
     email: string;
+    phone?: string;
   };
   shop: {
     id: string;
-    businessName: string;
+    shopName?: string;
+    businessName?: string;
   };
-  productSnapshot?: any;
+  productSnapshot?: {
+    jewelleryType?: string;
+    buildMethod?: string;
+    composition?: {
+      baseAlloy?: {
+        metal?: string;
+        purity?: string;
+      };
+    };
+    nameEn?: string;
+    nameNe?: string;
+    totalWeightGrams?: number;
+    goldWeightGrams?: number;
+    referenceImages?: string[];
+    sku?: string;
+    quantity?: number;
+    images?: string[];
+  };
+  shippingAddress?: {
+    fullName?: string;
+    phone?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    pincode?: string;
+  };
   adminNotes?: string;
   createdByAdmin?: boolean;
   paymentVerifiedByAdmin?: boolean;
@@ -279,7 +317,7 @@ export default function AdminOrdersPage() {
   async function handleUpdateOrderStatus(orderId: string, newStatus: string) {
     setUpdatingOrderId(orderId);
     try {
-      await api.patch(`/orders/admin/${orderId}/order-status`, { status: newStatus });
+      await api.patch(`/orders/admin/${orderId}/order-status`, { detailedStatus: newStatus });
       
       // Update local state optimistically
       setOrders(prev => prev.map(o => 
@@ -437,13 +475,25 @@ export default function AdminOrdersPage() {
     }
   }
 
-  function formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('en-NP', {
+  function formatCurrency(amount: number, currency?: string): string {
+    const currencyCode = currency || 'NPR';
+    const locale = currencyCode === 'INR' ? 'en-IN' : currencyCode === 'USD' ? 'en-US' : 'en-NP';
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: 'NPR',
+      currency: currencyCode,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
+  }
+  
+  // Helper to get currency symbol
+  function getCurrencySymbol(currency?: string): string {
+    switch (currency) {
+      case 'INR': return '₹';
+      case 'USD': return '$';
+      case 'NPR':
+      default: return 'Rs.';
+    }
   }
 
   return (
@@ -761,10 +811,10 @@ export default function AdminOrdersPage() {
                                 </Select>
                               </TableCell>
                               <TableCell className="text-right">
-                                <div className="font-medium">{formatCurrency(order.totalNpr)}</div>
+                                <div className="font-medium">{formatCurrency(order.totalNpr, order.displayCurrency)}</div>
                                 {order.balanceDueNpr > 0 && (
                                   <div className="text-xs text-amber-600">
-                                    Due: {formatCurrency(order.balanceDueNpr)}
+                                    Due: {formatCurrency(order.balanceDueNpr, order.displayCurrency)}
                                   </div>
                                 )}
                               </TableCell>
@@ -775,18 +825,18 @@ export default function AdminOrdersPage() {
                                     <TooltipTrigger asChild>
                                       <div className="cursor-help">
                                         <div className="text-xs text-green-600 font-medium">
-                                          Shop: {formatCurrency(order.commissionBreakdown?.shopkeeperAmount || order.totalNpr * 0.99)}
+                                          Shop: {formatCurrency(order.commissionBreakdown?.shopkeeperAmount || order.totalNpr * 0.99, order.displayCurrency)}
                                         </div>
                                         <div className="text-xs text-blue-600">
-                                          Platform: {formatCurrency(order.commissionBreakdown?.platformCommission || order.totalNpr * 0.01)}
+                                          Platform: {formatCurrency(order.commissionBreakdown?.platformCommission || order.totalNpr * 0.01, order.displayCurrency)}
                                         </div>
                                       </div>
                                     </TooltipTrigger>
                                     <TooltipContent side="left" className="max-w-xs">
                                       <div className="space-y-1">
                                         <p className="font-medium">Commission Breakdown (1%)</p>
-                                        <p className="text-xs">Shopkeeper (99%): {formatCurrency(order.commissionBreakdown?.shopkeeperAmount || order.totalNpr * 0.99)}</p>
-                                        <p className="text-xs">Platform Fee (1%): {formatCurrency(order.commissionBreakdown?.platformCommission || order.totalNpr * 0.01)}</p>
+                                        <p className="text-xs">Shopkeeper (99%): {formatCurrency(order.commissionBreakdown?.shopkeeperAmount || order.totalNpr * 0.99, order.displayCurrency)}</p>
+                                        <p className="text-xs">Platform Fee (1%): {formatCurrency(order.commissionBreakdown?.platformCommission || order.totalNpr * 0.01, order.displayCurrency)}</p>
                                         {order.commissionBreakdown?.commissionStatus && (
                                           <Badge variant={order.commissionBreakdown.commissionStatus === 'PAID' ? 'default' : order.commissionBreakdown.commissionStatus === 'OVERDUE' ? 'destructive' : 'secondary'} className="text-xs mt-1">
                                             {order.commissionBreakdown.commissionStatus}
@@ -890,30 +940,36 @@ export default function AdminOrdersPage() {
 
             {/* View Order Dialog */}
             <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Order Details</DialogTitle>
                   <DialogDescription>
-                    {selectedOrder?.orderNumber}
+                    {selectedOrder?.orderNumber} • {selectedOrder?.orderType} Order
                   </DialogDescription>
                 </DialogHeader>
                 {selectedOrder && (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    {/* Status Row */}
+                    <div className="grid grid-cols-3 gap-4">
                       <div>
-                        <Label className="text-muted-foreground text-xs">Status</Label>
-                        <Badge className={statusStyles[selectedOrder.status]?.color || ''}>
-                          {statusStyles[selectedOrder.status]?.label || selectedOrder.status}
+                        <Label className="text-muted-foreground text-xs">Order Status</Label>
+                        <Badge className={statusStyles[selectedOrder.detailedStatus || selectedOrder.status]?.color || ''}>
+                          {statusStyles[selectedOrder.detailedStatus || selectedOrder.status]?.label || selectedOrder.status}
                         </Badge>
                       </div>
                       <div>
-                        <Label className="text-muted-foreground text-xs">Payment</Label>
+                        <Label className="text-muted-foreground text-xs">Payment Status</Label>
                         <Badge className={paymentStyles[selectedOrder.paymentStatus]?.color || ''}>
                           {paymentStyles[selectedOrder.paymentStatus]?.label || selectedOrder.paymentStatus}
                         </Badge>
                       </div>
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Payment Method</Label>
+                        <p className="text-sm font-medium">{selectedOrder.paymentMethod?.replace(/_/g, ' ') || 'N/A'}</p>
+                      </div>
                     </div>
                     
+                    {/* Customer & Shop Info */}
                     <div className="grid grid-cols-2 gap-4">
                       <Card>
                         <CardHeader className="pb-2">
@@ -922,9 +978,12 @@ export default function AdminOrdersPage() {
                             Customer
                           </CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="space-y-1">
                           <p className="font-medium">{selectedOrder.customer.firstName} {selectedOrder.customer.lastName}</p>
                           <p className="text-sm text-muted-foreground">{selectedOrder.customer.email}</p>
+                          {selectedOrder.customer.phone && (
+                            <p className="text-sm text-muted-foreground">{selectedOrder.customer.phone}</p>
+                          )}
                         </CardContent>
                       </Card>
                       <Card>
@@ -935,36 +994,188 @@ export default function AdminOrdersPage() {
                           </CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <p className="font-medium">{selectedOrder.shop.businessName}</p>
+                          <p className="font-medium">{selectedOrder.shop.shopName || selectedOrder.shop.businessName}</p>
                         </CardContent>
                       </Card>
                     </div>
                     
+                    {/* Product Details */}
                     <Card>
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Product Details</CardTitle>
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <Package className="h-4 w-4" />
+                          Product Details
+                        </CardTitle>
                       </CardHeader>
-                      <CardContent>
-                        <p className="font-medium">{selectedOrder.productSnapshot?.name || 'N/A'}</p>
-                        <p className="text-sm text-muted-foreground">{selectedOrder.productSnapshot?.metalType || 'N/A'}</p>
+                      <CardContent className="space-y-2">
+                        {selectedOrder.productSnapshot?.jewelleryType && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground text-sm">Jewellery Type</span>
+                            <span className="font-medium">{selectedOrder.productSnapshot.jewelleryType.replace(/_/g, ' ')}</span>
+                          </div>
+                        )}
+                        {selectedOrder.productSnapshot?.nameEn && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground text-sm">Name</span>
+                            <span className="font-medium">{selectedOrder.productSnapshot.nameEn}</span>
+                          </div>
+                        )}
+                        {selectedOrder.productSnapshot?.buildMethod && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground text-sm">Build Method</span>
+                            <span className="font-medium">{selectedOrder.productSnapshot.buildMethod.replace(/_/g, ' ')}</span>
+                          </div>
+                        )}
+                        {selectedOrder.productSnapshot?.composition?.baseAlloy && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground text-sm">Metal</span>
+                            <span className="font-medium">
+                              {selectedOrder.productSnapshot.composition.baseAlloy.metal} {selectedOrder.productSnapshot.composition.baseAlloy.purity}
+                            </span>
+                          </div>
+                        )}
+                        {selectedOrder.productSnapshot?.totalWeightGrams && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground text-sm">Weight</span>
+                            <span className="font-medium">{selectedOrder.productSnapshot.totalWeightGrams}g</span>
+                          </div>
+                        )}
+                        {selectedOrder.productSnapshot?.sku && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground text-sm">SKU</span>
+                            <span className="font-medium">{selectedOrder.productSnapshot.sku}</span>
+                          </div>
+                        )}
+                        {selectedOrder.productSnapshot?.quantity && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground text-sm">Quantity</span>
+                            <span className="font-medium">{selectedOrder.productSnapshot.quantity}</span>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                     
+                    {/* Shipping Address */}
+                    {selectedOrder.shippingAddress && Object.keys(selectedOrder.shippingAddress).length > 0 && (
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <Truck className="h-4 w-4" />
+                            Shipping Address
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-sm space-y-1">
+                            {selectedOrder.shippingAddress.fullName && (
+                              <p className="font-medium">{selectedOrder.shippingAddress.fullName}</p>
+                            )}
+                            {selectedOrder.shippingAddress.phone && (
+                              <p className="text-muted-foreground">{selectedOrder.shippingAddress.phone}</p>
+                            )}
+                            {selectedOrder.shippingAddress.addressLine1 && (
+                              <p>{selectedOrder.shippingAddress.addressLine1}</p>
+                            )}
+                            {selectedOrder.shippingAddress.addressLine2 && (
+                              <p>{selectedOrder.shippingAddress.addressLine2}</p>
+                            )}
+                            <p>
+                              {[
+                                selectedOrder.shippingAddress.city,
+                                selectedOrder.shippingAddress.state,
+                                selectedOrder.shippingAddress.pincode
+                              ].filter(Boolean).join(', ')}
+                            </p>
+                            {selectedOrder.shippingAddress.country && (
+                              <p>{selectedOrder.shippingAddress.country}</p>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                    
+                    {/* Price Breakdown */}
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <DollarSign className="h-4 w-4" />
+                          Price Breakdown ({selectedOrder.displayCurrency || 'NPR'})
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {selectedOrder.subtotalNpr !== undefined && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Subtotal</span>
+                            <span>{formatCurrency(selectedOrder.subtotalNpr, selectedOrder.displayCurrency)}</span>
+                          </div>
+                        )}
+                        {selectedOrder.taxNpr !== undefined && selectedOrder.taxNpr > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Tax</span>
+                            <span>{formatCurrency(selectedOrder.taxNpr, selectedOrder.displayCurrency)}</span>
+                          </div>
+                        )}
+                        {selectedOrder.shippingNpr !== undefined && selectedOrder.shippingNpr > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Shipping</span>
+                            <span>{formatCurrency(selectedOrder.shippingNpr, selectedOrder.displayCurrency)}</span>
+                          </div>
+                        )}
+                        {selectedOrder.discountNpr !== undefined && selectedOrder.discountNpr > 0 && (
+                          <div className="flex justify-between text-sm text-green-600">
+                            <span>Discount</span>
+                            <span>-{formatCurrency(selectedOrder.discountNpr, selectedOrder.displayCurrency)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between font-bold pt-2 border-t">
+                          <span>Total</span>
+                          <span className="text-lg">{formatCurrency(selectedOrder.totalNpr, selectedOrder.displayCurrency)}</span>
+                        </div>
+                        {selectedOrder.bookingFeePaidNpr !== undefined && selectedOrder.bookingFeePaidNpr > 0 && (
+                          <div className="flex justify-between text-sm text-green-600">
+                            <span>Booking Fee Paid</span>
+                            <span>{formatCurrency(selectedOrder.bookingFeePaidNpr, selectedOrder.displayCurrency)}</span>
+                          </div>
+                        )}
+                        {selectedOrder.balanceDueNpr > 0 && (
+                          <div className="flex justify-between text-sm font-medium text-amber-600">
+                            <span>Balance Due</span>
+                            <span>{formatCurrency(selectedOrder.balanceDueNpr, selectedOrder.displayCurrency)}</span>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                    
+                    {/* Delivery Info */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-muted-foreground text-xs">Total Amount</Label>
-                        <p className="text-lg font-bold">{formatCurrency(selectedOrder.totalNpr)}</p>
+                        <Label className="text-muted-foreground text-xs">Created At</Label>
+                        <p className="text-sm">{new Date(selectedOrder.createdAt).toLocaleString()}</p>
                       </div>
-                      <div>
-                        <Label className="text-muted-foreground text-xs">Balance Due</Label>
-                        <p className="text-lg font-bold text-amber-600">{formatCurrency(selectedOrder.balanceDueNpr)}</p>
-                      </div>
+                      {selectedOrder.estimatedDelivery && (
+                        <div>
+                          <Label className="text-muted-foreground text-xs">Estimated Delivery</Label>
+                          <p className="text-sm">{new Date(selectedOrder.estimatedDelivery).toLocaleDateString()}</p>
+                        </div>
+                      )}
+                      {selectedOrder.trackingNumber && (
+                        <div>
+                          <Label className="text-muted-foreground text-xs">Tracking Number</Label>
+                          <p className="text-sm font-mono">{selectedOrder.trackingNumber}</p>
+                        </div>
+                      )}
+                      {selectedOrder.shippingMethod && (
+                        <div>
+                          <Label className="text-muted-foreground text-xs">Shipping Method</Label>
+                          <p className="text-sm">{selectedOrder.shippingMethod}</p>
+                        </div>
+                      )}
                     </div>
                     
-                    {selectedOrder.estimatedDelivery && (
+                    {/* Admin Notes */}
+                    {selectedOrder.adminNotes && (
                       <div>
-                        <Label className="text-muted-foreground text-xs">Estimated Delivery</Label>
-                        <p>{new Date(selectedOrder.estimatedDelivery).toLocaleDateString()}</p>
+                        <Label className="text-muted-foreground text-xs">Admin Notes</Label>
+                        <p className="text-sm bg-muted p-2 rounded">{selectedOrder.adminNotes}</p>
                       </div>
                     )}
                   </div>

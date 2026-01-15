@@ -115,13 +115,13 @@ interface OrderDetails {
   };
 }
 
-// Shopkeeper-allowed status transitions
+// Shopkeeper-allowed status transitions - matches DetailedOrderStatus enum
 const shopkeeperStatusOptions = [
-  'IN_PRODUCTION',
-  'QC_PENDING',
-  'QC_PASSED',
-  'READY_TO_SHIP',
+  'CONFIRMED',
+  'IN_PROGRESS',
+  'READY',
   'SHIPPED',
+  'OUT_FOR_DELIVERY',
   'DELIVERED',
 ];
 
@@ -181,7 +181,7 @@ export default function ShopOrderDetailPage() {
   const updateStatus = async (newStatus: string) => {
     setIsUpdating(true);
     try {
-      await api.patch(`/orders/${orderId}/status`, { status: newStatus });
+      await api.patch(`/orders/shop/${orderId}/order-status`, { detailedStatus: newStatus });
       toast({
         title: 'Status Updated',
         description: `Order status changed to ${newStatus.replace(/_/g, ' ')}`,

@@ -88,7 +88,7 @@ export class OrdersService {
           paymentMethod: 'ONLINE',
           paymentStatus: 'PENDING',
           balanceDueNpr: total,
-          shippingAddress: {},
+          shippingAddress: (dto.shippingAddress || {}) as Prisma.InputJsonValue,
           status: OrderStatus.CREATED,
         },
         include: {
@@ -675,7 +675,7 @@ export class OrdersService {
       this.prisma.order.findMany({
         where,
         include: {
-          customer: { select: { id: true, firstName: true, lastName: true, email: true } },
+          customer: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
           shop: { select: { id: true, shopName: true } },
           commissionLedger: { select: { id: true, amount: true, status: true, dueAt: true, paidAt: true } },
         },
@@ -1275,8 +1275,8 @@ export class OrdersService {
       throw new ForbiddenException('This order does not belong to your shop');
     }
 
-    // Shopkeepers can only set certain statuses
-    const allowedStatuses = ['CONFIRMED', 'IN_PROGRESS', 'READY', 'SHIPPED', 'DELIVERED'];
+    // Shopkeepers can only set certain statuses (DetailedOrderStatus values)
+    const allowedStatuses = ['CONFIRMED', 'IN_PROGRESS', 'READY', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
     if (!allowedStatuses.includes(dto.detailedStatus)) {
       throw new BadRequestException(
         `Shopkeepers can only set these statuses: ${allowedStatuses.join(', ')}`,

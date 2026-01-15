@@ -40,18 +40,24 @@ interface Order {
   orderType: 'INVENTORY' | 'CUSTOM';
   status: string;
   detailedStatus: string;
-  totalAmount: number;
+  totalNpr: number;
+  displayCurrency?: string;
   createdAt: string;
   shop: {
     id: string;
-    name: string;
-    country: string;
+    shopName: string;
   };
-  items: Array<{
+  productSnapshot?: {
+    name?: string;
+    nameEn?: string;
+    jewelleryType?: string;
+    metalType?: string;
+    images?: string[];
+  };
+  milestones?: Array<{
     id: string;
-    jewelleryType: string;
-    metalType: string;
-    quantity: number;
+    type: string;
+    completedAt: string;
   }>;
 }
 
@@ -68,7 +74,8 @@ export default function CustomerOrdersPage() {
     setIsLoading(true);
     try {
       const response = await api.get('/orders/my-orders');
-      let ordersArr = response.data;
+      // API returns { orders: [], pagination: {} }
+      let ordersArr = response.data?.orders || response.data;
       if (!Array.isArray(ordersArr)) {
         ordersArr = [];
       }
@@ -82,8 +89,8 @@ export default function CustomerOrdersPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'PENDING':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Pending</Badge>;
+      case 'PLACED':
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Placed</Badge>;
       case 'CONFIRMED':
         return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Confirmed</Badge>;
       case 'IN_PROGRESS':
@@ -92,10 +99,13 @@ export default function CustomerOrdersPage() {
         return <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">Ready</Badge>;
       case 'SHIPPED':
         return <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-200">Shipped</Badge>;
+      case 'OUT_FOR_DELIVERY':
+        return <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">Out for Delivery</Badge>;
       case 'DELIVERED':
         return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Delivered</Badge>;
       case 'CANCELLED':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Cancelled</Badge>;
+      case 'REFUNDED':
+        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">{status === 'CANCELLED' ? 'Cancelled' : 'Refunded'}</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -103,13 +113,14 @@ export default function CustomerOrdersPage() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'PENDING':
+      case 'PLACED':
       case 'CONFIRMED':
         return <Clock className="h-4 w-4" />;
       case 'IN_PROGRESS':
         return <Package className="h-4 w-4" />;
       case 'READY':
       case 'SHIPPED':
+      case 'OUT_FOR_DELIVERY':
         return <Truck className="h-4 w-4" />;
       case 'DELIVERED':
         return <CheckCircle2 className="h-4 w-4" />;
@@ -120,20 +131,20 @@ export default function CustomerOrdersPage() {
 
   const filteredOrders = orders.filter((order) => {
     if (activeTab === 'all') return true;
-    if (activeTab === 'active') return ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'READY'].includes(order.status);
-    if (activeTab === 'shipped') return ['SHIPPED', 'DELIVERED'].includes(order.status);
+    if (activeTab === 'active') return ['PLACED', 'CONFIRMED', 'IN_PROGRESS', 'READY'].includes(order.status);
+    if (activeTab === 'shipped') return ['SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(order.status);
     if (activeTab === 'cancelled') return order.status === 'CANCELLED';
     return true;
   });
 
   const stats = {
     total: orders.length,
-    active: orders.filter((o) => ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'READY'].includes(o.status)).length,
-    shipped: orders.filter((o) => o.status === 'SHIPPED').length,
+    active: orders.filter((o) => ['PLACED', 'CONFIRMED', 'IN_PROGRESS', 'READY'].includes(o.status)).length,
+    shipped: orders.filter((o) => ['SHIPPED', 'OUT_FOR_DELIVERY'].includes(o.status)).length,
     delivered: orders.filter((o) => o.status === 'DELIVERED').length,
     totalSpent: orders
       .filter((o) => o.status !== 'CANCELLED')
-      .reduce((sum, o) => sum + o.totalAmount, 0),
+      .reduce((sum, o) => sum + (o.totalNpr || 0), 0),
   };
 
   if (isLoading) {
@@ -198,7 +209,7 @@ export default function CustomerOrdersPage() {
                 <CardDescription>Total Spent</CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                <p className="text-2xl font-bold">${stats.totalSpent.toLocaleString()}</p>
+                <p className="text-2xl font-bold">Rs. {stats.totalSpent.toLocaleString()}</p>
               </CardContent>
             </Card>
           </div>
@@ -240,7 +251,7 @@ export default function CustomerOrdersPage() {
                         <TableRow>
                           <TableHead>Order</TableHead>
                           <TableHead>Shop</TableHead>
-                          <TableHead>Items</TableHead>
+                          <TableHead>Product</TableHead>
                           <TableHead>Total</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Date</TableHead>
@@ -256,14 +267,14 @@ export default function CustomerOrdersPage() {
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <Store className="h-4 w-4 text-muted-foreground" />
-                                <span>{order.shop.name}</span>
+                                <span>{order.shop?.shopName || 'N/A'}</span>
                               </div>
                             </TableCell>
                             <TableCell>
-                              {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+                              {order.productSnapshot?.jewelleryType?.replace(/_/g, ' ') || order.orderType}
                             </TableCell>
                             <TableCell className="font-medium">
-                              ${order.totalAmount.toLocaleString()}
+                              {order.displayCurrency === 'INR' ? '₹' : 'Rs.'}{(order.totalNpr || 0).toLocaleString()}
                             </TableCell>
                             <TableCell>
                               <div className="w-40">
