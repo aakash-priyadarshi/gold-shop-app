@@ -331,10 +331,12 @@ export class OrdersService {
       this.prisma.order.count({ where }),
     ]);
 
-    // Ensure displayCurrency is set for all orders (fallback to customer preference)
+    // Use customer's preferred currency for all orders
+    // This ensures orders display in the customer's chosen currency
+    const customerCurrency = customer?.preferredCurrency || 'NPR';
     const ordersWithCurrency = orders.map(order => ({
       ...order,
-      displayCurrency: order.displayCurrency || customer?.preferredCurrency || 'NPR',
+      displayCurrency: customerCurrency,
     }));
 
     return {
@@ -405,8 +407,9 @@ export class OrdersService {
       throw new ForbiddenException('Not your shop order');
     }
 
-    // For orders without displayCurrency, use customer's preferred currency as fallback
-    const displayCurrency = order.displayCurrency || order.customer?.preferredCurrency || 'NPR';
+    // Always use customer's current preferred currency for display
+    // This ensures the order shows in their chosen currency
+    const displayCurrency = order.customer?.preferredCurrency || order.displayCurrency || 'NPR';
 
     return {
       ...order,
