@@ -1187,21 +1187,25 @@ export class OrdersService {
       },
     });
 
-    // Notify customer of status change
-    await this.notificationsService.create({
-      userId: order.customerId,
-      type: 'ORDER_UPDATE',
-      titleKey: 'notification.order.status_updated.title',
-      titleParams: { orderNumber: order.orderNumber },
-      bodyKey: 'notification.order.status_updated.body',
-      bodyParams: { 
-        orderNumber: order.orderNumber,
-        status: dto.detailedStatus,
-      },
-      referenceType: 'ORDER',
-      referenceId: order.id,
-      channels: ['EMAIL', 'PUSH'],
-    });
+    // Notify customer of status change (non-blocking)
+    try {
+      await this.notificationsService.create({
+        userId: order.customerId,
+        type: 'SYSTEM_ALERT',
+        titleKey: 'notification.order.status_updated.title',
+        titleParams: { orderNumber: order.orderNumber },
+        bodyKey: 'notification.order.status_updated.body',
+        bodyParams: { 
+          orderNumber: order.orderNumber,
+          status: dto.detailedStatus,
+        },
+        referenceType: 'ORDER',
+        referenceId: order.id,
+        channels: ['EMAIL', 'PUSH'],
+      });
+    } catch (notifyError) {
+      this.logger.warn(`Failed to send notification for order ${orderId}: ${notifyError}`);
+    }
 
     return updated;
   }
@@ -1293,21 +1297,25 @@ export class OrdersService {
       },
     });
 
-    // Notify customer of status change
-    await this.notificationsService.create({
-      userId: order.customerId,
-      type: 'ORDER_UPDATE',
-      titleKey: 'notification.order.status_updated.title',
-      titleParams: { orderNumber: order.orderNumber },
-      bodyKey: 'notification.order.status_updated.body',
-      bodyParams: { 
-        orderNumber: order.orderNumber,
-        status: dto.detailedStatus,
-      },
-      referenceType: 'ORDER',
-      referenceId: order.id,
-      channels: ['EMAIL', 'PUSH'],
-    });
+    // Notify customer of status change (non-blocking)
+    try {
+      await this.notificationsService.create({
+        userId: order.customerId,
+        type: 'SYSTEM_ALERT',
+        titleKey: 'notification.order.status_updated.title',
+        titleParams: { orderNumber: order.orderNumber },
+        bodyKey: 'notification.order.status_updated.body',
+        bodyParams: { 
+          orderNumber: order.orderNumber,
+          status: dto.detailedStatus,
+        },
+        referenceType: 'ORDER',
+        referenceId: order.id,
+        channels: ['EMAIL', 'PUSH'],
+      });
+    } catch (notifyError) {
+      this.logger.warn(`Failed to send notification for order ${orderId}: ${notifyError}`);
+    }
 
     return updated;
   }
