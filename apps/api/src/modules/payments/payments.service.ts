@@ -167,6 +167,12 @@ export class PaymentsService {
       throw new BadRequestException('No booking fee required');
     }
 
+    // Get customer's preferred currency
+    const customer = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { preferredCurrency: true },
+    });
+
     // Create a placeholder order for the booking fee payment
     // Note: In a real scenario, you might want to create the order first
     // For now, we'll create a payment tied to an order that will be created later
@@ -191,6 +197,7 @@ export class PaymentsService {
         shippingNpr: 0,
         discountNpr: 0,
         totalNpr: offer.totalPriceNpr,
+        displayCurrency: customer?.preferredCurrency || 'NPR',
         paymentMethod: dto.method,
         paymentStatus: 'PENDING',
         bookingFeePaidNpr: 0,

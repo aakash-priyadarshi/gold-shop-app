@@ -54,6 +54,12 @@ export class OrdersService {
       throw new BadRequestException(`Only ${item.stockQuantity} items available`);
     }
 
+    // Get customer's preferred currency
+    const customer = await this.prisma.user.findUnique({
+      where: { id: customerId },
+      select: { preferredCurrency: true },
+    });
+
     // Calculate totals
     const subtotal = item.totalPriceNpr * dto.quantity;
     const tax = item.taxNpr * dto.quantity;
@@ -85,6 +91,7 @@ export class OrdersService {
           shippingNpr: 0,
           discountNpr: 0,
           totalNpr: total,
+          displayCurrency: customer?.preferredCurrency || 'NPR',
           paymentMethod: 'ONLINE',
           paymentStatus: 'PENDING',
           balanceDueNpr: total,
@@ -213,6 +220,12 @@ export class OrdersService {
       }
     }
 
+    // Get customer's preferred currency
+    const customer = await this.prisma.user.findUnique({
+      where: { id: customerId },
+      select: { preferredCurrency: true },
+    });
+
     // Create order
     const order = await this.prisma.$transaction(async (tx) => {
       const newOrder = await tx.order.create({
@@ -236,6 +249,7 @@ export class OrdersService {
           shippingNpr: 0,
           discountNpr: 0,
           totalNpr: offer.totalPriceNpr,
+          displayCurrency: customer?.preferredCurrency || 'NPR',
           paymentMethod: allowPayAtShop ? 'PAY_AT_SHOP' : 'ONLINE',
           paymentStatus: allowPayAtShop ? 'PENDING_AT_SHOP' : 'PENDING',
           paidAtShopRequested: allowPayAtShop,
@@ -297,6 +311,12 @@ export class OrdersService {
     if (type) where.orderType = type;
     if (status) where.status = status;
 
+    // Get customer's preferred currency for fallback
+    const customer = await this.prisma.user.findUnique({
+      where: { id: customerId },
+      select: { preferredCurrency: true },
+    });
+
     const [orders, total] = await Promise.all([
       this.prisma.order.findMany({
         where,
@@ -311,8 +331,14 @@ export class OrdersService {
       this.prisma.order.count({ where }),
     ]);
 
+    // Ensure displayCurrency is set for all orders (fallback to customer preference)
+    const ordersWithCurrency = orders.map(order => ({
+      ...order,
+      displayCurrency: order.displayCurrency || customer?.preferredCurrency || 'NPR',
+    }));
+
     return {
-      orders,
+      orders: ordersWithCurrency,
       pagination: {
         page,
         limit,
@@ -361,7 +387,7 @@ export class OrdersService {
       where: { id },
       include: {
         shop: { select: { id: true, shopName: true, userId: true } },
-        customer: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
+        customer: { select: { id: true, firstName: true, lastName: true, email: true, phone: true, preferredCurrency: true } },
         milestones: { orderBy: { completedAt: 'desc' } },
       },
     });
@@ -379,7 +405,13 @@ export class OrdersService {
       throw new ForbiddenException('Not your shop order');
     }
 
-    return order;
+    // For orders without displayCurrency, use customer's preferred currency as fallback
+    const displayCurrency = order.displayCurrency || order.customer?.preferredCurrency || 'NPR';
+
+    return {
+      ...order,
+      displayCurrency,
+    };
   }
 
   // Update order status

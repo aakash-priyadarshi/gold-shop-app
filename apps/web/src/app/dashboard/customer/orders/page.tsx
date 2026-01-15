@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import api from '@/lib/api';
 import { MiniOrderStepper, type OrderType } from '@/components/orders';
+import { formatCurrency } from '@/lib/utils';
 
 interface Order {
   id: string;
@@ -274,7 +275,7 @@ export default function CustomerOrdersPage() {
                               {order.productSnapshot?.jewelleryType?.replace(/_/g, ' ') || order.orderType}
                             </TableCell>
                             <TableCell className="font-medium">
-                              {order.displayCurrency === 'INR' ? '₹' : 'Rs.'}{(order.totalNpr || 0).toLocaleString()}
+                              {formatCurrency(order.totalNpr || 0, order.displayCurrency || 'NPR')}
                             </TableCell>
                             <TableCell>
                               <div className="w-40">
