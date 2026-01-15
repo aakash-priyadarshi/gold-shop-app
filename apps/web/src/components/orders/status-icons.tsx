@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 export type IconState = 'active' | 'completed' | 'future';
 
-interface StatusIconProps {
+export interface StatusIconProps {
   state: IconState;
   className?: string;
 }
@@ -106,4 +106,10 @@ export const StatusIconMap = {
   SHIPPED: ShippedIcon,
   OUT_FOR_DELIVERY: OutForDeliveryIcon,
   DELIVERED: DeliveredIcon,
+};
+
+export type OrderStatusIconType = keyof typeof StatusIconMap;
+
+export const getStatusIcon = (status: OrderStatusIconType) => {
+  return StatusIconMap[status] || OrderedIcon;
 };

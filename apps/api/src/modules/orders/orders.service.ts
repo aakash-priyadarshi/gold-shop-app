@@ -242,7 +242,7 @@ export class OrdersService {
           paidAtShopRequestedAt: allowPayAtShop ? new Date() : undefined,
           bookingFeePaidNpr: 0,
           balanceDueNpr: offer.totalPriceNpr,
-          shippingAddress: dto.shippingAddress || {},
+          shippingAddress: (dto.shippingAddress || {}) as Record<string, unknown>,
           status: OrderStatus.CREATED,
           bookingExpiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000), // 48 hours for pay-at-shop, 24 for online
         },
