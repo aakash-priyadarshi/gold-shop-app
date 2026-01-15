@@ -4,7 +4,7 @@ import * as React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SessionProvider } from 'next-auth/react';
 import { ThemeProvider } from 'next-themes';
-import { AuthProvider } from '@/hooks/useAuth';
+import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import { MarketProvider, useMarket, type MarketRegion, type CurrencyCode as MarketCurrency } from '@/hooks/useMarket';
 import { usePreferencesStore, type CountryCode, type CurrencyCode } from '@/store/preferences';
 import { CartProvider } from '@/contexts/CartContext';
@@ -20,6 +20,7 @@ const queryClient = new QueryClient({
 
 // Bridge component to sync MarketContext with Zustand preferences store
 function MarketPreferencesSync({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated } = useAuth();
   const { selectedCountry, selectedCurrency, isLoading, detectedCountry } = useMarket();
   const syncCountryFromGeo = usePreferencesStore((state) => state.syncCountryFromGeo);
   const syncCurrencyFromGeo = usePreferencesStore((state) => state.syncCurrencyFromGeo);
@@ -31,6 +32,14 @@ function MarketPreferencesSync({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     // Only sync once per session and when market is loaded
     if (isLoading || syncedRef.current) return;
+    
+    // IMPORTANT: For authenticated users, preferences are synced from server
+    // Do NOT override with geo detection - the server is the source of truth
+    if (isAuthenticated) {
+      console.log('[MarketPreferencesSync] Authenticated user - skipping geo sync, server is source of truth');
+      syncedRef.current = true;
+      return;
+    }
     
     if (detectedCountry) {
       // Check if user has explicitly set preferences (user_choice flag in localStorage)
@@ -85,7 +94,7 @@ function MarketPreferencesSync({ children }: { children: React.ReactNode }) {
       
       syncedRef.current = true;
     }
-  }, [isLoading, detectedCountry, prefsCountry, prefsCurrency, syncCountryFromGeo, syncCurrencyFromGeo]);
+  }, [isLoading, detectedCountry, prefsCountry, prefsCurrency, syncCountryFromGeo, syncCurrencyFromGeo, isAuthenticated]);
 
   return <>{children}</>;
 }

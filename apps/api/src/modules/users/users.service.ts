@@ -35,6 +35,8 @@ export class UsersService {
         role: true,
         status: true,
         preferredLanguage: true,
+        preferredCurrency: true,
+        preferredCountry: true, // New field - may need regenerating Prisma client
         createdAt: true,
         shops: {
           select: {
@@ -43,7 +45,7 @@ export class UsersService {
           },
           take: 1,
         },
-      },
+      } as any, // Type cast needed until Prisma client is regenerated
     });
 
     if (!user) {
@@ -53,7 +55,7 @@ export class UsersService {
     // Transform to maintain backward compatibility
     return {
       ...user,
-      shop: user.shops?.[0] || null,
+      shop: (user as any).shops?.[0] || null,
     };
   }
 
@@ -84,8 +86,7 @@ export class UsersService {
     if (data.phone !== undefined) updateData.phone = data.phone;
     if (data.preferredLanguage !== undefined) updateData.preferredLanguage = data.preferredLanguage;
     if (data.preferredCurrency !== undefined) updateData.preferredCurrency = data.preferredCurrency;
-    // Note: country, emailNotifications, smsNotifications would need schema updates
-    // For now, we'll store them in the existing fields or ignore
+    if (data.country !== undefined) updateData.preferredCountry = data.country; // Map 'country' from DTO to 'preferredCountry' in schema
     
     return this.prisma.user.update({
       where: { id: userId },
@@ -97,7 +98,9 @@ export class UsersService {
         firstName: true,
         lastName: true,
         preferredLanguage: true,
-      },
+        preferredCurrency: true,
+        preferredCountry: true, // New field
+      } as any, // Type cast needed until Prisma client is regenerated
     });
   }
 
