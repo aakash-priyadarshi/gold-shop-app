@@ -42,7 +42,7 @@ interface Order {
   status: string;
   detailedStatus: string;
   totalNpr: number;
-  displayCurrency?: string;
+  displayCurrency: string;
   createdAt: string;
   shop: {
     id: string;
@@ -66,7 +66,7 @@ export default function CustomerOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
-  const { formatWithConversion, selectedCurrency, currencySymbol } = useCurrencyConversion();
+  const { formatWithConversion, convertCurrency, selectedCurrency, currencySymbol } = useCurrencyConversion();
 
   useEffect(() => {
     loadOrders();
@@ -139,14 +139,21 @@ export default function CustomerOrdersPage() {
     return true;
   });
 
+  // Calculate total spent by converting each order to the selected currency
+  const totalSpentInSelectedCurrency = orders
+    .filter((o) => o.status !== 'CANCELLED')
+    .reduce((sum, o) => {
+      const orderCurrency = (o.displayCurrency || 'NPR') as any;
+      const convertedAmount = convertCurrency(o.totalNpr || 0, orderCurrency, selectedCurrency);
+      return sum + convertedAmount;
+    }, 0);
+
   const stats = {
     total: orders.length,
     active: orders.filter((o) => ['PLACED', 'CONFIRMED', 'IN_PROGRESS', 'READY'].includes(o.status)).length,
     shipped: orders.filter((o) => ['SHIPPED', 'OUT_FOR_DELIVERY'].includes(o.status)).length,
     delivered: orders.filter((o) => o.status === 'DELIVERED').length,
-    totalSpent: orders
-      .filter((o) => o.status !== 'CANCELLED')
-      .reduce((sum, o) => sum + (o.totalNpr || 0), 0),
+    totalSpent: totalSpentInSelectedCurrency,
   };
 
   if (isLoading) {
@@ -211,7 +218,8 @@ export default function CustomerOrdersPage() {
                 <CardDescription>Total Spent</CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                <p className="text-2xl font-bold">{formatWithConversion(stats.totalSpent, { fromCurrency: 'NPR', decimals: 0 })}</p>
+                <p className="text-2xl font-bold">{currencySymbol}{stats.totalSpent.toLocaleString('en', { maximumFractionDigits: 0 })}</p>
+                <p className="text-xs text-muted-foreground">in {selectedCurrency}</p>
               </CardContent>
             </Card>
           </div>
@@ -276,7 +284,7 @@ export default function CustomerOrdersPage() {
                               {order.productSnapshot?.jewelleryType?.replace(/_/g, ' ') || order.orderType}
                             </TableCell>
                             <TableCell className="font-medium">
-                              {formatWithConversion(order.totalNpr || 0, { fromCurrency: 'NPR', decimals: 0 })}
+                              {formatWithConversion(order.totalNpr || 0, { fromCurrency: (order.displayCurrency || 'NPR') as any, decimals: 0 })}
                             </TableCell>
                             <TableCell>
                               <div className="w-40">

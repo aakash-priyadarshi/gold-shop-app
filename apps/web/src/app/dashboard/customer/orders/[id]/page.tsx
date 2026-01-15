@@ -288,30 +288,30 @@ export default function CustomerOrderDetailPage() {
                   <div className="w-64 space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span>{formatWithConversion(order.subtotalNpr || order.totalNpr || 0, { fromCurrency: 'NPR' })}</span>
+                      <span>{formatWithConversion(order.subtotalNpr || order.totalNpr || 0, { fromCurrency: (order.displayCurrency || 'NPR') as any })}</span>
                     </div>
                     {order.taxNpr > 0 && (
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Tax</span>
-                        <span>{formatWithConversion(order.taxNpr, { fromCurrency: 'NPR' })}</span>
+                        <span>{formatWithConversion(order.taxNpr, { fromCurrency: (order.displayCurrency || 'NPR') as any })}</span>
                       </div>
                     )}
                     {order.shippingNpr > 0 && (
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Shipping</span>
-                        <span>{formatWithConversion(order.shippingNpr, { fromCurrency: 'NPR' })}</span>
+                        <span>{formatWithConversion(order.shippingNpr, { fromCurrency: (order.displayCurrency || 'NPR') as any })}</span>
                       </div>
                     )}
                     {order.discountNpr > 0 && (
                       <div className="flex justify-between text-sm text-green-600">
                         <span>Discount</span>
-                        <span>-{formatWithConversion(order.discountNpr, { fromCurrency: 'NPR' })}</span>
+                        <span>-{formatWithConversion(order.discountNpr, { fromCurrency: (order.displayCurrency || 'NPR') as any })}</span>
                       </div>
                     )}
                     <Separator />
                     <div className="flex justify-between font-bold">
                       <span>Total</span>
-                      <span>{formatWithConversion(order.totalNpr || 0, { fromCurrency: 'NPR' })}</span>
+                      <span>{formatWithConversion(order.totalNpr || 0, { fromCurrency: (order.displayCurrency || 'NPR') as any })}</span>
                     </div>
                   </div>
                 </div>
