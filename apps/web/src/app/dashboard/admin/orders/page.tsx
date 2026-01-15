@@ -78,8 +78,9 @@ import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
-// Order status badge styles - matches DetailedOrderStatus enum
+// Order status badge styles - matches DetailedOrderStatus enum + legacy OrderStatus values
 const statusStyles: Record<string, { color: string; icon: any; label: string }> = {
+  // DetailedOrderStatus values
   PLACED: { color: 'bg-blue-100 text-blue-800', icon: Clock, label: 'Placed' },
   CONFIRMED: { color: 'bg-indigo-100 text-indigo-800', icon: CheckCircle, label: 'Confirmed' },
   IN_PROGRESS: { color: 'bg-amber-100 text-amber-800', icon: Package, label: 'In Progress' },
@@ -89,6 +90,18 @@ const statusStyles: Record<string, { color: string; icon: any; label: string }> 
   DELIVERED: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Delivered' },
   CANCELLED: { color: 'bg-red-100 text-red-800', icon: XCircle, label: 'Cancelled' },
   REFUNDED: { color: 'bg-orange-100 text-orange-800', icon: DollarSign, label: 'Refunded' },
+  // Legacy OrderStatus values (for backwards compatibility)
+  CREATED: { color: 'bg-gray-100 text-gray-800', icon: Clock, label: 'Created' },
+  PAYMENT_PENDING: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Payment Pending' },
+  PAID: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Paid' },
+  PACKED: { color: 'bg-indigo-100 text-indigo-800', icon: Package, label: 'Packed' },
+  IN_PRODUCTION: { color: 'bg-amber-100 text-amber-800', icon: Package, label: 'In Production' },
+  QC_PENDING: { color: 'bg-orange-100 text-orange-800', icon: Clock, label: 'QC Pending' },
+  QC_PASSED: { color: 'bg-teal-100 text-teal-800', icon: CheckCircle, label: 'QC Passed' },
+  QC_FAILED: { color: 'bg-red-100 text-red-800', icon: XCircle, label: 'QC Failed' },
+  READY_TO_SHIP: { color: 'bg-cyan-100 text-cyan-800', icon: Package, label: 'Ready to Ship' },
+  COMPLETED: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Completed' },
+  PAYMENT_FAILED: { color: 'bg-red-100 text-red-800', icon: XCircle, label: 'Payment Failed' },
 };
 
 // Payment status styles
@@ -716,9 +729,10 @@ export default function AdminOrdersPage() {
                         </TableRow>
                       ) : (
                         filteredOrders.map((order) => {
-                          const statusStyle = statusStyles[order.status] || statusStyles.CREATED;
+                          const orderStatus = order.detailedStatus || order.status || 'CREATED';
+                          const statusStyle = statusStyles[orderStatus] || { color: 'bg-gray-100 text-gray-800', icon: Clock, label: orderStatus };
                           const paymentStyle = paymentStyles[order.paymentStatus] || paymentStyles.PENDING;
-                          const StatusIcon = statusStyle.icon;
+                          const StatusIcon = statusStyle.icon || Clock;
                           const isUpdating = updatingOrderId === order.id;
                           const marketMethods = PAYMENT_METHODS[order.marketCountry || 'DEFAULT'] || PAYMENT_METHODS['DEFAULT'];
                           
