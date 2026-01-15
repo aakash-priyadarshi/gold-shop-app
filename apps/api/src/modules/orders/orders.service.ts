@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException,
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MailService } from '../mail/mail.service';
-import { OrderStatus, OrderType, MilestoneType, Prisma } from '@prisma/client';
+import { OrderStatus, OrderType, MilestoneType, Prisma, CurrencyCode, CustomerPurchaseStats } from '@prisma/client';
 import {
   CreateInventoryOrderDto,
   CreateCustomOrderDto,
@@ -26,6 +26,43 @@ export class OrdersService {
     private notificationsService: NotificationsService,
     private mailService: MailService,
   ) {}
+
+  /**
+   * Update customer purchase statistics when an order is delivered
+   * This tracks total spent and order count per currency
+   */
+  private async updateCustomerPurchaseStats(
+    customerId: string,
+    currency: string,
+    orderTotal: number,
+  ): Promise<void> {
+    try {
+      await this.prisma.customerPurchaseStats.upsert({
+        where: {
+          customerId_currency: {
+            customerId,
+            currency: currency as any,
+          },
+        },
+        update: {
+          orderCount: { increment: 1 },
+          totalSpent: { increment: orderTotal },
+          lastOrderAt: new Date(),
+        },
+        create: {
+          customerId,
+          currency: currency as any,
+          orderCount: 1,
+          totalSpent: orderTotal,
+          lastOrderAt: new Date(),
+        },
+      });
+      this.logger.log(`Updated purchase stats for customer ${customerId}: +${orderTotal} ${currency}`);
+    } catch (error) {
+      this.logger.error(`Failed to update purchase stats: ${error.message}`);
+      // Don't throw - this is a non-critical operation
+    }
+  }
 
   // Generate order number
   private generateOrderNumber(): string {
@@ -369,6 +406,27 @@ export class OrdersService {
     };
   }
 
+  // Get customer purchase statistics by currency
+  async getCustomerPurchaseStats(customerId: string) {
+    const stats = await this.prisma.customerPurchaseStats.findMany({
+      where: { customerId },
+      orderBy: { totalSpent: 'desc' },
+    });
+
+    // Also get a summary
+    const summary = {
+      totalOrders: stats.reduce((sum, s) => sum + s.orderCount, 0),
+      currencyBreakdown: stats.map(s => ({
+        currency: s.currency,
+        orderCount: s.orderCount,
+        totalSpent: s.totalSpent,
+        lastOrderAt: s.lastOrderAt,
+      })),
+    };
+
+    return summary;
+  }
+
   // Find single order
   async findOne(id: string, userId: string, userRole: string) {
     const order = await this.prisma.order.findUnique({
@@ -441,6 +499,15 @@ export class OrdersService {
         status: dto.status as OrderStatus,
       },
     });
+
+    // Update customer purchase stats when order is delivered
+    if (dto.status === 'DELIVERED') {
+      await this.updateCustomerPurchaseStats(
+        order.customerId,
+        order.displayCurrency || 'NPR',
+        order.totalNpr,
+      );
+    }
 
     // Notify customer
     await this.notificationsService.create({

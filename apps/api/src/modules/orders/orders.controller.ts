@@ -68,6 +68,13 @@ export class OrdersController {
     return this.ordersService.findCustomerOrders(userId, filters);
   }
 
+  @Get('my-stats')
+  @Roles('CUSTOMER')
+  @ApiOperation({ summary: 'Get purchase statistics for current customer by currency' })
+  async getMyPurchaseStats(@CurrentUser('id') userId: string) {
+    return this.ordersService.getCustomerPurchaseStats(userId);
+  }
+
   @Get('shop/:shopId')
   @Roles('SHOPKEEPER', 'ADMIN')
   @ApiOperation({ summary: 'Get orders for a shop' })

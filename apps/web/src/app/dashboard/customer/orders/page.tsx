@@ -30,10 +30,12 @@ import {
   Eye,
   ShoppingBag,
   Store,
+  Wallet,
 } from 'lucide-react';
 import api from '@/lib/api';
 import { MiniOrderStepper, type OrderType } from '@/components/orders';
 import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
+import { CURRENCY_SYMBOLS } from '@/hooks/useMarket';
 
 interface Order {
   id: string;
@@ -62,14 +64,26 @@ interface Order {
   }>;
 }
 
+interface PurchaseStats {
+  totalOrders: number;
+  currencyBreakdown: Array<{
+    currency: string;
+    orderCount: number;
+    totalSpent: number;
+    lastOrderAt: string | null;
+  }>;
+}
+
 export default function CustomerOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [purchaseStats, setPurchaseStats] = useState<PurchaseStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const { formatWithConversion, convertCurrency, selectedCurrency, currencySymbol } = useCurrencyConversion();
 
   useEffect(() => {
     loadOrders();
+    loadPurchaseStats();
   }, []);
 
   const loadOrders = async () => {
@@ -86,6 +100,15 @@ export default function CustomerOrdersPage() {
       console.error('Failed to load orders:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadPurchaseStats = async () => {
+    try {
+      const response = await api.get('/orders/my-stats');
+      setPurchaseStats(response.data);
+    } catch (error) {
+      console.error('Failed to load purchase stats:', error);
     }
   };
 
@@ -215,11 +238,32 @@ export default function CustomerOrdersPage() {
             </Card>
             <Card>
               <CardHeader className="p-4 pb-2">
-                <CardDescription>Total Spent</CardDescription>
+                <CardDescription className="flex items-center gap-1">
+                  <Wallet className="h-3 w-3" />
+                  Total Spent
+                </CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                <p className="text-2xl font-bold">{currencySymbol}{stats.totalSpent.toLocaleString('en', { maximumFractionDigits: 0 })}</p>
-                <p className="text-xs text-muted-foreground">in {selectedCurrency}</p>
+                {purchaseStats && purchaseStats.currencyBreakdown.length > 0 ? (
+                  <div className="space-y-1">
+                    {purchaseStats.currencyBreakdown.map((stat) => (
+                      <div key={stat.currency} className="flex items-center justify-between">
+                        <span className="text-lg font-bold">
+                          {CURRENCY_SYMBOLS[stat.currency as keyof typeof CURRENCY_SYMBOLS] || stat.currency}
+                          {stat.totalSpent.toLocaleString('en', { maximumFractionDigits: 0 })}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          ({stat.orderCount} {stat.orderCount === 1 ? 'order' : 'orders'})
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold">{currencySymbol}{stats.totalSpent.toLocaleString('en', { maximumFractionDigits: 0 })}</p>
+                    <p className="text-xs text-muted-foreground">in {selectedCurrency}</p>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>

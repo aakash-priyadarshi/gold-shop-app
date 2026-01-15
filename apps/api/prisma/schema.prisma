@@ -44,11 +44,30 @@ model User {
   rfqRequests          RfqRequest[]          @relation("CustomerRfqs")
   shops                Shop[]
   verificationRequests VerificationRequest[] @relation("UserVerificationRequests")
+  purchaseStats        CustomerPurchaseStats[]
 
   @@index([email])
   @@index([phone])
   @@index([role])
   @@index([activeShopId])
+}
+
+// Track customer purchase statistics by currency
+model CustomerPurchaseStats {
+  id            String       @id @default(uuid())
+  customerId    String
+  currency      CurrencyCode
+  orderCount    Int          @default(0)
+  totalSpent    Float        @default(0)
+  lastOrderAt   DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  
+  customer      User         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, currency])
+  @@index([customerId])
+  @@index([currency])
 }
 
 model RefreshToken {
