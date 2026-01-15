@@ -116,9 +116,12 @@ export function MarketProvider({ children, initialCountry }: MarketProviderProps
     selectedCountry: initialCountry || 'US',
     detectedCountry: initialCountry || 'US',
   });
+  
+  // Track if user has explicitly set currency (from localStorage)
+  const [hasSavedCurrency, setHasSavedCurrency] = useState(false);
 
   // Fetch market config from API
-  const fetchConfig = useCallback(async (countryCode: MarketRegion) => {
+  const fetchConfig = useCallback(async (countryCode: MarketRegion, useSavedCurrency: boolean = false) => {
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
       
@@ -128,7 +131,8 @@ export function MarketProvider({ children, initialCountry }: MarketProviderProps
       setState(prev => ({
         ...prev,
         config,
-        selectedCurrency: prev.selectedCurrency || config.defaultCurrency,
+        // Only use prev.selectedCurrency if user has explicitly saved a preference
+        selectedCurrency: useSavedCurrency ? prev.selectedCurrency : config.defaultCurrency,
         selectedWeightUnit: prev.selectedWeightUnit || config.defaultWeightUnit,
         isLoading: false,
       }));
@@ -160,6 +164,10 @@ export function MarketProvider({ children, initialCountry }: MarketProviderProps
       const savedCountry = localStorage.getItem(STORAGE_KEYS.COUNTRY) as MarketRegion | null;
       const savedCurrency = localStorage.getItem(STORAGE_KEYS.CURRENCY) as CurrencyCode | null;
       const savedWeightUnit = localStorage.getItem(STORAGE_KEYS.WEIGHT_UNIT) as WeightUnit | null;
+      
+      // Track if user has explicitly saved a currency preference
+      const hasSavedCurrencyPref = savedCurrency !== null;
+      setHasSavedCurrency(hasSavedCurrencyPref);
 
       let detectedCountry: MarketRegion = 'US';
 
@@ -191,15 +199,26 @@ export function MarketProvider({ children, initialCountry }: MarketProviderProps
         }
       }
 
-      setState(prev => ({
-        ...prev,
-        detectedCountry,
-        selectedCountry: savedCountry || detectedCountry,
-        selectedCurrency: savedCurrency || prev.selectedCurrency,
-        selectedWeightUnit: savedWeightUnit || prev.selectedWeightUnit,
-      }));
+      // Set the state with saved currency if available
+      if (hasSavedCurrencyPref && savedCurrency) {
+        setState(prev => ({
+          ...prev,
+          detectedCountry,
+          selectedCountry: savedCountry || detectedCountry,
+          selectedCurrency: savedCurrency,
+          selectedWeightUnit: savedWeightUnit || prev.selectedWeightUnit,
+        }));
+      } else {
+        setState(prev => ({
+          ...prev,
+          detectedCountry,
+          selectedCountry: savedCountry || detectedCountry,
+          selectedWeightUnit: savedWeightUnit || prev.selectedWeightUnit,
+        }));
+      }
 
-      await fetchConfig(savedCountry || detectedCountry);
+      // Pass flag to indicate if user has a saved currency preference
+      await fetchConfig(savedCountry || detectedCountry, hasSavedCurrencyPref);
     };
 
     detectAndLoadConfig();
@@ -209,12 +228,14 @@ export function MarketProvider({ children, initialCountry }: MarketProviderProps
   const setCountry = useCallback((country: MarketRegion) => {
     localStorage.setItem(STORAGE_KEYS.COUNTRY, country);
     setState(prev => ({ ...prev, selectedCountry: country }));
-    fetchConfig(country);
-  }, [fetchConfig]);
+    // When changing country, use saved currency preference if it exists
+    fetchConfig(country, hasSavedCurrency);
+  }, [fetchConfig, hasSavedCurrency]);
 
   // Set currency preference
   const setCurrency = useCallback((currency: CurrencyCode) => {
     localStorage.setItem(STORAGE_KEYS.CURRENCY, currency);
+    setHasSavedCurrency(true);
     setState(prev => ({ ...prev, selectedCurrency: currency }));
   }, []);
 
@@ -226,8 +247,8 @@ export function MarketProvider({ children, initialCountry }: MarketProviderProps
 
   // Refresh config
   const refreshConfig = useCallback(async () => {
-    await fetchConfig(state.selectedCountry);
-  }, [fetchConfig, state.selectedCountry]);
+    await fetchConfig(state.selectedCountry, hasSavedCurrency);
+  }, [fetchConfig, state.selectedCountry, hasSavedCurrency]);
 
   const contextValue: MarketContextType = {
     ...state,
