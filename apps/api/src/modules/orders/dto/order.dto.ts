@@ -1,10 +1,46 @@
-import { IsString, IsOptional, IsNumber, IsEnum, ValidateNested, IsArray } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsEnum, ValidateNested, IsArray, IsBoolean, IsObject } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export enum OrderType {
   INVENTORY = 'INVENTORY',
   CUSTOM = 'CUSTOM',
+}
+
+export class ShippingAddressDto {
+  @ApiProperty()
+  @IsString()
+  fullName: string;
+
+  @ApiProperty()
+  @IsString()
+  phone: string;
+
+  @ApiProperty()
+  @IsString()
+  addressLine1: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  addressLine2?: string;
+
+  @ApiProperty()
+  @IsString()
+  city: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  state?: string;
+
+  @ApiProperty()
+  @IsString()
+  country: string;
+
+  @ApiProperty()
+  @IsString()
+  pincode: string;
 }
 
 export class CreateInventoryOrderDto {
@@ -20,6 +56,12 @@ export class CreateInventoryOrderDto {
   @IsString()
   @IsOptional()
   addressId?: string;
+
+  @ApiPropertyOptional({ description: 'Shipping address object' })
+  @ValidateNested()
+  @Type(() => ShippingAddressDto)
+  @IsOptional()
+  shippingAddress?: ShippingAddressDto;
 
   @ApiPropertyOptional({ description: 'Special instructions' })
   @IsString()
@@ -41,10 +83,21 @@ export class CreateCustomOrderDto {
   @IsOptional()
   addressId?: string;
 
+  @ApiPropertyOptional({ description: 'Shipping address object' })
+  @ValidateNested()
+  @Type(() => ShippingAddressDto)
+  @IsOptional()
+  shippingAddress?: ShippingAddressDto;
+
   @ApiPropertyOptional({ description: 'Special instructions' })
   @IsString()
   @IsOptional()
   instructions?: string;
+
+  @ApiPropertyOptional({ description: 'Customer wants to pay at shop (only for same-city custom orders)' })
+  @IsBoolean()
+  @IsOptional()
+  payAtShop?: boolean;
 }
 
 export class UpdateOrderStatusDto {

@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { OrderStepper, OrderStatusBadge, type OrderType } from '@/components/orders';
 
 // Currency based on country
 const getCurrencySymbol = (country: string) => {
@@ -287,11 +288,33 @@ export default function ShopOrderDetailPage() {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <Badge className={statusColors[order.status] || 'bg-gray-100'}>
-                {order.status.replace(/_/g, ' ')}
-              </Badge>
+              <OrderStatusBadge
+                orderType={(order.orderType === 'CUSTOM' ? 'CUSTOM' : 'INVENTORY') as OrderType}
+                currentStatus={order.detailedStatus || order.status}
+              />
             </div>
           </div>
+
+          {/* Order Progress Stepper */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle>Order Progress</CardTitle>
+              <CardDescription>Track the order through production stages</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <OrderStepper
+                orderType={(order.orderType === 'CUSTOM' ? 'CUSTOM' : 'INVENTORY') as OrderType}
+                currentStatus={order.detailedStatus || order.status}
+                statusHistory={
+                  order.milestones?.map((m) => ({
+                    status: m.status,
+                    timestamp: m.createdAt,
+                  })) || []
+                }
+                orientation="horizontal"
+              />
+            </CardContent>
+          </Card>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Main Content */}

@@ -88,6 +88,17 @@ export class PaymentsService {
       case PaymentMethod.RAZORPAY:
         gatewayOrder = await this.createRazorpayOrder(payment.id, amount);
         break;
+      case PaymentMethod.STRIPE:
+        // For UK/USA customers - convert NPR to appropriate currency
+        // In production, use proper currency conversion
+        const stripeCurrency = order.displayCurrency || 'USD';
+        gatewayOrder = await this.createStripePaymentIntent(
+          payment.id, 
+          amount, 
+          stripeCurrency,
+          order.customer.email,
+        );
+        break;
       case PaymentMethod.ESEWA:
         gatewayOrder = await this.createEsewaOrder(payment.id, amount);
         break;
@@ -269,6 +280,12 @@ export class PaymentsService {
           dto.gatewayOrderId || '',
           dto.gatewayPaymentId || '',
           dto.signature || '',
+        );
+        break;
+      case 'STRIPE':
+        isValid = await this.verifyStripePayment(
+          dto.gatewayPaymentId || '',
+          dto.signature,
         );
         break;
       case 'ESEWA':
@@ -479,6 +496,49 @@ export class PaymentsService {
       currency: 'NPR',
       gatewayOrderId: `khalti_${Date.now()}`,
     };
+  }
+
+  // Create Stripe Payment Intent for UK/USA customers
+  private async createStripePaymentIntent(
+    paymentId: string, 
+    amount: number, 
+    currency: string,
+    customerEmail?: string,
+  ): Promise<PaymentGatewayOrder> {
+    // Note: In production, use the stripe SDK:
+    // import Stripe from 'stripe';
+    // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    // const paymentIntent = await stripe.paymentIntents.create({
+    //   amount: Math.round(amount * 100), // Stripe uses cents
+    //   currency: currency.toLowerCase(),
+    //   receipt_email: customerEmail,
+    //   metadata: { paymentId },
+    // });
+    
+    // Stub for development - returns mock payment intent
+    const mockClientSecret = `pi_${Date.now()}_secret_${Math.random().toString(36).substring(7)}`;
+    
+    return {
+      orderId: paymentId,
+      amount,
+      currency,
+      gatewayOrderId: `pi_${Date.now()}`,
+      gatewayKey: mockClientSecret, // This is the client_secret for Stripe Elements
+    };
+  }
+
+  // Verify Stripe webhook signature and payment
+  private async verifyStripePayment(
+    paymentIntentId: string,
+    signature?: string,
+  ): Promise<boolean> {
+    // In production:
+    // import Stripe from 'stripe';
+    // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    // const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    // return paymentIntent.status === 'succeeded';
+    
+    return true; // Stub for development
   }
 
   private async verifyRazorpayPayment(

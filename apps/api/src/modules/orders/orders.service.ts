@@ -200,6 +200,19 @@ export class OrdersService {
       throw new BadRequestException('Offer is no longer available');
     }
 
+    // Validate pay-at-shop: only allowed for same-city custom orders
+    let allowPayAtShop = false;
+    if (dto.payAtShop && dto.shippingAddress) {
+      // Check if customer is in the same city as the shop
+      const shop = await this.prisma.shop.findUnique({
+        where: { id: offer.shopId },
+        select: { city: true },
+      });
+      if (shop && shop.city.toLowerCase() === dto.shippingAddress.city.toLowerCase()) {
+        allowPayAtShop = true;
+      }
+    }
+
     // Create order
     const order = await this.prisma.$transaction(async (tx) => {
       const newOrder = await tx.order.create({
@@ -223,13 +236,15 @@ export class OrdersService {
           shippingNpr: 0,
           discountNpr: 0,
           totalNpr: offer.totalPriceNpr,
-          paymentMethod: 'ONLINE',
-          paymentStatus: 'PENDING',
+          paymentMethod: allowPayAtShop ? 'PAY_AT_SHOP' : 'ONLINE',
+          paymentStatus: allowPayAtShop ? 'PENDING_AT_SHOP' : 'PENDING',
+          paidAtShopRequested: allowPayAtShop,
+          paidAtShopRequestedAt: allowPayAtShop ? new Date() : undefined,
           bookingFeePaidNpr: 0,
           balanceDueNpr: offer.totalPriceNpr,
-          shippingAddress: {},
+          shippingAddress: dto.shippingAddress || {},
           status: OrderStatus.CREATED,
-          bookingExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+          bookingExpiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000), // 48 hours for pay-at-shop, 24 for online
         },
         include: {
           shop: { select: { id: true, shopName: true } },

@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { OrderStepper, OrderStatusBadge, type OrderType } from '@/components/orders';
 
 interface OrderItem {
   id: string;
@@ -48,7 +49,9 @@ interface OrderItem {
 interface OrderDetail {
   id: string;
   orderNumber: string;
+  orderType: 'INVENTORY' | 'CUSTOM';
   status: string;
+  detailedStatus: string;
   totalAmount: number;
   createdAt: string;
   updatedAt: string;
@@ -67,6 +70,11 @@ interface OrderDetail {
     status: string;
     timestamp: string;
     note: string | null;
+  }>;
+  milestones?: Array<{
+    id: string;
+    type: string;
+    completedAt: string;
   }>;
 }
 
@@ -168,7 +176,10 @@ export default function CustomerOrderDetailPage() {
             <div className="flex-1">
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold">Order #{order.orderNumber}</h1>
-                {getStatusBadge(order.status)}
+                <OrderStatusBadge
+                  orderType={(order.orderType || 'INVENTORY') as OrderType}
+                  currentStatus={order.detailedStatus || order.status}
+                />
               </div>
               <p className="text-muted-foreground">
                 Placed {new Date(order.createdAt).toLocaleDateString()}
@@ -176,43 +187,25 @@ export default function CustomerOrderDetailPage() {
             </div>
           </div>
 
-          {/* Progress Tracker */}
+          {/* Progress Tracker - Using new animated OrderStepper */}
           {order.status !== 'CANCELLED' && (
             <Card>
+              <CardHeader className="pb-2">
+                <CardTitle>Order Progress</CardTitle>
+                <CardDescription>Track your order status</CardDescription>
+              </CardHeader>
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  {statusSteps.map((step, index) => (
-                    <div key={step} className="flex items-center">
-                      <div className="flex flex-col items-center">
-                        <div
-                          className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                            index <= currentStep
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted text-muted-foreground'
-                          }`}
-                        >
-                          {index < currentStep ? (
-                            <CheckCircle2 className="h-5 w-5" />
-                          ) : index === currentStep ? (
-                            <Clock className="h-5 w-5" />
-                          ) : (
-                            <span className="text-sm">{index + 1}</span>
-                          )}
-                        </div>
-                        <span className="text-xs mt-2 text-center">
-                          {step.replace('_', ' ')}
-                        </span>
-                      </div>
-                      {index < statusSteps.length - 1 && (
-                        <div
-                          className={`h-1 w-12 md:w-24 mx-2 ${
-                            index < currentStep ? 'bg-primary' : 'bg-muted'
-                          }`}
-                        />
-                      )}
-                    </div>
-                  ))}
-                </div>
+                <OrderStepper
+                  orderType={(order.orderType || 'INVENTORY') as OrderType}
+                  currentStatus={order.detailedStatus || order.status}
+                  statusHistory={
+                    order.milestones?.map((m) => ({
+                      status: m.type,
+                      timestamp: m.completedAt,
+                    })) || order.statusHistory || []
+                  }
+                  orientation="horizontal"
+                />
               </CardContent>
             </Card>
           )}

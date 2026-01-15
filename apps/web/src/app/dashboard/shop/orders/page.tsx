@@ -35,10 +35,12 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { ordersApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { MiniOrderStepper, type OrderType } from '@/components/orders';
 
 interface Order {
   id: string;
   orderNumber: string;
+  orderType: 'INVENTORY' | 'CUSTOM';
   customer: {
     firstName: string;
     lastName: string;
@@ -47,6 +49,7 @@ interface Order {
   totalNpr: number;
   displayCurrency: string;
   status: string;
+  detailedStatus: string;
   paymentStatusEnum: string;
   createdAt: string;
 }
@@ -221,10 +224,12 @@ export default function ShopOrdersPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge className={statusColors[order.status] || 'bg-gray-100'}>
-                            {getStatusIcon(order.status)}
-                            <span className="ml-1">{order.status.replace(/_/g, ' ')}</span>
-                          </Badge>
+                          <div className="w-32">
+                            <MiniOrderStepper
+                              orderType={(order.orderType || 'INVENTORY') as OrderType}
+                              currentStatus={order.detailedStatus || order.status}
+                            />
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant={order.paymentStatusEnum === 'PAID' ? 'default' : 'outline'}>

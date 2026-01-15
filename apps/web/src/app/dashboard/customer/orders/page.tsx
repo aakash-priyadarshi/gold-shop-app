@@ -32,11 +32,14 @@ import {
   Store,
 } from 'lucide-react';
 import api from '@/lib/api';
+import { MiniOrderStepper, type OrderType } from '@/components/orders';
 
 interface Order {
   id: string;
   orderNumber: string;
+  orderType: 'INVENTORY' | 'CUSTOM';
   status: string;
+  detailedStatus: string;
   totalAmount: number;
   createdAt: string;
   shop: {
@@ -263,9 +266,11 @@ export default function CustomerOrdersPage() {
                               ${order.totalAmount.toLocaleString()}
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-2">
-                                {getStatusIcon(order.status)}
-                                {getStatusBadge(order.status)}
+                              <div className="w-40">
+                                <MiniOrderStepper
+                                  orderType={(order.orderType || 'INVENTORY') as OrderType}
+                                  currentStatus={order.detailedStatus || order.status}
+                                />
                               </div>
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">
