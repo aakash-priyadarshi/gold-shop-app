@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Header } from '@/components/layout/header';
@@ -97,7 +97,7 @@ const PAYMENT_METHODS_BY_COUNTRY: Record<string, Array<{
 // CHECKOUT PAGE COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export default function CheckoutPage() {
+function CheckoutPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -858,5 +858,18 @@ export default function CheckoutPage() {
 
       <Footer />
     </div>
+  );
+}
+
+// Wrapper with Suspense for useSearchParams
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+      </div>
+    }>
+      <CheckoutPageContent />
+    </Suspense>
   );
 }

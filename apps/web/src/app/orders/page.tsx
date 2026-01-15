@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Header } from '@/components/layout/header';
@@ -71,7 +71,7 @@ interface OrdersResponse {
 // MY ORDERS PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export default function MyOrdersPage() {
+function MyOrdersPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -434,5 +434,18 @@ export default function MyOrdersPage() {
 
       <Footer />
     </div>
+  );
+}
+
+// Wrapper with Suspense for useSearchParams
+export default function MyOrdersPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+      </div>
+    }>
+      <MyOrdersPageContent />
+    </Suspense>
   );
 }

@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException,
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MailService } from '../mail/mail.service';
-import { OrderStatus, OrderType, MilestoneType } from '@prisma/client';
+import { OrderStatus, OrderType, MilestoneType, Prisma } from '@prisma/client';
 import {
   CreateInventoryOrderDto,
   CreateCustomOrderDto,
@@ -242,7 +242,7 @@ export class OrdersService {
           paidAtShopRequestedAt: allowPayAtShop ? new Date() : undefined,
           bookingFeePaidNpr: 0,
           balanceDueNpr: offer.totalPriceNpr,
-          shippingAddress: (dto.shippingAddress || {}) as Record<string, unknown>,
+          shippingAddress: (dto.shippingAddress || {}) as Prisma.InputJsonValue,
           status: OrderStatus.CREATED,
           bookingExpiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000), // 48 hours for pay-at-shop, 24 for online
         },
