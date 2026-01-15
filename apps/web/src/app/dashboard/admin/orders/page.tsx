@@ -116,6 +116,29 @@ const paymentStyles: Record<string, { color: string; label: string }> = {
 // Order status options for dropdown
 const ORDER_STATUS_OPTIONS = Object.entries(statusStyles).map(([value, { label }]) => ({ value, label }));
 
+// Order-type-specific status options
+const PREBUILT_STATUS_OPTIONS = [
+  { value: 'PLACED', label: 'Placed' },
+  { value: 'CONFIRMED', label: 'Confirmed' },
+  { value: 'PACKED', label: 'Packed' },
+  { value: 'SHIPPED', label: 'Shipped' },
+  { value: 'OUT_FOR_DELIVERY', label: 'Out for Delivery' },
+  { value: 'DELIVERED', label: 'Delivered' },
+  { value: 'CANCELLED', label: 'Cancelled' },
+];
+
+const CUSTOM_STATUS_OPTIONS = [
+  { value: 'PLACED', label: 'Placed' },
+  { value: 'CONFIRMED', label: 'Order Accepted' },
+  { value: 'IN_PROGRESS', label: 'Forging / Being Made' },
+  { value: 'READY', label: 'Ready' },
+  { value: 'PACKED', label: 'Packed' },
+  { value: 'SHIPPED', label: 'Shipped' },
+  { value: 'OUT_FOR_DELIVERY', label: 'Out for Delivery' },
+  { value: 'DELIVERED', label: 'Delivered' },
+  { value: 'CANCELLED', label: 'Cancelled' },
+];
+
 // Payment status options for dropdown
 const PAYMENT_STATUS_OPTIONS = Object.entries(paymentStyles).map(([value, { label }]) => ({ value, label }));
 
@@ -334,7 +357,7 @@ export default function AdminOrdersPage() {
       
       // Update local state optimistically
       setOrders(prev => prev.map(o => 
-        o.id === orderId ? { ...o, status: newStatus } : o
+        o.id === orderId ? { ...o, status: newStatus, detailedStatus: newStatus } : o
       ));
       
       toast({
@@ -771,7 +794,7 @@ export default function AdminOrdersPage() {
                               {/* Order Status Dropdown */}
                               <TableCell>
                                 <Select
-                                  value={order.status}
+                                  value={order.detailedStatus || order.status}
                                   onValueChange={(value) => handleUpdateOrderStatus(order.id, value)}
                                   disabled={isUpdating}
                                 >
@@ -782,7 +805,7 @@ export default function AdminOrdersPage() {
                                     </div>
                                   </SelectTrigger>
                                   <SelectContent>
-                                    {ORDER_STATUS_OPTIONS.map(s => (
+                                    {(order.orderType === 'CUSTOM' ? CUSTOM_STATUS_OPTIONS : PREBUILT_STATUS_OPTIONS).map(s => (
                                       <SelectItem key={s.value} value={s.value}>
                                         {s.label}
                                       </SelectItem>
