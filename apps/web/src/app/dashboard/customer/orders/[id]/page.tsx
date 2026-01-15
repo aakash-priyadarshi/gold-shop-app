@@ -10,14 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   ArrowLeft,
   Loader2,
   Package,
@@ -35,24 +27,18 @@ import { toast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { OrderStepper, OrderStatusBadge, type OrderType } from '@/components/orders';
 
-interface OrderItem {
-  id: string;
-  jewelleryType: string;
-  metalType: string;
-  purity: string;
-  weight: number;
-  quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-}
-
 interface OrderDetail {
   id: string;
   orderNumber: string;
   orderType: 'INVENTORY' | 'CUSTOM';
   status: string;
   detailedStatus: string;
-  totalAmount: number;
+  totalNpr: number;
+  subtotalNpr: number;
+  taxNpr: number;
+  shippingNpr: number;
+  discountNpr: number;
+  displayCurrency?: string;
   createdAt: string;
   updatedAt: string;
   estimatedDelivery: string | null;
@@ -60,12 +46,33 @@ interface OrderDetail {
   notes: string | null;
   shop: {
     id: string;
-    name: string;
-    country: string;
-    email: string;
-    phone: string | null;
+    shopName: string;
+    userId?: string;
   };
-  items: OrderItem[];
+  customer?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+  };
+  productSnapshot: {
+    nameEn?: string;
+    nameNe?: string;
+    jewelleryType?: string;
+    composition?: {
+      baseAlloy?: {
+        metal: string;
+        purity: string;
+      };
+    };
+    totalWeightGrams?: number;
+    quantity?: number;
+    images?: string[];
+    referenceImages?: string[];
+    sku?: string;
+    buildMethod?: string;
+  };
   statusHistory?: Array<{
     status: string;
     timestamp: string;
@@ -76,6 +83,15 @@ interface OrderDetail {
     type: string;
     completedAt: string;
   }>;
+  shippingAddress?: {
+    fullName?: string;
+    street?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+    phone?: string;
+  };
 }
 
 const statusSteps = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'READY', 'SHIPPED', 'DELIVERED'];
@@ -216,55 +232,84 @@ export default function CustomerOrderDetailPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Package className="h-5 w-5" />
-                  Order Items
+                  Order Details
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Item</TableHead>
-                      <TableHead>Metal</TableHead>
-                      <TableHead>Weight</TableHead>
-                      <TableHead>Qty</TableHead>
-                      <TableHead className="text-right">Price</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {order.items.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">
-                          {item.jewelleryType}
-                        </TableCell>
-                        <TableCell>
-                          {item.metalType} {item.purity}
-                        </TableCell>
-                        <TableCell>{item.weight}g</TableCell>
-                        <TableCell>{item.quantity}</TableCell>
-                        <TableCell className="text-right">
-                          ${item.totalPrice.toLocaleString()}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                {/* Product Info */}
+                <div className="flex gap-4 mb-6">
+                  {(order.productSnapshot?.images?.[0] || order.productSnapshot?.referenceImages?.[0]) && (
+                    <div className="w-24 h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                      <img
+                        src={order.productSnapshot.images?.[0] || order.productSnapshot.referenceImages?.[0]}
+                        alt="Product"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1 space-y-2">
+                    <h3 className="font-semibold text-lg">
+                      {order.productSnapshot?.nameEn || order.productSnapshot?.jewelleryType?.replace(/_/g, ' ') || 'Order Item'}
+                    </h3>
+                    {order.productSnapshot?.composition?.baseAlloy && (
+                      <p className="text-sm text-muted-foreground">
+                        {order.productSnapshot.composition.baseAlloy.metal} {order.productSnapshot.composition.baseAlloy.purity}
+                      </p>
+                    )}
+                    {order.productSnapshot?.totalWeightGrams && (
+                      <p className="text-sm text-muted-foreground">
+                        Weight: {order.productSnapshot.totalWeightGrams}g
+                      </p>
+                    )}
+                    {order.productSnapshot?.quantity && (
+                      <p className="text-sm text-muted-foreground">
+                        Quantity: {order.productSnapshot.quantity}
+                      </p>
+                    )}
+                    {order.productSnapshot?.sku && (
+                      <p className="text-sm text-muted-foreground">
+                        SKU: {order.productSnapshot.sku}
+                      </p>
+                    )}
+                    {order.productSnapshot?.buildMethod && (
+                      <p className="text-sm text-muted-foreground">
+                        Build: {order.productSnapshot.buildMethod.replace(/_/g, ' ')}
+                      </p>
+                    )}
+                  </div>
+                </div>
 
                 <Separator className="my-4" />
 
+                {/* Price Summary */}
                 <div className="flex justify-end">
                   <div className="w-64 space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span>${order.totalAmount.toLocaleString()}</span>
+                      <span>{order.displayCurrency || 'NPR'} {(order.subtotalNpr || order.totalNpr)?.toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Shipping</span>
-                      <span>Calculated at checkout</span>
-                    </div>
+                    {order.taxNpr > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Tax</span>
+                        <span>{order.displayCurrency || 'NPR'} {order.taxNpr.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {order.shippingNpr > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Shipping</span>
+                        <span>{order.displayCurrency || 'NPR'} {order.shippingNpr.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {order.discountNpr > 0 && (
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span>Discount</span>
+                        <span>-{order.displayCurrency || 'NPR'} {order.discountNpr.toLocaleString()}</span>
+                      </div>
+                    )}
                     <Separator />
                     <div className="flex justify-between font-bold">
                       <span>Total</span>
-                      <span>${order.totalAmount.toLocaleString()}</span>
+                      <span>{order.displayCurrency || 'NPR'} {order.totalNpr?.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
@@ -283,21 +328,39 @@ export default function CustomerOrderDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div>
-                    <p className="font-medium">{order.shop.name}</p>
-                    <p className="text-sm text-muted-foreground">{order.shop.country}</p>
+                    <p className="font-medium">{order.shop?.shopName || 'Shop'}</p>
                   </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span>{order.shop.email}</span>
-                  </div>
-                  {order.shop.phone && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span>{order.shop.phone}</span>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
+
+              {/* Shipping Address */}
+              {order.shippingAddress && Object.keys(order.shippingAddress).length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MapPin className="h-5 w-5" />
+                      Shipping Address
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-1 text-sm">
+                    {order.shippingAddress.fullName && (
+                      <p className="font-medium">{order.shippingAddress.fullName}</p>
+                    )}
+                    {order.shippingAddress.street && <p>{order.shippingAddress.street}</p>}
+                    {(order.shippingAddress.city || order.shippingAddress.state || order.shippingAddress.postalCode) && (
+                      <p>
+                        {order.shippingAddress.city}{order.shippingAddress.state ? `, ${order.shippingAddress.state}` : ''} {order.shippingAddress.postalCode}
+                      </p>
+                    )}
+                    {order.shippingAddress.country && <p>{order.shippingAddress.country}</p>}
+                    {order.shippingAddress.phone && (
+                      <p className="flex items-center gap-1 mt-2">
+                        <Phone className="h-3 w-3" /> {order.shippingAddress.phone}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Delivery Info */}
               <Card>
