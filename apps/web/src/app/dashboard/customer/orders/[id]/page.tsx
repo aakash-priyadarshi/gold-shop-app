@@ -26,7 +26,7 @@ import {
 import { toast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 import { OrderStepper, OrderStatusBadge, type OrderType } from '@/components/orders';
-import { formatCurrency } from '@/lib/utils';
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 
 interface OrderDetail {
   id: string;
@@ -101,6 +101,7 @@ export default function CustomerOrderDetailPage() {
   const params = useParams();
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { formatWithConversion, selectedCurrency, currencySymbol } = useCurrencyConversion();
 
   useEffect(() => {
     if (params.id) {
@@ -287,30 +288,30 @@ export default function CustomerOrderDetailPage() {
                   <div className="w-64 space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span>{formatCurrency(order.subtotalNpr || order.totalNpr || 0, order.displayCurrency || 'NPR')}</span>
+                      <span>{formatWithConversion(order.subtotalNpr || order.totalNpr || 0, { fromCurrency: 'NPR' })}</span>
                     </div>
                     {order.taxNpr > 0 && (
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Tax</span>
-                        <span>{formatCurrency(order.taxNpr, order.displayCurrency || 'NPR')}</span>
+                        <span>{formatWithConversion(order.taxNpr, { fromCurrency: 'NPR' })}</span>
                       </div>
                     )}
                     {order.shippingNpr > 0 && (
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Shipping</span>
-                        <span>{formatCurrency(order.shippingNpr, order.displayCurrency || 'NPR')}</span>
+                        <span>{formatWithConversion(order.shippingNpr, { fromCurrency: 'NPR' })}</span>
                       </div>
                     )}
                     {order.discountNpr > 0 && (
                       <div className="flex justify-between text-sm text-green-600">
                         <span>Discount</span>
-                        <span>-{formatCurrency(order.discountNpr, order.displayCurrency || 'NPR')}</span>
+                        <span>-{formatWithConversion(order.discountNpr, { fromCurrency: 'NPR' })}</span>
                       </div>
                     )}
                     <Separator />
                     <div className="flex justify-between font-bold">
                       <span>Total</span>
-                      <span>{formatCurrency(order.totalNpr || 0, order.displayCurrency || 'NPR')}</span>
+                      <span>{formatWithConversion(order.totalNpr || 0, { fromCurrency: 'NPR' })}</span>
                     </div>
                   </div>
                 </div>

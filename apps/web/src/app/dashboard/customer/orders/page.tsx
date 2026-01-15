@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 import api from '@/lib/api';
 import { MiniOrderStepper, type OrderType } from '@/components/orders';
-import { formatCurrency } from '@/lib/utils';
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 
 interface Order {
   id: string;
@@ -66,6 +66,7 @@ export default function CustomerOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
+  const { formatWithConversion, selectedCurrency, currencySymbol } = useCurrencyConversion();
 
   useEffect(() => {
     loadOrders();
@@ -210,7 +211,7 @@ export default function CustomerOrdersPage() {
                 <CardDescription>Total Spent</CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                <p className="text-2xl font-bold">Rs. {stats.totalSpent.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{formatWithConversion(stats.totalSpent, { fromCurrency: 'NPR', decimals: 0 })}</p>
               </CardContent>
             </Card>
           </div>
@@ -275,7 +276,7 @@ export default function CustomerOrdersPage() {
                               {order.productSnapshot?.jewelleryType?.replace(/_/g, ' ') || order.orderType}
                             </TableCell>
                             <TableCell className="font-medium">
-                              {formatCurrency(order.totalNpr || 0, order.displayCurrency || 'NPR')}
+                              {formatWithConversion(order.totalNpr || 0, { fromCurrency: 'NPR', decimals: 0 })}
                             </TableCell>
                             <TableCell>
                               <div className="w-40">

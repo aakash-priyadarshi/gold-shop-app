@@ -311,12 +311,6 @@ export class OrdersService {
     if (type) where.orderType = type;
     if (status) where.status = status;
 
-    // Get customer's preferred currency for fallback
-    const customer = await this.prisma.user.findUnique({
-      where: { id: customerId },
-      select: { preferredCurrency: true },
-    });
-
     const [orders, total] = await Promise.all([
       this.prisma.order.findMany({
         where,
@@ -331,16 +325,8 @@ export class OrdersService {
       this.prisma.order.count({ where }),
     ]);
 
-    // Use customer's preferred currency for all orders
-    // This ensures orders display in the customer's chosen currency
-    const customerCurrency = customer?.preferredCurrency || 'NPR';
-    const ordersWithCurrency = orders.map(order => ({
-      ...order,
-      displayCurrency: customerCurrency,
-    }));
-
     return {
-      orders: ordersWithCurrency,
+      orders,
       pagination: {
         page,
         limit,
@@ -389,7 +375,7 @@ export class OrdersService {
       where: { id },
       include: {
         shop: { select: { id: true, shopName: true, userId: true } },
-        customer: { select: { id: true, firstName: true, lastName: true, email: true, phone: true, preferredCurrency: true } },
+        customer: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
         milestones: { orderBy: { completedAt: 'desc' } },
       },
     });
@@ -407,14 +393,7 @@ export class OrdersService {
       throw new ForbiddenException('Not your shop order');
     }
 
-    // Always use customer's current preferred currency for display
-    // This ensures the order shows in their chosen currency
-    const displayCurrency = order.customer?.preferredCurrency || order.displayCurrency || 'NPR';
-
-    return {
-      ...order,
-      displayCurrency,
-    };
+    return order;
   }
 
   // Update order status
