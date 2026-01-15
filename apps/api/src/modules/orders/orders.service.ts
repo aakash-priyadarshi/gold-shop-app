@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException,
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MailService } from '../mail/mail.service';
-import { OrderStatus, OrderType, MilestoneType, Prisma, CurrencyCode, CustomerPurchaseStats } from '@prisma/client';
+import { OrderStatus, OrderType, MilestoneType, Prisma, CurrencyCode } from '@prisma/client';
 import {
   CreateInventoryOrderDto,
   CreateCustomOrderDto,
@@ -153,10 +153,10 @@ export class OrdersService {
       return newOrder;
     });
 
-    // Notify shop
+    // Notify shop about new order
     await this.notificationsService.create({
       userId: item.shop.userId,
-      type: 'SYSTEM_ALERT',
+      type: 'ORDER_PLACED',
       titleKey: 'notification.order.new.title',
       titleParams: { orderNumber: order.orderNumber },
       bodyKey: 'notification.order.new.body',
@@ -509,10 +509,20 @@ export class OrdersService {
       );
     }
 
-    // Notify customer
+    // Notify customer with status-specific notification type
+    const statusToNotificationType: Record<string, string> = {
+      'CONFIRMED': 'ORDER_CONFIRMED',
+      'PACKED': 'ORDER_PACKED',
+      'SHIPPED': 'ORDER_SHIPPED',
+      'OUT_FOR_DELIVERY': 'ORDER_OUT_FOR_DELIVERY',
+      'DELIVERED': 'ORDER_DELIVERED',
+      'CANCELLED': 'ORDER_CANCELLED',
+    };
+    const notificationType = statusToNotificationType[dto.status] || 'ORDER_STATUS_UPDATE';
+
     await this.notificationsService.create({
       userId: order.customerId,
-      type: 'SYSTEM_ALERT',
+      type: notificationType,
       titleKey: 'notification.order.status.title',
       titleParams: { status: dto.status },
       bodyKey: 'notification.order.status.body',
