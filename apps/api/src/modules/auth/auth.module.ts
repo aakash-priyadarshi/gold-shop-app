@@ -1,22 +1,24 @@
-import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
-import { PassportModule } from '@nestjs/passport';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
-import { ApiTokenController } from './api-token.controller';
-import { ApiTokenService } from './api-token.service';
-import { OtpController } from './otp.controller';
-import { OtpService } from './otp.service';
-import { TwoFactorController } from './two-factor.controller';
-import { TwoFactorService } from './two-factor.service';
-import { JwtStrategy } from './strategies/jwt.strategy';
-import { LocalStrategy } from './strategies/local.strategy';
-import { GoogleStrategy } from './strategies/google.strategy';
-import { UsersModule } from '../users/users.module';
-import { AuditModule } from '../audit/audit.module';
-import { NotificationsModule } from '../notifications/notifications.module';
-import { MailModule } from '../mail/mail.module';
+import { Module } from "@nestjs/common";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { JwtModule } from "@nestjs/jwt";
+import { PassportModule } from "@nestjs/passport";
+import { HttpClientModule } from "../../common";
+import { AuditModule } from "../audit/audit.module";
+import { MailModule } from "../mail/mail.module";
+import { NotificationsModule } from "../notifications/notifications.module";
+import { UsersModule } from "../users/users.module";
+import { ApiTokenController } from "./api-token.controller";
+import { ApiTokenService } from "./api-token.service";
+import { AuthController } from "./auth.controller";
+import { AuthService } from "./auth.service";
+import { OtpController } from "./otp.controller";
+import { OtpService } from "./otp.service";
+import { GoogleStrategy } from "./strategies/google.strategy";
+import { JwtStrategy } from "./strategies/jwt.strategy";
+import { LocalStrategy } from "./strategies/local.strategy";
+import { TurnstileService } from "./turnstile.service";
+import { TwoFactorController } from "./two-factor.controller";
+import { TwoFactorService } from "./two-factor.service";
 
 @Module({
   imports: [
@@ -24,20 +26,42 @@ import { MailModule } from '../mail/mail.module';
     AuditModule,
     NotificationsModule,
     MailModule,
-    PassportModule.register({ defaultStrategy: 'jwt' }),
+    HttpClientModule,
+    PassportModule.register({ defaultStrategy: "jwt" }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET') || 'gold-shop-secret-key',
+        secret:
+          configService.get<string>("JWT_SECRET") || "gold-shop-secret-key",
         signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRY') || '24h',
+          expiresIn: configService.get<string>("JWT_EXPIRY") || "24h",
         },
       }),
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController, ApiTokenController, OtpController, TwoFactorController],
-  providers: [AuthService, ApiTokenService, OtpService, TwoFactorService, JwtStrategy, LocalStrategy, GoogleStrategy],
-  exports: [AuthService, ApiTokenService, OtpService, TwoFactorService],
+  controllers: [
+    AuthController,
+    ApiTokenController,
+    OtpController,
+    TwoFactorController,
+  ],
+  providers: [
+    AuthService,
+    ApiTokenService,
+    OtpService,
+    TwoFactorService,
+    TurnstileService,
+    JwtStrategy,
+    LocalStrategy,
+    GoogleStrategy,
+  ],
+  exports: [
+    AuthService,
+    ApiTokenService,
+    OtpService,
+    TwoFactorService,
+    TurnstileService,
+  ],
 })
 export class AuthModule {}

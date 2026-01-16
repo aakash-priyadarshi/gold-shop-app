@@ -1,36 +1,36 @@
-'use client';
+"use client";
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import { Footer } from "@/components/layout/footer";
+import { Header } from "@/components/layout/header";
+import {
+  MiniOrderStepper,
+  type OrderType as OrderTypeEnum,
+} from "@/components/orders";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
+import { useAuth } from "@/hooks/useAuth";
+import { ordersApi } from "@/lib/api";
+import { CURRENCIES, usePreferencesStore } from "@/store/preferences";
 import {
-  MagnifyingGlassIcon,
-  ShoppingBagIcon,
   CalendarIcon,
   ChevronRightIcon,
   FunnelIcon,
-} from '@heroicons/react/24/outline';
-import { Loader2, Package, Store } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
-import { ordersApi } from '@/lib/api';
-import { usePreferencesStore, CURRENCIES } from '@/store/preferences';
-import { 
-  MiniOrderStepper,
-  type OrderType as OrderTypeEnum,
-} from '@/components/orders';
+  MagnifyingGlassIcon,
+  ShoppingBagIcon,
+} from "@heroicons/react/24/outline";
+import { Loader2, Package, Store } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -39,7 +39,7 @@ import {
 interface OrderSummary {
   id: string;
   orderNumber: string;
-  orderType: 'INVENTORY' | 'CUSTOM';
+  orderType: "INVENTORY" | "CUSTOM";
   status: string;
   detailedStatus: string;
   paymentStatus: string;
@@ -89,19 +89,19 @@ function MyOrdersPageContent() {
   const [totalOrders, setTotalOrders] = useState(0);
 
   // Filters
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('newest');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
 
   useEffect(() => {
     setMounted(true);
-    
+
     // Initialize from URL params
-    const page = searchParams.get('page');
-    const status = searchParams.get('status');
-    const type = searchParams.get('type');
-    
+    const page = searchParams.get("page");
+    const status = searchParams.get("status");
+    const type = searchParams.get("type");
+
     if (page) setCurrentPage(parseInt(page));
     if (status) setStatusFilter(status);
     if (type) setTypeFilter(type);
@@ -119,25 +119,27 @@ function MyOrdersPageContent() {
           limit: 10,
         };
 
-        if (statusFilter !== 'all') {
+        if (statusFilter !== "all") {
           params.status = statusFilter;
         }
-        if (typeFilter !== 'all') {
+        if (typeFilter !== "all") {
           params.orderType = typeFilter;
         }
         if (searchQuery) {
           params.search = searchQuery;
         }
-        if (sortBy === 'oldest') {
-          params.sortOrder = 'asc';
+        if (sortBy === "oldest") {
+          params.sortOrder = "asc";
         }
 
-        const response = await ordersApi.getMyOrders(params) as { data: OrdersResponse };
+        const response = (await ordersApi.getMyOrders(params)) as {
+          data: OrdersResponse;
+        };
         setOrders(response.data.orders);
         setTotalPages(response.data.pages);
         setTotalOrders(response.data.total);
       } catch (err) {
-        console.error('Failed to fetch orders:', err);
+        console.error("Failed to fetch orders:", err);
       } finally {
         setLoading(false);
       }
@@ -146,20 +148,28 @@ function MyOrdersPageContent() {
     if (mounted) {
       fetchOrders();
     }
-  }, [isAuthenticated, currentPage, statusFilter, typeFilter, searchQuery, sortBy, mounted]);
+  }, [
+    isAuthenticated,
+    currentPage,
+    statusFilter,
+    typeFilter,
+    searchQuery,
+    sortBy,
+    mounted,
+  ]);
 
   // Format price
   const formatPrice = (priceNpr: number) => {
     if (!mounted) {
-      return new Intl.NumberFormat('ne-NP', {
-        style: 'currency',
-        currency: 'NPR',
+      return new Intl.NumberFormat("ne-NP", {
+        style: "currency",
+        currency: "NPR",
         minimumFractionDigits: 0,
       }).format(priceNpr);
     }
-    
-    return new Intl.NumberFormat(currencyInfo?.locale || 'en-US', {
-      style: 'currency',
+
+    return new Intl.NumberFormat(currencyInfo?.locale || "en-US", {
+      style: "currency",
       currency: currency,
       minimumFractionDigits: 0,
     }).format(priceNpr);
@@ -167,10 +177,10 @@ function MyOrdersPageContent() {
 
   // Format date
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    return new Date(dateStr).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
@@ -196,18 +206,20 @@ function MyOrdersPageContent() {
 
   // Not authenticated
   if (!isAuthenticated) {
-    router.push('/auth?redirect=/orders');
+    router.push("/auth/login?redirect=/orders");
     return null;
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       <Header />
-      
+
       <main className="flex-1 container mx-auto px-4 py-8">
         {/* Page header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Orders</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            My Orders
+          </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
             Track and manage your orders
           </p>
@@ -286,8 +298,8 @@ function MyOrdersPageContent() {
                 No orders found
               </h3>
               <p className="text-gray-500 mb-4">
-                {searchQuery || statusFilter !== 'all' || typeFilter !== 'all'
-                  ? 'Try adjusting your filters'
+                {searchQuery || statusFilter !== "all" || typeFilter !== "all"
+                  ? "Try adjusting your filters"
                   : "You haven't placed any orders yet"}
               </p>
               <Button asChild>
@@ -298,15 +310,20 @@ function MyOrdersPageContent() {
         ) : (
           <div className="space-y-4">
             {orders.map((order) => {
-              const productName = order.productSnapshot.name || 
-                order.productSnapshot.nameEn || 
-                order.productSnapshot.jewelleryType || 
-                'Custom Jewellery';
-              const productImage = order.productSnapshot.images?.[0] || 
+              const productName =
+                order.productSnapshot.name ||
+                order.productSnapshot.nameEn ||
+                order.productSnapshot.jewelleryType ||
+                "Custom Jewellery";
+              const productImage =
+                order.productSnapshot.images?.[0] ||
                 order.productSnapshot.referenceImages?.[0];
 
               return (
-                <Card key={order.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                <Card
+                  key={order.id}
+                  className="overflow-hidden hover:shadow-md transition-shadow"
+                >
                   <Link href={`/orders/${order.id}`}>
                     <CardContent className="p-0">
                       <div className="flex flex-col lg:flex-row">
@@ -333,12 +350,16 @@ function MyOrdersPageContent() {
                                   #{order.orderNumber}
                                 </span>
                                 <Badge variant="secondary" className="text-xs">
-                                  {order.orderType === 'CUSTOM' ? 'Custom' : 'Pre-built'}
+                                  {order.orderType === "CUSTOM"
+                                    ? "Custom"
+                                    : "Pre-built"}
                                 </Badge>
                               </div>
 
                               {/* Product name */}
-                              <h3 className="font-medium mt-1">{productName}</h3>
+                              <h3 className="font-medium mt-1">
+                                {productName}
+                              </h3>
 
                               {/* Shop */}
                               <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
@@ -410,7 +431,7 @@ function MyOrdersPageContent() {
                   return (
                     <Button
                       key={pageNum}
-                      variant={currentPage === pageNum ? 'default' : 'outline'}
+                      variant={currentPage === pageNum ? "default" : "outline"}
                       size="sm"
                       className="w-10"
                       onClick={() => setCurrentPage(pageNum)}
@@ -423,7 +444,9 @@ function MyOrdersPageContent() {
               <Button
                 variant="outline"
                 disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
               >
                 Next
               </Button>
@@ -440,11 +463,13 @@ function MyOrdersPageContent() {
 // Wrapper with Suspense for useSearchParams
 export default function MyOrdersPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+        </div>
+      }
+    >
       <MyOrdersPageContent />
     </Suspense>
   );

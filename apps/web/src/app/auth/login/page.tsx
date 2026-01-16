@@ -1,34 +1,42 @@
-'use client';
+"use client";
 
-import { useState, useEffect, Suspense, useRef } from 'react';
-import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth, getDashboardRoute } from '@/hooks/useAuth';
-import { GoldenUnveil } from '@/components/auth/GoldenUnveil';
-import { AuthBackground } from '@/components/auth/AuthBackground';
+import { AuthBackground } from "@/components/auth/AuthBackground";
+import { GoldenUnveil } from "@/components/auth/GoldenUnveil";
+import { Turnstile } from "@/components/auth/Turnstile";
+import { Button } from "@/components/ui/button";
 import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { getDashboardRoute, useAuth } from "@/hooks/useAuth";
+import { cn } from "@/lib/utils";
+import {
+  ArrowPathIcon,
+  ArrowRightIcon,
+  CheckCircleIcon,
   EnvelopeIcon,
-  LockClosedIcon,
+  ExclamationCircleIcon,
   EyeIcon,
   EyeSlashIcon,
-  ExclamationCircleIcon,
-  ArrowRightIcon,
-  ArrowPathIcon,
-  CheckCircleIcon,
-} from '@heroicons/react/24/outline';
-import { cn } from '@/lib/utils';
+  LockClosedIcon,
+} from "@heroicons/react/24/outline";
+import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  email: z.string().email("Please enter a valid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -37,42 +45,75 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const { login, verifyEmail, resendVerificationOtp, googleLogin, isAuthenticated, user, isLoading: authLoading, error, clearError } = useAuth();
+  const {
+    login,
+    verifyEmail,
+    resendVerificationOtp,
+    googleLogin,
+    isAuthenticated,
+    user,
+    isLoading: authLoading,
+    error,
+    clearError,
+  } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [hasVisited, setHasVisited] = useState(false);
-  
+
   // Email verification state (when user tries to login with unverified email)
   const [showVerification, setShowVerification] = useState(false);
-  const [verificationUserId, setVerificationUserId] = useState<string>('');
-  const [verificationEmail, setVerificationEmail] = useState<string>('');
-  const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
-  const [otpError, setOtpError] = useState('');
+  const [verificationUserId, setVerificationUserId] = useState<string>("");
+  const [verificationEmail, setVerificationEmail] = useState<string>("");
+  const [otpCode, setOtpCode] = useState(["", "", "", "", "", ""]);
+  const [otpError, setOtpError] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  // Turnstile state
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
+  const handleTurnstileError = useCallback(() => {
+    setTurnstileToken("");
+    toast({
+      variant: "destructive",
+      title: "Verification failed",
+      description: "Please try again or refresh the page.",
+    });
+  }, [toast]);
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken("");
+  }, []);
+
   // Check URL for error param (from OAuth redirect)
   useEffect(() => {
-    const errorParam = searchParams.get('error');
-    const messageParam = searchParams.get('message');
-    const emailParam = searchParams.get('email');
-    
-    if (errorParam === 'account_not_found') {
+    const errorParam = searchParams.get("error");
+    const messageParam = searchParams.get("message");
+    const emailParam = searchParams.get("email");
+
+    if (errorParam === "account_not_found") {
       // Google OAuth login with non-existent account
       toast({
-        variant: 'destructive',
-        title: 'Account not found',
-        description: messageParam || 'No account found with this email. Please register first.',
+        variant: "destructive",
+        title: "Account not found",
+        description:
+          messageParam ||
+          "No account found with this email. Please register first.",
         duration: 6000,
       });
       // Redirect to register page after short delay
       setTimeout(() => {
-        router.push(`/auth/register${emailParam ? `?email=${encodeURIComponent(emailParam)}` : ''}`);
+        router.push(
+          `/auth/register${
+            emailParam ? `?email=${encodeURIComponent(emailParam)}` : ""
+          }`
+        );
       }, 2000);
     } else if (errorParam) {
       toast({
-        variant: 'destructive',
-        title: 'Login failed',
+        variant: "destructive",
+        title: "Login failed",
         description: errorParam,
       });
     }
@@ -80,7 +121,7 @@ function LoginForm() {
 
   // Check if user has visited before (skip intro for returning users)
   useEffect(() => {
-    const visited = sessionStorage.getItem('orivraa_visited');
+    const visited = sessionStorage.getItem("orivraa_visited");
     if (visited) {
       setHasVisited(true);
     }
@@ -89,20 +130,23 @@ function LoginForm() {
   // Resend cooldown timer
   useEffect(() => {
     if (resendCooldown > 0) {
-      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      const timer = setTimeout(
+        () => setResendCooldown(resendCooldown - 1),
+        1000
+      );
       return () => clearTimeout(timer);
     }
   }, [resendCooldown]);
 
   // Mark as visited after animation completes
   const handleAnimationComplete = () => {
-    sessionStorage.setItem('orivraa_visited', 'true');
+    sessionStorage.setItem("orivraa_visited", "true");
   };
 
   // Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated && user) {
-      const redirect = searchParams.get('redirect');
+      const redirect = searchParams.get("redirect");
       if (redirect) {
         router.push(decodeURIComponent(redirect));
       } else {
@@ -126,42 +170,52 @@ function LoginForm() {
   });
 
   const onSubmit = async (data: LoginForm) => {
+    // Check Turnstile token
+    if (!turnstileToken && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
+      toast({
+        variant: "destructive",
+        title: "Verification required",
+        description: "Please complete the security check.",
+      });
+      return;
+    }
+
     setIsLoading(true);
     clearError();
-    
+
     try {
-      await login(data.email, data.password);
+      await login(data.email, data.password, turnstileToken);
       toast({
-        title: 'Welcome back!',
-        description: 'You have successfully signed in.',
+        title: "Welcome back!",
+        description: "You have successfully signed in.",
       });
     } catch (error: any) {
       // Check if email not verified
-      if (error.message === 'EMAIL_NOT_VERIFIED') {
+      if (error.message === "EMAIL_NOT_VERIFIED") {
         setVerificationUserId(error.userId);
         setVerificationEmail(error.email);
         setShowVerification(true);
-        
+
         // Send verification OTP
         try {
           await resendVerificationOtp(error.email);
           setResendCooldown(60);
           toast({
-            title: 'Verification required',
-            description: 'A verification code has been sent to your email.',
+            title: "Verification required",
+            description: "A verification code has been sent to your email.",
           });
         } catch {
           toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'Failed to send verification code. Please try again.',
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to send verification code. Please try again.",
           });
         }
       } else {
         toast({
-          variant: 'destructive',
-          title: 'Login failed',
-          description: error.message || 'Invalid credentials',
+          variant: "destructive",
+          title: "Login failed",
+          description: error.message || "Invalid credentials",
         });
       }
     } finally {
@@ -172,7 +226,7 @@ function LoginForm() {
   // OTP handlers
   const handleOtpChange = (index: number, value: string) => {
     if (value.length > 1) {
-      const digits = value.replace(/\D/g, '').slice(0, 6).split('');
+      const digits = value.replace(/\D/g, "").slice(0, 6).split("");
       const newOtp = [...otpCode];
       digits.forEach((digit, i) => {
         if (index + i < 6) newOtp[index + i] = digit;
@@ -186,35 +240,35 @@ function LoginForm() {
     const newOtp = [...otpCode];
     newOtp[index] = value;
     setOtpCode(newOtp);
-    setOtpError('');
+    setOtpError("");
     if (value && index < 5) {
       otpInputRefs.current[index + 1]?.focus();
     }
   };
 
   const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !otpCode[index] && index > 0) {
+    if (e.key === "Backspace" && !otpCode[index] && index > 0) {
       otpInputRefs.current[index - 1]?.focus();
     }
   };
 
   const handleVerifyOtp = async () => {
-    const code = otpCode.join('');
+    const code = otpCode.join("");
     if (code.length !== 6) {
-      setOtpError('Please enter the complete 6-digit code');
+      setOtpError("Please enter the complete 6-digit code");
       return;
     }
     setIsLoading(true);
-    setOtpError('');
+    setOtpError("");
     try {
       await verifyEmail(verificationUserId, code);
       toast({
-        title: 'Email verified!',
-        description: 'Welcome! You are now signed in.',
+        title: "Email verified!",
+        description: "Welcome! You are now signed in.",
       });
     } catch (error: any) {
-      setOtpError(error.message || 'Invalid code. Please try again.');
-      setOtpCode(['', '', '', '', '', '']);
+      setOtpError(error.message || "Invalid code. Please try again.");
+      setOtpCode(["", "", "", "", "", ""]);
       otpInputRefs.current[0]?.focus();
     } finally {
       setIsLoading(false);
@@ -226,16 +280,16 @@ function LoginForm() {
     try {
       await resendVerificationOtp(verificationEmail);
       setResendCooldown(60);
-      setOtpCode(['', '', '', '', '', '']);
-      setOtpError('');
+      setOtpCode(["", "", "", "", "", ""]);
+      setOtpError("");
       toast({
-        title: 'Code resent!',
-        description: 'Please check your email for the new verification code.',
+        title: "Code resent!",
+        description: "Please check your email for the new verification code.",
       });
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Failed to resend code',
+        variant: "destructive",
+        title: "Failed to resend code",
         description: error.message,
       });
     }
@@ -260,17 +314,26 @@ function LoginForm() {
   // Show email verification screen
   if (showVerification) {
     return (
-      <GoldenUnveil skipIntro={true} onAnimationComplete={handleAnimationComplete}>
+      <GoldenUnveil
+        skipIntro={true}
+        onAnimationComplete={handleAnimationComplete}
+      >
         <Card className="w-full max-w-md border-0 shadow-2xl shadow-gold-500/10 bg-white/95 backdrop-blur-sm">
           <CardHeader className="space-y-1 text-center pb-4">
             <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-gold-100 to-gold-200 flex items-center justify-center mb-2">
               <EnvelopeIcon className="w-8 h-8 text-gold-600" />
             </div>
-            <CardTitle className="text-2xl font-bold">Verify your email</CardTitle>
+            <CardTitle className="text-2xl font-bold">
+              Verify your email
+            </CardTitle>
             <CardDescription className="text-base">
-              Your email hasn't been verified yet.<br />
-              Enter the 6-digit code sent to<br />
-              <span className="font-medium text-gray-900">{verificationEmail}</span>
+              Your email hasn't been verified yet.
+              <br />
+              Enter the 6-digit code sent to
+              <br />
+              <span className="font-medium text-gray-900">
+                {verificationEmail}
+              </span>
             </CardDescription>
           </CardHeader>
 
@@ -280,7 +343,9 @@ function LoginForm() {
                 {otpCode.map((digit, index) => (
                   <input
                     key={index}
-                    ref={(el) => { otpInputRefs.current[index] = el; }}
+                    ref={(el) => {
+                      otpInputRefs.current[index] = el;
+                    }}
                     type="text"
                     inputMode="numeric"
                     maxLength={6}
@@ -290,7 +355,9 @@ function LoginForm() {
                     className={cn(
                       "w-12 h-14 text-center text-xl font-semibold rounded-xl border-2 transition-all",
                       "focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500",
-                      otpError ? "border-red-300 bg-red-50" : "border-gray-200 bg-white"
+                      otpError
+                        ? "border-red-300 bg-red-50"
+                        : "border-gray-200 bg-white"
                     )}
                     autoFocus={index === 0}
                   />
@@ -306,7 +373,7 @@ function LoginForm() {
 
             <Button
               onClick={handleVerifyOtp}
-              disabled={isLoading || otpCode.join('').length !== 6}
+              disabled={isLoading || otpCode.join("").length !== 6}
               className="w-full h-12 rounded-xl gold-gradient text-white font-semibold"
             >
               {isLoading ? (
@@ -323,7 +390,9 @@ function LoginForm() {
             </Button>
 
             <div className="text-center">
-              <p className="text-sm text-gray-500 mb-2">Didn't receive the code?</p>
+              <p className="text-sm text-gray-500 mb-2">
+                Didn't receive the code?
+              </p>
               <Button
                 variant="ghost"
                 size="sm"
@@ -347,10 +416,10 @@ function LoginForm() {
                 variant="link"
                 onClick={() => {
                   setShowVerification(false);
-                  setVerificationUserId('');
-                  setVerificationEmail('');
-                  setOtpCode(['', '', '', '', '', '']);
-                  setOtpError('');
+                  setVerificationUserId("");
+                  setVerificationEmail("");
+                  setOtpCode(["", "", "", "", "", ""]);
+                  setOtpError("");
                 }}
                 className="text-gray-500 hover:text-gray-700"
               >
@@ -364,8 +433,8 @@ function LoginForm() {
   }
 
   return (
-    <GoldenUnveil 
-      skipIntro={hasVisited} 
+    <GoldenUnveil
+      skipIntro={hasVisited}
       onAnimationComplete={handleAnimationComplete}
     >
       <Card className="border-0 shadow-2xl shadow-gold-500/10 bg-white/95 backdrop-blur-sm login-form-item">
@@ -375,13 +444,13 @@ function LoginForm() {
             Sign in to continue your jewellery journey
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent className="space-y-5">
           {/* Google OAuth Button */}
           <Button
             type="button"
             variant="outline"
-            onClick={() => googleLogin('CUSTOMER', 'login')}
+            onClick={() => googleLogin("CUSTOMER", "login")}
             className="w-full h-12 rounded-xl border-gray-200 hover:bg-gray-50 flex items-center justify-center gap-3"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -410,7 +479,9 @@ function LoginForm() {
               <span className="w-full border-t border-gray-200" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-2 text-gray-500">Or continue with email</span>
+              <span className="bg-white px-2 text-gray-500">
+                Or continue with email
+              </span>
             </div>
           </div>
         </CardContent>
@@ -424,7 +495,7 @@ function LoginForm() {
                 <span>{error}</span>
               </div>
             )}
-            
+
             {/* Email Field */}
             <div className="space-y-2 login-form-item">
               <Label htmlFor="email" className="text-sm font-medium">
@@ -438,21 +509,25 @@ function LoginForm() {
                   placeholder="you@example.com"
                   className={cn(
                     "h-12 pl-11 rounded-xl border-gray-200 transition-all duration-300",
-                    errors.email && "border-red-300 focus:border-red-400 focus:ring-red-400/20"
+                    errors.email &&
+                      "border-red-300 focus:border-red-400 focus:ring-red-400/20"
                   )}
-                  {...register('email')}
-                  aria-invalid={errors.email ? 'true' : 'false'}
-                  aria-describedby={errors.email ? 'email-error' : undefined}
+                  {...register("email")}
+                  aria-invalid={errors.email ? "true" : "false"}
+                  aria-describedby={errors.email ? "email-error" : undefined}
                 />
               </div>
               {errors.email && (
-                <p id="email-error" className="text-sm text-red-500 flex items-center gap-1.5">
+                <p
+                  id="email-error"
+                  className="text-sm text-red-500 flex items-center gap-1.5"
+                >
                   <ExclamationCircleIcon className="h-4 w-4" />
                   {errors.email.message}
                 </p>
               )}
             </div>
-            
+
             {/* Password Field */}
             <div className="space-y-2 login-form-item">
               <div className="flex items-center justify-between">
@@ -470,21 +545,24 @@ function LoginForm() {
                 <LockClosedIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
                 <Input
                   id="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   className={cn(
                     "h-12 pl-11 pr-11 rounded-xl border-gray-200 transition-all duration-300",
-                    errors.password && "border-red-300 focus:border-red-400 focus:ring-red-400/20"
+                    errors.password &&
+                      "border-red-300 focus:border-red-400 focus:ring-red-400/20"
                   )}
-                  {...register('password')}
-                  aria-invalid={errors.password ? 'true' : 'false'}
-                  aria-describedby={errors.password ? 'password-error' : undefined}
+                  {...register("password")}
+                  aria-invalid={errors.password ? "true" : "false"}
+                  aria-describedby={
+                    errors.password ? "password-error" : undefined
+                  }
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gold-500 transition-colors"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
                     <EyeSlashIcon className="h-5 w-5" />
@@ -494,19 +572,36 @@ function LoginForm() {
                 </button>
               </div>
               {errors.password && (
-                <p id="password-error" className="text-sm text-red-500 flex items-center gap-1.5">
+                <p
+                  id="password-error"
+                  className="text-sm text-red-500 flex items-center gap-1.5"
+                >
                   <ExclamationCircleIcon className="h-4 w-4" />
                   {errors.password.message}
                 </p>
               )}
             </div>
+
+            {/* Turnstile CAPTCHA */}
+            <div className="flex justify-center login-form-item">
+              <Turnstile
+                onVerify={handleTurnstileVerify}
+                onError={handleTurnstileError}
+                onExpire={handleTurnstileExpire}
+                theme="auto"
+              />
+            </div>
           </CardContent>
-          
+
           <CardFooter className="flex flex-col space-y-4 pt-2 login-form-item">
-            <Button 
-              type="submit" 
-              className="w-full h-12 rounded-xl gold-gradient text-white text-base font-semibold transition-all hover:shadow-lg hover:shadow-gold-500/25 disabled:opacity-70" 
-              disabled={isLoading}
+            <Button
+              type="submit"
+              className="w-full h-12 rounded-xl gold-gradient text-white text-base font-semibold transition-all hover:shadow-lg hover:shadow-gold-500/25 disabled:opacity-70"
+              disabled={
+                isLoading ||
+                (!turnstileToken &&
+                  !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY)
+              }
             >
               {isLoading ? (
                 <span className="flex items-center gap-2">
@@ -520,11 +615,11 @@ function LoginForm() {
                 </span>
               )}
             </Button>
-            
+
             <p className="text-sm text-center text-muted-foreground">
-              Don&apos;t have an account?{' '}
-              <Link 
-                href="/auth/register" 
+              Don&apos;t have an account?{" "}
+              <Link
+                href="/auth/register"
                 className="text-gold-600 font-semibold hover:text-gold-700 hover:underline"
               >
                 Create one

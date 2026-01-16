@@ -1,39 +1,43 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Footer } from "@/components/layout/footer";
+import { Header } from "@/components/layout/header";
+import {
+  OrderStatusBadge,
+  OrderStepper,
+  type OrderType as OrderTypeEnum,
+} from "@/components/orders";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/hooks/useAuth";
+import { ordersApi } from "@/lib/api";
+import { CURRENCIES, usePreferencesStore } from "@/store/preferences";
 import {
   ArrowLeftIcon,
   BuildingStorefrontIcon,
-  PhoneIcon,
-  MapPinIcon,
   CalendarIcon,
-  TruckIcon,
-  ShoppingBagIcon,
-  CurrencyDollarIcon,
-  ClockIcon,
   CheckCircleIcon,
-  XCircleIcon,
+  ClockIcon,
   ExclamationTriangleIcon,
-} from '@heroicons/react/24/outline';
-import { Loader2, Package, Store, CreditCard } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
-import { ordersApi } from '@/lib/api';
-import { usePreferencesStore, CURRENCIES } from '@/store/preferences';
-import { 
-  OrderStepper, 
-  OrderStatusBadge,
-  type OrderType as OrderTypeEnum,
-} from '@/components/orders';
+  MapPinIcon,
+  PhoneIcon,
+  TruckIcon,
+  XCircleIcon,
+} from "@heroicons/react/24/outline";
+import { CreditCard, Loader2, Package, Store } from "lucide-react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -42,7 +46,7 @@ import {
 interface OrderDetails {
   id: string;
   orderNumber: string;
-  orderType: 'INVENTORY' | 'CUSTOM';
+  orderType: "INVENTORY" | "CUSTOM";
   status: string;
   detailedStatus: string;
   paymentStatus: string;
@@ -135,13 +139,15 @@ export default function OrderTrackingPage() {
         const response = await ordersApi.getById(orderId);
         setOrder(response.data);
       } catch (err: unknown) {
-        const error = err as { response?: { status?: number; data?: { message?: string } } };
+        const error = err as {
+          response?: { status?: number; data?: { message?: string } };
+        };
         if (error.response?.status === 404) {
-          setError('Order not found');
+          setError("Order not found");
         } else if (error.response?.status === 403) {
-          setError('You do not have permission to view this order');
+          setError("You do not have permission to view this order");
         } else {
-          setError(error.response?.data?.message || 'Failed to load order');
+          setError(error.response?.data?.message || "Failed to load order");
         }
       } finally {
         setLoading(false);
@@ -156,15 +162,15 @@ export default function OrderTrackingPage() {
   // Format price
   const formatPrice = (priceNpr: number) => {
     if (!mounted) {
-      return new Intl.NumberFormat('ne-NP', {
-        style: 'currency',
-        currency: 'NPR',
+      return new Intl.NumberFormat("ne-NP", {
+        style: "currency",
+        currency: "NPR",
         minimumFractionDigits: 0,
       }).format(priceNpr);
     }
-    
-    return new Intl.NumberFormat(currencyInfo?.locale || 'en-US', {
-      style: 'currency',
+
+    return new Intl.NumberFormat(currencyInfo?.locale || "en-US", {
+      style: "currency",
       currency: currency,
       minimumFractionDigits: 0,
     }).format(priceNpr);
@@ -172,37 +178,37 @@ export default function OrderTrackingPage() {
 
   // Format date
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+    return new Date(dateStr).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
   const formatDateTime = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(dateStr).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   // Get payment status color
   const getPaymentStatusColor = (status: string) => {
     switch (status.toUpperCase()) {
-      case 'PAID':
-      case 'COMPLETED':
-        return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
-      case 'PENDING':
-      case 'PENDING_AT_SHOP':
-        return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
-      case 'FAILED':
-      case 'CANCELLED':
-        return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+      case "PAID":
+      case "COMPLETED":
+        return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400";
+      case "PENDING":
+      case "PENDING_AT_SHOP":
+        return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
+      case "FAILED":
+      case "CANCELLED":
+        return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
       default:
-        return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
+        return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
     }
   };
 
@@ -221,7 +227,7 @@ export default function OrderTrackingPage() {
 
   // Not authenticated
   if (!isAuthenticated) {
-    router.push(`/auth?redirect=/orders/${orderId}`);
+    router.push(`/auth/login?redirect=/orders/${orderId}`);
     return null;
   }
 
@@ -237,12 +243,12 @@ export default function OrderTrackingPage() {
                 <XCircleIcon className="h-10 w-10 text-red-600" />
               </div>
               <CardTitle className="text-red-700 dark:text-red-400">
-                {error || 'Order Not Found'}
+                {error || "Order Not Found"}
               </CardTitle>
               <CardDescription>
-                {error === 'You do not have permission to view this order'
-                  ? 'This order belongs to another user.'
-                  : 'The order you are looking for does not exist or has been removed.'}
+                {error === "You do not have permission to view this order"
+                  ? "This order belongs to another user."
+                  : "The order you are looking for does not exist or has been removed."}
               </CardDescription>
             </CardHeader>
             <CardFooter className="justify-center">
@@ -258,10 +264,11 @@ export default function OrderTrackingPage() {
   }
 
   // Get product name
-  const productName = order.productSnapshot.name || 
-    order.productSnapshot.nameEn || 
-    order.productSnapshot.jewelleryType || 
-    'Custom Jewellery';
+  const productName =
+    order.productSnapshot.name ||
+    order.productSnapshot.nameEn ||
+    order.productSnapshot.jewelleryType ||
+    "Custom Jewellery";
 
   // Build status history from milestones
   const statusHistory = order.milestones.map((m) => ({
@@ -272,14 +279,10 @@ export default function OrderTrackingPage() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       <Header />
-      
+
       <main className="flex-1 container mx-auto px-4 py-8">
         {/* Back button */}
-        <Button
-          variant="ghost"
-          className="mb-4"
-          onClick={() => router.back()}
-        >
+        <Button variant="ghost" className="mb-4" onClick={() => router.back()}>
           <ArrowLeftIcon className="h-4 w-4 mr-2" />
           Back
         </Button>
@@ -292,10 +295,14 @@ export default function OrderTrackingPage() {
               <CardHeader className="pb-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Order Number</p>
-                    <CardTitle className="text-xl font-mono">{order.orderNumber}</CardTitle>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Order Number
+                    </p>
+                    <CardTitle className="text-xl font-mono">
+                      {order.orderNumber}
+                    </CardTitle>
                   </div>
-                  <OrderStatusBadge 
+                  <OrderStatusBadge
                     orderType={order.orderType as OrderTypeEnum}
                     currentStatus={order.detailedStatus}
                   />
@@ -306,7 +313,9 @@ export default function OrderTrackingPage() {
                     Placed on {formatDate(order.createdAt)}
                   </span>
                   <span>•</span>
-                  <span className="capitalize">{order.orderType.toLowerCase()} Order</span>
+                  <span className="capitalize">
+                    {order.orderType.toLowerCase()} Order
+                  </span>
                 </div>
               </CardHeader>
             </Card>
@@ -315,9 +324,7 @@ export default function OrderTrackingPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Order Progress</CardTitle>
-                <CardDescription>
-                  Track your order status
-                </CardDescription>
+                <CardDescription>Track your order status</CardDescription>
               </CardHeader>
               <CardContent>
                 <OrderStepper
@@ -347,9 +354,13 @@ export default function OrderTrackingPage() {
                     {/* Product info */}
                     <div className="flex gap-4">
                       <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center overflow-hidden">
-                        {(order.productSnapshot.images?.[0] || order.productSnapshot.referenceImages?.[0]) ? (
+                        {order.productSnapshot.images?.[0] ||
+                        order.productSnapshot.referenceImages?.[0] ? (
                           <img
-                            src={order.productSnapshot.images?.[0] || order.productSnapshot.referenceImages?.[0]}
+                            src={
+                              order.productSnapshot.images?.[0] ||
+                              order.productSnapshot.referenceImages?.[0]
+                            }
                             alt={productName}
                             className="w-full h-full object-cover"
                           />
@@ -360,10 +371,14 @@ export default function OrderTrackingPage() {
                       <div className="flex-1">
                         <h3 className="font-medium">{productName}</h3>
                         {order.productSnapshot.sku && (
-                          <p className="text-sm text-gray-500">SKU: {order.productSnapshot.sku}</p>
+                          <p className="text-sm text-gray-500">
+                            SKU: {order.productSnapshot.sku}
+                          </p>
                         )}
                         {order.productSnapshot.quantity && (
-                          <p className="text-sm text-gray-500">Qty: {order.productSnapshot.quantity}</p>
+                          <p className="text-sm text-gray-500">
+                            Qty: {order.productSnapshot.quantity}
+                          </p>
                         )}
                         {order.productSnapshot.buildMethod && (
                           <Badge variant="secondary" className="mt-1">
@@ -409,7 +424,9 @@ export default function OrderTrackingPage() {
                             <div className="flex-1 pb-4">
                               <p className="font-medium">{milestone.title}</p>
                               {milestone.description && (
-                                <p className="text-sm text-gray-500 mt-1">{milestone.description}</p>
+                                <p className="text-sm text-gray-500 mt-1">
+                                  {milestone.description}
+                                </p>
                               )}
                               <p className="text-xs text-gray-400 mt-1">
                                 {formatDateTime(milestone.completedAt)}
@@ -434,7 +451,9 @@ export default function OrderTrackingPage() {
                       <div className="text-center py-8 text-gray-500">
                         <ClockIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                         <p>No timeline updates yet</p>
-                        <p className="text-sm">Updates will appear here as your order progresses</p>
+                        <p className="text-sm">
+                          Updates will appear here as your order progresses
+                        </p>
                       </div>
                     )}
                   </CardContent>
@@ -445,7 +464,9 @@ export default function OrderTrackingPage() {
               <TabsContent value="delivery">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Delivery Information</CardTitle>
+                    <CardTitle className="text-lg">
+                      Delivery Information
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {/* Shipping address */}
@@ -453,7 +474,9 @@ export default function OrderTrackingPage() {
                       <div className="flex gap-3">
                         <MapPinIcon className="h-5 w-5 text-gray-400 mt-0.5" />
                         <div>
-                          <p className="font-medium">{order.shippingAddress.fullName}</p>
+                          <p className="font-medium">
+                            {order.shippingAddress.fullName}
+                          </p>
                           <p className="text-sm text-gray-500">
                             {order.shippingAddress.addressLine1}
                             {order.shippingAddress.addressLine2 && (
@@ -461,7 +484,9 @@ export default function OrderTrackingPage() {
                             )}
                           </p>
                           <p className="text-sm text-gray-500">
-                            {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.pincode}
+                            {order.shippingAddress.city},{" "}
+                            {order.shippingAddress.state}{" "}
+                            {order.shippingAddress.pincode}
                           </p>
                           <p className="text-sm text-gray-500">
                             {order.shippingAddress.country}
@@ -484,10 +509,13 @@ export default function OrderTrackingPage() {
                       <div>
                         <p className="font-medium">Tracking</p>
                         {order.trackingNumber ? (
-                          <p className="text-sm font-mono">{order.trackingNumber}</p>
+                          <p className="text-sm font-mono">
+                            {order.trackingNumber}
+                          </p>
                         ) : (
                           <p className="text-sm text-gray-500">
-                            Tracking information will be available once your order ships
+                            Tracking information will be available once your
+                            order ships
                           </p>
                         )}
                       </div>
@@ -510,7 +538,9 @@ export default function OrderTrackingPage() {
                       <div className="flex gap-3">
                         <CheckCircleIcon className="h-5 w-5 text-emerald-500 mt-0.5" />
                         <div>
-                          <p className="font-medium text-emerald-600">Delivered</p>
+                          <p className="font-medium text-emerald-600">
+                            Delivered
+                          </p>
                           <p className="text-sm text-gray-500">
                             {formatDate(order.actualDelivery)}
                           </p>
@@ -537,7 +567,9 @@ export default function OrderTrackingPage() {
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">Status</span>
                   <Badge className={getPaymentStatusColor(order.paymentStatus)}>
-                    {order.paidAtShopRequested ? 'Pay at Shop' : order.paymentStatus}
+                    {order.paidAtShopRequested
+                      ? "Pay at Shop"
+                      : order.paymentStatus}
                   </Badge>
                 </div>
 
@@ -550,7 +582,8 @@ export default function OrderTrackingPage() {
                           Payment Pending at Shop
                         </p>
                         <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                          Please visit {order.shop.shopName} to complete your payment.
+                          Please visit {order.shop.shopName} to complete your
+                          payment.
                         </p>
                       </div>
                     </div>
@@ -560,7 +593,9 @@ export default function OrderTrackingPage() {
                 {order.paymentMethod && (
                   <div className="flex justify-between items-center">
                     <span className="text-gray-500">Method</span>
-                    <span className="capitalize">{order.paymentMethod.toLowerCase().replace('_', ' ')}</span>
+                    <span className="capitalize">
+                      {order.paymentMethod.toLowerCase().replace("_", " ")}
+                    </span>
                   </div>
                 )}
 
@@ -577,7 +612,11 @@ export default function OrderTrackingPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Shipping</span>
-                    <span>{order.shippingNpr === 0 ? 'Free' : formatPrice(order.shippingNpr)}</span>
+                    <span>
+                      {order.shippingNpr === 0
+                        ? "Free"
+                        : formatPrice(order.shippingNpr)}
+                    </span>
                   </div>
                   {order.discountNpr > 0 && (
                     <div className="flex justify-between text-emerald-600">
@@ -588,14 +627,17 @@ export default function OrderTrackingPage() {
                   <Separator />
                   <div className="flex justify-between text-lg font-semibold">
                     <span>Total</span>
-                    <span className="text-amber-600">{formatPrice(order.totalNpr)}</span>
+                    <span className="text-amber-600">
+                      {formatPrice(order.totalNpr)}
+                    </span>
                   </div>
-                  {order.balanceDueNpr > 0 && order.balanceDueNpr < order.totalNpr && (
-                    <div className="flex justify-between text-amber-600">
-                      <span>Balance Due</span>
-                      <span>{formatPrice(order.balanceDueNpr)}</span>
-                    </div>
-                  )}
+                  {order.balanceDueNpr > 0 &&
+                    order.balanceDueNpr < order.totalNpr && (
+                      <div className="flex justify-between text-amber-600">
+                        <span>Balance Due</span>
+                        <span>{formatPrice(order.balanceDueNpr)}</span>
+                      </div>
+                    )}
                 </div>
               </CardContent>
             </Card>
@@ -606,7 +648,11 @@ export default function OrderTrackingPage() {
                 <CardTitle className="text-lg">Need Help?</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start" asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  asChild
+                >
                   <Link href={`/shop/${order.shop.id}`}>
                     <BuildingStorefrontIcon className="h-4 w-4 mr-2" />
                     View Shop

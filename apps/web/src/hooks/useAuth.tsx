@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import React, { 
-  createContext, 
-  useContext, 
-  useEffect, 
-  useState, 
+import { api } from "@/lib/api";
+import { usePathname, useRouter } from "next/navigation";
+import React, {
+  createContext,
+  ReactNode,
   useCallback,
-  ReactNode 
-} from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { api } from '@/lib/api';
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 // Types matching backend
-export type UserRole = 'ADMIN' | 'SHOPKEEPER' | 'CUSTOMER';
+export type UserRole = "ADMIN" | "SHOPKEEPER" | "CUSTOMER";
 
 export interface User {
   id: string;
@@ -50,13 +50,24 @@ export interface AuthState {
 }
 
 export interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<void>;
+  login: (
+    email: string,
+    password: string,
+    turnstileToken?: string
+  ) => Promise<void>;
   register: (data: RegisterData) => Promise<RegisterResponse>;
   verifyEmail: (userId: string, code: string) => Promise<void>;
   resendVerificationOtp: (email: string) => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
-  resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
-  googleLogin: (role?: 'CUSTOMER' | 'SHOPKEEPER', mode?: 'login' | 'register') => void;
+  resetPassword: (
+    email: string,
+    code: string,
+    newPassword: string
+  ) => Promise<void>;
+  googleLogin: (
+    role?: "CUSTOMER" | "SHOPKEEPER",
+    mode?: "login" | "register"
+  ) => void;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   clearError: () => void;
@@ -70,6 +81,7 @@ export interface RegisterData {
   phone?: string;
   role: UserRole;
   preferredLanguage?: string;
+  turnstileToken?: string;
   shop?: {
     shopName: string;
     country: string;
@@ -107,11 +119,11 @@ interface AuthResponse {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Token management
-const TOKEN_KEY = 'token';
-const REFRESH_TOKEN_KEY = 'refreshToken';
+const TOKEN_KEY = "token";
+const REFRESH_TOKEN_KEY = "refreshToken";
 
 const getStoredToken = () => {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === "undefined") return null;
   return localStorage.getItem(TOKEN_KEY);
 };
 
@@ -128,36 +140,45 @@ const clearTokens = () => {
 // Dashboard routes by role
 export const getDashboardRoute = (role: UserRole): string => {
   switch (role) {
-    case 'ADMIN':
-      return '/dashboard/admin';
-    case 'SHOPKEEPER':
-      return '/dashboard/shop';
-    case 'CUSTOMER':
-      return '/dashboard/customer';
+    case "ADMIN":
+      return "/dashboard/admin";
+    case "SHOPKEEPER":
+      return "/dashboard/shop";
+    case "CUSTOMER":
+      return "/dashboard/customer";
     default:
-      return '/';
+      return "/";
   }
 };
 
 // Routes allowed per role
 const roleRoutes: Record<UserRole, string[]> = {
-  ADMIN: ['/dashboard/admin', '/admin', '/api/admin'],
-  SHOPKEEPER: ['/dashboard/shop', '/shop', '/inventory'],
-  CUSTOMER: ['/dashboard/customer', '/browse', '/cart', '/orders', '/rfq'],
+  ADMIN: ["/dashboard/admin", "/admin", "/api/admin"],
+  SHOPKEEPER: ["/dashboard/shop", "/shop", "/inventory"],
+  CUSTOMER: ["/dashboard/customer", "/browse", "/cart", "/orders", "/rfq"],
 };
 
 // Public routes that don't require auth
-const publicRoutes = ['/', '/auth/login', '/auth/register', '/browse', '/pricing'];
+const publicRoutes = [
+  "/",
+  "/auth/login",
+  "/auth/register",
+  "/browse",
+  "/pricing",
+];
 
-export const isRouteAllowedForRole = (pathname: string, role: UserRole): boolean => {
+export const isRouteAllowedForRole = (
+  pathname: string,
+  role: UserRole
+): boolean => {
   // Public routes are always allowed
-  if (publicRoutes.some(r => pathname === r || pathname.startsWith(r))) {
+  if (publicRoutes.some((r) => pathname === r || pathname.startsWith(r))) {
     return true;
   }
 
   // Check if route is in role's allowed routes
   const allowed = roleRoutes[role];
-  return allowed.some(route => pathname.startsWith(route));
+  return allowed.some((route) => pathname.startsWith(route));
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -175,14 +196,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUser = useCallback(async () => {
     const token = getStoredToken();
     if (!token) {
-      setState(prev => ({ ...prev, isLoading: false }));
+      setState((prev) => ({ ...prev, isLoading: false }));
       return;
     }
 
     try {
-      const response = await api.get('/auth/me');
+      const response = await api.get("/auth/me");
       const user = response.data;
-      
+
       setState({
         user,
         isAuthenticated: true,
@@ -190,7 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error: null,
       });
     } catch (error: any) {
-      console.error('Failed to fetch user:', error);
+      console.error("Failed to fetch user:", error);
       clearTokens();
       setState({
         user: null,
@@ -207,127 +228,146 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchUser]);
 
   // Login function
-  const login = useCallback(async (email: string, password: string) => {
-    setState(prev => ({ ...prev, isLoading: true, error: null }));
+  const login = useCallback(
+    async (email: string, password: string, turnstileToken?: string) => {
+      setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
-    try {
-      const response = await api.post<AuthResponse>('/auth/login', {
-        email,
-        password,
-      });
+      try {
+        const response = await api.post<AuthResponse>("/auth/login", {
+          email,
+          password,
+          turnstileToken,
+        });
 
-      const { accessToken, refreshToken, user: userData } = response.data;
-      storeTokens(accessToken, refreshToken);
+        const { accessToken, refreshToken, user: userData } = response.data;
+        storeTokens(accessToken, refreshToken);
 
-      // Fetch full user profile
-      const meResponse = await api.get('/auth/me');
-      const fullUser = meResponse.data;
+        // Fetch full user profile
+        const meResponse = await api.get("/auth/me");
+        const fullUser = meResponse.data;
 
-      setState({
-        user: fullUser,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      });
+        setState({
+          user: fullUser,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+        });
 
-      // Redirect to appropriate dashboard
-      const dashboardRoute = getDashboardRoute(fullUser.role);
-      router.push(dashboardRoute);
-    } catch (error: any) {
-      // Check if email is not verified
-      const errorData = error.response?.data;
-      if (errorData?.code === 'EMAIL_NOT_VERIFIED') {
-        setState(prev => ({
+        // Redirect to appropriate dashboard
+        const dashboardRoute = getDashboardRoute(fullUser.role);
+        router.push(dashboardRoute);
+      } catch (error: any) {
+        // Check if email is not verified
+        const errorData = error.response?.data;
+        if (errorData?.code === "EMAIL_NOT_VERIFIED") {
+          setState((prev) => ({
+            ...prev,
+            isLoading: false,
+            error: null,
+          }));
+          // Throw structured error for handling in UI
+          const verificationError = new Error("EMAIL_NOT_VERIFIED") as any;
+          verificationError.userId = errorData.userId;
+          verificationError.email = errorData.email;
+          throw verificationError;
+        }
+
+        const message = errorData?.message || "Login failed. Please try again.";
+        setState((prev) => ({
+          ...prev,
+          isLoading: false,
+          error: message,
+        }));
+        throw new Error(message);
+      }
+    },
+    [router]
+  );
+
+  // Register function - returns registration response (requires email verification)
+  const register = useCallback(
+    async (data: RegisterData): Promise<RegisterResponse> => {
+      setState((prev) => ({ ...prev, isLoading: true, error: null }));
+
+      try {
+        const response = await api.post<RegisterResponse>(
+          "/auth/register",
+          data
+        );
+
+        setState((prev) => ({
           ...prev,
           isLoading: false,
           error: null,
         }));
-        // Throw structured error for handling in UI
-        const verificationError = new Error('EMAIL_NOT_VERIFIED') as any;
-        verificationError.userId = errorData.userId;
-        verificationError.email = errorData.email;
-        throw verificationError;
+
+        return response.data;
+      } catch (error: any) {
+        const message =
+          error.response?.data?.message ||
+          "Registration failed. Please try again.";
+        setState((prev) => ({
+          ...prev,
+          isLoading: false,
+          error: message,
+        }));
+        throw new Error(message);
       }
-      
-      const message = errorData?.message || 'Login failed. Please try again.';
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: message,
-      }));
-      throw new Error(message);
-    }
-  }, [router]);
-
-  // Register function - returns registration response (requires email verification)
-  const register = useCallback(async (data: RegisterData): Promise<RegisterResponse> => {
-    setState(prev => ({ ...prev, isLoading: true, error: null }));
-
-    try {
-      const response = await api.post<RegisterResponse>('/auth/register', data);
-      
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: null,
-      }));
-
-      return response.data;
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Registration failed. Please try again.';
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: message,
-      }));
-      throw new Error(message);
-    }
-  }, []);
+    },
+    []
+  );
 
   // Verify email with OTP - completes registration and logs user in
-  const verifyEmail = useCallback(async (userId: string, code: string) => {
-    setState(prev => ({ ...prev, isLoading: true, error: null }));
+  const verifyEmail = useCallback(
+    async (userId: string, code: string) => {
+      setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
-    try {
-      const response = await api.post<AuthResponse>('/auth/verify-email', {
-        userId,
-        code,
-      });
+      try {
+        const response = await api.post<AuthResponse>("/auth/verify-email", {
+          userId,
+          code,
+        });
 
-      const { accessToken, refreshToken, user: userData } = response.data;
-      storeTokens(accessToken, refreshToken);
+        const { accessToken, refreshToken, user: userData } = response.data;
+        storeTokens(accessToken, refreshToken);
 
-      // Fetch full user profile
-      const meResponse = await api.get('/auth/me');
-      const fullUser = meResponse.data;
+        // Fetch full user profile
+        const meResponse = await api.get("/auth/me");
+        const fullUser = meResponse.data;
 
-      setState({
-        user: fullUser,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      });
+        setState({
+          user: fullUser,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+        });
 
-      // Redirect to appropriate dashboard
-      const dashboardRoute = getDashboardRoute(fullUser.role);
-      router.push(dashboardRoute);
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Verification failed. Please try again.';
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: message,
-      }));
-      throw new Error(message);
-    }
-  }, [router]);
+        // Redirect to appropriate dashboard
+        const dashboardRoute = getDashboardRoute(fullUser.role);
+        router.push(dashboardRoute);
+      } catch (error: any) {
+        const message =
+          error.response?.data?.message ||
+          "Verification failed. Please try again.";
+        setState((prev) => ({
+          ...prev,
+          isLoading: false,
+          error: message,
+        }));
+        throw new Error(message);
+      }
+    },
+    [router]
+  );
 
   // Resend verification OTP
   const resendVerificationOtp = useCallback(async (email: string) => {
     try {
-      await api.post('/auth/resend-verification', { email });
+      await api.post("/auth/resend-verification", { email });
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to resend code. Please try again.';
+      const message =
+        error.response?.data?.message ||
+        "Failed to resend code. Please try again.";
       throw new Error(message);
     }
   }, []);
@@ -335,43 +375,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Forgot password - request OTP
   const forgotPassword = useCallback(async (email: string) => {
     try {
-      await api.post('/auth/forgot-password', { email });
+      await api.post("/auth/forgot-password", { email });
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to send reset code. Please try again.';
+      const message =
+        error.response?.data?.message ||
+        "Failed to send reset code. Please try again.";
       throw new Error(message);
     }
   }, []);
 
   // Reset password with OTP
-  const resetPassword = useCallback(async (email: string, code: string, newPassword: string) => {
-    try {
-      await api.post('/auth/reset-password', { email, code, newPassword });
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Password reset failed. Please try again.';
-      throw new Error(message);
-    }
-  }, []);
+  const resetPassword = useCallback(
+    async (email: string, code: string, newPassword: string) => {
+      try {
+        await api.post("/auth/reset-password", { email, code, newPassword });
+      } catch (error: any) {
+        const message =
+          error.response?.data?.message ||
+          "Password reset failed. Please try again.";
+        throw new Error(message);
+      }
+    },
+    []
+  );
 
   // Google OAuth login - redirects to backend OAuth endpoint with role and mode
-  const googleLogin = useCallback((role: 'CUSTOMER' | 'SHOPKEEPER' = 'CUSTOMER', mode: 'login' | 'register' = 'login') => {
-    // Use getApiUrl to get the correct base URL with /api
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-    // Ensure we have /api in the path
-    const baseUrl = apiBaseUrl.endsWith('/api') ? apiBaseUrl : `${apiBaseUrl}/api`;
-    // Pass role and mode as query params so backend knows what type of account to create
-    // mode='login' - requires existing account, redirects to register if not found
-    // mode='register' - creates account if not exists
-    window.location.href = `${baseUrl}/auth/google?role=${role}&mode=${mode}`;
-  }, []);
+  const googleLogin = useCallback(
+    (
+      role: "CUSTOMER" | "SHOPKEEPER" = "CUSTOMER",
+      mode: "login" | "register" = "login"
+    ) => {
+      // Use getApiUrl to get the correct base URL with /api
+      const apiBaseUrl =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+      // Ensure we have /api in the path
+      const baseUrl = apiBaseUrl.endsWith("/api")
+        ? apiBaseUrl
+        : `${apiBaseUrl}/api`;
+      // Pass role and mode as query params so backend knows what type of account to create
+      // mode='login' - requires existing account, redirects to register if not found
+      // mode='register' - creates account if not exists
+      window.location.href = `${baseUrl}/auth/google?role=${role}&mode=${mode}`;
+    },
+    []
+  );
 
   // Logout function
   const logout = useCallback(async () => {
     const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
-    
+
     try {
-      await api.post('/auth/logout', { refreshToken });
+      await api.post("/auth/logout", { refreshToken });
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     }
 
     clearTokens();
@@ -382,7 +438,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       error: null,
     });
 
-    router.push('/auth/login');
+    router.push("/auth/login");
   }, [router]);
 
   // Refresh user data
@@ -392,7 +448,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Clear error
   const clearError = useCallback(() => {
-    setState(prev => ({ ...prev, error: null }));
+    setState((prev) => ({ ...prev, error: null }));
   }, []);
 
   const value: AuthContextType = {
@@ -409,18 +465,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearError,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 // Custom hook to use auth context
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }
@@ -437,7 +489,7 @@ export function withAuth<P extends object>(
     useEffect(() => {
       if (!isLoading) {
         if (!isAuthenticated) {
-          router.push('/auth/login');
+          router.push("/auth/login");
         } else if (allowedRoles && user && !allowedRoles.includes(user.role)) {
           // Redirect to user's own dashboard if not authorized
           router.push(getDashboardRoute(user.role));

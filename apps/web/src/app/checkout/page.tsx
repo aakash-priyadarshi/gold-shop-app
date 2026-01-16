@@ -1,95 +1,153 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useMemo, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Footer } from "@/components/layout/footer";
+import { Header } from "@/components/layout/header";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { useCart, type DeliveryAddress } from "@/contexts/CartContext";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { ordersApi, paymentsApi } from "@/lib/api";
+import { CURRENCIES, usePreferencesStore } from "@/store/preferences";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from '@/components/ui/alert';
-import {
-  ShoppingCartIcon,
-  CreditCardIcon,
-  BuildingStorefrontIcon,
-  MapPinIcon,
-  TruckIcon,
-  CheckCircleIcon,
-  ExclamationTriangleIcon,
-  ShieldCheckIcon,
-  LockClosedIcon,
   ArrowLeftIcon,
-} from '@heroicons/react/24/outline';
-import { Loader2, CreditCard, Banknote, Store } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { useCart, type DeliveryAddress } from '@/contexts/CartContext';
-import { useAuth } from '@/hooks/useAuth';
-import { ordersApi, paymentsApi } from '@/lib/api';
-import { usePreferencesStore, CURRENCIES } from '@/store/preferences';
+  CheckCircleIcon,
+  CreditCardIcon,
+  LockClosedIcon,
+  MapPinIcon,
+  ShieldCheckIcon,
+  ShoppingCartIcon,
+  TruckIcon,
+} from "@heroicons/react/24/outline";
+import { Banknote, CreditCard, Loader2, Store } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const COUNTRIES = [
-  { code: 'NP', name: 'Nepal', flag: '🇳🇵' },
-  { code: 'IN', name: 'India', flag: '🇮🇳' },
-  { code: 'US', name: 'United States', flag: '🇺🇸' },
-  { code: 'UK', name: 'United Kingdom', flag: '🇬🇧' },
-  { code: 'AE', name: 'UAE', flag: '🇦🇪' },
+  { code: "NP", name: "Nepal", flag: "🇳🇵" },
+  { code: "IN", name: "India", flag: "🇮🇳" },
+  { code: "US", name: "United States", flag: "🇺🇸" },
+  { code: "UK", name: "United Kingdom", flag: "🇬🇧" },
+  { code: "AE", name: "UAE", flag: "🇦🇪" },
 ];
 
 // Payment methods available per country
-const PAYMENT_METHODS_BY_COUNTRY: Record<string, Array<{ 
-  id: string; 
-  name: string; 
-  icon: typeof CreditCard; 
-  description: string;
-  available: boolean;
-}>> = {
+const PAYMENT_METHODS_BY_COUNTRY: Record<
+  string,
+  Array<{
+    id: string;
+    name: string;
+    icon: typeof CreditCard;
+    description: string;
+    available: boolean;
+  }>
+> = {
   NP: [
-    { id: 'ESEWA', name: 'eSewa', icon: Banknote, description: 'Pay via eSewa wallet', available: true },
-    { id: 'KHALTI', name: 'Khalti', icon: Banknote, description: 'Pay via Khalti wallet', available: true },
-    { id: 'BANK_TRANSFER', name: 'Bank Transfer', icon: Banknote, description: 'Direct bank transfer', available: true },
+    {
+      id: "ESEWA",
+      name: "eSewa",
+      icon: Banknote,
+      description: "Pay via eSewa wallet",
+      available: true,
+    },
+    {
+      id: "KHALTI",
+      name: "Khalti",
+      icon: Banknote,
+      description: "Pay via Khalti wallet",
+      available: true,
+    },
+    {
+      id: "BANK_TRANSFER",
+      name: "Bank Transfer",
+      icon: Banknote,
+      description: "Direct bank transfer",
+      available: true,
+    },
   ],
   IN: [
-    { id: 'RAZORPAY', name: 'Razorpay', icon: CreditCard, description: 'UPI, Cards, NetBanking', available: true },
-    { id: 'BANK_TRANSFER', name: 'Bank Transfer', icon: Banknote, description: 'Direct bank transfer', available: true },
+    {
+      id: "RAZORPAY",
+      name: "Razorpay",
+      icon: CreditCard,
+      description: "UPI, Cards, NetBanking",
+      available: true,
+    },
+    {
+      id: "BANK_TRANSFER",
+      name: "Bank Transfer",
+      icon: Banknote,
+      description: "Direct bank transfer",
+      available: true,
+    },
   ],
   US: [
-    { id: 'STRIPE', name: 'Credit/Debit Card', icon: CreditCard, description: 'Visa, Mastercard, Amex', available: true },
+    {
+      id: "STRIPE",
+      name: "Credit/Debit Card",
+      icon: CreditCard,
+      description: "Visa, Mastercard, Amex",
+      available: true,
+    },
   ],
   UK: [
-    { id: 'STRIPE', name: 'Credit/Debit Card', icon: CreditCard, description: 'Visa, Mastercard, Amex', available: true },
+    {
+      id: "STRIPE",
+      name: "Credit/Debit Card",
+      icon: CreditCard,
+      description: "Visa, Mastercard, Amex",
+      available: true,
+    },
   ],
   AE: [
-    { id: 'STRIPE', name: 'Credit/Debit Card', icon: CreditCard, description: 'Visa, Mastercard', available: true },
-    { id: 'BANK_TRANSFER', name: 'Bank Transfer', icon: Banknote, description: 'Direct bank transfer', available: true },
+    {
+      id: "STRIPE",
+      name: "Credit/Debit Card",
+      icon: CreditCard,
+      description: "Visa, Mastercard",
+      available: true,
+    },
+    {
+      id: "BANK_TRANSFER",
+      name: "Bank Transfer",
+      icon: Banknote,
+      description: "Direct bank transfer",
+      available: true,
+    },
   ],
 };
 
@@ -117,38 +175,44 @@ function CheckoutPageContent() {
 
   // State
   const [mounted, setMounted] = useState(false);
-  const [step, setStep] = useState<'address' | 'payment' | 'confirm'>('address');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
+  const [step, setStep] = useState<"address" | "payment" | "confirm">(
+    "address"
+  );
+  const [selectedPaymentMethod, setSelectedPaymentMethod] =
+    useState<string>("");
   const [payAtShop, setPayAtShop] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderCreated, setOrderCreated] = useState<string | null>(null);
 
   // Address form state
   const [addressDialogOpen, setAddressDialogOpen] = useState(false);
-  const [newAddress, setNewAddress] = useState<Omit<DeliveryAddress, 'id'>>({
-    label: 'Home',
-    fullName: user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : '',
-    phone: user?.phone || '',
-    addressLine1: '',
-    addressLine2: '',
-    city: '',
-    state: '',
-    country: userCountry || 'NP',
-    pincode: '',
+  const [newAddress, setNewAddress] = useState<Omit<DeliveryAddress, "id">>({
+    label: "Home",
+    fullName: user?.firstName
+      ? `${user.firstName} ${user.lastName || ""}`.trim()
+      : "",
+    phone: user?.phone || "",
+    addressLine1: "",
+    addressLine2: "",
+    city: "",
+    state: "",
+    country: userCountry || "NP",
+    pincode: "",
     isDefault: true,
   });
   const [savingAddress, setSavingAddress] = useState(false);
 
   // Order type (from URL for custom orders)
-  const orderType = searchParams.get('type') as 'INVENTORY' | 'CUSTOM' || 'INVENTORY';
-  const rfqId = searchParams.get('rfqId');
-  const offerId = searchParams.get('offerId');
+  const orderType =
+    (searchParams.get("type") as "INVENTORY" | "CUSTOM") || "INVENTORY";
+  const rfqId = searchParams.get("rfqId");
+  const offerId = searchParams.get("offerId");
 
   // Determine if this is a custom order with same-city shop
   const [shopCity, setShopCity] = useState<string | null>(null);
   const [customerCity, setCustomerCity] = useState<string | null>(null);
   const canPayAtShop = useMemo(() => {
-    if (orderType !== 'CUSTOM') return false;
+    if (orderType !== "CUSTOM") return false;
     if (!shopCity || !customerCity) return false;
     return shopCity.toLowerCase() === customerCity.toLowerCase();
   }, [orderType, shopCity, customerCity]);
@@ -159,8 +223,8 @@ function CheckoutPageContent() {
 
   // Redirect if cart is empty and not a custom order
   useEffect(() => {
-    if (mounted && items.length === 0 && orderType !== 'CUSTOM') {
-      router.push('/cart');
+    if (mounted && items.length === 0 && orderType !== "CUSTOM") {
+      router.push("/cart");
     }
   }, [mounted, items, orderType, router]);
 
@@ -176,22 +240,24 @@ function CheckoutPageContent() {
 
   // Get available payment methods for user's country
   const availablePaymentMethods = useMemo(() => {
-    const country = selectedAddress?.country || userCountry || 'NP';
-    return PAYMENT_METHODS_BY_COUNTRY[country] || PAYMENT_METHODS_BY_COUNTRY['NP'];
+    const country = selectedAddress?.country || userCountry || "NP";
+    return (
+      PAYMENT_METHODS_BY_COUNTRY[country] || PAYMENT_METHODS_BY_COUNTRY["NP"]
+    );
   }, [selectedAddress?.country, userCountry]);
 
   // Format price
   const formatPrice = (priceNpr: number) => {
     if (!mounted) {
-      return new Intl.NumberFormat('ne-NP', {
-        style: 'currency',
-        currency: 'NPR',
+      return new Intl.NumberFormat("ne-NP", {
+        style: "currency",
+        currency: "NPR",
         minimumFractionDigits: 0,
       }).format(priceNpr);
     }
-    
-    return new Intl.NumberFormat(currencyInfo?.locale || 'en-US', {
-      style: 'currency',
+
+    return new Intl.NumberFormat(currencyInfo?.locale || "en-US", {
+      style: "currency",
       currency: currency,
       minimumFractionDigits: 0,
     }).format(priceNpr);
@@ -204,11 +270,17 @@ function CheckoutPageContent() {
 
   // Handle address save
   const handleSaveAddress = async () => {
-    if (!newAddress.fullName || !newAddress.phone || !newAddress.addressLine1 || !newAddress.city || !newAddress.pincode) {
+    if (
+      !newAddress.fullName ||
+      !newAddress.phone ||
+      !newAddress.addressLine1 ||
+      !newAddress.city ||
+      !newAddress.pincode
+    ) {
       toast({
-        title: 'Missing Information',
-        description: 'Please fill in all required fields',
-        variant: 'destructive',
+        title: "Missing Information",
+        description: "Please fill in all required fields",
+        variant: "destructive",
       });
       return;
     }
@@ -218,14 +290,14 @@ function CheckoutPageContent() {
       await addAddress(newAddress);
       setAddressDialogOpen(false);
       toast({
-        title: 'Address Saved',
-        description: 'Your delivery address has been saved',
+        title: "Address Saved",
+        description: "Your delivery address has been saved",
       });
     } catch {
       toast({
-        title: 'Error',
-        description: 'Failed to save address',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to save address",
+        variant: "destructive",
       });
     } finally {
       setSavingAddress(false);
@@ -236,18 +308,18 @@ function CheckoutPageContent() {
   const handlePlaceOrder = async () => {
     if (!selectedAddress) {
       toast({
-        title: 'Select Address',
-        description: 'Please select a delivery address',
-        variant: 'destructive',
+        title: "Select Address",
+        description: "Please select a delivery address",
+        variant: "destructive",
       });
       return;
     }
 
     if (!payAtShop && !selectedPaymentMethod) {
       toast({
-        title: 'Select Payment',
-        description: 'Please select a payment method',
-        variant: 'destructive',
+        title: "Select Payment",
+        description: "Please select a payment method",
+        variant: "destructive",
       });
       return;
     }
@@ -256,7 +328,7 @@ function CheckoutPageContent() {
 
     try {
       // Create order(s) - one per shop for inventory orders
-      if (orderType === 'INVENTORY') {
+      if (orderType === "INVENTORY") {
         // For inventory orders, create one order per item
         for (const item of items) {
           const orderData = {
@@ -281,7 +353,7 @@ function CheckoutPageContent() {
           if (!payAtShop && selectedPaymentMethod) {
             await paymentsApi.initiatePayment({
               orderId: order.id,
-              paymentType: 'FULL_PAYMENT',
+              paymentType: "FULL_PAYMENT",
               method: selectedPaymentMethod,
             });
           }
@@ -291,7 +363,7 @@ function CheckoutPageContent() {
 
         // Clear cart after successful order
         clearCart();
-      } else if (orderType === 'CUSTOM' && rfqId && offerId) {
+      } else if (orderType === "CUSTOM" && rfqId && offerId) {
         // For custom orders from RFQ
         const orderData = {
           rfqRequestId: rfqId,
@@ -316,7 +388,7 @@ function CheckoutPageContent() {
         if (!payAtShop && selectedPaymentMethod) {
           await paymentsApi.initiatePayment({
             orderId: order.id,
-            paymentType: 'BOOKING_FEE',
+            paymentType: "BOOKING_FEE",
             method: selectedPaymentMethod,
           });
         }
@@ -325,17 +397,17 @@ function CheckoutPageContent() {
       }
 
       toast({
-        title: 'Order Placed!',
-        description: 'Your order has been placed successfully',
+        title: "Order Placed!",
+        description: "Your order has been placed successfully",
       });
 
-      setStep('confirm');
+      setStep("confirm");
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
       toast({
-        title: 'Order Failed',
-        description: err.response?.data?.message || 'Failed to place order',
-        variant: 'destructive',
+        title: "Order Failed",
+        description: err.response?.data?.message || "Failed to place order",
+        variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
@@ -357,12 +429,12 @@ function CheckoutPageContent() {
 
   // Redirect if not authenticated
   if (!isAuthenticated) {
-    router.push('/auth?redirect=/checkout');
+    router.push("/auth/login?redirect=/checkout");
     return null;
   }
 
   // Order confirmation view
-  if (step === 'confirm' && orderCreated) {
+  if (step === "confirm" && orderCreated) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
         <Header />
@@ -376,19 +448,24 @@ function CheckoutPageContent() {
                 Order Placed Successfully!
               </CardTitle>
               <CardDescription className="text-lg">
-                Order Number: <span className="font-mono font-semibold">{orderCreated}</span>
+                Order Number:{" "}
+                <span className="font-mono font-semibold">{orderCreated}</span>
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-gray-600 dark:text-gray-400">
-                Thank you for your order! You will receive a confirmation email shortly.
+                Thank you for your order! You will receive a confirmation email
+                shortly.
               </p>
               {payAtShop && (
                 <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800">
                   <Store className="h-4 w-4 text-amber-600" />
-                  <AlertTitle className="text-amber-800 dark:text-amber-400">Pay at Shop Selected</AlertTitle>
+                  <AlertTitle className="text-amber-800 dark:text-amber-400">
+                    Pay at Shop Selected
+                  </AlertTitle>
                   <AlertDescription className="text-amber-700 dark:text-amber-300">
-                    Please visit the shop to complete your payment. Your order will be held for 48 hours.
+                    Please visit the shop to complete your payment. Your order
+                    will be held for 48 hours.
                   </AlertDescription>
                 </Alert>
               )}
@@ -401,9 +478,7 @@ function CheckoutPageContent() {
                 </Link>
               </Button>
               <Button asChild className="bg-amber-600 hover:bg-amber-700">
-                <Link href="/shops">
-                  Continue Shopping
-                </Link>
+                <Link href="/shops">Continue Shopping</Link>
               </Button>
             </CardFooter>
           </Card>
@@ -416,14 +491,10 @@ function CheckoutPageContent() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       <Header />
-      
+
       <main className="flex-1 container mx-auto px-4 py-8">
         {/* Back button */}
-        <Button
-          variant="ghost"
-          className="mb-4"
-          onClick={() => router.back()}
-        >
+        <Button variant="ghost" className="mb-4" onClick={() => router.back()}>
           <ArrowLeftIcon className="h-4 w-4 mr-2" />
           Back
         </Button>
@@ -433,15 +504,39 @@ function CheckoutPageContent() {
           <div className="lg:col-span-2 space-y-6">
             {/* Step indicator */}
             <div className="flex items-center gap-4 mb-8">
-              <div className={`flex items-center gap-2 ${step === 'address' ? 'text-amber-600 font-semibold' : 'text-gray-500'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'address' ? 'bg-amber-600 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>
+              <div
+                className={`flex items-center gap-2 ${
+                  step === "address"
+                    ? "text-amber-600 font-semibold"
+                    : "text-gray-500"
+                }`}
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    step === "address"
+                      ? "bg-amber-600 text-white"
+                      : "bg-gray-200 dark:bg-gray-700"
+                  }`}
+                >
                   1
                 </div>
                 <span className="hidden sm:inline">Address</span>
               </div>
               <div className="flex-1 h-0.5 bg-gray-200 dark:bg-gray-700" />
-              <div className={`flex items-center gap-2 ${step === 'payment' ? 'text-amber-600 font-semibold' : 'text-gray-500'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'payment' ? 'bg-amber-600 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>
+              <div
+                className={`flex items-center gap-2 ${
+                  step === "payment"
+                    ? "text-amber-600 font-semibold"
+                    : "text-gray-500"
+                }`}
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    step === "payment"
+                      ? "bg-amber-600 text-white"
+                      : "bg-gray-200 dark:bg-gray-700"
+                  }`}
+                >
                   2
                 </div>
                 <span className="hidden sm:inline">Payment</span>
@@ -449,7 +544,7 @@ function CheckoutPageContent() {
             </div>
 
             {/* Step 1: Address */}
-            {step === 'address' && (
+            {step === "address" && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -463,7 +558,7 @@ function CheckoutPageContent() {
                 <CardContent className="space-y-4">
                   {addresses.length > 0 ? (
                     <RadioGroup
-                      value={selectedAddressId || ''}
+                      value={selectedAddressId || ""}
                       onValueChange={setSelectedAddress}
                       className="space-y-3"
                     >
@@ -472,17 +567,24 @@ function CheckoutPageContent() {
                           key={address.id}
                           className={`flex items-start space-x-3 p-4 border rounded-lg cursor-pointer transition-colors ${
                             selectedAddressId === address.id
-                              ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/10'
-                              : 'border-gray-200 dark:border-gray-700 hover:border-amber-300'
+                              ? "border-amber-500 bg-amber-50 dark:bg-amber-900/10"
+                              : "border-gray-200 dark:border-gray-700 hover:border-amber-300"
                           }`}
                           onClick={() => setSelectedAddress(address.id)}
                         >
                           <RadioGroupItem value={address.id} id={address.id} />
-                          <label htmlFor={address.id} className="flex-1 cursor-pointer">
+                          <label
+                            htmlFor={address.id}
+                            className="flex-1 cursor-pointer"
+                          >
                             <div className="flex items-center gap-2">
-                              <span className="font-medium">{address.label}</span>
+                              <span className="font-medium">
+                                {address.label}
+                              </span>
                               {address.isDefault && (
-                                <Badge variant="secondary" className="text-xs">Default</Badge>
+                                <Badge variant="secondary" className="text-xs">
+                                  Default
+                                </Badge>
                               )}
                             </div>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -490,13 +592,19 @@ function CheckoutPageContent() {
                             </p>
                             <p className="text-sm text-gray-500 dark:text-gray-500">
                               {address.addressLine1}
-                              {address.addressLine2 && `, ${address.addressLine2}`}
+                              {address.addressLine2 &&
+                                `, ${address.addressLine2}`}
                             </p>
                             <p className="text-sm text-gray-500 dark:text-gray-500">
                               {address.city}, {address.state} {address.pincode}
                             </p>
                             <p className="text-sm text-gray-500 dark:text-gray-500">
-                              {COUNTRIES.find((c) => c.code === address.country)?.flag} {address.phone}
+                              {
+                                COUNTRIES.find(
+                                  (c) => c.code === address.country
+                                )?.flag
+                              }{" "}
+                              {address.phone}
                             </p>
                           </label>
                         </div>
@@ -523,7 +631,7 @@ function CheckoutPageContent() {
                   <Button
                     className="w-full bg-amber-600 hover:bg-amber-700"
                     disabled={!selectedAddressId}
-                    onClick={() => setStep('payment')}
+                    onClick={() => setStep("payment")}
                   >
                     Continue to Payment
                   </Button>
@@ -532,7 +640,7 @@ function CheckoutPageContent() {
             )}
 
             {/* Step 2: Payment */}
-            {step === 'payment' && (
+            {step === "payment" && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -553,16 +661,20 @@ function CheckoutPageContent() {
                           checked={payAtShop}
                           onCheckedChange={(checked) => {
                             setPayAtShop(checked as boolean);
-                            if (checked) setSelectedPaymentMethod('');
+                            if (checked) setSelectedPaymentMethod("");
                           }}
                         />
                         <div className="flex-1">
-                          <label htmlFor="payAtShop" className="font-medium cursor-pointer flex items-center gap-2">
+                          <label
+                            htmlFor="payAtShop"
+                            className="font-medium cursor-pointer flex items-center gap-2"
+                          >
                             <Store className="h-4 w-4" />
                             Pay at Shop
                           </label>
                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            Visit the shop to pay in person. Only available because you're in the same city as the shop.
+                            Visit the shop to pay in person. Only available
+                            because you're in the same city as the shop.
                           </p>
                         </div>
                       </div>
@@ -583,16 +695,31 @@ function CheckoutPageContent() {
                             key={method.id}
                             className={`flex items-start space-x-3 p-4 border rounded-lg cursor-pointer transition-colors ${
                               selectedPaymentMethod === method.id
-                                ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/10'
-                                : 'border-gray-200 dark:border-gray-700 hover:border-amber-300'
-                            } ${!method.available && 'opacity-50 cursor-not-allowed'}`}
-                            onClick={() => method.available && setSelectedPaymentMethod(method.id)}
+                                ? "border-amber-500 bg-amber-50 dark:bg-amber-900/10"
+                                : "border-gray-200 dark:border-gray-700 hover:border-amber-300"
+                            } ${
+                              !method.available &&
+                              "opacity-50 cursor-not-allowed"
+                            }`}
+                            onClick={() =>
+                              method.available &&
+                              setSelectedPaymentMethod(method.id)
+                            }
                           >
-                            <RadioGroupItem value={method.id} id={method.id} disabled={!method.available} />
-                            <label htmlFor={method.id} className="flex-1 cursor-pointer">
+                            <RadioGroupItem
+                              value={method.id}
+                              id={method.id}
+                              disabled={!method.available}
+                            />
+                            <label
+                              htmlFor={method.id}
+                              className="flex-1 cursor-pointer"
+                            >
                               <div className="flex items-center gap-2">
                                 <Icon className="h-5 w-5" />
-                                <span className="font-medium">{method.name}</span>
+                                <span className="font-medium">
+                                  {method.name}
+                                </span>
                               </div>
                               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                                 {method.description}
@@ -607,14 +734,13 @@ function CheckoutPageContent() {
                   {/* Security note */}
                   <div className="flex items-center gap-2 text-sm text-gray-500 mt-4">
                     <ShieldCheckIcon className="h-4 w-4" />
-                    <span>Your payment information is secure and encrypted</span>
+                    <span>
+                      Your payment information is secure and encrypted
+                    </span>
                   </div>
                 </CardContent>
                 <CardFooter className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => setStep('address')}
-                  >
+                  <Button variant="outline" onClick={() => setStep("address")}>
                     Back
                   </Button>
                   <Button
@@ -665,8 +791,12 @@ function CheckoutPageContent() {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{item.product.name}</p>
-                        <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                        <p className="text-sm font-medium truncate">
+                          {item.product.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Qty: {item.quantity}
+                        </p>
                       </div>
                       <p className="text-sm font-medium">
                         {formatPrice(item.product.price * item.quantity)}
@@ -731,7 +861,9 @@ function CheckoutPageContent() {
                 <Label htmlFor="label">Address Label</Label>
                 <Select
                   value={newAddress.label}
-                  onValueChange={(value) => setNewAddress({ ...newAddress, label: value })}
+                  onValueChange={(value) =>
+                    setNewAddress({ ...newAddress, label: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select label" />
@@ -747,7 +879,9 @@ function CheckoutPageContent() {
                 <Label htmlFor="country">Country</Label>
                 <Select
                   value={newAddress.country}
-                  onValueChange={(value) => setNewAddress({ ...newAddress, country: value })}
+                  onValueChange={(value) =>
+                    setNewAddress({ ...newAddress, country: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -767,7 +901,9 @@ function CheckoutPageContent() {
               <Input
                 id="fullName"
                 value={newAddress.fullName}
-                onChange={(e) => setNewAddress({ ...newAddress, fullName: e.target.value })}
+                onChange={(e) =>
+                  setNewAddress({ ...newAddress, fullName: e.target.value })
+                }
                 placeholder="John Doe"
               />
             </div>
@@ -776,7 +912,9 @@ function CheckoutPageContent() {
               <Input
                 id="phone"
                 value={newAddress.phone}
-                onChange={(e) => setNewAddress({ ...newAddress, phone: e.target.value })}
+                onChange={(e) =>
+                  setNewAddress({ ...newAddress, phone: e.target.value })
+                }
                 placeholder="+1234567890"
               />
             </div>
@@ -785,7 +923,9 @@ function CheckoutPageContent() {
               <Input
                 id="addressLine1"
                 value={newAddress.addressLine1}
-                onChange={(e) => setNewAddress({ ...newAddress, addressLine1: e.target.value })}
+                onChange={(e) =>
+                  setNewAddress({ ...newAddress, addressLine1: e.target.value })
+                }
                 placeholder="House/Building number, Street"
               />
             </div>
@@ -793,8 +933,10 @@ function CheckoutPageContent() {
               <Label htmlFor="addressLine2">Address Line 2</Label>
               <Input
                 id="addressLine2"
-                value={newAddress.addressLine2 || ''}
-                onChange={(e) => setNewAddress({ ...newAddress, addressLine2: e.target.value })}
+                value={newAddress.addressLine2 || ""}
+                onChange={(e) =>
+                  setNewAddress({ ...newAddress, addressLine2: e.target.value })
+                }
                 placeholder="Apartment, Suite, Area (Optional)"
               />
             </div>
@@ -804,7 +946,9 @@ function CheckoutPageContent() {
                 <Input
                   id="city"
                   value={newAddress.city}
-                  onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
+                  onChange={(e) =>
+                    setNewAddress({ ...newAddress, city: e.target.value })
+                  }
                   placeholder="City"
                 />
               </div>
@@ -813,7 +957,9 @@ function CheckoutPageContent() {
                 <Input
                   id="state"
                   value={newAddress.state}
-                  onChange={(e) => setNewAddress({ ...newAddress, state: e.target.value })}
+                  onChange={(e) =>
+                    setNewAddress({ ...newAddress, state: e.target.value })
+                  }
                   placeholder="State"
                 />
               </div>
@@ -823,7 +969,9 @@ function CheckoutPageContent() {
               <Input
                 id="pincode"
                 value={newAddress.pincode}
-                onChange={(e) => setNewAddress({ ...newAddress, pincode: e.target.value })}
+                onChange={(e) =>
+                  setNewAddress({ ...newAddress, pincode: e.target.value })
+                }
                 placeholder="PIN Code"
               />
             </div>
@@ -831,7 +979,12 @@ function CheckoutPageContent() {
               <Checkbox
                 id="isDefault"
                 checked={newAddress.isDefault}
-                onCheckedChange={(checked) => setNewAddress({ ...newAddress, isDefault: checked as boolean })}
+                onCheckedChange={(checked) =>
+                  setNewAddress({
+                    ...newAddress,
+                    isDefault: checked as boolean,
+                  })
+                }
               />
               <label htmlFor="isDefault" className="text-sm cursor-pointer">
                 Set as default address
@@ -839,7 +992,10 @@ function CheckoutPageContent() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddressDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setAddressDialogOpen(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleSaveAddress} disabled={savingAddress}>
@@ -849,7 +1005,7 @@ function CheckoutPageContent() {
                   Saving...
                 </>
               ) : (
-                'Save Address'
+                "Save Address"
               )}
             </Button>
           </DialogFooter>
@@ -864,11 +1020,13 @@ function CheckoutPageContent() {
 // Wrapper with Suspense for useSearchParams
 export default function CheckoutPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+        </div>
+      }
+    >
       <CheckoutPageContent />
     </Suspense>
   );
