@@ -1,13 +1,22 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { ShopGuard } from '@/components/auth/RouteGuard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ShopGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -15,34 +24,34 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { shopQuotesApi } from "@/lib/api";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  CURRENCIES,
+  usePreferencesStore,
+  type CurrencyCode,
+} from "@/store/preferences";
 import {
-  FileText,
-  Eye,
-  Clock,
   CheckCircle,
-  XCircle,
+  Clock,
+  Eye,
+  FileText,
   Loader2,
-  Plus,
-  UserPlus,
   MoreVertical,
-  Play,
   Package,
-  IndianRupee,
-  Users,
-  TrendingUp,
   Phone,
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { shopQuotesApi } from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
-import { usePreferencesStore, CURRENCIES, type CurrencyCode } from '@/store/preferences';
+  Play,
+  Plus,
+  TrendingUp,
+  UserPlus,
+  Users,
+  XCircle,
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 interface ShopQuote {
   id: string;
@@ -79,28 +88,67 @@ interface QuoteStats {
   uniqueCustomers: number;
 }
 
-const statusConfig: Record<string, { label: string; color: string; icon: typeof Clock }> = {
-  QUOTED: { label: 'Quoted', color: 'bg-amber-100 text-amber-700', icon: Clock },
-  CONFIRMED: { label: 'Confirmed', color: 'bg-blue-100 text-blue-700', icon: CheckCircle },
-  IN_PROGRESS: { label: 'In Progress', color: 'bg-purple-100 text-purple-700', icon: Play },
-  READY: { label: 'Ready', color: 'bg-green-100 text-green-700', icon: Package },
-  COMPLETED: { label: 'Completed', color: 'bg-green-100 text-green-700', icon: CheckCircle },
-  CANCELLED: { label: 'Cancelled', color: 'bg-red-100 text-red-700', icon: XCircle },
+const statusConfig: Record<
+  string,
+  { label: string; color: string; icon: typeof Clock }
+> = {
+  QUOTED: {
+    label: "Quoted",
+    color: "bg-amber-100 text-amber-700",
+    icon: Clock,
+  },
+  CONFIRMED: {
+    label: "Confirmed",
+    color: "bg-blue-100 text-blue-700",
+    icon: CheckCircle,
+  },
+  IN_PROGRESS: {
+    label: "In Progress",
+    color: "bg-purple-100 text-purple-700",
+    icon: Play,
+  },
+  READY: {
+    label: "Ready",
+    color: "bg-green-100 text-green-700",
+    icon: Package,
+  },
+  COMPLETED: {
+    label: "Completed",
+    color: "bg-green-100 text-green-700",
+    icon: CheckCircle,
+  },
+  CANCELLED: {
+    label: "Cancelled",
+    color: "bg-red-100 text-red-700",
+    icon: XCircle,
+  },
 };
 
 export default function ShopQuotesPage() {
   const { user } = useAuth();
   const { currency } = usePreferencesStore();
-  
+
   // Get shop-based currency from shop's country
-  const shopCountry = user?.shop?.country || 'NP';
-  const shopCurrency = shopCountry === 'IN' ? 'INR' : shopCountry === 'AE' ? 'AED' : shopCountry === 'US' ? 'USD' : shopCountry === 'UK' ? 'GBP' : 'NPR';
-  const currencySymbol = CURRENCIES[shopCurrency as CurrencyCode]?.symbol || CURRENCIES[currency as CurrencyCode]?.symbol || 'Rs.';
-  
+  const shopCountry = user?.shop?.country || "NP";
+  const shopCurrency =
+    shopCountry === "IN"
+      ? "INR"
+      : shopCountry === "AE"
+      ? "AED"
+      : shopCountry === "US"
+      ? "USD"
+      : shopCountry === "UK"
+      ? "GBP"
+      : "NPR";
+  const currencySymbol =
+    CURRENCIES[shopCurrency as CurrencyCode]?.symbol ||
+    CURRENCIES[currency as CurrencyCode]?.symbol ||
+    "Rs.";
+
   const [quotes, setQuotes] = useState<ShopQuote[]>([]);
   const [stats, setStats] = useState<QuoteStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<string>("all");
 
   useEffect(() => {
     if (user?.shop?.id) {
@@ -118,11 +166,11 @@ export default function ShopQuotesPage() {
       setQuotes(quotesRes.data || []);
       setStats(statsRes.data);
     } catch (error) {
-      console.error('Failed to load quotes:', error);
+      console.error("Failed to load quotes:", error);
       toast({
-        variant: 'destructive',
-        title: 'Failed to load quotes',
-        description: 'Could not fetch quote data',
+        variant: "destructive",
+        title: "Failed to load quotes",
+        description: "Could not fetch quote data",
       });
     } finally {
       setIsLoading(false);
@@ -133,34 +181,39 @@ export default function ShopQuotesPage() {
     try {
       await shopQuotesApi.updateStatus(quoteId, { status: newStatus });
       toast({
-        title: 'Status Updated',
-        description: `Quote status changed to ${statusConfig[newStatus]?.label || newStatus}`,
+        title: "Status Updated",
+        description: `Quote status changed to ${
+          statusConfig[newStatus]?.label || newStatus
+        }`,
       });
       loadData();
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Failed to update status',
-        description: error.response?.data?.message || 'Could not update quote status',
+        variant: "destructive",
+        title: "Failed to update status",
+        description:
+          error.response?.data?.message || "Could not update quote status",
       });
     }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
   const formatCurrency = (amount: number) => {
-    return `${currencySymbol} ${amount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+    return `${currencySymbol} ${amount.toLocaleString("en-IN", {
+      maximumFractionDigits: 0,
+    })}`;
   };
 
   const getFilteredQuotes = () => {
-    if (activeTab === 'all') return quotes;
-    return quotes.filter(q => q.status === activeTab.toUpperCase());
+    if (activeTab === "all") return quotes;
+    return quotes.filter((q) => q.status === activeTab.toUpperCase());
   };
 
   const filteredQuotes = getFilteredQuotes();
@@ -173,7 +226,9 @@ export default function ShopQuotesPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold">Walk-in Quotes</h1>
-              <p className="text-muted-foreground">Manage quotes for walk-in customers</p>
+              <p className="text-muted-foreground">
+                Manage quotes for walk-in customers
+              </p>
             </div>
             <div className="flex items-center gap-3">
               <Link href="/dashboard/shop/rfqs">
@@ -198,7 +253,9 @@ export default function ShopQuotesPage() {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Total Quotes</p>
+                      <p className="text-sm text-muted-foreground">
+                        Total Quotes
+                      </p>
                       <p className="text-2xl font-bold">{stats.total}</p>
                     </div>
                     <FileText className="h-8 w-8 text-muted-foreground" />
@@ -209,7 +266,9 @@ export default function ShopQuotesPage() {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Active Orders</p>
+                      <p className="text-sm text-muted-foreground">
+                        Active Orders
+                      </p>
                       <p className="text-2xl font-bold">
                         {stats.byStatus.confirmed + stats.byStatus.inProgress}
                       </p>
@@ -222,8 +281,12 @@ export default function ShopQuotesPage() {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Total Revenue</p>
-                      <p className="text-2xl font-bold">{formatCurrency(stats.totalRevenue)}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Total Revenue
+                      </p>
+                      <p className="text-2xl font-bold">
+                        {formatCurrency(stats.totalRevenue)}
+                      </p>
                     </div>
                     <TrendingUp className="h-8 w-8 text-green-500" />
                   </div>
@@ -233,8 +296,12 @@ export default function ShopQuotesPage() {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Unique Customers</p>
-                      <p className="text-2xl font-bold">{stats.uniqueCustomers}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Unique Customers
+                      </p>
+                      <p className="text-2xl font-bold">
+                        {stats.uniqueCustomers}
+                      </p>
                     </div>
                     <Users className="h-8 w-8 text-blue-500" />
                   </div>
@@ -255,10 +322,18 @@ export default function ShopQuotesPage() {
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="mb-4">
                   <TabsTrigger value="all">All ({quotes.length})</TabsTrigger>
-                  <TabsTrigger value="quoted">Pending ({stats?.byStatus.pending || 0})</TabsTrigger>
-                  <TabsTrigger value="confirmed">Confirmed ({stats?.byStatus.confirmed || 0})</TabsTrigger>
-                  <TabsTrigger value="in_progress">In Progress ({stats?.byStatus.inProgress || 0})</TabsTrigger>
-                  <TabsTrigger value="completed">Completed ({stats?.byStatus.completed || 0})</TabsTrigger>
+                  <TabsTrigger value="quoted">
+                    Pending ({stats?.byStatus.pending || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="confirmed">
+                    Confirmed ({stats?.byStatus.confirmed || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="in_progress">
+                    In Progress ({stats?.byStatus.inProgress || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="completed">
+                    Completed ({stats?.byStatus.completed || 0})
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value={activeTab}>
@@ -292,9 +367,10 @@ export default function ShopQuotesPage() {
                       </TableHeader>
                       <TableBody>
                         {filteredQuotes.map((quote) => {
-                          const status = statusConfig[quote.status] || statusConfig.QUOTED;
+                          const status =
+                            statusConfig[quote.status] || statusConfig.QUOTED;
                           const StatusIcon = status.icon;
-                          
+
                           return (
                             <TableRow key={quote.id}>
                               <TableCell className="font-medium">
@@ -302,7 +378,9 @@ export default function ShopQuotesPage() {
                               </TableCell>
                               <TableCell>
                                 <div>
-                                  <p className="font-medium">{quote.walkInCustomer.name}</p>
+                                  <p className="font-medium">
+                                    {quote.walkInCustomer.name}
+                                  </p>
                                   <p className="text-xs text-muted-foreground flex items-center gap-1">
                                     <Phone className="h-3 w-3" />
                                     {quote.walkInCustomer.phone}
@@ -322,19 +400,27 @@ export default function ShopQuotesPage() {
                               <TableCell>
                                 {quote.totalPriceNpr ? (
                                   <div>
-                                    <p className="font-medium">{formatCurrency(quote.totalPriceNpr)}</p>
-                                    {quote.balanceDueNpr && quote.balanceDueNpr > 0 && (
-                                      <p className="text-xs text-orange-600">
-                                        Due: {formatCurrency(quote.balanceDueNpr)}
-                                      </p>
-                                    )}
+                                    <p className="font-medium">
+                                      {formatCurrency(quote.totalPriceNpr)}
+                                    </p>
+                                    {quote.balanceDueNpr &&
+                                      quote.balanceDueNpr > 0 && (
+                                        <p className="text-xs text-orange-600">
+                                          Due:{" "}
+                                          {formatCurrency(quote.balanceDueNpr)}
+                                        </p>
+                                      )}
                                   </div>
                                 ) : (
-                                  <span className="text-muted-foreground">Not set</span>
+                                  <span className="text-muted-foreground">
+                                    Not set
+                                  </span>
                                 )}
                               </TableCell>
                               <TableCell>
-                                <Badge className={`${status.color} flex items-center gap-1 w-fit`}>
+                                <Badge
+                                  className={`${status.color} flex items-center gap-1 w-fit`}
+                                >
                                   <StatusIcon className="h-3 w-3" />
                                   {status.label}
                                 </Badge>
@@ -350,39 +436,73 @@ export default function ShopQuotesPage() {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                    <Link href={`/dashboard/shop/quotes/${quote.id}`}>
+                                    <Link
+                                      href={`/dashboard/shop/quotes/${quote.id}`}
+                                    >
                                       <DropdownMenuItem>
                                         <Eye className="h-4 w-4 mr-2" />
                                         View Details
                                       </DropdownMenuItem>
                                     </Link>
-                                    {quote.status === 'QUOTED' && (
-                                      <DropdownMenuItem onClick={() => handleStatusUpdate(quote.id, 'CONFIRMED')}>
+                                    {quote.status === "QUOTED" && (
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleStatusUpdate(
+                                            quote.id,
+                                            "CONFIRMED"
+                                          )
+                                        }
+                                      >
                                         <CheckCircle className="h-4 w-4 mr-2" />
                                         Confirm Order
                                       </DropdownMenuItem>
                                     )}
-                                    {quote.status === 'CONFIRMED' && (
-                                      <DropdownMenuItem onClick={() => handleStatusUpdate(quote.id, 'IN_PROGRESS')}>
+                                    {quote.status === "CONFIRMED" && (
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleStatusUpdate(
+                                            quote.id,
+                                            "IN_PROGRESS"
+                                          )
+                                        }
+                                      >
                                         <Play className="h-4 w-4 mr-2" />
                                         Start Production
                                       </DropdownMenuItem>
                                     )}
-                                    {quote.status === 'IN_PROGRESS' && (
-                                      <DropdownMenuItem onClick={() => handleStatusUpdate(quote.id, 'READY')}>
+                                    {quote.status === "IN_PROGRESS" && (
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleStatusUpdate(quote.id, "READY")
+                                        }
+                                      >
                                         <Package className="h-4 w-4 mr-2" />
                                         Mark Ready
                                       </DropdownMenuItem>
                                     )}
-                                    {quote.status === 'READY' && (
-                                      <DropdownMenuItem onClick={() => handleStatusUpdate(quote.id, 'COMPLETED')}>
+                                    {quote.status === "READY" && (
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleStatusUpdate(
+                                            quote.id,
+                                            "COMPLETED"
+                                          )
+                                        }
+                                      >
                                         <CheckCircle className="h-4 w-4 mr-2" />
                                         Complete & Deliver
                                       </DropdownMenuItem>
                                     )}
-                                    {!['COMPLETED', 'CANCELLED'].includes(quote.status) && (
-                                      <DropdownMenuItem 
-                                        onClick={() => handleStatusUpdate(quote.id, 'CANCELLED')}
+                                    {!["COMPLETED", "CANCELLED"].includes(
+                                      quote.status
+                                    ) && (
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleStatusUpdate(
+                                            quote.id,
+                                            "CANCELLED"
+                                          )
+                                        }
                                         className="text-red-600"
                                       >
                                         <XCircle className="h-4 w-4 mr-2" />
