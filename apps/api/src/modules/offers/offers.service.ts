@@ -98,20 +98,22 @@ export class OffersService {
       });
     }
 
-    // Notify customer
-    await this.notificationsService.create({
-      userId: target.rfq.customerId,
-      type: dto.offerType === 'DECLINE' ? 'OFFER_RECEIVED' : 'OFFER_RECEIVED',
-      titleKey: 'notification.offerReceived.title',
-      bodyKey: 'notification.offerReceived.body',
-      bodyParams: {
-        shopName: offer.shop.shopName,
-        offerType: dto.offerType,
-      },
-      referenceType: 'OFFER',
-      referenceId: offer.id,
-      channels: ['EMAIL', 'PUSH'],
-    });
+    // Notify customer (only if not a walk-in RFQ)
+    if (target.rfq.customerId) {
+      await this.notificationsService.create({
+        userId: target.rfq.customerId,
+        type: dto.offerType === 'DECLINE' ? 'OFFER_RECEIVED' : 'OFFER_RECEIVED',
+        titleKey: 'notification.offerReceived.title',
+        bodyKey: 'notification.offerReceived.body',
+        bodyParams: {
+          shopName: offer.shop.shopName,
+          offerType: dto.offerType,
+        },
+        referenceType: 'OFFER',
+        referenceId: offer.id,
+        channels: ['EMAIL', 'PUSH'],
+      });
+    }
 
     await this.auditService.log({
       userId: offer.shop.userId,
@@ -193,16 +195,18 @@ export class OffersService {
       data: { status: 'COUNTERED' },
     });
 
-    // Notify customer
-    await this.notificationsService.create({
-      userId: originalOffer.rfq.customerId,
-      type: 'OFFER_COUNTERED',
-      titleKey: 'notification.offerCountered.title',
-      bodyKey: 'notification.offerCountered.body',
-      referenceType: 'OFFER',
-      referenceId: counterOffer.id,
-      channels: ['EMAIL', 'PUSH'],
-    });
+    // Notify customer (only if not a walk-in RFQ)
+    if (originalOffer.rfq.customerId) {
+      await this.notificationsService.create({
+        userId: originalOffer.rfq.customerId,
+        type: 'OFFER_COUNTERED',
+        titleKey: 'notification.offerCountered.title',
+        bodyKey: 'notification.offerCountered.body',
+        referenceType: 'OFFER',
+        referenceId: counterOffer.id,
+        channels: ['EMAIL', 'PUSH'],
+      });
+    }
 
     return counterOffer;
   }

@@ -44,16 +44,18 @@ export class RfqExpiryProcessor {
       data: { status: 'EXPIRED' },
     });
 
-    // Notify customer
-    await this.notificationsService.create({
-      userId: rfq.customerId,
-      type: 'SYSTEM_ALERT',
-      titleKey: 'notification.rfqExpired.title',
-      bodyKey: 'notification.rfqExpired.body',
-      referenceType: 'RFQ',
-      referenceId: rfqId,
-      channels: ['EMAIL', 'PUSH'],
-    });
+    // Notify customer (only if not a walk-in RFQ)
+    if (rfq.customerId) {
+      await this.notificationsService.create({
+        userId: rfq.customerId,
+        type: 'SYSTEM_ALERT',
+        titleKey: 'notification.rfqExpired.title',
+        bodyKey: 'notification.rfqExpired.body',
+        referenceType: 'RFQ',
+        referenceId: rfqId,
+        channels: ['EMAIL', 'PUSH'],
+      });
+    }
 
     console.log(`RFQ ${rfqId} expired`);
     return { success: true };

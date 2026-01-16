@@ -218,7 +218,7 @@ export class PaymentsService {
         metadata: {
           rfqId: rfq.id,
           offerId: offer.id,
-          customerEmail: rfq.customer.email,
+          customerEmail: rfq.customer?.email || rfq.walkInCustomerEmail || null,
           paymentType: 'BOOKING_FEE',
         },
       },

@@ -9,41 +9,41 @@ datasource db {
 }
 
 model User {
-  id                   String                @id @default(uuid())
-  email                String                @unique
-  phone                String?               @unique
+  id                   String                  @id @default(uuid())
+  email                String                  @unique
+  phone                String?                 @unique
   passwordHash         String
-  googleId             String?               @unique
+  googleId             String?                 @unique
   role                 UserRole
-  status               UserStatus            @default(PENDING_VERIFICATION)
+  status               UserStatus              @default(PENDING_VERIFICATION)
   firstName            String
   lastName             String
-  preferredLanguage    String                @default("en")
-  preferredCurrency    CurrencyCode          @default(NPR)
-  preferredCountry     String                @default("US")
-  themeMode            String                @default("system")
-  emailVerified        Boolean               @default(false)
+  preferredLanguage    String                  @default("en")
+  preferredCurrency    CurrencyCode            @default(NPR)
+  preferredCountry     String                  @default("US")
+  themeMode            String                  @default("system")
+  emailVerified        Boolean                 @default(false)
   emailVerifiedAt      DateTime?
   phoneVerifiedAt      DateTime?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
   lastLoginAt          DateTime?
   // Multi-shop support
   activeShopId         String?
   // 2FA support
-  twoFactorEnabled     Boolean               @default(false)
+  twoFactorEnabled     Boolean                 @default(false)
   twoFactorSecret      String?
   twoFactorBackupCodes String[]
   apiTokens            ApiToken[]
   auditLogs            AuditLog[]
   notifications        Notification[]
-  customerOrders       Order[]               @relation("CustomerOrders")
+  customerOrders       Order[]                 @relation("CustomerOrders")
   refreshTokens        RefreshToken[]
-  reportsAgainst       Report[]              @relation("ReportReported")
-  reportsFiled         Report[]              @relation("ReportReporter")
-  rfqRequests          RfqRequest[]          @relation("CustomerRfqs")
+  reportsAgainst       Report[]                @relation("ReportReported")
+  reportsFiled         Report[]                @relation("ReportReporter")
+  rfqRequests          RfqRequest[]            @relation("CustomerRfqs")
   shops                Shop[]
-  verificationRequests VerificationRequest[] @relation("UserVerificationRequests")
+  verificationRequests VerificationRequest[]   @relation("UserVerificationRequests")
   purchaseStats        CustomerPurchaseStats[]
 
   @@index([email])
@@ -54,16 +54,16 @@ model User {
 
 // Track customer purchase statistics by currency
 model CustomerPurchaseStats {
-  id            String       @id @default(uuid())
-  customerId    String
-  currency      CurrencyCode
-  orderCount    Int          @default(0)
-  totalSpent    Float        @default(0)
-  lastOrderAt   DateTime?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  
-  customer      User         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  id          String       @id @default(uuid())
+  customerId  String
+  currency    CurrencyCode
+  orderCount  Int          @default(0)
+  totalSpent  Float        @default(0)
+  lastOrderAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  customer User @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@unique([customerId, currency])
   @@index([customerId])
@@ -168,6 +168,7 @@ model Shop {
   inventoryItems          InventoryItem[]
   orders                  Order[]
   rfqOffers               RfqOffer[]
+  walkInRfqs              RfqRequest[]          @relation("ShopWalkInRfqs")
   user                    User                  @relation(fields: [userId], references: [id])
   finishPricing           ShopFinishPricing[]
   metalRates              ShopMetalRate[]
@@ -269,7 +270,7 @@ model InventoryItem {
 
 model RfqRequest {
   id                    String          @id @default(uuid())
-  customerId            String
+  customerId            String? // Optional for walk-in customers
   jewelleryType         JewelleryType
   buildMethod           BuildMethod
   templateId            String?
@@ -296,14 +297,29 @@ model RfqRequest {
   mandatoryLabels       String[]
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
-  gemstones             RfqGemstone[]
-  offers                RfqOffer[]
-  customer              User            @relation("CustomerRfqs", fields: [customerId], references: [id])
-  selectedOffer         RfqOffer?       @relation("SelectedOffer", fields: [selectedOfferId], references: [id])
-  targetedShops         RfqShopTarget[]
+
+  // Walk-in customer fields (for shopkeeper-created RFQs)
+  isWalkIn               Boolean @default(false)
+  createdByShopId        String? // The shop that created this walk-in RFQ
+  walkInCustomerName     String?
+  walkInCustomerPhone    String?
+  walkInPhoneCountryCode String? @default("+91")
+  walkInCustomerEmail    String?
+  walkInCustomerAddress  String?
+  walkInCustomerCity     String?
+  walkInCustomerCountry  String? @default("India")
+
+  gemstones     RfqGemstone[]
+  offers        RfqOffer[]
+  customer      User?           @relation("CustomerRfqs", fields: [customerId], references: [id])
+  createdByShop Shop?           @relation("ShopWalkInRfqs", fields: [createdByShopId], references: [id])
+  selectedOffer RfqOffer?       @relation("SelectedOffer", fields: [selectedOfferId], references: [id])
+  targetedShops RfqShopTarget[]
 
   @@index([customerId])
   @@index([status])
+  @@index([createdByShopId])
+  @@index([isWalkIn])
 }
 
 model RfqGemstone {
@@ -1357,17 +1373,17 @@ enum PaymentStatusEnum {
 
 enum DetailedOrderStatus {
   // Prebuilt (Inventory) Order Flow
-  PLACED        // Initial state when order is created
-  CONFIRMED     // Payment confirmed / Order accepted
-  PACKED        // Item is packed and ready
-  SHIPPED       // Item has been shipped
-  OUT_FOR_DELIVERY  // Out for delivery
-  DELIVERED     // Successfully delivered
-  
+  PLACED // Initial state when order is created
+  CONFIRMED // Payment confirmed / Order accepted
+  PACKED // Item is packed and ready
+  SHIPPED // Item has been shipped
+  OUT_FOR_DELIVERY // Out for delivery
+  DELIVERED // Successfully delivered
+
   // Custom Order Flow (additional states)
-  IN_PROGRESS   // Custom: Forging / Being made
-  READY         // Custom: QC passed, ready to pack
-  
+  IN_PROGRESS // Custom: Forging / Being made
+  READY // Custom: QC passed, ready to pack
+
   // Terminal states
   CANCELLED
   REFUNDED

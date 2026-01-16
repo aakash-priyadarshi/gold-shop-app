@@ -25,6 +25,8 @@ import {
   DollarSign,
   Loader2,
   Scale,
+  Plus,
+  UserPlus,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { rfqApi } from '@/lib/api';
@@ -162,11 +164,19 @@ export default function ShopRfqsPage() {
                 Incoming quote requests from customers
               </p>
             </div>
-            {pendingCount > 0 && (
-              <Badge variant="secondary" className="text-amber-700 bg-amber-100">
-                {pendingCount} Pending
-              </Badge>
-            )}
+            <div className="flex items-center gap-3">
+              {pendingCount > 0 && (
+                <Badge variant="secondary" className="text-amber-700 bg-amber-100">
+                  {pendingCount} Pending
+                </Badge>
+              )}
+              <Link href="/dashboard/shop/rfqs/create">
+                <Button>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Walk-in Customer
+                </Button>
+              </Link>
+            </div>
           </div>
 
           <Card>
