@@ -199,7 +199,13 @@ export class ShopsController {
   async updateMyShopCapabilities(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,
-    @Body() dto: { jewelleryTypes: string[]; buildMethods?: string[] }
+    @Body()
+    dto: {
+      jewelleryTypes?: string[];
+      buildMethods?: string[];
+      finishes?: string[];
+      gemstones?: string[];
+    }
   ) {
     return this.shopsService.updateShopCapabilities(shopId, userId, dto);
   }
