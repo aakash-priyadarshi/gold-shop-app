@@ -1,7 +1,60 @@
 # Internal deployment and checklist notes
 deployment-notes.txt
 *.prompt-checklist.txt
+
+# ============================================
+# 🚨 CRITICAL - API KEYS & SECRETS
+# ============================================
+# Environment files (NEVER commit!)
+.env
+.env.*
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+*.env
+**/.env
+**/.env.*
+
+# Secret/credential files
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.jks
+secrets/
+credentials/
+.secrets/
+**/secrets/
+**/credentials/
+
+# API keys and tokens (common patterns)
+*apikey*
+*api_key*
+*secret*
+*.secret
+*token*
+!*.token.ts  # Allow TypeScript token files
+!**/token/   # Allow token directories in code
+
+# Railway/Vercel deployment secrets
+railway.json
+.railway/
+.vercel/token
+
+# Database credentials
+*.sql.gz
+*.dump
+database-backup*
+db-backup*
+
+# ============================================
 # Dependencies
+# ============================================
 node_modules/
 .pnpm-store/
 
@@ -11,15 +64,6 @@ build/
 .next/
 out/
 .turbo/
-
-# Environment files (IMPORTANT - keep secrets safe!)
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env*.local
-*.env
 
 # IDE
 .idea/
@@ -63,13 +107,6 @@ prisma/*.db-journal
 # Vercel
 .vercel
 
-# Secrets and credentials (NEVER commit these)
-*.pem
-*.key
-*.crt
-secrets/
-credentials/
-
 # Local development files
 start-dev.bat
 test-account.txt
@@ -80,3 +117,4 @@ AI-plans*.txt
 TAX_ENGINE_*.md
 TAX_ENGINE_*.ts
 TAX_ENGINE_*.txt
+ai-context.md

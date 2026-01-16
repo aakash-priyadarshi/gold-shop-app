@@ -269,4 +269,31 @@ export const materialsApi = {
     api.get('/market-rates', { params }),
 };
 
+// Shop Quotes API (Walk-in customers)
+export const shopQuotesApi = {
+  // Customer lookup with Redis cache
+  lookupCustomer: (data: { phoneCountryCode: string; phone: string }) => 
+    api.post('/shop-quotes/lookup-customer', data),
+  
+  // CRUD operations
+  create: (data: any) => api.post('/shop-quotes', data),
+  getAll: (params?: { status?: string }) => api.get('/shop-quotes', { params }),
+  getById: (id: string) => api.get(`/shop-quotes/${id}`),
+  update: (id: string, data: any) => api.put(`/shop-quotes/${id}`, data),
+  
+  // Status management
+  updateStatus: (id: string, data: { status: string; cancelReason?: string }) => 
+    api.put(`/shop-quotes/${id}/status`, data),
+  
+  // Payment recording
+  recordPayment: (id: string, data: { amountNpr: number; notes?: string }) => 
+    api.post(`/shop-quotes/${id}/payment`, data),
+  
+  // Statistics and analytics
+  getStats: () => api.get('/shop-quotes/stats'),
+  
+  // Customer history
+  getCustomerHistory: (customerId: string) => api.get(`/shop-quotes/customer/${customerId}`),
+};
+
 export default api;

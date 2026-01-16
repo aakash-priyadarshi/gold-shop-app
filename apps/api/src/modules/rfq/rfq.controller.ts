@@ -10,7 +10,6 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { RfqService } from './rfq.service';
 import { CreateRfqDto } from './dto/create-rfq.dto';
-import { CreateWalkInRfqDto } from './dto/create-walkin-rfq.dto';
 import { BroadcastRfqDto } from './dto/broadcast-rfq.dto';
 import { SelectOfferDto } from './dto/select-offer.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -48,27 +47,6 @@ export class RfqController {
   @ApiOperation({ summary: 'List all RFQs received by shop' })
   async findShopRequests(@CurrentUser('shopId') shopId: string) {
     return this.rfqService.findAllForShop(shopId);
-  }
-
-  @Post('walk-in')
-  @Roles(UserRole.SHOPKEEPER)
-  @ApiOperation({ summary: 'Create a walk-in RFQ for a customer visiting the shop' })
-  async createWalkIn(
-    @CurrentUser('shopId') shopId: string,
-    @CurrentUser('id') userId: string,
-    @Body() dto: CreateWalkInRfqDto,
-  ) {
-    return this.rfqService.createWalkIn(shopId, userId, dto);
-  }
-
-  @Get('shop-walk-ins')
-  @Roles(UserRole.SHOPKEEPER)
-  @ApiOperation({ summary: 'List all walk-in RFQs created by this shop' })
-  async findWalkInRfqs(
-    @CurrentUser('shopId') shopId: string,
-    @CurrentUser('id') userId: string,
-  ) {
-    return this.rfqService.findWalkInRfqsForShop(shopId, userId);
   }
 
   @Get(':id')

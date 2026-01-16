@@ -1,0 +1,67 @@
+# Cursor/Copilot Rules for Gold Shop App
+
+## CRITICAL - Production Database Safety
+
+This is a LIVE PRODUCTION application hosted at:
+- Website: https://www.orivraa.com
+- API: https://api.orivraa.com
+
+### NEVER DO THESE WITHOUT EXPLICIT USER CONFIRMATION:
+1. Run `prisma migrate dev` - This can RESET the production database
+2. Run `prisma db push --force-reset` 
+3. Run any command that mentions "data will be lost"
+4. Modify `schema.prisma` without discussing impact first
+
+### SAFE DATABASE COMMANDS:
+- `prisma generate` - Just generates the client, safe
+- `prisma migrate deploy` - Safe for production, only applies pending migrations
+- `prisma studio` - Read-only browsing, safe
+
+## Tech Stack Reference
+
+### Hosting
+- Frontend: Vercel (Next.js 14)
+- Backend: Railway (NestJS)
+- Database: Neon (PostgreSQL) - NOT Upstash
+- Cache: Upstash (Redis)
+- Images: Cloudflare R2 + Workers
+- Email: Resend
+
+### Key Domains
+- orivraa.com, www.orivraa.com - Frontend
+- api.orivraa.com - Backend API
+- images.orivraa.com - Cloudflare image worker
+
+## Code Patterns
+
+### API Endpoints
+- All API routes prefixed with `/api/`
+- Use NestJS decorators for validation
+- Return consistent response format: `{ data, message, statusCode }`
+
+### Frontend
+- App Router (not Pages Router)
+- Use `@/` path aliases
+- State management: Zustand for global, React Query for server state
+- UI: shadcn/ui components
+
+### Authentication
+- JWT-based with access + refresh tokens
+- Google OAuth supported
+- OTP verification for sensitive operations
+
+## File Locations
+
+- Schema: `apps/api/prisma/schema.prisma`
+- API modules: `apps/api/src/modules/`
+- Frontend pages: `apps/web/src/app/`
+- Shared types: `packages/shared/src/`
+- Environment: `.env` files (not committed)
+
+## Before Making Changes
+
+1. Check if the change affects production
+2. For database changes, create migration file only (don't apply to production)
+3. Build both apps: `pnpm build`
+4. Test locally: `pnpm dev`
+5. Let CI/CD handle production deployment

@@ -159,9 +159,9 @@ export default function ShopRfqsPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">RFQ Requests</h1>
+              <h1 className="text-2xl font-bold">Online RFQ Requests</h1>
               <p className="text-muted-foreground">
-                Incoming quote requests from customers
+                Incoming quote requests from online customers
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -170,10 +170,10 @@ export default function ShopRfqsPage() {
                   {pendingCount} Pending
                 </Badge>
               )}
-              <Link href="/dashboard/shop/rfqs/create">
-                <Button>
+              <Link href="/dashboard/shop/quotes">
+                <Button variant="outline">
                   <UserPlus className="h-4 w-4 mr-2" />
-                  Walk-in Customer
+                  Walk-in Quotes
                 </Button>
               </Link>
             </div>

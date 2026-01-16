@@ -168,7 +168,8 @@ model Shop {
   inventoryItems          InventoryItem[]
   orders                  Order[]
   rfqOffers               RfqOffer[]
-  walkInRfqs              RfqRequest[]          @relation("ShopWalkInRfqs")
+  shopQuotes              ShopQuote[]
+  walkInCustomers         WalkInCustomer[]
   user                    User                  @relation(fields: [userId], references: [id])
   finishPricing           ShopFinishPricing[]
   metalRates              ShopMetalRate[]
@@ -298,28 +299,14 @@ model RfqRequest {
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
 
-  // Walk-in customer fields (for shopkeeper-created RFQs)
-  isWalkIn               Boolean @default(false)
-  createdByShopId        String? // The shop that created this walk-in RFQ
-  walkInCustomerName     String?
-  walkInCustomerPhone    String?
-  walkInPhoneCountryCode String? @default("+91")
-  walkInCustomerEmail    String?
-  walkInCustomerAddress  String?
-  walkInCustomerCity     String?
-  walkInCustomerCountry  String? @default("India")
-
   gemstones     RfqGemstone[]
   offers        RfqOffer[]
   customer      User?           @relation("CustomerRfqs", fields: [customerId], references: [id])
-  createdByShop Shop?           @relation("ShopWalkInRfqs", fields: [createdByShopId], references: [id])
   selectedOffer RfqOffer?       @relation("SelectedOffer", fields: [selectedOfferId], references: [id])
   targetedShops RfqShopTarget[]
 
   @@index([customerId])
   @@index([status])
-  @@index([createdByShopId])
-  @@index([isWalkIn])
 }
 
 model RfqGemstone {
@@ -388,6 +375,93 @@ model RfqOffer {
   @@index([rfqId])
   @@index([shopId])
   @@index([status])
+}
+
+// Walk-in customer model - for customers who visit the shop in person
+// Phone number is the unique identifier for returning customers
+model WalkInCustomer {
+  id               String      @id @default(uuid())
+  phone            String      @unique // Unique identifier - phone is used for lookup
+  phoneCountryCode String      @default("+91")
+  name             String
+  email            String?
+  address          String
+  city             String
+  country          String      @default("India")
+  createdByShopId  String      // First shop that created this customer
+  notes            String?     // Any notes about the customer
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  createdByShop    Shop        @relation(fields: [createdByShopId], references: [id])
+  shopQuotes       ShopQuote[]
+
+  @@index([phone])
+  @@index([createdByShopId])
+}
+
+// Shop Quote model - for walk-in customer orders
+// Separate from RfqRequest for cleaner workflow
+model ShopQuote {
+  id                    String           @id @default(uuid())
+  quoteNumber           String           @unique // SQ-XXXXXX
+  shopId                String
+  walkInCustomerId      String
+
+  // Jewellery details (same as RFQ)
+  jewelleryType         JewelleryType
+  buildMethod           BuildMethod
+  composition           Json
+  targetTotalWeightG    Float?
+  targetGoldWeightG     Float?
+  specialInstructions   String?
+  referenceImages       String[]
+
+  // Pricing (calculated by shopkeeper)
+  metalCostNpr          Float?
+  makingChargeNpr       Float?
+  gemstoneCostNpr       Float            @default(0)
+  finishCostNpr         Float            @default(0)
+  taxNpr                Float            @default(0)
+  totalPriceNpr         Float?
+  goldPriceSnapshot     Float?           // Gold rate at time of quote
+  estimatedDays         Int?
+
+  // Status: QUOTED → CONFIRMED → IN_PROGRESS → READY → COMPLETED / CANCELLED
+  status                ShopQuoteStatus  @default(QUOTED)
+  confirmedAt           DateTime?
+  startedAt             DateTime?
+  readyAt               DateTime?
+  completedAt           DateTime?
+  cancelledAt           DateTime?
+  cancelReason          String?
+
+  // Payment (always at shop)
+  advancePaidNpr        Float            @default(0)
+  balanceDueNpr         Float?
+  paidInFullAt          DateTime?
+
+  // Metadata
+  shopNotes             String?          // Internal notes for shopkeeper
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  shop                  Shop             @relation(fields: [shopId], references: [id])
+  walkInCustomer        WalkInCustomer   @relation(fields: [walkInCustomerId], references: [id])
+
+  @@index([shopId])
+  @@index([walkInCustomerId])
+  @@index([status])
+  @@index([quoteNumber])
+}
+
+enum ShopQuoteStatus {
+  QUOTED      // Initial quote created
+  CONFIRMED   // Customer agreed, work can start
+  IN_PROGRESS // Manufacturing in progress
+  READY       // Ready for pickup
+  COMPLETED   // Delivered and fully paid
+  CANCELLED   // Cancelled by customer or shop
 }
 
 model Order {

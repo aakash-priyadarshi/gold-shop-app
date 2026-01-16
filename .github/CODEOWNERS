@@ -1,0 +1,18 @@
+# CODEOWNERS - Require review for critical files
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Database schema - ALWAYS requires careful review
+/apps/api/prisma/schema.prisma @aakash-priyadarshi
+
+# Migrations - ALWAYS requires review
+/apps/api/prisma/migrations/ @aakash-priyadarshi
+
+# Environment configurations
+/.env* @aakash-priyadarshi
+
+# CI/CD workflows
+/.github/workflows/ @aakash-priyadarshi
+
+# Core infrastructure configs
+/railway.json @aakash-priyadarshi
+/vercel.json @aakash-priyadarshi
