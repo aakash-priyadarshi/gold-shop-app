@@ -42,6 +42,7 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { shopQuotesApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { usePreferencesStore, CURRENCIES, type CurrencyCode } from '@/store/preferences';
 
 interface ShopQuote {
   id: string;
@@ -89,6 +90,13 @@ const statusConfig: Record<string, { label: string; color: string; icon: typeof 
 
 export default function ShopQuotesPage() {
   const { user } = useAuth();
+  const { currency } = usePreferencesStore();
+  
+  // Get shop-based currency from shop's country
+  const shopCountry = user?.shop?.country || 'NP';
+  const shopCurrency = shopCountry === 'IN' ? 'INR' : shopCountry === 'AE' ? 'AED' : shopCountry === 'US' ? 'USD' : shopCountry === 'UK' ? 'GBP' : 'NPR';
+  const currencySymbol = CURRENCIES[shopCurrency as CurrencyCode]?.symbol || CURRENCIES[currency as CurrencyCode]?.symbol || 'Rs.';
+  
   const [quotes, setQuotes] = useState<ShopQuote[]>([]);
   const [stats, setStats] = useState<QuoteStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -147,11 +155,7 @@ export default function ShopQuotesPage() {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'NPR',
-      maximumFractionDigits: 0,
-    }).format(amount);
+    return `${currencySymbol} ${amount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
   };
 
   const getFilteredQuotes = () => {
