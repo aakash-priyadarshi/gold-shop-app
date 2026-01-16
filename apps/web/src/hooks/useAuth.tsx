@@ -254,8 +254,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
 
         // Redirect to appropriate dashboard
-        const dashboardRoute = getDashboardRoute(fullUser.role);
-        router.push(dashboardRoute);
+        // Check if shopkeeper needs to complete shop setup first
+        if (fullUser.role === 'SHOPKEEPER' && !fullUser.shop?.id) {
+          router.push('/auth/complete-shop-setup');
+        } else {
+          const dashboardRoute = getDashboardRoute(fullUser.role);
+          router.push(dashboardRoute);
+        }
       } catch (error: any) {
         // Check if email is not verified
         const errorData = error.response?.data;
@@ -343,8 +348,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
 
         // Redirect to appropriate dashboard
-        const dashboardRoute = getDashboardRoute(fullUser.role);
-        router.push(dashboardRoute);
+        // Check if shopkeeper needs to complete shop setup first
+        if (fullUser.role === 'SHOPKEEPER' && !fullUser.shop?.id) {
+          router.push('/auth/complete-shop-setup');
+        } else {
+          const dashboardRoute = getDashboardRoute(fullUser.role);
+          router.push(dashboardRoute);
+        }
       } catch (error: any) {
         const message =
           error.response?.data?.message ||
@@ -490,6 +500,9 @@ export function withAuth<P extends object>(
       if (!isLoading) {
         if (!isAuthenticated) {
           router.push("/auth/login");
+        } else if (user?.role === 'SHOPKEEPER' && !user.shop?.id) {
+          // Shopkeeper without shop must complete setup
+          router.push("/auth/complete-shop-setup");
         } else if (allowedRoles && user && !allowedRoles.includes(user.role)) {
           // Redirect to user's own dashboard if not authorized
           router.push(getDashboardRoute(user.role));
@@ -506,6 +519,11 @@ export function withAuth<P extends object>(
     }
 
     if (!isAuthenticated) {
+      return null;
+    }
+
+    // Shopkeeper without shop should not render protected content
+    if (user?.role === 'SHOPKEEPER' && !user.shop?.id) {
       return null;
     }
 

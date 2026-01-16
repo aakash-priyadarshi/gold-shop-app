@@ -77,6 +77,47 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
 }
 
 export function ShopkeeperGuard({ children }: { children: React.ReactNode }) {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    // If not authenticated, let RouteGuard handle it
+    if (!isAuthenticated || !user) return;
+
+    // If user is SHOPKEEPER but has no shop, redirect to complete setup
+    // Exception: if already on the setup page, don't redirect
+    if (user.role === 'SHOPKEEPER' && !user.shop?.id && pathname !== '/auth/complete-shop-setup') {
+      router.replace('/auth/complete-shop-setup');
+    }
+  }, [isLoading, isAuthenticated, user, pathname, router]);
+
+  // Show loading while checking
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-yellow-600 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If shopkeeper has no shop, show nothing (redirect happening)
+  if (user?.role === 'SHOPKEEPER' && !user.shop?.id) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-yellow-600 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-gray-600">Setting up your shop...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <RouteGuard allowedRoles={['SHOPKEEPER']} requireAuth={true}>
       {children}

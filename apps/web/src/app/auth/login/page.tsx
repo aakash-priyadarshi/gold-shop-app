@@ -146,6 +146,12 @@ function LoginForm() {
   // Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated && user) {
+      // Check if shopkeeper needs to complete shop setup
+      if (user.role === 'SHOPKEEPER' && !user.shop?.id) {
+        router.push('/auth/complete-shop-setup');
+        return;
+      }
+      
       const redirect = searchParams.get("redirect");
       if (redirect) {
         router.push(decodeURIComponent(redirect));

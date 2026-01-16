@@ -52,7 +52,9 @@ function OAuthCallbackHandler() {
         const user = response.data;
 
         // Check if shop setup is required (SHOPKEEPER via Google OAuth)
-        if (setupRequired === 'shop' || (user.role === 'SHOPKEEPER' && !user.shopId)) {
+        // Check both shopId (flat) and shop.id (nested) for compatibility
+        const hasShop = user.shopId || user.shop?.id;
+        if (setupRequired === 'shop' || (user.role === 'SHOPKEEPER' && !hasShop)) {
           toast({
             title: 'Almost there!',
             description: 'Please complete your shop details to finish registration.',

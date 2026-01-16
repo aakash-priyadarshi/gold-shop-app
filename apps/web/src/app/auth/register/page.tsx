@@ -334,6 +334,11 @@ function RegisterForm() {
   // Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated && user) {
+      // Check if shopkeeper needs to complete shop setup
+      if (user.role === 'SHOPKEEPER' && !user.shop?.id) {
+        router.push('/auth/complete-shop-setup');
+        return;
+      }
       router.push(getDashboardRoute(user.role));
     }
   }, [isAuthenticated, user, router]);
