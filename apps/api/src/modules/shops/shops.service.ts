@@ -1,31 +1,34 @@
 import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
-  BadRequestException,
-  ForbiddenException,
-  ConflictException,
-} from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AuditService } from '../audit/audit.service';
-import { RedisService } from '../../common';
-import { CreateShopDto } from './dto/create-shop.dto';
-import { UpdateShopDto } from './dto/update-shop.dto';
-import { UpdateMetalRatesDto } from './dto/update-metal-rates.dto';
-import { OAuthShopSetupDto } from './dto/oauth-shop-setup.dto';
-import { UserRole, UserStatus } from '@prisma/client';
+} from "@nestjs/common";
+import { UserRole } from "@prisma/client";
+import { RedisService } from "../../common";
+import { PrismaService } from "../../prisma/prisma.service";
+import { AuditService } from "../audit/audit.service";
+import { CreateShopDto } from "./dto/create-shop.dto";
+import { OAuthShopSetupDto } from "./dto/oauth-shop-setup.dto";
+import { UpdateMetalRatesDto } from "./dto/update-metal-rates.dto";
+import { UpdateShopDto } from "./dto/update-shop.dto";
 
 @Injectable()
 export class ShopsService {
   constructor(
     private prisma: PrismaService,
     private auditService: AuditService,
-    private redisService: RedisService,
+    private redisService: RedisService
   ) {}
 
   /**
    * Check if a phone number is already registered (using Redis cache first)
    */
-  private async checkPhoneUniqueness(phone: string, excludeUserId?: string): Promise<boolean> {
+  private async checkPhoneUniqueness(
+    phone: string,
+    excludeUserId?: string
+  ): Promise<boolean> {
     const normalizedPhone = phone.trim();
     const cacheKey = `phone:${normalizedPhone}`;
 
@@ -46,7 +49,7 @@ export class ShopsService {
 
     // Check database
     const existingUser = await this.prisma.user.findFirst({
-      where: { 
+      where: {
         phone: normalizedPhone,
         ...(excludeUserId ? { NOT: { id: excludeUserId } } : {}),
       },
@@ -56,7 +59,11 @@ export class ShopsService {
     if (existingUser) {
       // Cache the result for future lookups
       try {
-        await this.redisService.set(cacheKey, JSON.stringify({ userId: existingUser.id }), 3600);
+        await this.redisService.set(
+          cacheKey,
+          JSON.stringify({ userId: existingUser.id }),
+          3600
+        );
       } catch (error) {
         // Ignore Redis errors
       }
@@ -78,21 +85,25 @@ export class ShopsService {
     });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     if (user.role !== UserRole.SHOPKEEPER) {
-      throw new ForbiddenException('Only shopkeeper accounts can create shops');
+      throw new ForbiddenException("Only shopkeeper accounts can create shops");
     }
 
     if (user.shops && user.shops.length > 0) {
-      throw new BadRequestException('User already has a shop. Use the dashboard to add more shops.');
+      throw new BadRequestException(
+        "User already has a shop. Use the dashboard to add more shops."
+      );
     }
 
     // Check phone uniqueness (required for OAuth setup)
     const phoneExists = await this.checkPhoneUniqueness(dto.userPhone, userId);
     if (phoneExists) {
-      throw new ConflictException('This phone number is already registered. Please use a different number.');
+      throw new ConflictException(
+        "This phone number is already registered. Please use a different number."
+      );
     }
 
     // Determine shop contact phone (use shop phone if provided, else user phone)
@@ -104,9 +115,9 @@ export class ShopsService {
         data: {
           userId,
           shopName: dto.shopName,
-          country: dto.country || 'NP',
+          country: dto.country || "NP",
           city: dto.city,
-          address: dto.address || '',
+          address: dto.address || "",
           contactPhone: shopContactPhone,
           contactEmail: dto.contactEmail || user.email,
           makingChargePercent: 10, // Default making charge
@@ -115,7 +126,7 @@ export class ShopsService {
       // Update user's phone number
       this.prisma.user.update({
         where: { id: userId },
-        data: { 
+        data: {
           phone: dto.userPhone,
           // Keep status as PENDING_VERIFICATION until admin approves the shop
         },
@@ -132,11 +143,11 @@ export class ShopsService {
 
     await this.auditService.log({
       userId,
-      actorType: 'USER',
-      action: 'CREATE',
-      resourceType: 'SHOP',
+      actorType: "USER",
+      action: "CREATE",
+      resourceType: "SHOP",
       resourceId: shop.id,
-      newValue: { shopName: shop.shopName, method: 'oauth_setup' },
+      newValue: { shopName: shop.shopName, method: "oauth_setup" },
     });
 
     return shop;
@@ -153,7 +164,7 @@ export class ShopsService {
         shopNameNe: dto.shopNameNe,
         shopNameHi: dto.shopNameHi,
         description: dto.description,
-        country: dto.country || 'NP',
+        country: dto.country || "NP",
         state: dto.state,
         city: dto.city,
         address: dto.address,
@@ -172,9 +183,9 @@ export class ShopsService {
 
     await this.auditService.log({
       userId,
-      actorType: 'USER',
-      action: 'CREATE',
-      resourceType: 'SHOP',
+      actorType: "USER",
+      action: "CREATE",
+      resourceType: "SHOP",
       resourceId: shop.id,
       newValue: { shopName: shop.shopName },
     });
@@ -191,7 +202,15 @@ export class ShopsService {
     page?: number;
     pageSize?: number;
   }) {
-    const { country, city, jewelleryType, method, verified, page = 1, pageSize = 20 } = params;
+    const {
+      country,
+      city,
+      jewelleryType,
+      method,
+      verified,
+      page = 1,
+      pageSize = 20,
+    } = params;
     const skip = (page - 1) * pageSize;
 
     const where: any = {
@@ -238,7 +257,7 @@ export class ShopsService {
             select: { overall: true },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
       }),
       this.prisma.shop.count({ where }),
     ]);
@@ -248,10 +267,20 @@ export class ShopsService {
         ...shop,
         owner: shop.user,
         user: undefined,
-        currency: shop.country === 'IN' ? 'INR' : shop.country === 'AE' ? 'AED' : shop.country === 'US' ? 'USD' : shop.country === 'UK' ? 'GBP' : 'NPR',
+        currency:
+          shop.country === "IN"
+            ? "INR"
+            : shop.country === "AE"
+            ? "AED"
+            : shop.country === "US"
+            ? "USD"
+            : shop.country === "UK"
+            ? "GBP"
+            : "NPR",
         averageRating:
           shop.ratings.length > 0
-            ? shop.ratings.reduce((sum, r) => sum + r.overall, 0) / shop.ratings.length
+            ? shop.ratings.reduce((sum, r) => sum + r.overall, 0) /
+              shop.ratings.length
             : null,
         reviewCount: shop.ratings.length,
         ratings: undefined,
@@ -273,7 +302,7 @@ export class ShopsService {
         finishPricing: true,
         ratings: {
           take: 10,
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
           select: {
             overall: true,
             quality: true,
@@ -285,14 +314,15 @@ export class ShopsService {
     });
 
     if (!shop) {
-      throw new NotFoundException('Shop not found');
+      throw new NotFoundException("Shop not found");
     }
 
     return {
       ...shop,
       averageRating:
         shop.ratings.length > 0
-          ? shop.ratings.reduce((sum, r) => sum + r.overall, 0) / shop.ratings.length
+          ? shop.ratings.reduce((sum, r) => sum + r.overall, 0) /
+            shop.ratings.length
           : null,
     };
   }
@@ -327,7 +357,7 @@ export class ShopsService {
     }
 
     if (!shop) {
-      throw new NotFoundException('Shop not found for this user');
+      throw new NotFoundException("Shop not found for this user");
     }
 
     return shop;
@@ -344,15 +374,15 @@ export class ShopsService {
         country: true,
         createdAt: true,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     // Transform to match frontend expectations
-    return shops.map(shop => ({
+    return shops.map((shop) => ({
       ...shop,
       name: shop.shopName,
       slug: shop.id, // Using ID as slug placeholder
-      status: shop.isVerified ? 'ACTIVE' : 'PENDING',
+      status: shop.isVerified ? "ACTIVE" : "PENDING",
     }));
   }
 
@@ -362,11 +392,11 @@ export class ShopsService {
     });
 
     if (!shop) {
-      throw new NotFoundException('Shop not found');
+      throw new NotFoundException("Shop not found");
     }
 
     if (shop.userId !== userId) {
-      throw new ForbiddenException('Not authorized to update this shop');
+      throw new ForbiddenException("Not authorized to update this shop");
     }
 
     const previousValue = { ...shop };
@@ -378,9 +408,9 @@ export class ShopsService {
 
     await this.auditService.log({
       userId,
-      actorType: 'USER',
-      action: 'UPDATE',
-      resourceType: 'SHOP',
+      actorType: "USER",
+      action: "UPDATE",
+      resourceType: "SHOP",
       resourceId: shopId,
       previousValue,
       newValue: dto,
@@ -389,17 +419,21 @@ export class ShopsService {
     return updated;
   }
 
-  async updateMetalRates(shopId: string, userId: string, dto: UpdateMetalRatesDto) {
+  async updateMetalRates(
+    shopId: string,
+    userId: string,
+    dto: UpdateMetalRatesDto
+  ) {
     const shop = await this.prisma.shop.findUnique({
       where: { id: shopId },
     });
 
     if (!shop) {
-      throw new NotFoundException('Shop not found');
+      throw new NotFoundException("Shop not found");
     }
 
     if (shop.userId !== userId) {
-      throw new ForbiddenException('Not authorized');
+      throw new ForbiddenException("Not authorized");
     }
 
     // Upsert metal rates
@@ -421,15 +455,15 @@ export class ShopsService {
             ratePerGramNpr: rate.ratePerGramNpr,
             lastUpdatedAt: new Date(),
           },
-        }),
-      ),
+        })
+      )
     );
 
     await this.auditService.log({
       userId,
-      actorType: 'USER',
-      action: 'UPDATE',
-      resourceType: 'SHOP_RATES',
+      actorType: "USER",
+      action: "UPDATE",
+      resourceType: "SHOP_RATES",
       resourceId: shopId,
       newValue: dto.rates,
     });
@@ -443,7 +477,7 @@ export class ShopsService {
     });
 
     if (!shop) {
-      throw new NotFoundException('Shop not found');
+      throw new NotFoundException("Shop not found");
     }
 
     const updated = await this.prisma.shop.update({
@@ -453,9 +487,9 @@ export class ShopsService {
 
     await this.auditService.log({
       userId: adminId,
-      actorType: 'ADMIN',
-      action: 'APPROVE',
-      resourceType: 'SHOP',
+      actorType: "ADMIN",
+      action: "APPROVE",
+      resourceType: "SHOP",
       resourceId: shopId,
     });
 
@@ -472,7 +506,7 @@ export class ShopsService {
           shopId,
           respondedAt: null,
           rfq: {
-            status: 'SENT_TO_SHOPS',
+            status: "SENT_TO_SHOPS",
           },
         },
       }),
@@ -480,14 +514,14 @@ export class ShopsService {
         where: {
           shopId,
           status: {
-            in: ['PAID', 'IN_PRODUCTION', 'QC_PENDING', 'READY_TO_SHIP'],
+            in: ["PAID", "IN_PRODUCTION", "QC_PENDING", "READY_TO_SHIP"],
           },
         },
       }),
       this.prisma.shopRating.findMany({
         where: { shopId },
         take: 5,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
       }),
     ]);
 
@@ -499,7 +533,8 @@ export class ShopsService {
         recentRatings: recentRatings.length,
         averageRating:
           recentRatings.length > 0
-            ? recentRatings.reduce((sum, r) => sum + r.overall, 0) / recentRatings.length
+            ? recentRatings.reduce((sum, r) => sum + r.overall, 0) /
+              recentRatings.length
             : null,
       },
     };
@@ -516,8 +551,8 @@ export class ShopsService {
     });
 
     const shop = await this.prisma.shop.findFirst({
-      where: user?.activeShopId 
-        ? { id: user.activeShopId, userId } 
+      where: user?.activeShopId
+        ? { id: user.activeShopId, userId }
         : { userId },
       include: {
         metalRates: true,
@@ -536,7 +571,7 @@ export class ShopsService {
     });
 
     if (!shop) {
-      throw new NotFoundException('Shop not found for this user');
+      throw new NotFoundException("Shop not found for this user");
     }
 
     return {
@@ -556,13 +591,13 @@ export class ShopsService {
     });
 
     const shop = await this.prisma.shop.findFirst({
-      where: user?.activeShopId 
-        ? { id: user.activeShopId, userId } 
+      where: user?.activeShopId
+        ? { id: user.activeShopId, userId }
         : { userId },
     });
 
     if (!shop) {
-      throw new NotFoundException('Shop not found for this user');
+      throw new NotFoundException("Shop not found for this user");
     }
 
     const previousValue = { ...shop };
@@ -574,9 +609,9 @@ export class ShopsService {
 
     await this.auditService.log({
       userId,
-      actorType: 'USER',
-      action: 'UPDATE',
-      resourceType: 'SHOP_SETTINGS',
+      actorType: "USER",
+      action: "UPDATE",
+      resourceType: "SHOP_SETTINGS",
       resourceId: shop.id,
       previousValue,
       newValue: dto,
@@ -590,20 +625,20 @@ export class ShopsService {
    */
   async getShopAnalytics(shopId: string, period?: string) {
     if (!shopId) {
-      throw new BadRequestException('Shop ID required');
+      throw new BadRequestException("Shop ID required");
     }
 
     const now = new Date();
     let startDate: Date;
-    
+
     switch (period) {
-      case 'week':
+      case "week":
         startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
-      case 'month':
+      case "month":
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         break;
-      case 'year':
+      case "year":
         startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
         break;
       default:
@@ -623,26 +658,40 @@ export class ShopsService {
         where: { shopId, createdAt: { gte: startDate } },
       }),
       this.prisma.order.count({
-        where: { shopId, status: { in: ['CREATED', 'PAYMENT_PENDING', 'PAID', 'IN_PRODUCTION'] }, createdAt: { gte: startDate } },
+        where: {
+          shopId,
+          status: {
+            in: ["CREATED", "PAYMENT_PENDING", "PAID", "IN_PRODUCTION"],
+          },
+          createdAt: { gte: startDate },
+        },
       }),
       this.prisma.order.count({
-        where: { shopId, status: { in: ['DELIVERED', 'COMPLETED'] }, createdAt: { gte: startDate } },
+        where: {
+          shopId,
+          status: { in: ["DELIVERED", "COMPLETED"] },
+          createdAt: { gte: startDate },
+        },
       }),
       this.prisma.order.count({
-        where: { shopId, status: 'CANCELLED', createdAt: { gte: startDate } },
+        where: { shopId, status: "CANCELLED", createdAt: { gte: startDate } },
       }),
       this.prisma.order.aggregate({
-        where: { shopId, status: { in: ['DELIVERED', 'COMPLETED', 'PAID'] }, createdAt: { gte: startDate } },
+        where: {
+          shopId,
+          status: { in: ["DELIVERED", "COMPLETED", "PAID"] },
+          createdAt: { gte: startDate },
+        },
         _sum: { totalNpr: true },
       }),
       this.prisma.shopRating.findMany({
         where: { shopId },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         take: 50,
       }),
       this.prisma.order.findMany({
         where: { shopId, createdAt: { gte: startDate } },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         take: 10,
         select: {
           id: true,
@@ -657,12 +706,13 @@ export class ShopsService {
       }),
     ]);
 
-    const avgRating = ratings.length > 0
-      ? ratings.reduce((sum, r) => sum + r.overall, 0) / ratings.length
-      : 0;
+    const avgRating =
+      ratings.length > 0
+        ? ratings.reduce((sum, r) => sum + r.overall, 0) / ratings.length
+        : 0;
 
     return {
-      period: period || 'month',
+      period: period || "month",
       summary: {
         totalOrders,
         pendingOrders,
@@ -681,7 +731,7 @@ export class ShopsService {
    */
   async getShopMaterials(shopId: string) {
     if (!shopId) {
-      throw new BadRequestException('Shop ID required');
+      throw new BadRequestException("Shop ID required");
     }
 
     const shop = await this.prisma.shop.findUnique({
@@ -694,24 +744,61 @@ export class ShopsService {
     });
 
     if (!shop) {
-      throw new NotFoundException('Shop not found');
+      throw new NotFoundException("Shop not found");
     }
 
     // Get all available material codes from the system
     const allMaterials = [
-      { code: 'GOLD_24K', name: '24K Gold', category: 'PRECIOUS_METAL', purity: 99.9 },
-      { code: 'GOLD_22K', name: '22K Gold', category: 'PRECIOUS_METAL', purity: 91.6 },
-      { code: 'GOLD_18K', name: '18K Gold', category: 'PRECIOUS_METAL', purity: 75.0 },
-      { code: 'GOLD_14K', name: '14K Gold', category: 'PRECIOUS_METAL', purity: 58.5 },
-      { code: 'SILVER_999', name: 'Pure Silver', category: 'PRECIOUS_METAL', purity: 99.9 },
-      { code: 'SILVER_925', name: 'Sterling Silver', category: 'PRECIOUS_METAL', purity: 92.5 },
-      { code: 'PLATINUM_950', name: 'Platinum 950', category: 'PRECIOUS_METAL', purity: 95.0 },
+      {
+        code: "GOLD_24K",
+        name: "24K Gold",
+        category: "PRECIOUS_METAL",
+        purity: 99.9,
+      },
+      {
+        code: "GOLD_22K",
+        name: "22K Gold",
+        category: "PRECIOUS_METAL",
+        purity: 91.6,
+      },
+      {
+        code: "GOLD_18K",
+        name: "18K Gold",
+        category: "PRECIOUS_METAL",
+        purity: 75.0,
+      },
+      {
+        code: "GOLD_14K",
+        name: "14K Gold",
+        category: "PRECIOUS_METAL",
+        purity: 58.5,
+      },
+      {
+        code: "SILVER_999",
+        name: "Pure Silver",
+        category: "PRECIOUS_METAL",
+        purity: 99.9,
+      },
+      {
+        code: "SILVER_925",
+        name: "Sterling Silver",
+        category: "PRECIOUS_METAL",
+        purity: 92.5,
+      },
+      {
+        code: "PLATINUM_950",
+        name: "Platinum 950",
+        category: "PRECIOUS_METAL",
+        purity: 95.0,
+      },
     ];
 
     // Map materials with shop-specific data
-    const materials = allMaterials.map(material => {
+    const materials = allMaterials.map((material) => {
       const isAvailable = shop.supportedMaterials.includes(material.code);
-      const shopRate = shop.metalRates.find(r => r.metalType === material.code);
+      const shopRate = shop.metalRates.find(
+        (r) => r.metalType === material.code
+      );
       return {
         ...material,
         isAvailable,
@@ -730,12 +817,16 @@ export class ShopsService {
    * Update shop materials inventory
    */
   async updateShopMaterials(
-    shopId: string, 
-    userId: string, 
-    materials: Array<{ materialCode: string; isAvailable: boolean; pricePerGramNpr?: number }>
+    shopId: string,
+    userId: string,
+    materials: Array<{
+      materialCode: string;
+      isAvailable: boolean;
+      pricePerGramNpr?: number;
+    }>
   ) {
     if (!shopId) {
-      throw new BadRequestException('Shop ID required');
+      throw new BadRequestException("Shop ID required");
     }
 
     const shop = await this.prisma.shop.findUnique({
@@ -743,18 +834,20 @@ export class ShopsService {
     });
 
     if (!shop || shop.userId !== userId) {
-      throw new ForbiddenException('Not authorized');
+      throw new ForbiddenException("Not authorized");
     }
 
     // Update supportedMaterials array
     const supportedMaterials = materials
-      .filter(m => m.isAvailable)
-      .map(m => m.materialCode);
+      .filter((m) => m.isAvailable)
+      .map((m) => m.materialCode);
 
     // Update metal rates for materials with custom pricing
     const metalRateUpdates = materials
-      .filter(m => m.pricePerGramNpr !== undefined && m.pricePerGramNpr !== null)
-      .map(m => 
+      .filter(
+        (m) => m.pricePerGramNpr !== undefined && m.pricePerGramNpr !== null
+      )
+      .map((m) =>
         this.prisma.shopMetalRate.upsert({
           where: {
             shopId_metalType: {
@@ -784,9 +877,9 @@ export class ShopsService {
 
     await this.auditService.log({
       userId,
-      actorType: 'USER',
-      action: 'UPDATE',
-      resourceType: 'SHOP_MATERIALS',
+      actorType: "USER",
+      action: "UPDATE",
+      resourceType: "SHOP_MATERIALS",
       resourceId: shopId,
       newValue: { materials: supportedMaterials },
     });
@@ -799,7 +892,7 @@ export class ShopsService {
    */
   async getShopCapabilities(shopId: string) {
     if (!shopId) {
-      throw new BadRequestException('Shop ID required');
+      throw new BadRequestException("Shop ID required");
     }
 
     const shop = await this.prisma.shop.findUnique({
@@ -813,40 +906,62 @@ export class ShopsService {
     });
 
     if (!shop) {
-      throw new NotFoundException('Shop not found');
+      throw new NotFoundException("Shop not found");
     }
 
     // All available jewellery types
     const allJewelleryTypes = [
-      'RING', 'NECKLACE', 'BRACELET', 'BANGLE', 'EARRING', 
-      'PENDANT', 'CHAIN', 'ANKLET', 'NOSE_PIN', 'MANGALSUTRA', 
-      'MAANG_TIKKA', 'OTHER'
+      "RING",
+      "NECKLACE",
+      "BRACELET",
+      "BANGLE",
+      "EARRING",
+      "PENDANT",
+      "CHAIN",
+      "ANKLET",
+      "NOSE_PIN",
+      "MANGALSUTRA",
+      "MAANG_TIKKA",
+      "OTHER",
     ];
 
-    const allBuildMethods = ['METHOD_A', 'METHOD_B', 'METHOD_C', 'METHOD_D'];
+    const allBuildMethods = ["METHOD_A", "METHOD_B", "METHOD_C", "METHOD_D"];
 
     // All available gemstone types
     const allGemstoneTypes = [
-      'DIAMOND_NATURAL', 'DIAMOND_LAB', 'MOISSANITE', 'CUBIC_ZIRCONIA',
-      'RUBY', 'SAPPHIRE', 'EMERALD', 'PEARL', 'AMETHYST', 'TOPAZ',
-      'GARNET', 'OPAL', 'TURQUOISE', 'AQUAMARINE', 'PERIDOT', 'CITRINE'
+      "DIAMOND_NATURAL",
+      "DIAMOND_LAB",
+      "MOISSANITE",
+      "CUBIC_ZIRCONIA",
+      "RUBY",
+      "SAPPHIRE",
+      "EMERALD",
+      "PEARL",
+      "AMETHYST",
+      "TOPAZ",
+      "GARNET",
+      "OPAL",
+      "TURQUOISE",
+      "AQUAMARINE",
+      "PERIDOT",
+      "CITRINE",
     ];
 
     return {
-      jewelleryTypes: allJewelleryTypes.map(type => ({
+      jewelleryTypes: allJewelleryTypes.map((type) => ({
         code: type,
-        name: type.replace(/_/g, ' '),
+        name: type.replace(/_/g, " "),
         isSupported: shop.supportedJewelleryTypes.includes(type),
       })),
-      buildMethods: allBuildMethods.map(method => ({
+      buildMethods: allBuildMethods.map((method) => ({
         code: method,
-        name: method.replace(/_/g, ' '),
+        name: method.replace(/_/g, " "),
         isSupported: shop.supportedMethods.includes(method),
       })),
       supportedFinishes: shop.supportedFinishes,
-      gemstones: allGemstoneTypes.map(type => ({
+      gemstones: allGemstoneTypes.map((type) => ({
         code: type,
-        name: type.replace(/_/g, ' '),
+        name: type.replace(/_/g, " "),
         isSupported: (shop.supportedGemstones || []).includes(type),
       })),
     };
@@ -856,12 +971,17 @@ export class ShopsService {
    * Update shop capabilities
    */
   async updateShopCapabilities(
-    shopId: string, 
-    userId: string, 
-    dto: { jewelleryTypes?: string[]; buildMethods?: string[]; finishes?: string[]; gemstones?: string[] }
+    shopId: string,
+    userId: string,
+    dto: {
+      jewelleryTypes?: string[];
+      buildMethods?: string[];
+      finishes?: string[];
+      gemstones?: string[];
+    }
   ) {
     if (!shopId) {
-      throw new BadRequestException('Shop ID required');
+      throw new BadRequestException("Shop ID required");
     }
 
     const shop = await this.prisma.shop.findUnique({
@@ -869,7 +989,7 @@ export class ShopsService {
     });
 
     if (!shop || shop.userId !== userId) {
-      throw new ForbiddenException('Not authorized');
+      throw new ForbiddenException("Not authorized");
     }
 
     const updateData: any = {};
@@ -897,9 +1017,9 @@ export class ShopsService {
 
     await this.auditService.log({
       userId,
-      actorType: 'USER',
-      action: 'UPDATE',
-      resourceType: 'SHOP_CAPABILITIES',
+      actorType: "USER",
+      action: "UPDATE",
+      resourceType: "SHOP_CAPABILITIES",
       resourceId: shopId,
       newValue: dto,
     });
@@ -916,7 +1036,7 @@ export class ShopsService {
     });
 
     if (!shop) {
-      throw new NotFoundException('Shop not found');
+      throw new NotFoundException("Shop not found");
     }
 
     const previousValue = { ...shop };
@@ -928,9 +1048,9 @@ export class ShopsService {
 
     await this.auditService.log({
       userId: adminId,
-      actorType: 'ADMIN',
-      action: 'UPDATE',
-      resourceType: 'SHOP',
+      actorType: "ADMIN",
+      action: "UPDATE",
+      resourceType: "SHOP",
       resourceId: shopId,
       previousValue,
       newValue: dto,
@@ -949,7 +1069,7 @@ export class ShopsService {
     });
 
     if (!shop) {
-      throw new NotFoundException('Shop not found');
+      throw new NotFoundException("Shop not found");
     }
 
     // Delete shop and related data in transaction
@@ -966,13 +1086,13 @@ export class ShopsService {
 
     await this.auditService.log({
       userId: adminId,
-      actorType: 'ADMIN',
-      action: 'DELETE',
-      resourceType: 'SHOP',
+      actorType: "ADMIN",
+      action: "DELETE",
+      resourceType: "SHOP",
       resourceId: shopId,
       previousValue: { shopName: shop.shopName, userId: shop.userId },
     });
 
-    return { success: true, message: 'Shop deleted successfully' };
+    return { success: true, message: "Shop deleted successfully" };
   }
 }

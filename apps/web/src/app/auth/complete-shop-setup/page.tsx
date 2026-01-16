@@ -1,37 +1,54 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth, getDashboardRoute } from '@/hooks/useAuth';
-import { AuthBackground } from '@/components/auth/AuthBackground';
-import { usePreferencesStore, type CountryCode } from '@/store/preferences';
-import { api, authApi } from '@/lib/api';
+import { AuthBackground } from "@/components/auth/AuthBackground";
+import { Button } from "@/components/ui/button";
 import {
-  BuildingStorefrontIcon,
-  PhoneIcon,
-  MapPinIcon,
-  ExclamationCircleIcon,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { getDashboardRoute, useAuth } from "@/hooks/useAuth";
+import { api, authApi } from "@/lib/api";
+import { usePreferencesStore } from "@/store/preferences";
+import {
   ArrowRightIcon,
+  BuildingStorefrontIcon,
   CheckCircleIcon,
+  ExclamationCircleIcon,
+  MapPinIcon,
+  PhoneIcon,
   UserIcon,
-} from '@heroicons/react/24/outline';
-import { CheckCircleIcon as CheckCircleSolid, XCircleIcon } from '@heroicons/react/24/solid';
+} from "@heroicons/react/24/outline";
+import {
+  CheckCircleIcon as CheckCircleSolid,
+  XCircleIcon,
+} from "@heroicons/react/24/solid";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 
 // Shop setup schema - userPhone is required and unique, shopPhone is optional
 const shopSetupSchema = z.object({
-  shopName: z.string().min(2, 'Shop name must be at least 2 characters'),
-  userPhone: z.string().min(10, 'Please enter a valid phone number'),
-  country: z.enum(['NP', 'IN', 'US', 'AE', 'UK'], { required_error: 'Please select a country' }),
-  city: z.string().min(2, 'City must be at least 2 characters'),
+  shopName: z.string().min(2, "Shop name must be at least 2 characters"),
+  userPhone: z.string().min(10, "Please enter a valid phone number"),
+  country: z.enum(["NP", "IN", "US", "AE", "UK"], {
+    required_error: "Please select a country",
+  }),
+  city: z.string().min(2, "City must be at least 2 characters"),
   address: z.string().optional(),
   shopPhone: z.string().optional(),
 });
@@ -39,55 +56,58 @@ const shopSetupSchema = z.object({
 type ShopSetupForm = z.infer<typeof shopSetupSchema>;
 
 const countryOptions = [
-  { value: 'NP', label: '🇳🇵 Nepal', currency: 'NPR' },
-  { value: 'IN', label: '🇮🇳 India', currency: 'INR' },
-  { value: 'US', label: '🇺🇸 United States', currency: 'USD' },
-  { value: 'AE', label: '🇦🇪 UAE', currency: 'AED' },
-  { value: 'UK', label: '🇬🇧 United Kingdom', currency: 'GBP' },
+  { value: "NP", label: "🇳🇵 Nepal", currency: "NPR" },
+  { value: "IN", label: "🇮🇳 India", currency: "INR" },
+  { value: "US", label: "🇺🇸 United States", currency: "USD" },
+  { value: "AE", label: "🇦🇪 UAE", currency: "AED" },
+  { value: "UK", label: "🇬🇧 United Kingdom", currency: "GBP" },
 ];
 
 // Country-specific placeholder data
-const countryPlaceholders: Record<string, {
-  phone: string;
-  shopName: string;
-  city: string;
-  address: string;
-  shopPhone: string;
-}> = {
+const countryPlaceholders: Record<
+  string,
+  {
+    phone: string;
+    shopName: string;
+    city: string;
+    address: string;
+    shopPhone: string;
+  }
+> = {
   NP: {
-    phone: '+977 98XXXXXXXX',
-    shopName: 'Shrestha Gold House',
-    city: 'Kathmandu',
-    address: 'New Road, Kathmandu',
-    shopPhone: '+977 01-XXXXXXX',
+    phone: "+977 98XXXXXXXX",
+    shopName: "Shrestha Gold House",
+    city: "Kathmandu",
+    address: "New Road, Kathmandu",
+    shopPhone: "+977 01-XXXXXXX",
   },
   IN: {
-    phone: '+91 98XXXXXXXX',
-    shopName: 'Sharma Jewellers',
-    city: 'Mumbai',
-    address: 'Zaveri Bazaar, Mumbai',
-    shopPhone: '+91 22-XXXXXXXX',
+    phone: "+91 98XXXXXXXX",
+    shopName: "Sharma Jewellers",
+    city: "Mumbai",
+    address: "Zaveri Bazaar, Mumbai",
+    shopPhone: "+91 22-XXXXXXXX",
   },
   US: {
-    phone: '+1 (555) XXX-XXXX',
-    shopName: 'Smith Fine Jewelry',
-    city: 'New York',
-    address: '47th Street, New York',
-    shopPhone: '+1 (212) XXX-XXXX',
+    phone: "+1 (555) XXX-XXXX",
+    shopName: "Smith Fine Jewelry",
+    city: "New York",
+    address: "47th Street, New York",
+    shopPhone: "+1 (212) XXX-XXXX",
   },
   UK: {
-    phone: '+44 7XXX XXXXXX',
-    shopName: 'Williams Gold & Diamonds',
-    city: 'London',
-    address: 'Hatton Garden, London',
-    shopPhone: '+44 20 XXXX XXXX',
+    phone: "+44 7XXX XXXXXX",
+    shopName: "Williams Gold & Diamonds",
+    city: "London",
+    address: "Hatton Garden, London",
+    shopPhone: "+44 20 XXXX XXXX",
   },
   AE: {
-    phone: '+971 5X XXX XXXX',
-    shopName: 'Al-Rashid Gold Souq',
-    city: 'Dubai',
-    address: 'Gold Souq, Deira, Dubai',
-    shopPhone: '+971 4 XXX XXXX',
+    phone: "+971 5X XXX XXXX",
+    shopName: "Al-Rashid Gold Souq",
+    city: "Dubai",
+    address: "Gold Souq, Deira, Dubai",
+    shopPhone: "+971 4 XXX XXXX",
   },
 };
 
@@ -107,7 +127,8 @@ export default function CompleteShopSetupPage() {
 
   // Get detected country from preferences store
   const detectedCountry = usePreferencesStore((state) => state.country);
-  const placeholders = countryPlaceholders[detectedCountry] || countryPlaceholders['US'];
+  const placeholders =
+    countryPlaceholders[detectedCountry] || countryPlaceholders["US"];
 
   const form = useForm<ShopSetupForm>({
     resolver: zodResolver(shopSetupSchema),
@@ -151,7 +172,7 @@ export default function CompleteShopSetupPage() {
   // Redirect if not authenticated or not a shopkeeper
   useEffect(() => {
     if (!isAuthenticated) {
-      router.push('/auth/login');
+      router.push("/auth/login");
       return;
     }
 
@@ -165,9 +186,10 @@ export default function CompleteShopSetupPage() {
     // Check if phone is already taken
     if (phoneCheckState.exists) {
       toast({
-        variant: 'destructive',
-        title: 'Phone number unavailable',
-        description: 'This phone number is already registered. Please use a different number.',
+        variant: "destructive",
+        title: "Phone number unavailable",
+        description:
+          "This phone number is already registered. Please use a different number.",
       });
       return;
     }
@@ -175,14 +197,14 @@ export default function CompleteShopSetupPage() {
     setIsLoading(true);
 
     try {
-      const country = countryOptions.find(c => c.value === data.country);
-      
+      const country = countryOptions.find((c) => c.value === data.country);
+
       // Create shop for the authenticated user with new field names
-      await api.post('/shops/setup', {
+      await api.post("/shops/setup", {
         shopName: data.shopName,
         userPhone: data.userPhone,
         country: data.country,
-        currency: country?.currency || 'NPR',
+        currency: country?.currency || "NPR",
         city: data.city,
         address: data.address,
         shopPhone: data.shopPhone,
@@ -190,24 +212,27 @@ export default function CompleteShopSetupPage() {
       });
 
       setIsSuccess(true);
-      
+
       // Refresh user to get updated shop info
       await refreshUser();
 
       toast({
-        title: 'Shop registered successfully!',
-        description: 'Your shop registration is pending admin approval.',
+        title: "Shop registered successfully!",
+        description: "Your shop registration is pending admin approval.",
       });
 
       // Redirect after short delay
       setTimeout(() => {
-        router.push(getDashboardRoute('SHOPKEEPER'));
+        router.push(getDashboardRoute("SHOPKEEPER"));
       }, 2000);
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Setup failed',
-        description: error.response?.data?.message || error.message || 'Something went wrong',
+        variant: "destructive",
+        title: "Setup failed",
+        description:
+          error.response?.data?.message ||
+          error.message ||
+          "Something went wrong",
       });
     } finally {
       setIsLoading(false);
@@ -224,9 +249,12 @@ export default function CompleteShopSetupPage() {
             <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
               <CheckCircleIcon className="w-10 h-10 text-green-600" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Shop Registered!</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Shop Registered!
+            </h2>
             <p className="text-gray-600 mb-6">
-              Your shop has been submitted for approval. You'll be notified once it's verified.
+              Your shop has been submitted for approval. You'll be notified once
+              it's verified.
             </p>
             <p className="text-sm text-gray-500">Redirecting to dashboard...</p>
           </CardContent>
@@ -243,9 +271,12 @@ export default function CompleteShopSetupPage() {
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center">
             <BuildingStorefrontIcon className="w-8 h-8 text-white" />
           </div>
-          <CardTitle className="text-2xl font-bold">Complete Shop Setup</CardTitle>
+          <CardTitle className="text-2xl font-bold">
+            Complete Shop Setup
+          </CardTitle>
           <CardDescription className="text-base">
-            Welcome {user?.firstName}! Please provide your shop details to complete registration.
+            Welcome {user?.firstName}! Please provide your shop details to
+            complete registration.
           </CardDescription>
         </CardHeader>
 
@@ -259,7 +290,7 @@ export default function CompleteShopSetupPage() {
                   id="shopName"
                   placeholder={placeholders.shopName}
                   className="h-11 pl-10 rounded-xl"
-                  {...form.register('shopName')}
+                  {...form.register("shopName")}
                 />
               </div>
               {form.formState.errors.shopName && (
@@ -271,8 +302,12 @@ export default function CompleteShopSetupPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="userPhone">Your Phone Number <span className="text-red-500">*</span></Label>
-              <p className="text-xs text-gray-500 mb-1">This will be your account phone number (must be unique)</p>
+              <Label htmlFor="userPhone">
+                Your Phone Number <span className="text-red-500">*</span>
+              </Label>
+              <p className="text-xs text-gray-500 mb-1">
+                This will be your account phone number (must be unique)
+              </p>
               <div className="relative">
                 <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                 <Input
@@ -280,10 +315,13 @@ export default function CompleteShopSetupPage() {
                   type="tel"
                   placeholder={placeholders.phone}
                   className={`h-11 pl-10 pr-10 rounded-xl ${
-                    phoneCheckState.exists === true ? 'border-red-500 focus-visible:ring-red-500' :
-                    phoneCheckState.exists === false ? 'border-green-500 focus-visible:ring-green-500' : ''
+                    phoneCheckState.exists === true
+                      ? "border-red-500 focus-visible:ring-red-500"
+                      : phoneCheckState.exists === false
+                      ? "border-green-500 focus-visible:ring-green-500"
+                      : ""
                   }`}
-                  {...form.register('userPhone', {
+                  {...form.register("userPhone", {
                     onChange: (e) => checkPhoneAvailability(e.target.value),
                   })}
                 />
@@ -292,12 +330,14 @@ export default function CompleteShopSetupPage() {
                   {phoneCheckState.checking && (
                     <div className="w-4 h-4 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
                   )}
-                  {!phoneCheckState.checking && phoneCheckState.exists === false && (
-                    <CheckCircleSolid className="h-5 w-5 text-green-500" />
-                  )}
-                  {!phoneCheckState.checking && phoneCheckState.exists === true && (
-                    <XCircleIcon className="h-5 w-5 text-red-500" />
-                  )}
+                  {!phoneCheckState.checking &&
+                    phoneCheckState.exists === false && (
+                      <CheckCircleSolid className="h-5 w-5 text-green-500" />
+                    )}
+                  {!phoneCheckState.checking &&
+                    phoneCheckState.exists === true && (
+                      <XCircleIcon className="h-5 w-5 text-red-500" />
+                    )}
                 </div>
               </div>
               {form.formState.errors.userPhone && (
@@ -325,7 +365,9 @@ export default function CompleteShopSetupPage() {
                 <Label htmlFor="country">Country</Label>
                 <Select
                   defaultValue={detectedCountry}
-                  onValueChange={(value) => form.setValue('country', value as any)}
+                  onValueChange={(value) =>
+                    form.setValue("country", value as any)
+                  }
                 >
                   <SelectTrigger className="h-11 rounded-xl">
                     <SelectValue placeholder="Select country" />
@@ -353,7 +395,7 @@ export default function CompleteShopSetupPage() {
                     id="city"
                     placeholder={placeholders.city}
                     className="h-11 pl-10 rounded-xl"
-                    {...form.register('city')}
+                    {...form.register("city")}
                   />
                 </div>
                 {form.formState.errors.city && (
@@ -373,14 +415,16 @@ export default function CompleteShopSetupPage() {
                   id="address"
                   placeholder={placeholders.address}
                   className="h-11 pl-10 rounded-xl"
-                  {...form.register('address')}
+                  {...form.register("address")}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="shopPhone">Shop Contact Phone (Optional)</Label>
-              <p className="text-xs text-gray-500 mb-1">Leave empty to use your personal phone number</p>
+              <p className="text-xs text-gray-500 mb-1">
+                Leave empty to use your personal phone number
+              </p>
               <div className="relative">
                 <PhoneIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                 <Input
@@ -388,19 +432,24 @@ export default function CompleteShopSetupPage() {
                   type="tel"
                   placeholder={placeholders.shopPhone}
                   className="h-11 pl-10 rounded-xl"
-                  {...form.register('shopPhone')}
+                  {...form.register("shopPhone")}
                 />
               </div>
             </div>
 
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-              <strong>Note:</strong> Shop registrations require verification. Your account will be active after admin approval.
+              <strong>Note:</strong> Shop registrations require verification.
+              Your account will be active after admin approval.
             </div>
 
             <Button
               type="submit"
               className="w-full h-12 rounded-xl gold-gradient text-white font-semibold transition-all hover:shadow-lg hover:shadow-gold-500/25"
-              disabled={isLoading || phoneCheckState.checking || phoneCheckState.exists === true}
+              disabled={
+                isLoading ||
+                phoneCheckState.checking ||
+                phoneCheckState.exists === true
+              }
             >
               {isLoading ? (
                 <span className="flex items-center gap-2">

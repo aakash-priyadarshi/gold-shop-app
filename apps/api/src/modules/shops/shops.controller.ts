@@ -1,41 +1,41 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Put,
-  Delete,
-  Param,
   Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Put,
   Query,
   UseGuards,
-} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { ShopsService } from './shops.service';
-import { CreateShopDto } from './dto/create-shop.dto';
-import { UpdateShopDto } from './dto/update-shop.dto';
-import { UpdateMetalRatesDto } from './dto/update-metal-rates.dto';
-import { OAuthShopSetupDto } from './dto/oauth-shop-setup.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { UserRole } from '@prisma/client';
+} from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { UserRole } from "@prisma/client";
+import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { Roles } from "../auth/decorators/roles.decorator";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RolesGuard } from "../auth/guards/roles.guard";
+import { CreateShopDto } from "./dto/create-shop.dto";
+import { OAuthShopSetupDto } from "./dto/oauth-shop-setup.dto";
+import { UpdateMetalRatesDto } from "./dto/update-metal-rates.dto";
+import { UpdateShopDto } from "./dto/update-shop.dto";
+import { ShopsService } from "./shops.service";
 
-@ApiTags('shops')
-@Controller('shops')
+@ApiTags("shops")
+@Controller("shops")
 export class ShopsController {
   constructor(private shopsService: ShopsService) {}
 
   // Public endpoint for verified shops listing (for /shops page)
-  @Get('public')
-  @ApiOperation({ summary: 'List all verified public shops' })
+  @Get("public")
+  @ApiOperation({ summary: "List all verified public shops" })
   async findPublicShops(
-    @Query('country') country?: string,
-    @Query('state') state?: string,
-    @Query('city') city?: string,
-    @Query('page') page?: string,
-    @Query('pageSize') pageSize?: string,
+    @Query("country") country?: string,
+    @Query("state") state?: string,
+    @Query("city") city?: string,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string
   ) {
     return this.shopsService.findAll({
       country,
@@ -47,50 +47,50 @@ export class ShopsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'List all shops' })
+  @ApiOperation({ summary: "List all shops" })
   async findAll(
-    @Query('country') country?: string,
-    @Query('city') city?: string,
-    @Query('jewelleryType') jewelleryType?: string,
-    @Query('method') method?: string,
-    @Query('verified') verified?: string,
-    @Query('page') page?: string,
-    @Query('pageSize') pageSize?: string,
+    @Query("country") country?: string,
+    @Query("city") city?: string,
+    @Query("jewelleryType") jewelleryType?: string,
+    @Query("method") method?: string,
+    @Query("verified") verified?: string,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string
   ) {
     return this.shopsService.findAll({
       country,
       city,
       jewelleryType,
       method,
-      verified: verified !== undefined ? verified === 'true' : undefined,
+      verified: verified !== undefined ? verified === "true" : undefined,
       page: page ? parseInt(page, 10) : 1,
       pageSize: pageSize ? parseInt(pageSize, 10) : 20,
     });
   }
 
-  @Get('my-shop')
+  @Get("my-shop")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get current user shop' })
-  async getMyShop(@CurrentUser('id') userId: string) {
+  @ApiOperation({ summary: "Get current user shop" })
+  async getMyShop(@CurrentUser("id") userId: string) {
     return this.shopsService.findByUserId(userId);
   }
 
-  @Get('my-shops')
+  @Get("my-shops")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SHOPKEEPER)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get all shops owned by current user' })
-  async getMyShops(@CurrentUser('id') userId: string) {
+  @ApiOperation({ summary: "Get all shops owned by current user" })
+  async getMyShops(@CurrentUser("id") userId: string) {
     return this.shopsService.findAllByUserId(userId);
   }
 
-  @Get('my-shop/dashboard')
+  @Get("my-shop/dashboard")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SHOPKEEPER)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get shop dashboard' })
-  async getDashboard(@CurrentUser('shopId') shopId: string) {
+  @ApiOperation({ summary: "Get shop dashboard" })
+  async getDashboard(@CurrentUser("shopId") shopId: string) {
     return this.shopsService.getShopDashboard(shopId);
   }
 
@@ -98,16 +98,19 @@ export class ShopsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SHOPKEEPER)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create a new shop' })
-  async create(@CurrentUser('id') userId: string, @Body() dto: CreateShopDto) {
+  @ApiOperation({ summary: "Create a new shop" })
+  async create(@CurrentUser("id") userId: string, @Body() dto: CreateShopDto) {
     return this.shopsService.create(userId, dto);
   }
 
-  @Post('setup')
+  @Post("setup")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Complete shop setup for OAuth SHOPKEEPER users' })
-  async setupShop(@CurrentUser('id') userId: string, @Body() dto: OAuthShopSetupDto) {
+  @ApiOperation({ summary: "Complete shop setup for OAuth SHOPKEEPER users" })
+  async setupShop(
+    @CurrentUser("id") userId: string,
+    @Body() dto: OAuthShopSetupDto
+  ) {
     // This endpoint allows shopkeepers who signed up via Google OAuth to create their shop
     // Also validates and saves the user's phone number (must be unique)
     return this.shopsService.setupShopForOAuthUser(userId, dto);
@@ -117,79 +120,86 @@ export class ShopsController {
   // MY SHOP ENDPOINTS (for authenticated shopkeeper)
   // ═══════════════════════════════════════════════════════════════
 
-  @Get('my-shop/settings')
+  @Get("my-shop/settings")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SHOPKEEPER)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get shop settings' })
-  async getMyShopSettings(@CurrentUser('id') userId: string) {
+  @ApiOperation({ summary: "Get shop settings" })
+  async getMyShopSettings(@CurrentUser("id") userId: string) {
     return this.shopsService.getShopSettings(userId);
   }
 
-  @Patch('my-shop/settings')
+  @Patch("my-shop/settings")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SHOPKEEPER)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update shop settings' })
+  @ApiOperation({ summary: "Update shop settings" })
   async updateMyShopSettings(
-    @CurrentUser('id') userId: string,
-    @Body() dto: UpdateShopDto,
+    @CurrentUser("id") userId: string,
+    @Body() dto: UpdateShopDto
   ) {
     return this.shopsService.updateShopSettings(userId, dto);
   }
 
-  @Get('my-shop/analytics')
+  @Get("my-shop/analytics")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SHOPKEEPER)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get shop analytics' })
+  @ApiOperation({ summary: "Get shop analytics" })
   async getMyShopAnalytics(
-    @CurrentUser('shopId') shopId: string,
-    @Query('period') period?: string,
+    @CurrentUser("shopId") shopId: string,
+    @Query("period") period?: string
   ) {
     return this.shopsService.getShopAnalytics(shopId, period);
   }
 
-  @Get('my-shop/materials')
+  @Get("my-shop/materials")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SHOPKEEPER)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get shop materials inventory' })
-  async getMyShopMaterials(@CurrentUser('shopId') shopId: string) {
+  @ApiOperation({ summary: "Get shop materials inventory" })
+  async getMyShopMaterials(@CurrentUser("shopId") shopId: string) {
     return this.shopsService.getShopMaterials(shopId);
   }
 
-  @Put('my-shop/materials')
+  @Put("my-shop/materials")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SHOPKEEPER)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update shop materials inventory' })
+  @ApiOperation({ summary: "Update shop materials inventory" })
   async updateMyShopMaterials(
-    @CurrentUser('shopId') shopId: string,
-    @CurrentUser('id') userId: string,
-    @Body() dto: { materials: Array<{ materialCode: string; isAvailable: boolean; pricePerGramNpr?: number }> },
+    @CurrentUser("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @Body()
+    dto: {
+      materials: Array<{
+        materialCode: string;
+        isAvailable: boolean;
+        pricePerGramNpr?: number;
+      }>;
+    }
   ) {
     return this.shopsService.updateShopMaterials(shopId, userId, dto.materials);
   }
 
-  @Get('my-shop/capabilities')
+  @Get("my-shop/capabilities")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SHOPKEEPER)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get shop capabilities (jewellery types)' })
-  async getMyShopCapabilities(@CurrentUser('shopId') shopId: string) {
+  @ApiOperation({ summary: "Get shop capabilities (jewellery types)" })
+  async getMyShopCapabilities(@CurrentUser("shopId") shopId: string) {
     return this.shopsService.getShopCapabilities(shopId);
   }
 
-  @Put('my-shop/capabilities')
+  @Put("my-shop/capabilities")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SHOPKEEPER)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update shop capabilities' })
+  @ApiOperation({ summary: "Update shop capabilities" })
   async updateMyShopCapabilities(
-    @CurrentUser('shopId') shopId: string,
-    @CurrentUser('id') userId: string,
-    @Body() dto: { jewelleryTypes: string[]; buildMethods?: string[] },
+    @CurrentUser("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @Body() dto: { jewelleryTypes: string[]; buildMethods?: string[] }
   ) {
     return this.shopsService.updateShopCapabilities(shopId, userId, dto);
   }
@@ -198,68 +208,68 @@ export class ShopsController {
   // PUBLIC ENDPOINTS
   // ═══════════════════════════════════════════════════════════════
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get shop by ID' })
-  async findOne(@Param('id') id: string) {
+  @Get(":id")
+  @ApiOperation({ summary: "Get shop by ID" })
+  async findOne(@Param("id") id: string) {
     return this.shopsService.findById(id);
   }
 
-  @Patch(':id')
+  @Patch(":id")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SHOPKEEPER)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update shop details' })
+  @ApiOperation({ summary: "Update shop details" })
   async update(
-    @Param('id') id: string,
-    @CurrentUser('id') userId: string,
-    @Body() dto: UpdateShopDto,
+    @Param("id") id: string,
+    @CurrentUser("id") userId: string,
+    @Body() dto: UpdateShopDto
   ) {
     return this.shopsService.update(id, userId, dto);
   }
 
-  @Patch(':id/metal-rates')
+  @Patch(":id/metal-rates")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SHOPKEEPER)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update shop metal rates' })
+  @ApiOperation({ summary: "Update shop metal rates" })
   async updateMetalRates(
-    @Param('id') id: string,
-    @CurrentUser('id') userId: string,
-    @Body() dto: UpdateMetalRatesDto,
+    @Param("id") id: string,
+    @CurrentUser("id") userId: string,
+    @Body() dto: UpdateMetalRatesDto
   ) {
     return this.shopsService.updateMetalRates(id, userId, dto);
   }
 
-  @Patch(':id/verify')
+  @Patch(":id/verify")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Verify a shop (Admin only)' })
-  async verify(@Param('id') id: string, @CurrentUser('id') adminId: string) {
+  @ApiOperation({ summary: "Verify a shop (Admin only)" })
+  async verify(@Param("id") id: string, @CurrentUser("id") adminId: string) {
     return this.shopsService.verifyShop(id, adminId);
   }
 
-  @Patch(':id/admin')
+  @Patch(":id/admin")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update shop details (Admin only)' })
+  @ApiOperation({ summary: "Update shop details (Admin only)" })
   async adminUpdateShop(
-    @Param('id') id: string,
-    @CurrentUser('id') adminId: string,
-    @Body() dto: UpdateShopDto,
+    @Param("id") id: string,
+    @CurrentUser("id") adminId: string,
+    @Body() dto: UpdateShopDto
   ) {
     return this.shopsService.adminUpdateShop(id, adminId, dto);
   }
 
-  @Delete(':id/admin')
+  @Delete(":id/admin")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete a shop (Admin only)' })
+  @ApiOperation({ summary: "Delete a shop (Admin only)" })
   async adminDeleteShop(
-    @Param('id') id: string,
-    @CurrentUser('id') adminId: string,
+    @Param("id") id: string,
+    @CurrentUser("id") adminId: string
   ) {
     return this.shopsService.adminDeleteShop(id, adminId);
   }

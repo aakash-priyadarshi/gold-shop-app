@@ -1,9 +1,5 @@
-import {
-  IsString,
-  IsOptional,
-  MinLength,
-} from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsOptional, IsString, MinLength } from "class-validator";
 
 /**
  * DTO for completing shop setup for OAuth (Google) authenticated shopkeepers.
@@ -11,48 +7,57 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
  * and needs to provide shop details and their phone number.
  */
 export class OAuthShopSetupDto {
-  @ApiProperty({ example: 'Golden Dreams Jewellers', description: 'Shop name' })
+  @ApiProperty({ example: "Golden Dreams Jewellers", description: "Shop name" })
   @IsString()
   @MinLength(2)
   shopName: string;
 
-  @ApiProperty({ 
-    example: '+9779812345678', 
-    description: 'Shopkeeper\'s personal phone number (required, must be unique)' 
+  @ApiProperty({
+    example: "+9779812345678",
+    description:
+      "Shopkeeper's personal phone number (required, must be unique)",
   })
   @IsString()
   @MinLength(10)
   userPhone: string;
 
-  @ApiPropertyOptional({ enum: ['NP', 'IN', 'US', 'AE', 'UK'], default: 'NP' })
+  @ApiPropertyOptional({ enum: ["NP", "IN", "US", "AE", "UK"], default: "NP" })
   @IsOptional()
   @IsString()
   country?: string;
 
-  @ApiPropertyOptional({ example: 'NPR', description: 'Currency code' })
+  @ApiPropertyOptional({ example: "NPR", description: "Currency code" })
   @IsOptional()
   @IsString()
   currency?: string;
 
-  @ApiProperty({ example: 'Kathmandu', description: 'City where shop is located' })
+  @ApiProperty({
+    example: "Kathmandu",
+    description: "City where shop is located",
+  })
   @IsString()
   @MinLength(2)
   city: string;
 
-  @ApiPropertyOptional({ example: 'New Road, Kathmandu', description: 'Shop address' })
+  @ApiPropertyOptional({
+    example: "New Road, Kathmandu",
+    description: "Shop address",
+  })
   @IsOptional()
   @IsString()
   address?: string;
 
-  @ApiPropertyOptional({ 
-    example: '+977-1-4234567', 
-    description: 'Shop contact phone (optional, can be same as user phone)' 
+  @ApiPropertyOptional({
+    example: "+977-1-4234567",
+    description: "Shop contact phone (optional, can be same as user phone)",
   })
   @IsOptional()
   @IsString()
   shopPhone?: string;
 
-  @ApiPropertyOptional({ description: 'Shop contact email (defaults to user email)' })
+  @ApiPropertyOptional({
+    description: "Shop contact email (defaults to user email)",
+  })
   @IsOptional()
   @IsString()
   contactEmail?: string;

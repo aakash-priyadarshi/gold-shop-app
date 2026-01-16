@@ -1,8 +1,8 @@
-import { Module } from '@nestjs/common';
-import { ShopsService } from './shops.service';
-import { ShopsController } from './shops.controller';
-import { AuditModule } from '../audit/audit.module';
-import { RedisModule } from '../../common';
+import { Module } from "@nestjs/common";
+import { RedisModule } from "../../common";
+import { AuditModule } from "../audit/audit.module";
+import { ShopsController } from "./shops.controller";
+import { ShopsService } from "./shops.service";
 
 @Module({
   imports: [AuditModule, RedisModule],
