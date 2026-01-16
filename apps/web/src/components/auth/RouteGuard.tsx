@@ -1,8 +1,13 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { useAuth, UserRole, getDashboardRoute, isRouteAllowedForRole } from '@/hooks/useAuth';
+import {
+  getDashboardRoute,
+  isRouteAllowedForRole,
+  useAuth,
+  UserRole,
+} from "@/hooks/useAuth";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -10,10 +15,10 @@ interface RouteGuardProps {
   requireAuth?: boolean;
 }
 
-export function RouteGuard({ 
-  children, 
-  allowedRoles, 
-  requireAuth = true 
+export function RouteGuard({
+  children,
+  allowedRoles,
+  requireAuth = true,
 }: RouteGuardProps) {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
@@ -37,10 +42,22 @@ export function RouteGuard({
     }
 
     // Check if current route is allowed for user's role
-    if (isAuthenticated && user && !isRouteAllowedForRole(pathname, user.role)) {
+    if (
+      isAuthenticated &&
+      user &&
+      !isRouteAllowedForRole(pathname, user.role)
+    ) {
       router.push(getDashboardRoute(user.role));
     }
-  }, [isLoading, isAuthenticated, user, pathname, router, allowedRoles, requireAuth]);
+  }, [
+    isLoading,
+    isAuthenticated,
+    user,
+    pathname,
+    router,
+    allowedRoles,
+    requireAuth,
+  ]);
 
   // Show loading state
   if (isLoading) {
@@ -70,7 +87,7 @@ export function RouteGuard({
 // Specific guards for each role
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   return (
-    <RouteGuard allowedRoles={['ADMIN']} requireAuth={true}>
+    <RouteGuard allowedRoles={["ADMIN"]} requireAuth={true}>
       {children}
     </RouteGuard>
   );
@@ -89,8 +106,12 @@ export function ShopkeeperGuard({ children }: { children: React.ReactNode }) {
 
     // If user is SHOPKEEPER but has no shop, redirect to complete setup
     // Exception: if already on the setup page, don't redirect
-    if (user.role === 'SHOPKEEPER' && !user.shop?.id && pathname !== '/auth/complete-shop-setup') {
-      router.replace('/auth/complete-shop-setup');
+    if (
+      user.role === "SHOPKEEPER" &&
+      !user.shop?.id &&
+      pathname !== "/auth/complete-shop-setup"
+    ) {
+      router.replace("/auth/complete-shop-setup");
     }
   }, [isLoading, isAuthenticated, user, pathname, router]);
 
@@ -107,7 +128,7 @@ export function ShopkeeperGuard({ children }: { children: React.ReactNode }) {
   }
 
   // If shopkeeper has no shop, show nothing (redirect happening)
-  if (user?.role === 'SHOPKEEPER' && !user.shop?.id) {
+  if (user?.role === "SHOPKEEPER" && !user.shop?.id) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
@@ -119,7 +140,7 @@ export function ShopkeeperGuard({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <RouteGuard allowedRoles={['SHOPKEEPER']} requireAuth={true}>
+    <RouteGuard allowedRoles={["SHOPKEEPER"]} requireAuth={true}>
       {children}
     </RouteGuard>
   );
@@ -130,7 +151,7 @@ export const ShopGuard = ShopkeeperGuard;
 
 export function CustomerGuard({ children }: { children: React.ReactNode }) {
   return (
-    <RouteGuard allowedRoles={['CUSTOMER']} requireAuth={true}>
+    <RouteGuard allowedRoles={["CUSTOMER"]} requireAuth={true}>
       {children}
     </RouteGuard>
   );
@@ -139,7 +160,7 @@ export function CustomerGuard({ children }: { children: React.ReactNode }) {
 // Guard for shop-related pages (Admin and Shopkeeper)
 export function ShopAccessGuard({ children }: { children: React.ReactNode }) {
   return (
-    <RouteGuard allowedRoles={['ADMIN', 'SHOPKEEPER']} requireAuth={true}>
+    <RouteGuard allowedRoles={["ADMIN", "SHOPKEEPER"]} requireAuth={true}>
       {children}
     </RouteGuard>
   );

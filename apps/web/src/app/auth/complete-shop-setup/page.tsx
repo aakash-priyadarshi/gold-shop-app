@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth, getDashboardRoute } from '@/hooks/useAuth';
 import { AuthBackground } from '@/components/auth/AuthBackground';
 import { usePreferencesStore, type CountryCode } from '@/store/preferences';
-import { api } from '@/lib/api';
+import { api, authApi } from '@/lib/api';
 import {
   BuildingStorefrontIcon,
   PhoneIcon,
@@ -22,12 +22,14 @@ import {
   ExclamationCircleIcon,
   ArrowRightIcon,
   CheckCircleIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline';
+import { CheckCircleIcon as CheckCircleSolid, XCircleIcon } from '@heroicons/react/24/solid';
 
-// Shop setup schema (no password needed - user already authenticated via Google)
+// Shop setup schema - userPhone is required and unique, shopPhone is optional
 const shopSetupSchema = z.object({
   shopName: z.string().min(2, 'Shop name must be at least 2 characters'),
-  phone: z.string().min(10, 'Please enter a valid phone number'),
+  userPhone: z.string().min(10, 'Please enter a valid phone number'),
   country: z.enum(['NP', 'IN', 'US', 'AE', 'UK'], { required_error: 'Please select a country' }),
   city: z.string().min(2, 'City must be at least 2 characters'),
   address: z.string().optional(),
@@ -96,6 +98,13 @@ export default function CompleteShopSetupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
+  // Phone uniqueness check state (same pattern as register page)
+  const [phoneCheckState, setPhoneCheckState] = useState<{
+    checking: boolean;
+    exists: boolean | null;
+  }>({ checking: false, exists: null });
+  const phoneCheckTimeout = useRef<NodeJS.Timeout | null>(null);
+
   // Get detected country from preferences store
   const detectedCountry = usePreferencesStore((state) => state.country);
   const placeholders = countryPlaceholders[detectedCountry] || countryPlaceholders['US'];
@@ -106,6 +115,38 @@ export default function CompleteShopSetupPage() {
       country: detectedCountry as any,
     },
   });
+
+  // Real-time phone uniqueness check with debounce (Redis-backed for speed)
+  const checkPhoneAvailability = useCallback(async (phone: string) => {
+    if (!phone || phone.length < 7) {
+      setPhoneCheckState({ checking: false, exists: null });
+      return;
+    }
+
+    // Clear previous timeout
+    if (phoneCheckTimeout.current) {
+      clearTimeout(phoneCheckTimeout.current);
+    }
+
+    setPhoneCheckState({ checking: true, exists: null });
+
+    // Debounce the API call by 500ms
+    phoneCheckTimeout.current = setTimeout(async () => {
+      try {
+        const response = await authApi.checkPhone(phone);
+        setPhoneCheckState({ checking: false, exists: response.data.exists });
+      } catch (error) {
+        setPhoneCheckState({ checking: false, exists: null });
+      }
+    }, 500);
+  }, []);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (phoneCheckTimeout.current) clearTimeout(phoneCheckTimeout.current);
+    };
+  }, []);
 
   // Redirect if not authenticated or not a shopkeeper
   useEffect(() => {
@@ -121,20 +162,30 @@ export default function CompleteShopSetupPage() {
   }, [isAuthenticated, user, router]);
 
   const onSubmit = async (data: ShopSetupForm) => {
+    // Check if phone is already taken
+    if (phoneCheckState.exists) {
+      toast({
+        variant: 'destructive',
+        title: 'Phone number unavailable',
+        description: 'This phone number is already registered. Please use a different number.',
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       const country = countryOptions.find(c => c.value === data.country);
       
-      // Create shop for the authenticated user
+      // Create shop for the authenticated user with new field names
       await api.post('/shops/setup', {
         shopName: data.shopName,
-        phone: data.phone,
+        userPhone: data.userPhone,
         country: data.country,
         currency: country?.currency || 'NPR',
         city: data.city,
         address: data.address,
-        contactPhone: data.shopPhone || data.phone,
+        shopPhone: data.shopPhone,
         contactEmail: user?.email,
       });
 
@@ -220,21 +271,51 @@ export default function CompleteShopSetupPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Your Phone Number</Label>
+              <Label htmlFor="userPhone">Your Phone Number <span className="text-red-500">*</span></Label>
+              <p className="text-xs text-gray-500 mb-1">This will be your account phone number (must be unique)</p>
               <div className="relative">
-                <PhoneIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                 <Input
-                  id="phone"
+                  id="userPhone"
                   type="tel"
                   placeholder={placeholders.phone}
-                  className="h-11 pl-10 rounded-xl"
-                  {...form.register('phone')}
+                  className={`h-11 pl-10 pr-10 rounded-xl ${
+                    phoneCheckState.exists === true ? 'border-red-500 focus-visible:ring-red-500' :
+                    phoneCheckState.exists === false ? 'border-green-500 focus-visible:ring-green-500' : ''
+                  }`}
+                  {...form.register('userPhone', {
+                    onChange: (e) => checkPhoneAvailability(e.target.value),
+                  })}
                 />
+                {/* Phone check indicator */}
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
+                  {phoneCheckState.checking && (
+                    <div className="w-4 h-4 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
+                  )}
+                  {!phoneCheckState.checking && phoneCheckState.exists === false && (
+                    <CheckCircleSolid className="h-5 w-5 text-green-500" />
+                  )}
+                  {!phoneCheckState.checking && phoneCheckState.exists === true && (
+                    <XCircleIcon className="h-5 w-5 text-red-500" />
+                  )}
+                </div>
               </div>
-              {form.formState.errors.phone && (
+              {form.formState.errors.userPhone && (
                 <p className="text-sm text-red-500 flex items-center gap-1">
                   <ExclamationCircleIcon className="h-3.5 w-3.5" />
-                  {form.formState.errors.phone.message}
+                  {form.formState.errors.userPhone.message}
+                </p>
+              )}
+              {phoneCheckState.exists === true && (
+                <p className="text-sm text-red-500 flex items-center gap-1">
+                  <XCircleIcon className="h-3.5 w-3.5" />
+                  This phone number is already registered
+                </p>
+              )}
+              {phoneCheckState.exists === false && (
+                <p className="text-sm text-green-600 flex items-center gap-1">
+                  <CheckCircleSolid className="h-3.5 w-3.5" />
+                  Phone number is available
                 </p>
               )}
             </div>
@@ -298,7 +379,8 @@ export default function CompleteShopSetupPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="shopPhone">Shop Phone (Optional)</Label>
+              <Label htmlFor="shopPhone">Shop Contact Phone (Optional)</Label>
+              <p className="text-xs text-gray-500 mb-1">Leave empty to use your personal phone number</p>
               <div className="relative">
                 <PhoneIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                 <Input
@@ -318,7 +400,7 @@ export default function CompleteShopSetupPage() {
             <Button
               type="submit"
               className="w-full h-12 rounded-xl gold-gradient text-white font-semibold transition-all hover:shadow-lg hover:shadow-gold-500/25"
-              disabled={isLoading}
+              disabled={isLoading || phoneCheckState.checking || phoneCheckState.exists === true}
             >
               {isLoading ? (
                 <span className="flex items-center gap-2">

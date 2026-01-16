@@ -255,8 +255,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Redirect to appropriate dashboard
         // Check if shopkeeper needs to complete shop setup first
-        if (fullUser.role === 'SHOPKEEPER' && !fullUser.shop?.id) {
-          router.push('/auth/complete-shop-setup');
+        if (fullUser.role === "SHOPKEEPER" && !fullUser.shop?.id) {
+          router.push("/auth/complete-shop-setup");
         } else {
           const dashboardRoute = getDashboardRoute(fullUser.role);
           router.push(dashboardRoute);
@@ -349,8 +349,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Redirect to appropriate dashboard
         // Check if shopkeeper needs to complete shop setup first
-        if (fullUser.role === 'SHOPKEEPER' && !fullUser.shop?.id) {
-          router.push('/auth/complete-shop-setup');
+        if (fullUser.role === "SHOPKEEPER" && !fullUser.shop?.id) {
+          router.push("/auth/complete-shop-setup");
         } else {
           const dashboardRoute = getDashboardRoute(fullUser.role);
           router.push(dashboardRoute);
@@ -500,7 +500,7 @@ export function withAuth<P extends object>(
       if (!isLoading) {
         if (!isAuthenticated) {
           router.push("/auth/login");
-        } else if (user?.role === 'SHOPKEEPER' && !user.shop?.id) {
+        } else if (user?.role === "SHOPKEEPER" && !user.shop?.id) {
           // Shopkeeper without shop must complete setup
           router.push("/auth/complete-shop-setup");
         } else if (allowedRoles && user && !allowedRoles.includes(user.role)) {
@@ -523,7 +523,7 @@ export function withAuth<P extends object>(
     }
 
     // Shopkeeper without shop should not render protected content
-    if (user?.role === 'SHOPKEEPER' && !user.shop?.id) {
+    if (user?.role === "SHOPKEEPER" && !user.shop?.id) {
       return null;
     }
 

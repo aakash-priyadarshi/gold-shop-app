@@ -3,12 +3,15 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { RedisService } from '../../common';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
 import { UpdateMetalRatesDto } from './dto/update-metal-rates.dto';
+import { OAuthShopSetupDto } from './dto/oauth-shop-setup.dto';
 import { UserRole, UserStatus } from '@prisma/client';
 
 @Injectable()
@@ -16,13 +19,58 @@ export class ShopsService {
   constructor(
     private prisma: PrismaService,
     private auditService: AuditService,
+    private redisService: RedisService,
   ) {}
 
   /**
-   * Setup shop for OAuth users who signed up as SHOPKEEPER
-   * This also updates their user status to PENDING_VERIFICATION
+   * Check if a phone number is already registered (using Redis cache first)
    */
-  async setupShopForOAuthUser(userId: string, dto: CreateShopDto) {
+  private async checkPhoneUniqueness(phone: string, excludeUserId?: string): Promise<boolean> {
+    const normalizedPhone = phone.trim();
+    const cacheKey = `phone:${normalizedPhone}`;
+
+    // Check Redis cache first
+    try {
+      const cached = await this.redisService.get(cacheKey);
+      if (cached) {
+        const cachedData = JSON.parse(cached);
+        // If excluding a user (like self), check if it's them
+        if (excludeUserId && cachedData.userId === excludeUserId) {
+          return false; // Phone belongs to same user, allow
+        }
+        return true; // Phone exists for another user
+      }
+    } catch (error) {
+      // Redis error, fall back to database
+    }
+
+    // Check database
+    const existingUser = await this.prisma.user.findFirst({
+      where: { 
+        phone: normalizedPhone,
+        ...(excludeUserId ? { NOT: { id: excludeUserId } } : {}),
+      },
+      select: { id: true },
+    });
+
+    if (existingUser) {
+      // Cache the result for future lookups
+      try {
+        await this.redisService.set(cacheKey, JSON.stringify({ userId: existingUser.id }), 3600);
+      } catch (error) {
+        // Ignore Redis errors
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Setup shop for OAuth users who signed up as SHOPKEEPER
+   * This validates phone uniqueness and creates the shop
+   */
+  async setupShopForOAuthUser(userId: string, dto: OAuthShopSetupDto) {
     // Check if user exists and is a shopkeeper
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -38,8 +86,17 @@ export class ShopsService {
     }
 
     if (user.shops && user.shops.length > 0) {
-      throw new BadRequestException('User already has a shop');
+      throw new BadRequestException('User already has a shop. Use the dashboard to add more shops.');
     }
+
+    // Check phone uniqueness (required for OAuth setup)
+    const phoneExists = await this.checkPhoneUniqueness(dto.userPhone, userId);
+    if (phoneExists) {
+      throw new ConflictException('This phone number is already registered. Please use a different number.');
+    }
+
+    // Determine shop contact phone (use shop phone if provided, else user phone)
+    const shopContactPhone = dto.shopPhone || dto.userPhone;
 
     // Create shop and update user phone in a transaction
     const [shop] = await this.prisma.$transaction([
@@ -47,36 +104,31 @@ export class ShopsService {
         data: {
           userId,
           shopName: dto.shopName,
-          shopNameNe: dto.shopNameNe,
-          shopNameHi: dto.shopNameHi,
-          description: dto.description,
           country: dto.country || 'NP',
-          state: dto.state,
           city: dto.city,
-          address: dto.address,
-          pincode: dto.pincode,
-          contactPhone: dto.contactPhone,
+          address: dto.address || '',
+          contactPhone: shopContactPhone,
           contactEmail: dto.contactEmail || user.email,
-          whatsappNumber: dto.whatsappNumber,
-          supportedJewelleryTypes: dto.supportedJewelleryTypes || [],
-          supportedMethods: dto.supportedMethods || [],
-          supportedMaterials: dto.supportedMaterials || [],
-          supportedFinishes: dto.supportedFinishes || [],
-          codEnabled: dto.codEnabled || false,
-          makingChargePercent: dto.makingChargePercent || 10,
+          makingChargePercent: 10, // Default making charge
         },
       }),
-      // Update user's phone if provided
-      ...(dto.contactPhone ? [
-        this.prisma.user.update({
-          where: { id: userId },
-          data: { 
-            phone: dto.contactPhone,
-            // Keep status as PENDING_VERIFICATION until admin approves the shop
-          },
-        }),
-      ] : []),
+      // Update user's phone number
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { 
+          phone: dto.userPhone,
+          // Keep status as PENDING_VERIFICATION until admin approves the shop
+        },
+      }),
     ]);
+
+    // Cache the phone number in Redis
+    try {
+      const cacheKey = `phone:${dto.userPhone.trim()}`;
+      await this.redisService.set(cacheKey, JSON.stringify({ userId }), 3600);
+    } catch (error) {
+      // Ignore Redis errors
+    }
 
     await this.auditService.log({
       userId,

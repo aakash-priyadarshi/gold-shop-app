@@ -15,6 +15,7 @@ import { ShopsService } from './shops.service';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
 import { UpdateMetalRatesDto } from './dto/update-metal-rates.dto';
+import { OAuthShopSetupDto } from './dto/oauth-shop-setup.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -106,8 +107,9 @@ export class ShopsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Complete shop setup for OAuth SHOPKEEPER users' })
-  async setupShop(@CurrentUser('id') userId: string, @Body() dto: CreateShopDto) {
+  async setupShop(@CurrentUser('id') userId: string, @Body() dto: OAuthShopSetupDto) {
     // This endpoint allows shopkeepers who signed up via Google OAuth to create their shop
+    // Also validates and saves the user's phone number (must be unique)
     return this.shopsService.setupShopForOAuthUser(userId, dto);
   }
 
