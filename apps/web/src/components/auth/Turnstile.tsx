@@ -90,10 +90,10 @@ export function Turnstile({
       return;
     }
 
-    // Load Turnstile script
+    // Load Turnstile script with explicit rendering mode
     const script = document.createElement("script");
     script.src =
-      "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad";
+      "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onTurnstileLoad";
     script.async = true;
     script.defer = true;
 
@@ -120,11 +120,13 @@ export function Turnstile({
     return null;
   }
 
+  // IMPORTANT: Do NOT add cf-turnstile class or data-sitekey attribute here!
+  // We use explicit rendering via window.turnstile.render() in the useEffect.
+  // Adding those attributes causes Cloudflare's script to auto-render a second widget.
   return (
     <div
       ref={containerRef}
-      className={`cf-turnstile ${className}`}
-      data-sitekey={TURNSTILE_SITE_KEY}
+      className={`turnstile-container ${className}`}
     />
   );
 }
