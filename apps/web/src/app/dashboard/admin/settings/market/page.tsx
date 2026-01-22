@@ -1,22 +1,16 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { AdminGuard } from '@/components/auth/RouteGuard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
+import { AdminGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -24,78 +18,79 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  FLAG_IMAGES,
+  FlagImage,
+  type FlagCode,
+} from "@/components/ui/phone-input";
 import {
-  Globe,
-  RefreshCw,
-  Loader2,
-  Edit,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/hooks/use-toast";
+import api from "@/lib/api";
+import {
   CheckCircle,
-  XCircle,
   DollarSign,
-  Scale,
-  Phone,
+  Edit,
+  Globe,
+  Loader2,
   Mail,
   MapPin,
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import api from '@/lib/api';
+  Phone,
+  RefreshCw,
+  Scale,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
-// Market region data
-const marketFlags: Record<string, string> = {
-  NP: '🇳🇵',
-  IN: '🇮🇳',
-  US: '🇺🇸',
-  UK: '🇬🇧',
-  EU: '🇪🇺',
-  AE: '🇦🇪',
-};
+// Valid flag codes for rendering
+const validFlagCodes = Object.keys(FLAG_IMAGES);
 
 const marketNames: Record<string, string> = {
-  NP: 'Nepal',
-  IN: 'India',
-  US: 'United States',
-  UK: 'United Kingdom',
-  EU: 'European Union',
-  AE: 'United Arab Emirates',
+  NP: "Nepal",
+  IN: "India",
+  US: "United States",
+  UK: "United Kingdom",
+  EU: "European Union",
+  AE: "United Arab Emirates",
 };
 
 const availableCurrencies = [
-  { code: 'NPR', name: 'Nepalese Rupee', symbol: 'रु' },
-  { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
-  { code: 'USD', name: 'US Dollar', symbol: '$' },
-  { code: 'GBP', name: 'British Pound', symbol: '£' },
-  { code: 'EUR', name: 'Euro', symbol: '€' },
-  { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ' },
+  { code: "NPR", name: "Nepalese Rupee", symbol: "रु" },
+  { code: "INR", name: "Indian Rupee", symbol: "₹" },
+  { code: "USD", name: "US Dollar", symbol: "$" },
+  { code: "GBP", name: "British Pound", symbol: "£" },
+  { code: "EUR", name: "Euro", symbol: "€" },
+  { code: "AED", name: "UAE Dirham", symbol: "د.إ" },
 ];
 
 const availableWeightUnits = [
-  { code: 'GRAM', name: 'Grams', symbol: 'g' },
-  { code: 'KILOGRAM', name: 'Kilograms', symbol: 'kg' },
-  { code: 'TOLA', name: 'Tola', symbol: 'tola' },
-  { code: 'LAAL', name: 'Laal', symbol: 'laal' },
-  { code: 'OUNCE', name: 'Troy Ounce', symbol: 'oz' },
-  { code: 'POUND', name: 'Pounds', symbol: 'lb' },
+  { code: "GRAM", name: "Grams", symbol: "g" },
+  { code: "KILOGRAM", name: "Kilograms", symbol: "kg" },
+  { code: "TOLA", name: "Tola", symbol: "tola" },
+  { code: "LAAL", name: "Laal", symbol: "laal" },
+  { code: "OUNCE", name: "Troy Ounce", symbol: "oz" },
+  { code: "POUND", name: "Pounds", symbol: "lb" },
 ];
 
 const availablePaymentMethods = [
-  { code: 'CARD', name: 'Credit/Debit Card' },
-  { code: 'BANK_TRANSFER', name: 'Bank Transfer' },
-  { code: 'UPI', name: 'UPI' },
-  { code: 'ESEWA', name: 'eSewa' },
-  { code: 'KHALTI', name: 'Khalti' },
-  { code: 'CONNECTIPS', name: 'ConnectIPS' },
-  { code: 'PAYPAL', name: 'PayPal' },
-  { code: 'STRIPE', name: 'Stripe' },
-  { code: 'PAID_AT_SHOP', name: 'Pay at Shop' },
+  { code: "CARD", name: "Credit/Debit Card" },
+  { code: "BANK_TRANSFER", name: "Bank Transfer" },
+  { code: "UPI", name: "UPI" },
+  { code: "ESEWA", name: "eSewa" },
+  { code: "KHALTI", name: "Khalti" },
+  { code: "CONNECTIPS", name: "ConnectIPS" },
+  { code: "PAYPAL", name: "PayPal" },
+  { code: "STRIPE", name: "Stripe" },
+  { code: "PAID_AT_SHOP", name: "Pay at Shop" },
 ];
 
 interface MarketConfig {
@@ -120,9 +115,11 @@ export default function AdminMarketSettingsPage() {
   const [markets, setMarkets] = useState<MarketConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [selectedMarket, setSelectedMarket] = useState<MarketConfig | null>(null);
+  const [selectedMarket, setSelectedMarket] = useState<MarketConfig | null>(
+    null,
+  );
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  
+
   // Edit form state
   const [editForm, setEditForm] = useState<Partial<MarketConfig>>({});
 
@@ -133,14 +130,14 @@ export default function AdminMarketSettingsPage() {
   async function fetchMarkets() {
     setLoading(true);
     try {
-      const response = await api.get('/market/admin/list');
+      const response = await api.get("/market/admin/list");
       setMarkets(response.data);
     } catch (error) {
-      console.error('Failed to fetch markets:', error);
+      console.error("Failed to fetch markets:", error);
       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to load market configurations.',
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load market configurations.",
       });
     } finally {
       setLoading(false);
@@ -156,33 +153,33 @@ export default function AdminMarketSettingsPage() {
       defaultWeightUnit: market.defaultWeightUnit,
       supportedWeightUnits: market.supportedWeightUnits,
       supportedPaymentMethods: market.supportedPaymentMethods,
-      heroHeadline: market.heroHeadline || '',
-      heroSubheadline: market.heroSubheadline || '',
-      contactEmail: market.contactEmail || '',
-      contactPhone: market.contactPhone || '',
-      contactAddress: market.contactAddress || '',
+      heroHeadline: market.heroHeadline || "",
+      heroSubheadline: market.heroSubheadline || "",
+      contactEmail: market.contactEmail || "",
+      contactPhone: market.contactPhone || "",
+      contactAddress: market.contactAddress || "",
     });
     setIsEditDialogOpen(true);
   }
 
   async function handleSaveMarket() {
     if (!selectedMarket) return;
-    
+
     setSaving(true);
     try {
       await api.patch(`/market/admin/${selectedMarket.countryCode}`, editForm);
       toast({
-        title: 'Market Updated',
+        title: "Market Updated",
         description: `${marketNames[selectedMarket.countryCode]} market configuration saved.`,
       });
       setIsEditDialogOpen(false);
       fetchMarkets();
     } catch (error) {
-      console.error('Failed to save market:', error);
+      console.error("Failed to save market:", error);
       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to save market configuration.',
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save market configuration.",
       });
     } finally {
       setSaving(false);
@@ -191,7 +188,7 @@ export default function AdminMarketSettingsPage() {
 
   function toggleArrayItem(array: string[], item: string): string[] {
     if (array.includes(item)) {
-      return array.filter(i => i !== item);
+      return array.filter((i) => i !== item);
     }
     return [...array, item];
   }
@@ -212,7 +209,9 @@ export default function AdminMarketSettingsPage() {
               </p>
             </div>
             <Button variant="outline" onClick={fetchMarkets} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+              />
               Refresh
             </Button>
           </div>
@@ -220,36 +219,51 @@ export default function AdminMarketSettingsPage() {
           {/* Markets Grid */}
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {loading ? (
-              Array(6).fill(0).map((_, i) => (
-                <Card key={i} className="animate-pulse">
-                  <CardHeader className="pb-3">
-                    <div className="h-6 bg-gray-200 rounded w-1/2" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="h-4 bg-gray-200 rounded w-3/4" />
-                      <div className="h-4 bg-gray-200 rounded w-1/2" />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+              Array(6)
+                .fill(0)
+                .map((_, i) => (
+                  <Card key={i} className="animate-pulse">
+                    <CardHeader className="pb-3">
+                      <div className="h-6 bg-gray-200 rounded w-1/2" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-3/4" />
+                        <div className="h-4 bg-gray-200 rounded w-1/2" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
             ) : markets.length === 0 ? (
               <Card className="col-span-full">
                 <CardContent className="py-8 text-center text-muted-foreground">
-                  No market configurations found. Run database seed to create default markets.
+                  No market configurations found. Run database seed to create
+                  default markets.
                 </CardContent>
               </Card>
             ) : (
               markets.map((market) => (
-                <Card key={market.id} className={!market.isActive ? 'opacity-60' : ''}>
+                <Card
+                  key={market.id}
+                  className={!market.isActive ? "opacity-60" : ""}
+                >
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg flex items-center gap-2">
-                        <span className="text-2xl">{marketFlags[market.countryCode]}</span>
+                        {validFlagCodes.includes(market.countryCode) ? (
+                          <FlagImage
+                            code={market.countryCode as FlagCode}
+                            size={28}
+                          />
+                        ) : (
+                          <span className="text-2xl">🌍</span>
+                        )}
                         {marketNames[market.countryCode]}
                       </CardTitle>
-                      <Badge variant={market.isActive ? 'default' : 'secondary'}>
-                        {market.isActive ? 'Active' : 'Inactive'}
+                      <Badge
+                        variant={market.isActive ? "default" : "secondary"}
+                      >
+                        {market.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </div>
                     <CardDescription>
@@ -260,7 +274,9 @@ export default function AdminMarketSettingsPage() {
                     <div className="flex items-center gap-2 text-sm">
                       <DollarSign className="h-4 w-4 text-muted-foreground" />
                       <span className="text-muted-foreground">Currency:</span>
-                      <span className="font-medium">{market.defaultCurrency}</span>
+                      <span className="font-medium">
+                        {market.defaultCurrency}
+                      </span>
                       <span className="text-xs text-muted-foreground">
                         (+{market.supportedCurrencies.length - 1} more)
                       </span>
@@ -268,7 +284,9 @@ export default function AdminMarketSettingsPage() {
                     <div className="flex items-center gap-2 text-sm">
                       <Scale className="h-4 w-4 text-muted-foreground" />
                       <span className="text-muted-foreground">Weight:</span>
-                      <span className="font-medium">{market.defaultWeightUnit}</span>
+                      <span className="font-medium">
+                        {market.defaultWeightUnit}
+                      </span>
                       <span className="text-xs text-muted-foreground">
                         (+{market.supportedWeightUnits.length - 1} more)
                       </span>
@@ -288,9 +306,9 @@ export default function AdminMarketSettingsPage() {
                         </span>
                       </div>
                     )}
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="w-full mt-3"
                       onClick={() => openEditDialog(market)}
                     >
@@ -308,10 +326,18 @@ export default function AdminMarketSettingsPage() {
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
-                  <span className="text-2xl">
-                    {selectedMarket && marketFlags[selectedMarket.countryCode]}
-                  </span>
-                  Edit {selectedMarket && marketNames[selectedMarket.countryCode]} Market
+                  {selectedMarket &&
+                  validFlagCodes.includes(selectedMarket.countryCode) ? (
+                    <FlagImage
+                      code={selectedMarket.countryCode as FlagCode}
+                      size={28}
+                    />
+                  ) : (
+                    <span className="text-2xl">🌍</span>
+                  )}
+                  Edit{" "}
+                  {selectedMarket && marketNames[selectedMarket.countryCode]}{" "}
+                  Market
                 </DialogTitle>
                 <DialogDescription>
                   Configure regional settings for this market
@@ -329,7 +355,7 @@ export default function AdminMarketSettingsPage() {
                   </div>
                   <Switch
                     checked={editForm.isActive}
-                    onCheckedChange={(checked) => 
+                    onCheckedChange={(checked) =>
                       setEditForm({ ...editForm, isActive: checked })
                     }
                   />
@@ -340,7 +366,7 @@ export default function AdminMarketSettingsPage() {
                   <Label>Default Currency</Label>
                   <Select
                     value={editForm.defaultCurrency}
-                    onValueChange={(value) => 
+                    onValueChange={(value) =>
                       setEditForm({ ...editForm, defaultCurrency: value })
                     }
                   >
@@ -355,20 +381,24 @@ export default function AdminMarketSettingsPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  
+
                   <Label>Supported Currencies</Label>
                   <div className="flex flex-wrap gap-2">
                     {availableCurrencies.map((curr) => (
                       <Badge
                         key={curr.code}
-                        variant={editForm.supportedCurrencies?.includes(curr.code) ? 'default' : 'outline'}
+                        variant={
+                          editForm.supportedCurrencies?.includes(curr.code)
+                            ? "default"
+                            : "outline"
+                        }
                         className="cursor-pointer"
-                        onClick={() => 
+                        onClick={() =>
                           setEditForm({
                             ...editForm,
                             supportedCurrencies: toggleArrayItem(
                               editForm.supportedCurrencies || [],
-                              curr.code
+                              curr.code,
                             ),
                           })
                         }
@@ -384,7 +414,7 @@ export default function AdminMarketSettingsPage() {
                   <Label>Default Weight Unit</Label>
                   <Select
                     value={editForm.defaultWeightUnit}
-                    onValueChange={(value) => 
+                    onValueChange={(value) =>
                       setEditForm({ ...editForm, defaultWeightUnit: value })
                     }
                   >
@@ -405,14 +435,18 @@ export default function AdminMarketSettingsPage() {
                     {availableWeightUnits.map((unit) => (
                       <Badge
                         key={unit.code}
-                        variant={editForm.supportedWeightUnits?.includes(unit.code) ? 'default' : 'outline'}
+                        variant={
+                          editForm.supportedWeightUnits?.includes(unit.code)
+                            ? "default"
+                            : "outline"
+                        }
                         className="cursor-pointer"
-                        onClick={() => 
+                        onClick={() =>
                           setEditForm({
                             ...editForm,
                             supportedWeightUnits: toggleArrayItem(
                               editForm.supportedWeightUnits || [],
-                              unit.code
+                              unit.code,
                             ),
                           })
                         }
@@ -430,14 +464,20 @@ export default function AdminMarketSettingsPage() {
                     {availablePaymentMethods.map((method) => (
                       <Badge
                         key={method.code}
-                        variant={editForm.supportedPaymentMethods?.includes(method.code) ? 'default' : 'outline'}
+                        variant={
+                          editForm.supportedPaymentMethods?.includes(
+                            method.code,
+                          )
+                            ? "default"
+                            : "outline"
+                        }
                         className="cursor-pointer"
-                        onClick={() => 
+                        onClick={() =>
                           setEditForm({
                             ...editForm,
                             supportedPaymentMethods: toggleArrayItem(
                               editForm.supportedPaymentMethods || [],
-                              method.code
+                              method.code,
                             ),
                           })
                         }
@@ -452,8 +492,8 @@ export default function AdminMarketSettingsPage() {
                 <div className="space-y-3">
                   <Label>Hero Headline</Label>
                   <Input
-                    value={editForm.heroHeadline || ''}
-                    onChange={(e) => 
+                    value={editForm.heroHeadline || ""}
+                    onChange={(e) =>
                       setEditForm({ ...editForm, heroHeadline: e.target.value })
                     }
                     placeholder="Discover Exquisite Jewellery From Trusted Artisans"
@@ -461,9 +501,12 @@ export default function AdminMarketSettingsPage() {
 
                   <Label>Hero Subheadline</Label>
                   <Textarea
-                    value={editForm.heroSubheadline || ''}
-                    onChange={(e) => 
-                      setEditForm({ ...editForm, heroSubheadline: e.target.value })
+                    value={editForm.heroSubheadline || ""}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        heroSubheadline: e.target.value,
+                      })
                     }
                     placeholder="Connect with verified local jewellers..."
                     rows={2}
@@ -478,8 +521,8 @@ export default function AdminMarketSettingsPage() {
                   </Label>
                   <Input
                     type="email"
-                    value={editForm.contactEmail || ''}
-                    onChange={(e) => 
+                    value={editForm.contactEmail || ""}
+                    onChange={(e) =>
                       setEditForm({ ...editForm, contactEmail: e.target.value })
                     }
                     placeholder="support@orivraa.com"
@@ -490,8 +533,8 @@ export default function AdminMarketSettingsPage() {
                     Contact Phone
                   </Label>
                   <Input
-                    value={editForm.contactPhone || ''}
-                    onChange={(e) => 
+                    value={editForm.contactPhone || ""}
+                    onChange={(e) =>
                       setEditForm({ ...editForm, contactPhone: e.target.value })
                     }
                     placeholder="+977 9800000000"
@@ -502,9 +545,12 @@ export default function AdminMarketSettingsPage() {
                     Contact Address
                   </Label>
                   <Textarea
-                    value={editForm.contactAddress || ''}
-                    onChange={(e) => 
-                      setEditForm({ ...editForm, contactAddress: e.target.value })
+                    value={editForm.contactAddress || ""}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        contactAddress: e.target.value,
+                      })
                     }
                     placeholder="123 Jewellery Street, Kathmandu"
                     rows={2}
@@ -513,7 +559,10 @@ export default function AdminMarketSettingsPage() {
               </div>
 
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditDialogOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button onClick={handleSaveMarket} disabled={saving}>

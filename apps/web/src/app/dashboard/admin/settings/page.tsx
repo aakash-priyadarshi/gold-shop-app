@@ -1,14 +1,16 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { AdminGuard } from '@/components/auth/RouteGuard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { AdminGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -17,45 +19,49 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { FlagImage, type FlagCode } from "@/components/ui/phone-input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { adminApi } from "@/lib/api";
 import {
-  Settings,
-  Percent,
-  Globe,
-  DollarSign,
-  Shield,
   Bell,
-  Database,
-  RefreshCw,
-  Loader2,
-  Send,
-  Mail,
   CheckCircle2,
-  XCircle,
+  Database,
+  DollarSign,
+  Globe,
   KeyRound,
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { adminApi } from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
-
+  Loader2,
+  Mail,
+  Percent,
+  RefreshCw,
+  Send,
+  Settings,
+  Shield,
+  XCircle,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 const supportedRegions = [
-  { code: 'NP', name: 'Nepal', currency: 'NPR', flag: '🇳🇵' },
-  { code: 'IN', name: 'India', currency: 'INR', flag: '🇮🇳' },
-  { code: 'US', name: 'United States', currency: 'USD', flag: '🇺🇸' },
-  { code: 'UK', name: 'United Kingdom', currency: 'GBP', flag: '🇬🇧' },
-  { code: 'AE', name: 'UAE', currency: 'AED', flag: '🇦🇪' },
-  { code: 'EU', name: 'European Union', currency: 'EUR', flag: '🇪🇺' },
+  { code: "NP", name: "Nepal", currency: "NPR" },
+  { code: "IN", name: "India", currency: "INR" },
+  { code: "US", name: "United States", currency: "USD" },
+  { code: "UK", name: "United Kingdom", currency: "GBP" },
+  { code: "AE", name: "UAE", currency: "AED" },
+  { code: "EU", name: "European Union", currency: "EUR" },
 ];
 
-const supportedCurrencies = ['NPR', 'INR', 'USD', 'GBP', 'AED', 'EUR'];
+const supportedCurrencies = ["NPR", "INR", "USD", "GBP", "AED", "EUR"];
 
 export default function AdminSettingsPage() {
   const { user } = useAuth();
@@ -64,21 +70,24 @@ export default function AdminSettingsPage() {
   const [sendingNotification, setSendingNotification] = useState(false);
   const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
   const [notificationData, setNotificationData] = useState({
-    title: '',
-    message: '',
-    type: 'INFO',
+    title: "",
+    message: "",
+    type: "INFO",
     targetRoles: [] as string[],
   });
 
   // Email settings state
-  const [emailStatus, setEmailStatus] = useState<{ configured: boolean; sender: string } | null>(null);
+  const [emailStatus, setEmailStatus] = useState<{
+    configured: boolean;
+    sender: string;
+  } | null>(null);
   const [loadingEmailStatus, setLoadingEmailStatus] = useState(true);
-  const [testEmail, setTestEmail] = useState('');
+  const [testEmail, setTestEmail] = useState("");
   const [sendingTestEmail, setSendingTestEmail] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [adminEmailForm, setAdminEmailForm] = useState({
-    newEmail: '',
-    currentPassword: '',
+    newEmail: "",
+    currentPassword: "",
   });
   const [updatingAdminEmail, setUpdatingAdminEmail] = useState(false);
 
@@ -89,7 +98,7 @@ export default function AdminSettingsPage() {
         const response = await adminApi.getEmailStatus();
         setEmailStatus(response.data);
       } catch (error) {
-        console.error('Failed to fetch email status:', error);
+        console.error("Failed to fetch email status:", error);
       } finally {
         setLoadingEmailStatus(false);
       }
@@ -100,9 +109,9 @@ export default function AdminSettingsPage() {
   const handleSendTestEmail = async () => {
     if (!testEmail) {
       toast({
-        variant: 'destructive',
-        title: 'Email Required',
-        description: 'Please enter an email address to send the test to.',
+        variant: "destructive",
+        title: "Email Required",
+        description: "Please enter an email address to send the test to.",
       });
       return;
     }
@@ -111,15 +120,15 @@ export default function AdminSettingsPage() {
     try {
       await adminApi.sendTestEmail(testEmail);
       toast({
-        title: 'Test Email Sent',
+        title: "Test Email Sent",
         description: `Test email has been sent to ${testEmail}. Check your inbox.`,
       });
-      setTestEmail('');
+      setTestEmail("");
     } catch (error) {
       toast({
-        variant: 'destructive',
-        title: 'Send Failed',
-        description: 'Could not send test email. Check SMTP configuration.',
+        variant: "destructive",
+        title: "Send Failed",
+        description: "Could not send test email. Check SMTP configuration.",
       });
     } finally {
       setSendingTestEmail(false);
@@ -129,9 +138,9 @@ export default function AdminSettingsPage() {
   const handleUpdateAdminEmail = async () => {
     if (!adminEmailForm.newEmail || !adminEmailForm.currentPassword) {
       toast({
-        variant: 'destructive',
-        title: 'Missing Fields',
-        description: 'Please fill in all fields.',
+        variant: "destructive",
+        title: "Missing Fields",
+        description: "Please fill in all fields.",
       });
       return;
     }
@@ -143,16 +152,18 @@ export default function AdminSettingsPage() {
         currentPassword: adminEmailForm.currentPassword,
       });
       toast({
-        title: 'Admin Email Updated',
+        title: "Admin Email Updated",
         description: `Admin notification email has been updated to ${adminEmailForm.newEmail}.`,
       });
       setEmailDialogOpen(false);
-      setAdminEmailForm({ newEmail: '', currentPassword: '' });
+      setAdminEmailForm({ newEmail: "", currentPassword: "" });
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Update Failed',
-        description: error?.response?.data?.message || 'Could not update admin email. Check your password.',
+        variant: "destructive",
+        title: "Update Failed",
+        description:
+          error?.response?.data?.message ||
+          "Could not update admin email. Check your password.",
       });
     } finally {
       setUpdatingAdminEmail(false);
@@ -164,14 +175,14 @@ export default function AdminSettingsPage() {
     try {
       await adminApi.refreshMarketRates();
       toast({
-        title: 'Market Rates Refreshed',
-        description: 'Latest market rates have been fetched successfully.',
+        title: "Market Rates Refreshed",
+        description: "Latest market rates have been fetched successfully.",
       });
     } catch (error) {
       toast({
-        variant: 'destructive',
-        title: 'Refresh Failed',
-        description: 'Could not refresh market rates. Try again later.',
+        variant: "destructive",
+        title: "Refresh Failed",
+        description: "Could not refresh market rates. Try again later.",
       });
     } finally {
       setRefreshingRates(false);
@@ -183,14 +194,14 @@ export default function AdminSettingsPage() {
     try {
       await adminApi.clearCache();
       toast({
-        title: 'Cache Cleared',
-        description: 'Platform cache has been cleared successfully.',
+        title: "Cache Cleared",
+        description: "Platform cache has been cleared successfully.",
       });
     } catch (error) {
       toast({
-        variant: 'destructive',
-        title: 'Clear Failed',
-        description: 'Could not clear cache. Try again later.',
+        variant: "destructive",
+        title: "Clear Failed",
+        description: "Could not clear cache. Try again later.",
       });
     } finally {
       setClearingCache(false);
@@ -200,9 +211,9 @@ export default function AdminSettingsPage() {
   const handleSendNotification = async () => {
     if (!notificationData.title || !notificationData.message) {
       toast({
-        variant: 'destructive',
-        title: 'Missing Fields',
-        description: 'Please fill in title and message.',
+        variant: "destructive",
+        title: "Missing Fields",
+        description: "Please fill in title and message.",
       });
       return;
     }
@@ -211,16 +222,21 @@ export default function AdminSettingsPage() {
     try {
       await adminApi.broadcastNotification(notificationData);
       toast({
-        title: 'Notification Sent',
-        description: 'System notification has been broadcasted.',
+        title: "Notification Sent",
+        description: "System notification has been broadcasted.",
       });
       setNotificationDialogOpen(false);
-      setNotificationData({ title: '', message: '', type: 'INFO', targetRoles: [] });
+      setNotificationData({
+        title: "",
+        message: "",
+        type: "INFO",
+        targetRoles: [],
+      });
     } catch (error) {
       toast({
-        variant: 'destructive',
-        title: 'Send Failed',
-        description: 'Could not send notification. Try again later.',
+        variant: "destructive",
+        title: "Send Failed",
+        description: "Could not send notification. Try again later.",
       });
     } finally {
       setSendingNotification(false);
@@ -267,8 +283,8 @@ export default function AdminSettingsPage() {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground">
-                      Platform earns 1% on each successful transaction.
-                      This setting is currently read-only.
+                      Platform earns 1% on each successful transaction. This
+                      setting is currently read-only.
                     </p>
                   </div>
                 </div>
@@ -293,7 +309,7 @@ export default function AdminSettingsPage() {
                       key={region.code}
                       className="flex items-center gap-3 p-3 border rounded-lg"
                     >
-                      <span className="text-2xl">{region.flag}</span>
+                      <FlagImage code={region.code as FlagCode} size={28} />
                       <div>
                         <p className="font-medium">{region.name}</p>
                         <p className="text-sm text-muted-foreground">
@@ -320,7 +336,11 @@ export default function AdminSettingsPage() {
               <CardContent>
                 <div className="flex flex-wrap gap-2">
                   {supportedCurrencies.map((currency) => (
-                    <Badge key={currency} variant="outline" className="text-sm py-1 px-3">
+                    <Badge
+                      key={currency}
+                      variant="outline"
+                      className="text-sm py-1 px-3"
+                    >
                       {currency}
                     </Badge>
                   ))}
@@ -423,14 +443,12 @@ export default function AdminSettingsPage() {
                   <RefreshCw className="h-5 w-5" />
                   Quick Actions
                 </CardTitle>
-                <CardDescription>
-                  Administrative operations
-                </CardDescription>
+                <CardDescription>Administrative operations</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-4">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={handleRefreshRates}
                     disabled={refreshingRates}
                   >
@@ -441,8 +459,8 @@ export default function AdminSettingsPage() {
                     )}
                     Refresh Market Rates
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={handleClearCache}
                     disabled={clearingCache}
                   >
@@ -453,7 +471,10 @@ export default function AdminSettingsPage() {
                     )}
                     Clear Cache
                   </Button>
-                  <Dialog open={notificationDialogOpen} onOpenChange={setNotificationDialogOpen}>
+                  <Dialog
+                    open={notificationDialogOpen}
+                    onOpenChange={setNotificationDialogOpen}
+                  >
                     <DialogTrigger asChild>
                       <Button variant="outline">
                         <Bell className="h-4 w-4 mr-2" />
@@ -464,7 +485,8 @@ export default function AdminSettingsPage() {
                       <DialogHeader>
                         <DialogTitle>Send System Notification</DialogTitle>
                         <DialogDescription>
-                          Broadcast a notification to all users or specific roles.
+                          Broadcast a notification to all users or specific
+                          roles.
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
@@ -473,7 +495,12 @@ export default function AdminSettingsPage() {
                           <Input
                             placeholder="Notification title"
                             value={notificationData.title}
-                            onChange={(e) => setNotificationData(prev => ({ ...prev, title: e.target.value }))}
+                            onChange={(e) =>
+                              setNotificationData((prev) => ({
+                                ...prev,
+                                title: e.target.value,
+                              }))
+                            }
                           />
                         </div>
                         <div className="space-y-2">
@@ -482,14 +509,24 @@ export default function AdminSettingsPage() {
                             placeholder="Notification message..."
                             rows={3}
                             value={notificationData.message}
-                            onChange={(e) => setNotificationData(prev => ({ ...prev, message: e.target.value }))}
+                            onChange={(e) =>
+                              setNotificationData((prev) => ({
+                                ...prev,
+                                message: e.target.value,
+                              }))
+                            }
                           />
                         </div>
                         <div className="space-y-2">
                           <Label>Type</Label>
                           <Select
                             value={notificationData.type}
-                            onValueChange={(value) => setNotificationData(prev => ({ ...prev, type: value }))}
+                            onValueChange={(value) =>
+                              setNotificationData((prev) => ({
+                                ...prev,
+                                type: value,
+                              }))
+                            }
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -505,11 +542,13 @@ export default function AdminSettingsPage() {
                         <div className="space-y-2">
                           <Label>Target Roles (leave empty for all)</Label>
                           <Select
-                            value={notificationData.targetRoles[0] || 'all'}
-                            onValueChange={(value) => setNotificationData(prev => ({ 
-                              ...prev, 
-                              targetRoles: value === 'all' ? [] : [value] 
-                            }))}
+                            value={notificationData.targetRoles[0] || "all"}
+                            onValueChange={(value) =>
+                              setNotificationData((prev) => ({
+                                ...prev,
+                                targetRoles: value === "all" ? [] : [value],
+                              }))
+                            }
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="All Users" />
@@ -517,17 +556,27 @@ export default function AdminSettingsPage() {
                             <SelectContent>
                               <SelectItem value="all">All Users</SelectItem>
                               <SelectItem value="ADMIN">Admins Only</SelectItem>
-                              <SelectItem value="SHOPKEEPER">Shopkeepers Only</SelectItem>
-                              <SelectItem value="CUSTOMER">Customers Only</SelectItem>
+                              <SelectItem value="SHOPKEEPER">
+                                Shopkeepers Only
+                              </SelectItem>
+                              <SelectItem value="CUSTOMER">
+                                Customers Only
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                       </div>
                       <DialogFooter>
-                        <Button variant="outline" onClick={() => setNotificationDialogOpen(false)}>
+                        <Button
+                          variant="outline"
+                          onClick={() => setNotificationDialogOpen(false)}
+                        >
                           Cancel
                         </Button>
-                        <Button onClick={handleSendNotification} disabled={sendingNotification}>
+                        <Button
+                          onClick={handleSendNotification}
+                          disabled={sendingNotification}
+                        >
                           {sendingNotification ? (
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           ) : (
@@ -570,16 +619,24 @@ export default function AdminSettingsPage() {
                     <div>
                       <p className="font-medium">SMTP Status</p>
                       <p className="text-sm text-muted-foreground">
-                        {loadingEmailStatus 
-                          ? 'Checking configuration...' 
-                          : emailStatus?.configured 
+                        {loadingEmailStatus
+                          ? "Checking configuration..."
+                          : emailStatus?.configured
                             ? `Configured • Sender: ${emailStatus.sender}`
-                            : 'Not configured - check environment variables'}
+                            : "Not configured - check environment variables"}
                       </p>
                     </div>
                   </div>
-                  <Badge variant={emailStatus?.configured ? 'default' : 'destructive'}>
-                    {loadingEmailStatus ? 'Loading' : emailStatus?.configured ? 'Active' : 'Inactive'}
+                  <Badge
+                    variant={
+                      emailStatus?.configured ? "default" : "destructive"
+                    }
+                  >
+                    {loadingEmailStatus
+                      ? "Loading"
+                      : emailStatus?.configured
+                        ? "Active"
+                        : "Inactive"}
                   </Badge>
                 </div>
 
@@ -597,7 +654,7 @@ export default function AdminSettingsPage() {
                       onChange={(e) => setTestEmail(e.target.value)}
                       className="flex-1"
                     />
-                    <Button 
+                    <Button
                       onClick={handleSendTestEmail}
                       disabled={sendingTestEmail || !emailStatus?.configured}
                     >
@@ -620,7 +677,10 @@ export default function AdminSettingsPage() {
                         Email address where admin alerts are sent
                       </p>
                     </div>
-                    <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+                    <Dialog
+                      open={emailDialogOpen}
+                      onOpenChange={setEmailDialogOpen}
+                    >
                       <DialogTrigger asChild>
                         <Button variant="outline">
                           <KeyRound className="h-4 w-4 mr-2" />
@@ -631,15 +691,16 @@ export default function AdminSettingsPage() {
                         <DialogHeader>
                           <DialogTitle>Change Admin Email</DialogTitle>
                           <DialogDescription>
-                            Update the email address for admin notifications and alerts.
-                            You must verify your identity with your current password.
+                            Update the email address for admin notifications and
+                            alerts. You must verify your identity with your
+                            current password.
                           </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
                           <div className="space-y-2">
                             <Label>Current Email</Label>
                             <Input
-                              value={user?.email || ''}
+                              value={user?.email || ""}
                               disabled
                               className="bg-muted"
                             />
@@ -651,38 +712,47 @@ export default function AdminSettingsPage() {
                               type="email"
                               placeholder="new-admin@example.com"
                               value={adminEmailForm.newEmail}
-                              onChange={(e) => setAdminEmailForm(prev => ({ 
-                                ...prev, 
-                                newEmail: e.target.value 
-                              }))}
+                              onChange={(e) =>
+                                setAdminEmailForm((prev) => ({
+                                  ...prev,
+                                  newEmail: e.target.value,
+                                }))
+                              }
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="currentPassword">Current Password</Label>
+                            <Label htmlFor="currentPassword">
+                              Current Password
+                            </Label>
                             <Input
                               id="currentPassword"
                               type="password"
                               placeholder="Enter your password to confirm"
                               value={adminEmailForm.currentPassword}
-                              onChange={(e) => setAdminEmailForm(prev => ({ 
-                                ...prev, 
-                                currentPassword: e.target.value 
-                              }))}
+                              onChange={(e) =>
+                                setAdminEmailForm((prev) => ({
+                                  ...prev,
+                                  currentPassword: e.target.value,
+                                }))
+                              }
                             />
                           </div>
                         </div>
                         <DialogFooter>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             onClick={() => {
                               setEmailDialogOpen(false);
-                              setAdminEmailForm({ newEmail: '', currentPassword: '' });
+                              setAdminEmailForm({
+                                newEmail: "",
+                                currentPassword: "",
+                              });
                             }}
                           >
                             Cancel
                           </Button>
-                          <Button 
-                            onClick={handleUpdateAdminEmail} 
+                          <Button
+                            onClick={handleUpdateAdminEmail}
                             disabled={updatingAdminEmail}
                           >
                             {updatingAdminEmail ? (

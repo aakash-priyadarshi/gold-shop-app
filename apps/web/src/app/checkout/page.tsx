@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FlagImage, type FlagCode } from "@/components/ui/phone-input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
@@ -58,11 +59,11 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const COUNTRIES = [
-  { code: "NP", name: "Nepal", flag: "🇳🇵" },
-  { code: "IN", name: "India", flag: "🇮🇳" },
-  { code: "US", name: "United States", flag: "🇺🇸" },
-  { code: "UK", name: "United Kingdom", flag: "🇬🇧" },
-  { code: "AE", name: "UAE", flag: "🇦🇪" },
+  { code: "NP", name: "Nepal" },
+  { code: "IN", name: "India" },
+  { code: "US", name: "United States" },
+  { code: "UK", name: "United Kingdom" },
+  { code: "AE", name: "UAE" },
 ];
 
 // Payment methods available per country
@@ -176,7 +177,7 @@ function CheckoutPageContent() {
   // State
   const [mounted, setMounted] = useState(false);
   const [step, setStep] = useState<"address" | "payment" | "confirm">(
-    "address"
+    "address",
   );
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState<string>("");
@@ -598,12 +599,11 @@ function CheckoutPageContent() {
                             <p className="text-sm text-gray-500 dark:text-gray-500">
                               {address.city}, {address.state} {address.pincode}
                             </p>
-                            <p className="text-sm text-gray-500 dark:text-gray-500">
-                              {
-                                COUNTRIES.find(
-                                  (c) => c.code === address.country
-                                )?.flag
-                              }{" "}
+                            <p className="text-sm text-gray-500 dark:text-gray-500 flex items-center gap-1">
+                              <FlagImage
+                                code={address.country as FlagCode}
+                                size={14}
+                              />
                               {address.phone}
                             </p>
                           </label>
@@ -889,7 +889,10 @@ function CheckoutPageContent() {
                   <SelectContent>
                     {COUNTRIES.map((c) => (
                       <SelectItem key={c.code} value={c.code}>
-                        {c.flag} {c.name}
+                        <span className="flex items-center gap-2">
+                          <FlagImage code={c.code as FlagCode} size={16} />
+                          {c.name}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>

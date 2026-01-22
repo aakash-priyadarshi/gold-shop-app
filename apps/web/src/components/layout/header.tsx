@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { FlagImage, type FlagCode } from "@/components/ui/phone-input";
 import {
   Popover,
   PopoverContent,
@@ -383,14 +384,19 @@ export function Header() {
                       <SelectTrigger className="flex-1 h-11 text-sm rounded-xl">
                         <MapPinIcon className="h-4 w-4 mr-2 text-gray-400" />
                         <SelectValue>
-                          {COUNTRIES[country]?.flag} {COUNTRIES[country]?.name}
+                          <span className="flex items-center gap-2">
+                            <FlagImage code={country as FlagCode} size={16} />
+                            {COUNTRIES[country]?.name}
+                          </span>
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {Object.entries(COUNTRIES).map(([code, info]) => (
                           <SelectItem key={code} value={code}>
-                            <span className="mr-2">{info.flag}</span>
-                            {info.name}
+                            <span className="flex items-center gap-2">
+                              <FlagImage code={code as FlagCode} size={16} />
+                              {info.name}
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -546,7 +552,10 @@ export function Header() {
                 <SelectTrigger className="w-[90px] h-9 text-xs rounded-lg border-gray-200">
                   <MapPinIcon className="h-3 w-3 mr-1 text-gray-400" />
                   <SelectValue>
-                    {COUNTRIES[country]?.flag} {country}
+                    <span className="flex items-center gap-1">
+                      <FlagImage code={country as FlagCode} size={14} />
+                      {country}
+                    </span>
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -555,10 +564,12 @@ export function Header() {
                   </div>
                   {Object.entries(COUNTRIES).map(([code, info]) => (
                     <SelectItem key={code} value={code} className="text-xs">
-                      <span className="mr-1">{info.flag}</span>
-                      {info.name}
-                      <span className="ml-1 text-muted-foreground">
-                        ({info.taxDisplay})
+                      <span className="flex items-center gap-1">
+                        <FlagImage code={code as FlagCode} size={14} />
+                        {info.name}
+                        <span className="ml-1 text-muted-foreground">
+                          ({info.taxDisplay})
+                        </span>
                       </span>
                     </SelectItem>
                   ))}

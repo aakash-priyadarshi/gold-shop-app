@@ -1,52 +1,64 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Footer } from "@/components/layout/footer";
+import { Header } from "@/components/layout/header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { FlagImage, type FlagCode } from "@/components/ui/phone-input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useCart } from "@/contexts/CartContext";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import api from "@/lib/api";
 import {
   BuildingStorefrontIcon,
-  MapPinIcon,
-  PhoneIcon,
+  CheckBadgeIcon,
+  ChevronLeftIcon,
+  ClockIcon,
   EnvelopeIcon,
   GlobeAltIcon,
-  StarIcon,
-  CheckBadgeIcon,
-  ClockIcon,
+  MapPinIcon,
+  PhoneIcon,
   ShoppingCartIcon,
   SparklesIcon,
-  ChevronLeftIcon,
-} from '@heroicons/react/24/outline';
-import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
-import { Loader2, Package, Scale, ShoppingBag, Plus, Minus } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import api from '@/lib/api';
-import { useCart } from '@/contexts/CartContext';
-import { useAuth } from '@/hooks/useAuth';
+  StarIcon,
+} from "@heroicons/react/24/outline";
+import { StarIcon as StarSolidIcon } from "@heroicons/react/24/solid";
+import {
+  Loader2,
+  Minus,
+  Package,
+  Plus,
+  Scale,
+  ShoppingBag,
+} from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface Shop {
   id: string;
@@ -90,17 +102,30 @@ interface Product {
   composition?: any;
 }
 
-const COUNTRIES: Record<string, { name: string; flag: string; currency: string; symbol: string }> = {
-  NP: { name: 'Nepal', flag: '🇳🇵', currency: 'NPR', symbol: 'रू' },
-  IN: { name: 'India', flag: '🇮🇳', currency: 'INR', symbol: '₹' },
-  US: { name: 'United States', flag: '🇺🇸', currency: 'USD', symbol: '$' },
-  UK: { name: 'United Kingdom', flag: '🇬🇧', currency: 'GBP', symbol: '£' },
-  AE: { name: 'UAE', flag: '🇦🇪', currency: 'AED', symbol: 'د.إ' },
+const COUNTRIES: Record<
+  string,
+  { name: string; currency: string; symbol: string }
+> = {
+  NP: { name: "Nepal", currency: "NPR", symbol: "रू" },
+  IN: { name: "India", currency: "INR", symbol: "₹" },
+  US: { name: "United States", currency: "USD", symbol: "$" },
+  UK: { name: "United Kingdom", currency: "GBP", symbol: "£" },
+  AE: { name: "UAE", currency: "AED", symbol: "د.إ" },
 };
 
 const JEWELLERY_TYPES = [
-  'RING', 'NECKLACE', 'PENDANT', 'EARRING', 'BRACELET', 'BANGLE',
-  'CHAIN', 'ANKLET', 'BROOCH', 'NOSE_PIN', 'MAANG_TIKKA', 'OTHER'
+  "RING",
+  "NECKLACE",
+  "PENDANT",
+  "EARRING",
+  "BRACELET",
+  "BANGLE",
+  "CHAIN",
+  "ANKLET",
+  "BROOCH",
+  "NOSE_PIN",
+  "MAANG_TIKKA",
+  "OTHER",
 ];
 
 export default function ShopDetailPage() {
@@ -116,19 +141,19 @@ export default function ShopDetailPage() {
   const [productsLoading, setProductsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
-  
+
   // Custom order dialog
   const [customOrderOpen, setCustomOrderOpen] = useState(false);
   const [customOrderForm, setCustomOrderForm] = useState({
-    jewelleryType: '',
-    metalType: 'GOLD',
-    purity: '22K',
-    weightGrams: '',
-    description: '',
+    jewelleryType: "",
+    metalType: "GOLD",
+    purity: "22K",
+    weightGrams: "",
+    description: "",
     referenceImages: [] as string[],
   });
   const [submittingOrder, setSubmittingOrder] = useState(false);
-  
+
   // Product quantity state for cart
   const [quantities, setQuantities] = useState<Record<string, number>>({});
 
@@ -145,11 +170,14 @@ export default function ShopDetailPage() {
   }, [shopId]);
 
   // Check if current user is the shop owner
-  const isShopOwner = mounted && isAuthenticated && user && shop && (
-    user.shop?.id === shop.id || 
-    shop.userId === user.id || 
-    shop.user?.id === user.id
-  );
+  const isShopOwner =
+    mounted &&
+    isAuthenticated &&
+    user &&
+    shop &&
+    (user.shop?.id === shop.id ||
+      shop.userId === user.id ||
+      shop.user?.id === user.id);
 
   const loadShopDetails = async () => {
     setIsLoading(true);
@@ -158,8 +186,8 @@ export default function ShopDetailPage() {
       const response = await api.get(`/shops/${shopId}`);
       setShop(response.data);
     } catch (err: any) {
-      console.error('Failed to load shop:', err);
-      setError(err.response?.data?.message || 'Shop not found');
+      console.error("Failed to load shop:", err);
+      setError(err.response?.data?.message || "Shop not found");
     } finally {
       setIsLoading(false);
     }
@@ -168,13 +196,13 @@ export default function ShopDetailPage() {
   const loadShopProducts = async () => {
     setProductsLoading(true);
     try {
-      const response = await api.get('/inventory', {
-        params: { shopId, status: 'AVAILABLE' }
+      const response = await api.get("/inventory", {
+        params: { shopId, status: "AVAILABLE" },
       });
       const items = response.data?.items || response.data || [];
       setProducts(Array.isArray(items) ? items : []);
     } catch (err) {
-      console.error('Failed to load products:', err);
+      console.error("Failed to load products:", err);
       setProducts([]);
     } finally {
       setProductsLoading(false);
@@ -182,10 +210,10 @@ export default function ShopDetailPage() {
   };
 
   const getCurrency = () => {
-    if (!shop) return { code: 'NPR', symbol: 'रू' };
+    if (!shop) return { code: "NPR", symbol: "रू" };
     return {
-      code: COUNTRIES[shop.country]?.currency || 'NPR',
-      symbol: COUNTRIES[shop.country]?.symbol || 'रू',
+      code: COUNTRIES[shop.country]?.currency || "NPR",
+      symbol: COUNTRIES[shop.country]?.symbol || "रू",
     };
   };
 
@@ -196,9 +224,16 @@ export default function ShopDetailPage() {
 
     for (let i = 0; i < 5; i++) {
       if (i < fullStars) {
-        stars.push(<StarSolidIcon key={i} className="h-5 w-5 text-amber-400" />);
+        stars.push(
+          <StarSolidIcon key={i} className="h-5 w-5 text-amber-400" />,
+        );
       } else if (i === fullStars && hasHalfStar) {
-        stars.push(<StarSolidIcon key={i} className="h-5 w-5 text-amber-400 opacity-50" />);
+        stars.push(
+          <StarSolidIcon
+            key={i}
+            className="h-5 w-5 text-amber-400 opacity-50"
+          />,
+        );
       } else {
         stars.push(<StarIcon key={i} className="h-5 w-5 text-gray-300" />);
       }
@@ -210,9 +245,9 @@ export default function ShopDetailPage() {
     // Check if user is the shop owner
     if (isShopOwner) {
       toast({
-        variant: 'destructive',
-        title: 'Cannot Add to Cart',
-        description: 'You cannot purchase products from your own shop',
+        variant: "destructive",
+        title: "Cannot Add to Cart",
+        description: "You cannot purchase products from your own shop",
       });
       return;
     }
@@ -232,14 +267,14 @@ export default function ShopDetailPage() {
         },
       });
       toast({
-        title: 'Added to Cart',
+        title: "Added to Cart",
         description: `${product.nameEn} added to your cart`,
       });
     } catch (err) {
       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to add item to cart',
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to add item to cart",
       });
     }
   };
@@ -247,19 +282,19 @@ export default function ShopDetailPage() {
   const handleCustomOrder = async () => {
     if (!isAuthenticated) {
       toast({
-        variant: 'destructive',
-        title: 'Login Required',
-        description: 'Please login to place a custom order',
+        variant: "destructive",
+        title: "Login Required",
+        description: "Please login to place a custom order",
       });
-      router.push('/auth/login');
+      router.push("/auth/login");
       return;
     }
 
     if (!customOrderForm.jewelleryType || !customOrderForm.weightGrams) {
       toast({
-        variant: 'destructive',
-        title: 'Missing Fields',
-        description: 'Please fill in required fields',
+        variant: "destructive",
+        title: "Missing Fields",
+        description: "Please fill in required fields",
       });
       return;
     }
@@ -267,10 +302,10 @@ export default function ShopDetailPage() {
     setSubmittingOrder(true);
     try {
       // Create RFQ request
-      const response = await api.post('/rfq', {
+      const response = await api.post("/rfq", {
         shopId: shop!.id,
         jewelleryType: customOrderForm.jewelleryType,
-        buildMethod: 'METHOD_A',
+        buildMethod: "METHOD_A",
         alloyConfig: {
           metal: customOrderForm.metalType,
           purity: customOrderForm.purity,
@@ -281,23 +316,23 @@ export default function ShopDetailPage() {
       });
 
       toast({
-        title: 'Custom Order Submitted!',
-        description: 'The shop will respond to your request soon.',
+        title: "Custom Order Submitted!",
+        description: "The shop will respond to your request soon.",
       });
       setCustomOrderOpen(false);
       setCustomOrderForm({
-        jewelleryType: '',
-        metalType: 'GOLD',
-        purity: '22K',
-        weightGrams: '',
-        description: '',
+        jewelleryType: "",
+        metalType: "GOLD",
+        purity: "22K",
+        weightGrams: "",
+        description: "",
         referenceImages: [],
       });
     } catch (err: any) {
       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: err.response?.data?.message || 'Failed to submit order',
+        variant: "destructive",
+        title: "Error",
+        description: err.response?.data?.message || "Failed to submit order",
       });
     } finally {
       setSubmittingOrder(false);
@@ -329,9 +364,10 @@ export default function ShopDetailPage() {
               <BuildingStorefrontIcon className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <h2 className="text-xl font-semibold mb-2">Shop Not Found</h2>
               <p className="text-muted-foreground mb-4">
-                {error || 'The shop you are looking for does not exist or has been removed.'}
+                {error ||
+                  "The shop you are looking for does not exist or has been removed."}
               </p>
-              <Button onClick={() => router.push('/shops')}>
+              <Button onClick={() => router.push("/shops")}>
                 <ChevronLeftIcon className="h-4 w-4 mr-2" />
                 Browse All Shops
               </Button>
@@ -348,7 +384,7 @@ export default function ShopDetailPage() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
-      
+
       <main className="flex-1">
         {/* Owner Banner */}
         {isShopOwner && (
@@ -356,12 +392,14 @@ export default function ShopDetailPage() {
             <div className="container mx-auto px-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <BuildingStorefrontIcon className="h-5 w-5" />
-                <span className="font-medium">You are viewing your own shop</span>
+                <span className="font-medium">
+                  You are viewing your own shop
+                </span>
               </div>
-              <Button 
-                variant="secondary" 
+              <Button
+                variant="secondary"
                 size="sm"
-                onClick={() => router.push('/dashboard/shop')}
+                onClick={() => router.push("/dashboard/shop")}
               >
                 Go to Dashboard
               </Button>
@@ -375,7 +413,7 @@ export default function ShopDetailPage() {
             <Button
               variant="ghost"
               className="text-white/80 hover:text-white mb-4"
-              onClick={() => router.push('/shops')}
+              onClick={() => router.push("/shops")}
             >
               <ChevronLeftIcon className="h-4 w-4 mr-1" />
               All Shops
@@ -385,10 +423,12 @@ export default function ShopDetailPage() {
               <div className="h-24 w-24 rounded-xl bg-white/10 flex items-center justify-center">
                 <BuildingStorefrontIcon className="h-12 w-12 text-white" />
               </div>
-              
+
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-3xl md:text-4xl font-bold">{shop.shopName}</h1>
+                  <h1 className="text-3xl md:text-4xl font-bold">
+                    {shop.shopName}
+                  </h1>
                   {shop.isVerified && (
                     <Badge className="bg-green-500 text-white">
                       <CheckBadgeIcon className="h-4 w-4 mr-1" />
@@ -396,21 +436,29 @@ export default function ShopDetailPage() {
                     </Badge>
                   )}
                 </div>
-                
+
                 {shop.description && (
-                  <p className="text-amber-100 text-lg mb-4">{shop.description}</p>
+                  <p className="text-amber-100 text-lg mb-4">
+                    {shop.description}
+                  </p>
                 )}
 
                 <div className="flex flex-wrap items-center gap-4 text-sm">
                   <div className="flex items-center gap-1">
                     <MapPinIcon className="h-4 w-4" />
-                    <span>{shop.city}, {COUNTRIES[shop.country]?.name || shop.country}</span>
+                    <span>
+                      {shop.city},{" "}
+                      {COUNTRIES[shop.country]?.name || shop.country}
+                    </span>
                   </div>
                   {shop.averageRating && (
                     <div className="flex items-center gap-1">
-                      <div className="flex">{renderStars(shop.averageRating)}</div>
+                      <div className="flex">
+                        {renderStars(shop.averageRating)}
+                      </div>
                       <span className="ml-1">
-                        {shop.averageRating.toFixed(1)} ({shop.totalRatings || 0} reviews)
+                        {shop.averageRating.toFixed(1)} (
+                        {shop.totalRatings || 0} reviews)
                       </span>
                     </div>
                   )}
@@ -418,9 +466,15 @@ export default function ShopDetailPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">
-                <Dialog open={customOrderOpen} onOpenChange={setCustomOrderOpen}>
+                <Dialog
+                  open={customOrderOpen}
+                  onOpenChange={setCustomOrderOpen}
+                >
                   <DialogTrigger asChild>
-                    <Button size="lg" className="bg-white text-amber-700 hover:bg-amber-50">
+                    <Button
+                      size="lg"
+                      className="bg-white text-amber-700 hover:bg-amber-50"
+                    >
                       <SparklesIcon className="h-5 w-5 mr-2" />
                       Custom Order
                     </Button>
@@ -432,14 +486,19 @@ export default function ShopDetailPage() {
                         Request a custom jewellery piece from {shop.shopName}
                       </DialogDescription>
                     </DialogHeader>
-                    
+
                     <div className="space-y-4 py-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label>Jewellery Type *</Label>
                           <Select
                             value={customOrderForm.jewelleryType}
-                            onValueChange={(v) => setCustomOrderForm({ ...customOrderForm, jewelleryType: v })}
+                            onValueChange={(v) =>
+                              setCustomOrderForm({
+                                ...customOrderForm,
+                                jewelleryType: v,
+                              })
+                            }
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Select type" />
@@ -447,18 +506,23 @@ export default function ShopDetailPage() {
                             <SelectContent>
                               {JEWELLERY_TYPES.map((type) => (
                                 <SelectItem key={type} value={type}>
-                                  {type.replace(/_/g, ' ')}
+                                  {type.replace(/_/g, " ")}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
-                        
+
                         <div className="space-y-2">
                           <Label>Metal Type</Label>
                           <Select
                             value={customOrderForm.metalType}
-                            onValueChange={(v) => setCustomOrderForm({ ...customOrderForm, metalType: v })}
+                            onValueChange={(v) =>
+                              setCustomOrderForm({
+                                ...customOrderForm,
+                                metalType: v,
+                              })
+                            }
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -477,7 +541,12 @@ export default function ShopDetailPage() {
                           <Label>Purity</Label>
                           <Select
                             value={customOrderForm.purity}
-                            onValueChange={(v) => setCustomOrderForm({ ...customOrderForm, purity: v })}
+                            onValueChange={(v) =>
+                              setCustomOrderForm({
+                                ...customOrderForm,
+                                purity: v,
+                              })
+                            }
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -498,7 +567,12 @@ export default function ShopDetailPage() {
                             type="number"
                             step="0.01"
                             value={customOrderForm.weightGrams}
-                            onChange={(e) => setCustomOrderForm({ ...customOrderForm, weightGrams: e.target.value })}
+                            onChange={(e) =>
+                              setCustomOrderForm({
+                                ...customOrderForm,
+                                weightGrams: e.target.value,
+                              })
+                            }
                             placeholder="e.g., 5.5"
                           />
                         </div>
@@ -508,7 +582,12 @@ export default function ShopDetailPage() {
                         <Label>Description & Requirements</Label>
                         <Textarea
                           value={customOrderForm.description}
-                          onChange={(e) => setCustomOrderForm({ ...customOrderForm, description: e.target.value })}
+                          onChange={(e) =>
+                            setCustomOrderForm({
+                              ...customOrderForm,
+                              description: e.target.value,
+                            })
+                          }
                           placeholder="Describe your design requirements, preferences, etc."
                           rows={4}
                         />
@@ -516,10 +595,16 @@ export default function ShopDetailPage() {
                     </div>
 
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setCustomOrderOpen(false)}>
+                      <Button
+                        variant="outline"
+                        onClick={() => setCustomOrderOpen(false)}
+                      >
                         Cancel
                       </Button>
-                      <Button onClick={handleCustomOrder} disabled={submittingOrder}>
+                      <Button
+                        onClick={handleCustomOrder}
+                        disabled={submittingOrder}
+                      >
                         {submittingOrder ? (
                           <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -538,7 +623,11 @@ export default function ShopDetailPage() {
 
                 {shop.contactPhone && (
                   <a href={`tel:${shop.contactPhone}`}>
-                    <Button size="lg" variant="outline" className="bg-white/10 border-white/30 text-white hover:bg-white/20">
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                    >
                       <PhoneIcon className="h-5 w-5 mr-2" />
                       Call Now
                     </Button>
@@ -573,12 +662,17 @@ export default function ShopDetailPage() {
                     <div className="text-center py-12 text-muted-foreground">
                       <ShoppingBag className="h-12 w-12 mx-auto mb-4 opacity-50" />
                       <p>No products available at the moment</p>
-                      <p className="text-sm mt-2">Try placing a custom order instead!</p>
+                      <p className="text-sm mt-2">
+                        Try placing a custom order instead!
+                      </p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {products.map((product) => (
-                        <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                        <Card
+                          key={product.id}
+                          className="overflow-hidden hover:shadow-lg transition-shadow"
+                        >
                           <div className="aspect-square bg-gray-100 relative">
                             {product.images?.[0] ? (
                               <img
@@ -592,20 +686,25 @@ export default function ShopDetailPage() {
                               </div>
                             )}
                             <Badge className="absolute top-2 right-2 bg-white/90 text-gray-900">
-                              {product.jewelleryType?.replace(/_/g, ' ')}
+                              {product.jewelleryType?.replace(/_/g, " ")}
                             </Badge>
                           </div>
                           <CardContent className="p-4">
-                            <h3 className="font-semibold mb-1 line-clamp-1">{product.nameEn}</h3>
-                            <p className="text-sm text-muted-foreground mb-2">{product.sku}</p>
-                            
+                            <h3 className="font-semibold mb-1 line-clamp-1">
+                              {product.nameEn}
+                            </h3>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              {product.sku}
+                            </p>
+
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center gap-1 text-sm text-muted-foreground">
                                 <Scale className="h-4 w-4" />
                                 <span>{product.totalWeightGrams}g</span>
                               </div>
                               <span className="font-bold text-lg">
-                                {currency.symbol} {product.totalPriceNpr?.toLocaleString()}
+                                {currency.symbol}{" "}
+                                {product.totalPriceNpr?.toLocaleString()}
                               </span>
                             </div>
 
@@ -616,10 +715,15 @@ export default function ShopDetailPage() {
                                     variant="ghost"
                                     size="sm"
                                     className="h-8 w-8 p-0"
-                                    onClick={() => setQuantities({
-                                      ...quantities,
-                                      [product.id]: Math.max(1, (quantities[product.id] || 1) - 1)
-                                    })}
+                                    onClick={() =>
+                                      setQuantities({
+                                        ...quantities,
+                                        [product.id]: Math.max(
+                                          1,
+                                          (quantities[product.id] || 1) - 1,
+                                        ),
+                                      })
+                                    }
                                   >
                                     <Minus className="h-3 w-3" />
                                   </Button>
@@ -630,10 +734,15 @@ export default function ShopDetailPage() {
                                     variant="ghost"
                                     size="sm"
                                     className="h-8 w-8 p-0"
-                                    onClick={() => setQuantities({
-                                      ...quantities,
-                                      [product.id]: Math.min(product.stockQuantity, (quantities[product.id] || 1) + 1)
-                                    })}
+                                    onClick={() =>
+                                      setQuantities({
+                                        ...quantities,
+                                        [product.id]: Math.min(
+                                          product.stockQuantity,
+                                          (quantities[product.id] || 1) + 1,
+                                        ),
+                                      })
+                                    }
                                   >
                                     <Plus className="h-3 w-3" />
                                   </Button>
@@ -681,13 +790,19 @@ export default function ShopDetailPage() {
                         <div key={idx} className="border-b pb-4 last:border-0">
                           <div className="flex items-center gap-2 mb-2">
                             <div className="flex">
-                              {[...Array(5)].map((_, i) => (
+                              {[...Array(5)].map((_, i) =>
                                 i < review.overall ? (
-                                  <StarSolidIcon key={i} className="h-4 w-4 text-amber-400" />
+                                  <StarSolidIcon
+                                    key={i}
+                                    className="h-4 w-4 text-amber-400"
+                                  />
                                 ) : (
-                                  <StarIcon key={i} className="h-4 w-4 text-gray-300" />
-                                )
-                              ))}
+                                  <StarIcon
+                                    key={i}
+                                    className="h-4 w-4 text-gray-300"
+                                  />
+                                ),
+                              )}
                             </div>
                             <span className="text-sm text-muted-foreground">
                               {new Date(review.createdAt).toLocaleDateString()}
@@ -722,8 +837,9 @@ export default function ShopDetailPage() {
                         {shop.state && `, ${shop.state}`}
                         {shop.pincode && ` - ${shop.pincode}`}
                       </p>
-                      <p className="text-sm text-muted-foreground">
-                        {COUNTRIES[shop.country]?.flag} {COUNTRIES[shop.country]?.name || shop.country}
+                      <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        <FlagImage code={shop.country as FlagCode} size={14} />{" "}
+                        {COUNTRIES[shop.country]?.name || shop.country}
                       </p>
                     </div>
                   </div>
@@ -733,7 +849,7 @@ export default function ShopDetailPage() {
                       <PhoneIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                       <div>
                         <p className="font-medium">Phone</p>
-                        <a 
+                        <a
                           href={`tel:${shop.contactPhone}`}
                           className="text-sm text-amber-600 hover:underline"
                         >
@@ -748,7 +864,7 @@ export default function ShopDetailPage() {
                       <EnvelopeIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                       <div>
                         <p className="font-medium">Email</p>
-                        <a 
+                        <a
                           href={`mailto:${shop.contactEmail}`}
                           className="text-sm text-amber-600 hover:underline"
                         >
@@ -763,7 +879,7 @@ export default function ShopDetailPage() {
                       <GlobeAltIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                       <div>
                         <p className="font-medium">Website</p>
-                        <a 
+                        <a
                           href={shop.websiteUrl}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -780,7 +896,9 @@ export default function ShopDetailPage() {
                       <ClockIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                       <div>
                         <p className="font-medium">Business Hours</p>
-                        <p className="text-sm text-muted-foreground">{shop.businessHours}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {shop.businessHours}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -788,40 +906,42 @@ export default function ShopDetailPage() {
               </Card>
 
               {/* Supported Materials */}
-              {shop.supportedMaterials && shop.supportedMaterials.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Materials We Work With</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      {shop.supportedMaterials.map((material) => (
-                        <Badge key={material} variant="outline">
-                          {material?.replace(/_/g, ' ') || material}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              {shop.supportedMaterials &&
+                shop.supportedMaterials.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Materials We Work With</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-2">
+                        {shop.supportedMaterials.map((material) => (
+                          <Badge key={material} variant="outline">
+                            {material?.replace(/_/g, " ") || material}
+                          </Badge>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
               {/* Supported Jewellery Types */}
-              {shop.supportedJewelleryTypes && shop.supportedJewelleryTypes.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Jewellery Types</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      {shop.supportedJewelleryTypes.map((type) => (
-                        <Badge key={type} variant="secondary">
-                          {type?.replace(/_/g, ' ') || type}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              {shop.supportedJewelleryTypes &&
+                shop.supportedJewelleryTypes.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Jewellery Types</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-2">
+                        {shop.supportedJewelleryTypes.map((type) => (
+                          <Badge key={type} variant="secondary">
+                            {type?.replace(/_/g, " ") || type}
+                          </Badge>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
             </div>
           </div>
         </div>

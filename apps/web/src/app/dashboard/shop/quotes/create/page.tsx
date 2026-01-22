@@ -1,109 +1,104 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { ShopGuard } from '@/components/auth/RouteGuard';
-import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { ShopGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { FlagImage } from "@/components/ui/phone-input";
 import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from '@/components/ui/alert';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useImageUpload } from "@/hooks/useImageUpload";
+import { useMarket, type WeightUnit } from "@/hooks/useMarket";
+import { getApiUrl, shopQuotesApi } from "@/lib/api";
+import { getImageUrl } from "@/lib/image-upload";
+import { CURRENCIES, usePreferencesStore } from "@/store/preferences";
 import {
-  ArrowRight,
+  AlertCircle,
   ArrowLeft,
-  Upload,
-  X,
+  ArrowRight,
   Check,
   Loader2,
-  Plus,
-  Trash2,
-  Phone,
+  Upload,
   User,
-  MapPin,
-  Mail,
-  Globe,
-  Image as ImageIcon,
   UserCheck,
-  AlertCircle,
-  Search,
-  History,
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { usePreferencesStore, CURRENCIES, COUNTRIES, type CurrencyCode, type CountryCode } from '@/store/preferences';
-import { useMarket, WEIGHT_UNIT_SYMBOLS, type WeightUnit } from '@/hooks/useMarket';
-import { toGrams, fromGrams } from '@gold-shop/shared';
-import { useImageUpload } from '@/hooks/useImageUpload';
-import { getImageUrl } from '@/lib/image-upload';
-import { shopQuotesApi, getApiUrl } from '@/lib/api';
+  X,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useCallback, useRef, useState } from "react";
 
 // Pricing components
-import { AlloyBuilder, type AlloyConfig } from '@/components/pricing/AlloyBuilder';
-import { MethodCSelector, type MethodCConfig } from '@/components/pricing/MethodCSelector';
-import { GemstoneEditorV2, type GemstoneEntry as GemstoneEntryV2 } from '@/components/pricing/GemstoneEditorV2';
-import { LivePricingPanel } from '@/components/pricing/LivePricingPanel';
-import { 
-  calculateEstimate, 
-  type EstimateRequest,
-} from '@/lib/pricing/calculate-estimate';
 
 // Local type that includes METHOD_D for walk-in quotes
-type BuildMethod = 'METHOD_A' | 'METHOD_B' | 'METHOD_C' | 'METHOD_D';
+type BuildMethod = "METHOD_A" | "METHOD_B" | "METHOD_C" | "METHOD_D";
 
 const API_URL = getApiUrl();
 
 const JEWELLERY_TYPES = [
-  { value: 'RING', label: 'Ring' },
-  { value: 'NECKLACE', label: 'Necklace' },
-  { value: 'BRACELET', label: 'Bracelet' },
-  { value: 'EARRING', label: 'Earrings' },
-  { value: 'PENDANT', label: 'Pendant' },
-  { value: 'BANGLE', label: 'Bangle' },
-  { value: 'CHAIN', label: 'Chain' },
-  { value: 'ANKLET', label: 'Anklet' },
-  { value: 'NOSE_PIN', label: 'Nose Pin' },
-  { value: 'MANGALSUTRA', label: 'Mangalsutra' },
-  { value: 'MAANG_TIKKA', label: 'Maang Tikka' },
-  { value: 'OTHER', label: 'Other' },
+  { value: "RING", label: "Ring" },
+  { value: "NECKLACE", label: "Necklace" },
+  { value: "BRACELET", label: "Bracelet" },
+  { value: "EARRING", label: "Earrings" },
+  { value: "PENDANT", label: "Pendant" },
+  { value: "BANGLE", label: "Bangle" },
+  { value: "CHAIN", label: "Chain" },
+  { value: "ANKLET", label: "Anklet" },
+  { value: "NOSE_PIN", label: "Nose Pin" },
+  { value: "MANGALSUTRA", label: "Mangalsutra" },
+  { value: "MAANG_TIKKA", label: "Maang Tikka" },
+  { value: "OTHER", label: "Other" },
 ];
 
 const BUILD_METHODS = [
-  { value: 'METHOD_A', label: 'Method A: Solid Precious Metal', description: 'Pure gold, silver, or platinum throughout' },
-  { value: 'METHOD_B', label: 'Method B: Precious Metal Alloy', description: 'Gold/silver mixed with other metals for durability' },
-  { value: 'METHOD_C', label: 'Method C: Base Metal + Plating', description: 'Not solid gold. Plated/Coated.' },
-  { value: 'METHOD_D', label: 'Method D: Italian Machine Made', description: 'Machine-made chains, bangles, and intricate patterns' },
+  {
+    value: "METHOD_A",
+    label: "Method A: Solid Precious Metal",
+    description: "Pure gold, silver, or platinum throughout",
+  },
+  {
+    value: "METHOD_B",
+    label: "Method B: Precious Metal Alloy",
+    description: "Gold/silver mixed with other metals for durability",
+  },
+  {
+    value: "METHOD_C",
+    label: "Method C: Base Metal + Plating",
+    description: "Not solid gold. Plated/Coated.",
+  },
+  {
+    value: "METHOD_D",
+    label: "Method D: Italian Machine Made",
+    description: "Machine-made chains, bangles, and intricate patterns",
+  },
 ];
 
 // Country codes for phone
 const COUNTRY_CODES = [
-  { code: '+91', country: 'India', flag: '🇮🇳' },
-  { code: '+977', country: 'Nepal', flag: '🇳🇵' },
-  { code: '+1', country: 'USA', flag: '🇺🇸' },
-  { code: '+44', country: 'UK', flag: '🇬🇧' },
-  { code: '+971', country: 'UAE', flag: '🇦🇪' },
-  { code: '+65', country: 'Singapore', flag: '🇸🇬' },
-  { code: '+61', country: 'Australia', flag: '🇦🇺' },
-  { code: '+81', country: 'Japan', flag: '🇯🇵' },
+  { code: "+91", country: "India", flagCode: "IN" as const },
+  { code: "+977", country: "Nepal", flagCode: "NP" as const },
+  { code: "+1", country: "USA", flagCode: "US" as const },
+  { code: "+44", country: "UK", flagCode: "GB" as const },
+  { code: "+971", country: "UAE", flagCode: "AE" as const },
+  { code: "+65", country: "Singapore", flagCode: null },
+  { code: "+61", country: "Australia", flagCode: null },
+  { code: "+81", country: "Japan", flagCode: null },
 ];
 
 interface CustomerLookupResult {
@@ -126,7 +121,7 @@ interface CustomerLookupResult {
       createdAt: string;
     }>;
   } | null;
-  source: 'cache' | 'database' | null;
+  source: "cache" | "database" | null;
 }
 
 export default function CreateShopQuotePage() {
@@ -134,58 +129,66 @@ export default function CreateShopQuotePage() {
   const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   // Customer lookup state
   const [isLookingUp, setIsLookingUp] = useState(false);
-  const [lookupResult, setLookupResult] = useState<CustomerLookupResult | null>(null);
-  const [showReturningCustomerAlert, setShowReturningCustomerAlert] = useState(false);
+  const [lookupResult, setLookupResult] = useState<CustomerLookupResult | null>(
+    null,
+  );
+  const [showReturningCustomerAlert, setShowReturningCustomerAlert] =
+    useState(false);
   const phoneDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Customer details state
   const [customerDetails, setCustomerDetails] = useState({
-    name: '',
-    phoneCountryCode: '+91',
-    phone: '',
-    email: '',
-    address: '',
-    city: '',
-    country: 'India',
+    name: "",
+    phoneCountryCode: "+91",
+    phone: "",
+    email: "",
+    address: "",
+    city: "",
+    country: "India",
   });
 
   // Get currency from global preferences store
   const currency = usePreferencesStore((state) => state.currency);
   const currencyInfo = CURRENCIES[currency];
   const country = usePreferencesStore((state) => state.country);
-  
+
   // Get weight unit from market context
   const { selectedWeightUnit, config: marketConfig } = useMarket();
-  const [displayWeightUnit, setDisplayWeightUnit] = useState<WeightUnit>(selectedWeightUnit);
+  const [displayWeightUnit, setDisplayWeightUnit] =
+    useState<WeightUnit>(selectedWeightUnit);
 
   // Form data
   const [formData, setFormData] = useState({
-    jewelleryType: '',
-    buildMethod: 'METHOD_A' as BuildMethod,
+    jewelleryType: "",
+    buildMethod: "METHOD_A" as BuildMethod,
     composition: {} as Record<string, unknown>,
-    targetTotalWeightG: '',
-    targetGoldWeightG: '',
-    specialInstructions: '',
+    targetTotalWeightG: "",
+    targetGoldWeightG: "",
+    specialInstructions: "",
     referenceImages: [] as string[],
-    metalCostNpr: '',
-    makingChargeNpr: '',
-    gemstoneCostNpr: '',
-    finishCostNpr: '',
-    estimatedDays: '',
-    shopNotes: '',
+    metalCostNpr: "",
+    makingChargeNpr: "",
+    gemstoneCostNpr: "",
+    finishCostNpr: "",
+    estimatedDays: "",
+    shopNotes: "",
   });
 
   // Image upload
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { uploading: isUploadingImage, progress: uploadProgress, upload: uploadImageToR2 } = useImageUpload({
-    type: 'rfq',
+  const {
+    uploading: isUploadingImage,
+    progress: uploadProgress,
+    upload: uploadImageToR2,
+  } = useImageUpload({
+    type: "rfq",
     onSuccess: (result) => {
       if (result.url) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           referenceImages: [...prev.referenceImages, result.url!],
         }));
@@ -197,34 +200,40 @@ export default function CreateShopQuotePage() {
   });
 
   // Phone lookup with debounce
-  const lookupCustomer = useCallback(async (phoneCountryCode: string, phone: string) => {
-    if (phone.length < 7) {
-      setLookupResult(null);
-      setShowReturningCustomerAlert(false);
-      return;
-    }
-
-    setIsLookingUp(true);
-    try {
-      const response = await shopQuotesApi.lookupCustomer({ phoneCountryCode, phone });
-      const result = response.data as CustomerLookupResult;
-      setLookupResult(result);
-      
-      if (result.found && result.customer) {
-        setShowReturningCustomerAlert(true);
+  const lookupCustomer = useCallback(
+    async (phoneCountryCode: string, phone: string) => {
+      if (phone.length < 7) {
+        setLookupResult(null);
+        setShowReturningCustomerAlert(false);
+        return;
       }
-    } catch (err) {
-      console.error('Customer lookup failed:', err);
-      setLookupResult(null);
-    } finally {
-      setIsLookingUp(false);
-    }
-  }, []);
+
+      setIsLookingUp(true);
+      try {
+        const response = await shopQuotesApi.lookupCustomer({
+          phoneCountryCode,
+          phone,
+        });
+        const result = response.data as CustomerLookupResult;
+        setLookupResult(result);
+
+        if (result.found && result.customer) {
+          setShowReturningCustomerAlert(true);
+        }
+      } catch (err) {
+        console.error("Customer lookup failed:", err);
+        setLookupResult(null);
+      } finally {
+        setIsLookingUp(false);
+      }
+    },
+    [],
+  );
 
   // Debounced phone input handler
   const handlePhoneChange = (phone: string) => {
-    setCustomerDetails(prev => ({ ...prev, phone }));
-    
+    setCustomerDetails((prev) => ({ ...prev, phone }));
+
     if (phoneDebounceRef.current) {
       clearTimeout(phoneDebounceRef.current);
     }
@@ -241,41 +250,43 @@ export default function CreateShopQuotePage() {
       setCustomerDetails({
         name: c.name,
         phoneCountryCode: c.phoneCountryCode,
-        phone: c.phone.replace(c.phoneCountryCode, ''),
-        email: c.email || '',
+        phone: c.phone.replace(c.phoneCountryCode, ""),
+        email: c.email || "",
         address: c.address,
         city: c.city,
         country: c.country,
       });
       setShowReturningCustomerAlert(false);
       toast({
-        title: 'Customer details auto-filled',
+        title: "Customer details auto-filled",
         description: `Welcome back, ${c.name}!`,
       });
     }
   };
 
-  const handleReferenceImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleReferenceImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const files = e.target.files;
     if (!files?.length) return;
-    
+
     for (const file of Array.from(files)) {
       if (file.size > 10 * 1024 * 1024) {
-        setError('Each image must be smaller than 10MB');
+        setError("Each image must be smaller than 10MB");
         continue;
       }
       await uploadImageToR2(file);
     }
-    
+
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
   const removeReferenceImage = (url: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      referenceImages: prev.referenceImages.filter(img => img !== url),
+      referenceImages: prev.referenceImages.filter((img) => img !== url),
     }));
   };
 
@@ -292,25 +303,32 @@ export default function CreateShopQuotePage() {
 
   const handleSubmit = async () => {
     // Validate customer details
-    if (!customerDetails.name || !customerDetails.phone || !customerDetails.address || !customerDetails.city) {
-      setError('Please fill in all required customer details (name, phone, address, city)');
+    if (
+      !customerDetails.name ||
+      !customerDetails.phone ||
+      !customerDetails.address ||
+      !customerDetails.city
+    ) {
+      setError(
+        "Please fill in all required customer details (name, phone, address, city)",
+      );
       return;
     }
 
     // Validate phone format
     if (!/^\d{7,15}$/.test(customerDetails.phone)) {
-      setError('Please enter a valid phone number (7-15 digits)');
+      setError("Please enter a valid phone number (7-15 digits)");
       return;
     }
 
     // Validate jewellery details
     if (!formData.jewelleryType || !formData.buildMethod) {
-      setError('Please select jewellery type and build method');
+      setError("Please select jewellery type and build method");
       return;
     }
 
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
       const response = await shopQuotesApi.create({
@@ -326,7 +344,8 @@ export default function CreateShopQuotePage() {
         jewelleryType: formData.jewelleryType,
         buildMethod: formData.buildMethod,
         composition: formData.composition,
-        targetTotalWeightG: parseFloat(formData.targetTotalWeightG) || undefined,
+        targetTotalWeightG:
+          parseFloat(formData.targetTotalWeightG) || undefined,
         targetGoldWeightG: parseFloat(formData.targetGoldWeightG) || undefined,
         specialInstructions: formData.specialInstructions || undefined,
         referenceImages: formData.referenceImages,
@@ -339,16 +358,16 @@ export default function CreateShopQuotePage() {
       });
 
       toast({
-        title: 'Quote Created Successfully',
+        title: "Quote Created Successfully",
         description: `Quote ${response.data.quoteNumber} created for ${customerDetails.name}`,
       });
 
-      router.push('/dashboard/shop/quotes');
+      router.push("/dashboard/shop/quotes");
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError('An unexpected error occurred');
+        setError("An unexpected error occurred");
       }
     } finally {
       setLoading(false);
@@ -357,8 +376,13 @@ export default function CreateShopQuotePage() {
 
   const { subtotal, tax, total } = calculateTotal();
 
-  const customerDetailsComplete = customerDetails.name && customerDetails.phone && customerDetails.address && customerDetails.city;
-  const jewelleryDetailsComplete = formData.jewelleryType && formData.buildMethod;
+  const customerDetailsComplete =
+    customerDetails.name &&
+    customerDetails.phone &&
+    customerDetails.address &&
+    customerDetails.city;
+  const jewelleryDetailsComplete =
+    formData.jewelleryType && formData.buildMethod;
   const canSubmit = customerDetailsComplete && jewelleryDetailsComplete;
 
   return (
@@ -369,7 +393,9 @@ export default function CreateShopQuotePage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold">Create Walk-in Quote</h1>
-              <p className="text-muted-foreground">Create a quote for a customer visiting your shop</p>
+              <p className="text-muted-foreground">
+                Create a quote for a customer visiting your shop
+              </p>
             </div>
             <Badge variant="outline" className="text-sm">
               Step {step} of 3
@@ -383,16 +409,18 @@ export default function CreateShopQuotePage() {
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                     s === step
-                      ? 'bg-amber-500 text-white'
+                      ? "bg-amber-500 text-white"
                       : s < step
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-200 text-gray-600'
+                        ? "bg-green-500 text-white"
+                        : "bg-gray-200 text-gray-600"
                   }`}
                 >
                   {s < step ? <Check className="h-4 w-4" /> : s}
                 </div>
                 {s < 3 && (
-                  <div className={`w-16 h-1 ${s < step ? 'bg-green-500' : 'bg-gray-200'}`} />
+                  <div
+                    className={`w-16 h-1 ${s < step ? "bg-green-500" : "bg-gray-200"}`}
+                  />
                 )}
               </div>
             ))}
@@ -411,31 +439,47 @@ export default function CreateShopQuotePage() {
           {showReturningCustomerAlert && lookupResult?.customer && (
             <Alert className="border-green-500 bg-green-50">
               <UserCheck className="h-4 w-4 text-green-600" />
-              <AlertTitle className="text-green-800">Returning Customer Found!</AlertTitle>
+              <AlertTitle className="text-green-800">
+                Returning Customer Found!
+              </AlertTitle>
               <AlertDescription className="text-green-700">
                 <div className="flex items-center justify-between">
-                  <span>Is this <strong>{lookupResult.customer.name}</strong> from {lookupResult.customer.city}?</span>
+                  <span>
+                    Is this <strong>{lookupResult.customer.name}</strong> from{" "}
+                    {lookupResult.customer.city}?
+                  </span>
                   <div className="flex gap-2">
                     <Button size="sm" onClick={handleAutoFillCustomer}>
                       <Check className="h-4 w-4 mr-1" /> Yes, auto-fill
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => setShowReturningCustomerAlert(false)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowReturningCustomerAlert(false)}
+                    >
                       No, new customer
                     </Button>
                   </div>
                 </div>
-                {lookupResult.customer.recentOrders && lookupResult.customer.recentOrders.length > 0 && (
-                  <div className="mt-2 pt-2 border-t border-green-200">
-                    <p className="text-xs mb-1">Recent orders:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {lookupResult.customer.recentOrders.slice(0, 3).map((order) => (
-                        <Badge key={order.id} variant="secondary" className="text-xs">
-                          {order.quoteNumber} - {order.jewelleryType}
-                        </Badge>
-                      ))}
+                {lookupResult.customer.recentOrders &&
+                  lookupResult.customer.recentOrders.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-green-200">
+                      <p className="text-xs mb-1">Recent orders:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {lookupResult.customer.recentOrders
+                          .slice(0, 3)
+                          .map((order) => (
+                            <Badge
+                              key={order.id}
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              {order.quoteNumber} - {order.jewelleryType}
+                            </Badge>
+                          ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
               </AlertDescription>
             </Alert>
           )}
@@ -448,7 +492,8 @@ export default function CreateShopQuotePage() {
                   <User className="h-5 w-5" /> Customer Details
                 </CardTitle>
                 <CardDescription>
-                  Enter the walk-in customer's information. Phone numbers are used to identify returning customers.
+                  Enter the walk-in customer's information. Phone numbers are
+                  used to identify returning customers.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -459,7 +504,10 @@ export default function CreateShopQuotePage() {
                     <Select
                       value={customerDetails.phoneCountryCode}
                       onValueChange={(value) => {
-                        setCustomerDetails(prev => ({ ...prev, phoneCountryCode: value }));
+                        setCustomerDetails((prev) => ({
+                          ...prev,
+                          phoneCountryCode: value,
+                        }));
                         if (customerDetails.phone.length >= 7) {
                           lookupCustomer(value, customerDetails.phone);
                         }
@@ -471,7 +519,12 @@ export default function CreateShopQuotePage() {
                       <SelectContent>
                         {COUNTRY_CODES.map((c) => (
                           <SelectItem key={c.code} value={c.code}>
-                            {c.flag} {c.code} ({c.country})
+                            <span className="flex items-center gap-2">
+                              {c.flagCode && (
+                                <FlagImage code={c.flagCode} size={16} />
+                              )}
+                              {c.code} ({c.country})
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -483,7 +536,9 @@ export default function CreateShopQuotePage() {
                       <Input
                         placeholder="9876543210"
                         value={customerDetails.phone}
-                        onChange={(e) => handlePhoneChange(e.target.value.replace(/\D/g, ''))}
+                        onChange={(e) =>
+                          handlePhoneChange(e.target.value.replace(/\D/g, ""))
+                        }
                       />
                       {isLookingUp && (
                         <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -508,7 +563,12 @@ export default function CreateShopQuotePage() {
                   <Input
                     placeholder="Enter customer's full name"
                     value={customerDetails.name}
-                    onChange={(e) => setCustomerDetails(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) =>
+                      setCustomerDetails((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
                   />
                 </div>
 
@@ -519,7 +579,12 @@ export default function CreateShopQuotePage() {
                     type="email"
                     placeholder="customer@example.com"
                     value={customerDetails.email}
-                    onChange={(e) => setCustomerDetails(prev => ({ ...prev, email: e.target.value }))}
+                    onChange={(e) =>
+                      setCustomerDetails((prev) => ({
+                        ...prev,
+                        email: e.target.value,
+                      }))
+                    }
                   />
                 </div>
 
@@ -529,7 +594,12 @@ export default function CreateShopQuotePage() {
                   <Textarea
                     placeholder="Enter full address"
                     value={customerDetails.address}
-                    onChange={(e) => setCustomerDetails(prev => ({ ...prev, address: e.target.value }))}
+                    onChange={(e) =>
+                      setCustomerDetails((prev) => ({
+                        ...prev,
+                        address: e.target.value,
+                      }))
+                    }
                     rows={2}
                   />
                 </div>
@@ -541,24 +611,54 @@ export default function CreateShopQuotePage() {
                     <Input
                       placeholder="Mumbai"
                       value={customerDetails.city}
-                      onChange={(e) => setCustomerDetails(prev => ({ ...prev, city: e.target.value }))}
+                      onChange={(e) =>
+                        setCustomerDetails((prev) => ({
+                          ...prev,
+                          city: e.target.value,
+                        }))
+                      }
                     />
                   </div>
                   <div>
                     <Label>Country</Label>
                     <Select
                       value={customerDetails.country}
-                      onValueChange={(value) => setCustomerDetails(prev => ({ ...prev, country: value }))}
+                      onValueChange={(value) =>
+                        setCustomerDetails((prev) => ({
+                          ...prev,
+                          country: value,
+                        }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="India">🇮🇳 India</SelectItem>
-                        <SelectItem value="Nepal">🇳🇵 Nepal</SelectItem>
-                        <SelectItem value="USA">🇺🇸 USA</SelectItem>
-                        <SelectItem value="UK">🇬🇧 UK</SelectItem>
-                        <SelectItem value="UAE">🇦🇪 UAE</SelectItem>
+                        <SelectItem value="India">
+                          <span className="flex items-center gap-2">
+                            <FlagImage code="IN" size={16} /> India
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="Nepal">
+                          <span className="flex items-center gap-2">
+                            <FlagImage code="NP" size={16} /> Nepal
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="USA">
+                          <span className="flex items-center gap-2">
+                            <FlagImage code="US" size={16} /> USA
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="UK">
+                          <span className="flex items-center gap-2">
+                            <FlagImage code="UK" size={16} /> UK
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="UAE">
+                          <span className="flex items-center gap-2">
+                            <FlagImage code="AE" size={16} /> UAE
+                          </span>
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -582,7 +682,9 @@ export default function CreateShopQuotePage() {
                   <Label>Jewellery Type *</Label>
                   <Select
                     value={formData.jewelleryType}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, jewelleryType: value }))}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({ ...prev, jewelleryType: value }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select type" />
@@ -602,7 +704,12 @@ export default function CreateShopQuotePage() {
                   <Label>Build Method *</Label>
                   <Select
                     value={formData.buildMethod}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, buildMethod: value as BuildMethod }))}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        buildMethod: value as BuildMethod,
+                      }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select method" />
@@ -612,7 +719,9 @@ export default function CreateShopQuotePage() {
                         <SelectItem key={method.value} value={method.value}>
                           <div>
                             <span className="font-medium">{method.label}</span>
-                            <p className="text-xs text-muted-foreground">{method.description}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {method.description}
+                            </p>
                           </div>
                         </SelectItem>
                       ))}
@@ -628,17 +737,27 @@ export default function CreateShopQuotePage() {
                       type="number"
                       placeholder="e.g., 10.5"
                       value={formData.targetTotalWeightG}
-                      onChange={(e) => setFormData(prev => ({ ...prev, targetTotalWeightG: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          targetTotalWeightG: e.target.value,
+                        }))
+                      }
                     />
                   </div>
-                  {formData.buildMethod === 'METHOD_D' && (
+                  {formData.buildMethod === "METHOD_D" && (
                     <div>
                       <Label>Target Gold Weight (grams)</Label>
                       <Input
                         type="number"
                         placeholder="e.g., 8.0"
                         value={formData.targetGoldWeightG}
-                        onChange={(e) => setFormData(prev => ({ ...prev, targetGoldWeightG: e.target.value }))}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            targetGoldWeightG: e.target.value,
+                          }))
+                        }
                       />
                     </div>
                   )}
@@ -703,7 +822,12 @@ export default function CreateShopQuotePage() {
                   <Textarea
                     placeholder="Any special requirements or notes about the order..."
                     value={formData.specialInstructions}
-                    onChange={(e) => setFormData(prev => ({ ...prev, specialInstructions: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        specialInstructions: e.target.value,
+                      }))
+                    }
                     rows={3}
                   />
                 </div>
@@ -717,7 +841,8 @@ export default function CreateShopQuotePage() {
               <CardHeader>
                 <CardTitle>Pricing & Quote</CardTitle>
                 <CardDescription>
-                  Set the price for this order. Payment will be collected at your shop.
+                  Set the price for this order. Payment will be collected at
+                  your shop.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -729,7 +854,12 @@ export default function CreateShopQuotePage() {
                       type="number"
                       placeholder="0"
                       value={formData.metalCostNpr}
-                      onChange={(e) => setFormData(prev => ({ ...prev, metalCostNpr: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          metalCostNpr: e.target.value,
+                        }))
+                      }
                     />
                   </div>
                   <div>
@@ -738,7 +868,12 @@ export default function CreateShopQuotePage() {
                       type="number"
                       placeholder="0"
                       value={formData.makingChargeNpr}
-                      onChange={(e) => setFormData(prev => ({ ...prev, makingChargeNpr: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          makingChargeNpr: e.target.value,
+                        }))
+                      }
                     />
                   </div>
                   <div>
@@ -747,7 +882,12 @@ export default function CreateShopQuotePage() {
                       type="number"
                       placeholder="0"
                       value={formData.gemstoneCostNpr}
-                      onChange={(e) => setFormData(prev => ({ ...prev, gemstoneCostNpr: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          gemstoneCostNpr: e.target.value,
+                        }))
+                      }
                     />
                   </div>
                   <div>
@@ -756,7 +896,12 @@ export default function CreateShopQuotePage() {
                       type="number"
                       placeholder="0"
                       value={formData.finishCostNpr}
-                      onChange={(e) => setFormData(prev => ({ ...prev, finishCostNpr: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          finishCostNpr: e.target.value,
+                        }))
+                      }
                     />
                   </div>
                 </div>
@@ -773,7 +918,9 @@ export default function CreateShopQuotePage() {
                   </div>
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total</span>
-                    <span className="text-amber-600">NPR {total.toLocaleString()}</span>
+                    <span className="text-amber-600">
+                      NPR {total.toLocaleString()}
+                    </span>
                   </div>
                 </div>
 
@@ -784,7 +931,12 @@ export default function CreateShopQuotePage() {
                     type="number"
                     placeholder="14"
                     value={formData.estimatedDays}
-                    onChange={(e) => setFormData(prev => ({ ...prev, estimatedDays: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        estimatedDays: e.target.value,
+                      }))
+                    }
                   />
                 </div>
 
@@ -794,7 +946,12 @@ export default function CreateShopQuotePage() {
                   <Textarea
                     placeholder="Any internal notes for your reference..."
                     value={formData.shopNotes}
-                    onChange={(e) => setFormData(prev => ({ ...prev, shopNotes: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        shopNotes: e.target.value,
+                      }))
+                    }
                     rows={2}
                   />
                 </div>
@@ -804,8 +961,9 @@ export default function CreateShopQuotePage() {
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>Payment at Shop</AlertTitle>
                   <AlertDescription>
-                    This is a walk-in order. Payment will be collected directly at your shop.
-                    You can record advance payments and track the balance due.
+                    This is a walk-in order. Payment will be collected directly
+                    at your shop. You can record advance payments and track the
+                    balance due.
                   </AlertDescription>
                 </Alert>
               </CardContent>
@@ -816,10 +974,10 @@ export default function CreateShopQuotePage() {
           <div className="flex justify-between">
             <Button
               variant="outline"
-              onClick={() => step > 1 ? setStep(step - 1) : router.back()}
+              onClick={() => (step > 1 ? setStep(step - 1) : router.back())}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              {step === 1 ? 'Cancel' : 'Back'}
+              {step === 1 ? "Cancel" : "Back"}
             </Button>
 
             {step < 3 ? (
@@ -861,12 +1019,32 @@ export default function CreateShopQuotePage() {
                 <CardTitle className="text-sm">Quote Summary</CardTitle>
               </CardHeader>
               <CardContent className="text-sm space-y-1">
-                <p><strong>Customer:</strong> {customerDetails.name}</p>
-                <p><strong>Phone:</strong> {customerDetails.phoneCountryCode} {customerDetails.phone}</p>
-                <p><strong>City:</strong> {customerDetails.city}</p>
-                <p><strong>Jewellery:</strong> {JEWELLERY_TYPES.find(t => t.value === formData.jewelleryType)?.label || formData.jewelleryType}</p>
-                <p><strong>Method:</strong> {BUILD_METHODS.find(m => m.value === formData.buildMethod)?.label || formData.buildMethod}</p>
-                {formData.targetTotalWeightG && <p><strong>Weight:</strong> {formData.targetTotalWeightG}g</p>}
+                <p>
+                  <strong>Customer:</strong> {customerDetails.name}
+                </p>
+                <p>
+                  <strong>Phone:</strong> {customerDetails.phoneCountryCode}{" "}
+                  {customerDetails.phone}
+                </p>
+                <p>
+                  <strong>City:</strong> {customerDetails.city}
+                </p>
+                <p>
+                  <strong>Jewellery:</strong>{" "}
+                  {JEWELLERY_TYPES.find(
+                    (t) => t.value === formData.jewelleryType,
+                  )?.label || formData.jewelleryType}
+                </p>
+                <p>
+                  <strong>Method:</strong>{" "}
+                  {BUILD_METHODS.find((m) => m.value === formData.buildMethod)
+                    ?.label || formData.buildMethod}
+                </p>
+                {formData.targetTotalWeightG && (
+                  <p>
+                    <strong>Weight:</strong> {formData.targetTotalWeightG}g
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}

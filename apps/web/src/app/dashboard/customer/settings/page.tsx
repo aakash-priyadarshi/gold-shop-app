@@ -1,39 +1,56 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { CustomerGuard } from '@/components/auth/RouteGuard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { PhoneInput, needsCountryCode } from '@/components/ui/phone-input';
-import { CheckCircle, XCircle, Loader2 as SpinnerIcon } from 'lucide-react';
-import { authApi } from '@/lib/api';
+import { CustomerGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  FlagImage,
+  PhoneInput,
+  needsCountryCode,
+  type FlagCode,
+} from "@/components/ui/phone-input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import api, { authApi } from "@/lib/api";
 import {
-  User,
-  Shield,
-  Save,
-  Loader2,
+  COUNTRIES,
+  CURRENCIES,
+  CountryCode,
+  CurrencyCode,
+  usePreferencesStore,
+} from "@/store/preferences";
+import {
+  CheckCircle,
   Globe,
+  Home,
+  Loader2,
   MapPin,
   Phone,
   Plus,
+  Save,
+  Shield,
+  Loader2 as SpinnerIcon,
   Trash2,
-  Home,
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import api from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
-import { usePreferencesStore, CURRENCIES, COUNTRIES, CurrencyCode, CountryCode } from '@/store/preferences';
+  User,
+  XCircle,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface DeliveryAddress {
   id?: string;
@@ -62,12 +79,12 @@ interface UserProfile {
 }
 
 const countries = [
-  { value: 'NP', label: 'Nepal', flag: '🇳🇵' },
-  { value: 'IN', label: 'India', flag: '🇮🇳' },
-  { value: 'AE', label: 'UAE', flag: '🇦🇪' },
-  { value: 'UK', label: 'United Kingdom', flag: '🇬🇧' },
-  { value: 'EU', label: 'Europe', flag: '🇪🇺' },
-  { value: 'US', label: 'United States', flag: '🇺🇸' },
+  { value: "NP", label: "Nepal" },
+  { value: "IN", label: "India" },
+  { value: "AE", label: "UAE" },
+  { value: "UK", label: "United Kingdom" },
+  { value: "EU", label: "Europe" },
+  { value: "US", label: "United States" },
 ];
 
 export default function CustomerSettingsPage() {
@@ -76,34 +93,36 @@ export default function CustomerSettingsPage() {
   const setCountry = usePreferencesStore((state) => state.setCountry);
   const currentCurrency = usePreferencesStore((state) => state.currency);
   const currentCountry = usePreferencesStore((state) => state.country);
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
-  
+
   const [profile, setProfile] = useState<UserProfile>({
-    id: '',
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    preferredLanguage: 'en',
-    preferredCurrency: 'USD',
-    preferredCountry: 'US',
+    id: "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    preferredLanguage: "en",
+    preferredCurrency: "USD",
+    preferredCountry: "US",
     deliveryAddresses: [],
   });
 
   const [addresses, setAddresses] = useState<DeliveryAddress[]>([]);
   const [showAddressForm, setShowAddressForm] = useState(false);
-  const [editingAddress, setEditingAddress] = useState<DeliveryAddress | null>(null);
+  const [editingAddress, setEditingAddress] = useState<DeliveryAddress | null>(
+    null,
+  );
 
   // Phone availability check state
   const [phoneCheckState, setPhoneCheckState] = useState<{
     checking: boolean;
     exists: boolean | null;
     originalPhone: string;
-  }>({ checking: false, exists: null, originalPhone: '' });
+  }>({ checking: false, exists: null, originalPhone: "" });
   const phoneCheckTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Check phone availability with debounce
@@ -111,13 +130,21 @@ export default function CustomerSettingsPage() {
     async (phone: string) => {
       // Skip if phone is same as original
       if (phone === phoneCheckState.originalPhone) {
-        setPhoneCheckState((prev) => ({ ...prev, checking: false, exists: null }));
+        setPhoneCheckState((prev) => ({
+          ...prev,
+          checking: false,
+          exists: null,
+        }));
         return;
       }
 
       // Skip if phone is empty or needs country code
       if (!phone || phone.length < 7 || needsCountryCode(phone)) {
-        setPhoneCheckState((prev) => ({ ...prev, checking: false, exists: null }));
+        setPhoneCheckState((prev) => ({
+          ...prev,
+          checking: false,
+          exists: null,
+        }));
         return;
       }
 
@@ -137,29 +164,33 @@ export default function CustomerSettingsPage() {
             exists: response.data.exists,
           }));
         } catch {
-          setPhoneCheckState((prev) => ({ ...prev, checking: false, exists: null }));
+          setPhoneCheckState((prev) => ({
+            ...prev,
+            checking: false,
+            exists: null,
+          }));
         }
       }, 500);
     },
-    [phoneCheckState.originalPhone]
+    [phoneCheckState.originalPhone],
   );
   const [newAddress, setNewAddress] = useState<DeliveryAddress>({
-    label: 'Home',
-    fullName: '',
-    phone: '',
-    addressLine1: '',
-    addressLine2: '',
-    city: '',
-    state: '',
-    postalCode: '',
-    country: 'NP',
+    label: "Home",
+    fullName: "",
+    phone: "",
+    addressLine1: "",
+    addressLine2: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    country: "NP",
     isDefault: false,
   });
 
   const [passwords, setPasswords] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
 
   useEffect(() => {
@@ -171,15 +202,15 @@ export default function CustomerSettingsPage() {
   const loadProfile = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/users/me');
-      const phoneValue = response.data.phone || '';
+      const response = await api.get("/users/me");
+      const phoneValue = response.data.phone || "";
       setProfile({
         id: response.data.id,
-        firstName: response.data.firstName || '',
-        lastName: response.data.lastName || '',
-        email: response.data.email || '',
+        firstName: response.data.firstName || "",
+        lastName: response.data.lastName || "",
+        email: response.data.email || "",
         phone: phoneValue,
-        preferredLanguage: response.data.preferredLanguage || 'en',
+        preferredLanguage: response.data.preferredLanguage || "en",
         preferredCurrency: response.data.preferredCurrency || currentCurrency,
         preferredCountry: response.data.preferredCountry || currentCountry,
         deliveryAddresses: response.data.deliveryAddresses || [],
@@ -189,7 +220,7 @@ export default function CustomerSettingsPage() {
       // Load delivery addresses
       setAddresses(response.data.deliveryAddresses || []);
     } catch (error) {
-      console.error('Failed to load profile:', error);
+      console.error("Failed to load profile:", error);
     } finally {
       setIsLoading(false);
     }
@@ -198,7 +229,7 @@ export default function CustomerSettingsPage() {
   const saveProfile = async () => {
     setIsSaving(true);
     try {
-      await api.patch('/users/me', {
+      await api.patch("/users/me", {
         firstName: profile.firstName,
         lastName: profile.lastName,
         phone: profile.phone || null,
@@ -213,16 +244,16 @@ export default function CustomerSettingsPage() {
       }
 
       toast({
-        title: 'Profile Updated',
-        description: 'Your settings have been saved',
+        title: "Profile Updated",
+        description: "Your settings have been saved",
       });
 
       refreshUser?.();
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Update Failed',
-        description: error.response?.data?.message || 'Could not save settings',
+        variant: "destructive",
+        title: "Update Failed",
+        description: error.response?.data?.message || "Could not save settings",
       });
     } finally {
       setIsSaving(false);
@@ -233,41 +264,50 @@ export default function CustomerSettingsPage() {
     setIsSavingAddress(true);
     try {
       const addressData = editingAddress || newAddress;
-      
+
       if (editingAddress?.id) {
         // Update existing address
-        await api.patch(`/users/me/addresses/${editingAddress.id}`, addressData);
-        setAddresses(addresses.map(a => a.id === editingAddress.id ? { ...addressData, id: editingAddress.id } : a));
+        await api.patch(
+          `/users/me/addresses/${editingAddress.id}`,
+          addressData,
+        );
+        setAddresses(
+          addresses.map((a) =>
+            a.id === editingAddress.id
+              ? { ...addressData, id: editingAddress.id }
+              : a,
+          ),
+        );
       } else {
         // Create new address
-        const response = await api.post('/users/me/addresses', addressData);
+        const response = await api.post("/users/me/addresses", addressData);
         setAddresses([...addresses, response.data]);
       }
 
       toast({
-        title: editingAddress ? 'Address Updated' : 'Address Added',
-        description: 'Your delivery address has been saved',
+        title: editingAddress ? "Address Updated" : "Address Added",
+        description: "Your delivery address has been saved",
       });
 
       setShowAddressForm(false);
       setEditingAddress(null);
       setNewAddress({
-        label: 'Home',
-        fullName: '',
-        phone: '',
-        addressLine1: '',
-        addressLine2: '',
-        city: '',
-        state: '',
-        postalCode: '',
-        country: 'NP',
+        label: "Home",
+        fullName: "",
+        phone: "",
+        addressLine1: "",
+        addressLine2: "",
+        city: "",
+        state: "",
+        postalCode: "",
+        country: "NP",
         isDefault: false,
       });
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Failed to save address',
-        description: error.response?.data?.message || 'Could not save address',
+        variant: "destructive",
+        title: "Failed to save address",
+        description: error.response?.data?.message || "Could not save address",
       });
     } finally {
       setIsSavingAddress(false);
@@ -277,16 +317,17 @@ export default function CustomerSettingsPage() {
   const deleteAddress = async (addressId: string) => {
     try {
       await api.delete(`/users/me/addresses/${addressId}`);
-      setAddresses(addresses.filter(a => a.id !== addressId));
+      setAddresses(addresses.filter((a) => a.id !== addressId));
       toast({
-        title: 'Address Deleted',
-        description: 'The delivery address has been removed',
+        title: "Address Deleted",
+        description: "The delivery address has been removed",
       });
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Delete Failed',
-        description: error.response?.data?.message || 'Could not delete address',
+        variant: "destructive",
+        title: "Delete Failed",
+        description:
+          error.response?.data?.message || "Could not delete address",
       });
     }
   };
@@ -294,16 +335,19 @@ export default function CustomerSettingsPage() {
   const setDefaultAddress = async (addressId: string) => {
     try {
       await api.patch(`/users/me/addresses/${addressId}/default`);
-      setAddresses(addresses.map(a => ({ ...a, isDefault: a.id === addressId })));
+      setAddresses(
+        addresses.map((a) => ({ ...a, isDefault: a.id === addressId })),
+      );
       toast({
-        title: 'Default Address Updated',
-        description: 'Your default delivery address has been set',
+        title: "Default Address Updated",
+        description: "Your default delivery address has been set",
       });
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Update Failed',
-        description: error.response?.data?.message || 'Could not set default address',
+        variant: "destructive",
+        title: "Update Failed",
+        description:
+          error.response?.data?.message || "Could not set default address",
       });
     }
   };
@@ -311,40 +355,45 @@ export default function CustomerSettingsPage() {
   const changePassword = async () => {
     if (passwords.newPassword !== passwords.confirmPassword) {
       toast({
-        variant: 'destructive',
-        title: 'Passwords do not match',
-        description: 'Please ensure both passwords are the same',
+        variant: "destructive",
+        title: "Passwords do not match",
+        description: "Please ensure both passwords are the same",
       });
       return;
     }
 
     if (passwords.newPassword.length < 8) {
       toast({
-        variant: 'destructive',
-        title: 'Password too short',
-        description: 'Password must be at least 8 characters',
+        variant: "destructive",
+        title: "Password too short",
+        description: "Password must be at least 8 characters",
       });
       return;
     }
 
     setIsChangingPassword(true);
     try {
-      await api.post('/auth/change-password', {
+      await api.post("/auth/change-password", {
         currentPassword: passwords.currentPassword,
         newPassword: passwords.newPassword,
       });
 
       toast({
-        title: 'Password Changed',
-        description: 'Your password has been updated successfully',
+        title: "Password Changed",
+        description: "Your password has been updated successfully",
       });
 
-      setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPasswords({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Password Change Failed',
-        description: error.response?.data?.message || 'Could not change password',
+        variant: "destructive",
+        title: "Password Change Failed",
+        description:
+          error.response?.data?.message || "Could not change password",
       });
     } finally {
       setIsChangingPassword(false);
@@ -381,9 +430,7 @@ export default function CustomerSettingsPage() {
                 <User className="h-5 w-5" />
                 Profile Information
               </CardTitle>
-              <CardDescription>
-                Update your personal details
-              </CardDescription>
+              <CardDescription>Update your personal details</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -392,7 +439,9 @@ export default function CustomerSettingsPage() {
                   <Input
                     id="profile-firstName"
                     value={profile.firstName}
-                    onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
+                    onChange={(e) =>
+                      setProfile({ ...profile, firstName: e.target.value })
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -400,7 +449,9 @@ export default function CustomerSettingsPage() {
                   <Input
                     id="profile-lastName"
                     value={profile.lastName}
-                    onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
+                    onChange={(e) =>
+                      setProfile({ ...profile, lastName: e.target.value })
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -412,14 +463,16 @@ export default function CustomerSettingsPage() {
                     disabled
                     className="bg-muted"
                   />
-                  <p className="text-xs text-muted-foreground">Email cannot be changed</p>
+                  <p className="text-xs text-muted-foreground">
+                    Email cannot be changed
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="profile-phone">Phone Number</Label>
                   <div className="relative">
                     <PhoneInput
                       id="profile-phone"
-                      value={profile.phone || ''}
+                      value={profile.phone || ""}
                       onChange={(value) => {
                         setProfile({ ...profile, phone: value });
                         checkPhoneAvailability(value);
@@ -453,7 +506,9 @@ export default function CustomerSettingsPage() {
                     phoneCheckState.exists === false &&
                     profile.phone &&
                     profile.phone !== phoneCheckState.originalPhone && (
-                      <p className="text-xs text-green-600">Phone number is available</p>
+                      <p className="text-xs text-green-600">
+                        Phone number is available
+                      </p>
                     )}
                 </div>
               </div>
@@ -467,22 +522,24 @@ export default function CustomerSettingsPage() {
                 <Globe className="h-5 w-5" />
                 Preferences
               </CardTitle>
-              <CardDescription>
-                Customize your experience
-              </CardDescription>
+              <CardDescription>Customize your experience</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="pref-country">Country</Label>
                   <Select
-                    value={profile.preferredCountry || 'US'}
+                    value={profile.preferredCountry || "US"}
                     onValueChange={(value) => {
                       setProfile({ ...profile, preferredCountry: value });
                       // Auto-update currency based on country
                       const countryInfo = COUNTRIES[value as CountryCode];
                       if (countryInfo?.defaultCurrency) {
-                        setProfile(prev => ({ ...prev, preferredCountry: value, preferredCurrency: countryInfo.defaultCurrency }));
+                        setProfile((prev) => ({
+                          ...prev,
+                          preferredCountry: value,
+                          preferredCurrency: countryInfo.defaultCurrency,
+                        }));
                       }
                     }}
                   >
@@ -493,7 +550,10 @@ export default function CustomerSettingsPage() {
                       {countries.map((country) => (
                         <SelectItem key={country.value} value={country.value}>
                           <span className="flex items-center gap-2">
-                            <span>{country.flag}</span>
+                            <FlagImage
+                              code={country.value as FlagCode}
+                              size={16}
+                            />
                             <span>{country.label}</span>
                           </span>
                         </SelectItem>
@@ -508,7 +568,9 @@ export default function CustomerSettingsPage() {
                   <Label htmlFor="pref-currency">Preferred Currency</Label>
                   <Select
                     value={profile.preferredCurrency}
-                    onValueChange={(value) => setProfile({ ...profile, preferredCurrency: value })}
+                    onValueChange={(value) =>
+                      setProfile({ ...profile, preferredCurrency: value })
+                    }
                   >
                     <SelectTrigger id="pref-currency" className="w-full">
                       <SelectValue />
@@ -585,7 +647,7 @@ export default function CustomerSettingsPage() {
               {addresses.map((address) => (
                 <div
                   key={address.id}
-                  className={`border rounded-lg p-4 ${address.isDefault ? 'border-gold-500 bg-gold-50' : ''}`}
+                  className={`border rounded-lg p-4 ${address.isDefault ? "border-gold-500 bg-gold-50" : ""}`}
                 >
                   <div className="flex justify-between items-start">
                     <div className="space-y-1">
@@ -593,7 +655,9 @@ export default function CustomerSettingsPage() {
                         <Home className="h-4 w-4" />
                         <span className="font-medium">{address.label}</span>
                         {address.isDefault && (
-                          <span className="text-xs bg-gold-100 text-gold-800 px-2 py-0.5 rounded">Default</span>
+                          <span className="text-xs bg-gold-100 text-gold-800 px-2 py-0.5 rounded">
+                            Default
+                          </span>
                         )}
                       </div>
                       <p className="text-sm">{address.fullName}</p>
@@ -645,7 +709,9 @@ export default function CustomerSettingsPage() {
               {/* Add/Edit Address Form */}
               {showAddressForm && (
                 <div className="border rounded-lg p-4 space-y-4">
-                  <h4 className="font-medium">{editingAddress ? 'Edit Address' : 'New Address'}</h4>
+                  <h4 className="font-medium">
+                    {editingAddress ? "Edit Address" : "New Address"}
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Label</Label>
@@ -653,7 +719,10 @@ export default function CustomerSettingsPage() {
                         value={(editingAddress || newAddress).label}
                         onValueChange={(value) => {
                           if (editingAddress) {
-                            setEditingAddress({ ...editingAddress, label: value });
+                            setEditingAddress({
+                              ...editingAddress,
+                              label: value,
+                            });
                           } else {
                             setNewAddress({ ...newAddress, label: value });
                           }
@@ -675,9 +744,15 @@ export default function CustomerSettingsPage() {
                         value={(editingAddress || newAddress).fullName}
                         onChange={(e) => {
                           if (editingAddress) {
-                            setEditingAddress({ ...editingAddress, fullName: e.target.value });
+                            setEditingAddress({
+                              ...editingAddress,
+                              fullName: e.target.value,
+                            });
                           } else {
-                            setNewAddress({ ...newAddress, fullName: e.target.value });
+                            setNewAddress({
+                              ...newAddress,
+                              fullName: e.target.value,
+                            });
                           }
                         }}
                         placeholder="John Doe"
@@ -689,9 +764,15 @@ export default function CustomerSettingsPage() {
                         value={(editingAddress || newAddress).phone}
                         onChange={(e) => {
                           if (editingAddress) {
-                            setEditingAddress({ ...editingAddress, phone: e.target.value });
+                            setEditingAddress({
+                              ...editingAddress,
+                              phone: e.target.value,
+                            });
                           } else {
-                            setNewAddress({ ...newAddress, phone: e.target.value });
+                            setNewAddress({
+                              ...newAddress,
+                              phone: e.target.value,
+                            });
                           }
                         }}
                         placeholder="+977 98XXXXXXXX"
@@ -703,9 +784,15 @@ export default function CustomerSettingsPage() {
                         value={(editingAddress || newAddress).addressLine1}
                         onChange={(e) => {
                           if (editingAddress) {
-                            setEditingAddress({ ...editingAddress, addressLine1: e.target.value });
+                            setEditingAddress({
+                              ...editingAddress,
+                              addressLine1: e.target.value,
+                            });
                           } else {
-                            setNewAddress({ ...newAddress, addressLine1: e.target.value });
+                            setNewAddress({
+                              ...newAddress,
+                              addressLine1: e.target.value,
+                            });
                           }
                         }}
                         placeholder="Street address, P.O. box"
@@ -714,12 +801,20 @@ export default function CustomerSettingsPage() {
                     <div className="space-y-2 md:col-span-2">
                       <Label>Address Line 2 (Optional)</Label>
                       <Input
-                        value={(editingAddress || newAddress).addressLine2 || ''}
+                        value={
+                          (editingAddress || newAddress).addressLine2 || ""
+                        }
                         onChange={(e) => {
                           if (editingAddress) {
-                            setEditingAddress({ ...editingAddress, addressLine2: e.target.value });
+                            setEditingAddress({
+                              ...editingAddress,
+                              addressLine2: e.target.value,
+                            });
                           } else {
-                            setNewAddress({ ...newAddress, addressLine2: e.target.value });
+                            setNewAddress({
+                              ...newAddress,
+                              addressLine2: e.target.value,
+                            });
                           }
                         }}
                         placeholder="Apartment, suite, unit, building, floor"
@@ -731,9 +826,15 @@ export default function CustomerSettingsPage() {
                         value={(editingAddress || newAddress).city}
                         onChange={(e) => {
                           if (editingAddress) {
-                            setEditingAddress({ ...editingAddress, city: e.target.value });
+                            setEditingAddress({
+                              ...editingAddress,
+                              city: e.target.value,
+                            });
                           } else {
-                            setNewAddress({ ...newAddress, city: e.target.value });
+                            setNewAddress({
+                              ...newAddress,
+                              city: e.target.value,
+                            });
                           }
                         }}
                         placeholder="Kathmandu"
@@ -745,9 +846,15 @@ export default function CustomerSettingsPage() {
                         value={(editingAddress || newAddress).state}
                         onChange={(e) => {
                           if (editingAddress) {
-                            setEditingAddress({ ...editingAddress, state: e.target.value });
+                            setEditingAddress({
+                              ...editingAddress,
+                              state: e.target.value,
+                            });
                           } else {
-                            setNewAddress({ ...newAddress, state: e.target.value });
+                            setNewAddress({
+                              ...newAddress,
+                              state: e.target.value,
+                            });
                           }
                         }}
                         placeholder="Bagmati"
@@ -759,9 +866,15 @@ export default function CustomerSettingsPage() {
                         value={(editingAddress || newAddress).postalCode}
                         onChange={(e) => {
                           if (editingAddress) {
-                            setEditingAddress({ ...editingAddress, postalCode: e.target.value });
+                            setEditingAddress({
+                              ...editingAddress,
+                              postalCode: e.target.value,
+                            });
                           } else {
-                            setNewAddress({ ...newAddress, postalCode: e.target.value });
+                            setNewAddress({
+                              ...newAddress,
+                              postalCode: e.target.value,
+                            });
                           }
                         }}
                         placeholder="44600"
@@ -773,7 +886,10 @@ export default function CustomerSettingsPage() {
                         value={(editingAddress || newAddress).country}
                         onValueChange={(value) => {
                           if (editingAddress) {
-                            setEditingAddress({ ...editingAddress, country: value });
+                            setEditingAddress({
+                              ...editingAddress,
+                              country: value,
+                            });
                           } else {
                             setNewAddress({ ...newAddress, country: value });
                           }
@@ -784,9 +900,15 @@ export default function CustomerSettingsPage() {
                         </SelectTrigger>
                         <SelectContent>
                           {countries.map((country) => (
-                            <SelectItem key={country.value} value={country.value}>
+                            <SelectItem
+                              key={country.value}
+                              value={country.value}
+                            >
                               <span className="flex items-center gap-2">
-                                <span>{country.flag}</span>
+                                <FlagImage
+                                  code={country.value as FlagCode}
+                                  size={16}
+                                />
                                 <span>{country.label}</span>
                               </span>
                             </SelectItem>
@@ -814,7 +936,7 @@ export default function CustomerSettingsPage() {
                       ) : (
                         <>
                           <Save className="h-4 w-4 mr-2" />
-                          {editingAddress ? 'Update Address' : 'Save Address'}
+                          {editingAddress ? "Update Address" : "Save Address"}
                         </>
                       )}
                     </Button>
@@ -831,19 +953,22 @@ export default function CustomerSettingsPage() {
                 <Shield className="h-5 w-5" />
                 Security
               </CardTitle>
-              <CardDescription>
-                Change your password
-              </CardDescription>
+              <CardDescription>Change your password</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="security-currentPassword">Current Password</Label>
+                <Label htmlFor="security-currentPassword">
+                  Current Password
+                </Label>
                 <Input
                   id="security-currentPassword"
                   type="password"
                   value={passwords.currentPassword}
                   onChange={(e) =>
-                    setPasswords({ ...passwords, currentPassword: e.target.value })
+                    setPasswords({
+                      ...passwords,
+                      currentPassword: e.target.value,
+                    })
                   }
                 />
               </div>
@@ -855,18 +980,26 @@ export default function CustomerSettingsPage() {
                     type="password"
                     value={passwords.newPassword}
                     onChange={(e) =>
-                      setPasswords({ ...passwords, newPassword: e.target.value })
+                      setPasswords({
+                        ...passwords,
+                        newPassword: e.target.value,
+                      })
                     }
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="security-confirmPassword">Confirm New Password</Label>
+                  <Label htmlFor="security-confirmPassword">
+                    Confirm New Password
+                  </Label>
                   <Input
                     id="security-confirmPassword"
                     type="password"
                     value={passwords.confirmPassword}
                     onChange={(e) =>
-                      setPasswords({ ...passwords, confirmPassword: e.target.value })
+                      setPasswords({
+                        ...passwords,
+                        confirmPassword: e.target.value,
+                      })
                     }
                   />
                 </div>
@@ -886,7 +1019,7 @@ export default function CustomerSettingsPage() {
                     Changing...
                   </>
                 ) : (
-                  'Change Password'
+                  "Change Password"
                 )}
               </Button>
             </CardContent>

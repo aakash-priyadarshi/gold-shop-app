@@ -1,43 +1,50 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { ShopGuard } from '@/components/auth/RouteGuard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { PhoneInput, needsCountryCode } from '@/components/ui/phone-input';
-import { CheckCircle, XCircle, Loader2 as SpinnerIcon } from 'lucide-react';
-import { authApi } from '@/lib/api';
+import { ShopGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PhoneInput, needsCountryCode } from "@/components/ui/phone-input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { authApi, shopsApi } from "@/lib/api";
 import {
-  Store,
-  MapPin,
-  Settings,
-  Save,
-  Loader2,
-  Globe,
-  Phone,
-  Mail,
-  CreditCard,
   Building2,
-  Wallet,
+  CheckCircle,
+  CreditCard,
+  Globe,
   Info,
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { shopsApi } from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
+  Loader2,
+  Mail,
+  MapPin,
+  Phone,
+  Save,
+  Settings,
+  Loader2 as SpinnerIcon,
+  Store,
+  Wallet,
+  XCircle,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ShopData {
   id: string;
@@ -80,25 +87,25 @@ interface ShopData {
 }
 
 const countries = [
-  { code: 'NP', name: 'Nepal', currency: 'NPR' },
-  { code: 'IN', name: 'India', currency: 'INR' },
-  { code: 'US', name: 'United States', currency: 'USD' },
-  { code: 'GB', name: 'United Kingdom', currency: 'GBP' },
-  { code: 'AU', name: 'Australia', currency: 'AUD' },
-  { code: 'CA', name: 'Canada', currency: 'CAD' },
-  { code: 'AE', name: 'UAE', currency: 'AED' },
-  { code: 'SG', name: 'Singapore', currency: 'SGD' },
+  { code: "NP", name: "Nepal", currency: "NPR" },
+  { code: "IN", name: "India", currency: "INR" },
+  { code: "US", name: "United States", currency: "USD" },
+  { code: "GB", name: "United Kingdom", currency: "GBP" },
+  { code: "AU", name: "Australia", currency: "AUD" },
+  { code: "CA", name: "Canada", currency: "CAD" },
+  { code: "AE", name: "UAE", currency: "AED" },
+  { code: "SG", name: "Singapore", currency: "SGD" },
 ];
 
 const currencies = [
-  { code: 'NPR', name: 'Nepali Rupee (रू)', symbol: 'रू' },
-  { code: 'INR', name: 'Indian Rupee (₹)', symbol: '₹' },
-  { code: 'USD', name: 'US Dollar ($)', symbol: '$' },
-  { code: 'GBP', name: 'British Pound (£)', symbol: '£' },
-  { code: 'AUD', name: 'Australian Dollar (A$)', symbol: 'A$' },
-  { code: 'CAD', name: 'Canadian Dollar (C$)', symbol: 'C$' },
-  { code: 'AED', name: 'UAE Dirham (د.إ)', symbol: 'د.إ' },
-  { code: 'SGD', name: 'Singapore Dollar (S$)', symbol: 'S$' },
+  { code: "NPR", name: "Nepali Rupee (रू)", symbol: "रू" },
+  { code: "INR", name: "Indian Rupee (₹)", symbol: "₹" },
+  { code: "USD", name: "US Dollar ($)", symbol: "$" },
+  { code: "GBP", name: "British Pound (£)", symbol: "£" },
+  { code: "AUD", name: "Australian Dollar (A$)", symbol: "A$" },
+  { code: "CAD", name: "Canadian Dollar (C$)", symbol: "C$" },
+  { code: "AED", name: "UAE Dirham (د.إ)", symbol: "د.إ" },
+  { code: "SGD", name: "Singapore Dollar (S$)", symbol: "S$" },
 ];
 
 export default function ShopSettingsPage() {
@@ -112,7 +119,7 @@ export default function ShopSettingsPage() {
     checking: boolean;
     exists: boolean | null;
     originalPhone: string;
-  }>({ checking: false, exists: null, originalPhone: '' });
+  }>({ checking: false, exists: null, originalPhone: "" });
   const phoneCheckTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Check phone availability with debounce
@@ -120,13 +127,21 @@ export default function ShopSettingsPage() {
     async (phone: string) => {
       // Skip if phone is same as original
       if (phone === phoneCheckState.originalPhone) {
-        setPhoneCheckState((prev) => ({ ...prev, checking: false, exists: null }));
+        setPhoneCheckState((prev) => ({
+          ...prev,
+          checking: false,
+          exists: null,
+        }));
         return;
       }
 
       // Skip if phone is empty or needs country code
       if (!phone || phone.length < 7 || needsCountryCode(phone)) {
-        setPhoneCheckState((prev) => ({ ...prev, checking: false, exists: null }));
+        setPhoneCheckState((prev) => ({
+          ...prev,
+          checking: false,
+          exists: null,
+        }));
         return;
       }
 
@@ -146,11 +161,15 @@ export default function ShopSettingsPage() {
             exists: response.data.exists,
           }));
         } catch {
-          setPhoneCheckState((prev) => ({ ...prev, checking: false, exists: null }));
+          setPhoneCheckState((prev) => ({
+            ...prev,
+            checking: false,
+            exists: null,
+          }));
         }
       }, 500);
     },
-    [phoneCheckState.originalPhone]
+    [phoneCheckState.originalPhone],
   );
 
   useEffect(() => {
@@ -164,24 +183,27 @@ export default function ShopSettingsPage() {
     try {
       const response = await shopsApi.getSettings();
       const data = response.data;
-      
+
       // Handle both formats: { shop, user } or direct shop object
       const shop = data.shop || data;
       const userData = data.user || shop.user;
-      
+
       setShopData({
         ...shop,
         user: userData,
       });
-      
+
       // Store original phone for comparison
-      setPhoneCheckState((prev) => ({ ...prev, originalPhone: shop.contactPhone || '' }));
+      setPhoneCheckState((prev) => ({
+        ...prev,
+        originalPhone: shop.contactPhone || "",
+      }));
     } catch (error) {
-      console.error('Failed to load settings:', error);
+      console.error("Failed to load settings:", error);
       toast({
-        variant: 'destructive',
-        title: 'Failed to load settings',
-        description: 'Could not fetch shop settings',
+        variant: "destructive",
+        title: "Failed to load settings",
+        description: "Could not fetch shop settings",
       });
     } finally {
       setIsLoading(false);
@@ -214,15 +236,15 @@ export default function ShopSettingsPage() {
         bankAccountDetails: shopData.bankAccountDetails,
       });
       toast({
-        title: 'Settings Saved',
-        description: 'Your shop settings have been updated successfully',
+        title: "Settings Saved",
+        description: "Your shop settings have been updated successfully",
       });
     } catch (error: any) {
-      console.error('Failed to save settings:', error);
+      console.error("Failed to save settings:", error);
       toast({
-        variant: 'destructive',
-        title: 'Save Failed',
-        description: error.response?.data?.message || 'Could not save settings',
+        variant: "destructive",
+        title: "Save Failed",
+        description: error.response?.data?.message || "Could not save settings",
       });
     } finally {
       setIsSaving(false);
@@ -235,7 +257,9 @@ export default function ShopSettingsPage() {
     }
   };
 
-  const updateBankDetails = (updates: Partial<NonNullable<ShopData['bankAccountDetails']>>) => {
+  const updateBankDetails = (
+    updates: Partial<NonNullable<ShopData["bankAccountDetails"]>>,
+  ) => {
     if (shopData) {
       setShopData({
         ...shopData,
@@ -263,7 +287,9 @@ export default function ShopSettingsPage() {
           <div className="text-center py-12">
             <Settings className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
             <h2 className="text-xl font-semibold">Settings Not Found</h2>
-            <p className="text-muted-foreground">Could not load shop settings.</p>
+            <p className="text-muted-foreground">
+              Could not load shop settings.
+            </p>
             <Button onClick={loadSettings} className="mt-4">
               Retry
             </Button>
@@ -287,7 +313,9 @@ export default function ShopSettingsPage() {
             </div>
             <div className="flex items-center gap-2">
               {shopData.isVerified ? (
-                <Badge variant="default" className="bg-green-500">Verified</Badge>
+                <Badge variant="default" className="bg-green-500">
+                  Verified
+                </Badge>
               ) : (
                 <Badge variant="secondary">Pending Verification</Badge>
               )}
@@ -333,8 +361,10 @@ export default function ShopSettingsPage() {
                       <Label htmlFor="shopName">Shop Name (English) *</Label>
                       <Input
                         id="shopName"
-                        value={shopData.shopName || ''}
-                        onChange={(e) => updateShopData({ shopName: e.target.value })}
+                        value={shopData.shopName || ""}
+                        onChange={(e) =>
+                          updateShopData({ shopName: e.target.value })
+                        }
                         placeholder="Your Shop Name"
                       />
                     </div>
@@ -342,8 +372,10 @@ export default function ShopSettingsPage() {
                       <Label htmlFor="shopNameNe">Shop Name (नेपाली)</Label>
                       <Input
                         id="shopNameNe"
-                        value={shopData.shopNameNe || ''}
-                        onChange={(e) => updateShopData({ shopNameNe: e.target.value })}
+                        value={shopData.shopNameNe || ""}
+                        onChange={(e) =>
+                          updateShopData({ shopNameNe: e.target.value })
+                        }
                         placeholder="तपाईंको पसलको नाम"
                       />
                     </div>
@@ -352,8 +384,10 @@ export default function ShopSettingsPage() {
                     <Label htmlFor="description">Description</Label>
                     <Textarea
                       id="description"
-                      value={shopData.description || ''}
-                      onChange={(e) => updateShopData({ description: e.target.value })}
+                      value={shopData.description || ""}
+                      onChange={(e) =>
+                        updateShopData({ description: e.target.value })
+                      }
                       rows={4}
                       placeholder="Tell customers about your shop, specialties, and history..."
                     />
@@ -367,7 +401,7 @@ export default function ShopSettingsPage() {
                       <div className="relative">
                         <PhoneInput
                           id="phone"
-                          value={shopData.contactPhone || ''}
+                          value={shopData.contactPhone || ""}
                           onChange={(value) => {
                             updateShopData({ contactPhone: value });
                             checkPhoneAvailability(value);
@@ -387,7 +421,8 @@ export default function ShopSettingsPage() {
                           {!phoneCheckState.checking &&
                             phoneCheckState.exists === false &&
                             shopData.contactPhone &&
-                            shopData.contactPhone !== phoneCheckState.originalPhone && (
+                            shopData.contactPhone !==
+                              phoneCheckState.originalPhone && (
                               <CheckCircle className="h-4 w-4 text-green-500" />
                             )}
                         </div>
@@ -406,8 +441,10 @@ export default function ShopSettingsPage() {
                       <Input
                         id="email"
                         type="email"
-                        value={shopData.contactEmail || ''}
-                        onChange={(e) => updateShopData({ contactEmail: e.target.value })}
+                        value={shopData.contactEmail || ""}
+                        onChange={(e) =>
+                          updateShopData({ contactEmail: e.target.value })
+                        }
                         placeholder="shop@example.com"
                       />
                     </div>
@@ -415,8 +452,10 @@ export default function ShopSettingsPage() {
                       <Label htmlFor="whatsapp">WhatsApp Number</Label>
                       <Input
                         id="whatsapp"
-                        value={shopData.whatsappNumber || ''}
-                        onChange={(e) => updateShopData({ whatsappNumber: e.target.value })}
+                        value={shopData.whatsappNumber || ""}
+                        onChange={(e) =>
+                          updateShopData({ whatsappNumber: e.target.value })
+                        }
                         placeholder="+977 98XXXXXXXX"
                       />
                     </div>
@@ -442,8 +481,10 @@ export default function ShopSettingsPage() {
                     <div className="space-y-2">
                       <Label htmlFor="country">Country *</Label>
                       <Select
-                        value={shopData.country || 'NP'}
-                        onValueChange={(value) => updateShopData({ country: value })}
+                        value={shopData.country || "NP"}
+                        onValueChange={(value) =>
+                          updateShopData({ country: value })
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -464,8 +505,10 @@ export default function ShopSettingsPage() {
                       <Label htmlFor="state">State/Province</Label>
                       <Input
                         id="state"
-                        value={shopData.state || ''}
-                        onChange={(e) => updateShopData({ state: e.target.value })}
+                        value={shopData.state || ""}
+                        onChange={(e) =>
+                          updateShopData({ state: e.target.value })
+                        }
                         placeholder="Bagmati"
                       />
                     </div>
@@ -475,8 +518,10 @@ export default function ShopSettingsPage() {
                       <Label htmlFor="city">City *</Label>
                       <Input
                         id="city"
-                        value={shopData.city || ''}
-                        onChange={(e) => updateShopData({ city: e.target.value })}
+                        value={shopData.city || ""}
+                        onChange={(e) =>
+                          updateShopData({ city: e.target.value })
+                        }
                         placeholder="Kathmandu"
                       />
                     </div>
@@ -484,8 +529,10 @@ export default function ShopSettingsPage() {
                       <Label htmlFor="pincode">Postal Code</Label>
                       <Input
                         id="pincode"
-                        value={shopData.pincode || ''}
-                        onChange={(e) => updateShopData({ pincode: e.target.value })}
+                        value={shopData.pincode || ""}
+                        onChange={(e) =>
+                          updateShopData({ pincode: e.target.value })
+                        }
                         placeholder="44600"
                       />
                     </div>
@@ -494,8 +541,10 @@ export default function ShopSettingsPage() {
                     <Label htmlFor="address">Full Address *</Label>
                     <Textarea
                       id="address"
-                      value={shopData.address || ''}
-                      onChange={(e) => updateShopData({ address: e.target.value })}
+                      value={shopData.address || ""}
+                      onChange={(e) =>
+                        updateShopData({ address: e.target.value })
+                      }
                       rows={2}
                       placeholder="Street address, building, floor..."
                     />
@@ -526,7 +575,9 @@ export default function ShopSettingsPage() {
                     </div>
                     <Switch
                       checked={shopData.isActive ?? true}
-                      onCheckedChange={(checked) => updateShopData({ isActive: checked })}
+                      onCheckedChange={(checked) =>
+                        updateShopData({ isActive: checked })
+                      }
                     />
                   </div>
 
@@ -538,8 +589,9 @@ export default function ShopSettingsPage() {
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex gap-2">
                       <Info className="h-5 w-5 text-blue-500 flex-shrink-0" />
                       <p className="text-sm text-blue-700">
-                        Your country determines market rates. Currency is for display purposes - 
-                        all prices are stored in your market's base currency and converted automatically.
+                        Your country determines market rates. Currency is for
+                        display purposes - all prices are stored in your
+                        market's base currency and converted automatically.
                       </p>
                     </div>
                   </div>
@@ -548,7 +600,9 @@ export default function ShopSettingsPage() {
                     <h4 className="font-medium">Pricing Settings</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="makingCharge">Default Making Charge (%)</Label>
+                        <Label htmlFor="makingCharge">
+                          Default Making Charge (%)
+                        </Label>
                         <Input
                           id="makingCharge"
                           type="number"
@@ -556,7 +610,12 @@ export default function ShopSettingsPage() {
                           max="100"
                           step="0.5"
                           value={shopData.makingChargePercent ?? 10}
-                          onChange={(e) => updateShopData({ makingChargePercent: parseFloat(e.target.value) || 10 })}
+                          onChange={(e) =>
+                            updateShopData({
+                              makingChargePercent:
+                                parseFloat(e.target.value) || 10,
+                            })
+                          }
                         />
                         <p className="text-xs text-muted-foreground">
                           Applied to all materials if not specified individually
@@ -568,7 +627,11 @@ export default function ShopSettingsPage() {
                           id="minOrder"
                           type="number"
                           value={shopData.minOrderValueNpr ?? 0}
-                          onChange={(e) => updateShopData({ minOrderValueNpr: parseInt(e.target.value) || 0 })}
+                          onChange={(e) =>
+                            updateShopData({
+                              minOrderValueNpr: parseInt(e.target.value) || 0,
+                            })
+                          }
                           placeholder="e.g., 10000"
                         />
                       </div>
@@ -604,18 +667,25 @@ export default function ShopSettingsPage() {
                     </div>
                     <Switch
                       checked={shopData.codEnabled ?? false}
-                      onCheckedChange={(checked) => updateShopData({ codEnabled: checked })}
+                      onCheckedChange={(checked) =>
+                        updateShopData({ codEnabled: checked })
+                      }
                     />
                   </div>
-                  
+
                   {shopData.codEnabled && (
                     <div className="ml-6 space-y-2">
                       <Label htmlFor="codMax">Maximum COD Value</Label>
                       <Input
                         id="codMax"
                         type="number"
-                        value={shopData.codMaxValueNpr || ''}
-                        onChange={(e) => updateShopData({ codMaxValueNpr: parseInt(e.target.value) || undefined })}
+                        value={shopData.codMaxValueNpr || ""}
+                        onChange={(e) =>
+                          updateShopData({
+                            codMaxValueNpr:
+                              parseInt(e.target.value) || undefined,
+                          })
+                        }
                         placeholder="e.g., 100000"
                       />
                       <p className="text-xs text-muted-foreground">
@@ -637,8 +707,10 @@ export default function ShopSettingsPage() {
                         <Label htmlFor="bankName">Bank Name</Label>
                         <Input
                           id="bankName"
-                          value={shopData.bankAccountDetails?.bankName || ''}
-                          onChange={(e) => updateBankDetails({ bankName: e.target.value })}
+                          value={shopData.bankAccountDetails?.bankName || ""}
+                          onChange={(e) =>
+                            updateBankDetails({ bankName: e.target.value })
+                          }
                           placeholder="Nepal Bank Limited"
                         />
                       </div>
@@ -646,8 +718,10 @@ export default function ShopSettingsPage() {
                         <Label htmlFor="branchName">Branch Name</Label>
                         <Input
                           id="branchName"
-                          value={shopData.bankAccountDetails?.branchName || ''}
-                          onChange={(e) => updateBankDetails({ branchName: e.target.value })}
+                          value={shopData.bankAccountDetails?.branchName || ""}
+                          onChange={(e) =>
+                            updateBankDetails({ branchName: e.target.value })
+                          }
                           placeholder="New Road Branch"
                         />
                       </div>
@@ -655,8 +729,10 @@ export default function ShopSettingsPage() {
                         <Label htmlFor="accountName">Account Holder Name</Label>
                         <Input
                           id="accountName"
-                          value={shopData.bankAccountDetails?.accountName || ''}
-                          onChange={(e) => updateBankDetails({ accountName: e.target.value })}
+                          value={shopData.bankAccountDetails?.accountName || ""}
+                          onChange={(e) =>
+                            updateBankDetails({ accountName: e.target.value })
+                          }
                           placeholder="Shop Owner Name"
                         />
                       </div>
@@ -664,17 +740,25 @@ export default function ShopSettingsPage() {
                         <Label htmlFor="accountNumber">Account Number</Label>
                         <Input
                           id="accountNumber"
-                          value={shopData.bankAccountDetails?.accountNumber || ''}
-                          onChange={(e) => updateBankDetails({ accountNumber: e.target.value })}
+                          value={
+                            shopData.bankAccountDetails?.accountNumber || ""
+                          }
+                          onChange={(e) =>
+                            updateBankDetails({ accountNumber: e.target.value })
+                          }
                           placeholder="0123456789012345"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="swiftCode">SWIFT/BIC Code (for international)</Label>
+                        <Label htmlFor="swiftCode">
+                          SWIFT/BIC Code (for international)
+                        </Label>
                         <Input
                           id="swiftCode"
-                          value={shopData.bankAccountDetails?.swiftCode || ''}
-                          onChange={(e) => updateBankDetails({ swiftCode: e.target.value })}
+                          value={shopData.bankAccountDetails?.swiftCode || ""}
+                          onChange={(e) =>
+                            updateBankDetails({ swiftCode: e.target.value })
+                          }
                           placeholder="NBLNPKA"
                         />
                       </div>
@@ -683,11 +767,14 @@ export default function ShopSettingsPage() {
 
                   <div className="border-t pt-4">
                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                      <h4 className="font-medium text-amber-800 mb-2">Online Payments (Coming Soon)</h4>
+                      <h4 className="font-medium text-amber-800 mb-2">
+                        Online Payments (Coming Soon)
+                      </h4>
                       <p className="text-sm text-amber-700">
-                        Stripe integration for accepting credit/debit cards and international payments 
-                        will be available soon. You'll be able to receive payments directly to your 
-                        connected Stripe account.
+                        Stripe integration for accepting credit/debit cards and
+                        international payments will be available soon. You'll be
+                        able to receive payments directly to your connected
+                        Stripe account.
                       </p>
                     </div>
                   </div>

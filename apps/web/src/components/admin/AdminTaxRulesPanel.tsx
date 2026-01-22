@@ -1,30 +1,31 @@
 /**
  * Admin Tax Rules Panel
- * 
+ *
  * UI for managing country tax configurations
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { FlagImage } from "@/components/ui/phone-input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { AlertCircle, Plus, Trash2, Save, RefreshCw } from 'lucide-react';
-import { CountryTaxConfig, TaxRule, VatMode } from '@/lib/tax/types';
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { CountryTaxConfig, TaxRule, VatMode } from "@/lib/tax/types";
+import { AlertCircle, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export function AdminTaxRulesPanel() {
-  const [selectedCountry, setSelectedCountry] = useState<string>('NP');
+  const [selectedCountry, setSelectedCountry] = useState<string>("NP");
   const [config, setConfig] = useState<CountryTaxConfig | null>(null);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -36,13 +37,15 @@ export function AdminTaxRulesPanel() {
   const loadConfig = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/tax-config?country=${selectedCountry}`);
+      const res = await fetch(
+        `/api/admin/tax-config?country=${selectedCountry}`,
+      );
       if (res.ok) {
         const data = await res.json();
         setConfig(data);
       }
     } catch (err) {
-      console.error('Failed to load tax config:', err);
+      console.error("Failed to load tax config:", err);
     } finally {
       setLoading(false);
     }
@@ -50,22 +53,22 @@ export function AdminTaxRulesPanel() {
 
   const saveConfig = async () => {
     if (!config) return;
-    
+
     setLoading(true);
     setSaved(false);
     try {
-      const res = await fetch('/api/admin/tax-config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/admin/tax-config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(config),
       });
-      
+
       if (res.ok) {
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
       }
     } catch (err) {
-      console.error('Failed to save tax config:', err);
+      console.error("Failed to save tax config:", err);
     } finally {
       setLoading(false);
     }
@@ -73,28 +76,28 @@ export function AdminTaxRulesPanel() {
 
   const updateRule = (ruleId: string, updates: Partial<TaxRule>) => {
     if (!config) return;
-    
+
     setConfig({
       ...config,
-      rules: config.rules.map(rule =>
-        rule.id === ruleId ? { ...rule, ...updates } : rule
+      rules: config.rules.map((rule) =>
+        rule.id === ruleId ? { ...rule, ...updates } : rule,
       ),
     });
   };
 
   const addRule = () => {
     if (!config) return;
-    
+
     const newRule: TaxRule = {
       id: `RULE_${Date.now()}`,
-      name: 'NEW_TAX',
-      displayName: 'New Tax',
+      name: "NEW_TAX",
+      displayName: "New Tax",
       rate: 0.05,
       priority: config.rules.length + 1,
       applyWhen: { isJewellery: true },
-      base: 'item_subtotal_excluding_tax',
+      base: "item_subtotal_excluding_tax",
     };
-    
+
     setConfig({
       ...config,
       rules: [...config.rules, newRule],
@@ -103,10 +106,10 @@ export function AdminTaxRulesPanel() {
 
   const deleteRule = (ruleId: string) => {
     if (!config) return;
-    
+
     setConfig({
       ...config,
-      rules: config.rules.filter(rule => rule.id !== ruleId),
+      rules: config.rules.filter((rule) => rule.id !== ruleId),
     });
   };
 
@@ -131,7 +134,9 @@ export function AdminTaxRulesPanel() {
         </div>
         <div className="flex items-center gap-2">
           <Button onClick={loadConfig} variant="outline" disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
           <Button onClick={saveConfig} disabled={loading}>
@@ -154,11 +159,31 @@ export function AdminTaxRulesPanel() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="NP">🇳🇵 Nepal (NP)</SelectItem>
-            <SelectItem value="IN">🇮🇳 India (IN)</SelectItem>
-            <SelectItem value="AE">🇦🇪 UAE (AE)</SelectItem>
-            <SelectItem value="US">🇺🇸 USA (US)</SelectItem>
-            <SelectItem value="UK">🇬🇧 UK</SelectItem>
+            <SelectItem value="NP">
+              <span className="flex items-center gap-2">
+                <FlagImage code="NP" size={16} /> Nepal (NP)
+              </span>
+            </SelectItem>
+            <SelectItem value="IN">
+              <span className="flex items-center gap-2">
+                <FlagImage code="IN" size={16} /> India (IN)
+              </span>
+            </SelectItem>
+            <SelectItem value="AE">
+              <span className="flex items-center gap-2">
+                <FlagImage code="AE" size={16} /> UAE (AE)
+              </span>
+            </SelectItem>
+            <SelectItem value="US">
+              <span className="flex items-center gap-2">
+                <FlagImage code="US" size={16} /> USA (US)
+              </span>
+            </SelectItem>
+            <SelectItem value="UK">
+              <span className="flex items-center gap-2">
+                <FlagImage code="UK" size={16} /> UK
+              </span>
+            </SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -172,7 +197,7 @@ export function AdminTaxRulesPanel() {
                 <Label className="text-xs">Effective From</Label>
                 <Input
                   type="date"
-                  value={config.effectiveFrom.split('T')[0]}
+                  value={config.effectiveFrom.split("T")[0]}
                   onChange={(e) =>
                     setConfig({ ...config, effectiveFrom: e.target.value })
                   }
@@ -182,9 +207,12 @@ export function AdminTaxRulesPanel() {
                 <Label className="text-xs">Effective To (Optional)</Label>
                 <Input
                   type="date"
-                  value={config.effectiveTo?.split('T')[0] || ''}
+                  value={config.effectiveTo?.split("T")[0] || ""}
                   onChange={(e) =>
-                    setConfig({ ...config, effectiveTo: e.target.value || undefined })
+                    setConfig({
+                      ...config,
+                      effectiveTo: e.target.value || undefined,
+                    })
                   }
                 />
               </div>
@@ -238,7 +266,9 @@ export function AdminTaxRulesPanel() {
                     <Label className="text-xs">Rule ID</Label>
                     <Input
                       value={rule.id}
-                      onChange={(e) => updateRule(rule.id, { id: e.target.value })}
+                      onChange={(e) =>
+                        updateRule(rule.id, { id: e.target.value })
+                      }
                       placeholder="e.g., NP_LUXURY_TAX"
                     />
                   </div>
@@ -263,7 +293,9 @@ export function AdminTaxRulesPanel() {
                       step="0.01"
                       value={(rule.rate * 100).toFixed(2)}
                       onChange={(e) =>
-                        updateRule(rule.id, { rate: parseFloat(e.target.value) / 100 })
+                        updateRule(rule.id, {
+                          rate: parseFloat(e.target.value) / 100,
+                        })
                       }
                     />
                   </div>
@@ -275,7 +307,9 @@ export function AdminTaxRulesPanel() {
                       type="number"
                       value={rule.priority || 999}
                       onChange={(e) =>
-                        updateRule(rule.id, { priority: parseInt(e.target.value) })
+                        updateRule(rule.id, {
+                          priority: parseInt(e.target.value),
+                        })
                       }
                     />
                   </div>
@@ -331,14 +365,14 @@ export function AdminTaxRulesPanel() {
                 </div>
 
                 {/* VAT Mode (for Nepal VAT rule) */}
-                {rule.name === 'VAT' && selectedCountry === 'NP' && (
+                {rule.name === "VAT" && selectedCountry === "NP" && (
                   <div className="space-y-2 bg-amber-50 border border-amber-200 rounded p-3">
                     <Label className="text-xs font-semibold flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" />
                       VAT Calculation Mode (Nepal)
                     </Label>
                     <Select
-                      value={rule.vatMode || 'WHOLE_ITEM_IF_STUDDED'}
+                      value={rule.vatMode || "WHOLE_ITEM_IF_STUDDED"}
                       onValueChange={(value: VatMode) =>
                         updateRule(rule.id, { vatMode: value })
                       }
@@ -348,7 +382,8 @@ export function AdminTaxRulesPanel() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="WHOLE_ITEM_IF_STUDDED">
-                          Whole Item (Conservative - VAT on full item if stones present)
+                          Whole Item (Conservative - VAT on full item if stones
+                          present)
                         </SelectItem>
                         <SelectItem value="STONES_ONLY">
                           Stones Only (VAT only on gemstone portion)
@@ -359,18 +394,20 @@ export function AdminTaxRulesPanel() {
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-amber-700">
-                      {rule.vatMode === 'WHOLE_ITEM_IF_STUDDED'
-                        ? 'VAT applies to entire item subtotal when gemstones are present'
-                        : rule.vatMode === 'STONES_ONLY'
-                        ? 'VAT applies only to the gemstone subtotal'
-                        : 'VAT is disabled'}
+                      {rule.vatMode === "WHOLE_ITEM_IF_STUDDED"
+                        ? "VAT applies to entire item subtotal when gemstones are present"
+                        : rule.vatMode === "STONES_ONLY"
+                          ? "VAT applies only to the gemstone subtotal"
+                          : "VAT is disabled"}
                     </p>
                   </div>
                 )}
 
                 {/* Include in Base */}
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Include in Tax Base:</Label>
+                  <Label className="text-xs font-semibold">
+                    Include in Tax Base:
+                  </Label>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="flex items-center space-x-2">
                       <Switch
@@ -424,7 +461,7 @@ export function AdminTaxRulesPanel() {
           <div className="flex justify-end pt-4 border-t">
             <Button onClick={saveConfig} disabled={loading} size="lg">
               <Save className="h-4 w-4 mr-2" />
-              {loading ? 'Saving...' : 'Save All Changes'}
+              {loading ? "Saving..." : "Save All Changes"}
             </Button>
           </div>
         </>

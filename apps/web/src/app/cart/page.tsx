@@ -1,58 +1,66 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Footer } from "@/components/layout/footer";
+import { Header } from "@/components/layout/header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { FlagImage, type FlagCode } from "@/components/ui/phone-input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import {
+  useCart,
+  type DeliveryAddress,
+  type DeliveryEstimate,
+} from "@/contexts/CartContext";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import api from "@/lib/api";
+import { CURRENCIES, usePreferencesStore } from "@/store/preferences";
+import {
+  BuildingStorefrontIcon,
+  ExclamationTriangleIcon,
+  MapPinIcon,
+  MinusIcon,
+  PlusIcon,
   ShoppingCartIcon,
   TrashIcon,
-  PlusIcon,
-  MinusIcon,
   TruckIcon,
-  MapPinIcon,
-  ClockIcon,
-  ExclamationTriangleIcon,
-  CheckCircleIcon,
-  BuildingStorefrontIcon,
-} from '@heroicons/react/24/outline';
-import { Loader2, Package, AlertTriangle } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { useCart, type DeliveryAddress, type DeliveryEstimate } from '@/contexts/CartContext';
-import { useAuth } from '@/hooks/useAuth';
-import api from '@/lib/api';
-import { usePreferencesStore, CURRENCIES } from '@/store/preferences';
+} from "@heroicons/react/24/outline";
+import { Loader2, Package } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const COUNTRIES = [
-  { code: 'NP', name: 'Nepal', flag: '🇳🇵' },
-  { code: 'IN', name: 'India', flag: '🇮🇳' },
-  { code: 'US', name: 'United States', flag: '🇺🇸' },
-  { code: 'UK', name: 'United Kingdom', flag: '🇬🇧' },
-  { code: 'AE', name: 'UAE', flag: '🇦🇪' },
+  { code: "NP", name: "Nepal" },
+  { code: "IN", name: "India" },
+  { code: "US", name: "United States" },
+  { code: "UK", name: "United Kingdom" },
+  { code: "AE", name: "UAE" },
 ];
 
 interface ShopInfo {
@@ -95,36 +103,38 @@ export default function CartPage() {
   // Format price in user's preferred currency
   const formatPrice = (priceNpr: number) => {
     if (!mounted) {
-      return new Intl.NumberFormat('ne-NP', {
-        style: 'currency',
-        currency: 'NPR',
+      return new Intl.NumberFormat("ne-NP", {
+        style: "currency",
+        currency: "NPR",
         minimumFractionDigits: 0,
       }).format(priceNpr);
     }
-    
-    return new Intl.NumberFormat(currencyInfo?.locale || 'en-US', {
-      style: 'currency',
+
+    return new Intl.NumberFormat(currencyInfo?.locale || "en-US", {
+      style: "currency",
       currency: currency,
       minimumFractionDigits: 0,
     }).format(priceNpr);
   };
 
   const [shopInfos, setShopInfos] = useState<Record<string, ShopInfo>>({});
-  const [deliveryEstimates, setDeliveryEstimates] = useState<Record<string, DeliveryEstimate>>({});
+  const [deliveryEstimates, setDeliveryEstimates] = useState<
+    Record<string, DeliveryEstimate>
+  >({});
   const [loadingShops, setLoadingShops] = useState(true);
-  
+
   // Add address dialog
   const [addressDialogOpen, setAddressDialogOpen] = useState(false);
-  const [newAddress, setNewAddress] = useState<Omit<DeliveryAddress, 'id'>>({
-    label: '',
-    fullName: '',
-    phone: '',
-    addressLine1: '',
-    addressLine2: '',
-    city: '',
-    state: '',
-    country: 'NP',
-    pincode: '',
+  const [newAddress, setNewAddress] = useState<Omit<DeliveryAddress, "id">>({
+    label: "",
+    fullName: "",
+    phone: "",
+    addressLine1: "",
+    addressLine2: "",
+    city: "",
+    state: "",
+    country: "NP",
+    pincode: "",
     isDefault: false,
   });
   const [savingAddress, setSavingAddress] = useState(false);
@@ -163,7 +173,7 @@ export default function CartPage() {
     };
 
     loadShopInfos();
-  }, [shopIds.join(',')]);
+  }, [shopIds.join(",")]);
 
   // Calculate delivery estimates when address or shops change
   useEffect(() => {
@@ -176,7 +186,10 @@ export default function CartPage() {
 
     for (const [shopId, shop] of Object.entries(shopInfos)) {
       if (shop.pincode) {
-        estimates[shopId] = estimateDelivery(shop.pincode, selectedAddress.pincode);
+        estimates[shopId] = estimateDelivery(
+          shop.pincode,
+          selectedAddress.pincode,
+        );
       }
     }
 
@@ -184,11 +197,17 @@ export default function CartPage() {
   }, [selectedAddressId, shopInfos, addresses, loadingShops, estimateDelivery]);
 
   const handleAddAddress = async () => {
-    if (!newAddress.fullName || !newAddress.phone || !newAddress.addressLine1 || !newAddress.city || !newAddress.pincode) {
+    if (
+      !newAddress.fullName ||
+      !newAddress.phone ||
+      !newAddress.addressLine1 ||
+      !newAddress.city ||
+      !newAddress.pincode
+    ) {
       toast({
-        variant: 'destructive',
-        title: 'Missing Fields',
-        description: 'Please fill in all required fields',
+        variant: "destructive",
+        title: "Missing Fields",
+        description: "Please fill in all required fields",
       });
       return;
     }
@@ -197,27 +216,27 @@ export default function CartPage() {
     try {
       await addAddress(newAddress);
       toast({
-        title: 'Address Added',
-        description: 'Your delivery address has been saved',
+        title: "Address Added",
+        description: "Your delivery address has been saved",
       });
       setAddressDialogOpen(false);
       setNewAddress({
-        label: '',
-        fullName: '',
-        phone: '',
-        addressLine1: '',
-        addressLine2: '',
-        city: '',
-        state: '',
-        country: 'NP',
-        pincode: '',
+        label: "",
+        fullName: "",
+        phone: "",
+        addressLine1: "",
+        addressLine2: "",
+        city: "",
+        state: "",
+        country: "NP",
+        pincode: "",
         isDefault: false,
       });
     } catch (error) {
       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to save address',
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save address",
       });
     } finally {
       setSavingAddress(false);
@@ -227,28 +246,28 @@ export default function CartPage() {
   const handleCheckout = () => {
     if (!isAuthenticated) {
       toast({
-        variant: 'destructive',
-        title: 'Login Required',
-        description: 'Please login to proceed with checkout',
+        variant: "destructive",
+        title: "Login Required",
+        description: "Please login to proceed with checkout",
       });
-      router.push('/auth/login');
+      router.push("/auth/login");
       return;
     }
 
     if (!selectedAddressId) {
       toast({
-        variant: 'destructive',
-        title: 'Address Required',
-        description: 'Please add a delivery address',
+        variant: "destructive",
+        title: "Address Required",
+        description: "Please add a delivery address",
       });
       return;
     }
 
-    router.push('/checkout');
+    router.push("/checkout");
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
   if (isLoading) {
@@ -275,7 +294,7 @@ export default function CartPage() {
               <p className="text-muted-foreground mb-6">
                 Browse our verified jewelers and add items to your cart
               </p>
-              <Button onClick={() => router.push('/shops')}>
+              <Button onClick={() => router.push("/shops")}>
                 Browse Shops
               </Button>
             </CardContent>
@@ -318,7 +337,7 @@ export default function CartPage() {
                       <div className="flex items-center gap-2">
                         <BuildingStorefrontIcon className="h-5 w-5 text-amber-600" />
                         <CardTitle className="text-lg">
-                          {shop?.shopName || 'Loading...'}
+                          {shop?.shopName || "Loading..."}
                         </CardTitle>
                       </div>
                       {shop && (
@@ -330,20 +349,25 @@ export default function CartPage() {
 
                     {/* Delivery Estimate */}
                     {estimate && (
-                      <div className={`mt-3 p-3 rounded-lg ${
-                        estimate.deliveryType === 'same-city'
-                          ? 'bg-green-50 border border-green-200'
-                          : estimate.deliveryType === 'same-country'
-                          ? 'bg-blue-50 border border-blue-200'
-                          : 'bg-amber-50 border border-amber-200'
-                      }`}>
+                      <div
+                        className={`mt-3 p-3 rounded-lg ${
+                          estimate.deliveryType === "same-city"
+                            ? "bg-green-50 border border-green-200"
+                            : estimate.deliveryType === "same-country"
+                              ? "bg-blue-50 border border-blue-200"
+                              : "bg-amber-50 border border-amber-200"
+                        }`}
+                      >
                         <div className="flex items-center gap-2 mb-1">
                           <TruckIcon className="h-4 w-4" />
                           <span className="font-medium text-sm">
-                            Estimated Delivery: {formatDate(estimate.estimatedDate.min)} - {formatDate(estimate.estimatedDate.max)}
+                            Estimated Delivery:{" "}
+                            {formatDate(estimate.estimatedDate.min)} -{" "}
+                            {formatDate(estimate.estimatedDate.max)}
                           </span>
                           <Badge variant="secondary" className="text-xs">
-                            {estimate.estimatedDays.min}-{estimate.estimatedDays.max} days
+                            {estimate.estimatedDays.min}-
+                            {estimate.estimatedDays.max} days
                           </Badge>
                         </div>
                         <div className="text-xs text-muted-foreground">
@@ -355,7 +379,9 @@ export default function CartPage() {
                           <div className="mt-2 p-2 bg-white rounded text-xs">
                             <div className="flex items-start gap-1">
                               <ExclamationTriangleIcon className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                              <p className="text-amber-700">{estimate.customsInfo}</p>
+                              <p className="text-amber-700">
+                                {estimate.customsInfo}
+                              </p>
                             </div>
                           </div>
                         )}
@@ -365,7 +391,10 @@ export default function CartPage() {
 
                   <CardContent className="space-y-4">
                     {shopItems.map((item) => (
-                      <div key={item.id} className="flex gap-4 py-3 border-b last:border-0">
+                      <div
+                        key={item.id}
+                        className="flex gap-4 py-3 border-b last:border-0"
+                      >
                         <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                           {item.product.image ? (
                             <img
@@ -382,9 +411,13 @@ export default function CartPage() {
 
                         <div className="flex-1">
                           <h3 className="font-medium">{item.product.name}</h3>
-                          <p className="text-sm text-muted-foreground">{item.product.sku}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {item.product.sku}
+                          </p>
                           {item.product.weight && (
-                            <p className="text-xs text-muted-foreground">{item.product.weight}g</p>
+                            <p className="text-xs text-muted-foreground">
+                              {item.product.weight}g
+                            </p>
                           )}
                         </div>
 
@@ -392,22 +425,28 @@ export default function CartPage() {
                           <p className="font-semibold">
                             {formatPrice(item.product.price * item.quantity)}
                           </p>
-                          
+
                           <div className="flex items-center gap-1 border rounded-md">
                             <Button
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0"
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              onClick={() =>
+                                updateQuantity(item.id, item.quantity - 1)
+                              }
                             >
                               <MinusIcon className="h-3 w-3" />
                             </Button>
-                            <span className="w-8 text-center text-sm">{item.quantity}</span>
+                            <span className="w-8 text-center text-sm">
+                              {item.quantity}
+                            </span>
                             <Button
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0"
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              onClick={() =>
+                                updateQuantity(item.id, item.quantity + 1)
+                              }
                             >
                               <PlusIcon className="h-3 w-3" />
                             </Button>
@@ -448,7 +487,10 @@ export default function CartPage() {
                     <p className="text-sm text-muted-foreground mb-3">
                       No delivery address added
                     </p>
-                    <Dialog open={addressDialogOpen} onOpenChange={setAddressDialogOpen}>
+                    <Dialog
+                      open={addressDialogOpen}
+                      onOpenChange={setAddressDialogOpen}
+                    >
                       <DialogTrigger asChild>
                         <Button size="sm">
                           <PlusIcon className="h-4 w-4 mr-1" />
@@ -470,14 +512,24 @@ export default function CartPage() {
                               <Input
                                 placeholder="e.g., Home, Office"
                                 value={newAddress.label}
-                                onChange={(e) => setNewAddress({ ...newAddress, label: e.target.value })}
+                                onChange={(e) =>
+                                  setNewAddress({
+                                    ...newAddress,
+                                    label: e.target.value,
+                                  })
+                                }
                               />
                             </div>
                             <div className="space-y-2">
                               <Label>Full Name *</Label>
                               <Input
                                 value={newAddress.fullName}
-                                onChange={(e) => setNewAddress({ ...newAddress, fullName: e.target.value })}
+                                onChange={(e) =>
+                                  setNewAddress({
+                                    ...newAddress,
+                                    fullName: e.target.value,
+                                  })
+                                }
                               />
                             </div>
                           </div>
@@ -486,7 +538,12 @@ export default function CartPage() {
                             <Label>Phone *</Label>
                             <Input
                               value={newAddress.phone}
-                              onChange={(e) => setNewAddress({ ...newAddress, phone: e.target.value })}
+                              onChange={(e) =>
+                                setNewAddress({
+                                  ...newAddress,
+                                  phone: e.target.value,
+                                })
+                              }
                             />
                           </div>
 
@@ -494,7 +551,12 @@ export default function CartPage() {
                             <Label>Address Line 1 *</Label>
                             <Input
                               value={newAddress.addressLine1}
-                              onChange={(e) => setNewAddress({ ...newAddress, addressLine1: e.target.value })}
+                              onChange={(e) =>
+                                setNewAddress({
+                                  ...newAddress,
+                                  addressLine1: e.target.value,
+                                })
+                              }
                             />
                           </div>
 
@@ -502,7 +564,12 @@ export default function CartPage() {
                             <Label>Address Line 2</Label>
                             <Input
                               value={newAddress.addressLine2}
-                              onChange={(e) => setNewAddress({ ...newAddress, addressLine2: e.target.value })}
+                              onChange={(e) =>
+                                setNewAddress({
+                                  ...newAddress,
+                                  addressLine2: e.target.value,
+                                })
+                              }
                             />
                           </div>
 
@@ -511,14 +578,24 @@ export default function CartPage() {
                               <Label>City *</Label>
                               <Input
                                 value={newAddress.city}
-                                onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
+                                onChange={(e) =>
+                                  setNewAddress({
+                                    ...newAddress,
+                                    city: e.target.value,
+                                  })
+                                }
                               />
                             </div>
                             <div className="space-y-2">
                               <Label>State/Province</Label>
                               <Input
                                 value={newAddress.state}
-                                onChange={(e) => setNewAddress({ ...newAddress, state: e.target.value })}
+                                onChange={(e) =>
+                                  setNewAddress({
+                                    ...newAddress,
+                                    state: e.target.value,
+                                  })
+                                }
                               />
                             </div>
                           </div>
@@ -528,7 +605,9 @@ export default function CartPage() {
                               <Label>Country *</Label>
                               <Select
                                 value={newAddress.country}
-                                onValueChange={(v) => setNewAddress({ ...newAddress, country: v })}
+                                onValueChange={(v) =>
+                                  setNewAddress({ ...newAddress, country: v })
+                                }
                               >
                                 <SelectTrigger>
                                   <SelectValue />
@@ -536,7 +615,13 @@ export default function CartPage() {
                                 <SelectContent>
                                   {COUNTRIES.map((c) => (
                                     <SelectItem key={c.code} value={c.code}>
-                                      {c.flag} {c.name}
+                                      <span className="flex items-center gap-2">
+                                        <FlagImage
+                                          code={c.code as FlagCode}
+                                          size={16}
+                                        />
+                                        {c.name}
+                                      </span>
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -546,7 +631,12 @@ export default function CartPage() {
                               <Label>Pincode/ZIP *</Label>
                               <Input
                                 value={newAddress.pincode}
-                                onChange={(e) => setNewAddress({ ...newAddress, pincode: e.target.value })}
+                                onChange={(e) =>
+                                  setNewAddress({
+                                    ...newAddress,
+                                    pincode: e.target.value,
+                                  })
+                                }
                               />
                             </div>
                           </div>
@@ -556,7 +646,12 @@ export default function CartPage() {
                               type="checkbox"
                               id="isDefault"
                               checked={newAddress.isDefault}
-                              onChange={(e) => setNewAddress({ ...newAddress, isDefault: e.target.checked })}
+                              onChange={(e) =>
+                                setNewAddress({
+                                  ...newAddress,
+                                  isDefault: e.target.checked,
+                                })
+                              }
                             />
                             <Label htmlFor="isDefault" className="text-sm">
                               Set as default address
@@ -565,10 +660,16 @@ export default function CartPage() {
                         </div>
 
                         <DialogFooter>
-                          <Button variant="outline" onClick={() => setAddressDialogOpen(false)}>
+                          <Button
+                            variant="outline"
+                            onClick={() => setAddressDialogOpen(false)}
+                          >
                             Cancel
                           </Button>
-                          <Button onClick={handleAddAddress} disabled={savingAddress}>
+                          <Button
+                            onClick={handleAddAddress}
+                            disabled={savingAddress}
+                          >
                             {savingAddress ? (
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             ) : null}
@@ -581,7 +682,7 @@ export default function CartPage() {
                 ) : (
                   <div className="space-y-3">
                     <RadioGroup
-                      value={selectedAddressId || ''}
+                      value={selectedAddressId || ""}
                       onValueChange={setSelectedAddress}
                     >
                       {addresses.map((addr) => (
@@ -589,8 +690,8 @@ export default function CartPage() {
                           key={addr.id}
                           className={`p-3 border rounded-lg cursor-pointer transition-colors ${
                             selectedAddressId === addr.id
-                              ? 'border-amber-500 bg-amber-50'
-                              : 'hover:border-gray-300'
+                              ? "border-amber-500 bg-amber-50"
+                              : "hover:border-gray-300"
                           }`}
                           onClick={() => setSelectedAddress(addr.id)}
                         >
@@ -598,9 +699,16 @@ export default function CartPage() {
                             <RadioGroupItem value={addr.id} className="mt-1" />
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
-                                <span className="font-medium">{addr.label || 'Address'}</span>
+                                <span className="font-medium">
+                                  {addr.label || "Address"}
+                                </span>
                                 {addr.isDefault && (
-                                  <Badge variant="secondary" className="text-xs">Default</Badge>
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
+                                    Default
+                                  </Badge>
                                 )}
                               </div>
                               <p className="text-sm">{addr.fullName}</p>
@@ -611,7 +719,9 @@ export default function CartPage() {
                               <p className="text-sm text-muted-foreground">
                                 {addr.city}, {addr.state} {addr.pincode}
                               </p>
-                              <p className="text-sm text-muted-foreground">{addr.phone}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {addr.phone}
+                              </p>
                             </div>
                             <Button
                               variant="ghost"
@@ -629,7 +739,10 @@ export default function CartPage() {
                       ))}
                     </RadioGroup>
 
-                    <Dialog open={addressDialogOpen} onOpenChange={setAddressDialogOpen}>
+                    <Dialog
+                      open={addressDialogOpen}
+                      onOpenChange={setAddressDialogOpen}
+                    >
                       <DialogTrigger asChild>
                         <Button variant="outline" size="sm" className="w-full">
                           <PlusIcon className="h-4 w-4 mr-1" />
@@ -655,11 +768,15 @@ export default function CartPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Shipping</span>
-                  <span className="text-muted-foreground">Calculated at checkout</span>
+                  <span className="text-muted-foreground">
+                    Calculated at checkout
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Tax</span>
-                  <span className="text-muted-foreground">Calculated at checkout</span>
+                  <span className="text-muted-foreground">
+                    Calculated at checkout
+                  </span>
                 </div>
                 <Separator />
                 <div className="flex justify-between font-semibold text-lg">

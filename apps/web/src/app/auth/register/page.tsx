@@ -14,7 +14,12 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PhoneInput } from "@/components/ui/phone-input";
+import {
+  FlagImage,
+  needsCountryCode,
+  PhoneInput,
+  type FlagCode,
+} from "@/components/ui/phone-input";
 import {
   Select,
   SelectContent,
@@ -104,11 +109,11 @@ type CustomerForm = z.infer<typeof customerSchema>;
 type ShopkeeperForm = z.infer<typeof shopkeeperSchema>;
 
 const countryOptions = [
-  { value: "NP", label: "🇳🇵 Nepal", currency: "NPR" },
-  { value: "IN", label: "🇮🇳 India", currency: "INR" },
-  { value: "US", label: "🇺🇸 United States", currency: "USD" },
-  { value: "AE", label: "🇦🇪 UAE", currency: "AED" },
-  { value: "UK", label: "🇬🇧 United Kingdom", currency: "GBP" },
+  { value: "NP", label: "Nepal", currency: "NPR" },
+  { value: "IN", label: "India", currency: "INR" },
+  { value: "US", label: "United States", currency: "USD" },
+  { value: "AE", label: "UAE", currency: "AED" },
+  { value: "UK", label: "United Kingdom", currency: "GBP" },
 ];
 
 // Country-specific placeholder data
@@ -976,10 +981,14 @@ function RegisterForm() {
                   const needsCaptcha =
                     !turnstileToken &&
                     !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+                  const phoneValue = customerForm.watch("phone") || "";
+                  const phoneMissingCountryCode =
+                    phoneValue.length > 0 && needsCountryCode(phoneValue);
                   const isDisabled =
                     isLoading ||
                     emailCheckState.exists === true ||
                     phoneCheckState.exists === true ||
+                    phoneMissingCountryCode ||
                     needsCaptcha;
 
                   const button = (
@@ -1002,8 +1011,8 @@ function RegisterForm() {
                     </Button>
                   );
 
-                  // Show tooltip only when disabled due to captcha
-                  if (needsCaptcha && !isLoading) {
+                  // Show tooltip when disabled due to captcha or missing country code
+                  if ((needsCaptcha || phoneMissingCountryCode) && !isLoading) {
                     return (
                       <TooltipProvider>
                         <Tooltip>
@@ -1012,16 +1021,9 @@ function RegisterForm() {
                           </TooltipTrigger>
                           <TooltipContent side="top" className="max-w-[250px]">
                             <p className="text-sm">
-                              Please complete the security captcha above. If
-                              it's not visible, try{" "}
-                              <button
-                                type="button"
-                                onClick={() => window.location.reload()}
-                                className="underline font-medium"
-                              >
-                                reloading the page
-                              </button>
-                              .
+                              {phoneMissingCountryCode
+                                ? "Please enter a valid country code in the phone field (e.g., +977, +91)"
+                                : "Please complete the security captcha above. If it's not visible, try reloading the page."}
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -1177,7 +1179,10 @@ function RegisterForm() {
                             shopkeeperForm.setValue("phone", value);
                             checkPhoneAvailability(value);
                           }}
-                          error={phoneCheckState.exists === true || !!shopkeeperForm.formState.errors.phone}
+                          error={
+                            phoneCheckState.exists === true ||
+                            !!shopkeeperForm.formState.errors.phone
+                          }
                           className={cn(
                             phoneCheckState.exists === true &&
                               "[&_input]:border-red-500 [&_input]:focus-visible:ring-red-500",
@@ -1336,7 +1341,13 @@ function RegisterForm() {
                                 key={country.value}
                                 value={country.value}
                               >
-                                {country.label}
+                                <span className="flex items-center gap-2">
+                                  <FlagImage
+                                    code={country.value as FlagCode}
+                                    size={16}
+                                  />
+                                  {country.label}
+                                </span>
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -1435,10 +1446,14 @@ function RegisterForm() {
                   const needsCaptcha =
                     !turnstileToken &&
                     !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+                  const phoneValue = shopkeeperForm.watch("phone") || "";
+                  const phoneMissingCountryCode =
+                    phoneValue.length > 0 && needsCountryCode(phoneValue);
                   const isDisabled =
                     isLoading ||
                     emailCheckState.exists === true ||
                     phoneCheckState.exists === true ||
+                    phoneMissingCountryCode ||
                     needsCaptcha;
 
                   const button = (
@@ -1461,8 +1476,8 @@ function RegisterForm() {
                     </Button>
                   );
 
-                  // Show tooltip only when disabled due to captcha
-                  if (needsCaptcha && !isLoading) {
+                  // Show tooltip when disabled due to captcha or missing country code
+                  if ((needsCaptcha || phoneMissingCountryCode) && !isLoading) {
                     return (
                       <TooltipProvider>
                         <Tooltip>
@@ -1471,16 +1486,9 @@ function RegisterForm() {
                           </TooltipTrigger>
                           <TooltipContent side="top" className="max-w-[250px]">
                             <p className="text-sm">
-                              Please complete the security captcha above. If
-                              it's not visible, try{" "}
-                              <button
-                                type="button"
-                                onClick={() => window.location.reload()}
-                                className="underline font-medium"
-                              >
-                                reloading the page
-                              </button>
-                              .
+                              {phoneMissingCountryCode
+                                ? "Please enter a valid country code in the phone field (e.g., +977, +91)"
+                                : "Please complete the security captcha above. If it's not visible, try reloading the page."}
                             </p>
                           </TooltipContent>
                         </Tooltip>

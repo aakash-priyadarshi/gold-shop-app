@@ -2,53 +2,60 @@
 
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 import { forwardRef, useCallback, useMemo } from "react";
 
-// Supported countries with phone codes and flags
+// Flag SVG paths (from /public/flags/)
+export const FLAG_IMAGES = {
+  NP: "/flags/nepal-flag-icon.svg",
+  IN: "/flags/india-flag-icon.svg",
+  US: "/flags/united-states-flag-icon.svg",
+  AE: "/flags/united-arab-emirates-flag-icon.svg",
+  GB: "/flags/united-kingdom-flag-icon.svg",
+  UK: "/flags/united-kingdom-flag-icon.svg", // Alias for UK
+  EU: "/flags/europe-flag-icon.svg",
+} as const;
+
+// Supported countries with phone codes
 export const SUPPORTED_PHONE_COUNTRIES = [
   {
-    code: "NP",
+    code: "NP" as const,
     name: "Nepal",
-    flag: "🇳🇵",
     dialCode: "+977",
     minLength: 10,
     maxLength: 10,
   },
   {
-    code: "IN",
+    code: "IN" as const,
     name: "India",
-    flag: "🇮🇳",
     dialCode: "+91",
     minLength: 10,
     maxLength: 10,
   },
   {
-    code: "US",
+    code: "US" as const,
     name: "United States",
-    flag: "🇺🇸",
     dialCode: "+1",
     minLength: 10,
     maxLength: 10,
   },
   {
-    code: "AE",
+    code: "AE" as const,
     name: "UAE",
-    flag: "🇦🇪",
     dialCode: "+971",
     minLength: 9,
     maxLength: 9,
   },
   {
-    code: "GB",
+    code: "GB" as const,
     name: "United Kingdom",
-    flag: "🇬🇧",
     dialCode: "+44",
     minLength: 10,
     maxLength: 10,
   },
-] as const;
+];
 
-// EU country dial codes (excluding UK) - these will show EU flag 🇪🇺
+// EU country dial codes (excluding UK) - these will show EU flag
 const EU_DIAL_CODES = [
   "+43", // Austria
   "+32", // Belgium
@@ -82,6 +89,8 @@ const EU_DIAL_CODES = [
 export type SupportedCountryCode =
   (typeof SUPPORTED_PHONE_COUNTRIES)[number]["code"];
 
+export type FlagCode = keyof typeof FLAG_IMAGES;
+
 interface PhoneInputProps {
   value?: string;
   onChange?: (value: string) => void;
@@ -97,18 +106,44 @@ interface PhoneInputProps {
 }
 
 /**
+ * Flag Image Component - renders SVG flag
+ */
+export function FlagImage({
+  code,
+  size = 20,
+  className,
+}: {
+  code: FlagCode;
+  size?: number;
+  className?: string;
+}) {
+  const src = FLAG_IMAGES[code];
+  if (!src) return null;
+
+  return (
+    <Image
+      src={src}
+      alt={`${code} flag`}
+      width={size}
+      height={Math.round(size * 0.67)}
+      className={cn("inline-block object-contain rounded-sm", className)}
+      unoptimized
+    />
+  );
+}
+
+/**
  * Detect flag based on phone number input
- * Returns: { flag: emoji, isSupported: boolean, needsCountryCode: boolean }
  */
 function detectPhoneFlag(phone: string): {
-  flag: string | null;
+  flagCode: FlagCode | null;
   isSupported: boolean;
   needsCountryCode: boolean;
   countryCode: SupportedCountryCode | "EU" | null;
 } {
   if (!phone || phone.trim() === "") {
     return {
-      flag: null,
+      flagCode: null,
       isSupported: false,
       needsCountryCode: false,
       countryCode: null,
@@ -120,7 +155,7 @@ function detectPhoneFlag(phone: string): {
   // Check if starts with + (has country code)
   if (!cleaned.startsWith("+")) {
     return {
-      flag: null,
+      flagCode: null,
       isSupported: false,
       needsCountryCode: true,
       countryCode: null,
@@ -129,13 +164,13 @@ function detectPhoneFlag(phone: string): {
 
   // Check supported countries first (order by dial code length descending to match longer codes first)
   const sortedCountries = [...SUPPORTED_PHONE_COUNTRIES].sort(
-    (a, b) => b.dialCode.length - a.dialCode.length
+    (a, b) => b.dialCode.length - a.dialCode.length,
   );
 
   for (const country of sortedCountries) {
     if (cleaned.startsWith(country.dialCode)) {
       return {
-        flag: country.flag,
+        flagCode: country.code,
         isSupported: true,
         needsCountryCode: false,
         countryCode: country.code,
@@ -148,7 +183,7 @@ function detectPhoneFlag(phone: string): {
   for (const dialCode of sortedEU) {
     if (cleaned.startsWith(dialCode)) {
       return {
-        flag: "🇪🇺",
+        flagCode: "EU",
         isSupported: false,
         needsCountryCode: false,
         countryCode: "EU",
@@ -158,7 +193,7 @@ function detectPhoneFlag(phone: string): {
 
   // Has + but unrecognized country code
   return {
-    flag: null,
+    flagCode: null,
     isSupported: false,
     needsCountryCode: false,
     countryCode: null,
@@ -168,8 +203,8 @@ function detectPhoneFlag(phone: string): {
 /**
  * Phone input component with automatic flag detection
  * - Single unified input field
- * - Shows flag emoji based on country code typed
- * - Shows EU flag 🇪🇺 for EU countries (except UK)
+ * - Shows SVG flag based on country code typed
+ * - Shows EU flag for EU countries (except UK)
  * - Prompts for country code if not entered
  */
 export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
@@ -187,7 +222,7 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
       required,
       showValidationHint = true,
     },
-    ref
+    ref,
   ) => {
     // Detect flag and validation state
     const phoneState = useMemo(() => detectPhoneFlag(value), [value]);
@@ -195,7 +230,7 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
     // Handle input change - allow + at start, then only digits and spaces
     const handleChange = useCallback(
       (e: React.ChangeEvent<HTMLInputElement>) => {
-        let input = e.target.value;
+        const input = e.target.value;
 
         // Filter: allow + at start, then digits and spaces only
         let result = "";
@@ -210,15 +245,15 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
 
         onChange?.(result);
       },
-      [onChange]
+      [onChange],
     );
 
     return (
       <div className={cn("relative", className)}>
         {/* Flag display on the left inside input */}
-        {phoneState.flag && (
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xl pointer-events-none z-10">
-            {phoneState.flag}
+        {phoneState.flagCode && (
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10">
+            <FlagImage code={phoneState.flagCode} size={22} />
           </span>
         )}
 
@@ -236,29 +271,29 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
           required={required}
           className={cn(
             "h-11 rounded-xl pr-10",
-            phoneState.flag ? "pl-12" : "pl-4",
-            error && "border-red-500 focus-visible:ring-red-500"
+            phoneState.flagCode ? "pl-12" : "pl-4",
+            error && "border-red-500 focus-visible:ring-red-500",
           )}
         />
 
         {/* Validation hint below input */}
-        {showValidationHint && phoneState.needsCountryCode && value.length > 0 && (
-          <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-            <span>⚠️</span>
-            Please enter country code (e.g., +977, +91, +1)
-          </p>
-        )}
+        {showValidationHint &&
+          phoneState.needsCountryCode &&
+          value.length > 0 && (
+            <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+              <span>⚠️</span>
+              Please enter country code (e.g., +977, +91, +1)
+            </p>
+          )}
       </div>
     );
-  }
+  },
 );
 
 PhoneInput.displayName = "PhoneInput";
 
 /**
  * Validate a phone number
- * @param phone Full phone number with country code (e.g., "+977 9812345678")
- * @returns { valid: boolean, needsCountryCode: boolean, isSupported: boolean }
  */
 export function validatePhoneNumber(phone: string): {
   valid: boolean;
@@ -351,39 +386,32 @@ export function needsCountryCode(phone: string): boolean {
  */
 export function getCountryFromPhone(phone: string): {
   code: SupportedCountryCode | "EU" | null;
-  flag: string | null;
+  flagCode: FlagCode | null;
   name: string | null;
 } {
   const state = detectPhoneFlag(phone);
 
   if (state.countryCode === "EU") {
-    return { code: "EU", flag: "🇪🇺", name: "European Union" };
+    return { code: "EU", flagCode: "EU", name: "European Union" };
   }
 
   if (state.countryCode) {
     const country = SUPPORTED_PHONE_COUNTRIES.find(
-      (c) => c.code === state.countryCode
+      (c) => c.code === state.countryCode,
     );
     if (country) {
-      return { code: country.code, flag: country.flag, name: country.name };
+      return { code: country.code, flagCode: country.code, name: country.name };
     }
   }
 
-  return { code: null, flag: null, name: null };
+  return { code: null, flagCode: null, name: null };
 }
 
 /**
- * Format phone number for display with flag
+ * Get flag image path for a country code
  */
-export function formatPhoneDisplay(phone: string): string {
-  if (!phone) return "";
-
-  const { flag } = getCountryFromPhone(phone);
-  if (flag) {
-    return `${flag} ${phone}`;
-  }
-
-  return phone;
+export function getFlagImagePath(code: FlagCode): string {
+  return FLAG_IMAGES[code];
 }
 
 export default PhoneInput;

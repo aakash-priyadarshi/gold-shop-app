@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FlagImage, type FlagCode } from "@/components/ui/phone-input";
 import {
   Select,
   SelectContent,
@@ -56,11 +57,11 @@ const shopSetupSchema = z.object({
 type ShopSetupForm = z.infer<typeof shopSetupSchema>;
 
 const countryOptions = [
-  { value: "NP", label: "🇳🇵 Nepal", currency: "NPR" },
-  { value: "IN", label: "🇮🇳 India", currency: "INR" },
-  { value: "US", label: "🇺🇸 United States", currency: "USD" },
-  { value: "AE", label: "🇦🇪 UAE", currency: "AED" },
-  { value: "UK", label: "🇬🇧 United Kingdom", currency: "GBP" },
+  { value: "NP", label: "Nepal", currency: "NPR" },
+  { value: "IN", label: "India", currency: "INR" },
+  { value: "US", label: "United States", currency: "USD" },
+  { value: "AE", label: "UAE", currency: "AED" },
+  { value: "UK", label: "United Kingdom", currency: "GBP" },
 ];
 
 // Country-specific placeholder data
@@ -318,8 +319,8 @@ export default function CompleteShopSetupPage() {
                     phoneCheckState.exists === true
                       ? "border-red-500 focus-visible:ring-red-500"
                       : phoneCheckState.exists === false
-                      ? "border-green-500 focus-visible:ring-green-500"
-                      : ""
+                        ? "border-green-500 focus-visible:ring-green-500"
+                        : ""
                   }`}
                   {...form.register("userPhone", {
                     onChange: (e) => checkPhoneAvailability(e.target.value),
@@ -375,7 +376,13 @@ export default function CompleteShopSetupPage() {
                   <SelectContent>
                     {countryOptions.map((country) => (
                       <SelectItem key={country.value} value={country.value}>
-                        {country.label}
+                        <span className="flex items-center gap-2">
+                          <FlagImage
+                            code={country.value as FlagCode}
+                            size={16}
+                          />
+                          {country.label}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
