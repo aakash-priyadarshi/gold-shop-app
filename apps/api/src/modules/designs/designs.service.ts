@@ -1,0 +1,608 @@
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
+import { ImageGenerationService } from './image-generation.service';
+import { ConfigService } from '@nestjs/config';
+import {
+  JewelleryType,
+  BuildMethod,
+  WeightCategory,
+  DesignImageSource,
+  Prisma,
+} from '@prisma/client';
+
+interface CreateDesignDto {
+  jewelryType: JewelleryType;
+  buildMethod: BuildMethod;
+  metalType?: string;
+  metalColor?: string;
+  weightCategory?: WeightCategory;
+  estimatedWeight?: number;
+  surfaceFinish?: string;
+  hasGemstones?: boolean;
+  primaryStone?: string;
+  stoneCut?: string;
+  stoneCarat?: number;
+  stoneColor?: string;
+  settingStyle?: string;
+  additionalSpecs?: Record<string, unknown>;
+  referenceImageUrl?: string; // Customer uploaded image
+  shareToGallery?: boolean;
+  creatorName?: string;
+}
+
+interface DesignFilters {
+  jewelryType?: JewelleryType;
+  buildMethod?: BuildMethod;
+  metalType?: string;
+  primaryStone?: string;
+  hasGemstones?: boolean;
+  creatorId?: string;
+  isFeatured?: boolean;
+}
+
+type SortOption = 'popular' | 'liked' | 'trending' | 'newest' | 'most_made';
+
+@Injectable()
+export class DesignsService {
+  private readonly logger = new Logger(DesignsService.name);
+  private readonly bucketName: string;
+  private readonly publicUrl: string;
+  private readonly r2AccountId: string;
+  private readonly r2AccessKeyId: string;
+  private readonly r2SecretAccessKey: string;
+
+  constructor(
+    private prisma: PrismaService,
+    private imageGenService: ImageGenerationService,
+    private configService: ConfigService,
+  ) {
+    // R2 configuration
+    this.bucketName = this.configService.get<string>('R2_BUCKET_NAME') || '';
+    this.publicUrl = this.configService.get<string>('R2_PUBLIC_URL') || '';
+    this.r2AccountId = this.configService.get<string>('R2_ACCOUNT_ID') || '';
+    this.r2AccessKeyId = this.configService.get<string>('R2_ACCESS_KEY_ID') || '';
+    this.r2SecretAccessKey = this.configService.get<string>('R2_SECRET_ACCESS_KEY') || '';
+  }
+
+  /**
+   * Create a new design with AI-generated image
+   */
+  async createDesign(userId: string, dto: CreateDesignDto) {
+    // Generate spec hash for caching
+    const specHash = this.imageGenService.generateSpecHash({
+      jewelryType: dto.jewelryType,
+      buildMethod: dto.buildMethod,
+      metalType: dto.metalType,
+      metalColor: dto.metalColor,
+      weightCategory: dto.weightCategory,
+      estimatedWeight: dto.estimatedWeight,
+      surfaceFinish: dto.surfaceFinish,
+      hasGemstones: dto.hasGemstones,
+      primaryStone: dto.primaryStone,
+      stoneCut: dto.stoneCut,
+      stoneCarat: dto.stoneCarat,
+      stoneColor: dto.stoneColor,
+      settingStyle: dto.settingStyle,
+    });
+
+    // Check if identical design already exists
+    const existingDesign = await this.prisma.design.findUnique({
+      where: { imageHash: specHash },
+    });
+
+    if (existingDesign) {
+      this.logger.log(`Found cached design with hash: ${specHash}`);
+      
+      // Increment view count
+      await this.prisma.design.update({
+        where: { id: existingDesign.id },
+        data: { viewsCount: { increment: 1 } },
+      });
+
+      return {
+        design: existingDesign,
+        cached: true,
+      };
+    }
+
+    // Determine image source and generate/refine image
+    let imageResult;
+    let imageSource: DesignImageSource = DesignImageSource.GENERATED;
+
+    if (dto.referenceImageUrl) {
+      // Customer provided a reference image - refine it
+      imageResult = await this.imageGenService.refineImage(dto.referenceImageUrl, {
+        jewelryType: dto.jewelryType,
+        buildMethod: dto.buildMethod,
+        metalType: dto.metalType,
+        metalColor: dto.metalColor,
+        surfaceFinish: dto.surfaceFinish,
+        hasGemstones: dto.hasGemstones,
+        primaryStone: dto.primaryStone,
+        stoneCut: dto.stoneCut,
+        stoneCarat: dto.stoneCarat,
+        stoneColor: dto.stoneColor,
+        settingStyle: dto.settingStyle,
+      });
+      imageSource = DesignImageSource.REFINED;
+    } else {
+      // Generate from scratch
+      imageResult = await this.imageGenService.generateImage({
+        jewelryType: dto.jewelryType,
+        buildMethod: dto.buildMethod,
+        metalType: dto.metalType,
+        metalColor: dto.metalColor,
+        weightCategory: dto.weightCategory,
+        estimatedWeight: dto.estimatedWeight,
+        surfaceFinish: dto.surfaceFinish,
+        hasGemstones: dto.hasGemstones,
+        primaryStone: dto.primaryStone,
+        stoneCut: dto.stoneCut,
+        stoneCarat: dto.stoneCarat,
+        stoneColor: dto.stoneColor,
+        settingStyle: dto.settingStyle,
+      });
+    }
+
+    // Upload image to R2
+    const imageUrl = await this.uploadImageToR2(imageResult.imageUrl, specHash);
+
+    // Get user info for creator name
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true },
+    });
+
+    const creatorDisplayName = dto.creatorName || 
+      (user ? `${user.firstName} ${user.lastName?.charAt(0) || ''}`.trim() : 'Anonymous');
+
+    // Create the design record
+    const design = await this.prisma.design.create({
+      data: {
+        jewelryType: dto.jewelryType,
+        buildMethod: dto.buildMethod,
+        metalType: dto.metalType,
+        metalColor: dto.metalColor,
+        weightCategory: dto.weightCategory,
+        estimatedWeight: dto.estimatedWeight,
+        surfaceFinish: dto.surfaceFinish,
+        hasGemstones: dto.hasGemstones || false,
+        primaryStone: dto.primaryStone,
+        stoneCut: dto.stoneCut,
+        stoneCarat: dto.stoneCarat,
+        stoneColor: dto.stoneColor,
+        settingStyle: dto.settingStyle,
+        additionalSpecs: dto.additionalSpecs as Prisma.InputJsonValue,
+        generationPrompt: imageResult.prompt,
+        imageUrl,
+        imageHash: specHash,
+        imageSource,
+        creatorId: userId,
+        creatorName: creatorDisplayName,
+        isPublic: dto.shareToGallery !== false, // Default to true (checked)
+      },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    return {
+      design,
+      cached: false,
+    };
+  }
+
+  /**
+   * Upload base64 image to R2 storage using fetch with signed URL
+   * For now, we'll return base64 and handle R2 upload via existing image upload service
+   */
+  private async uploadImageToR2(base64DataUrl: string, hash: string): Promise<string> {
+    if (!this.publicUrl || !this.bucketName) {
+      this.logger.warn('R2 not configured, returning base64 URL');
+      return base64DataUrl;
+    }
+
+    try {
+      // Extract base64 data from data URL
+      const matches = base64DataUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+      if (!matches) {
+        throw new Error('Invalid base64 image format');
+      }
+
+      const format = matches[1];
+      const base64Data = matches[2];
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      const key = `designs/${hash}.${format}`;
+
+      // Use R2's S3-compatible API with presigned URL approach
+      // For now, we store the base64 directly - you can enhance this with proper R2 upload
+      // when integrating with the existing image upload infrastructure
+      
+      // TODO: Integrate with existing R2 upload service if available
+      // For MVP, store as base64 data URL (works but not optimal for large images)
+      this.logger.log(`Would upload to R2: ${key}`);
+      
+      // Return the base64 for now - in production, return the R2 URL after upload
+      return base64DataUrl;
+    } catch (error) {
+      this.logger.error(`Failed to process image: ${error}`);
+      return base64DataUrl;
+    }
+  }
+
+  /**
+   * Get designs for the gallery with filtering and sorting
+   */
+  async getDesigns(
+    filters: DesignFilters,
+    sort: SortOption = 'popular',
+    page: number = 1,
+    limit: number = 20,
+  ) {
+    const where: Prisma.DesignWhereInput = {
+      isPublic: true,
+      isApproved: true,
+    };
+
+    if (filters.jewelryType) {
+      where.jewelryType = filters.jewelryType;
+    }
+    if (filters.buildMethod) {
+      where.buildMethod = filters.buildMethod;
+    }
+    if (filters.metalType) {
+      where.metalType = filters.metalType;
+    }
+    if (filters.primaryStone) {
+      where.primaryStone = filters.primaryStone;
+    }
+    if (filters.hasGemstones !== undefined) {
+      where.hasGemstones = filters.hasGemstones;
+    }
+    if (filters.creatorId) {
+      where.creatorId = filters.creatorId;
+    }
+    if (filters.isFeatured) {
+      where.isFeatured = true;
+    }
+
+    // Determine sort order
+    let orderBy: Prisma.DesignOrderByWithRelationInput;
+    switch (sort) {
+      case 'popular':
+        orderBy = { ordersCount: 'desc' };
+        break;
+      case 'liked':
+        orderBy = { likesCount: 'desc' };
+        break;
+      case 'trending':
+        // For trending, we'd ideally use a time-weighted score
+        // For now, use a combination
+        orderBy = { likesCount: 'desc' };
+        break;
+      case 'newest':
+        orderBy = { createdAt: 'desc' };
+        break;
+      case 'most_made':
+        orderBy = { ordersCompleted: 'desc' };
+        break;
+      default:
+        orderBy = { ordersCount: 'desc' };
+    }
+
+    const [designs, total] = await Promise.all([
+      this.prisma.design.findMany({
+        where,
+        orderBy,
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          creator: {
+            select: {
+              id: true,
+              firstName: true,
+            },
+          },
+          _count: {
+            select: {
+              likes: true,
+            },
+          },
+        },
+      }),
+      this.prisma.design.count({ where }),
+    ]);
+
+    return {
+      designs,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * Get a single design by ID
+   */
+  async getDesignById(id: string, userId?: string) {
+    const design = await this.prisma.design.findUnique({
+      where: { id },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        _count: {
+          select: {
+            likes: true,
+          },
+        },
+      },
+    });
+
+    if (!design) {
+      throw new NotFoundException('Design not found');
+    }
+
+    // Check if user has liked this design
+    let isLiked = false;
+    if (userId) {
+      const like = await this.prisma.designLike.findUnique({
+        where: {
+          designId_userId: {
+            designId: id,
+            userId,
+          },
+        },
+      });
+      isLiked = !!like;
+    }
+
+    // Increment view count
+    await this.prisma.design.update({
+      where: { id },
+      data: { viewsCount: { increment: 1 } },
+    });
+
+    return {
+      ...design,
+      isLiked,
+    };
+  }
+
+  /**
+   * Get user's own designs
+   */
+  async getMyDesigns(userId: string, page: number = 1, limit: number = 20) {
+    const [designs, total] = await Promise.all([
+      this.prisma.design.findMany({
+        where: { creatorId: userId },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          _count: {
+            select: {
+              likes: true,
+            },
+          },
+        },
+      }),
+      this.prisma.design.count({ where: { creatorId: userId } }),
+    ]);
+
+    return {
+      designs,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * Like a design
+   */
+  async likeDesign(designId: string, userId: string) {
+    // Check if design exists
+    const design = await this.prisma.design.findUnique({
+      where: { id: designId },
+    });
+
+    if (!design) {
+      throw new NotFoundException('Design not found');
+    }
+
+    // Check if already liked
+    const existingLike = await this.prisma.designLike.findUnique({
+      where: {
+        designId_userId: {
+          designId,
+          userId,
+        },
+      },
+    });
+
+    if (existingLike) {
+      throw new BadRequestException('Design already liked');
+    }
+
+    // Create like and increment count
+    await this.prisma.$transaction([
+      this.prisma.designLike.create({
+        data: {
+          designId,
+          userId,
+        },
+      }),
+      this.prisma.design.update({
+        where: { id: designId },
+        data: { likesCount: { increment: 1 } },
+      }),
+    ]);
+
+    return { success: true };
+  }
+
+  /**
+   * Unlike a design
+   */
+  async unlikeDesign(designId: string, userId: string) {
+    // Check if like exists
+    const existingLike = await this.prisma.designLike.findUnique({
+      where: {
+        designId_userId: {
+          designId,
+          userId,
+        },
+      },
+    });
+
+    if (!existingLike) {
+      throw new BadRequestException('Design not liked');
+    }
+
+    // Delete like and decrement count
+    await this.prisma.$transaction([
+      this.prisma.designLike.delete({
+        where: { id: existingLike.id },
+      }),
+      this.prisma.design.update({
+        where: { id: designId },
+        data: { likesCount: { decrement: 1 } },
+      }),
+    ]);
+
+    return { success: true };
+  }
+
+  /**
+   * Increment "Build me this" count (when user starts RFQ from design)
+   */
+  async incrementOrdersCount(designId: string) {
+    await this.prisma.design.update({
+      where: { id: designId },
+      data: { ordersCount: { increment: 1 } },
+    });
+  }
+
+  /**
+   * Increment completed orders count (when order is actually delivered)
+   */
+  async incrementOrdersCompleted(designId: string) {
+    await this.prisma.design.update({
+      where: { id: designId },
+      data: { ordersCompleted: { increment: 1 } },
+    });
+  }
+
+  /**
+   * Update design visibility
+   */
+  async updateDesignVisibility(designId: string, userId: string, isPublic: boolean) {
+    const design = await this.prisma.design.findUnique({
+      where: { id: designId },
+    });
+
+    if (!design) {
+      throw new NotFoundException('Design not found');
+    }
+
+    if (design.creatorId !== userId) {
+      throw new ForbiddenException('You can only update your own designs');
+    }
+
+    return this.prisma.design.update({
+      where: { id: designId },
+      data: { isPublic },
+    });
+  }
+
+  /**
+   * Delete a design (only creator can delete)
+   */
+  async deleteDesign(designId: string, userId: string) {
+    const design = await this.prisma.design.findUnique({
+      where: { id: designId },
+    });
+
+    if (!design) {
+      throw new NotFoundException('Design not found');
+    }
+
+    if (design.creatorId !== userId) {
+      throw new ForbiddenException('You can only delete your own designs');
+    }
+
+    await this.prisma.design.delete({
+      where: { id: designId },
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Get featured designs for homepage
+   */
+  async getFeaturedDesigns(limit: number = 8) {
+    return this.prisma.design.findMany({
+      where: {
+        isPublic: true,
+        isApproved: true,
+        isFeatured: true,
+      },
+      orderBy: { ordersCount: 'desc' },
+      take: limit,
+      include: {
+        creator: {
+          select: {
+            id: true,
+            firstName: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Get design stats for admin dashboard
+   */
+  async getDesignStats() {
+    const [totalDesigns, publicDesigns, totalLikes, totalOrders] = await Promise.all([
+      this.prisma.design.count(),
+      this.prisma.design.count({ where: { isPublic: true } }),
+      this.prisma.designLike.count(),
+      this.prisma.design.aggregate({
+        _sum: { ordersCount: true },
+      }),
+    ]);
+
+    return {
+      totalDesigns,
+      publicDesigns,
+      totalLikes,
+      totalOrders: totalOrders._sum.ordersCount || 0,
+    };
+  }
+}

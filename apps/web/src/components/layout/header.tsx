@@ -198,6 +198,7 @@ export function Header() {
 
   const navigation = [
     { name: 'Shop', href: '/shop', icon: ShoppingBagIcon },
+    { name: 'Designs', href: '/designs', icon: HeartIcon },
     { name: 'Custom Order', href: '/rfq/create', icon: SparklesIcon },
     { name: 'Sellers', href: '/shops', icon: BuildingOffice2Icon },
     { name: 'About', href: '/about', icon: InformationCircleIcon },

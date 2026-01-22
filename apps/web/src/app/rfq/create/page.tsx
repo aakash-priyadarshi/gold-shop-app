@@ -307,6 +307,147 @@ export default function CreateRfqPage() {
     }));
   };
 
+  // AI Design Preview state
+  const [designPreviewUrl, setDesignPreviewUrl] = useState<string | null>(null);
+  const [generatingPreview, setGeneratingPreview] = useState(false);
+  const [shareToGallery, setShareToGallery] = useState(true); // Default to checked
+  const [designId, setDesignId] = useState<string | null>(null);
+  const [fromDesign, setFromDesign] = useState(false);
+
+  // Handle prefill from Design Gallery ("Build me this")
+  useEffect(() => {
+    // Check if coming from design gallery
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get('from') === 'design') {
+      const prefillJson = sessionStorage.getItem('rfq-prefill');
+      if (prefillJson) {
+        try {
+          const prefill = JSON.parse(prefillJson);
+          setFromDesign(true);
+          
+          // Set the design preview image if available
+          if (prefill.imageUrl) {
+            setDesignPreviewUrl(prefill.imageUrl);
+          }
+          if (prefill.designId) {
+            setDesignId(prefill.designId);
+          }
+          
+          // Prefill form data
+          setFormData(prev => ({
+            ...prev,
+            jewelleryType: prefill.jewelleryType || prev.jewelleryType,
+            buildMethod: prefill.buildMethod || prev.buildMethod,
+            metalType: prefill.metalType || prev.metalType,
+            weightCategory: prefill.weightCategory || prev.weightCategory,
+            estimatedWeight: prefill.estimatedWeight?.toString() || prev.estimatedWeight,
+            surfaceFinish: prefill.surfaceFinish || prev.surfaceFinish,
+            description: prefill.description || prev.description,
+            hasGemstones: prefill.hasGemstones || false,
+            referenceImages: prefill.referenceImages || prev.referenceImages,
+          }));
+          
+          // Set gemstones if any
+          if (prefill.hasGemstones && prefill.gemstone) {
+            setFormData(prev => ({
+              ...prev,
+              gemstonesV2: [{
+                id: `prefill-${Date.now()}`,
+                presetId: '',
+                stoneType: prefill.gemstone.type || '',
+                shape: prefill.gemstone.shape || '',
+                sizeValue: prefill.gemstone.size || '0',
+                sizeUnit: 'MM' as const,
+                color: prefill.gemstone.color || '',
+                clarity: '',
+                cut: '',
+                settingStyle: prefill.gemstone.settingStyle || '',
+                count: prefill.gemstone.count || 1,
+              }],
+            }));
+          }
+          
+          // Clear the session storage
+          sessionStorage.removeItem('rfq-prefill');
+        } catch (err) {
+          console.error('Failed to parse prefill data:', err);
+        }
+      }
+    }
+  }, []);
+
+  // Generate AI Preview
+  const generatePreview = async () => {
+    if (!isAuthenticated) {
+      router.push('/auth/login?callbackUrl=/rfq/create');
+      return;
+    }
+    
+    setGeneratingPreview(true);
+    setError('');
+    
+    try {
+      const token = localStorage.getItem('token');
+      const weight = getWeightFromTemplate();
+      
+      // Prepare the design specs
+      const designSpecs = {
+        jewelryType: formData.jewelleryType,
+        buildMethod: formData.buildMethod,
+        metalType: formData.metalType,
+        weightCategory: formData.weightCategory,
+        estimatedWeight: weight,
+        surfaceFinish: formData.surfaceFinish,
+        hasGemstones: formData.hasGemstones,
+        // Include primary gemstone if any
+        ...(formData.hasGemstones && formData.gemstonesV2.length > 0 && {
+          primaryStone: formData.gemstonesV2[0].stoneType,
+          stoneCut: formData.gemstonesV2[0].shape,
+          stoneColor: formData.gemstonesV2[0].color,
+          settingStyle: formData.gemstonesV2[0].settingStyle,
+        }),
+        additionalSpecs: {
+          description: formData.description,
+        },
+        shareToGallery,
+      };
+      
+      const response = await fetch(`${API_URL}/designs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(designSpecs),
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to generate preview');
+      }
+      
+      const design = await response.json();
+      setDesignPreviewUrl(design.imageUrl);
+      setDesignId(design.id);
+      
+      // Add the generated image to reference images
+      if (design.imageUrl) {
+        setFormData(prev => ({
+          ...prev,
+          referenceImages: [design.imageUrl, ...prev.referenceImages.filter(img => img !== design.imageUrl)],
+        }));
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to generate preview');
+      }
+    } finally {
+      setGeneratingPreview(false);
+    }
+  };
+
   const [formData, setFormData] = useState({
     jewelleryType: '',
     templateId: '',
@@ -1407,6 +1548,99 @@ export default function CreateRfqPage() {
                         </div>
                       ))}
                     </div>
+                  )}
+                </div>
+
+                {/* AI Design Preview Section */}
+                <div className="space-y-4 p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg border border-amber-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-amber-600" />
+                      <Label className="text-base font-medium">AI Design Preview</Label>
+                    </div>
+                    {designId && (
+                      <Badge variant="outline" className="text-xs">
+                        Design #{designId.slice(0, 8)}
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  <p className="text-sm text-gray-600">
+                    Generate an AI visualization of your custom jewelry design based on your specifications.
+                    {fromDesign && ' This design was selected from the gallery.'}
+                  </p>
+                  
+                  {/* Preview Image Display */}
+                  {designPreviewUrl ? (
+                    <div className="relative w-full max-w-sm mx-auto">
+                      <img
+                        src={designPreviewUrl}
+                        alt="AI Generated Design Preview"
+                        className="w-full rounded-lg shadow-md border"
+                      />
+                      <div className="absolute top-2 right-2">
+                        <Badge className="bg-amber-500 text-white">
+                          <Sparkles className="h-3 w-3 mr-1" />
+                          AI Generated
+                        </Badge>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-full max-w-sm mx-auto aspect-square bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400">
+                      <ImageIcon className="h-12 w-12 mb-2" />
+                      <p className="text-sm">Preview will appear here</p>
+                    </div>
+                  )}
+                  
+                  {/* Generate Button */}
+                  <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
+                    <Button
+                      type="button"
+                      onClick={generatePreview}
+                      disabled={generatingPreview || !formData.jewelleryType || !formData.metalType}
+                      className="bg-amber-600 hover:bg-amber-700 text-white"
+                    >
+                      {generatingPreview ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Generating... (10-15s)
+                        </>
+                      ) : designPreviewUrl ? (
+                        <>
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Regenerate Preview
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Generate Preview
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  
+                  {/* Share to Gallery Checkbox */}
+                  <div className="flex items-center justify-center gap-2 pt-2 border-t border-amber-200">
+                    <input
+                      type="checkbox"
+                      id="share-to-gallery"
+                      checked={shareToGallery}
+                      onChange={(e) => setShareToGallery(e.target.checked)}
+                      className="h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="share-to-gallery" className="text-sm text-gray-600">
+                      Share this design to the{' '}
+                      <a href="/designs" target="_blank" className="text-amber-600 hover:underline">
+                        Design Gallery
+                      </a>{' '}
+                      to inspire others
+                    </label>
+                  </div>
+                  
+                  {(!formData.jewelleryType || !formData.metalType) && (
+                    <p className="text-xs text-gray-500 text-center">
+                      Complete jewelry type and metal selection to enable preview generation
+                    </p>
                   )}
                 </div>
 

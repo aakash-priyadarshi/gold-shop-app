@@ -124,10 +124,7 @@ export function Turnstile({
   // We use explicit rendering via window.turnstile.render() in the useEffect.
   // Adding those attributes causes Cloudflare's script to auto-render a second widget.
   return (
-    <div
-      ref={containerRef}
-      className={`turnstile-container ${className}`}
-    />
+    <div ref={containerRef} className={`turnstile-container ${className}`} />
   );
 }
 

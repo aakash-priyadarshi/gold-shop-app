@@ -45,6 +45,9 @@ model User {
   shops                Shop[]
   verificationRequests VerificationRequest[]   @relation("UserVerificationRequests")
   purchaseStats        CustomerPurchaseStats[]
+  // Design gallery
+  designs              Design[]                @relation("DesignCreator")
+  designLikes          DesignLike[]
 
   @@index([email])
   @@index([phone])
@@ -1116,6 +1119,103 @@ model CommissionLedger {
   @@index([shopId])
   @@index([status])
   @@index([dueAt])
+}
+
+// ============================================
+// Design Gallery - AI-Generated Jewelry Designs
+// ============================================
+
+model Design {
+  id              String   @id @default(uuid())
+  
+  // Design specifications (matches RFQ form structure)
+  jewelryType     JewelleryType
+  buildMethod     BuildMethod
+  metalType       String?              // e.g., "GOLD_22K", "SILVER_925"
+  metalColor      String?              // e.g., "YELLOW", "WHITE", "ROSE"
+  weightCategory  WeightCategory?
+  estimatedWeight Float?               // in grams
+  surfaceFinish   String?              // e.g., "HIGH_POLISH", "MATTE"
+  
+  // Gemstone specifications
+  hasGemstones    Boolean  @default(false)
+  primaryStone    String?              // e.g., "DIAMOND_NATURAL", "RUBY"
+  stoneCut        String?              // e.g., "ROUND", "PRINCESS", "OVAL"
+  stoneCarat      Float?
+  stoneColor      String?
+  settingStyle    String?              // e.g., "PRONG", "BEZEL", "HALO"
+  
+  // Additional specs stored as JSON for flexibility
+  additionalSpecs Json?
+  
+  // The prompt used to generate the image
+  generationPrompt String?  @db.Text
+  
+  // Generated/uploaded image
+  imageUrl        String               // R2 URL to the generated image
+  thumbnailUrl    String?              // Optional smaller thumbnail
+  imageHash       String   @unique     // Hash of specs for deduplication
+  
+  // Source: "generated" (AI) or "uploaded" (customer reference)
+  imageSource     DesignImageSource @default(GENERATED)
+  
+  // Creator info
+  creatorId       String
+  creator         User     @relation("DesignCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  creatorName     String?              // Display name (can be anonymous)
+  
+  // Visibility
+  isPublic        Boolean  @default(true)
+  isFeatured      Boolean  @default(false)
+  
+  // Engagement metrics (denormalized for fast queries)
+  likesCount      Int      @default(0)
+  viewsCount      Int      @default(0)
+  ordersCount     Int      @default(0)  // "Build me this" clicks
+  ordersCompleted Int      @default(0)  // Actually manufactured
+  
+  // Moderation
+  isApproved      Boolean  @default(true) // Auto-approved, can be flagged
+  flaggedAt       DateTime?
+  flagReason      String?
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  likes           DesignLike[]
+  
+  @@index([jewelryType])
+  @@index([buildMethod])
+  @@index([metalType])
+  @@index([primaryStone])
+  @@index([likesCount])
+  @@index([ordersCount])
+  @@index([viewsCount])
+  @@index([creatorId])
+  @@index([isPublic, isApproved])
+  @@index([isFeatured])
+  @@index([createdAt])
+}
+
+model DesignLike {
+  id        String   @id @default(uuid())
+  designId  String
+  design    Design   @relation(fields: [designId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  
+  @@unique([designId, userId]) // One like per user per design
+  @@index([designId])
+  @@index([userId])
+}
+
+enum DesignImageSource {
+  GENERATED    // AI-generated from specs
+  UPLOADED     // Customer uploaded reference
+  REFINED      // AI-refined from uploaded reference
 }
 
 enum UserRole {
