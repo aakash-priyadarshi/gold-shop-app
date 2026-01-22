@@ -144,6 +144,7 @@ export class UsersController {
         id: true,
         email: true,
         phone: true,
+        phoneVerifiedAt: true,
         firstName: true,
         lastName: true,
         role: true,

@@ -14,6 +14,12 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { getDashboardRoute, useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -71,11 +77,14 @@ function LoginForm() {
 
   // Turnstile state
   const [turnstileToken, setTurnstileToken] = useState<string>("");
+  const [turnstileError, setTurnstileError] = useState(false);
   const handleTurnstileVerify = useCallback((token: string) => {
     setTurnstileToken(token);
+    setTurnstileError(false);
   }, []);
   const handleTurnstileError = useCallback(() => {
     setTurnstileToken("");
+    setTurnstileError(true);
     toast({
       variant: "destructive",
       title: "Verification failed",
@@ -84,6 +93,7 @@ function LoginForm() {
   }, [toast]);
   const handleTurnstileExpire = useCallback(() => {
     setTurnstileToken("");
+    setTurnstileError(true);
   }, []);
 
   // Check URL for error param (from OAuth redirect)
@@ -107,7 +117,7 @@ function LoginForm() {
         router.push(
           `/auth/register${
             emailParam ? `?email=${encodeURIComponent(emailParam)}` : ""
-          }`
+          }`,
         );
       }, 2000);
     } else if (errorParam) {
@@ -132,7 +142,7 @@ function LoginForm() {
     if (resendCooldown > 0) {
       const timer = setTimeout(
         () => setResendCooldown(resendCooldown - 1),
-        1000
+        1000,
       );
       return () => clearTimeout(timer);
     }
@@ -363,7 +373,7 @@ function LoginForm() {
                       "focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500",
                       otpError
                         ? "border-red-300 bg-red-50"
-                        : "border-gray-200 bg-white"
+                        : "border-gray-200 bg-white",
                     )}
                     autoFocus={index === 0}
                   />
@@ -516,7 +526,7 @@ function LoginForm() {
                   className={cn(
                     "h-12 pl-11 rounded-xl border-gray-200 transition-all duration-300",
                     errors.email &&
-                      "border-red-300 focus:border-red-400 focus:ring-red-400/20"
+                      "border-red-300 focus:border-red-400 focus:ring-red-400/20",
                   )}
                   {...register("email")}
                   aria-invalid={errors.email ? "true" : "false"}
@@ -556,7 +566,7 @@ function LoginForm() {
                   className={cn(
                     "h-12 pl-11 pr-11 rounded-xl border-gray-200 transition-all duration-300",
                     errors.password &&
-                      "border-red-300 focus:border-red-400 focus:ring-red-400/20"
+                      "border-red-300 focus:border-red-400 focus:ring-red-400/20",
                   )}
                   {...register("password")}
                   aria-invalid={errors.password ? "true" : "false"}
@@ -589,38 +599,86 @@ function LoginForm() {
             </div>
 
             {/* Turnstile CAPTCHA */}
-            <div className="flex justify-center login-form-item">
+            <div className="flex flex-col items-center gap-2 login-form-item">
               <Turnstile
                 onVerify={handleTurnstileVerify}
                 onError={handleTurnstileError}
                 onExpire={handleTurnstileExpire}
                 theme="auto"
               />
+              {/* Show message if captcha has error or expired */}
+              {turnstileError && (
+                <p className="text-sm text-amber-600 flex items-center gap-1">
+                  <ExclamationCircleIcon className="h-4 w-4" />
+                  Captcha expired or failed.{" "}
+                  <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    className="underline font-medium hover:text-amber-700"
+                  >
+                    Reload page
+                  </button>
+                </p>
+              )}
             </div>
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-4 pt-2 login-form-item">
-            <Button
-              type="submit"
-              className="w-full h-12 rounded-xl gold-gradient text-white text-base font-semibold transition-all hover:shadow-lg hover:shadow-gold-500/25 disabled:opacity-70"
-              disabled={
-                isLoading ||
-                (!turnstileToken &&
-                  !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY)
+            {/* Determine why button is disabled */}
+            {(() => {
+              const needsCaptcha =
+                !turnstileToken && !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+              const isDisabled = isLoading || needsCaptcha;
+
+              const button = (
+                <Button
+                  type="submit"
+                  className="w-full h-12 rounded-xl gold-gradient text-white text-base font-semibold transition-all hover:shadow-lg hover:shadow-gold-500/25 disabled:opacity-70 disabled:cursor-not-allowed"
+                  disabled={isDisabled}
+                >
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <span className="spinner spinner-sm border-white/30 border-t-white" />
+                      Signing in...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      Sign in
+                      <ArrowRightIcon className="h-4 w-4" />
+                    </span>
+                  )}
+                </Button>
+              );
+
+              // Show tooltip only when disabled due to captcha
+              if (needsCaptcha && !isLoading) {
+                return (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="w-full">{button}</div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[250px]">
+                        <p className="text-sm">
+                          Please complete the security captcha above. If it's
+                          not visible, try{" "}
+                          <button
+                            type="button"
+                            onClick={() => window.location.reload()}
+                            className="underline font-medium"
+                          >
+                            reloading the page
+                          </button>
+                          .
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                );
               }
-            >
-              {isLoading ? (
-                <span className="flex items-center gap-2">
-                  <span className="spinner spinner-sm border-white/30 border-t-white" />
-                  Signing in...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  Sign in
-                  <ArrowRightIcon className="h-4 w-4" />
-                </span>
-              )}
-            </Button>
+
+              return button;
+            })()}
 
             <p className="text-sm text-center text-muted-foreground">
               Don&apos;t have an account?{" "}

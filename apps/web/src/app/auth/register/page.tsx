@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PhoneInput } from "@/components/ui/phone-input";
 import {
   Select,
   SelectContent,
@@ -22,6 +23,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { BRAND } from "@/config/brand";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -195,7 +202,7 @@ function RegisterForm() {
     countryPlaceholders[detectedCountry] || countryPlaceholders["US"];
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"customer" | "shopkeeper">(
-    "customer"
+    "customer",
   );
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -224,11 +231,14 @@ function RegisterForm() {
 
   // Turnstile state
   const [turnstileToken, setTurnstileToken] = useState<string>("");
+  const [turnstileError, setTurnstileError] = useState(false);
   const handleTurnstileVerify = useCallback((token: string) => {
     setTurnstileToken(token);
+    setTurnstileError(false);
   }, []);
   const handleTurnstileError = useCallback(() => {
     setTurnstileToken("");
+    setTurnstileError(true);
     toast({
       variant: "destructive",
       title: "Verification failed",
@@ -237,6 +247,7 @@ function RegisterForm() {
   }, [toast]);
   const handleTurnstileExpire = useCallback(() => {
     setTurnstileToken("");
+    setTurnstileError(true);
   }, []);
 
   // Check if user has visited before (skip intro for returning users)
@@ -252,7 +263,7 @@ function RegisterForm() {
     if (resendCooldown > 0) {
       const timer = setTimeout(
         () => setResendCooldown(resendCooldown - 1),
-        1000
+        1000,
       );
       return () => clearTimeout(timer);
     }
@@ -598,7 +609,7 @@ function RegisterForm() {
                       "focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500",
                       otpError
                         ? "border-red-300 bg-red-50"
-                        : "border-gray-200 bg-white"
+                        : "border-gray-200 bg-white",
                     )}
                     autoFocus={index === 0}
                   />
@@ -776,7 +787,7 @@ function RegisterForm() {
                         emailCheckState.exists === true &&
                           "border-red-500 focus-visible:ring-red-500",
                         emailCheckState.exists === false &&
-                          "border-green-500 focus-visible:ring-green-500"
+                          "border-green-500 focus-visible:ring-green-500",
                       )}
                       {...customerForm.register("email", {
                         onChange: (e) => checkEmailAvailability(e.target.value),
@@ -825,24 +836,26 @@ function RegisterForm() {
                 <div className="space-y-2">
                   <Label htmlFor="customer-phone">Phone (Optional)</Label>
                   <div className="relative">
-                    <PhoneIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                    <Input
+                    <PhoneInput
                       id="customer-phone"
-                      type="tel"
-                      placeholder={placeholders.phone}
+                      placeholder="Enter phone number"
+                      defaultCountry="NP"
+                      value={customerForm.watch("phone") || ""}
+                      onChange={(value) => {
+                        customerForm.setValue("phone", value);
+                        checkPhoneAvailability(value);
+                      }}
+                      error={phoneCheckState.exists === true}
                       className={cn(
-                        "h-11 pl-10 pr-10 rounded-xl",
                         phoneCheckState.exists === true &&
-                          "border-red-500 focus-visible:ring-red-500",
+                          "[&_input]:border-red-500 [&_input]:focus-visible:ring-red-500",
                         phoneCheckState.exists === false &&
-                          "border-green-500 focus-visible:ring-green-500"
+                          customerForm.watch("phone") &&
+                          "[&_input]:border-green-500 [&_input]:focus-visible:ring-green-500",
                       )}
-                      {...customerForm.register("phone", {
-                        onChange: (e) => checkPhoneAvailability(e.target.value),
-                      })}
                     />
                     {/* Real-time phone check indicator */}
-                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
+                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 z-10">
                       {phoneCheckState.checking && (
                         <ArrowPathIcon className="h-4 w-4 text-gray-400 animate-spin" />
                       )}
@@ -851,7 +864,8 @@ function RegisterForm() {
                           <ExclamationCircleIcon className="h-4 w-4 text-red-500" />
                         )}
                       {!phoneCheckState.checking &&
-                        phoneCheckState.exists === false && (
+                        phoneCheckState.exists === false &&
+                        customerForm.watch("phone") && (
                           <CheckCircleIcon className="h-4 w-4 text-green-500" />
                         )}
                     </div>
@@ -935,38 +949,89 @@ function RegisterForm() {
                 </div>
 
                 {/* Turnstile CAPTCHA */}
-                <div className="flex justify-center">
+                <div className="flex flex-col items-center gap-2">
                   <Turnstile
                     onVerify={handleTurnstileVerify}
                     onError={handleTurnstileError}
                     onExpire={handleTurnstileExpire}
                     theme="auto"
                   />
+                  {/* Show message if captcha has error or expired */}
+                  {turnstileError && (
+                    <p className="text-sm text-amber-600 flex items-center gap-1">
+                      <ExclamationCircleIcon className="h-4 w-4" />
+                      Captcha expired or failed.{" "}
+                      <button
+                        type="button"
+                        onClick={() => window.location.reload()}
+                        className="underline font-medium hover:text-amber-700"
+                      >
+                        Reload page
+                      </button>
+                    </p>
+                  )}
                 </div>
 
-                <Button
-                  type="submit"
-                  className="w-full h-12 rounded-xl gold-gradient text-white font-semibold transition-all hover:shadow-lg hover:shadow-gold-500/25"
-                  disabled={
+                {/* Submit Button with Tooltip */}
+                {(() => {
+                  const needsCaptcha =
+                    !turnstileToken &&
+                    !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+                  const isDisabled =
                     isLoading ||
                     emailCheckState.exists === true ||
                     phoneCheckState.exists === true ||
-                    (!turnstileToken &&
-                      !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY)
+                    needsCaptcha;
+
+                  const button = (
+                    <Button
+                      type="submit"
+                      className="w-full h-12 rounded-xl gold-gradient text-white font-semibold transition-all hover:shadow-lg hover:shadow-gold-500/25 disabled:opacity-70 disabled:cursor-not-allowed"
+                      disabled={isDisabled}
+                    >
+                      {isLoading ? (
+                        <span className="flex items-center gap-2">
+                          <span className="spinner spinner-sm border-white/30 border-t-white" />
+                          Creating account...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          Create Customer Account
+                          <ArrowRightIcon className="h-4 w-4" />
+                        </span>
+                      )}
+                    </Button>
+                  );
+
+                  // Show tooltip only when disabled due to captcha
+                  if (needsCaptcha && !isLoading) {
+                    return (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="w-full">{button}</div>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-[250px]">
+                            <p className="text-sm">
+                              Please complete the security captcha above. If
+                              it's not visible, try{" "}
+                              <button
+                                type="button"
+                                onClick={() => window.location.reload()}
+                                className="underline font-medium"
+                              >
+                                reloading the page
+                              </button>
+                              .
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    );
                   }
-                >
-                  {isLoading ? (
-                    <span className="flex items-center gap-2">
-                      <span className="spinner spinner-sm border-white/30 border-t-white" />
-                      Creating account...
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      Create Customer Account
-                      <ArrowRightIcon className="h-4 w-4" />
-                    </span>
-                  )}
-                </Button>
+
+                  return button;
+                })()}
 
                 {/* Google OAuth for Customer */}
                 <div className="relative my-4">
@@ -1067,7 +1132,7 @@ function RegisterForm() {
                             emailCheckState.exists === true &&
                               "border-red-500 focus-visible:ring-red-500",
                             emailCheckState.exists === false &&
-                              "border-green-500 focus-visible:ring-green-500"
+                              "border-green-500 focus-visible:ring-green-500",
                           )}
                           {...shopkeeperForm.register("email", {
                             onChange: (e) =>
@@ -1105,25 +1170,27 @@ function RegisterForm() {
                     <div className="space-y-2">
                       <Label htmlFor="shop-phone">Phone</Label>
                       <div className="relative">
-                        <PhoneIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                        <Input
+                        <PhoneInput
                           id="shop-phone"
-                          type="tel"
-                          placeholder={placeholders.phone}
+                          placeholder="Enter phone number"
+                          defaultCountry="NP"
+                          value={shopkeeperForm.watch("phone") || ""}
+                          onChange={(value) => {
+                            shopkeeperForm.setValue("phone", value);
+                            checkPhoneAvailability(value);
+                          }}
+                          error={phoneCheckState.exists === true || !!shopkeeperForm.formState.errors.phone}
                           className={cn(
-                            "h-11 pl-10 pr-10 rounded-xl",
                             phoneCheckState.exists === true &&
-                              "border-red-500 focus-visible:ring-red-500",
+                              "[&_input]:border-red-500 [&_input]:focus-visible:ring-red-500",
                             phoneCheckState.exists === false &&
-                              "border-green-500 focus-visible:ring-green-500"
+                              shopkeeperForm.watch("phone") &&
+                              "[&_input]:border-green-500 [&_input]:focus-visible:ring-green-500",
                           )}
-                          {...shopkeeperForm.register("phone", {
-                            onChange: (e) =>
-                              checkPhoneAvailability(e.target.value),
-                          })}
+                          required
                         />
                         {/* Real-time phone check indicator */}
-                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
+                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 z-10">
                           {phoneCheckState.checking && (
                             <ArrowPathIcon className="h-4 w-4 text-gray-400 animate-spin" />
                           )}
@@ -1132,7 +1199,8 @@ function RegisterForm() {
                               <ExclamationCircleIcon className="h-4 w-4 text-red-500" />
                             )}
                           {!phoneCheckState.checking &&
-                            phoneCheckState.exists === false && (
+                            phoneCheckState.exists === false &&
+                            shopkeeperForm.watch("phone") && (
                               <CheckCircleIcon className="h-4 w-4 text-green-500" />
                             )}
                         </div>
@@ -1341,38 +1409,89 @@ function RegisterForm() {
                 </div>
 
                 {/* Turnstile CAPTCHA */}
-                <div className="flex justify-center">
+                <div className="flex flex-col items-center gap-2">
                   <Turnstile
                     onVerify={handleTurnstileVerify}
                     onError={handleTurnstileError}
                     onExpire={handleTurnstileExpire}
                     theme="auto"
                   />
+                  {/* Show message if captcha has error or expired */}
+                  {turnstileError && (
+                    <p className="text-sm text-amber-600 flex items-center gap-1">
+                      <ExclamationCircleIcon className="h-4 w-4" />
+                      Captcha expired or failed.{" "}
+                      <button
+                        type="button"
+                        onClick={() => window.location.reload()}
+                        className="underline font-medium hover:text-amber-700"
+                      >
+                        Reload page
+                      </button>
+                    </p>
+                  )}
                 </div>
 
-                <Button
-                  type="submit"
-                  className="w-full h-12 rounded-xl gold-gradient text-white font-semibold transition-all hover:shadow-lg hover:shadow-gold-500/25"
-                  disabled={
+                {/* Submit Button with Tooltip */}
+                {(() => {
+                  const needsCaptcha =
+                    !turnstileToken &&
+                    !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+                  const isDisabled =
                     isLoading ||
                     emailCheckState.exists === true ||
                     phoneCheckState.exists === true ||
-                    (!turnstileToken &&
-                      !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY)
+                    needsCaptcha;
+
+                  const button = (
+                    <Button
+                      type="submit"
+                      className="w-full h-12 rounded-xl gold-gradient text-white font-semibold transition-all hover:shadow-lg hover:shadow-gold-500/25 disabled:opacity-70 disabled:cursor-not-allowed"
+                      disabled={isDisabled}
+                    >
+                      {isLoading ? (
+                        <span className="flex items-center gap-2">
+                          <span className="spinner spinner-sm border-white/30 border-t-white" />
+                          Registering shop...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          Register Shop
+                          <ArrowRightIcon className="h-4 w-4" />
+                        </span>
+                      )}
+                    </Button>
+                  );
+
+                  // Show tooltip only when disabled due to captcha
+                  if (needsCaptcha && !isLoading) {
+                    return (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="w-full">{button}</div>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-[250px]">
+                            <p className="text-sm">
+                              Please complete the security captcha above. If
+                              it's not visible, try{" "}
+                              <button
+                                type="button"
+                                onClick={() => window.location.reload()}
+                                className="underline font-medium"
+                              >
+                                reloading the page
+                              </button>
+                              .
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    );
                   }
-                >
-                  {isLoading ? (
-                    <span className="flex items-center gap-2">
-                      <span className="spinner spinner-sm border-white/30 border-t-white" />
-                      Registering shop...
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      Register Shop
-                      <ArrowRightIcon className="h-4 w-4" />
-                    </span>
-                  )}
-                </Button>
+
+                  return button;
+                })()}
 
                 {/* Google OAuth for Shopkeeper */}
                 <div className="relative my-4">
