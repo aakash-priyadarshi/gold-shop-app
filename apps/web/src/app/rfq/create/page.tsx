@@ -78,7 +78,9 @@ import {
 import { getApiUrl } from "@/lib/api";
 import {
   calculateEstimate,
+  CHAIN_STYLE_OPTIONS,
   type BuildMethod,
+  type ChainStyleType,
   type EstimateRequest,
 } from "@/lib/pricing/calculate-estimate";
 
@@ -159,6 +161,15 @@ const BUILD_METHODS = [
       care: "Hollow pieces can dent if pressed hard. Avoid crushing. Store flat.",
     },
   },
+];
+
+// Method D is only available for certain jewelry types (machine-made items)
+const METHOD_D_SUPPORTED_TYPES = [
+  "CHAIN",
+  "NECKLACE",
+  "BRACELET",
+  "BANGLE",
+  "ANKLET",
 ];
 
 const WEIGHT_CATEGORIES = [
@@ -945,6 +956,14 @@ export default function CreateRfqPage() {
           finishType: config?.platingType || "GOLD_PLATED",
           tier: config?.platingTier || "STANDARD",
         };
+      } else if (formData.buildMethod === "METHOD_D") {
+        // Use methodDConfig for Method D (Italian Machine Made)
+        const config = formData.methodDConfig;
+        requestBody.methodD = {
+          purity: config?.purity || "22K",
+          chainStyle: config?.chainStyle,
+          totalWeightG: weight,
+        };
       }
 
       // Add gemstones if any
@@ -1059,6 +1078,18 @@ export default function CreateRfqPage() {
         platingTier: formData.methodCConfig.platingTier,
         weightGrams: weight,
       };
+    } else if (formData.buildMethod === "METHOD_D") {
+      request.methodD = {
+        purity: formData.methodDConfig.purity as
+          | "22K"
+          | "18K"
+          | "14K"
+          | "SILVER_925",
+        chainStyle: formData.methodDConfig.chainStyle as
+          | ChainStyleType
+          | undefined,
+        weightGrams: weight,
+      };
     }
 
     // Add gemstones from V2 format
@@ -1163,19 +1194,17 @@ export default function CreateRfqPage() {
     );
   };
 
-  // Pure metals for Method A (no alloys - those are in Method B)
+  // Pure metals for Method A - only the highest purity options
+  // Lower karats (22K, 18K, 14K, 10K) are ALLOYS and should be in Method B
+  // Method A is for solid PURE precious metals with minimal/no alloy mixing
   const PURE_METAL_IDS = [
-    "GOLD_24K",
-    "GOLD_22K",
-    "GOLD_18K",
-    "GOLD_14K",
-    "GOLD_10K",
-    "SILVER_999",
-    "SILVER_925",
-    "PLATINUM_PT950",
-    "PLATINUM_PT900",
-    "PALLADIUM_PD950",
-    "PALLADIUM_PD500",
+    "GOLD_24K", // Pure gold (99.9%)
+    "SILVER_999", // Fine silver (99.9%)
+    "PLATINUM_PT950", // Platinum 950 (95%)
+    "PLATINUM_PT900", // Platinum 900 (90%)
+    "PALLADIUM_PD950", // Palladium 950 (95%)
+    "PALLADIUM_PD500", // Palladium 500 (50%)
+    // Note: 22K, 18K, 14K, 10K gold and 925 silver are alloys - see Method B
   ];
 
   // Get metal types based on build method
@@ -1394,6 +1423,13 @@ export default function CreateRfqPage() {
                       onValueChange={(v: string) => {
                         updateFormData("jewelleryType", v);
                         updateFormData("templateId", ""); // Reset template
+                        // Reset build method if it's METHOD_D and new jewelry type doesn't support it
+                        if (
+                          formData.buildMethod === "METHOD_D" &&
+                          !METHOD_D_SUPPORTED_TYPES.includes(v)
+                        ) {
+                          updateFormData("buildMethod", "");
+                        }
                       }}
                     >
                       <SelectTrigger>
@@ -1536,7 +1572,15 @@ export default function CreateRfqPage() {
                   <div className="space-y-3">
                     <Label>Build Method *</Label>
                     <div className="space-y-2">
-                      {BUILD_METHODS.map((method) => (
+                      {BUILD_METHODS.filter((method) => {
+                        // Method D is only available for specific jewelry types
+                        if (method.value === "METHOD_D") {
+                          return METHOD_D_SUPPORTED_TYPES.includes(
+                            formData.jewelleryType,
+                          );
+                        }
+                        return true;
+                      }).map((method) => (
                         <Tooltip key={method.value}>
                           <TooltipTrigger asChild>
                             <div
@@ -1781,7 +1825,7 @@ export default function CreateRfqPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Chain/Pattern Style</Label>
+                        <Label>Chain/Pattern Style *</Label>
                         <Select
                           value={formData.methodDConfig.chainStyle}
                           onValueChange={(v: string) =>
@@ -1795,45 +1839,130 @@ export default function CreateRfqPage() {
                           }
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select style (optional)" />
+                            <SelectValue placeholder="Select chain/pattern style" />
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="ROPE">
-                              Rope Chain - Classic twisted pattern
-                            </SelectItem>
-                            <SelectItem value="FIGARO">
-                              Figaro Chain - Italian flat links
-                            </SelectItem>
-                            <SelectItem value="CURB">
-                              Curb Chain - Interlocking flat links
-                            </SelectItem>
-                            <SelectItem value="BOX">
-                              Box Chain - Square interlocking links
-                            </SelectItem>
-                            <SelectItem value="SNAKE">
-                              Snake Chain - Smooth, flexible
-                            </SelectItem>
-                            <SelectItem value="SINGAPORE">
-                              Singapore Chain - Twisted diamond cut
-                            </SelectItem>
-                            <SelectItem value="FRANCO">
-                              Franco Chain - V-shaped links
-                            </SelectItem>
-                            <SelectItem value="HOLLOW_BANGLE">
-                              Hollow Bangle - Lightweight construction
-                            </SelectItem>
-                            <SelectItem value="LASER_CUT">
-                              Laser Cut - Precision faceted patterns
-                            </SelectItem>
-                            <SelectItem value="MACHINE_WOVEN">
-                              Machine Woven - Intricate weaves
-                            </SelectItem>
+                          <SelectContent className="max-h-[400px]">
+                            {(
+                              Object.entries(CHAIN_STYLE_OPTIONS) as [
+                                ChainStyleType,
+                                (typeof CHAIN_STYLE_OPTIONS)[ChainStyleType],
+                              ][]
+                            ).map(([key, style]) => (
+                              <SelectItem key={key} value={key}>
+                                <div className="flex flex-col py-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">
+                                      {style.label}
+                                    </span>
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
+                                      +{style.makingChargePercent}%
+                                    </Badge>
+                                    {style.hollowDiscount >= 0.4 && (
+                                      <Badge
+                                        variant="secondary"
+                                        className="text-xs text-green-700"
+                                      >
+                                        ~
+                                        {Math.round(style.hollowDiscount * 100)}
+                                        % lighter
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <span className="text-xs text-gray-500 line-clamp-2">
+                                    {style.description}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
-                        <p className="text-xs text-gray-500">
-                          Hollow construction reduces weight by 30-50% while
-                          maintaining visual size
-                        </p>
+
+                        {/* Show selected style details */}
+                        {formData.methodDConfig.chainStyle &&
+                          CHAIN_STYLE_OPTIONS[
+                            formData.methodDConfig.chainStyle as ChainStyleType
+                          ] && (
+                            <div className="bg-white p-3 rounded border border-blue-200 text-sm">
+                              <div className="font-medium text-blue-900 mb-2">
+                                {
+                                  CHAIN_STYLE_OPTIONS[
+                                    formData.methodDConfig
+                                      .chainStyle as ChainStyleType
+                                  ].label
+                                }
+                              </div>
+                              <div className="text-xs text-gray-600 space-y-1">
+                                <p>
+                                  <strong>What it is:</strong>{" "}
+                                  {
+                                    CHAIN_STYLE_OPTIONS[
+                                      formData.methodDConfig
+                                        .chainStyle as ChainStyleType
+                                    ].description
+                                  }
+                                </p>
+                                <p>
+                                  <strong>How it looks:</strong>{" "}
+                                  {
+                                    CHAIN_STYLE_OPTIONS[
+                                      formData.methodDConfig
+                                        .chainStyle as ChainStyleType
+                                    ].howItLooks
+                                  }
+                                </p>
+                                <div className="flex gap-4 mt-2 pt-2 border-t">
+                                  <div>
+                                    <span className="text-gray-500">
+                                      Making Charge:
+                                    </span>
+                                    <span className="ml-1 font-medium text-amber-700">
+                                      +
+                                      {
+                                        CHAIN_STYLE_OPTIONS[
+                                          formData.methodDConfig
+                                            .chainStyle as ChainStyleType
+                                        ].makingChargePercent
+                                      }
+                                      %
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-500">
+                                      Weight Savings:
+                                    </span>
+                                    <span className="ml-1 font-medium text-green-700">
+                                      ~
+                                      {Math.round(
+                                        CHAIN_STYLE_OPTIONS[
+                                          formData.methodDConfig
+                                            .chainStyle as ChainStyleType
+                                        ].hollowDiscount * 100,
+                                      )}
+                                      % hollow
+                                    </span>
+                                  </div>
+                                </div>
+                                {CHAIN_STYLE_OPTIONS[
+                                  formData.methodDConfig
+                                    .chainStyle as ChainStyleType
+                                ].minWeight && (
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Min. recommended weight:{" "}
+                                    {
+                                      CHAIN_STYLE_OPTIONS[
+                                        formData.methodDConfig
+                                          .chainStyle as ChainStyleType
+                                      ].minWeight
+                                    }
+                                    g
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
                       </div>
 
                       <div className="bg-white p-3 rounded border text-sm text-blue-900">
@@ -2119,6 +2248,8 @@ export default function CreateRfqPage() {
                         gemstones={formData.gemstonesV2}
                         onChange={(gems) => updateFormData("gemstonesV2", gems)}
                         currencySymbol={currencyInfo.symbol}
+                        selectedCurrency={currency}
+                        exchangeRate={marketRates?.fx?.rate || 144}
                       />
                     )}
                   </div>
