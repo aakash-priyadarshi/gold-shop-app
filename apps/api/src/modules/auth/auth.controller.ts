@@ -39,7 +39,7 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private configService: ConfigService,
-    private turnstileService: TurnstileService
+    private turnstileService: TurnstileService,
   ) {}
 
   @Post("register")
@@ -55,7 +55,7 @@ export class AuthController {
   })
   async register(
     @Body() dto: RegisterDto,
-    @Request() req: any
+    @Request() req: any,
   ): Promise<RegisterResponse> {
     const ipAddress = req.ip || req.connection?.remoteAddress;
 
@@ -83,13 +83,13 @@ export class AuthController {
   @ApiResponse({ status: 200, description: "Returns whether email exists" })
   async checkEmail(
     @Query("email") email: string,
-    @Query("excludeUserId") excludeUserId?: string
+    @Query("excludeUserId") excludeUserId?: string,
   ) {
     if (!email) {
       return { exists: false, message: "Email is required" };
     }
     const result = await this.authService.checkEmailExists(
-      email.toLowerCase().trim()
+      email.toLowerCase().trim(),
     );
     // If excludeUserId is provided, check if the found user is the same
     // This allows editing your own email without triggering "already exists"
@@ -117,7 +117,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: "Returns whether phone exists" })
   async checkPhone(
     @Query("phone") phone: string,
-    @Query("excludeUserId") excludeUserId?: string
+    @Query("excludeUserId") excludeUserId?: string,
   ) {
     if (!phone) {
       return { exists: false, message: "Phone is required" };
@@ -153,7 +153,7 @@ export class AuthController {
   @ApiResponse({ status: 429, description: "Too many requests" })
   async resendVerification(
     @Body() dto: ResendVerificationDto,
-    @Request() req: any
+    @Request() req: any,
   ) {
     const ipAddress = req.ip || req.connection?.remoteAddress;
     return this.authService.resendVerificationOtp(dto.email, ipAddress);
@@ -168,7 +168,7 @@ export class AuthController {
   @ApiResponse({ status: 400, description: "CAPTCHA verification failed" })
   async login(
     @Body() dto: LoginDto,
-    @Request() req: any
+    @Request() req: any,
   ): Promise<AuthResponse> {
     const ipAddress = req.ip || req.connection?.remoteAddress;
     const userAgent = req.headers["user-agent"];
@@ -208,14 +208,14 @@ export class AuthController {
   @ApiResponse({ status: 401, description: "Invalid or expired refresh token" })
   async refresh(
     @Body() dto: RefreshTokenDto,
-    @Request() req: any
+    @Request() req: any,
   ): Promise<AuthResponse> {
     const ipAddress = req.ip || req.connection?.remoteAddress;
     const userAgent = req.headers["user-agent"];
     return this.authService.refreshToken(
       dto.refreshToken,
       ipAddress,
-      userAgent
+      userAgent,
     );
   }
 
@@ -227,7 +227,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: "Logged out successfully" })
   async logout(
     @CurrentUser() user: any,
-    @Body() body: { refreshToken?: string }
+    @Body() body: { refreshToken?: string },
   ) {
     await this.authService.logout(user.id, body.refreshToken);
     return { message: "Logged out successfully" };
@@ -271,7 +271,7 @@ export class AuthController {
       const result = await this.authService.googleAuth(
         req.user,
         ipAddress,
-        userAgent
+        userAgent,
       );
 
       // Check if this is a new SHOPKEEPER registration that needs shop details
@@ -304,7 +304,7 @@ export class AuthController {
         res.redirect(`${frontendUrl}/auth/login?${params.toString()}`);
       } else {
         res.redirect(
-          `${frontendUrl}/auth/login?error=${encodeURIComponent(error.message)}`
+          `${frontendUrl}/auth/login?error=${encodeURIComponent(error.message)}`,
         );
       }
     }

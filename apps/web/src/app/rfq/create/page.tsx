@@ -276,10 +276,29 @@ interface MarketRates {
 
 export default function CreateRfqPage() {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, refreshUser } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Refresh user data on page load and when window gains focus
+  // This ensures phoneVerifiedAt and other user status is up-to-date
+  useEffect(() => {
+    // Refresh user data on mount if logged in
+    if (isAuthenticated) {
+      refreshUser();
+    }
+
+    // Also refresh when tab/window gains focus (user might have verified in another tab)
+    const handleFocus = () => {
+      if (isAuthenticated) {
+        refreshUser();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [isAuthenticated, refreshUser]);
 
   // User verification status - use useAuth hook instead of useSession
   const isLoggedIn = isAuthenticated && !!user;
@@ -2109,7 +2128,10 @@ export default function CreateRfqPage() {
 
                   <div className="flex justify-end">
                     <Button
-                      onClick={() => setStep(2)}
+                      onClick={() => {
+                        setStep(2);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
                       disabled={!canProceedToStep2}
                       className="gold-gradient text-white"
                     >
@@ -2414,7 +2436,10 @@ export default function CreateRfqPage() {
                       Back
                     </Button>
                     <Button
-                      onClick={() => setStep(3)}
+                      onClick={() => {
+                        setStep(3);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
                       disabled={!canProceedToStep3}
                       className="gold-gradient text-white"
                     >
@@ -2436,6 +2461,187 @@ export default function CreateRfqPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {/* AI Design Preview Section - At top of Step 3 */}
+                  <div className="space-y-4 p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg border border-amber-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-amber-600" />
+                        <Label className="text-base font-medium">
+                          AI Design Preview
+                        </Label>
+                      </div>
+                      {designId && (
+                        <Badge variant="outline" className="text-xs">
+                          Design #{designId.slice(0, 8)}
+                        </Badge>
+                      )}
+                    </div>
+
+                    <p className="text-sm text-gray-600">
+                      Generate an AI visualization of your custom jewelry design
+                      based on all your specifications.
+                      {fromDesign &&
+                        " This design was selected from the gallery."}
+                    </p>
+
+                    {/* Sign-in / Phone Verification Required Notice - Check sign-in FIRST */}
+                    {(!isLoggedIn || !isPhoneVerified) && (
+                      <div className={`border rounded-lg p-3 flex items-start gap-2 ${
+                        !isLoggedIn
+                          ? "bg-blue-50 border-blue-200"
+                          : "bg-amber-100 border-amber-300"
+                      }`}>
+                        {!isLoggedIn ? (
+                          <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <Phone className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        )}
+                        <div>
+                          <p className={`text-sm font-medium ${
+                            !isLoggedIn ? "text-blue-800" : "text-amber-800"
+                          }`}>
+                            {!isLoggedIn
+                              ? "Sign In Required"
+                              : "Phone Verification Required"}
+                          </p>
+                          <p className={`text-sm mt-1 ${
+                            !isLoggedIn ? "text-blue-700" : "text-amber-700"
+                          }`}>
+                            {!isLoggedIn
+                              ? "Sign in to generate AI design previews and submit your custom jewelry request."
+                              : "Verify your phone number to generate AI design previews. This helps us prevent spam and ensures a quality experience."}
+                          </p>
+                          {!isLoggedIn ? (
+                            <Link
+                              href="/auth/login?redirect=/rfq/create"
+                              className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 mt-2"
+                            >
+                              Sign in now
+                              <ArrowRight className="h-4 w-4" />
+                            </Link>
+                          ) : (
+                            <Link
+                              href="/dashboard/customer"
+                              className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 hover:text-amber-800 mt-2"
+                            >
+                              Verify phone in profile
+                              <ArrowRight className="h-4 w-4" />
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Preview Image Display */}
+                    {designPreviewUrl ? (
+                      <div className="relative w-full max-w-sm mx-auto">
+                        <img
+                          src={designPreviewUrl}
+                          alt="AI Generated Design Preview"
+                          className="w-full rounded-lg shadow-md border"
+                        />
+                        <div className="absolute top-2 right-2">
+                          <Badge className="bg-amber-500 text-white">
+                            <Sparkles className="h-3 w-3 mr-1" />
+                            AI Generated
+                          </Badge>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-full max-w-sm mx-auto aspect-square bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400">
+                        <ImageIcon className="h-12 w-12 mb-2" />
+                        <p className="text-sm">Preview will appear here</p>
+                      </div>
+                    )}
+
+                    {/* Generate Button - Disabled if not signed in or phone not verified */}
+                    <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-block">
+                            <Button
+                              type="button"
+                              onClick={generatePreview}
+                              disabled={
+                                generatingPreview ||
+                                !formData.jewelleryType ||
+                                !formData.metalType ||
+                                !isLoggedIn ||
+                                !isPhoneVerified
+                              }
+                              className={`bg-amber-600 hover:bg-amber-700 text-white ${
+                                !isLoggedIn || !isPhoneVerified
+                                  ? "opacity-50 cursor-not-allowed"
+                                  : ""
+                              }`}
+                            >
+                              {generatingPreview ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Generating... (10-15s)
+                                </>
+                              ) : designPreviewUrl ? (
+                                <>
+                                  <Sparkles className="h-4 w-4 mr-2" />
+                                  Regenerate Preview
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="h-4 w-4 mr-2" />
+                                  Generate Preview
+                                </>
+                              )}
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        {(!isLoggedIn || !isPhoneVerified) && (
+                          <TooltipContent side="top" className="max-w-xs">
+                            <p>
+                              {!isLoggedIn
+                                ? "Sign in to generate AI design previews"
+                                : "Verify your phone number to generate AI design previews"}
+                            </p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </div>
+
+                    {/* Share to Gallery Checkbox */}
+                    {isLoggedIn && isPhoneVerified && (
+                      <div className="flex items-center justify-center gap-2 pt-2 border-t border-amber-200">
+                        <input
+                          type="checkbox"
+                          id="share-to-gallery"
+                          checked={shareToGallery}
+                          onChange={(e) => setShareToGallery(e.target.checked)}
+                          className="h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded"
+                        />
+                        <label
+                          htmlFor="share-to-gallery"
+                          className="text-sm text-gray-600"
+                        >
+                          Share this design to the{" "}
+                          <a
+                            href="/designs"
+                            target="_blank"
+                            className="text-amber-600 hover:underline"
+                          >
+                            Design Gallery
+                          </a>{" "}
+                          to inspire others
+                        </label>
+                      </div>
+                    )}
+
+                    {isLoggedIn && isPhoneVerified &&
+                      (!formData.jewelleryType || !formData.metalType) && (
+                        <p className="text-xs text-gray-500 text-center">
+                          Complete jewelry type and metal selection to enable
+                          preview generation
+                        </p>
+                      )}
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Minimum Budget ({currency}) *</Label>
@@ -2642,161 +2848,6 @@ export default function CreateRfqPage() {
                         {formData.budgetMax}
                       </span>
                     </div>
-                  </div>
-
-                  {/* AI Design Preview Section - Now in Step 3 after all details collected */}
-                  <div className="space-y-4 p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg border border-amber-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-amber-600" />
-                        <Label className="text-base font-medium">
-                          AI Design Preview
-                        </Label>
-                      </div>
-                      {designId && (
-                        <Badge variant="outline" className="text-xs">
-                          Design #{designId.slice(0, 8)}
-                        </Badge>
-                      )}
-                    </div>
-
-                    <p className="text-sm text-gray-600">
-                      Generate an AI visualization of your custom jewelry design
-                      based on all your specifications above.
-                      {fromDesign &&
-                        " This design was selected from the gallery."}
-                    </p>
-
-                    {/* Phone Verification Required Notice */}
-                    {!isPhoneVerified && (
-                      <div className="bg-amber-100 border border-amber-300 rounded-lg p-3 flex items-start gap-2">
-                        <Phone className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium text-amber-800">
-                            Phone Verification Required
-                          </p>
-                          <p className="text-sm text-amber-700 mt-1">
-                            To generate AI design previews, you need to verify
-                            your phone number first. This helps us prevent spam
-                            and ensures a quality experience.
-                          </p>
-                          <Link
-                            href="/dashboard/customer"
-                            className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 hover:text-amber-800 mt-2"
-                          >
-                            Verify phone in profile
-                            <ArrowRight className="h-4 w-4" />
-                          </Link>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Preview Image Display */}
-                    {designPreviewUrl ? (
-                      <div className="relative w-full max-w-sm mx-auto">
-                        <img
-                          src={designPreviewUrl}
-                          alt="AI Generated Design Preview"
-                          className="w-full rounded-lg shadow-md border"
-                        />
-                        <div className="absolute top-2 right-2">
-                          <Badge className="bg-amber-500 text-white">
-                            <Sparkles className="h-3 w-3 mr-1" />
-                            AI Generated
-                          </Badge>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="w-full max-w-sm mx-auto aspect-square bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400">
-                        <ImageIcon className="h-12 w-12 mb-2" />
-                        <p className="text-sm">Preview will appear here</p>
-                      </div>
-                    )}
-
-                    {/* Generate Button - Disabled if phone not verified */}
-                    <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="inline-block">
-                            <Button
-                              type="button"
-                              onClick={generatePreview}
-                              disabled={
-                                generatingPreview ||
-                                !formData.jewelleryType ||
-                                !formData.metalType ||
-                                !isPhoneVerified
-                              }
-                              className={`bg-amber-600 hover:bg-amber-700 text-white ${
-                                !isPhoneVerified
-                                  ? "opacity-50 cursor-not-allowed"
-                                  : ""
-                              }`}
-                            >
-                              {generatingPreview ? (
-                                <>
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  Generating... (10-15s)
-                                </>
-                              ) : designPreviewUrl ? (
-                                <>
-                                  <Sparkles className="h-4 w-4 mr-2" />
-                                  Regenerate Preview
-                                </>
-                              ) : (
-                                <>
-                                  <Sparkles className="h-4 w-4 mr-2" />
-                                  Generate Preview
-                                </>
-                              )}
-                            </Button>
-                          </span>
-                        </TooltipTrigger>
-                        {!isPhoneVerified && (
-                          <TooltipContent side="top" className="max-w-xs">
-                            <p>
-                              Verify your phone number to generate AI design
-                              previews
-                            </p>
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    </div>
-
-                    {/* Share to Gallery Checkbox */}
-                    {isPhoneVerified && (
-                      <div className="flex items-center justify-center gap-2 pt-2 border-t border-amber-200">
-                        <input
-                          type="checkbox"
-                          id="share-to-gallery"
-                          checked={shareToGallery}
-                          onChange={(e) => setShareToGallery(e.target.checked)}
-                          className="h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded"
-                        />
-                        <label
-                          htmlFor="share-to-gallery"
-                          className="text-sm text-gray-600"
-                        >
-                          Share this design to the{" "}
-                          <a
-                            href="/designs"
-                            target="_blank"
-                            className="text-amber-600 hover:underline"
-                          >
-                            Design Gallery
-                          </a>{" "}
-                          to inspire others
-                        </label>
-                      </div>
-                    )}
-
-                    {isPhoneVerified &&
-                      (!formData.jewelleryType || !formData.metalType) && (
-                        <p className="text-xs text-gray-500 text-center">
-                          Complete jewelry type and metal selection to enable
-                          preview generation
-                        </p>
-                      )}
                   </div>
 
                   {/* Method C warning */}

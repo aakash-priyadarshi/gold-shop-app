@@ -132,10 +132,14 @@ export default function AdminUsersPage() {
 
   // Live validation state for create form
   const [isCheckingNewEmail, setIsCheckingNewEmail] = useState(false);
-  const [newEmailAvailable, setNewEmailAvailable] = useState<boolean | null>(null);
+  const [newEmailAvailable, setNewEmailAvailable] = useState<boolean | null>(
+    null,
+  );
   const [newEmailError, setNewEmailError] = useState<string | null>(null);
   const [isCheckingNewPhone, setIsCheckingNewPhone] = useState(false);
-  const [newPhoneAvailable, setNewPhoneAvailable] = useState<boolean | null>(null);
+  const [newPhoneAvailable, setNewPhoneAvailable] = useState<boolean | null>(
+    null,
+  );
   const [newPhoneError, setNewPhoneError] = useState<string | null>(null);
   const newEmailCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const newPhoneCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -314,7 +318,7 @@ export default function AdminUsersPage() {
 
         try {
           const response = await api.get(
-            `/auth/check-email?email=${encodeURIComponent(email)}&excludeUserId=${excludeUserId}`
+            `/auth/check-email?email=${encodeURIComponent(email)}&excludeUserId=${excludeUserId}`,
           );
           const exists = response.data?.exists;
           setEmailAvailable(!exists);
@@ -330,7 +334,7 @@ export default function AdminUsersPage() {
         }
       }, 500);
     },
-    []
+    [],
   );
 
   // Debounced phone availability check for edit form
@@ -357,12 +361,14 @@ export default function AdminUsersPage() {
 
         try {
           const response = await api.get(
-            `/auth/check-phone?phone=${encodeURIComponent(phone)}&excludeUserId=${excludeUserId}`
+            `/auth/check-phone?phone=${encodeURIComponent(phone)}&excludeUserId=${excludeUserId}`,
           );
           const exists = response.data?.exists;
           setPhoneAvailable(!exists);
           if (exists) {
-            setPhoneError("This phone number is already registered to another user");
+            setPhoneError(
+              "This phone number is already registered to another user",
+            );
           }
         } catch (error) {
           console.error("Phone check failed:", error);
@@ -373,7 +379,7 @@ export default function AdminUsersPage() {
         }
       }, 500);
     },
-    []
+    [],
   );
 
   // Debounced email availability check for create form (no excludeUserId)
@@ -398,7 +404,7 @@ export default function AdminUsersPage() {
 
       try {
         const response = await api.get(
-          `/auth/check-email?email=${encodeURIComponent(email)}`
+          `/auth/check-email?email=${encodeURIComponent(email)}`,
         );
         const exists = response.data?.exists;
         setNewEmailAvailable(!exists);
@@ -438,7 +444,7 @@ export default function AdminUsersPage() {
 
       try {
         const response = await api.get(
-          `/auth/check-phone?phone=${encodeURIComponent(phone)}`
+          `/auth/check-phone?phone=${encodeURIComponent(phone)}`,
         );
         const exists = response.data?.exists;
         setNewPhoneAvailable(!exists);
