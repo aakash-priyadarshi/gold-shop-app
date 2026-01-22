@@ -8,6 +8,7 @@
  * - product: Product images (large: 1200px, medium: 600px, thumb: 200px)
  * - profile: Profile avatars (large: 400px, medium: 200px, thumb: 100px)  
  * - rfq: Custom order reference images (large: 1200px, medium: 600px, thumb: 200px)
+ * - designs: AI-generated design images (large: 1024px, medium: 512px, thumb: 200px)
  */
 
 export interface Env {
@@ -51,6 +52,11 @@ const VARIANTS: Record<string, ImageVariant[]> = {
   rfq: [
     { suffix: '', maxWidth: 1200, maxHeight: 1200, quality: 90 },
     { suffix: '_medium', maxWidth: 600, maxHeight: 600, quality: 85 },
+    { suffix: '_thumb', maxWidth: 200, maxHeight: 200, quality: 80 },
+  ],
+  designs: [
+    { suffix: '', maxWidth: 1024, maxHeight: 1024, quality: 90 }, // AI images are typically 1024px
+    { suffix: '_medium', maxWidth: 512, maxHeight: 512, quality: 85 },
     { suffix: '_thumb', maxWidth: 200, maxHeight: 200, quality: 80 },
   ],
 };
@@ -126,7 +132,7 @@ export default {
       }
 
       // Serve images from root path (e.g., /product/123.jpg)
-      if (path.startsWith('/product/') || path.startsWith('/profile/') || path.startsWith('/rfq/')) {
+      if (path.startsWith('/product/') || path.startsWith('/profile/') || path.startsWith('/rfq/') || path.startsWith('/designs/')) {
         const key = path.substring(1); // Remove leading slash
         return handleServe(key, env, corsHeaders);
       }

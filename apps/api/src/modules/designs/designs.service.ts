@@ -51,23 +51,15 @@ type SortOption = 'popular' | 'liked' | 'trending' | 'newest' | 'most_made';
 @Injectable()
 export class DesignsService {
   private readonly logger = new Logger(DesignsService.name);
-  private readonly bucketName: string;
-  private readonly publicUrl: string;
-  private readonly r2AccountId: string;
-  private readonly r2AccessKeyId: string;
-  private readonly r2SecretAccessKey: string;
+  private readonly imageWorkerUrl: string;
 
   constructor(
     private prisma: PrismaService,
     private imageGenService: ImageGenerationService,
     private configService: ConfigService,
   ) {
-    // R2 configuration
-    this.bucketName = this.configService.get<string>('R2_BUCKET_NAME') || '';
-    this.publicUrl = this.configService.get<string>('R2_PUBLIC_URL') || '';
-    this.r2AccountId = this.configService.get<string>('R2_ACCOUNT_ID') || '';
-    this.r2AccessKeyId = this.configService.get<string>('R2_ACCESS_KEY_ID') || '';
-    this.r2SecretAccessKey = this.configService.get<string>('R2_SECRET_ACCESS_KEY') || '';
+    // Use existing Cloudflare Worker for image uploads
+    this.imageWorkerUrl = this.configService.get<string>('IMAGE_WORKER_URL') || 'https://images.orivraa.com';
   }
 
   /**
@@ -205,15 +197,9 @@ export class DesignsService {
   }
 
   /**
-   * Upload base64 image to R2 storage using fetch with signed URL
-   * For now, we'll return base64 and handle R2 upload via existing image upload service
+   * Upload base64 image to R2 storage via Cloudflare Worker
    */
   private async uploadImageToR2(base64DataUrl: string, hash: string): Promise<string> {
-    if (!this.publicUrl || !this.bucketName) {
-      this.logger.warn('R2 not configured, returning base64 URL');
-      return base64DataUrl;
-    }
-
     try {
       // Extract base64 data from data URL
       const matches = base64DataUrl.match(/^data:image\/(\w+);base64,(.+)$/);
@@ -225,20 +211,41 @@ export class DesignsService {
       const base64Data = matches[2];
       const buffer = Buffer.from(base64Data, 'base64');
 
-      const key = `designs/${hash}.${format}`;
+      // Create a blob from buffer
+      const blob = new Blob([buffer], { type: `image/${format}` });
+      
+      // Create FormData to upload to worker
+      const formData = new FormData();
+      formData.append('file', blob, `design-${hash}.${format}`);
 
-      // Use R2's S3-compatible API with presigned URL approach
-      // For now, we store the base64 directly - you can enhance this with proper R2 upload
-      // when integrating with the existing image upload infrastructure
+      // Upload to the existing Cloudflare Worker
+      const response = await fetch(`${this.imageWorkerUrl}/upload`, {
+        method: 'POST',
+        headers: {
+          'X-Upload-Type': 'designs',
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        this.logger.error(`Worker upload failed: ${response.status} - ${errorText}`);
+        // Fallback to base64 if worker upload fails
+        return base64DataUrl;
+      }
+
+      const result = await response.json() as { success: boolean; url?: string; error?: string };
       
-      // TODO: Integrate with existing R2 upload service if available
-      // For MVP, store as base64 data URL (works but not optimal for large images)
-      this.logger.log(`Would upload to R2: ${key}`);
-      
-      // Return the base64 for now - in production, return the R2 URL after upload
+      if (result.success && result.url) {
+        this.logger.log(`Image uploaded to R2 via worker: ${result.url}`);
+        return result.url;
+      }
+
+      this.logger.warn(`Worker upload returned success=false: ${result.error}`);
       return base64DataUrl;
     } catch (error) {
-      this.logger.error(`Failed to process image: ${error}`);
+      this.logger.error(`Failed to upload image via worker: ${error}`);
+      // Fallback to base64 URL if upload fails
       return base64DataUrl;
     }
   }
