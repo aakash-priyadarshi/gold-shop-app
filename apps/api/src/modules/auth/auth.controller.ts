@@ -75,14 +75,27 @@ export class AuthController {
     required: true,
     description: "Email address to check",
   })
+  @ApiQuery({
+    name: "excludeUserId",
+    required: false,
+    description: "User ID to exclude from check (for edit scenarios)",
+  })
   @ApiResponse({ status: 200, description: "Returns whether email exists" })
-  async checkEmail(@Query("email") email: string) {
+  async checkEmail(
+    @Query("email") email: string,
+    @Query("excludeUserId") excludeUserId?: string
+  ) {
     if (!email) {
       return { exists: false, message: "Email is required" };
     }
     const result = await this.authService.checkEmailExists(
       email.toLowerCase().trim()
     );
+    // If excludeUserId is provided, check if the found user is the same
+    // This allows editing your own email without triggering "already exists"
+    if (excludeUserId && result.exists && result.userId === excludeUserId) {
+      return { exists: false };
+    }
     return { exists: result.exists };
   }
 
@@ -96,12 +109,25 @@ export class AuthController {
     required: true,
     description: "Phone number to check",
   })
+  @ApiQuery({
+    name: "excludeUserId",
+    required: false,
+    description: "User ID to exclude from check (for edit scenarios)",
+  })
   @ApiResponse({ status: 200, description: "Returns whether phone exists" })
-  async checkPhone(@Query("phone") phone: string) {
+  async checkPhone(
+    @Query("phone") phone: string,
+    @Query("excludeUserId") excludeUserId?: string
+  ) {
     if (!phone) {
       return { exists: false, message: "Phone is required" };
     }
     const result = await this.authService.checkPhoneExists(phone.trim());
+    // If excludeUserId is provided, check if the found user is the same
+    // This allows editing your own phone without triggering "already exists"
+    if (excludeUserId && result.exists && result.userId === excludeUserId) {
+      return { exists: false };
+    }
     return { exists: result.exists };
   }
 

@@ -46,6 +46,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import api, { adminApi } from "@/lib/api";
 import {
+  AlertCircle,
   Calendar,
   CheckCircle,
   Clock,
@@ -67,7 +68,7 @@ import {
   UserX,
   XCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ShopData {
   id: string;
@@ -129,6 +130,16 @@ export default function AdminUsersPage() {
     role: "CUSTOMER" as "ADMIN" | "SHOPKEEPER" | "CUSTOMER" | "SUPPORT",
   });
 
+  // Live validation state for create form
+  const [isCheckingNewEmail, setIsCheckingNewEmail] = useState(false);
+  const [newEmailAvailable, setNewEmailAvailable] = useState<boolean | null>(null);
+  const [newEmailError, setNewEmailError] = useState<string | null>(null);
+  const [isCheckingNewPhone, setIsCheckingNewPhone] = useState(false);
+  const [newPhoneAvailable, setNewPhoneAvailable] = useState<boolean | null>(null);
+  const [newPhoneError, setNewPhoneError] = useState<string | null>(null);
+  const newEmailCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const newPhoneCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // View/Edit user dialog state
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -143,6 +154,16 @@ export default function AdminUsersPage() {
     status: "ACTIVE" as string,
   });
   const [savingUser, setSavingUser] = useState(false);
+
+  // Live validation state for edit form
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [isCheckingPhone, setIsCheckingPhone] = useState(false);
+  const [phoneAvailable, setPhoneAvailable] = useState<boolean | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const emailCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const phoneCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Delete confirmation dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -260,11 +281,192 @@ export default function AdminUsersPage() {
       role: user.role,
       status: user.status,
     });
+    // Reset validation state when opening dialog
+    setEmailAvailable(null);
+    setEmailError(null);
+    setIsCheckingEmail(false);
+    setPhoneAvailable(null);
+    setPhoneError(null);
+    setIsCheckingPhone(false);
     setEditDialogOpen(true);
   };
 
+  // Debounced email availability check for edit form
+  const checkEmailAvailability = useCallback(
+    async (email: string, excludeUserId: string) => {
+      // Clear any pending check
+      if (emailCheckTimeoutRef.current) {
+        clearTimeout(emailCheckTimeoutRef.current);
+      }
+
+      // Basic validation
+      if (!email || email.trim().length < 5 || !email.includes("@")) {
+        setEmailAvailable(null);
+        setEmailError(null);
+        setIsCheckingEmail(false);
+        return;
+      }
+
+      // Debounce the API call
+      emailCheckTimeoutRef.current = setTimeout(async () => {
+        setIsCheckingEmail(true);
+        setEmailError(null);
+
+        try {
+          const response = await api.get(
+            `/auth/check-email?email=${encodeURIComponent(email)}&excludeUserId=${excludeUserId}`
+          );
+          const exists = response.data?.exists;
+          setEmailAvailable(!exists);
+          if (exists) {
+            setEmailError("This email is already registered to another user");
+          }
+        } catch (error) {
+          console.error("Email check failed:", error);
+          setEmailError("Could not verify email availability");
+          setEmailAvailable(null);
+        } finally {
+          setIsCheckingEmail(false);
+        }
+      }, 500);
+    },
+    []
+  );
+
+  // Debounced phone availability check for edit form
+  const checkPhoneAvailability = useCallback(
+    async (phone: string, excludeUserId: string) => {
+      // Clear any pending check
+      if (phoneCheckTimeoutRef.current) {
+        clearTimeout(phoneCheckTimeoutRef.current);
+      }
+
+      // Basic validation - phone should have at least 10 digits
+      const digitsOnly = phone.replace(/\D/g, "");
+      if (!phone || digitsOnly.length < 10) {
+        setPhoneAvailable(null);
+        setPhoneError(null);
+        setIsCheckingPhone(false);
+        return;
+      }
+
+      // Debounce the API call
+      phoneCheckTimeoutRef.current = setTimeout(async () => {
+        setIsCheckingPhone(true);
+        setPhoneError(null);
+
+        try {
+          const response = await api.get(
+            `/auth/check-phone?phone=${encodeURIComponent(phone)}&excludeUserId=${excludeUserId}`
+          );
+          const exists = response.data?.exists;
+          setPhoneAvailable(!exists);
+          if (exists) {
+            setPhoneError("This phone number is already registered to another user");
+          }
+        } catch (error) {
+          console.error("Phone check failed:", error);
+          setPhoneError("Could not verify phone availability");
+          setPhoneAvailable(null);
+        } finally {
+          setIsCheckingPhone(false);
+        }
+      }, 500);
+    },
+    []
+  );
+
+  // Debounced email availability check for create form (no excludeUserId)
+  const checkNewEmailAvailability = useCallback(async (email: string) => {
+    // Clear any pending check
+    if (newEmailCheckTimeoutRef.current) {
+      clearTimeout(newEmailCheckTimeoutRef.current);
+    }
+
+    // Basic validation
+    if (!email || email.trim().length < 5 || !email.includes("@")) {
+      setNewEmailAvailable(null);
+      setNewEmailError(null);
+      setIsCheckingNewEmail(false);
+      return;
+    }
+
+    // Debounce the API call
+    newEmailCheckTimeoutRef.current = setTimeout(async () => {
+      setIsCheckingNewEmail(true);
+      setNewEmailError(null);
+
+      try {
+        const response = await api.get(
+          `/auth/check-email?email=${encodeURIComponent(email)}`
+        );
+        const exists = response.data?.exists;
+        setNewEmailAvailable(!exists);
+        if (exists) {
+          setNewEmailError("This email is already registered");
+        }
+      } catch (error) {
+        console.error("Email check failed:", error);
+        setNewEmailError("Could not verify email availability");
+        setNewEmailAvailable(null);
+      } finally {
+        setIsCheckingNewEmail(false);
+      }
+    }, 500);
+  }, []);
+
+  // Debounced phone availability check for create form (no excludeUserId)
+  const checkNewPhoneAvailability = useCallback(async (phone: string) => {
+    // Clear any pending check
+    if (newPhoneCheckTimeoutRef.current) {
+      clearTimeout(newPhoneCheckTimeoutRef.current);
+    }
+
+    // Basic validation - phone should have at least 10 digits
+    const digitsOnly = phone.replace(/\D/g, "");
+    if (!phone || digitsOnly.length < 10) {
+      setNewPhoneAvailable(null);
+      setNewPhoneError(null);
+      setIsCheckingNewPhone(false);
+      return;
+    }
+
+    // Debounce the API call
+    newPhoneCheckTimeoutRef.current = setTimeout(async () => {
+      setIsCheckingNewPhone(true);
+      setNewPhoneError(null);
+
+      try {
+        const response = await api.get(
+          `/auth/check-phone?phone=${encodeURIComponent(phone)}`
+        );
+        const exists = response.data?.exists;
+        setNewPhoneAvailable(!exists);
+        if (exists) {
+          setNewPhoneError("This phone number is already registered");
+        }
+      } catch (error) {
+        console.error("Phone check failed:", error);
+        setNewPhoneError("Could not verify phone availability");
+        setNewPhoneAvailable(null);
+      } finally {
+        setIsCheckingNewPhone(false);
+      }
+    }, 500);
+  }, []);
+
   const handleSaveUser = async () => {
     if (!selectedUser) return;
+
+    // Don't save if email or phone is already taken
+    if (emailAvailable === false || phoneAvailable === false) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please fix the validation errors before saving.",
+      });
+      return;
+    }
 
     setSavingUser(true);
     try {
@@ -496,6 +698,16 @@ export default function AdminUsersPage() {
       return;
     }
 
+    // Don't create if email or phone is already taken
+    if (newEmailAvailable === false || newPhoneAvailable === false) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please fix the validation errors before creating.",
+      });
+      return;
+    }
+
     setCreatingUser(true);
     try {
       await adminApi.createUser(newUser);
@@ -512,6 +724,11 @@ export default function AdminUsersPage() {
         phone: "",
         role: "CUSTOMER",
       });
+      // Reset validation state
+      setNewEmailAvailable(null);
+      setNewEmailError(null);
+      setNewPhoneAvailable(null);
+      setNewPhoneError(null);
       loadUsers();
     } catch (error: any) {
       toast({
@@ -635,32 +852,96 @@ export default function AdminUsersPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={newUser.email}
-                      onChange={(e) =>
-                        setNewUser((prev) => ({
-                          ...prev,
-                          email: e.target.value,
-                        }))
-                      }
-                    />
+                    <div className="relative">
+                      <Input
+                        id="email"
+                        type="email"
+                        value={newUser.email}
+                        onChange={(e) => {
+                          const newEmail = e.target.value;
+                          setNewUser((prev) => ({
+                            ...prev,
+                            email: newEmail,
+                          }));
+                          checkNewEmailAvailability(newEmail);
+                        }}
+                        className={
+                          newEmailError
+                            ? "border-red-500 pr-10"
+                            : newEmailAvailable === true
+                              ? "border-green-500 pr-10"
+                              : ""
+                        }
+                      />
+                      {isCheckingNewEmail && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        </div>
+                      )}
+                      {!isCheckingNewEmail && newEmailAvailable === true && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        </div>
+                      )}
+                      {!isCheckingNewEmail && newEmailAvailable === false && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <AlertCircle className="h-4 w-4 text-red-500" />
+                        </div>
+                      )}
+                    </div>
+                    {newEmailError && (
+                      <p className="text-sm text-red-500">{newEmailError}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={newUser.phone}
-                      onChange={(e) =>
-                        setNewUser((prev) => ({
-                          ...prev,
-                          phone: e.target.value,
-                        }))
-                      }
-                      placeholder="+977 98XXXXXXXX"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={newUser.phone}
+                        onChange={(e) => {
+                          const newPhone = e.target.value;
+                          setNewUser((prev) => ({
+                            ...prev,
+                            phone: newPhone,
+                          }));
+                          if (newPhone.trim()) {
+                            checkNewPhoneAvailability(newPhone);
+                          } else {
+                            // Clear phone validation if empty
+                            setNewPhoneAvailable(null);
+                            setNewPhoneError(null);
+                          }
+                        }}
+                        placeholder="+977 98XXXXXXXX"
+                        className={
+                          newPhoneError
+                            ? "border-red-500 pr-10"
+                            : newPhoneAvailable === true
+                              ? "border-green-500 pr-10"
+                              : ""
+                        }
+                      />
+                      {isCheckingNewPhone && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        </div>
+                      )}
+                      {!isCheckingNewPhone && newPhoneAvailable === true && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        </div>
+                      )}
+                      {!isCheckingNewPhone && newPhoneAvailable === false && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <AlertCircle className="h-4 w-4 text-red-500" />
+                        </div>
+                      )}
+                    </div>
+                    {newPhoneError && (
+                      <p className="text-sm text-red-500">{newPhoneError}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="password">Password *</Label>
@@ -699,11 +980,27 @@ export default function AdminUsersPage() {
                 <DialogFooter>
                   <Button
                     variant="outline"
-                    onClick={() => setCreateDialogOpen(false)}
+                    onClick={() => {
+                      setCreateDialogOpen(false);
+                      // Reset validation state when closing
+                      setNewEmailAvailable(null);
+                      setNewEmailError(null);
+                      setNewPhoneAvailable(null);
+                      setNewPhoneError(null);
+                    }}
                   >
                     Cancel
                   </Button>
-                  <Button onClick={handleCreateUser} disabled={creatingUser}>
+                  <Button
+                    onClick={handleCreateUser}
+                    disabled={
+                      creatingUser ||
+                      isCheckingNewEmail ||
+                      isCheckingNewPhone ||
+                      newEmailAvailable === false ||
+                      newPhoneAvailable === false
+                    }
+                  >
                     {creatingUser && (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     )}
@@ -1366,25 +1663,91 @@ export default function AdminUsersPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-email">Email</Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  value={editForm.email}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({ ...prev, email: e.target.value }))
-                  }
-                />
+                <div className="relative">
+                  <Input
+                    id="edit-email"
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => {
+                      const newEmail = e.target.value;
+                      setEditForm((prev) => ({ ...prev, email: newEmail }));
+                      if (selectedUser) {
+                        checkEmailAvailability(newEmail, selectedUser.id);
+                      }
+                    }}
+                    className={
+                      emailError
+                        ? "border-red-500 pr-10"
+                        : emailAvailable === true
+                          ? "border-green-500 pr-10"
+                          : ""
+                    }
+                  />
+                  {isCheckingEmail && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                  {!isCheckingEmail && emailAvailable === true && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    </div>
+                  )}
+                  {!isCheckingEmail && emailAvailable === false && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <AlertCircle className="h-4 w-4 text-red-500" />
+                    </div>
+                  )}
+                </div>
+                {emailError && (
+                  <p className="text-sm text-red-500">{emailError}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-phone">Phone</Label>
-                <Input
-                  id="edit-phone"
-                  type="tel"
-                  value={editForm.phone}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({ ...prev, phone: e.target.value }))
-                  }
-                />
+                <div className="relative">
+                  <Input
+                    id="edit-phone"
+                    type="tel"
+                    value={editForm.phone}
+                    onChange={(e) => {
+                      const newPhone = e.target.value;
+                      setEditForm((prev) => ({ ...prev, phone: newPhone }));
+                      if (selectedUser && newPhone.trim()) {
+                        checkPhoneAvailability(newPhone, selectedUser.id);
+                      } else {
+                        // Clear phone validation if empty
+                        setPhoneAvailable(null);
+                        setPhoneError(null);
+                      }
+                    }}
+                    className={
+                      phoneError
+                        ? "border-red-500 pr-10"
+                        : phoneAvailable === true
+                          ? "border-green-500 pr-10"
+                          : ""
+                    }
+                  />
+                  {isCheckingPhone && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                  {!isCheckingPhone && phoneAvailable === true && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    </div>
+                  )}
+                  {!isCheckingPhone && phoneAvailable === false && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <AlertCircle className="h-4 w-4 text-red-500" />
+                    </div>
+                  )}
+                </div>
+                {phoneError && (
+                  <p className="text-sm text-red-500">{phoneError}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-role">Role</Label>
@@ -1434,7 +1797,16 @@ export default function AdminUsersPage() {
               >
                 Cancel
               </Button>
-              <Button onClick={handleSaveUser} disabled={savingUser}>
+              <Button
+                onClick={handleSaveUser}
+                disabled={
+                  savingUser ||
+                  isCheckingEmail ||
+                  isCheckingPhone ||
+                  emailAvailable === false ||
+                  phoneAvailable === false
+                }
+              >
                 {savingUser && (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 )}
