@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { ShopGuard } from '@/components/auth/RouteGuard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { PhoneInput, needsCountryCode } from '@/components/ui/phone-input';
+import { CheckCircle, XCircle, Loader2 as SpinnerIcon } from 'lucide-react';
+import { authApi } from '@/lib/api';
 import {
   Select,
   SelectContent,
@@ -104,6 +107,52 @@ export default function ShopSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Phone availability check state
+  const [phoneCheckState, setPhoneCheckState] = useState<{
+    checking: boolean;
+    exists: boolean | null;
+    originalPhone: string;
+  }>({ checking: false, exists: null, originalPhone: '' });
+  const phoneCheckTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  // Check phone availability with debounce
+  const checkPhoneAvailability = useCallback(
+    async (phone: string) => {
+      // Skip if phone is same as original
+      if (phone === phoneCheckState.originalPhone) {
+        setPhoneCheckState((prev) => ({ ...prev, checking: false, exists: null }));
+        return;
+      }
+
+      // Skip if phone is empty or needs country code
+      if (!phone || phone.length < 7 || needsCountryCode(phone)) {
+        setPhoneCheckState((prev) => ({ ...prev, checking: false, exists: null }));
+        return;
+      }
+
+      // Debounce
+      if (phoneCheckTimeout.current) {
+        clearTimeout(phoneCheckTimeout.current);
+      }
+
+      setPhoneCheckState((prev) => ({ ...prev, checking: true }));
+
+      phoneCheckTimeout.current = setTimeout(async () => {
+        try {
+          const response = await authApi.checkPhone(phone);
+          setPhoneCheckState((prev) => ({
+            ...prev,
+            checking: false,
+            exists: response.data.exists,
+          }));
+        } catch {
+          setPhoneCheckState((prev) => ({ ...prev, checking: false, exists: null }));
+        }
+      }, 500);
+    },
+    [phoneCheckState.originalPhone]
+  );
+
   useEffect(() => {
     if (user?.shop?.id) {
       loadSettings();
@@ -124,6 +173,9 @@ export default function ShopSettingsPage() {
         ...shop,
         user: userData,
       });
+      
+      // Store original phone for comparison
+      setPhoneCheckState((prev) => ({ ...prev, originalPhone: shop.contactPhone || '' }));
     } catch (error) {
       console.error('Failed to load settings:', error);
       toast({
@@ -312,12 +364,39 @@ export default function ShopSettingsPage() {
                         <Phone className="h-4 w-4 inline mr-1" />
                         Phone Number *
                       </Label>
-                      <Input
-                        id="phone"
-                        value={shopData.contactPhone || ''}
-                        onChange={(e) => updateShopData({ contactPhone: e.target.value })}
-                        placeholder="+977 98XXXXXXXX"
-                      />
+                      <div className="relative">
+                        <PhoneInput
+                          id="phone"
+                          value={shopData.contactPhone || ''}
+                          onChange={(value) => {
+                            updateShopData({ contactPhone: value });
+                            checkPhoneAvailability(value);
+                          }}
+                          placeholder="+977 98XXXXXXXX"
+                          error={phoneCheckState.exists === true}
+                        />
+                        {/* Real-time phone check indicator */}
+                        <div className="absolute right-3 top-[22px] -translate-y-1/2 z-10">
+                          {phoneCheckState.checking && (
+                            <SpinnerIcon className="h-4 w-4 text-gray-400 animate-spin" />
+                          )}
+                          {!phoneCheckState.checking &&
+                            phoneCheckState.exists === true && (
+                              <XCircle className="h-4 w-4 text-red-500" />
+                            )}
+                          {!phoneCheckState.checking &&
+                            phoneCheckState.exists === false &&
+                            shopData.contactPhone &&
+                            shopData.contactPhone !== phoneCheckState.originalPhone && (
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            )}
+                        </div>
+                      </div>
+                      {phoneCheckState.exists === true && (
+                        <p className="text-xs text-red-500">
+                          This phone number is already registered
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">

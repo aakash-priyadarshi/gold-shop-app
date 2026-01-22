@@ -1,15 +1,8 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { forwardRef, useCallback, useEffect, useMemo, useState } from "react";
+import { forwardRef, useCallback, useMemo } from "react";
 
 // Supported countries with phone codes and flags
 export const SUPPORTED_PHONE_COUNTRIES = [
@@ -18,7 +11,7 @@ export const SUPPORTED_PHONE_COUNTRIES = [
     name: "Nepal",
     flag: "🇳🇵",
     dialCode: "+977",
-    format: "XX-XXXXXXX",
+    minLength: 10,
     maxLength: 10,
   },
   {
@@ -26,7 +19,7 @@ export const SUPPORTED_PHONE_COUNTRIES = [
     name: "India",
     flag: "🇮🇳",
     dialCode: "+91",
-    format: "XXXXX-XXXXX",
+    minLength: 10,
     maxLength: 10,
   },
   {
@@ -34,7 +27,7 @@ export const SUPPORTED_PHONE_COUNTRIES = [
     name: "United States",
     flag: "🇺🇸",
     dialCode: "+1",
-    format: "(XXX) XXX-XXXX",
+    minLength: 10,
     maxLength: 10,
   },
   {
@@ -42,7 +35,7 @@ export const SUPPORTED_PHONE_COUNTRIES = [
     name: "UAE",
     flag: "🇦🇪",
     dialCode: "+971",
-    format: "XX-XXX-XXXX",
+    minLength: 9,
     maxLength: 9,
   },
   {
@@ -50,10 +43,41 @@ export const SUPPORTED_PHONE_COUNTRIES = [
     name: "United Kingdom",
     flag: "🇬🇧",
     dialCode: "+44",
-    format: "XXXX XXXXXX",
+    minLength: 10,
     maxLength: 10,
   },
 ] as const;
+
+// EU country dial codes (excluding UK) - these will show EU flag 🇪🇺
+const EU_DIAL_CODES = [
+  "+43", // Austria
+  "+32", // Belgium
+  "+359", // Bulgaria
+  "+385", // Croatia
+  "+357", // Cyprus
+  "+420", // Czech Republic
+  "+45", // Denmark
+  "+372", // Estonia
+  "+358", // Finland
+  "+33", // France
+  "+49", // Germany
+  "+30", // Greece
+  "+36", // Hungary
+  "+353", // Ireland
+  "+39", // Italy
+  "+371", // Latvia
+  "+370", // Lithuania
+  "+352", // Luxembourg
+  "+356", // Malta
+  "+31", // Netherlands
+  "+48", // Poland
+  "+351", // Portugal
+  "+40", // Romania
+  "+421", // Slovakia
+  "+386", // Slovenia
+  "+34", // Spain
+  "+46", // Sweden
+];
 
 export type SupportedCountryCode =
   (typeof SUPPORTED_PHONE_COUNTRIES)[number]["code"];
@@ -62,7 +86,6 @@ interface PhoneInputProps {
   value?: string;
   onChange?: (value: string) => void;
   onBlur?: () => void;
-  defaultCountry?: SupportedCountryCode;
   placeholder?: string;
   disabled?: boolean;
   error?: boolean;
@@ -70,13 +93,84 @@ interface PhoneInputProps {
   id?: string;
   name?: string;
   required?: boolean;
+  showValidationHint?: boolean;
 }
 
 /**
- * Phone input component with country code selection and validation
- * - Displays country flag based on selected country
- * - Validates phone number format
- * - Always stores full phone number with country code (e.g., +977 9812345678)
+ * Detect flag based on phone number input
+ * Returns: { flag: emoji, isSupported: boolean, needsCountryCode: boolean }
+ */
+function detectPhoneFlag(phone: string): {
+  flag: string | null;
+  isSupported: boolean;
+  needsCountryCode: boolean;
+  countryCode: SupportedCountryCode | "EU" | null;
+} {
+  if (!phone || phone.trim() === "") {
+    return {
+      flag: null,
+      isSupported: false,
+      needsCountryCode: false,
+      countryCode: null,
+    };
+  }
+
+  const cleaned = phone.replace(/\s/g, "");
+
+  // Check if starts with + (has country code)
+  if (!cleaned.startsWith("+")) {
+    return {
+      flag: null,
+      isSupported: false,
+      needsCountryCode: true,
+      countryCode: null,
+    };
+  }
+
+  // Check supported countries first (order by dial code length descending to match longer codes first)
+  const sortedCountries = [...SUPPORTED_PHONE_COUNTRIES].sort(
+    (a, b) => b.dialCode.length - a.dialCode.length
+  );
+
+  for (const country of sortedCountries) {
+    if (cleaned.startsWith(country.dialCode)) {
+      return {
+        flag: country.flag,
+        isSupported: true,
+        needsCountryCode: false,
+        countryCode: country.code,
+      };
+    }
+  }
+
+  // Check EU countries (sort by length descending)
+  const sortedEU = [...EU_DIAL_CODES].sort((a, b) => b.length - a.length);
+  for (const dialCode of sortedEU) {
+    if (cleaned.startsWith(dialCode)) {
+      return {
+        flag: "🇪🇺",
+        isSupported: false,
+        needsCountryCode: false,
+        countryCode: "EU",
+      };
+    }
+  }
+
+  // Has + but unrecognized country code
+  return {
+    flag: null,
+    isSupported: false,
+    needsCountryCode: false,
+    countryCode: null,
+  };
+}
+
+/**
+ * Phone input component with automatic flag detection
+ * - Single unified input field
+ * - Shows flag emoji based on country code typed
+ * - Shows EU flag 🇪🇺 for EU countries (except UK)
+ * - Prompts for country code if not entered
  */
 export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
   (
@@ -84,174 +178,79 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
       value = "",
       onChange,
       onBlur,
-      defaultCountry = "NP",
-      placeholder,
+      placeholder = "+977 9812345678",
       disabled = false,
       error = false,
       className,
       id,
       name,
       required,
+      showValidationHint = true,
     },
-    ref,
+    ref
   ) => {
-    // Parse initial value to extract country code
-    const parseInitialValue = useCallback(
-      (val: string) => {
-        if (!val) return { countryCode: defaultCountry, localNumber: "" };
+    // Detect flag and validation state
+    const phoneState = useMemo(() => detectPhoneFlag(value), [value]);
 
-        // Try to match country code from the value
-        for (const country of SUPPORTED_PHONE_COUNTRIES) {
-          if (val.startsWith(country.dialCode)) {
-            return {
-              countryCode: country.code,
-              localNumber: val
-                .slice(country.dialCode.length)
-                .replace(/\s/g, ""),
-            };
+    // Handle input change - allow + at start, then only digits and spaces
+    const handleChange = useCallback(
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        let input = e.target.value;
+
+        // Filter: allow + at start, then digits and spaces only
+        let result = "";
+        for (let i = 0; i < input.length; i++) {
+          const char = input[i];
+          if (i === 0 && char === "+") {
+            result += char;
+          } else if (/[\d\s]/.test(char)) {
+            result += char;
           }
         }
 
-        // If no country code found, assume it's just a local number
-        return {
-          countryCode: defaultCountry,
-          localNumber: val.replace(/[^\d]/g, ""),
-        };
+        onChange?.(result);
       },
-      [defaultCountry],
+      [onChange]
     );
-
-    const [selectedCountry, setSelectedCountry] =
-      useState<SupportedCountryCode>(() => {
-        const { countryCode } = parseInitialValue(value);
-        return countryCode;
-      });
-
-    const [localNumber, setLocalNumber] = useState(() => {
-      const { localNumber } = parseInitialValue(value);
-      return localNumber;
-    });
-
-    // Get current country info
-    const countryInfo = useMemo(
-      () =>
-        SUPPORTED_PHONE_COUNTRIES.find((c) => c.code === selectedCountry) ||
-        SUPPORTED_PHONE_COUNTRIES[0],
-      [selectedCountry],
-    );
-
-    // Update parent with full phone number
-    const updateFullNumber = useCallback(
-      (country: SupportedCountryCode, local: string) => {
-        const info = SUPPORTED_PHONE_COUNTRIES.find((c) => c.code === country);
-        if (!info) return;
-
-        // Only include dial code if there's a local number
-        const fullNumber = local ? `${info.dialCode} ${local}` : "";
-        onChange?.(fullNumber);
-      },
-      [onChange],
-    );
-
-    // Handle country change
-    const handleCountryChange = (newCountry: SupportedCountryCode) => {
-      setSelectedCountry(newCountry);
-      setLocalNumber(""); // Clear local number when country changes
-      updateFullNumber(newCountry, "");
-    };
-
-    // Handle local number change
-    const handleLocalNumberChange = (
-      e: React.ChangeEvent<HTMLInputElement>,
-    ) => {
-      const input = e.target.value;
-      // Only allow digits
-      const digitsOnly = input.replace(/[^\d]/g, "");
-      // Limit to max length for the country
-      const trimmed = digitsOnly.slice(0, countryInfo.maxLength);
-      setLocalNumber(trimmed);
-      updateFullNumber(selectedCountry, trimmed);
-    };
-
-    // Sync from external value changes
-    useEffect(() => {
-      const { countryCode, localNumber: parsed } = parseInitialValue(value);
-      if (countryCode !== selectedCountry || parsed !== localNumber) {
-        setSelectedCountry(countryCode);
-        setLocalNumber(parsed);
-      }
-    }, [value, parseInitialValue, selectedCountry, localNumber]);
-
-    // Format placeholder based on country
-    const getPlaceholder = () => {
-      if (placeholder) return placeholder;
-      return countryInfo.format.replace(/X/g, "0");
-    };
 
     return (
-      <div className={cn("flex gap-1", className)}>
-        {/* Country selector with flag */}
-        <Select
-          value={selectedCountry}
-          onValueChange={(val) =>
-            handleCountryChange(val as SupportedCountryCode)
-          }
-          disabled={disabled}
-        >
-          <SelectTrigger
-            className={cn(
-              "w-[100px] flex-shrink-0 rounded-xl",
-              error &&
-                "border-red-300 focus:border-red-400 focus:ring-red-400/20",
-            )}
-          >
-            <SelectValue>
-              <span className="flex items-center gap-1.5">
-                <span className="text-lg">{countryInfo.flag}</span>
-                <span className="text-sm text-muted-foreground">
-                  {countryInfo.dialCode}
-                </span>
-              </span>
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {SUPPORTED_PHONE_COUNTRIES.map((country) => (
-              <SelectItem key={country.code} value={country.code}>
-                <span className="flex items-center gap-2">
-                  <span className="text-lg">{country.flag}</span>
-                  <span className="text-sm">{country.dialCode}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {country.name}
-                  </span>
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className={cn("relative", className)}>
+        {/* Flag display on the left inside input */}
+        {phoneState.flag && (
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xl pointer-events-none z-10">
+            {phoneState.flag}
+          </span>
+        )}
 
-        {/* Phone number input */}
         <Input
           ref={ref}
           id={id}
           name={name}
           type="tel"
-          inputMode="numeric"
-          value={localNumber}
-          onChange={handleLocalNumberChange}
+          inputMode="tel"
+          value={value}
+          onChange={handleChange}
           onBlur={onBlur}
-          placeholder={getPlaceholder()}
+          placeholder={placeholder}
           disabled={disabled}
           required={required}
           className={cn(
-            "flex-1 rounded-xl",
-            error &&
-              "border-red-300 focus:border-red-400 focus:ring-red-400/20",
+            "h-11 rounded-xl pr-10",
+            phoneState.flag ? "pl-12" : "pl-4",
+            error && "border-red-500 focus-visible:ring-red-500"
           )}
-          maxLength={countryInfo.maxLength}
         />
+
+        {/* Validation hint below input */}
+        {showValidationHint && phoneState.needsCountryCode && value.length > 0 && (
+          <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+            <span>⚠️</span>
+            Please enter country code (e.g., +977, +91, +1)
+          </p>
+        )}
       </div>
     );
-  },
+  }
 );
 
 PhoneInput.displayName = "PhoneInput";
@@ -259,58 +258,129 @@ PhoneInput.displayName = "PhoneInput";
 /**
  * Validate a phone number
  * @param phone Full phone number with country code (e.g., "+977 9812345678")
- * @returns true if valid, false otherwise
+ * @returns { valid: boolean, needsCountryCode: boolean, isSupported: boolean }
  */
-export function isValidPhoneNumber(phone: string): boolean {
-  if (!phone) return false;
+export function validatePhoneNumber(phone: string): {
+  valid: boolean;
+  needsCountryCode: boolean;
+  isSupported: boolean;
+  message?: string;
+} {
+  if (!phone || phone.trim() === "") {
+    return { valid: false, needsCountryCode: false, isSupported: false };
+  }
 
-  // Must start with + and country code
-  if (!phone.startsWith("+")) return false;
+  const cleaned = phone.replace(/\s/g, "");
 
-  // Find matching country
+  // Must start with +
+  if (!cleaned.startsWith("+")) {
+    return {
+      valid: false,
+      needsCountryCode: true,
+      isSupported: false,
+      message: "Please enter country code (e.g., +977)",
+    };
+  }
+
+  // Check supported countries
   for (const country of SUPPORTED_PHONE_COUNTRIES) {
-    if (phone.startsWith(country.dialCode)) {
-      const localPart = phone.slice(country.dialCode.length).replace(/\s/g, "");
-      // Check if local part has correct length and is all digits
-      return localPart.length === country.maxLength && /^\d+$/.test(localPart);
+    if (cleaned.startsWith(country.dialCode)) {
+      const localPart = cleaned.slice(country.dialCode.length);
+      const isValidLength =
+        localPart.length >= country.minLength &&
+        localPart.length <= country.maxLength;
+      const isDigits = /^\d+$/.test(localPart);
+
+      if (isValidLength && isDigits) {
+        return { valid: true, needsCountryCode: false, isSupported: true };
+      } else {
+        return {
+          valid: false,
+          needsCountryCode: false,
+          isSupported: true,
+          message: `Phone number should be ${country.minLength} digits after ${country.dialCode}`,
+        };
+      }
     }
   }
 
-  return false;
-}
-
-/**
- * Get country from phone number
- * @param phone Full phone number with country code
- * @returns Country code or null if not found
- */
-export function getCountryFromPhone(
-  phone: string,
-): SupportedCountryCode | null {
-  if (!phone) return null;
-
-  for (const country of SUPPORTED_PHONE_COUNTRIES) {
-    if (phone.startsWith(country.dialCode)) {
-      return country.code;
+  // Check EU countries - they're valid but not "supported" for our business
+  for (const dialCode of EU_DIAL_CODES) {
+    if (cleaned.startsWith(dialCode)) {
+      const localPart = cleaned.slice(dialCode.length);
+      if (localPart.length >= 6 && /^\d+$/.test(localPart)) {
+        return { valid: true, needsCountryCode: false, isSupported: false };
+      }
     }
   }
 
-  return null;
+  // Has country code but might be incomplete or unsupported
+  if (cleaned.length < 4) {
+    return {
+      valid: false,
+      needsCountryCode: false,
+      isSupported: false,
+      message: "Please enter complete phone number",
+    };
+  }
+
+  // Unknown country code - still allow it
+  const localPart = cleaned.slice(1); // Remove +
+  if (localPart.length >= 7 && /^\d+$/.test(localPart)) {
+    return { valid: true, needsCountryCode: false, isSupported: false };
+  }
+
+  return {
+    valid: false,
+    needsCountryCode: false,
+    isSupported: false,
+    message: "Please enter a valid phone number",
+  };
 }
 
 /**
- * Format phone number for display
- * @param phone Full phone number with country code
- * @returns Formatted phone number
+ * Check if phone number needs country code
+ */
+export function needsCountryCode(phone: string): boolean {
+  if (!phone || phone.trim() === "") return false;
+  return !phone.trim().startsWith("+");
+}
+
+/**
+ * Get country info from phone number
+ */
+export function getCountryFromPhone(phone: string): {
+  code: SupportedCountryCode | "EU" | null;
+  flag: string | null;
+  name: string | null;
+} {
+  const state = detectPhoneFlag(phone);
+
+  if (state.countryCode === "EU") {
+    return { code: "EU", flag: "🇪🇺", name: "European Union" };
+  }
+
+  if (state.countryCode) {
+    const country = SUPPORTED_PHONE_COUNTRIES.find(
+      (c) => c.code === state.countryCode
+    );
+    if (country) {
+      return { code: country.code, flag: country.flag, name: country.name };
+    }
+  }
+
+  return { code: null, flag: null, name: null };
+}
+
+/**
+ * Format phone number for display with flag
  */
 export function formatPhoneDisplay(phone: string): string {
   if (!phone) return "";
 
-  for (const country of SUPPORTED_PHONE_COUNTRIES) {
-    if (phone.startsWith(country.dialCode)) {
-      const local = phone.slice(country.dialCode.length).replace(/\s/g, "");
-      return `${country.flag} ${country.dialCode} ${local}`;
-    }
+  const { flag } = getCountryFromPhone(phone);
+  if (flag) {
+    return `${flag} ${phone}`;
   }
 
   return phone;

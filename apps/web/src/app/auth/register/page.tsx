@@ -838,10 +838,9 @@ function RegisterForm() {
                   <div className="relative">
                     <PhoneInput
                       id="customer-phone"
-                      placeholder="Enter phone number"
-                      defaultCountry="NP"
+                      placeholder="+977 9812345678"
                       value={customerForm.watch("phone") || ""}
-                      onChange={(value) => {
+                      onChange={(value: string) => {
                         customerForm.setValue("phone", value);
                         checkPhoneAvailability(value);
                       }}
@@ -855,7 +854,7 @@ function RegisterForm() {
                       )}
                     />
                     {/* Real-time phone check indicator */}
-                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 z-10">
+                    <div className="absolute right-3.5 top-[22px] -translate-y-1/2 z-10">
                       {phoneCheckState.checking && (
                         <ArrowPathIcon className="h-4 w-4 text-gray-400 animate-spin" />
                       )}
@@ -1172,10 +1171,9 @@ function RegisterForm() {
                       <div className="relative">
                         <PhoneInput
                           id="shop-phone"
-                          placeholder="Enter phone number"
-                          defaultCountry="NP"
+                          placeholder="+977 9812345678"
                           value={shopkeeperForm.watch("phone") || ""}
-                          onChange={(value) => {
+                          onChange={(value: string) => {
                             shopkeeperForm.setValue("phone", value);
                             checkPhoneAvailability(value);
                           }}
@@ -1190,7 +1188,7 @@ function RegisterForm() {
                           required
                         />
                         {/* Real-time phone check indicator */}
-                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 z-10">
+                        <div className="absolute right-3.5 top-[22px] -translate-y-1/2 z-10">
                           {phoneCheckState.checking && (
                             <ArrowPathIcon className="h-4 w-4 text-gray-400 animate-spin" />
                           )}
