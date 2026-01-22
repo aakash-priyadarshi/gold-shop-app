@@ -1,37 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { AdminGuard } from '@/components/auth/RouteGuard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { AdminGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,34 +11,63 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Checkbox } from '@/components/ui/checkbox';
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Users,
-  UserCheck,
-  UserX,
-  Search,
-  Mail,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/hooks/use-toast";
+import api, { adminApi } from "@/lib/api";
+import {
   Calendar,
-  Loader2,
-  Shield,
-  Store,
-  User,
-  Plus,
-  Eye,
-  Pencil,
-  Trash2,
-  Phone,
-  MapPin,
-  Globe,
-  Clock,
   CheckCircle,
-  XCircle,
+  Clock,
+  Eye,
+  Loader2,
+  Mail,
+  MapPin,
+  Pencil,
+  Phone,
+  Plus,
+  Search,
+  Shield,
   Star,
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import api, { adminApi } from '@/lib/api';
+  Store,
+  Trash2,
+  User,
+  UserCheck,
+  Users,
+  UserX,
+  XCircle,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface ShopData {
   id: string;
@@ -97,8 +96,9 @@ interface UserData {
   firstName: string;
   lastName: string;
   phone?: string;
-  role: 'ADMIN' | 'SHOPKEEPER' | 'CUSTOMER' | 'SUPPORT';
-  status: 'ACTIVE' | 'SUSPENDED' | 'PENDING_VERIFICATION' | 'DEACTIVATED';
+  phoneVerifiedAt?: string;
+  role: "ADMIN" | "SHOPKEEPER" | "CUSTOMER" | "SUPPORT";
+  status: "ACTIVE" | "SUSPENDED" | "PENDING_VERIFICATION" | "DEACTIVATED";
   preferredLanguage?: string;
   preferredCurrency?: string;
   createdAt: string;
@@ -112,21 +112,21 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   // Create user dialog state
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [creatingUser, setCreatingUser] = useState(false);
   const [newUser, setNewUser] = useState({
-    email: '',
-    password: '',
-    firstName: '',
-    lastName: '',
-    phone: '',
-    role: 'CUSTOMER' as 'ADMIN' | 'SHOPKEEPER' | 'CUSTOMER' | 'SUPPORT',
+    email: "",
+    password: "",
+    firstName: "",
+    lastName: "",
+    phone: "",
+    role: "CUSTOMER" as "ADMIN" | "SHOPKEEPER" | "CUSTOMER" | "SUPPORT",
   });
 
   // View/Edit user dialog state
@@ -135,12 +135,12 @@ export default function AdminUsersPage() {
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [loadingUserDetails, setLoadingUserDetails] = useState(false);
   const [editForm, setEditForm] = useState({
-    email: '',
-    firstName: '',
-    lastName: '',
-    phone: '',
-    role: 'CUSTOMER' as string,
-    status: 'ACTIVE' as string,
+    email: "",
+    firstName: "",
+    lastName: "",
+    phone: "",
+    role: "CUSTOMER" as string,
+    status: "ACTIVE" as string,
   });
   const [savingUser, setSavingUser] = useState(false);
 
@@ -153,20 +153,23 @@ export default function AdminUsersPage() {
   const [addShopDialogOpen, setAddShopDialogOpen] = useState(false);
   const [addingShop, setAddingShop] = useState(false);
   const [newShopForm, setNewShopForm] = useState({
-    shopName: '',
-    city: '',
-    address: '',
-    contactPhone: '',
-    contactEmail: '',
-    country: 'NP',
-    state: '',
-    pincode: '',
+    shopName: "",
+    city: "",
+    address: "",
+    contactPhone: "",
+    contactEmail: "",
+    country: "NP",
+    state: "",
+    pincode: "",
     isVerified: true,
   });
 
   // Delete shop confirmation
   const [deleteShopId, setDeleteShopId] = useState<string | null>(null);
   const [deletingShop, setDeletingShop] = useState(false);
+
+  // Phone verification state
+  const [verifyingPhone, setVerifyingPhone] = useState(false);
 
   useEffect(() => {
     loadUsers();
@@ -179,18 +182,19 @@ export default function AdminUsersPage() {
   const loadUsers = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/users');
-      let usersArr = response.data?.data || response.data?.users || response.data || [];
+      const response = await api.get("/users");
+      let usersArr =
+        response.data?.data || response.data?.users || response.data || [];
       if (!Array.isArray(usersArr)) {
         usersArr = [];
       }
       setUsers(usersArr);
     } catch (error) {
-      console.error('Failed to load users:', error);
+      console.error("Failed to load users:", error);
       toast({
-        variant: 'destructive',
-        title: 'Failed to load users',
-        description: 'Could not fetch user data',
+        variant: "destructive",
+        title: "Failed to load users",
+        description: "Could not fetch user data",
       });
     } finally {
       setIsLoading(false);
@@ -200,16 +204,16 @@ export default function AdminUsersPage() {
   const filterUsers = () => {
     let filtered = [...users];
 
-    if (roleFilter !== 'all') {
+    if (roleFilter !== "all") {
       filtered = filtered.filter((u) => u.role === roleFilter);
     }
 
-    if (statusFilter === 'active') {
-      filtered = filtered.filter((u) => u.status === 'ACTIVE');
-    } else if (statusFilter === 'suspended') {
-      filtered = filtered.filter((u) => u.status === 'SUSPENDED');
-    } else if (statusFilter === 'pending') {
-      filtered = filtered.filter((u) => u.status === 'PENDING_VERIFICATION');
+    if (statusFilter === "active") {
+      filtered = filtered.filter((u) => u.status === "ACTIVE");
+    } else if (statusFilter === "suspended") {
+      filtered = filtered.filter((u) => u.status === "SUSPENDED");
+    } else if (statusFilter === "pending") {
+      filtered = filtered.filter((u) => u.status === "PENDING_VERIFICATION");
     }
 
     if (searchQuery) {
@@ -218,7 +222,7 @@ export default function AdminUsersPage() {
         (u) =>
           u.email.toLowerCase().includes(query) ||
           u.firstName?.toLowerCase().includes(query) ||
-          u.lastName?.toLowerCase().includes(query)
+          u.lastName?.toLowerCase().includes(query),
       );
     }
 
@@ -229,16 +233,16 @@ export default function AdminUsersPage() {
     setSelectedUser(null);
     setViewDialogOpen(true);
     setLoadingUserDetails(true);
-    
+
     try {
       const response = await adminApi.getUserDetails(user.id);
       setSelectedUser(response.data);
     } catch (error) {
-      console.error('Failed to load user details:', error);
+      console.error("Failed to load user details:", error);
       toast({
-        variant: 'destructive',
-        title: 'Failed to load user details',
-        description: 'Could not fetch full user information',
+        variant: "destructive",
+        title: "Failed to load user details",
+        description: "Could not fetch full user information",
       });
       setViewDialogOpen(false);
     } finally {
@@ -250,9 +254,9 @@ export default function AdminUsersPage() {
     setSelectedUser(user);
     setEditForm({
       email: user.email,
-      firstName: user.firstName || '',
-      lastName: user.lastName || '',
-      phone: user.phone || '',
+      firstName: user.firstName || "",
+      lastName: user.lastName || "",
+      phone: user.phone || "",
       role: user.role,
       status: user.status,
     });
@@ -261,21 +265,21 @@ export default function AdminUsersPage() {
 
   const handleSaveUser = async () => {
     if (!selectedUser) return;
-    
+
     setSavingUser(true);
     try {
       await adminApi.updateUser(selectedUser.id, editForm);
       toast({
-        title: 'User Updated',
-        description: 'User information has been updated successfully.',
+        title: "User Updated",
+        description: "User information has been updated successfully.",
       });
       setEditDialogOpen(false);
       loadUsers();
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Update Failed',
-        description: error.response?.data?.message || 'Could not update user',
+        variant: "destructive",
+        title: "Update Failed",
+        description: error.response?.data?.message || "Could not update user",
       });
     } finally {
       setSavingUser(false);
@@ -284,72 +288,123 @@ export default function AdminUsersPage() {
 
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
-    
+
     setDeletingUser(true);
     try {
       await adminApi.deleteUser(userToDelete.id);
       toast({
-        title: 'User Deleted',
-        description: 'The user has been deleted successfully.',
+        title: "User Deleted",
+        description: "The user has been deleted successfully.",
       });
       setDeleteDialogOpen(false);
       setUserToDelete(null);
       loadUsers();
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Delete Failed',
-        description: error.response?.data?.message || 'Could not delete user',
+        variant: "destructive",
+        title: "Delete Failed",
+        description: error.response?.data?.message || "Could not delete user",
       });
     } finally {
       setDeletingUser(false);
     }
   };
 
+  // Toggle phone verification for user
+  const handleTogglePhoneVerification = async () => {
+    if (!selectedUser) return;
+
+    setVerifyingPhone(true);
+    try {
+      const newVerifiedStatus = !selectedUser.phoneVerifiedAt;
+      const response = await adminApi.setPhoneVerified(
+        selectedUser.id,
+        newVerifiedStatus,
+      );
+      if (response.data?.success) {
+        toast({
+          title: newVerifiedStatus ? "Phone Verified" : "Phone Unverified",
+          description: newVerifiedStatus
+            ? "User phone number has been manually verified."
+            : "User phone verification has been removed.",
+        });
+        // Update selected user with new data
+        setSelectedUser({
+          ...selectedUser,
+          phoneVerifiedAt: newVerifiedStatus
+            ? new Date().toISOString()
+            : undefined,
+        });
+        loadUsers();
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Failed to Update",
+        description:
+          error.response?.data?.message ||
+          "Could not update phone verification status",
+      });
+    } finally {
+      setVerifyingPhone(false);
+    }
+  };
+
   // Add shop for user
   const handleAddShop = async () => {
     if (!selectedUser) return;
-    
-    if (!newShopForm.shopName || !newShopForm.city || !newShopForm.address || !newShopForm.contactPhone) {
+
+    if (
+      !newShopForm.shopName ||
+      !newShopForm.city ||
+      !newShopForm.address ||
+      !newShopForm.contactPhone
+    ) {
       toast({
-        variant: 'destructive',
-        title: 'Missing Fields',
-        description: 'Please fill in all required fields',
+        variant: "destructive",
+        title: "Missing Fields",
+        description: "Please fill in all required fields",
       });
       return;
     }
 
     setAddingShop(true);
     try {
-      const response = await api.post(`/admin/users/${selectedUser.id}/shops`, newShopForm);
+      const response = await api.post(
+        `/admin/users/${selectedUser.id}/shops`,
+        newShopForm,
+      );
       if (response.data?.success) {
         toast({
-          title: 'Shop Created',
-          description: 'The shop has been created successfully.',
+          title: "Shop Created",
+          description: "The shop has been created successfully.",
         });
         setAddShopDialogOpen(false);
         setNewShopForm({
-          shopName: '',
-          city: '',
-          address: '',
-          contactPhone: '',
-          contactEmail: '',
-          country: 'NP',
-          state: '',
-          pincode: '',
+          shopName: "",
+          city: "",
+          address: "",
+          contactPhone: "",
+          contactEmail: "",
+          country: "NP",
+          state: "",
+          pincode: "",
           isVerified: true,
         });
         // Refresh user details
         handleViewUser(selectedUser);
         loadUsers();
       } else {
-        throw new Error(response.data?.error || 'Failed to create shop');
+        throw new Error(response.data?.error || "Failed to create shop");
       }
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.response?.data?.message || error.message || 'Could not create shop',
+        variant: "destructive",
+        title: "Error",
+        description:
+          error.response?.data?.message ||
+          error.message ||
+          "Could not create shop",
       });
     } finally {
       setAddingShop(false);
@@ -362,24 +417,29 @@ export default function AdminUsersPage() {
 
     setDeletingShop(true);
     try {
-      const response = await api.delete(`/admin/users/${selectedUser.id}/shops/${deleteShopId}`);
+      const response = await api.delete(
+        `/admin/users/${selectedUser.id}/shops/${deleteShopId}`,
+      );
       if (response.data?.success) {
         toast({
-          title: 'Shop Deleted',
-          description: 'The shop has been deleted successfully.',
+          title: "Shop Deleted",
+          description: "The shop has been deleted successfully.",
         });
         setDeleteShopId(null);
         // Refresh user details
         handleViewUser(selectedUser);
         loadUsers();
       } else {
-        throw new Error(response.data?.error || 'Failed to delete shop');
+        throw new Error(response.data?.error || "Failed to delete shop");
       }
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.response?.data?.message || error.message || 'Could not delete shop',
+        variant: "destructive",
+        title: "Error",
+        description:
+          error.response?.data?.message ||
+          error.message ||
+          "Could not delete shop",
       });
     } finally {
       setDeletingShop(false);
@@ -391,15 +451,15 @@ export default function AdminUsersPage() {
     try {
       await api.patch(`/users/${userId}/suspend`);
       toast({
-        title: 'User Suspended',
-        description: 'The user has been suspended.',
+        title: "User Suspended",
+        description: "The user has been suspended.",
       });
       loadUsers();
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Action Failed',
-        description: error.response?.data?.message || 'Could not suspend user',
+        variant: "destructive",
+        title: "Action Failed",
+        description: error.response?.data?.message || "Could not suspend user",
       });
     } finally {
       setProcessingId(null);
@@ -411,15 +471,15 @@ export default function AdminUsersPage() {
     try {
       await api.patch(`/users/${userId}/activate`);
       toast({
-        title: 'User Activated',
-        description: 'The user has been activated.',
+        title: "User Activated",
+        description: "The user has been activated.",
       });
       loadUsers();
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Action Failed',
-        description: error.response?.data?.message || 'Could not activate user',
+        variant: "destructive",
+        title: "Action Failed",
+        description: error.response?.data?.message || "Could not activate user",
       });
     } finally {
       setProcessingId(null);
@@ -429,9 +489,9 @@ export default function AdminUsersPage() {
   const handleCreateUser = async () => {
     if (!newUser.email || !newUser.password || !newUser.firstName) {
       toast({
-        variant: 'destructive',
-        title: 'Missing Fields',
-        description: 'Please fill in all required fields.',
+        variant: "destructive",
+        title: "Missing Fields",
+        description: "Please fill in all required fields.",
       });
       return;
     }
@@ -440,24 +500,24 @@ export default function AdminUsersPage() {
     try {
       await adminApi.createUser(newUser);
       toast({
-        title: 'User Created',
-        description: 'The user has been created successfully.',
+        title: "User Created",
+        description: "The user has been created successfully.",
       });
       setCreateDialogOpen(false);
       setNewUser({
-        email: '',
-        password: '',
-        firstName: '',
-        lastName: '',
-        phone: '',
-        role: 'CUSTOMER',
+        email: "",
+        password: "",
+        firstName: "",
+        lastName: "",
+        phone: "",
+        role: "CUSTOMER",
       });
       loadUsers();
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Creation Failed',
-        description: error.response?.data?.message || 'Could not create user.',
+        variant: "destructive",
+        title: "Creation Failed",
+        description: error.response?.data?.message || "Could not create user.",
       });
     } finally {
       setCreatingUser(false);
@@ -465,30 +525,30 @@ export default function AdminUsersPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
   const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(dateString).toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const getRoleIcon = (role: string) => {
     switch (role) {
-      case 'ADMIN':
+      case "ADMIN":
         return <Shield className="h-4 w-4 text-purple-600" />;
-      case 'SHOPKEEPER':
+      case "SHOPKEEPER":
         return <Store className="h-4 w-4 text-gold-600" />;
-      case 'CUSTOMER':
+      case "CUSTOMER":
         return <User className="h-4 w-4 text-blue-600" />;
       default:
         return <Users className="h-4 w-4 text-gray-600" />;
@@ -497,25 +557,25 @@ export default function AdminUsersPage() {
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'ADMIN':
-        return 'bg-purple-100 text-purple-700';
-      case 'SHOPKEEPER':
-        return 'bg-gold-100 text-gold-700';
-      case 'CUSTOMER':
-        return 'bg-blue-100 text-blue-700';
+      case "ADMIN":
+        return "bg-purple-100 text-purple-700";
+      case "SHOPKEEPER":
+        return "bg-gold-100 text-gold-700";
+      case "CUSTOMER":
+        return "bg-blue-100 text-blue-700";
       default:
-        return 'bg-gray-100 text-gray-700';
+        return "bg-gray-100 text-gray-700";
     }
   };
 
   const userStats = {
     total: users.length,
-    admins: users.filter((u) => u.role === 'ADMIN').length,
-    shopkeepers: users.filter((u) => u.role === 'SHOPKEEPER').length,
-    customers: users.filter((u) => u.role === 'CUSTOMER').length,
-    active: users.filter((u) => u.status === 'ACTIVE').length,
-    suspended: users.filter((u) => u.status === 'SUSPENDED').length,
-    pending: users.filter((u) => u.status === 'PENDING_VERIFICATION').length,
+    admins: users.filter((u) => u.role === "ADMIN").length,
+    shopkeepers: users.filter((u) => u.role === "SHOPKEEPER").length,
+    customers: users.filter((u) => u.role === "CUSTOMER").length,
+    active: users.filter((u) => u.status === "ACTIVE").length,
+    suspended: users.filter((u) => u.status === "SUSPENDED").length,
+    pending: users.filter((u) => u.status === "PENDING_VERIFICATION").length,
   };
 
   return (
@@ -540,7 +600,8 @@ export default function AdminUsersPage() {
                 <DialogHeader>
                   <DialogTitle>Create New User</DialogTitle>
                   <DialogDescription>
-                    Add a new user to the platform. They will receive a welcome email.
+                    Add a new user to the platform. They will receive a welcome
+                    email.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
@@ -550,7 +611,12 @@ export default function AdminUsersPage() {
                       <Input
                         id="firstName"
                         value={newUser.firstName}
-                        onChange={(e) => setNewUser(prev => ({ ...prev, firstName: e.target.value }))}
+                        onChange={(e) =>
+                          setNewUser((prev) => ({
+                            ...prev,
+                            firstName: e.target.value,
+                          }))
+                        }
                       />
                     </div>
                     <div className="space-y-2">
@@ -558,7 +624,12 @@ export default function AdminUsersPage() {
                       <Input
                         id="lastName"
                         value={newUser.lastName}
-                        onChange={(e) => setNewUser(prev => ({ ...prev, lastName: e.target.value }))}
+                        onChange={(e) =>
+                          setNewUser((prev) => ({
+                            ...prev,
+                            lastName: e.target.value,
+                          }))
+                        }
                       />
                     </div>
                   </div>
@@ -568,7 +639,12 @@ export default function AdminUsersPage() {
                       id="email"
                       type="email"
                       value={newUser.email}
-                      onChange={(e) => setNewUser(prev => ({ ...prev, email: e.target.value }))}
+                      onChange={(e) =>
+                        setNewUser((prev) => ({
+                          ...prev,
+                          email: e.target.value,
+                        }))
+                      }
                     />
                   </div>
                   <div className="space-y-2">
@@ -577,7 +653,12 @@ export default function AdminUsersPage() {
                       id="phone"
                       type="tel"
                       value={newUser.phone}
-                      onChange={(e) => setNewUser(prev => ({ ...prev, phone: e.target.value }))}
+                      onChange={(e) =>
+                        setNewUser((prev) => ({
+                          ...prev,
+                          phone: e.target.value,
+                        }))
+                      }
                       placeholder="+977 98XXXXXXXX"
                     />
                   </div>
@@ -587,14 +668,21 @@ export default function AdminUsersPage() {
                       id="password"
                       type="password"
                       value={newUser.password}
-                      onChange={(e) => setNewUser(prev => ({ ...prev, password: e.target.value }))}
+                      onChange={(e) =>
+                        setNewUser((prev) => ({
+                          ...prev,
+                          password: e.target.value,
+                        }))
+                      }
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="role">Role</Label>
                     <Select
                       value={newUser.role}
-                      onValueChange={(value) => setNewUser(prev => ({ ...prev, role: value as any }))}
+                      onValueChange={(value) =>
+                        setNewUser((prev) => ({ ...prev, role: value as any }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -609,11 +697,16 @@ export default function AdminUsersPage() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setCreateDialogOpen(false)}
+                  >
                     Cancel
                   </Button>
                   <Button onClick={handleCreateUser} disabled={creatingUser}>
-                    {creatingUser && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    {creatingUser && (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    )}
                     Create User
                   </Button>
                 </DialogFooter>
@@ -632,31 +725,41 @@ export default function AdminUsersPage() {
             <Card>
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">Admins</p>
-                <p className="text-2xl font-bold text-purple-600">{userStats.admins}</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {userStats.admins}
+                </p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">Shopkeepers</p>
-                <p className="text-2xl font-bold text-gold-600">{userStats.shopkeepers}</p>
+                <p className="text-2xl font-bold text-gold-600">
+                  {userStats.shopkeepers}
+                </p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">Customers</p>
-                <p className="text-2xl font-bold text-blue-600">{userStats.customers}</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {userStats.customers}
+                </p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">Active</p>
-                <p className="text-2xl font-bold text-green-600">{userStats.active}</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {userStats.active}
+                </p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">Suspended</p>
-                <p className="text-2xl font-bold text-red-600">{userStats.suspended}</p>
+                <p className="text-2xl font-bold text-red-600">
+                  {userStats.suspended}
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -693,7 +796,9 @@ export default function AdminUsersPage() {
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="pending">Pending Verification</SelectItem>
+                    <SelectItem value="pending">
+                      Pending Verification
+                    </SelectItem>
                     <SelectItem value="suspended">Suspended</SelectItem>
                   </SelectContent>
                 </Select>
@@ -750,29 +855,29 @@ export default function AdminUsersPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {user.status === 'ACTIVE' ? (
+                          {user.status === "ACTIVE" ? (
                             <Badge className="bg-green-100 text-green-700">
                               <UserCheck className="h-3 w-3 mr-1" />
                               Active
                             </Badge>
-                          ) : user.status === 'PENDING_VERIFICATION' ? (
+                          ) : user.status === "PENDING_VERIFICATION" ? (
                             <Badge className="bg-amber-100 text-amber-700">
                               Pending
                             </Badge>
-                          ) : user.status === 'SUSPENDED' ? (
+                          ) : user.status === "SUSPENDED" ? (
                             <Badge variant="destructive">
                               <UserX className="h-3 w-3 mr-1" />
                               Suspended
                             </Badge>
                           ) : (
-                            <Badge variant="secondary">
-                              {user.status}
-                            </Badge>
+                            <Badge variant="secondary">{user.status}</Badge>
                           )}
                         </TableCell>
                         <TableCell>
                           {user.shop ? (
-                            <span className="text-sm">{user.shop.shopName}</span>
+                            <span className="text-sm">
+                              {user.shop.shopName}
+                            </span>
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
@@ -794,7 +899,7 @@ export default function AdminUsersPage() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            
+
                             {/* Edit User */}
                             <Button
                               size="sm"
@@ -804,10 +909,10 @@ export default function AdminUsersPage() {
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            
+
                             {/* Suspend/Activate */}
-                            {user.role !== 'ADMIN' && (
-                              user.status === 'ACTIVE' ? (
+                            {user.role !== "ADMIN" &&
+                              (user.status === "ACTIVE" ? (
                                 <Button
                                   size="sm"
                                   variant="ghost"
@@ -837,11 +942,10 @@ export default function AdminUsersPage() {
                                     <UserCheck className="h-4 w-4" />
                                   )}
                                 </Button>
-                              )
-                            )}
-                            
+                              ))}
+
                             {/* Delete User */}
-                            {user.role !== 'ADMIN' && (
+                            {user.role !== "ADMIN" && (
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -875,7 +979,7 @@ export default function AdminUsersPage() {
                 Complete information about this user
               </DialogDescription>
             </DialogHeader>
-            
+
             {loadingUserDetails ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -888,7 +992,7 @@ export default function AdminUsersPage() {
                     <TabsTrigger value="shop">Shop Details</TabsTrigger>
                   )}
                 </TabsList>
-                
+
                 <TabsContent value="profile" className="space-y-4 mt-4">
                   <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
                     <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center">
@@ -903,44 +1007,108 @@ export default function AdminUsersPage() {
                       </Badge>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <Label className="text-muted-foreground text-sm">Email</Label>
+                      <Label className="text-muted-foreground text-sm">
+                        Email
+                      </Label>
                       <p className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-muted-foreground" />
                         {selectedUser.email}
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-muted-foreground text-sm">Phone</Label>
-                      <p className="flex items-center gap-2">
+                      <Label className="text-muted-foreground text-sm">
+                        Phone
+                      </Label>
+                      <div className="flex items-center gap-2">
                         <Phone className="h-4 w-4 text-muted-foreground" />
-                        {selectedUser.phone || '—'}
-                      </p>
+                        <span>{selectedUser.phone || "—"}</span>
+                        {selectedUser.phone &&
+                          (selectedUser.phoneVerifiedAt ? (
+                            <Badge className="bg-green-100 text-green-700 gap-1">
+                              <CheckCircle className="h-3 w-3" />
+                              Verified
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="gap-1">
+                              <XCircle className="h-3 w-3" />
+                              Not Verified
+                            </Badge>
+                          ))}
+                      </div>
+                      {/* Manual Phone Verification Toggle */}
+                      {selectedUser.phone && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant={
+                              selectedUser.phoneVerifiedAt
+                                ? "outline"
+                                : "default"
+                            }
+                            onClick={handleTogglePhoneVerification}
+                            disabled={verifyingPhone}
+                            className={
+                              selectedUser.phoneVerifiedAt
+                                ? "border-red-200 text-red-600 hover:bg-red-50"
+                                : "bg-green-600 hover:bg-green-700 text-white"
+                            }
+                          >
+                            {verifyingPhone ? (
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            ) : selectedUser.phoneVerifiedAt ? (
+                              <XCircle className="h-3 w-3 mr-1" />
+                            ) : (
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                            )}
+                            {selectedUser.phoneVerifiedAt
+                              ? "Remove Verification"
+                              : "Manually Verify"}
+                          </Button>
+                          <span className="text-xs text-muted-foreground">
+                            {selectedUser.phoneVerifiedAt
+                              ? `Verified ${formatDateTime(selectedUser.phoneVerifiedAt)}`
+                              : "Admin can manually verify"}
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-muted-foreground text-sm">Status</Label>
+                      <Label className="text-muted-foreground text-sm">
+                        Status
+                      </Label>
                       <p>
-                        {selectedUser.status === 'ACTIVE' ? (
-                          <Badge className="bg-green-100 text-green-700">Active</Badge>
-                        ) : selectedUser.status === 'SUSPENDED' ? (
+                        {selectedUser.status === "ACTIVE" ? (
+                          <Badge className="bg-green-100 text-green-700">
+                            Active
+                          </Badge>
+                        ) : selectedUser.status === "SUSPENDED" ? (
                           <Badge variant="destructive">Suspended</Badge>
                         ) : (
-                          <Badge variant="secondary">{selectedUser.status}</Badge>
+                          <Badge variant="secondary">
+                            {selectedUser.status}
+                          </Badge>
                         )}
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-muted-foreground text-sm">Language</Label>
-                      <p>{selectedUser.preferredLanguage || 'en'}</p>
+                      <Label className="text-muted-foreground text-sm">
+                        Language
+                      </Label>
+                      <p>{selectedUser.preferredLanguage || "en"}</p>
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-muted-foreground text-sm">Currency</Label>
-                      <p>{selectedUser.preferredCurrency || 'NPR'}</p>
+                      <Label className="text-muted-foreground text-sm">
+                        Currency
+                      </Label>
+                      <p>{selectedUser.preferredCurrency || "NPR"}</p>
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-muted-foreground text-sm">Joined</Label>
+                      <Label className="text-muted-foreground text-sm">
+                        Joined
+                      </Label>
                       <p className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
                         {formatDateTime(selectedUser.createdAt)}
@@ -948,7 +1116,9 @@ export default function AdminUsersPage() {
                     </div>
                     {selectedUser.lastLoginAt && (
                       <div className="space-y-1">
-                        <Label className="text-muted-foreground text-sm">Last Login</Label>
+                        <Label className="text-muted-foreground text-sm">
+                          Last Login
+                        </Label>
                         <p className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-muted-foreground" />
                           {formatDateTime(selectedUser.lastLoginAt)}
@@ -957,7 +1127,7 @@ export default function AdminUsersPage() {
                     )}
                   </div>
                 </TabsContent>
-                
+
                 {/* Shop Tab - Always show for admin to add shops */}
                 <TabsContent value="shop" className="space-y-4 mt-4">
                   {/* Add Shop Button */}
@@ -971,118 +1141,160 @@ export default function AdminUsersPage() {
                       Add Shop
                     </Button>
                   </div>
-                  
+
                   {/* Show all shops for multi-shop support */}
-                  {(selectedUser.shop || selectedUser.shops?.length) ? (
-                    (selectedUser.shops || [selectedUser.shop]).filter(Boolean).map((shop, index) => (
-                      <div key={shop!.id} className={index > 0 ? 'border-t pt-4' : ''}>
-                        <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                          <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-lg bg-white flex items-center justify-center">
-                              <Store className="h-6 w-6 text-gold-600" />
-                            </div>
-                            <div>
-                              <h3 className="text-lg font-semibold">{shop!.shopName}</h3>
-                              <div className="flex items-center gap-2">
-                                {shop!.isVerified ? (
-                                  <Badge className="bg-green-100 text-green-700">
-                                    <CheckCircle className="h-3 w-3 mr-1" />
-                                    Verified
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="secondary" className="bg-amber-100 text-amber-700">
-                                    Pending
-                                  </Badge>
-                                )}
-                                {shop!.isActive ? (
-                                  <Badge className="bg-blue-100 text-blue-700">Active</Badge>
-                                ) : (
-                                  <Badge variant="destructive">Inactive</Badge>
-                                )}
+                  {selectedUser.shop || selectedUser.shops?.length ? (
+                    (selectedUser.shops || [selectedUser.shop])
+                      .filter(Boolean)
+                      .map((shop, index) => (
+                        <div
+                          key={shop!.id}
+                          className={index > 0 ? "border-t pt-4" : ""}
+                        >
+                          <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                            <div className="flex items-center gap-4">
+                              <div className="h-12 w-12 rounded-lg bg-white flex items-center justify-center">
+                                <Store className="h-6 w-6 text-gold-600" />
                               </div>
+                              <div>
+                                <h3 className="text-lg font-semibold">
+                                  {shop!.shopName}
+                                </h3>
+                                <div className="flex items-center gap-2">
+                                  {shop!.isVerified ? (
+                                    <Badge className="bg-green-100 text-green-700">
+                                      <CheckCircle className="h-3 w-3 mr-1" />
+                                      Verified
+                                    </Badge>
+                                  ) : (
+                                    <Badge
+                                      variant="secondary"
+                                      className="bg-amber-100 text-amber-700"
+                                    >
+                                      Pending
+                                    </Badge>
+                                  )}
+                                  {shop!.isActive ? (
+                                    <Badge className="bg-blue-100 text-blue-700">
+                                      Active
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="destructive">
+                                      Inactive
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="text-right">
+                                <div className="flex items-center gap-1">
+                                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                  <span className="font-semibold">
+                                    {shop!.rating?.toFixed(1) || "0.0"}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                  {shop!.totalReviews || 0} reviews
+                                </p>
+                              </div>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => setDeleteShopId(shop!.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
                           </div>
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <div className="flex items-center gap-1">
-                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                                <span className="font-semibold">{shop!.rating?.toFixed(1) || '0.0'}</span>
-                              </div>
-                              <p className="text-sm text-muted-foreground">
-                                {shop!.totalReviews || 0} reviews
+
+                          <div className="grid grid-cols-2 gap-4 mt-4">
+                            <div className="space-y-1">
+                              <Label className="text-muted-foreground text-sm">
+                                Location
+                              </Label>
+                              <p className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4 text-muted-foreground" />
+                                {shop!.city}, {shop!.country}
                               </p>
                             </div>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => setDeleteShopId(shop!.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <div className="space-y-1">
+                              <Label className="text-muted-foreground text-sm">
+                                Address
+                              </Label>
+                              <p>{shop!.address}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-muted-foreground text-sm">
+                                Contact Phone
+                              </Label>
+                              <p className="flex items-center gap-2">
+                                <Phone className="h-4 w-4 text-muted-foreground" />
+                                {shop!.contactPhone || "—"}
+                              </p>
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-muted-foreground text-sm">
+                                Contact Email
+                              </Label>
+                              <p className="flex items-center gap-2">
+                                <Mail className="h-4 w-4 text-muted-foreground" />
+                                {shop!.contactEmail || "—"}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4 mt-4">
-                          <div className="space-y-1">
-                            <Label className="text-muted-foreground text-sm">Location</Label>
-                            <p className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4 text-muted-foreground" />
-                              {shop!.city}, {shop!.country}
-                            </p>
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-muted-foreground text-sm">Address</Label>
-                            <p>{shop!.address}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-muted-foreground text-sm">Contact Phone</Label>
-                            <p className="flex items-center gap-2">
-                              <Phone className="h-4 w-4 text-muted-foreground" />
-                              {shop!.contactPhone || '—'}
-                            </p>
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-muted-foreground text-sm">Contact Email</Label>
-                            <p className="flex items-center gap-2">
-                              <Mail className="h-4 w-4 text-muted-foreground" />
-                              {shop!.contactEmail || '—'}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        {(shop!.supportedMaterials?.length || shop!.supportedJewelleryTypes?.length) && (
-                          <div className="space-y-4 pt-4 mt-4 border-t">
-                            <h4 className="font-semibold">Supported Services</h4>
-                            
-                            {(shop!.supportedMaterials?.length ?? 0) > 0 && (
-                              <div className="space-y-2">
-                                <Label className="text-muted-foreground text-sm">Materials</Label>
-                                <div className="flex flex-wrap gap-2">
-                                  {shop!.supportedMaterials?.map((material: string) => (
-                                    <Badge key={material} variant="outline">{material}</Badge>
-                                  ))}
+
+                          {(shop!.supportedMaterials?.length ||
+                            shop!.supportedJewelleryTypes?.length) && (
+                            <div className="space-y-4 pt-4 mt-4 border-t">
+                              <h4 className="font-semibold">
+                                Supported Services
+                              </h4>
+
+                              {(shop!.supportedMaterials?.length ?? 0) > 0 && (
+                                <div className="space-y-2">
+                                  <Label className="text-muted-foreground text-sm">
+                                    Materials
+                                  </Label>
+                                  <div className="flex flex-wrap gap-2">
+                                    {shop!.supportedMaterials?.map(
+                                      (material: string) => (
+                                        <Badge key={material} variant="outline">
+                                          {material}
+                                        </Badge>
+                                      ),
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
-                            
-                            {(shop!.supportedJewelleryTypes?.length ?? 0) > 0 && (
-                              <div className="space-y-2">
-                                <Label className="text-muted-foreground text-sm">Jewellery Types</Label>
-                                <div className="flex flex-wrap gap-2">
-                                  {shop!.supportedJewelleryTypes?.map((type: string) => (
-                                    <Badge key={type} variant="outline">{type}</Badge>
-                                  ))}
+                              )}
+
+                              {(shop!.supportedJewelleryTypes?.length ?? 0) >
+                                0 && (
+                                <div className="space-y-2">
+                                  <Label className="text-muted-foreground text-sm">
+                                    Jewellery Types
+                                  </Label>
+                                  <div className="flex flex-wrap gap-2">
+                                    {shop!.supportedJewelleryTypes?.map(
+                                      (type: string) => (
+                                        <Badge key={type} variant="outline">
+                                          {type}
+                                        </Badge>
+                                      ),
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
+                              )}
+                            </div>
+                          )}
+
+                          <div className="text-sm text-muted-foreground pt-4 border-t mt-4">
+                            <p>
+                              Shop created: {formatDateTime(shop!.createdAt)}
+                            </p>
                           </div>
-                        )}
-                        
-                        <div className="text-sm text-muted-foreground pt-4 border-t mt-4">
-                          <p>Shop created: {formatDateTime(shop!.createdAt)}</p>
                         </div>
-                      </div>
-                    ))
+                      ))
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
                       <Store className="h-12 w-12 mx-auto mb-2 opacity-50" />
@@ -1093,16 +1305,21 @@ export default function AdminUsersPage() {
                 </TabsContent>
               </Tabs>
             ) : null}
-            
+
             <DialogFooter>
-              <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setViewDialogOpen(false)}
+              >
                 Close
               </Button>
               {selectedUser && (
-                <Button onClick={() => {
-                  setViewDialogOpen(false);
-                  handleEditUser(selectedUser);
-                }}>
+                <Button
+                  onClick={() => {
+                    setViewDialogOpen(false);
+                    handleEditUser(selectedUser);
+                  }}
+                >
                   <Pencil className="h-4 w-4 mr-2" />
                   Edit User
                 </Button>
@@ -1116,9 +1333,7 @@ export default function AdminUsersPage() {
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Edit User</DialogTitle>
-              <DialogDescription>
-                Update user information
-              </DialogDescription>
+              <DialogDescription>Update user information</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
@@ -1127,7 +1342,12 @@ export default function AdminUsersPage() {
                   <Input
                     id="edit-firstName"
                     value={editForm.firstName}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, firstName: e.target.value }))}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        firstName: e.target.value,
+                      }))
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -1135,7 +1355,12 @@ export default function AdminUsersPage() {
                   <Input
                     id="edit-lastName"
                     value={editForm.lastName}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, lastName: e.target.value }))}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        lastName: e.target.value,
+                      }))
+                    }
                   />
                 </div>
               </div>
@@ -1145,7 +1370,9 @@ export default function AdminUsersPage() {
                   id="edit-email"
                   type="email"
                   value={editForm.email}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({ ...prev, email: e.target.value }))
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -1154,14 +1381,18 @@ export default function AdminUsersPage() {
                   id="edit-phone"
                   type="tel"
                   value={editForm.phone}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({ ...prev, phone: e.target.value }))
+                  }
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-role">Role</Label>
                 <Select
                   value={editForm.role}
-                  onValueChange={(value) => setEditForm(prev => ({ ...prev, role: value }))}
+                  onValueChange={(value) =>
+                    setEditForm((prev) => ({ ...prev, role: value }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1178,7 +1409,9 @@ export default function AdminUsersPage() {
                 <Label htmlFor="edit-status">Status</Label>
                 <Select
                   value={editForm.status}
-                  onValueChange={(value) => setEditForm(prev => ({ ...prev, status: value }))}
+                  onValueChange={(value) =>
+                    setEditForm((prev) => ({ ...prev, status: value }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1186,18 +1419,25 @@ export default function AdminUsersPage() {
                   <SelectContent>
                     <SelectItem value="ACTIVE">Active</SelectItem>
                     <SelectItem value="SUSPENDED">Suspended</SelectItem>
-                    <SelectItem value="PENDING_VERIFICATION">Pending Verification</SelectItem>
+                    <SelectItem value="PENDING_VERIFICATION">
+                      Pending Verification
+                    </SelectItem>
                     <SelectItem value="DEACTIVATED">Deactivated</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setEditDialogOpen(false)}
+              >
                 Cancel
               </Button>
               <Button onClick={handleSaveUser} disabled={savingUser}>
-                {savingUser && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {savingUser && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
                 Save Changes
               </Button>
             </DialogFooter>
@@ -1210,12 +1450,15 @@ export default function AdminUsersPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete the user{' '}
-                <strong>{userToDelete?.firstName} {userToDelete?.lastName}</strong>{' '}
+                This will permanently delete the user{" "}
+                <strong>
+                  {userToDelete?.firstName} {userToDelete?.lastName}
+                </strong>{" "}
                 ({userToDelete?.email}).
                 {userToDelete?.shop && (
                   <span className="block mt-2 text-amber-600">
-                    ⚠️ This user has a shop ({userToDelete.shop.shopName}) which will also be deleted.
+                    ⚠️ This user has a shop ({userToDelete.shop.shopName}) which
+                    will also be deleted.
                   </span>
                 )}
                 <span className="block mt-2">
@@ -1224,13 +1467,17 @@ export default function AdminUsersPage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={deletingUser}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={deletingUser}>
+                Cancel
+              </AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDeleteUser}
                 disabled={deletingUser}
                 className="bg-red-600 hover:bg-red-700"
               >
-                {deletingUser && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {deletingUser && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
                 Delete User
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -1241,7 +1488,9 @@ export default function AdminUsersPage() {
         <Dialog open={addShopDialogOpen} onOpenChange={setAddShopDialogOpen}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Add Shop for {selectedUser?.firstName} {selectedUser?.lastName}</DialogTitle>
+              <DialogTitle>
+                Add Shop for {selectedUser?.firstName} {selectedUser?.lastName}
+              </DialogTitle>
               <DialogDescription>
                 Create a new shop for this user
               </DialogDescription>
@@ -1252,7 +1501,9 @@ export default function AdminUsersPage() {
                 <Input
                   id="shop-name"
                   value={newShopForm.shopName}
-                  onChange={(e) => setNewShopForm({ ...newShopForm, shopName: e.target.value })}
+                  onChange={(e) =>
+                    setNewShopForm({ ...newShopForm, shopName: e.target.value })
+                  }
                   placeholder="Enter shop name"
                 />
               </div>
@@ -1261,7 +1512,9 @@ export default function AdminUsersPage() {
                   <Label htmlFor="shop-country">Country *</Label>
                   <Select
                     value={newShopForm.country}
-                    onValueChange={(value) => setNewShopForm({ ...newShopForm, country: value })}
+                    onValueChange={(value) =>
+                      setNewShopForm({ ...newShopForm, country: value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select country" />
@@ -1280,7 +1533,9 @@ export default function AdminUsersPage() {
                   <Input
                     id="shop-state"
                     value={newShopForm.state}
-                    onChange={(e) => setNewShopForm({ ...newShopForm, state: e.target.value })}
+                    onChange={(e) =>
+                      setNewShopForm({ ...newShopForm, state: e.target.value })
+                    }
                     placeholder="Enter state"
                   />
                 </div>
@@ -1291,7 +1546,9 @@ export default function AdminUsersPage() {
                   <Input
                     id="shop-city"
                     value={newShopForm.city}
-                    onChange={(e) => setNewShopForm({ ...newShopForm, city: e.target.value })}
+                    onChange={(e) =>
+                      setNewShopForm({ ...newShopForm, city: e.target.value })
+                    }
                     placeholder="Enter city"
                   />
                 </div>
@@ -1300,7 +1557,12 @@ export default function AdminUsersPage() {
                   <Input
                     id="shop-pincode"
                     value={newShopForm.pincode}
-                    onChange={(e) => setNewShopForm({ ...newShopForm, pincode: e.target.value })}
+                    onChange={(e) =>
+                      setNewShopForm({
+                        ...newShopForm,
+                        pincode: e.target.value,
+                      })
+                    }
                     placeholder="Enter pincode"
                   />
                 </div>
@@ -1310,7 +1572,9 @@ export default function AdminUsersPage() {
                 <Input
                   id="shop-address"
                   value={newShopForm.address}
-                  onChange={(e) => setNewShopForm({ ...newShopForm, address: e.target.value })}
+                  onChange={(e) =>
+                    setNewShopForm({ ...newShopForm, address: e.target.value })
+                  }
                   placeholder="Enter full address"
                 />
               </div>
@@ -1320,7 +1584,12 @@ export default function AdminUsersPage() {
                   <Input
                     id="shop-phone"
                     value={newShopForm.contactPhone}
-                    onChange={(e) => setNewShopForm({ ...newShopForm, contactPhone: e.target.value })}
+                    onChange={(e) =>
+                      setNewShopForm({
+                        ...newShopForm,
+                        contactPhone: e.target.value,
+                      })
+                    }
                     placeholder="+977 98..."
                   />
                 </div>
@@ -1330,7 +1599,12 @@ export default function AdminUsersPage() {
                     id="shop-email"
                     type="email"
                     value={newShopForm.contactEmail}
-                    onChange={(e) => setNewShopForm({ ...newShopForm, contactEmail: e.target.value })}
+                    onChange={(e) =>
+                      setNewShopForm({
+                        ...newShopForm,
+                        contactEmail: e.target.value,
+                      })
+                    }
                     placeholder="shop@example.com"
                   />
                 </div>
@@ -1339,17 +1613,29 @@ export default function AdminUsersPage() {
                 <Checkbox
                   id="shop-verified"
                   checked={newShopForm.isVerified}
-                  onCheckedChange={(checked) => setNewShopForm({ ...newShopForm, isVerified: !!checked })}
+                  onCheckedChange={(checked) =>
+                    setNewShopForm({ ...newShopForm, isVerified: !!checked })
+                  }
                 />
                 <Label htmlFor="shop-verified">Mark as Verified</Label>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setAddShopDialogOpen(false)} disabled={addingShop}>
+              <Button
+                variant="outline"
+                onClick={() => setAddShopDialogOpen(false)}
+                disabled={addingShop}
+              >
                 Cancel
               </Button>
-              <Button onClick={handleAddShop} disabled={addingShop} className="bg-green-600 hover:bg-green-700">
-                {addingShop && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              <Button
+                onClick={handleAddShop}
+                disabled={addingShop}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {addingShop && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
                 Create Shop
               </Button>
             </DialogFooter>
@@ -1357,25 +1643,33 @@ export default function AdminUsersPage() {
         </Dialog>
 
         {/* Delete Shop Confirmation Dialog */}
-        <AlertDialog open={!!deleteShopId} onOpenChange={(open) => !open && setDeleteShopId(null)}>
+        <AlertDialog
+          open={!!deleteShopId}
+          onOpenChange={(open) => !open && setDeleteShopId(null)}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Shop?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete this shop and all its associated data including products, inventory, and orders.
+                This will permanently delete this shop and all its associated
+                data including products, inventory, and orders.
                 <span className="block mt-2 text-amber-600">
                   ⚠️ This action cannot be undone.
                 </span>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={deletingShop}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={deletingShop}>
+                Cancel
+              </AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDeleteShop}
                 disabled={deletingShop}
                 className="bg-red-600 hover:bg-red-700"
               >
-                {deletingShop && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {deletingShop && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
                 Delete Shop
               </AlertDialogAction>
             </AlertDialogFooter>

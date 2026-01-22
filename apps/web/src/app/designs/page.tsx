@@ -1,55 +1,54 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import Image from 'next/image';
-import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Footer } from "@/components/layout/footer";
+import { Header } from "@/components/layout/header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from "@/components/ui/tooltip";
+import { useAuth } from "@/hooks/useAuth";
+import api from "@/lib/api";
+import { cn } from "@/lib/utils";
 import {
-  Heart,
-  Eye,
-  ShoppingBag,
-  Search,
-  Sparkles,
-  TrendingUp,
-  Clock,
-  Filter,
-  X,
-  Loader2,
   ChevronLeft,
   ChevronRight,
-  User,
+  Clock,
+  Eye,
+  Filter,
   Gem,
+  Heart,
   Layers,
-} from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
-import api from '@/lib/api';
-import { cn } from '@/lib/utils';
+  Loader2,
+  Search,
+  ShoppingBag,
+  Sparkles,
+  TrendingUp,
+  User,
+} from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 
 // Types matching the API
 interface Design {
@@ -91,35 +90,35 @@ interface PaginatedResponse {
 }
 
 const JEWELRY_TYPES = [
-  { value: 'all', label: 'All Types' },
-  { value: 'RING', label: 'Rings' },
-  { value: 'NECKLACE', label: 'Necklaces' },
-  { value: 'BRACELET', label: 'Bracelets' },
-  { value: 'EARRING', label: 'Earrings' },
-  { value: 'PENDANT', label: 'Pendants' },
-  { value: 'BANGLE', label: 'Bangles' },
-  { value: 'CHAIN', label: 'Chains' },
-  { value: 'ANKLET', label: 'Anklets' },
+  { value: "all", label: "All Types" },
+  { value: "RING", label: "Rings" },
+  { value: "NECKLACE", label: "Necklaces" },
+  { value: "BRACELET", label: "Bracelets" },
+  { value: "EARRING", label: "Earrings" },
+  { value: "PENDANT", label: "Pendants" },
+  { value: "BANGLE", label: "Bangles" },
+  { value: "CHAIN", label: "Chains" },
+  { value: "ANKLET", label: "Anklets" },
 ];
 
 const SORT_OPTIONS = [
-  { value: 'popular', label: 'Most Popular', icon: TrendingUp },
-  { value: 'liked', label: 'Most Liked', icon: Heart },
-  { value: 'recent', label: 'Most Recent', icon: Clock },
-  { value: 'ordered', label: 'Most Ordered', icon: ShoppingBag },
+  { value: "popular", label: "Most Popular", icon: TrendingUp },
+  { value: "liked", label: "Most Liked", icon: Heart },
+  { value: "recent", label: "Most Recent", icon: Clock },
+  { value: "ordered", label: "Most Ordered", icon: ShoppingBag },
 ];
 
 const BUILD_METHOD_LABELS: Record<string, string> = {
-  METHOD_A: 'Solid Precious Metal',
-  METHOD_B: 'Precious Metal Alloy',
-  METHOD_C: 'Base Metal + Plating',
-  METHOD_D: 'Italian Machine Made',
+  METHOD_A: "Solid Precious Metal",
+  METHOD_B: "Precious Metal Alloy",
+  METHOD_C: "Base Metal + Plating",
+  METHOD_D: "Italian Machine Made",
 };
 
 export default function DesignGalleryPage() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
-  
+
   // State
   const [designs, setDesigns] = useState<Design[]>([]);
   const [featured, setFeatured] = useState<Design[]>([]);
@@ -128,13 +127,13 @@ export default function DesignGalleryPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  
+
   // Filters
-  const [searchQuery, setSearchQuery] = useState('');
-  const [jewelryType, setJewelryType] = useState('all');
-  const [sortBy, setSortBy] = useState('popular');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [jewelryType, setJewelryType] = useState("all");
+  const [sortBy, setSortBy] = useState("popular");
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Modal
   const [selectedDesign, setSelectedDesign] = useState<Design | null>(null);
   const [likingId, setLikingId] = useState<string | null>(null);
@@ -144,10 +143,10 @@ export default function DesignGalleryPage() {
     const loadFeatured = async () => {
       setFeaturedLoading(true);
       try {
-        const response = await api.get('/designs/featured');
+        const response = await api.get("/designs/featured");
         setFeatured(response.data || []);
       } catch (error) {
-        console.error('Failed to load featured designs:', error);
+        console.error("Failed to load featured designs:", error);
       } finally {
         setFeaturedLoading(false);
       }
@@ -161,24 +160,24 @@ export default function DesignGalleryPage() {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
-        limit: '12',
+        limit: "12",
         sortBy,
       });
-      
-      if (jewelryType !== 'all') {
-        params.append('jewelryType', jewelryType);
+
+      if (jewelryType !== "all") {
+        params.append("jewelryType", jewelryType);
       }
-      
+
       if (searchQuery.trim()) {
-        params.append('search', searchQuery.trim());
+        params.append("search", searchQuery.trim());
       }
-      
+
       const response = await api.get<PaginatedResponse>(`/designs?${params}`);
       setDesigns(response.data.designs || []);
       setTotal(response.data.total);
       setTotalPages(response.data.totalPages);
     } catch (error) {
-      console.error('Failed to load designs:', error);
+      console.error("Failed to load designs:", error);
       setDesigns([]);
     } finally {
       setLoading(false);
@@ -192,36 +191,48 @@ export default function DesignGalleryPage() {
   // Handle like/unlike
   const handleLike = async (design: Design, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    
+
     if (!isAuthenticated) {
-      router.push('/auth/login?redirect=/designs');
+      router.push("/auth/login?redirect=/designs");
       return;
     }
-    
+
     setLikingId(design.id);
     try {
       if (design.isLikedByUser) {
         await api.delete(`/designs/${design.id}/like`);
         // Update local state
-        const updateDesign = (d: Design) => 
-          d.id === design.id ? { ...d, isLikedByUser: false, likesCount: d.likesCount - 1 } : d;
-        setDesigns(prev => prev.map(updateDesign));
-        setFeatured(prev => prev.map(updateDesign));
+        const updateDesign = (d: Design) =>
+          d.id === design.id
+            ? { ...d, isLikedByUser: false, likesCount: d.likesCount - 1 }
+            : d;
+        setDesigns((prev) => prev.map(updateDesign));
+        setFeatured((prev) => prev.map(updateDesign));
         if (selectedDesign?.id === design.id) {
-          setSelectedDesign({ ...selectedDesign, isLikedByUser: false, likesCount: selectedDesign.likesCount - 1 });
+          setSelectedDesign({
+            ...selectedDesign,
+            isLikedByUser: false,
+            likesCount: selectedDesign.likesCount - 1,
+          });
         }
       } else {
         await api.post(`/designs/${design.id}/like`);
-        const updateDesign = (d: Design) => 
-          d.id === design.id ? { ...d, isLikedByUser: true, likesCount: d.likesCount + 1 } : d;
-        setDesigns(prev => prev.map(updateDesign));
-        setFeatured(prev => prev.map(updateDesign));
+        const updateDesign = (d: Design) =>
+          d.id === design.id
+            ? { ...d, isLikedByUser: true, likesCount: d.likesCount + 1 }
+            : d;
+        setDesigns((prev) => prev.map(updateDesign));
+        setFeatured((prev) => prev.map(updateDesign));
         if (selectedDesign?.id === design.id) {
-          setSelectedDesign({ ...selectedDesign, isLikedByUser: true, likesCount: selectedDesign.likesCount + 1 });
+          setSelectedDesign({
+            ...selectedDesign,
+            isLikedByUser: true,
+            likesCount: selectedDesign.likesCount + 1,
+          });
         }
       }
     } catch (error) {
-      console.error('Failed to toggle like:', error);
+      console.error("Failed to toggle like:", error);
     } finally {
       setLikingId(null);
     }
@@ -233,14 +244,14 @@ export default function DesignGalleryPage() {
       // Call the API to get the RFQ prefill data
       const response = await api.post(`/designs/${design.id}/build`);
       const prefillData = response.data;
-      
+
       // Store in sessionStorage for the RFQ form to pick up
-      sessionStorage.setItem('rfq-prefill', JSON.stringify(prefillData));
-      
+      sessionStorage.setItem("rfq-prefill", JSON.stringify(prefillData));
+
       // Navigate to RFQ create page
-      router.push('/rfq/create?from=design');
+      router.push("/rfq/create?from=design");
     } catch (error) {
-      console.error('Failed to prepare RFQ:', error);
+      console.error("Failed to prepare RFQ:", error);
     }
   };
 
@@ -250,21 +261,27 @@ export default function DesignGalleryPage() {
     // Increment view count
     try {
       await api.patch(`/designs/${design.id}/view`);
-      const updateDesign = (d: Design) => 
+      const updateDesign = (d: Design) =>
         d.id === design.id ? { ...d, viewsCount: d.viewsCount + 1 } : d;
-      setDesigns(prev => prev.map(updateDesign));
-      setFeatured(prev => prev.map(updateDesign));
+      setDesigns((prev) => prev.map(updateDesign));
+      setFeatured((prev) => prev.map(updateDesign));
     } catch {
       // Ignore view count errors
     }
   };
 
   // Design card component
-  const DesignCard = ({ design, featured = false }: { design: Design; featured?: boolean }) => (
-    <Card 
+  const DesignCard = ({
+    design,
+    featured = false,
+  }: {
+    design: Design;
+    featured?: boolean;
+  }) => (
+    <Card
       className={cn(
         "group overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]",
-        featured && "ring-2 ring-amber-400"
+        featured && "ring-2 ring-amber-400",
       )}
       onClick={() => openDesignDetail(design)}
     >
@@ -282,11 +299,11 @@ export default function DesignGalleryPage() {
             <Gem className="h-12 w-12 text-gray-300" />
           </div>
         )}
-        
+
         {/* Overlay on hover */}
         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-          <Button 
-            variant="secondary" 
+          <Button
+            variant="secondary"
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
@@ -297,7 +314,7 @@ export default function DesignGalleryPage() {
             Build This
           </Button>
         </div>
-        
+
         {/* Like button */}
         <button
           className="absolute top-2 right-2 p-2 rounded-full bg-white/80 hover:bg-white transition-colors"
@@ -307,15 +324,17 @@ export default function DesignGalleryPage() {
           {likingId === design.id ? (
             <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
           ) : (
-            <Heart 
+            <Heart
               className={cn(
                 "h-5 w-5 transition-colors",
-                design.isLikedByUser ? "fill-red-500 text-red-500" : "text-gray-600"
-              )} 
+                design.isLikedByUser
+                  ? "fill-red-500 text-red-500"
+                  : "text-gray-600",
+              )}
             />
           )}
         </button>
-        
+
         {/* Featured badge */}
         {featured && (
           <Badge className="absolute top-2 left-2 bg-amber-500 text-white">
@@ -324,24 +343,25 @@ export default function DesignGalleryPage() {
           </Badge>
         )}
       </div>
-      
+
       <CardContent className="p-3">
         <div className="flex items-start justify-between mb-2">
           <div>
             <h3 className="font-medium text-sm">
-              {design.jewelryType.charAt(0) + design.jewelryType.slice(1).toLowerCase()}
+              {design.jewelryType.charAt(0) +
+                design.jewelryType.slice(1).toLowerCase()}
             </h3>
             <p className="text-xs text-muted-foreground">
               {BUILD_METHOD_LABELS[design.buildMethod] || design.buildMethod}
             </p>
           </div>
         </div>
-        
+
         {/* Specs */}
         <div className="flex flex-wrap gap-1 mb-2">
           {design.metalType && (
             <Badge variant="outline" className="text-xs">
-              {design.metalType.replace(/_/g, ' ')}
+              {design.metalType.replace(/_/g, " ")}
             </Badge>
           )}
           {design.primaryStone && (
@@ -351,11 +371,16 @@ export default function DesignGalleryPage() {
             </Badge>
           )}
         </div>
-        
+
         {/* Stats */}
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
-            <Heart className={cn("h-3 w-3", design.isLikedByUser && "fill-red-500 text-red-500")} />
+            <Heart
+              className={cn(
+                "h-3 w-3",
+                design.isLikedByUser && "fill-red-500 text-red-500",
+              )}
+            />
             {design.likesCount}
           </span>
           <span className="flex items-center gap-1">
@@ -367,7 +392,7 @@ export default function DesignGalleryPage() {
             {design.ordersCount}
           </span>
         </div>
-        
+
         {/* Creator */}
         {design.creator && (
           <div className="mt-2 pt-2 border-t flex items-center gap-1 text-xs text-muted-foreground">
@@ -382,7 +407,7 @@ export default function DesignGalleryPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      
+
       <main className="flex-1 container mx-auto px-4 py-8">
         {/* Hero Section */}
         <div className="text-center mb-8">
@@ -391,7 +416,9 @@ export default function DesignGalleryPage() {
             Design Gallery
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Explore AI-generated jewelry designs from our community. Find inspiration or click &quot;Build This&quot; to create your own custom piece.
+            Explore AI-generated jewelry designs from our community. Find
+            inspiration or click &quot;Build This&quot; to create your own
+            custom piece.
           </p>
         </div>
 
@@ -425,9 +452,15 @@ export default function DesignGalleryPage() {
               className="pl-10"
             />
           </div>
-          
+
           {/* Jewelry Type Filter */}
-          <Select value={jewelryType} onValueChange={(v) => { setJewelryType(v); setPage(1); }}>
+          <Select
+            value={jewelryType}
+            onValueChange={(v) => {
+              setJewelryType(v);
+              setPage(1);
+            }}
+          >
             <SelectTrigger className="w-full md:w-[180px]">
               <SelectValue placeholder="Jewelry Type" />
             </SelectTrigger>
@@ -439,9 +472,15 @@ export default function DesignGalleryPage() {
               ))}
             </SelectContent>
           </Select>
-          
+
           {/* Sort */}
-          <Select value={sortBy} onValueChange={(v) => { setSortBy(v); setPage(1); }}>
+          <Select
+            value={sortBy}
+            onValueChange={(v) => {
+              setSortBy(v);
+              setPage(1);
+            }}
+          >
             <SelectTrigger className="w-full md:w-[180px]">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
@@ -456,10 +495,10 @@ export default function DesignGalleryPage() {
               ))}
             </SelectContent>
           </Select>
-          
+
           {/* Mobile filter toggle */}
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="md:hidden"
             onClick={() => setShowFilters(!showFilters)}
           >
@@ -471,9 +510,9 @@ export default function DesignGalleryPage() {
         {/* Results count */}
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-muted-foreground">
-            {loading ? 'Loading...' : `${total} designs found`}
+            {loading ? "Loading..." : `${total} designs found`}
           </p>
-          
+
           {/* Create your own CTA */}
           <TooltipProvider>
             <Tooltip>
@@ -510,9 +549,9 @@ export default function DesignGalleryPage() {
             <Gem className="h-16 w-16 mx-auto text-gray-300 mb-4" />
             <h3 className="text-lg font-medium mb-2">No designs found</h3>
             <p className="text-muted-foreground mb-4">
-              {searchQuery || jewelryType !== 'all' 
-                ? 'Try adjusting your filters'
-                : 'Be the first to create a design!'}
+              {searchQuery || jewelryType !== "all"
+                ? "Try adjusting your filters"
+                : "Be the first to create a design!"}
             </p>
             <Link href="/rfq/create">
               <Button>
@@ -535,21 +574,21 @@ export default function DesignGalleryPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setPage(p => Math.max(1, p - 1))}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1 || loading}
             >
               <ChevronLeft className="h-4 w-4" />
               Previous
             </Button>
-            
+
             <span className="text-sm text-muted-foreground px-4">
               Page {page} of {totalPages}
             </span>
-            
+
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages || loading}
             >
               Next
@@ -560,13 +599,18 @@ export default function DesignGalleryPage() {
       </main>
 
       {/* Design Detail Modal */}
-      <Dialog open={!!selectedDesign} onOpenChange={(open) => !open && setSelectedDesign(null)}>
+      <Dialog
+        open={!!selectedDesign}
+        onOpenChange={(open) => !open && setSelectedDesign(null)}
+      >
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           {selectedDesign && (
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
-                  {selectedDesign.jewelryType.charAt(0) + selectedDesign.jewelryType.slice(1).toLowerCase()} Design
+                  {selectedDesign.jewelryType.charAt(0) +
+                    selectedDesign.jewelryType.slice(1).toLowerCase()}{" "}
+                  Design
                   {selectedDesign.creator && (
                     <span className="text-sm font-normal text-muted-foreground">
                       by {selectedDesign.creator.firstName}
@@ -577,7 +621,7 @@ export default function DesignGalleryPage() {
                   {BUILD_METHOD_LABELS[selectedDesign.buildMethod]}
                 </DialogDescription>
               </DialogHeader>
-              
+
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Image */}
                 <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden">
@@ -594,7 +638,7 @@ export default function DesignGalleryPage() {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Details */}
                 <div className="space-y-4">
                   {/* Specifications */}
@@ -609,13 +653,19 @@ export default function DesignGalleryPage() {
                         <span>{selectedDesign.jewelryType}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Build Method</span>
-                        <span>{BUILD_METHOD_LABELS[selectedDesign.buildMethod]}</span>
+                        <span className="text-muted-foreground">
+                          Build Method
+                        </span>
+                        <span>
+                          {BUILD_METHOD_LABELS[selectedDesign.buildMethod]}
+                        </span>
                       </div>
                       {selectedDesign.metalType && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Metal</span>
-                          <span>{selectedDesign.metalType.replace(/_/g, ' ')}</span>
+                          <span>
+                            {selectedDesign.metalType.replace(/_/g, " ")}
+                          </span>
                         </div>
                       )}
                       {selectedDesign.metalColor && (
@@ -626,47 +676,54 @@ export default function DesignGalleryPage() {
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Gemstone info */}
-                  {selectedDesign.hasGemstones && selectedDesign.primaryStone && (
-                    <div>
-                      <h4 className="font-medium mb-2 flex items-center gap-2">
-                        <Gem className="h-4 w-4" />
-                        Gemstone Details
-                      </h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Stone</span>
-                          <span>{selectedDesign.primaryStone}</span>
+                  {selectedDesign.hasGemstones &&
+                    selectedDesign.primaryStone && (
+                      <div>
+                        <h4 className="font-medium mb-2 flex items-center gap-2">
+                          <Gem className="h-4 w-4" />
+                          Gemstone Details
+                        </h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Stone</span>
+                            <span>{selectedDesign.primaryStone}</span>
+                          </div>
+                          {selectedDesign.stoneCut && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Cut</span>
+                              <span>{selectedDesign.stoneCut}</span>
+                            </div>
+                          )}
+                          {selectedDesign.stoneColor && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">
+                                Color
+                              </span>
+                              <span>{selectedDesign.stoneColor}</span>
+                            </div>
+                          )}
+                          {selectedDesign.stoneCarat && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">
+                                Carat
+                              </span>
+                              <span>{selectedDesign.stoneCarat}</span>
+                            </div>
+                          )}
+                          {selectedDesign.settingStyle && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">
+                                Setting
+                              </span>
+                              <span>{selectedDesign.settingStyle}</span>
+                            </div>
+                          )}
                         </div>
-                        {selectedDesign.stoneCut && (
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Cut</span>
-                            <span>{selectedDesign.stoneCut}</span>
-                          </div>
-                        )}
-                        {selectedDesign.stoneColor && (
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Color</span>
-                            <span>{selectedDesign.stoneColor}</span>
-                          </div>
-                        )}
-                        {selectedDesign.stoneCarat && (
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Carat</span>
-                            <span>{selectedDesign.stoneCarat}</span>
-                          </div>
-                        )}
-                        {selectedDesign.settingStyle && (
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Setting</span>
-                            <span>{selectedDesign.settingStyle}</span>
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  )}
-                  
+                    )}
+
                   {/* Description from additionalSpecs */}
                   {(() => {
                     const desc = selectedDesign.additionalSpecs?.description;
@@ -679,11 +736,17 @@ export default function DesignGalleryPage() {
                       </div>
                     ) : null;
                   })()}
-                  
+
                   {/* Stats */}
                   <div className="flex items-center gap-4 py-3 border-y">
                     <span className="flex items-center gap-1 text-sm">
-                      <Heart className={cn("h-4 w-4", selectedDesign.isLikedByUser && "fill-red-500 text-red-500")} />
+                      <Heart
+                        className={cn(
+                          "h-4 w-4",
+                          selectedDesign.isLikedByUser &&
+                            "fill-red-500 text-red-500",
+                        )}
+                      />
                       {selectedDesign.likesCount} likes
                     </span>
                     <span className="flex items-center gap-1 text-sm">
@@ -695,11 +758,11 @@ export default function DesignGalleryPage() {
                       {selectedDesign.ordersCount} orders
                     </span>
                   </div>
-                  
+
                   {/* Actions */}
                   <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="flex-1"
                       onClick={() => handleLike(selectedDesign)}
                       disabled={likingId === selectedDesign.id}
@@ -707,14 +770,17 @@ export default function DesignGalleryPage() {
                       {likingId === selectedDesign.id ? (
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       ) : (
-                        <Heart className={cn(
-                          "h-4 w-4 mr-2",
-                          selectedDesign.isLikedByUser && "fill-red-500 text-red-500"
-                        )} />
+                        <Heart
+                          className={cn(
+                            "h-4 w-4 mr-2",
+                            selectedDesign.isLikedByUser &&
+                              "fill-red-500 text-red-500",
+                          )}
+                        />
                       )}
-                      {selectedDesign.isLikedByUser ? 'Liked' : 'Like'}
+                      {selectedDesign.isLikedByUser ? "Liked" : "Like"}
                     </Button>
-                    <Button 
+                    <Button
                       className="flex-1 bg-amber-600 hover:bg-amber-700"
                       onClick={() => handleBuildThis(selectedDesign)}
                     >

@@ -1,24 +1,20 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Delete,
-  Patch,
   Body,
+  Controller,
+  Delete,
+  Get,
   Param,
+  Patch,
+  Post,
   Query,
-  UseGuards,
   Request,
-} from '@nestjs/common';
-import { DesignsService } from './designs.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
-import {
-  JewelleryType,
-  BuildMethod,
-  WeightCategory,
-} from '@prisma/client';
-import { Request as ExpressRequest } from 'express';
+  UseGuards,
+} from "@nestjs/common";
+import { BuildMethod, JewelleryType, WeightCategory } from "@prisma/client";
+import { Request as ExpressRequest } from "express";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
+import { DesignsService } from "./designs.service";
 
 interface AuthenticatedRequest extends ExpressRequest {
   user?: {
@@ -52,7 +48,7 @@ class UpdateVisibilityDto {
   isPublic: boolean;
 }
 
-@Controller('designs')
+@Controller("designs")
 export class DesignsController {
   constructor(private readonly designsService: DesignsService) {}
 
@@ -76,15 +72,16 @@ export class DesignsController {
   @Get()
   @UseGuards(OptionalJwtAuthGuard)
   async getDesigns(
-    @Query('jewelryType') jewelryType?: JewelleryType,
-    @Query('buildMethod') buildMethod?: BuildMethod,
-    @Query('metalType') metalType?: string,
-    @Query('primaryStone') primaryStone?: string,
-    @Query('hasGemstones') hasGemstones?: string,
-    @Query('featured') featured?: string,
-    @Query('sort') sort?: 'popular' | 'liked' | 'trending' | 'newest' | 'most_made',
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
+    @Query("jewelryType") jewelryType?: JewelleryType,
+    @Query("buildMethod") buildMethod?: BuildMethod,
+    @Query("metalType") metalType?: string,
+    @Query("primaryStone") primaryStone?: string,
+    @Query("hasGemstones") hasGemstones?: string,
+    @Query("featured") featured?: string,
+    @Query("sort")
+    sort?: "popular" | "liked" | "trending" | "newest" | "most_made",
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
   ) {
     return this.designsService.getDesigns(
       {
@@ -92,44 +89,49 @@ export class DesignsController {
         buildMethod,
         metalType,
         primaryStone,
-        hasGemstones: hasGemstones === 'true' ? true : hasGemstones === 'false' ? false : undefined,
-        isFeatured: featured === 'true',
+        hasGemstones:
+          hasGemstones === "true"
+            ? true
+            : hasGemstones === "false"
+              ? false
+              : undefined,
+        isFeatured: featured === "true",
       },
-      sort || 'popular',
-      parseInt(page || '1', 10),
-      parseInt(limit || '20', 10),
+      sort || "popular",
+      parseInt(page || "1", 10),
+      parseInt(limit || "20", 10),
     );
   }
 
   /**
    * Get featured designs for homepage
    */
-  @Get('featured')
-  async getFeaturedDesigns(@Query('limit') limit?: string) {
-    return this.designsService.getFeaturedDesigns(parseInt(limit || '8', 10));
+  @Get("featured")
+  async getFeaturedDesigns(@Query("limit") limit?: string) {
+    return this.designsService.getFeaturedDesigns(parseInt(limit || "8", 10));
   }
 
   /**
    * Get current user's designs
    */
-  @Get('my')
+  @Get("my")
   @UseGuards(JwtAuthGuard)
   async getMyDesigns(
     @Request() req: AuthenticatedRequest,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
   ) {
     return this.designsService.getMyDesigns(
       req.user!.id,
-      parseInt(page || '1', 10),
-      parseInt(limit || '20', 10),
+      parseInt(page || "1", 10),
+      parseInt(limit || "20", 10),
     );
   }
 
   /**
    * Get design stats (admin)
    */
-  @Get('stats')
+  @Get("stats")
   @UseGuards(JwtAuthGuard)
   async getDesignStats() {
     return this.designsService.getDesignStats();
@@ -138,10 +140,10 @@ export class DesignsController {
   /**
    * Get a single design by ID
    */
-  @Get(':id')
+  @Get(":id")
   @UseGuards(OptionalJwtAuthGuard)
   async getDesignById(
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Request() req: AuthenticatedRequest,
   ) {
     return this.designsService.getDesignById(id, req.user?.id);
@@ -150,10 +152,10 @@ export class DesignsController {
   /**
    * Like a design
    */
-  @Post(':id/like')
+  @Post(":id/like")
   @UseGuards(JwtAuthGuard)
   async likeDesign(
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Request() req: AuthenticatedRequest,
   ) {
     return this.designsService.likeDesign(id, req.user!.id);
@@ -162,10 +164,10 @@ export class DesignsController {
   /**
    * Unlike a design
    */
-  @Delete(':id/like')
+  @Delete(":id/like")
   @UseGuards(JwtAuthGuard)
   async unlikeDesign(
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Request() req: AuthenticatedRequest,
   ) {
     return this.designsService.unlikeDesign(id, req.user!.id);
@@ -174,18 +176,18 @@ export class DesignsController {
   /**
    * Track "Build me this" click and return specs for RFQ prefill
    */
-  @Post(':id/build')
+  @Post(":id/build")
   @UseGuards(OptionalJwtAuthGuard)
   async buildFromDesign(
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Request() req: AuthenticatedRequest,
   ) {
     // Increment the orders count
     await this.designsService.incrementOrdersCount(id);
-    
+
     // Get the design to return specs for RFQ prefill
     const design = await this.designsService.getDesignById(id, req.user?.id);
-    
+
     // Return specs that can be used to prefill the RFQ form
     return {
       success: true,
@@ -200,15 +202,19 @@ export class DesignsController {
         estimatedWeight: design.estimatedWeight,
         surfaceFinish: design.surfaceFinish,
         hasGemstones: design.hasGemstones,
-        gemstone: design.hasGemstones ? {
-          type: design.primaryStone,
-          shape: design.stoneCut,
-          size: design.stoneCarat?.toString(),
-          color: design.stoneColor,
-          count: 1, // Default to 1
-          settingStyle: design.settingStyle,
-        } : undefined,
-        description: (design.additionalSpecs as Record<string, unknown>)?.description || '',
+        gemstone: design.hasGemstones
+          ? {
+              type: design.primaryStone,
+              shape: design.stoneCut,
+              size: design.stoneCarat?.toString(),
+              color: design.stoneColor,
+              count: 1, // Default to 1
+              settingStyle: design.settingStyle,
+            }
+          : undefined,
+        description:
+          (design.additionalSpecs as Record<string, unknown>)?.description ||
+          "",
         // Include design preview image as reference
         referenceImages: design.imageUrl ? [design.imageUrl] : [],
       },
@@ -218,23 +224,27 @@ export class DesignsController {
   /**
    * Update design visibility (public/private)
    */
-  @Patch(':id/visibility')
+  @Patch(":id/visibility")
   @UseGuards(JwtAuthGuard)
   async updateVisibility(
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Request() req: AuthenticatedRequest,
     @Body() dto: UpdateVisibilityDto,
   ) {
-    return this.designsService.updateDesignVisibility(id, req.user!.id, dto.isPublic);
+    return this.designsService.updateDesignVisibility(
+      id,
+      req.user!.id,
+      dto.isPublic,
+    );
   }
 
   /**
    * Delete a design
    */
-  @Delete(':id')
+  @Delete(":id")
   @UseGuards(JwtAuthGuard)
   async deleteDesign(
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Request() req: AuthenticatedRequest,
   ) {
     return this.designsService.deleteDesign(id, req.user!.id);

@@ -1,5 +1,5 @@
-import { Injectable, ExecutionContext } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { ExecutionContext, Injectable } from "@nestjs/common";
+import { AuthGuard } from "@nestjs/passport";
 
 /**
  * Optional JWT Auth Guard
@@ -7,7 +7,7 @@ import { AuthGuard } from '@nestjs/passport';
  * Useful for endpoints that work for both authenticated and anonymous users
  */
 @Injectable()
-export class OptionalJwtAuthGuard extends AuthGuard('jwt') {
+export class OptionalJwtAuthGuard extends AuthGuard("jwt") {
   canActivate(context: ExecutionContext) {
     // Call the parent canActivate to extract user if token exists
     return super.canActivate(context);

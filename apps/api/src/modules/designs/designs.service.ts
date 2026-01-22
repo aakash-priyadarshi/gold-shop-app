@@ -1,26 +1,27 @@
 import {
+  BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { ImageGenerationService } from './image-generation.service';
-import { ConfigService } from '@nestjs/config';
+} from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import {
-  JewelleryType,
   BuildMethod,
-  WeightCategory,
   DesignImageSource,
+  JewelleryType,
   Prisma,
-} from '@prisma/client';
+  WeightCategory,
+} from "@prisma/client";
+import { PrismaService } from "../../prisma/prisma.service";
+import { ImageGenerationService } from "./image-generation.service";
 
 interface CreateDesignDto {
   jewelryType: JewelleryType;
   buildMethod: BuildMethod;
   metalType?: string;
   metalColor?: string;
+  metalDescription?: string;
   weightCategory?: WeightCategory;
   estimatedWeight?: number;
   surfaceFinish?: string;
@@ -29,11 +30,41 @@ interface CreateDesignDto {
   stoneCut?: string;
   stoneCarat?: number;
   stoneColor?: string;
+  stoneClarity?: string;
+  stoneCutGrade?: string;
+  stoneCount?: number;
   settingStyle?: string;
   additionalSpecs?: Record<string, unknown>;
-  referenceImageUrl?: string; // Customer uploaded image
+  referenceImageUrl?: string;
   shareToGallery?: boolean;
   creatorName?: string;
+  // Method-specific details
+  alloyDetails?: {
+    baseMetal?: string;
+    karat?: string;
+    alloyFamily?: string;
+    recipePresetId?: string;
+  };
+  platingDetails?: {
+    baseMetal?: string;
+    platingType?: string;
+    platingTier?: string;
+  };
+  italianMachineDetails?: {
+    purity?: string;
+    chainStyle?: string;
+  };
+  gemstones?: Array<{
+    stoneType?: string;
+    shape?: string;
+    color?: string;
+    clarity?: string;
+    cut?: string;
+    settingStyle?: string;
+    count?: number;
+    sizeValue?: number;
+    sizeUnit?: string;
+  }>;
 }
 
 interface DesignFilters {
@@ -46,7 +77,7 @@ interface DesignFilters {
   isFeatured?: boolean;
 }
 
-type SortOption = 'popular' | 'liked' | 'trending' | 'newest' | 'most_made';
+type SortOption = "popular" | "liked" | "trending" | "newest" | "most_made";
 
 @Injectable()
 export class DesignsService {
@@ -59,7 +90,9 @@ export class DesignsService {
     private configService: ConfigService,
   ) {
     // Use existing Cloudflare Worker for image uploads
-    this.imageWorkerUrl = this.configService.get<string>('IMAGE_WORKER_URL') || 'https://images.orivraa.com';
+    this.imageWorkerUrl =
+      this.configService.get<string>("IMAGE_WORKER_URL") ||
+      "https://images.orivraa.com";
   }
 
   /**
@@ -90,7 +123,7 @@ export class DesignsService {
 
     if (existingDesign) {
       this.logger.log(`Found cached design with hash: ${specHash}`);
-      
+
       // Increment view count
       await this.prisma.design.update({
         where: { id: existingDesign.id },
@@ -109,27 +142,31 @@ export class DesignsService {
 
     if (dto.referenceImageUrl) {
       // Customer provided a reference image - refine it
-      imageResult = await this.imageGenService.refineImage(dto.referenceImageUrl, {
-        jewelryType: dto.jewelryType,
-        buildMethod: dto.buildMethod,
-        metalType: dto.metalType,
-        metalColor: dto.metalColor,
-        surfaceFinish: dto.surfaceFinish,
-        hasGemstones: dto.hasGemstones,
-        primaryStone: dto.primaryStone,
-        stoneCut: dto.stoneCut,
-        stoneCarat: dto.stoneCarat,
-        stoneColor: dto.stoneColor,
-        settingStyle: dto.settingStyle,
-      });
+      imageResult = await this.imageGenService.refineImage(
+        dto.referenceImageUrl,
+        {
+          jewelryType: dto.jewelryType,
+          buildMethod: dto.buildMethod,
+          metalType: dto.metalType,
+          metalColor: dto.metalColor,
+          surfaceFinish: dto.surfaceFinish,
+          hasGemstones: dto.hasGemstones,
+          primaryStone: dto.primaryStone,
+          stoneCut: dto.stoneCut,
+          stoneCarat: dto.stoneCarat,
+          stoneColor: dto.stoneColor,
+          settingStyle: dto.settingStyle,
+        },
+      );
       imageSource = DesignImageSource.REFINED;
     } else {
-      // Generate from scratch
+      // Generate from scratch with all enhanced details
       imageResult = await this.imageGenService.generateImage({
         jewelryType: dto.jewelryType,
         buildMethod: dto.buildMethod,
         metalType: dto.metalType,
         metalColor: dto.metalColor,
+        metalDescription: dto.metalDescription,
         weightCategory: dto.weightCategory,
         estimatedWeight: dto.estimatedWeight,
         surfaceFinish: dto.surfaceFinish,
@@ -138,7 +175,15 @@ export class DesignsService {
         stoneCut: dto.stoneCut,
         stoneCarat: dto.stoneCarat,
         stoneColor: dto.stoneColor,
+        stoneClarity: dto.stoneClarity,
+        stoneCutGrade: dto.stoneCutGrade,
+        stoneCount: dto.stoneCount,
         settingStyle: dto.settingStyle,
+        // Method-specific details for enhanced prompts
+        alloyDetails: dto.alloyDetails,
+        platingDetails: dto.platingDetails,
+        italianMachineDetails: dto.italianMachineDetails,
+        gemstones: dto.gemstones,
       });
     }
 
@@ -151,8 +196,11 @@ export class DesignsService {
       select: { firstName: true, lastName: true },
     });
 
-    const creatorDisplayName = dto.creatorName || 
-      (user ? `${user.firstName} ${user.lastName?.charAt(0) || ''}`.trim() : 'Anonymous');
+    const creatorDisplayName =
+      dto.creatorName ||
+      (user
+        ? `${user.firstName} ${user.lastName?.charAt(0) || ""}`.trim()
+        : "Anonymous");
 
     // Create the design record
     const design = await this.prisma.design.create({
@@ -199,43 +247,52 @@ export class DesignsService {
   /**
    * Upload base64 image to R2 storage via Cloudflare Worker
    */
-  private async uploadImageToR2(base64DataUrl: string, hash: string): Promise<string> {
+  private async uploadImageToR2(
+    base64DataUrl: string,
+    hash: string,
+  ): Promise<string> {
     try {
       // Extract base64 data from data URL
       const matches = base64DataUrl.match(/^data:image\/(\w+);base64,(.+)$/);
       if (!matches) {
-        throw new Error('Invalid base64 image format');
+        throw new Error("Invalid base64 image format");
       }
 
       const format = matches[1];
       const base64Data = matches[2];
-      const buffer = Buffer.from(base64Data, 'base64');
+      const buffer = Buffer.from(base64Data, "base64");
 
       // Create a blob from buffer
       const blob = new Blob([buffer], { type: `image/${format}` });
-      
+
       // Create FormData to upload to worker
       const formData = new FormData();
-      formData.append('file', blob, `design-${hash}.${format}`);
+      formData.append("file", blob, `design-${hash}.${format}`);
 
       // Upload to the existing Cloudflare Worker
       const response = await fetch(`${this.imageWorkerUrl}/upload`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'X-Upload-Type': 'designs',
+          "X-Upload-Type": "designs",
         },
         body: formData,
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        this.logger.error(`Worker upload failed: ${response.status} - ${errorText}`);
+        this.logger.error(
+          `Worker upload failed: ${response.status} - ${errorText}`,
+        );
         // Fallback to base64 if worker upload fails
         return base64DataUrl;
       }
 
-      const result = await response.json() as { success: boolean; url?: string; error?: string };
-      
+      const result = (await response.json()) as {
+        success: boolean;
+        url?: string;
+        error?: string;
+      };
+
       if (result.success && result.url) {
         this.logger.log(`Image uploaded to R2 via worker: ${result.url}`);
         return result.url;
@@ -255,7 +312,7 @@ export class DesignsService {
    */
   async getDesigns(
     filters: DesignFilters,
-    sort: SortOption = 'popular',
+    sort: SortOption = "popular",
     page: number = 1,
     limit: number = 20,
   ) {
@@ -289,25 +346,25 @@ export class DesignsService {
     // Determine sort order
     let orderBy: Prisma.DesignOrderByWithRelationInput;
     switch (sort) {
-      case 'popular':
-        orderBy = { ordersCount: 'desc' };
+      case "popular":
+        orderBy = { ordersCount: "desc" };
         break;
-      case 'liked':
-        orderBy = { likesCount: 'desc' };
+      case "liked":
+        orderBy = { likesCount: "desc" };
         break;
-      case 'trending':
+      case "trending":
         // For trending, we'd ideally use a time-weighted score
         // For now, use a combination
-        orderBy = { likesCount: 'desc' };
+        orderBy = { likesCount: "desc" };
         break;
-      case 'newest':
-        orderBy = { createdAt: 'desc' };
+      case "newest":
+        orderBy = { createdAt: "desc" };
         break;
-      case 'most_made':
-        orderBy = { ordersCompleted: 'desc' };
+      case "most_made":
+        orderBy = { ordersCompleted: "desc" };
         break;
       default:
-        orderBy = { ordersCount: 'desc' };
+        orderBy = { ordersCount: "desc" };
     }
 
     const [designs, total] = await Promise.all([
@@ -367,7 +424,7 @@ export class DesignsService {
     });
 
     if (!design) {
-      throw new NotFoundException('Design not found');
+      throw new NotFoundException("Design not found");
     }
 
     // Check if user has liked this design
@@ -403,7 +460,7 @@ export class DesignsService {
     const [designs, total] = await Promise.all([
       this.prisma.design.findMany({
         where: { creatorId: userId },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
         include: {
@@ -438,7 +495,7 @@ export class DesignsService {
     });
 
     if (!design) {
-      throw new NotFoundException('Design not found');
+      throw new NotFoundException("Design not found");
     }
 
     // Check if already liked
@@ -452,7 +509,7 @@ export class DesignsService {
     });
 
     if (existingLike) {
-      throw new BadRequestException('Design already liked');
+      throw new BadRequestException("Design already liked");
     }
 
     // Create like and increment count
@@ -487,7 +544,7 @@ export class DesignsService {
     });
 
     if (!existingLike) {
-      throw new BadRequestException('Design not liked');
+      throw new BadRequestException("Design not liked");
     }
 
     // Delete like and decrement count
@@ -527,17 +584,21 @@ export class DesignsService {
   /**
    * Update design visibility
    */
-  async updateDesignVisibility(designId: string, userId: string, isPublic: boolean) {
+  async updateDesignVisibility(
+    designId: string,
+    userId: string,
+    isPublic: boolean,
+  ) {
     const design = await this.prisma.design.findUnique({
       where: { id: designId },
     });
 
     if (!design) {
-      throw new NotFoundException('Design not found');
+      throw new NotFoundException("Design not found");
     }
 
     if (design.creatorId !== userId) {
-      throw new ForbiddenException('You can only update your own designs');
+      throw new ForbiddenException("You can only update your own designs");
     }
 
     return this.prisma.design.update({
@@ -555,11 +616,11 @@ export class DesignsService {
     });
 
     if (!design) {
-      throw new NotFoundException('Design not found');
+      throw new NotFoundException("Design not found");
     }
 
     if (design.creatorId !== userId) {
-      throw new ForbiddenException('You can only delete your own designs');
+      throw new ForbiddenException("You can only delete your own designs");
     }
 
     await this.prisma.design.delete({
@@ -579,7 +640,7 @@ export class DesignsService {
         isApproved: true,
         isFeatured: true,
       },
-      orderBy: { ordersCount: 'desc' },
+      orderBy: { ordersCount: "desc" },
       take: limit,
       include: {
         creator: {
@@ -596,14 +657,15 @@ export class DesignsService {
    * Get design stats for admin dashboard
    */
   async getDesignStats() {
-    const [totalDesigns, publicDesigns, totalLikes, totalOrders] = await Promise.all([
-      this.prisma.design.count(),
-      this.prisma.design.count({ where: { isPublic: true } }),
-      this.prisma.designLike.count(),
-      this.prisma.design.aggregate({
-        _sum: { ordersCount: true },
-      }),
-    ]);
+    const [totalDesigns, publicDesigns, totalLikes, totalOrders] =
+      await Promise.all([
+        this.prisma.design.count(),
+        this.prisma.design.count({ where: { isPublic: true } }),
+        this.prisma.designLike.count(),
+        this.prisma.design.aggregate({
+          _sum: { ordersCount: true },
+        }),
+      ]);
 
     return {
       totalDesigns,
