@@ -1,5 +1,6 @@
 import {
   Body,
+  ConflictException,
   Controller,
   Delete,
   ForbiddenException,
@@ -228,25 +229,58 @@ export class UsersController {
     if (data.email !== undefined) updateData.email = data.email;
     if (data.firstName !== undefined) updateData.firstName = data.firstName;
     if (data.lastName !== undefined) updateData.lastName = data.lastName;
-    if (data.phone !== undefined) updateData.phone = data.phone;
+    if (data.phone !== undefined) updateData.phone = data.phone || null; // Allow clearing phone
     if (data.role !== undefined) updateData.role = data.role;
     if (data.status !== undefined) updateData.status = data.status;
 
-    const updated = await this.prisma.user.update({
-      where: { id },
-      data: updateData,
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        role: true,
-        status: true,
-      },
-    });
+    try {
+      // Check if phone is being updated and if it's already taken
+      if (data.phone) {
+        const existingUserWithPhone = await this.prisma.user.findUnique({
+          where: { phone: data.phone },
+        });
+        if (existingUserWithPhone && existingUserWithPhone.id !== id) {
+          throw new ConflictException(
+            "Phone number is already in use by another user",
+          );
+        }
+      }
 
-    return { success: true, user: updated };
+      // Check if email is being updated and if it's already taken
+      if (data.email) {
+        const existingUserWithEmail = await this.prisma.user.findUnique({
+          where: { email: data.email },
+        });
+        if (existingUserWithEmail && existingUserWithEmail.id !== id) {
+          throw new ConflictException(
+            "Email is already in use by another user",
+          );
+        }
+      }
+
+      const updated = await this.prisma.user.update({
+        where: { id },
+        data: updateData,
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          role: true,
+          status: true,
+        },
+      });
+
+      return { success: true, user: updated };
+    } catch (error: any) {
+      // Handle Prisma unique constraint violation
+      if (error.code === "P2002") {
+        const field = error.meta?.target?.[0] || "field";
+        throw new ConflictException(`A user with this ${field} already exists`);
+      }
+      throw error;
+    }
   }
 
   @Patch(":id/admin-phone-verify")
