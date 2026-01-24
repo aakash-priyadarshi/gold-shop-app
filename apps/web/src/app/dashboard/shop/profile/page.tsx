@@ -1,22 +1,17 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { ShopGuard } from '@/components/auth/RouteGuard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ShopGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -25,29 +20,39 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
-  User,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import api from "@/lib/api";
+import { format } from "date-fns";
+import {
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Copy,
+  Globe,
+  Key,
+  Loader2,
   Mail,
   Phone,
-  Globe,
-  Save,
-  Loader2,
-  Key,
-  Shield,
-  Clock,
-  MapPin,
-  AlertTriangle,
-  Smartphone,
-  CheckCircle,
-  Copy,
   RefreshCw,
+  Save,
+  Shield,
+  Smartphone,
+  User,
   XCircle,
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import api from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
-import { format } from 'date-fns';
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface UserProfile {
   id: string;
@@ -75,20 +80,20 @@ interface UserProfile {
 }
 
 const currencies = [
-  { code: 'NPR', name: 'Nepali Rupee (रू)', symbol: 'रू' },
-  { code: 'INR', name: 'Indian Rupee (₹)', symbol: '₹' },
-  { code: 'USD', name: 'US Dollar ($)', symbol: '$' },
-  { code: 'GBP', name: 'British Pound (£)', symbol: '£' },
-  { code: 'AUD', name: 'Australian Dollar (A$)', symbol: 'A$' },
-  { code: 'CAD', name: 'Canadian Dollar (C$)', symbol: 'C$' },
-  { code: 'AED', name: 'UAE Dirham (د.إ)', symbol: 'د.إ' },
-  { code: 'SGD', name: 'Singapore Dollar (S$)', symbol: 'S$' },
+  { code: "NPR", name: "Nepali Rupee (रू)", symbol: "रू" },
+  { code: "INR", name: "Indian Rupee (₹)", symbol: "₹" },
+  { code: "USD", name: "US Dollar ($)", symbol: "$" },
+  { code: "GBP", name: "British Pound (£)", symbol: "£" },
+  { code: "AUD", name: "Australian Dollar (A$)", symbol: "A$" },
+  { code: "CAD", name: "Canadian Dollar (C$)", symbol: "C$" },
+  { code: "AED", name: "UAE Dirham (د.إ)", symbol: "د.إ" },
+  { code: "SGD", name: "Singapore Dollar (S$)", symbol: "S$" },
 ];
 
 const languages = [
-  { code: 'en', name: 'English' },
-  { code: 'ne', name: 'नेपाली (Nepali)' },
-  { code: 'hi', name: 'हिंदी (Hindi)' },
+  { code: "en", name: "English" },
+  { code: "ne", name: "नेपाली (Nepali)" },
+  { code: "hi", name: "हिंदी (Hindi)" },
 ];
 
 export default function ShopkeeperProfilePage() {
@@ -99,9 +104,9 @@ export default function ShopkeeperProfilePage() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
 
   // 2FA State
@@ -114,16 +119,16 @@ export default function ShopkeeperProfilePage() {
     qrCode: string;
     secret: string;
   } | null>(null);
-  const [verificationCode, setVerificationCode] = useState('');
+  const [verificationCode, setVerificationCode] = useState("");
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [showBackupCodes, setShowBackupCodes] = useState(false);
   const [isSettingUp2FA, setIsSettingUp2FA] = useState(false);
   const [isVerifying2FA, setIsVerifying2FA] = useState(false);
   const [disableDialogOpen, setDisableDialogOpen] = useState(false);
-  const [disablePassword, setDisablePassword] = useState('');
+  const [disablePassword, setDisablePassword] = useState("");
   const [isDisabling2FA, setIsDisabling2FA] = useState(false);
   const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
-  const [regenerateToken, setRegenerateToken] = useState('');
+  const [regenerateToken, setRegenerateToken] = useState("");
   const [isRegenerating, setIsRegenerating] = useState(false);
 
   useEffect(() => {
@@ -133,24 +138,24 @@ export default function ShopkeeperProfilePage() {
 
   const load2FAStatus = async () => {
     try {
-      const response = await api.get('/auth/2fa/status');
+      const response = await api.get("/auth/2fa/status");
       setTwoFactorStatus(response.data);
     } catch (error) {
-      console.error('Failed to load 2FA status:', error);
+      console.error("Failed to load 2FA status:", error);
     }
   };
 
   const loadProfile = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/users/me');
+      const response = await api.get("/users/me");
       setProfile(response.data);
     } catch (error) {
-      console.error('Failed to load profile:', error);
+      console.error("Failed to load profile:", error);
       toast({
-        variant: 'destructive',
-        title: 'Failed to load profile',
-        description: 'Could not fetch your profile data',
+        variant: "destructive",
+        title: "Failed to load profile",
+        description: "Could not fetch your profile data",
       });
     } finally {
       setIsLoading(false);
@@ -160,7 +165,7 @@ export default function ShopkeeperProfilePage() {
   const startTwoFactorSetup = async () => {
     setIsSettingUp2FA(true);
     try {
-      const response = await api.post('/auth/2fa/generate');
+      const response = await api.post("/auth/2fa/generate");
       setTwoFactorSetup({
         qrCode: response.data.qrCode,
         secret: response.data.secret,
@@ -168,9 +173,10 @@ export default function ShopkeeperProfilePage() {
       setTwoFactorDialogOpen(true);
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Setup Failed',
-        description: error.response?.data?.message || 'Could not start 2FA setup',
+        variant: "destructive",
+        title: "Setup Failed",
+        description:
+          error.response?.data?.message || "Could not start 2FA setup",
       });
     } finally {
       setIsSettingUp2FA(false);
@@ -180,31 +186,34 @@ export default function ShopkeeperProfilePage() {
   const verifyAndEnable2FA = async () => {
     if (!verificationCode || verificationCode.length !== 6) {
       toast({
-        variant: 'destructive',
-        title: 'Invalid Code',
-        description: 'Please enter a 6-digit verification code',
+        variant: "destructive",
+        title: "Invalid Code",
+        description: "Please enter a 6-digit verification code",
       });
       return;
     }
 
     setIsVerifying2FA(true);
     try {
-      const response = await api.post('/auth/2fa/verify', { token: verificationCode });
+      const response = await api.post("/auth/2fa/verify", {
+        token: verificationCode,
+      });
       setBackupCodes(response.data.backupCodes);
       setShowBackupCodes(true);
       setTwoFactorDialogOpen(false);
       setTwoFactorSetup(null);
-      setVerificationCode('');
+      setVerificationCode("");
       await load2FAStatus();
       toast({
-        title: '2FA Enabled',
-        description: 'Two-factor authentication has been enabled',
+        title: "2FA Enabled",
+        description: "Two-factor authentication has been enabled",
       });
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Verification Failed',
-        description: error.response?.data?.message || 'Invalid verification code',
+        variant: "destructive",
+        title: "Verification Failed",
+        description:
+          error.response?.data?.message || "Invalid verification code",
       });
     } finally {
       setIsVerifying2FA(false);
@@ -214,28 +223,30 @@ export default function ShopkeeperProfilePage() {
   const disable2FA = async () => {
     if (!disablePassword) {
       toast({
-        variant: 'destructive',
-        title: 'Password Required',
-        description: 'Please enter your password to disable 2FA',
+        variant: "destructive",
+        title: "Password Required",
+        description: "Please enter your password to disable 2FA",
       });
       return;
     }
 
     setIsDisabling2FA(true);
     try {
-      await api.delete('/auth/2fa/disable', { data: { password: disablePassword } });
+      await api.delete("/auth/2fa/disable", {
+        data: { password: disablePassword },
+      });
       setDisableDialogOpen(false);
-      setDisablePassword('');
+      setDisablePassword("");
       await load2FAStatus();
       toast({
-        title: '2FA Disabled',
-        description: 'Two-factor authentication has been disabled',
+        title: "2FA Disabled",
+        description: "Two-factor authentication has been disabled",
       });
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Disable Failed',
-        description: error.response?.data?.message || 'Could not disable 2FA',
+        variant: "destructive",
+        title: "Disable Failed",
+        description: error.response?.data?.message || "Could not disable 2FA",
       });
     } finally {
       setIsDisabling2FA(false);
@@ -245,30 +256,33 @@ export default function ShopkeeperProfilePage() {
   const regenerateBackupCodes = async () => {
     if (!regenerateToken || regenerateToken.length !== 6) {
       toast({
-        variant: 'destructive',
-        title: 'Invalid Code',
-        description: 'Please enter a 6-digit verification code',
+        variant: "destructive",
+        title: "Invalid Code",
+        description: "Please enter a 6-digit verification code",
       });
       return;
     }
 
     setIsRegenerating(true);
     try {
-      const response = await api.post('/auth/2fa/backup-codes/regenerate', { token: regenerateToken });
+      const response = await api.post("/auth/2fa/backup-codes/regenerate", {
+        token: regenerateToken,
+      });
       setBackupCodes(response.data.backupCodes);
       setShowBackupCodes(true);
       setRegenerateDialogOpen(false);
-      setRegenerateToken('');
+      setRegenerateToken("");
       await load2FAStatus();
       toast({
-        title: 'Backup Codes Regenerated',
-        description: 'Your new backup codes are ready',
+        title: "Backup Codes Regenerated",
+        description: "Your new backup codes are ready",
       });
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Regeneration Failed',
-        description: error.response?.data?.message || 'Could not regenerate backup codes',
+        variant: "destructive",
+        title: "Regeneration Failed",
+        description:
+          error.response?.data?.message || "Could not regenerate backup codes",
       });
     } finally {
       setIsRegenerating(false);
@@ -276,10 +290,10 @@ export default function ShopkeeperProfilePage() {
   };
 
   const copyBackupCodes = () => {
-    navigator.clipboard.writeText(backupCodes.join('\n'));
+    navigator.clipboard.writeText(backupCodes.join("\n"));
     toast({
-      title: 'Copied',
-      description: 'Backup codes copied to clipboard',
+      title: "Copied",
+      description: "Backup codes copied to clipboard",
     });
   };
 
@@ -288,7 +302,7 @@ export default function ShopkeeperProfilePage() {
 
     setIsSaving(true);
     try {
-      await api.patch('/users/me', {
+      await api.patch("/users/me", {
         firstName: profile.firstName,
         lastName: profile.lastName,
         phone: profile.phone,
@@ -297,15 +311,15 @@ export default function ShopkeeperProfilePage() {
       });
       await refreshUser();
       toast({
-        title: 'Profile Updated',
-        description: 'Your profile has been updated successfully',
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully",
       });
     } catch (error: any) {
-      console.error('Failed to save profile:', error);
+      console.error("Failed to save profile:", error);
       toast({
-        variant: 'destructive',
-        title: 'Save Failed',
-        description: error.response?.data?.message || 'Could not save profile',
+        variant: "destructive",
+        title: "Save Failed",
+        description: error.response?.data?.message || "Could not save profile",
       });
     } finally {
       setIsSaving(false);
@@ -315,40 +329,45 @@ export default function ShopkeeperProfilePage() {
   const handleChangePassword = async () => {
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       toast({
-        variant: 'destructive',
-        title: 'Password Mismatch',
-        description: 'New password and confirmation do not match',
+        variant: "destructive",
+        title: "Password Mismatch",
+        description: "New password and confirmation do not match",
       });
       return;
     }
 
     if (passwordForm.newPassword.length < 8) {
       toast({
-        variant: 'destructive',
-        title: 'Password Too Short',
-        description: 'Password must be at least 8 characters',
+        variant: "destructive",
+        title: "Password Too Short",
+        description: "Password must be at least 8 characters",
       });
       return;
     }
 
     setIsChangingPassword(true);
     try {
-      await api.post('/auth/change-password', {
+      await api.post("/auth/change-password", {
         currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword,
       });
       toast({
-        title: 'Password Changed',
-        description: 'Your password has been updated successfully',
+        title: "Password Changed",
+        description: "Your password has been updated successfully",
       });
       setPasswordDialogOpen(false);
-      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
     } catch (error: any) {
-      console.error('Failed to change password:', error);
+      console.error("Failed to change password:", error);
       toast({
-        variant: 'destructive',
-        title: 'Password Change Failed',
-        description: error.response?.data?.message || 'Could not change password',
+        variant: "destructive",
+        title: "Password Change Failed",
+        description:
+          error.response?.data?.message || "Could not change password",
       });
     } finally {
       setIsChangingPassword(false);
@@ -362,8 +381,8 @@ export default function ShopkeeperProfilePage() {
   };
 
   const getInitials = () => {
-    if (!profile) return '?';
-    return `${profile.firstName?.[0] || ''}${profile.lastName?.[0] || ''}`.toUpperCase();
+    if (!profile) return "?";
+    return `${profile.firstName?.[0] || ""}${profile.lastName?.[0] || ""}`.toUpperCase();
   };
 
   if (isLoading) {
@@ -385,7 +404,9 @@ export default function ShopkeeperProfilePage() {
           <div className="text-center py-12">
             <AlertTriangle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h2 className="text-xl font-semibold mb-2">Profile Not Found</h2>
-            <p className="text-muted-foreground">Unable to load your profile data.</p>
+            <p className="text-muted-foreground">
+              Unable to load your profile data.
+            </p>
           </div>
         </DashboardLayout>
       </ShopGuard>
@@ -423,7 +444,11 @@ export default function ShopkeeperProfilePage() {
                   <p className="text-muted-foreground">{profile.email}</p>
                   <div className="flex items-center gap-2 mt-2">
                     <Badge variant="secondary">{profile.role}</Badge>
-                    <Badge variant={profile.status === 'ACTIVE' ? 'default' : 'destructive'}>
+                    <Badge
+                      variant={
+                        profile.status === "ACTIVE" ? "default" : "destructive"
+                      }
+                    >
                       {profile.status}
                     </Badge>
                   </div>
@@ -431,11 +456,18 @@ export default function ShopkeeperProfilePage() {
                 <div className="text-right text-sm text-muted-foreground">
                   <div className="flex items-center gap-2 justify-end">
                     <Clock className="h-4 w-4" />
-                    <span>Joined {format(new Date(profile.createdAt), 'MMM d, yyyy')}</span>
+                    <span>
+                      Joined{" "}
+                      {format(new Date(profile.createdAt), "MMM d, yyyy")}
+                    </span>
                   </div>
                   {profile.lastLoginAt && (
                     <p className="mt-1">
-                      Last login: {format(new Date(profile.lastLoginAt), 'MMM d, yyyy h:mm a')}
+                      Last login:{" "}
+                      {format(
+                        new Date(profile.lastLoginAt),
+                        "MMM d, yyyy h:mm a",
+                      )}
                     </p>
                   )}
                 </div>
@@ -469,7 +501,9 @@ export default function ShopkeeperProfilePage() {
                       <Input
                         id="firstName"
                         value={profile.firstName}
-                        onChange={(e) => updateProfile({ firstName: e.target.value })}
+                        onChange={(e) =>
+                          updateProfile({ firstName: e.target.value })
+                        }
                       />
                     </div>
                     <div className="space-y-2">
@@ -477,7 +511,9 @@ export default function ShopkeeperProfilePage() {
                       <Input
                         id="lastName"
                         value={profile.lastName}
-                        onChange={(e) => updateProfile({ lastName: e.target.value })}
+                        onChange={(e) =>
+                          updateProfile({ lastName: e.target.value })
+                        }
                       />
                     </div>
                   </div>
@@ -501,13 +537,13 @@ export default function ShopkeeperProfilePage() {
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <Label htmlFor="phone">Phone Number</Label>
-                        {user?.phoneVerifiedAt && (
+                        {authUser?.phoneVerifiedAt && (
                           <span className="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
                             <CheckCircle className="h-3 w-3" />
                             Verified
                           </span>
                         )}
-                        {!user?.phoneVerifiedAt && profile.phone && (
+                        {!authUser?.phoneVerifiedAt && profile.phone && (
                           <span className="inline-flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
                             <Shield className="h-3 w-3" />
                             Not Verified
@@ -518,14 +554,17 @@ export default function ShopkeeperProfilePage() {
                         <Phone className="h-4 w-4 text-muted-foreground" />
                         <Input
                           id="phone"
-                          value={profile.phone || ''}
-                          onChange={(e) => updateProfile({ phone: e.target.value })}
+                          value={profile.phone || ""}
+                          onChange={(e) =>
+                            updateProfile({ phone: e.target.value })
+                          }
                           placeholder="+977 9XXXXXXXXX"
                         />
                       </div>
-                      {user?.phoneVerifiedAt && (
+                      {authUser?.phoneVerifiedAt && (
                         <p className="text-xs text-muted-foreground">
-                          Changing your phone number will require re-verification
+                          Changing your phone number will require
+                          re-verification
                         </p>
                       )}
                     </div>
@@ -554,7 +593,8 @@ export default function ShopkeeperProfilePage() {
                     Regional Preferences
                   </CardTitle>
                   <CardDescription>
-                    Set your preferred language. Currency is determined by your shop&apos;s location.
+                    Set your preferred language. Currency is determined by your
+                    shop&apos;s location.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -562,8 +602,10 @@ export default function ShopkeeperProfilePage() {
                     <div className="space-y-2">
                       <Label htmlFor="language">Preferred Language</Label>
                       <Select
-                        value={profile.preferredLanguage || 'en'}
-                        onValueChange={(value) => updateProfile({ preferredLanguage: value })}
+                        value={profile.preferredLanguage || "en"}
+                        onValueChange={(value) =>
+                          updateProfile({ preferredLanguage: value })
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select language" />
@@ -581,10 +623,17 @@ export default function ShopkeeperProfilePage() {
                       <Label>Currency</Label>
                       <div className="p-3 bg-muted rounded-md text-sm">
                         <p className="text-muted-foreground">
-                          Currency is automatically set based on your shop&apos;s country.
+                          Currency is automatically set based on your
+                          shop&apos;s country.
                         </p>
                         <p className="mt-1">
-                          Manage this in <a href="/dashboard/shop/settings" className="text-gold-600 hover:underline">Shop Settings</a>
+                          Manage this in{" "}
+                          <a
+                            href="/dashboard/shop/settings"
+                            className="text-gold-600 hover:underline"
+                          >
+                            Shop Settings
+                          </a>
                         </p>
                       </div>
                     </div>
@@ -630,7 +679,10 @@ export default function ShopkeeperProfilePage() {
                         </p>
                       </div>
                     </div>
-                    <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+                    <Dialog
+                      open={passwordDialogOpen}
+                      onOpenChange={setPasswordDialogOpen}
+                    >
                       <DialogTrigger asChild>
                         <Button variant="outline">Change Password</Button>
                       </DialogTrigger>
@@ -643,13 +695,18 @@ export default function ShopkeeperProfilePage() {
                         </DialogHeader>
                         <div className="space-y-4 py-4">
                           <div className="space-y-2">
-                            <Label htmlFor="currentPassword">Current Password</Label>
+                            <Label htmlFor="currentPassword">
+                              Current Password
+                            </Label>
                             <Input
                               id="currentPassword"
                               type="password"
                               value={passwordForm.currentPassword}
                               onChange={(e) =>
-                                setPasswordForm({ ...passwordForm, currentPassword: e.target.value })
+                                setPasswordForm({
+                                  ...passwordForm,
+                                  currentPassword: e.target.value,
+                                })
                               }
                             />
                           </div>
@@ -660,18 +717,26 @@ export default function ShopkeeperProfilePage() {
                               type="password"
                               value={passwordForm.newPassword}
                               onChange={(e) =>
-                                setPasswordForm({ ...passwordForm, newPassword: e.target.value })
+                                setPasswordForm({
+                                  ...passwordForm,
+                                  newPassword: e.target.value,
+                                })
                               }
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                            <Label htmlFor="confirmPassword">
+                              Confirm New Password
+                            </Label>
                             <Input
                               id="confirmPassword"
                               type="password"
                               value={passwordForm.confirmPassword}
                               onChange={(e) =>
-                                setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
+                                setPasswordForm({
+                                  ...passwordForm,
+                                  confirmPassword: e.target.value,
+                                })
                               }
                             />
                           </div>
@@ -700,15 +765,21 @@ export default function ShopkeeperProfilePage() {
                   {/* Two-Factor Authentication */}
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-4">
-                      <div className={`p-3 rounded-full ${twoFactorStatus?.enabled ? 'bg-green-100' : 'bg-amber-100'}`}>
-                        <Smartphone className={`h-5 w-5 ${twoFactorStatus?.enabled ? 'text-green-600' : 'text-amber-600'}`} />
+                      <div
+                        className={`p-3 rounded-full ${twoFactorStatus?.enabled ? "bg-green-100" : "bg-amber-100"}`}
+                      >
+                        <Smartphone
+                          className={`h-5 w-5 ${twoFactorStatus?.enabled ? "text-green-600" : "text-amber-600"}`}
+                        />
                       </div>
                       <div>
-                        <h3 className="font-medium">Two-Factor Authentication</h3>
+                        <h3 className="font-medium">
+                          Two-Factor Authentication
+                        </h3>
                         <p className="text-sm text-muted-foreground">
                           {twoFactorStatus?.enabled
                             ? `Enabled • ${twoFactorStatus.backupCodesRemaining} backup codes remaining`
-                            : 'Add an extra layer of security with 2FA'}
+                            : "Add an extra layer of security with 2FA"}
                         </p>
                       </div>
                     </div>
@@ -752,12 +823,18 @@ export default function ShopkeeperProfilePage() {
                   </div>
 
                   {/* 2FA Setup Dialog */}
-                  <Dialog open={twoFactorDialogOpen} onOpenChange={setTwoFactorDialogOpen}>
+                  <Dialog
+                    open={twoFactorDialogOpen}
+                    onOpenChange={setTwoFactorDialogOpen}
+                  >
                     <DialogContent className="sm:max-w-md">
                       <DialogHeader>
-                        <DialogTitle>Set Up Two-Factor Authentication</DialogTitle>
+                        <DialogTitle>
+                          Set Up Two-Factor Authentication
+                        </DialogTitle>
                         <DialogDescription>
-                          Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.)
+                          Scan the QR code with your authenticator app (Google
+                          Authenticator, Authy, etc.)
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
@@ -779,12 +856,20 @@ export default function ShopkeeperProfilePage() {
                               </code>
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="verificationCode">Enter verification code</Label>
+                              <Label htmlFor="verificationCode">
+                                Enter verification code
+                              </Label>
                               <Input
                                 id="verificationCode"
                                 placeholder="000000"
                                 value={verificationCode}
-                                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                onChange={(e) =>
+                                  setVerificationCode(
+                                    e.target.value
+                                      .replace(/\D/g, "")
+                                      .slice(0, 6),
+                                  )
+                                }
                                 maxLength={6}
                                 className="text-center text-2xl tracking-widest font-mono"
                               />
@@ -793,10 +878,16 @@ export default function ShopkeeperProfilePage() {
                         )}
                       </div>
                       <DialogFooter>
-                        <Button variant="outline" onClick={() => setTwoFactorDialogOpen(false)}>
+                        <Button
+                          variant="outline"
+                          onClick={() => setTwoFactorDialogOpen(false)}
+                        >
                           Cancel
                         </Button>
-                        <Button onClick={verifyAndEnable2FA} disabled={isVerifying2FA}>
+                        <Button
+                          onClick={verifyAndEnable2FA}
+                          disabled={isVerifying2FA}
+                        >
                           {isVerifying2FA ? (
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           ) : null}
@@ -807,19 +898,26 @@ export default function ShopkeeperProfilePage() {
                   </Dialog>
 
                   {/* Backup Codes Dialog */}
-                  <Dialog open={showBackupCodes} onOpenChange={setShowBackupCodes}>
+                  <Dialog
+                    open={showBackupCodes}
+                    onOpenChange={setShowBackupCodes}
+                  >
                     <DialogContent className="sm:max-w-md">
                       <DialogHeader>
                         <DialogTitle>Save Your Backup Codes</DialogTitle>
                         <DialogDescription>
-                          These codes can be used if you lose access to your authenticator app. Each code can only be used once.
+                          These codes can be used if you lose access to your
+                          authenticator app. Each code can only be used once.
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
                         <div className="bg-muted p-4 rounded-lg">
                           <div className="grid grid-cols-2 gap-2 font-mono text-sm">
                             {backupCodes.map((code, i) => (
-                              <div key={i} className="bg-background p-2 rounded text-center">
+                              <div
+                                key={i}
+                                className="bg-background p-2 rounded text-center"
+                              >
                                 {code}
                               </div>
                             ))}
@@ -828,7 +926,8 @@ export default function ShopkeeperProfilePage() {
                         <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                           <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
                           <p className="text-sm text-amber-800">
-                            Store these codes in a safe place. You won't be able to see them again.
+                            Store these codes in a safe place. You won't be able
+                            to see them again.
                           </p>
                         </div>
                       </div>
@@ -845,12 +944,18 @@ export default function ShopkeeperProfilePage() {
                   </Dialog>
 
                   {/* Disable 2FA Dialog */}
-                  <Dialog open={disableDialogOpen} onOpenChange={setDisableDialogOpen}>
+                  <Dialog
+                    open={disableDialogOpen}
+                    onOpenChange={setDisableDialogOpen}
+                  >
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>Disable Two-Factor Authentication</DialogTitle>
+                        <DialogTitle>
+                          Disable Two-Factor Authentication
+                        </DialogTitle>
                         <DialogDescription>
-                          This will remove 2FA from your account. Enter your password to confirm.
+                          This will remove 2FA from your account. Enter your
+                          password to confirm.
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
@@ -865,10 +970,17 @@ export default function ShopkeeperProfilePage() {
                         </div>
                       </div>
                       <DialogFooter>
-                        <Button variant="outline" onClick={() => setDisableDialogOpen(false)}>
+                        <Button
+                          variant="outline"
+                          onClick={() => setDisableDialogOpen(false)}
+                        >
                           Cancel
                         </Button>
-                        <Button variant="destructive" onClick={disable2FA} disabled={isDisabling2FA}>
+                        <Button
+                          variant="destructive"
+                          onClick={disable2FA}
+                          disabled={isDisabling2FA}
+                        >
                           {isDisabling2FA ? (
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           ) : (
@@ -881,32 +993,48 @@ export default function ShopkeeperProfilePage() {
                   </Dialog>
 
                   {/* Regenerate Backup Codes Dialog */}
-                  <Dialog open={regenerateDialogOpen} onOpenChange={setRegenerateDialogOpen}>
+                  <Dialog
+                    open={regenerateDialogOpen}
+                    onOpenChange={setRegenerateDialogOpen}
+                  >
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle>Regenerate Backup Codes</DialogTitle>
                         <DialogDescription>
-                          This will invalidate all your existing backup codes. Enter a verification code to continue.
+                          This will invalidate all your existing backup codes.
+                          Enter a verification code to continue.
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                          <Label htmlFor="regenerateToken">Verification Code</Label>
+                          <Label htmlFor="regenerateToken">
+                            Verification Code
+                          </Label>
                           <Input
                             id="regenerateToken"
                             placeholder="000000"
                             value={regenerateToken}
-                            onChange={(e) => setRegenerateToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            onChange={(e) =>
+                              setRegenerateToken(
+                                e.target.value.replace(/\D/g, "").slice(0, 6),
+                              )
+                            }
                             maxLength={6}
                             className="text-center text-2xl tracking-widest font-mono"
                           />
                         </div>
                       </div>
                       <DialogFooter>
-                        <Button variant="outline" onClick={() => setRegenerateDialogOpen(false)}>
+                        <Button
+                          variant="outline"
+                          onClick={() => setRegenerateDialogOpen(false)}
+                        >
                           Cancel
                         </Button>
-                        <Button onClick={regenerateBackupCodes} disabled={isRegenerating}>
+                        <Button
+                          onClick={regenerateBackupCodes}
+                          disabled={isRegenerating}
+                        >
                           {isRegenerating ? (
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           ) : (
@@ -924,12 +1052,19 @@ export default function ShopkeeperProfilePage() {
                     <div className="space-y-2 text-sm text-muted-foreground">
                       <div className="flex items-center justify-between">
                         <span>Account created</span>
-                        <span>{format(new Date(profile.createdAt), 'MMM d, yyyy')}</span>
+                        <span>
+                          {format(new Date(profile.createdAt), "MMM d, yyyy")}
+                        </span>
                       </div>
                       {profile.lastLoginAt && (
                         <div className="flex items-center justify-between">
                           <span>Last login</span>
-                          <span>{format(new Date(profile.lastLoginAt), 'MMM d, yyyy h:mm a')}</span>
+                          <span>
+                            {format(
+                              new Date(profile.lastLoginAt),
+                              "MMM d, yyyy h:mm a",
+                            )}
+                          </span>
                         </div>
                       )}
                     </div>
