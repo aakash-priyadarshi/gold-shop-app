@@ -648,6 +648,7 @@ export class AuthService {
       preferredCurrency: user.preferredCurrency,
       themeMode: user.themeMode,
       emailVerifiedAt: user.emailVerifiedAt,
+      phoneVerifiedAt: user.phoneVerifiedAt,
       createdAt: user.createdAt,
       lastLoginAt: user.lastLoginAt,
       shop: user.shops?.[0] || null,

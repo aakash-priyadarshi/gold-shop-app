@@ -83,7 +83,23 @@ export class UsersService {
     const updateData: any = {};
     if (firstName !== undefined) updateData.firstName = firstName;
     if (lastName !== undefined) updateData.lastName = lastName;
-    if (data.phone !== undefined) updateData.phone = data.phone;
+    
+    // If phone is being changed, check if it's different from current and reset verification
+    if (data.phone !== undefined) {
+      const currentUser = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { phone: true },
+      });
+      
+      updateData.phone = data.phone;
+      
+      // If phone number is different from current, reset phoneVerifiedAt
+      // This makes the old number available for others to use
+      if (currentUser && currentUser.phone !== data.phone) {
+        updateData.phoneVerifiedAt = null;
+      }
+    }
+    
     if (data.preferredLanguage !== undefined) updateData.preferredLanguage = data.preferredLanguage;
     if (data.preferredCurrency !== undefined) updateData.preferredCurrency = data.preferredCurrency;
     if (data.country !== undefined) updateData.preferredCountry = data.country; // Map 'country' from DTO to 'preferredCountry' in schema

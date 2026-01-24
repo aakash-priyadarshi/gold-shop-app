@@ -276,7 +276,12 @@ interface MarketRates {
 
 export default function CreateRfqPage() {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading: authLoading, refreshUser } = useAuth();
+  const {
+    user,
+    isAuthenticated,
+    isLoading: authLoading,
+    refreshUser,
+  } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -296,20 +301,23 @@ export default function CreateRfqPage() {
       }
     };
 
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
   }, [isAuthenticated, refreshUser]);
 
   // User verification status - use useAuth hook instead of useSession
   const isLoggedIn = isAuthenticated && !!user;
-  const isPhoneVerified = !!user?.phoneVerifiedAt;
+  const isAdmin = user?.role === "ADMIN";
+  // Admins are exempt from phone verification requirement
+  const isPhoneVerified = isAdmin || !!user?.phoneVerifiedAt;
   const isSeller = user?.role === "SHOPKEEPER" || user?.role === "ADMIN";
   const isShopVerified = !!user?.shop?.isVerified;
 
-  // For sellers: need phone + KYC (shop verified)
+  // For sellers: need phone + KYC (shop verified) - but admins exempt from KYC too
   // For customers: need phone only
+  // Admins can always submit
   const canSubmitOrder =
-    isLoggedIn && isPhoneVerified && (!isSeller || isShopVerified);
+    isLoggedIn && (isAdmin || (isPhoneVerified && (!isSeller || isShopVerified)));
 
   // Determine why submit is blocked (for tooltip)
   const getSubmitBlockReason = (): string | null => {
@@ -2130,7 +2138,7 @@ export default function CreateRfqPage() {
                     <Button
                       onClick={() => {
                         setStep(2);
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
                       disabled={!canProceedToStep2}
                       className="gold-gradient text-white"
@@ -2438,7 +2446,7 @@ export default function CreateRfqPage() {
                     <Button
                       onClick={() => {
                         setStep(3);
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
                       disabled={!canProceedToStep3}
                       className="gold-gradient text-white"
@@ -2486,27 +2494,33 @@ export default function CreateRfqPage() {
 
                     {/* Sign-in / Phone Verification Required Notice - Check sign-in FIRST */}
                     {(!isLoggedIn || !isPhoneVerified) && (
-                      <div className={`border rounded-lg p-3 flex items-start gap-2 ${
-                        !isLoggedIn
-                          ? "bg-blue-50 border-blue-200"
-                          : "bg-amber-100 border-amber-300"
-                      }`}>
+                      <div
+                        className={`border rounded-lg p-3 flex items-start gap-2 ${
+                          !isLoggedIn
+                            ? "bg-blue-50 border-blue-200"
+                            : "bg-amber-100 border-amber-300"
+                        }`}
+                      >
                         {!isLoggedIn ? (
                           <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
                         ) : (
                           <Phone className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                         )}
                         <div>
-                          <p className={`text-sm font-medium ${
-                            !isLoggedIn ? "text-blue-800" : "text-amber-800"
-                          }`}>
+                          <p
+                            className={`text-sm font-medium ${
+                              !isLoggedIn ? "text-blue-800" : "text-amber-800"
+                            }`}
+                          >
                             {!isLoggedIn
                               ? "Sign In Required"
                               : "Phone Verification Required"}
                           </p>
-                          <p className={`text-sm mt-1 ${
-                            !isLoggedIn ? "text-blue-700" : "text-amber-700"
-                          }`}>
+                          <p
+                            className={`text-sm mt-1 ${
+                              !isLoggedIn ? "text-blue-700" : "text-amber-700"
+                            }`}
+                          >
                             {!isLoggedIn
                               ? "Sign in to generate AI design previews and submit your custom jewelry request."
                               : "Verify your phone number to generate AI design previews. This helps us prevent spam and ensures a quality experience."}
@@ -2633,7 +2647,8 @@ export default function CreateRfqPage() {
                       </div>
                     )}
 
-                    {isLoggedIn && isPhoneVerified &&
+                    {isLoggedIn &&
+                      isPhoneVerified &&
                       (!formData.jewelleryType || !formData.metalType) && (
                         <p className="text-xs text-gray-500 text-center">
                           Complete jewelry type and metal selection to enable

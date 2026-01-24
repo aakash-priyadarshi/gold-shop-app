@@ -468,7 +468,21 @@ export default function CustomerSettingsPage() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="profile-phone">Phone Number</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="profile-phone">Phone Number</Label>
+                    {user?.phoneVerifiedAt && profile.phone === phoneCheckState.originalPhone && (
+                      <span className="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                        <CheckCircle className="h-3 w-3" />
+                        Verified
+                      </span>
+                    )}
+                    {!user?.phoneVerifiedAt && profile.phone && profile.phone === phoneCheckState.originalPhone && (
+                      <span className="inline-flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                        <Shield className="h-3 w-3" />
+                        Not Verified
+                      </span>
+                    )}
+                  </div>
                   <div className="relative">
                     <PhoneInput
                       id="profile-phone"
@@ -508,6 +522,13 @@ export default function CustomerSettingsPage() {
                     profile.phone !== phoneCheckState.originalPhone && (
                       <p className="text-xs text-green-600">
                         Phone number is available
+                      </p>
+                    )}
+                  {profile.phone !== phoneCheckState.originalPhone && 
+                    phoneCheckState.originalPhone && 
+                    user?.phoneVerifiedAt && (
+                      <p className="text-xs text-amber-600">
+                        Changing your phone number will require re-verification
                       </p>
                     )}
                 </div>

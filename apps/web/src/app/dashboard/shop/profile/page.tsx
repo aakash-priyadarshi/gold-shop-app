@@ -499,7 +499,21 @@ export default function ShopkeeperProfilePage() {
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="phone">Phone Number</Label>
+                        {user?.phoneVerifiedAt && (
+                          <span className="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                            <CheckCircle className="h-3 w-3" />
+                            Verified
+                          </span>
+                        )}
+                        {!user?.phoneVerifiedAt && profile.phone && (
+                          <span className="inline-flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                            <Shield className="h-3 w-3" />
+                            Not Verified
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2">
                         <Phone className="h-4 w-4 text-muted-foreground" />
                         <Input
@@ -509,6 +523,11 @@ export default function ShopkeeperProfilePage() {
                           placeholder="+977 9XXXXXXXXX"
                         />
                       </div>
+                      {user?.phoneVerifiedAt && (
+                        <p className="text-xs text-muted-foreground">
+                          Changing your phone number will require re-verification
+                        </p>
+                      )}
                     </div>
                   </div>
 
