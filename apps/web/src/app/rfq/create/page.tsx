@@ -524,7 +524,8 @@ export default function CreateRfqPage() {
 
   // Generate AI Preview
   const generatePreview = async () => {
-
+    if (!isAuthenticated) {
+      router.push("/auth/login?callbackUrl=/rfq/create");
       return;
     }
 
