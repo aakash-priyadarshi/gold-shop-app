@@ -285,6 +285,15 @@ export default function CreateRfqPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  
+  // Hydration fix - track when component has mounted on client
+  const [mounted, setMounted] = useState(false);
+  const [minDate, setMinDate] = useState("");
+  
+  useEffect(() => {
+    setMounted(true);
+    setMinDate(new Date().toISOString().split("T")[0]);
+  }, []);
 
   // Refresh user data on page load and when window gains focus
   // This ensures phoneVerifiedAt and other user status is up-to-date
@@ -317,7 +326,8 @@ export default function CreateRfqPage() {
   // For customers: need phone only
   // Admins can always submit
   const canSubmitOrder =
-    isLoggedIn && (isAdmin || (isPhoneVerified && (!isSeller || isShopVerified)));
+    isLoggedIn &&
+    (isAdmin || (isPhoneVerified && (!isSeller || isShopVerified)));
 
   // Determine why submit is blocked (for tooltip)
   const getSubmitBlockReason = (): string | null => {
@@ -514,8 +524,7 @@ export default function CreateRfqPage() {
 
   // Generate AI Preview
   const generatePreview = async () => {
-    if (!isAuthenticated) {
-      router.push("/auth/login?callbackUrl=/rfq/create");
+
       return;
     }
 
@@ -2773,7 +2782,7 @@ export default function CreateRfqPage() {
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         updateFormData("deadline", e.target.value)
                       }
-                      min={new Date().toISOString().split("T")[0]}
+                      min={minDate}
                     />
                     <p className="text-xs text-gray-500">
                       Leave empty if you&apos;re flexible on timing
