@@ -315,17 +315,19 @@ export default function CreateRfqPage() {
   }, [isAuthenticated, refreshUser]);
 
   // User verification status - use useAuth hook instead of useSession
-  const isLoggedIn = isAuthenticated && !!user;
-  const isAdmin = user?.role === "ADMIN";
+  // Use mounted check to prevent hydration mismatch (server renders with no user, client has user)
+  const isLoggedIn = mounted && isAuthenticated && !!user;
+  const isAdmin = mounted && user?.role === "ADMIN";
   // Admins are exempt from phone verification requirement
-  const isPhoneVerified = isAdmin || !!user?.phoneVerifiedAt;
-  const isSeller = user?.role === "SHOPKEEPER" || user?.role === "ADMIN";
-  const isShopVerified = !!user?.shop?.isVerified;
+  const isPhoneVerified = mounted && (isAdmin || !!user?.phoneVerifiedAt);
+  const isSeller = mounted && (user?.role === "SHOPKEEPER" || user?.role === "ADMIN");
+  const isShopVerified = mounted && !!user?.shop?.isVerified;
 
   // For sellers: need phone + KYC (shop verified) - but admins exempt from KYC too
   // For customers: need phone only
   // Admins can always submit
   const canSubmitOrder =
+    mounted &&
     isLoggedIn &&
     (isAdmin || (isPhoneVerified && (!isSeller || isShopVerified)));
 
@@ -524,13 +526,7 @@ export default function CreateRfqPage() {
 
   // Generate AI Preview
   const generatePreview = async () => {
-    console.log("[generatePreview] Starting...");
-    console.log("[generatePreview] isAuthenticated:", isAuthenticated);
-    console.log("[generatePreview] formData.jewelleryType:", formData.jewelleryType);
-    console.log("[generatePreview] formData.metalType:", formData.metalType);
-    
     if (!isAuthenticated) {
-      console.log("[generatePreview] Not authenticated, redirecting...");
       router.push("/auth/login?callbackUrl=/rfq/create");
       return;
     }
@@ -656,9 +652,6 @@ export default function CreateRfqPage() {
         shareToGallery,
       };
 
-      console.log("[generatePreview] Sending request to:", `${API_URL}/designs`);
-      console.log("[generatePreview] Design specs:", JSON.stringify(designSpecs, null, 2));
-
       const response = await fetch(`${API_URL}/designs`, {
         method: "POST",
         headers: {
@@ -668,16 +661,12 @@ export default function CreateRfqPage() {
         body: JSON.stringify(designSpecs),
       });
 
-      console.log("[generatePreview] Response status:", response.status);
-
       if (!response.ok) {
         const data = await response.json();
-        console.log("[generatePreview] Error response:", data);
         throw new Error(data.message || "Failed to generate preview");
       }
 
       const design = await response.json();
-      console.log("[generatePreview] Success! Design:", design);
       setDesignPreviewUrl(design.imageUrl);
       setDesignId(design.id);
 
