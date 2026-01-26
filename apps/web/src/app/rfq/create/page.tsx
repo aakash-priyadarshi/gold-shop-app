@@ -135,7 +135,7 @@ const SURFACE_FINISH_IMAGES: Record<
 > = {
   // API IDs (from backend SURFACE_FINISHES)
   HIGH_POLISH: {
-    image: "https://images.orivraa.com/product/1769445067325-644vabv1.png",
+    image: "https://images.orivraa.com/product/1769448671129-6anrd5rf.png",
     description: "Mirror-like shine, highly reflective surface",
   },
   MATTE: {
@@ -163,20 +163,20 @@ const SURFACE_FINISH_IMAGES: Record<
     description: "Cross-hatched matte texture",
   },
   BARK_TEXTURE: {
-    image: "https://images.orivraa.com/product/1769445062183-qd3i944l.png",
+    image: "https://images.orivraa.com/product/1769448676427-epn2otmh.png",
     description: "Natural bark-like texture",
   },
   DIAMOND_CUT: {
-    image: "https://images.orivraa.com/product/1769445067325-644vabv1.png",
+    image: "https://images.orivraa.com/product/1769448674243-38v0ta17.png",
     description: "Precision faceted cuts for sparkle",
   },
   ENGRAVED: {
-    image: "https://images.orivraa.com/product/1769445062183-qd3i944l.png",
+    image: "https://images.orivraa.com/product/1769448679035-4xzpm0lm.png",
     description: "Decorative carved patterns",
   },
   // Fallback uppercase keys (for hardcoded SelectItems)
   POLISHED: {
-    image: "https://images.orivraa.com/product/1769445067325-644vabv1.png",
+    image: "https://images.orivraa.com/product/1769448671129-6anrd5rf.png",
     description: "Mirror-like shine, highly reflective surface",
   },
   SANDBLAST: {
