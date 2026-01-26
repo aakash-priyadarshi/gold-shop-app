@@ -191,7 +191,10 @@ export function LivePricingPanel({
             <p className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
               <span>
-                Last fetched on: {mounted ? formatLastFetched(marketRates.updatedAt) : new Date(marketRates.updatedAt).toLocaleDateString()}
+                Last fetched on:{" "}
+                {mounted
+                  ? formatLastFetched(marketRates.updatedAt)
+                  : new Date(marketRates.updatedAt).toLocaleDateString()}
               </span>
             </p>
           )}
