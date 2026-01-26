@@ -251,7 +251,10 @@ export class DesignsController {
       this.logger.log(`Design created successfully: ${result.design?.id}`);
       return result;
     } catch (error) {
-      this.logger.error(`Failed to create design: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to create design: ${error.message}`,
+        error.stack,
+      );
       if (error instanceof HttpException) {
         throw error;
       }

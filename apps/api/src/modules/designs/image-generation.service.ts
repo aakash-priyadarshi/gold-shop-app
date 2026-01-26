@@ -496,49 +496,55 @@ Forbidden:
     );
 
     try {
-      // Use Google GenAI for image generation
-      // Note: This uses the REST API directly for better control
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:generateImages?key=${this.apiKey}`;
-      this.logger.debug(`Calling Imagen API at: ${apiUrl.replace(this.apiKey, "***")}`);
-      
-      const response = await fetch(
-        apiUrl,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            prompt: prompt,
-            number_of_images: 1,
-            output_mime_type: "image/jpeg",
-            person_generation: "DONT_ALLOW",
-            aspect_ratio: "1:1",
-            image_size: "1K",
-          }),
-        },
+      // Use Google Imagen 4 via the predict endpoint
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${this.apiKey}`;
+      this.logger.debug(
+        `Calling Imagen API at: ${apiUrl.replace(this.apiKey, "***")}`,
       );
+
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          instances: [{ prompt: prompt }],
+          parameters: {
+            sampleCount: 1,
+            aspectRatio: "1:1",
+            personGeneration: "DONT_ALLOW",
+          },
+        }),
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
-        this.logger.error(`Imagen API error (${response.status}): ${errorText}`);
-        throw new Error(`Image generation failed: ${response.status} - ${errorText.substring(0, 200)}`);
+        this.logger.error(
+          `Imagen API error (${response.status}): ${errorText}`,
+        );
+        throw new Error(
+          `Image generation failed: ${response.status} - ${errorText.substring(0, 200)}`,
+        );
       }
 
       const result = await response.json();
-      this.logger.debug(`Imagen API response keys: ${Object.keys(result).join(", ")}`);
+      this.logger.debug(
+        `Imagen API response keys: ${Object.keys(result).join(", ")}`,
+      );
 
-      if (!result.generatedImages || result.generatedImages.length === 0) {
-        this.logger.error(`No images in response: ${JSON.stringify(result).substring(0, 500)}`);
+      if (!result.predictions || result.predictions.length === 0) {
+        this.logger.error(
+          `No images in response: ${JSON.stringify(result).substring(0, 500)}`,
+        );
         throw new Error("No images generated - API returned empty result");
       }
 
-      // The response contains base64-encoded image data
-      const imageData = result.generatedImages[0];
+      // The response contains base64-encoded image data in predictions[].bytesBase64Encoded
+      const imageData = result.predictions[0];
 
       // For now, return the base64 data - the controller will handle uploading to R2
       return {
-        imageUrl: `data:image/jpeg;base64,${imageData.image.imageBytes}`,
+        imageUrl: `data:image/png;base64,${imageData.bytesBase64Encoded}`,
         prompt,
         cached: false,
       };
