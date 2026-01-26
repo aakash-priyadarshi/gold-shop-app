@@ -421,7 +421,7 @@ export function Header() {
 
               {/* Mobile Auth Actions */}
               <div className="p-4 border-t border-gray-100 space-y-2">
-                {isAuthenticated && user ? (
+                {mounted && isAuthenticated && user ? (
                   <>
                     {/* Role-specific quick actions for mobile */}
                     {getRoleQuickActions(user.role).map((action) => (
@@ -595,7 +595,7 @@ export function Header() {
 
         {/* Desktop Auth/User Menu */}
         <div className="hidden lg:flex items-center gap-2">
-          {authLoading ? (
+          {!mounted || authLoading ? (
             <div className="w-9 h-9 bg-gray-100 rounded-lg animate-pulse" />
           ) : isAuthenticated && user ? (
             <TooltipProvider delayDuration={200}>
@@ -1207,7 +1207,7 @@ export function Header() {
 
         {/* Mobile Auth Icons */}
         <div className="flex lg:hidden items-center gap-1">
-          {!authLoading && isAuthenticated && user && (
+          {mounted && !authLoading && isAuthenticated && user && (
             <>
               {/* First quick action for mobile */}
               <Link
@@ -1247,7 +1247,7 @@ export function Header() {
               </Link>
             </>
           )}
-          {!authLoading && !isAuthenticated && (
+          {mounted && !authLoading && !isAuthenticated && (
             <Link href="/auth/login">
               <Button variant="ghost" size="icon" className="touch-target">
                 <UserIcon className="h-5 w-5" />
