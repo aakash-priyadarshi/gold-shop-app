@@ -498,8 +498,11 @@ Forbidden:
     try {
       // Use Google GenAI for image generation
       // Note: This uses the REST API directly for better control
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:generateImages?key=${this.apiKey}`;
+      this.logger.debug(`Calling Imagen API at: ${apiUrl.replace(this.apiKey, "***")}`);
+      
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:generateImages?key=${this.apiKey}`,
+        apiUrl,
         {
           method: "POST",
           headers: {
@@ -517,15 +520,17 @@ Forbidden:
       );
 
       if (!response.ok) {
-        const error = await response.text();
-        this.logger.error(`Imagen API error: ${error}`);
-        throw new Error(`Image generation failed: ${response.status}`);
+        const errorText = await response.text();
+        this.logger.error(`Imagen API error (${response.status}): ${errorText}`);
+        throw new Error(`Image generation failed: ${response.status} - ${errorText.substring(0, 200)}`);
       }
 
       const result = await response.json();
+      this.logger.debug(`Imagen API response keys: ${Object.keys(result).join(", ")}`);
 
       if (!result.generatedImages || result.generatedImages.length === 0) {
-        throw new Error("No images generated");
+        this.logger.error(`No images in response: ${JSON.stringify(result).substring(0, 500)}`);
+        throw new Error("No images generated - API returned empty result");
       }
 
       // The response contains base64-encoded image data

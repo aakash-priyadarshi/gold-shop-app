@@ -3,6 +3,9 @@ import {
   Controller,
   Delete,
   Get,
+  HttpException,
+  HttpStatus,
+  Logger,
   Param,
   Patch,
   Post,
@@ -11,7 +14,9 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { BuildMethod, JewelleryType, WeightCategory } from "@prisma/client";
+import { Type } from "class-transformer";
 import {
+  IsArray,
   IsBoolean,
   IsEnum,
   IsNumber,
@@ -19,9 +24,7 @@ import {
   IsOptional,
   IsString,
   ValidateNested,
-  IsArray,
 } from "class-validator";
-import { Type } from "class-transformer";
 import { Request as ExpressRequest } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
@@ -227,6 +230,8 @@ class UpdateVisibilityDto {
 
 @Controller("designs")
 export class DesignsController {
+  private readonly logger = new Logger(DesignsController.name);
+
   constructor(private readonly designsService: DesignsService) {}
 
   /**
@@ -239,7 +244,22 @@ export class DesignsController {
     @Request() req: AuthenticatedRequest,
     @Body() dto: CreateDesignDto,
   ) {
-    return this.designsService.createDesign(req.user!.id, dto);
+    try {
+      this.logger.log(`Creating design for user ${req.user!.id}`);
+      this.logger.debug(`Design DTO: ${JSON.stringify(dto)}`);
+      const result = await this.designsService.createDesign(req.user!.id, dto);
+      this.logger.log(`Design created successfully: ${result.design?.id}`);
+      return result;
+    } catch (error) {
+      this.logger.error(`Failed to create design: ${error.message}`, error.stack);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        error.message || "Failed to generate design",
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   /**
