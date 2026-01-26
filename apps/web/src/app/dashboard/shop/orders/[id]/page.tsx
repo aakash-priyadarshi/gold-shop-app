@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { ShopGuard } from '@/components/auth/RouteGuard';
-import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { ShopGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  OrderStatusBadge,
+  OrderStepper,
+  type OrderType,
+} from "@/components/orders";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -23,38 +23,47 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
-  ArrowLeft,
-  Package,
-  User,
-  MapPin,
-  Phone,
-  Mail,
-  Clock,
-  CheckCircle,
-  Truck,
-  DollarSign,
-  Loader2,
-  Calendar,
-  CreditCard,
-  Store,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import api from "@/lib/api";
+import {
   AlertTriangle,
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import api from '@/lib/api';
-import { OrderStepper, OrderStatusBadge, type OrderType } from '@/components/orders';
+  ArrowLeft,
+  CheckCircle,
+  Clock,
+  CreditCard,
+  ImageIcon,
+  Loader2,
+  Mail,
+  MapPin,
+  Package,
+  Phone,
+  Sparkles,
+  Store,
+  User,
+} from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 // Currency based on country
 const getCurrencySymbol = (country: string) => {
   const symbols: Record<string, string> = {
-    NP: 'रू',
-    IN: '₹',
-    AE: 'د.إ',
-    US: '$',
-    UK: '£',
+    NP: "रू",
+    IN: "₹",
+    AE: "د.إ",
+    US: "$",
+    UK: "£",
   };
-  return symbols[country] || 'Rs.';
+  return symbols[country] || "Rs.";
 };
 
 interface OrderDetails {
@@ -119,35 +128,35 @@ interface OrderDetails {
 // Prebuilt (INVENTORY): CONFIRMED → PACKED → SHIPPED → OUT_FOR_DELIVERY → DELIVERED
 // Custom: CONFIRMED → IN_PROGRESS → READY → PACKED → SHIPPED → OUT_FOR_DELIVERY → DELIVERED
 const PREBUILT_STATUS_OPTIONS = [
-  { value: 'CONFIRMED', label: 'Confirmed' },
-  { value: 'PACKED', label: 'Packed' },
-  { value: 'SHIPPED', label: 'Shipped' },
-  { value: 'OUT_FOR_DELIVERY', label: 'Out for Delivery' },
-  { value: 'DELIVERED', label: 'Delivered' },
+  { value: "CONFIRMED", label: "Confirmed" },
+  { value: "PACKED", label: "Packed" },
+  { value: "SHIPPED", label: "Shipped" },
+  { value: "OUT_FOR_DELIVERY", label: "Out for Delivery" },
+  { value: "DELIVERED", label: "Delivered" },
 ];
 
 const CUSTOM_STATUS_OPTIONS = [
-  { value: 'CONFIRMED', label: 'Order Accepted' },
-  { value: 'IN_PROGRESS', label: 'Forging / Being Made' },
-  { value: 'READY', label: 'Ready' },
-  { value: 'PACKED', label: 'Packed' },
-  { value: 'SHIPPED', label: 'Shipped' },
-  { value: 'OUT_FOR_DELIVERY', label: 'Out for Delivery' },
-  { value: 'DELIVERED', label: 'Delivered' },
+  { value: "CONFIRMED", label: "Order Accepted" },
+  { value: "IN_PROGRESS", label: "Forging / Being Made" },
+  { value: "READY", label: "Ready" },
+  { value: "PACKED", label: "Packed" },
+  { value: "SHIPPED", label: "Shipped" },
+  { value: "OUT_FOR_DELIVERY", label: "Out for Delivery" },
+  { value: "DELIVERED", label: "Delivered" },
 ];
 
 const statusColors: Record<string, string> = {
-  CREATED: 'bg-gray-100 text-gray-700',
-  PAYMENT_PENDING: 'bg-amber-100 text-amber-700',
-  PAID: 'bg-blue-100 text-blue-700',
-  IN_PRODUCTION: 'bg-purple-100 text-purple-700',
-  QC_PENDING: 'bg-orange-100 text-orange-700',
-  QC_PASSED: 'bg-teal-100 text-teal-700',
-  READY_TO_SHIP: 'bg-cyan-100 text-cyan-700',
-  SHIPPED: 'bg-indigo-100 text-indigo-700',
-  DELIVERED: 'bg-green-100 text-green-700',
-  COMPLETED: 'bg-green-100 text-green-700',
-  CANCELLED: 'bg-red-100 text-red-700',
+  CREATED: "bg-gray-100 text-gray-700",
+  PAYMENT_PENDING: "bg-amber-100 text-amber-700",
+  PAID: "bg-blue-100 text-blue-700",
+  IN_PRODUCTION: "bg-purple-100 text-purple-700",
+  QC_PENDING: "bg-orange-100 text-orange-700",
+  QC_PASSED: "bg-teal-100 text-teal-700",
+  READY_TO_SHIP: "bg-cyan-100 text-cyan-700",
+  SHIPPED: "bg-indigo-100 text-indigo-700",
+  DELIVERED: "bg-green-100 text-green-700",
+  COMPLETED: "bg-green-100 text-green-700",
+  CANCELLED: "bg-red-100 text-red-700",
 };
 
 export default function ShopOrderDetailPage() {
@@ -155,11 +164,11 @@ export default function ShopOrderDetailPage() {
   const router = useRouter();
   const { user } = useAuth();
   const orderId = params.id as string;
-  
+
   // Shop-based currency
-  const shopCountry = user?.shop?.country || 'NP';
+  const shopCountry = user?.shop?.country || "NP";
   const currencySymbol = getCurrencySymbol(shopCountry);
-  
+
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -178,11 +187,11 @@ export default function ShopOrderDetailPage() {
       const response = await api.get(`/orders/${orderId}`);
       setOrder(response.data);
     } catch (error) {
-      console.error('Failed to load order:', error);
+      console.error("Failed to load order:", error);
       toast({
-        variant: 'destructive',
-        title: 'Failed to load order',
-        description: 'Could not fetch order details',
+        variant: "destructive",
+        title: "Failed to load order",
+        description: "Could not fetch order details",
       });
     } finally {
       setIsLoading(false);
@@ -192,17 +201,19 @@ export default function ShopOrderDetailPage() {
   const updateStatus = async (newStatus: string) => {
     setIsUpdating(true);
     try {
-      await api.patch(`/orders/shop/${orderId}/order-status`, { detailedStatus: newStatus });
+      await api.patch(`/orders/shop/${orderId}/order-status`, {
+        detailedStatus: newStatus,
+      });
       toast({
-        title: 'Status Updated',
-        description: `Order status changed to ${newStatus.replace(/_/g, ' ')}`,
+        title: "Status Updated",
+        description: `Order status changed to ${newStatus.replace(/_/g, " ")}`,
       });
       loadOrder();
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Update Failed',
-        description: error.response?.data?.message || 'Could not update status',
+        variant: "destructive",
+        title: "Update Failed",
+        description: error.response?.data?.message || "Could not update status",
       });
     } finally {
       setIsUpdating(false);
@@ -214,16 +225,18 @@ export default function ShopOrderDetailPage() {
     try {
       await api.post(`/orders/shop/${orderId}/paid-at-shop`, {});
       toast({
-        title: 'Payment Recorded',
-        description: 'Order marked as paid at shop. A 1% commission will be due in 21 days.',
+        title: "Payment Recorded",
+        description:
+          "Order marked as paid at shop. A 1% commission will be due in 21 days.",
       });
       setIsPaidAtShopDialogOpen(false);
       loadOrder();
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Failed to Record Payment',
-        description: error.response?.data?.message || 'Could not mark as paid at shop',
+        variant: "destructive",
+        title: "Failed to Record Payment",
+        description:
+          error.response?.data?.message || "Could not mark as paid at shop",
       });
     } finally {
       setIsMarkingPaidAtShop(false);
@@ -231,19 +244,19 @@ export default function ShopOrderDetailPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency || 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency || "USD",
       minimumFractionDigits: 0,
     }).format(amount);
   };
@@ -267,7 +280,9 @@ export default function ShopOrderDetailPage() {
           <div className="text-center py-12">
             <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
             <h2 className="text-xl font-semibold">Order Not Found</h2>
-            <p className="text-muted-foreground">The order you're looking for doesn't exist.</p>
+            <p className="text-muted-foreground">
+              The order you're looking for doesn't exist.
+            </p>
             <Button onClick={() => router.back()} className="mt-4">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Go Back
@@ -300,7 +315,11 @@ export default function ShopOrderDetailPage() {
             </div>
             <div className="flex items-center gap-4">
               <OrderStatusBadge
-                orderType={(order.orderType === 'CUSTOM' ? 'CUSTOM' : 'INVENTORY') as OrderType}
+                orderType={
+                  (order.orderType === "CUSTOM"
+                    ? "CUSTOM"
+                    : "INVENTORY") as OrderType
+                }
                 currentStatus={order.detailedStatus || order.status}
               />
             </div>
@@ -310,11 +329,17 @@ export default function ShopOrderDetailPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle>Order Progress</CardTitle>
-              <CardDescription>Track the order through production stages</CardDescription>
+              <CardDescription>
+                Track the order through production stages
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <OrderStepper
-                orderType={(order.orderType === 'CUSTOM' ? 'CUSTOM' : 'INVENTORY') as OrderType}
+                orderType={
+                  (order.orderType === "CUSTOM"
+                    ? "CUSTOM"
+                    : "INVENTORY") as OrderType
+                }
                 currentStatus={order.detailedStatus || order.status}
                 statusHistory={
                   order.milestones?.map((m) => ({
@@ -344,14 +369,27 @@ export default function ShopOrderDetailPage() {
                         </div>
                         <div>
                           <p className="font-medium">
-                            {order.productSnapshot?.jewelleryType?.replace(/_/g, ' ') || order.orderType?.replace(/_/g, ' ')}
+                            {order.productSnapshot?.jewelleryType?.replace(
+                              /_/g,
+                              " ",
+                            ) || order.orderType?.replace(/_/g, " ")}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {order.productSnapshot?.buildMethod?.replace(/_/g, ' ')}
+                            {order.productSnapshot?.buildMethod?.replace(
+                              /_/g,
+                              " ",
+                            )}
                           </p>
                           {order.productSnapshot?.composition?.baseAlloy && (
                             <p className="text-sm text-muted-foreground">
-                              {order.productSnapshot.composition.baseAlloy.metal} {order.productSnapshot.composition.baseAlloy.purity}
+                              {
+                                order.productSnapshot.composition.baseAlloy
+                                  .metal
+                              }{" "}
+                              {
+                                order.productSnapshot.composition.baseAlloy
+                                  .purity
+                              }
                             </p>
                           )}
                         </div>
@@ -362,42 +400,104 @@ export default function ShopOrderDetailPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span>{currencySymbol} {order.subtotalNpr?.toLocaleString()}</span>
+                      <span>
+                        {currencySymbol} {order.subtotalNpr?.toLocaleString()}
+                      </span>
                     </div>
                     {order.shippingNpr > 0 && (
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-muted-foreground">Shipping</span>
-                        <span>{currencySymbol} {order.shippingNpr?.toLocaleString()}</span>
+                        <span>
+                          {currencySymbol} {order.shippingNpr?.toLocaleString()}
+                        </span>
                       </div>
                     )}
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">Tax</span>
-                      <span>{currencySymbol} {order.taxNpr?.toLocaleString()}</span>
+                      <span>
+                        {currencySymbol} {order.taxNpr?.toLocaleString()}
+                      </span>
                     </div>
                     {order.discountNpr > 0 && (
                       <div className="flex justify-between items-center text-sm text-green-600">
                         <span>Discount</span>
-                        <span>-{currencySymbol} {order.discountNpr?.toLocaleString()}</span>
+                        <span>
+                          -{currencySymbol}{" "}
+                          {order.discountNpr?.toLocaleString()}
+                        </span>
                       </div>
                     )}
                     <Separator className="my-2" />
                     <div className="flex justify-between items-center font-bold">
                       <span>Total</span>
-                      <span className="text-xl">{currencySymbol} {order.totalNpr?.toLocaleString()}</span>
+                      <span className="text-xl">
+                        {currencySymbol} {order.totalNpr?.toLocaleString()}
+                      </span>
                     </div>
                     {order.bookingFeePaidNpr && order.bookingFeePaidNpr > 0 && (
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">Booking Fee Paid</span>
-                        <span className="text-green-600">{currencySymbol} {order.bookingFeePaidNpr?.toLocaleString()}</span>
+                        <span className="text-muted-foreground">
+                          Booking Fee Paid
+                        </span>
+                        <span className="text-green-600">
+                          {currencySymbol}{" "}
+                          {order.bookingFeePaidNpr?.toLocaleString()}
+                        </span>
                       </div>
                     )}
                     {order.balanceDueNpr > 0 && (
                       <div className="flex justify-between items-center text-sm font-medium text-orange-600">
                         <span>Balance Due</span>
-                        <span>{currencySymbol} {order.balanceDueNpr?.toLocaleString()}</span>
+                        <span>
+                          {currencySymbol}{" "}
+                          {order.balanceDueNpr?.toLocaleString()}
+                        </span>
                       </div>
                     )}
                   </div>
+
+                  {/* Reference Images / AI Design Preview */}
+                  {order.productSnapshot?.referenceImages &&
+                    order.productSnapshot.referenceImages.length > 0 && (
+                      <>
+                        <Separator className="my-4" />
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-medium">
+                              Reference Images
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {order.productSnapshot.referenceImages.map(
+                              (url: string, idx: number) => (
+                                <div
+                                  key={idx}
+                                  className="relative aspect-square rounded-lg overflow-hidden border bg-gray-50"
+                                >
+                                  <img
+                                    src={url}
+                                    alt={`Reference ${idx + 1}`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                  {idx === 0 && (
+                                    <div className="absolute top-1 right-1">
+                                      <Badge className="bg-amber-500 text-white text-xs">
+                                        <Sparkles className="h-2 w-2 mr-1" />
+                                        AI Design
+                                      </Badge>
+                                    </div>
+                                  )}
+                                </div>
+                              ),
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Customer-provided reference images for the design.
+                          </p>
+                        </div>
+                      </>
+                    )}
                 </CardContent>
               </Card>
 
@@ -420,8 +520,12 @@ export default function ShopOrderDetailPage() {
                             )}
                           </div>
                           <div className="flex-1 pb-4">
-                            <p className="font-medium">{milestone.status.replace(/_/g, ' ')}</p>
-                            <p className="text-sm text-muted-foreground">{milestone.note}</p>
+                            <p className="font-medium">
+                              {milestone.status.replace(/_/g, " ")}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {milestone.note}
+                            </p>
                             <p className="text-xs text-muted-foreground mt-1">
                               {formatDate(milestone.createdAt)}
                             </p>
@@ -466,7 +570,10 @@ export default function ShopOrderDetailPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(order.orderType === 'CUSTOM' ? CUSTOM_STATUS_OPTIONS : PREBUILT_STATUS_OPTIONS).map((option) => (
+                      {(order.orderType === "CUSTOM"
+                        ? CUSTOM_STATUS_OPTIONS
+                        : PREBUILT_STATUS_OPTIONS
+                      ).map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
                         </SelectItem>
@@ -489,44 +596,66 @@ export default function ShopOrderDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Status</span>
-                    <Badge variant={order.paymentStatus === 'PAID' || order.paymentStatus === 'COMPLETED' ? 'default' : 'outline'}>
+                    <span className="text-sm text-muted-foreground">
+                      Status
+                    </span>
+                    <Badge
+                      variant={
+                        order.paymentStatus === "PAID" ||
+                        order.paymentStatus === "COMPLETED"
+                          ? "default"
+                          : "outline"
+                      }
+                    >
                       {order.paymentStatus}
                     </Badge>
                   </div>
                   {order.paymentMethod && (
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Method</span>
+                      <span className="text-sm text-muted-foreground">
+                        Method
+                      </span>
                       <div className="flex items-center gap-1">
-                        {order.paymentMethod === 'PAID_AT_SHOP' ? (
+                        {order.paymentMethod === "PAID_AT_SHOP" ? (
                           <Store className="h-4 w-4 text-muted-foreground" />
                         ) : (
                           <CreditCard className="h-4 w-4 text-muted-foreground" />
                         )}
                         <span className="text-sm font-medium">
-                          {order.paymentMethod.replace(/_/g, ' ')}
+                          {order.paymentMethod.replace(/_/g, " ")}
                         </span>
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Commission Info */}
                   {order.commissionLedger && (
                     <div className="mt-4 p-3 rounded-lg bg-yellow-50 border border-yellow-200">
                       <div className="flex items-center gap-2 text-yellow-800 mb-2">
                         <AlertTriangle className="h-4 w-4" />
-                        <span className="font-medium text-sm">Commission Due</span>
+                        <span className="font-medium text-sm">
+                          Commission Due
+                        </span>
                       </div>
                       <div className="text-sm text-yellow-700">
-                        <p>Amount: {currencySymbol} {order.commissionLedger.amountNpr?.toFixed(2)}</p>
-                        <p>Due: {new Date(order.commissionLedger.dueAt).toLocaleDateString()}</p>
+                        <p>
+                          Amount: {currencySymbol}{" "}
+                          {order.commissionLedger.amountNpr?.toFixed(2)}
+                        </p>
+                        <p>
+                          Due:{" "}
+                          {new Date(
+                            order.commissionLedger.dueAt,
+                          ).toLocaleDateString()}
+                        </p>
                         <p>Status: {order.commissionLedger.status}</p>
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Paid at Shop Button */}
-                  {(order.paymentStatus === 'PENDING' || order.paymentStatus === 'PARTIAL') && (
+                  {(order.paymentStatus === "PENDING" ||
+                    order.paymentStatus === "PARTIAL") && (
                     <Button
                       onClick={() => setIsPaidAtShopDialogOpen(true)}
                       className="w-full"
@@ -583,7 +712,8 @@ export default function ShopOrderDetailPage() {
                       <div className="text-sm">
                         <p>{order.shippingAddress.street}</p>
                         <p>
-                          {order.shippingAddress.city}, {order.shippingAddress.state}{' '}
+                          {order.shippingAddress.city},{" "}
+                          {order.shippingAddress.state}{" "}
                           {order.shippingAddress.postalCode}
                         </p>
                         <p>{order.shippingAddress.country}</p>
@@ -596,28 +726,38 @@ export default function ShopOrderDetailPage() {
           </div>
 
           {/* Paid at Shop Dialog */}
-          <Dialog open={isPaidAtShopDialogOpen} onOpenChange={setIsPaidAtShopDialogOpen}>
+          <Dialog
+            open={isPaidAtShopDialogOpen}
+            onOpenChange={setIsPaidAtShopDialogOpen}
+          >
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Confirm Payment at Shop</DialogTitle>
                 <DialogDescription>
-                  By marking this order as paid at shop, you agree to the following:
+                  By marking this order as paid at shop, you agree to the
+                  following:
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="rounded-lg border p-4 space-y-2">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Order Total:</span>
-                    <span className="font-bold">Rs. {(order?.totalNpr || 0).toLocaleString()}</span>
+                    <span className="font-bold">
+                      Rs. {(order?.totalNpr || 0).toLocaleString()}
+                    </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Commission (1%):</span>
+                    <span className="text-muted-foreground">
+                      Commission (1%):
+                    </span>
                     <span className="font-medium text-orange-600">
                       Rs. {((order?.totalNpr || 0) * 0.01).toLocaleString()}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Settlement Due:</span>
+                    <span className="text-muted-foreground">
+                      Settlement Due:
+                    </span>
                     <span className="font-medium">21 days from today</span>
                   </div>
                 </div>
@@ -627,7 +767,8 @@ export default function ShopOrderDetailPage() {
                     Important Notice
                   </p>
                   <p className="mt-1">
-                    The 1% commission must be settled within 21 days. Failure to pay will result in your shop being placed on hold.
+                    The 1% commission must be settled within 21 days. Failure to
+                    pay will result in your shop being placed on hold.
                   </p>
                 </div>
               </div>

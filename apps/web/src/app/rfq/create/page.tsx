@@ -477,7 +477,9 @@ export default function CreateRfqPage() {
   // Draft autosave state
   const DRAFT_STORAGE_KEY = "rfq-draft";
   const [showResumeDraftDialog, setShowResumeDraftDialog] = useState(false);
-  const [savedDraftTimestamp, setSavedDraftTimestamp] = useState<string | null>(null);
+  const [savedDraftTimestamp, setSavedDraftTimestamp] = useState<string | null>(
+    null,
+  );
   const [draftChecked, setDraftChecked] = useState(false);
 
   // Check for saved draft on mount
@@ -495,10 +497,11 @@ export default function CreateRfqPage() {
       if (savedDraft) {
         const draft = JSON.parse(savedDraft);
         // Check if draft has meaningful content (not just defaults)
-        const hasContent = draft.formData?.jewelleryType || 
-                          draft.formData?.metalType || 
-                          draft.formData?.description ||
-                          draft.designPreviewUrl;
+        const hasContent =
+          draft.formData?.jewelleryType ||
+          draft.formData?.metalType ||
+          draft.formData?.description ||
+          draft.designPreviewUrl;
         if (hasContent && draft.timestamp) {
           setSavedDraftTimestamp(draft.timestamp);
           setShowResumeDraftDialog(true);
@@ -890,11 +893,12 @@ export default function CreateRfqPage() {
     // Debounce save - wait 1 second after last change
     saveTimeoutRef.current = setTimeout(() => {
       // Only save if there's meaningful content
-      const hasContent = formData.jewelleryType || 
-                        formData.metalType || 
-                        formData.description ||
-                        designPreviewUrl;
-      
+      const hasContent =
+        formData.jewelleryType ||
+        formData.metalType ||
+        formData.description ||
+        designPreviewUrl;
+
       if (hasContent) {
         const draft = {
           formData,
@@ -912,7 +916,14 @@ export default function CreateRfqPage() {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [formData, designPreviewUrl, designId, shareToGallery, draftChecked, fromDesign]);
+  }, [
+    formData,
+    designPreviewUrl,
+    designId,
+    shareToGallery,
+    draftChecked,
+    fromDesign,
+  ]);
 
   // Fetch initial data
   useEffect(() => {
@@ -1518,7 +1529,17 @@ export default function CreateRfqPage() {
                 }))
               : undefined,
           descriptionEn: formData.description,
-          referenceImages: formData.referenceImages,
+          // Include AI preview image in referenceImages if available
+          referenceImages: designPreviewUrl
+            ? [
+                designPreviewUrl,
+                ...formData.referenceImages.filter(
+                  (img) => img !== designPreviewUrl,
+                ),
+              ]
+            : formData.referenceImages,
+          // Link to the design from gallery if coming from "Build This"
+          designId: designId || undefined,
           budgetMinNpr: parseFloat(formData.budgetMin) || 0,
           budgetMaxNpr: parseFloat(formData.budgetMax) || 0,
           deadline: formData.deadline
@@ -1623,7 +1644,10 @@ export default function CreateRfqPage() {
   return (
     <TooltipProvider>
       {/* Resume Draft Dialog */}
-      <AlertDialog open={showResumeDraftDialog} onOpenChange={setShowResumeDraftDialog}>
+      <AlertDialog
+        open={showResumeDraftDialog}
+        onOpenChange={setShowResumeDraftDialog}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
@@ -1644,7 +1668,7 @@ export default function CreateRfqPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel 
+            <AlertDialogCancel
               onClick={handleStartFresh}
               className="flex items-center gap-2"
             >

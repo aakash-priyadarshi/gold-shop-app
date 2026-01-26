@@ -209,6 +209,10 @@
       "orderPlaced": "Order Placed",
       "orderStatusUpdated": "Order Status Updated",
       "milestone": "Order Progress Update"
+    },
+    "ai_service_alert": {
+      "title": "⚠️ AI Description Service Alert",
+      "body": "The AI description generation service has been rate limited. Reason: {{reason}}. Queue size: {{queueSize}}. Service will resume at: {{resumeTime}}. Template descriptions are being used as fallback."
     }
   },
   "errors": {

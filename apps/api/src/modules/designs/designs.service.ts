@@ -15,6 +15,7 @@ import {
 } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { ImageGenerationService } from "./image-generation.service";
+import { DescriptionGeneratorService } from "./description-generator.service";
 
 interface CreateDesignDto {
   jewelryType: JewelleryType;
@@ -87,6 +88,7 @@ export class DesignsService {
   constructor(
     private prisma: PrismaService,
     private imageGenService: ImageGenerationService,
+    private descriptionGenService: DescriptionGeneratorService,
     private configService: ConfigService,
   ) {
     // Use existing Cloudflare Worker for image uploads
@@ -202,7 +204,28 @@ export class DesignsService {
         ? `${user.firstName} ${user.lastName?.charAt(0) || ""}`.trim()
         : "Anonymous");
 
-    // Create the design record
+    // Generate AI description for the design
+    // This runs in parallel-ish with image generation being already complete
+    const descriptionSpecs = {
+      jewelryType: dto.jewelryType,
+      metalType: dto.metalType || "",
+      metalColor: dto.metalColor,
+      karat: dto.alloyDetails?.karat || this.extractKaratFromMetal(dto.metalType),
+      surfaceFinish: dto.surfaceFinish,
+      hasGemstones: dto.hasGemstones || false,
+      gemstoneType: dto.primaryStone,
+      gemstoneShape: dto.stoneCut,
+      gemstoneColor: dto.stoneColor,
+      settingStyle: dto.settingStyle,
+    };
+
+    // Generate description - this will use AI with template fallback
+    const generatedDescription = await this.descriptionGenService.generateDescription(
+      specHash, // Use specHash as temporary ID, will update with real ID
+      descriptionSpecs,
+    );
+
+    // Create the design record with description
     const design = await this.prisma.design.create({
       data: {
         jewelryType: dto.jewelryType,
@@ -218,7 +241,11 @@ export class DesignsService {
         stoneCarat: dto.stoneCarat,
         stoneColor: dto.stoneColor,
         settingStyle: dto.settingStyle,
-        additionalSpecs: dto.additionalSpecs as Prisma.InputJsonValue,
+        additionalSpecs: {
+          ...(dto.additionalSpecs || {}),
+          description: generatedDescription,
+          descriptionGeneratedAt: new Date().toISOString(),
+        } as Prisma.InputJsonValue,
         generationPrompt: imageResult.prompt,
         imageUrl,
         imageHash: specHash,
@@ -242,6 +269,15 @@ export class DesignsService {
       design,
       cached: false,
     };
+  }
+
+  /**
+   * Extract karat from metal type string (e.g., "GOLD_18K" -> "18K")
+   */
+  private extractKaratFromMetal(metalType?: string): string | undefined {
+    if (!metalType) return undefined;
+    const match = metalType.match(/(\d+K)/i);
+    return match ? match[1].toUpperCase() : undefined;
   }
 
   /**

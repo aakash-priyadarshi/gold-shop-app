@@ -1,34 +1,41 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { ShopGuard } from '@/components/auth/RouteGuard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
+import { ShopGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { offersApi, rfqApi } from "@/lib/api";
 import {
   ArrowLeft,
-  FileQuestion,
-  User,
-  Clock,
-  CheckCircle,
-  Scale,
-  DollarSign,
-  Send,
-  Loader2,
   Calendar,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  FileQuestion,
+  ImageIcon,
+  Loader2,
   MessageSquare,
-  XCircle,
+  Scale,
+  Send,
   Sparkles,
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { rfqApi, offersApi } from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
+  User,
+  XCircle,
+} from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface RfqDetails {
   id: string;
@@ -86,16 +93,16 @@ interface RfqDetails {
 }
 
 const statusColors: Record<string, string> = {
-  DRAFT: 'bg-gray-100 text-gray-700',
-  PENDING: 'bg-amber-100 text-amber-700',
-  BROADCAST: 'bg-blue-100 text-blue-700',
-  SENT_TO_SHOPS: 'bg-blue-100 text-blue-700',
-  OFFERS_RECEIVED: 'bg-purple-100 text-purple-700',
-  NEGOTIATING: 'bg-orange-100 text-orange-700',
-  ACCEPTED: 'bg-green-100 text-green-700',
-  COMPLETED: 'bg-green-100 text-green-700',
-  CANCELLED: 'bg-red-100 text-red-700',
-  EXPIRED: 'bg-gray-100 text-gray-700',
+  DRAFT: "bg-gray-100 text-gray-700",
+  PENDING: "bg-amber-100 text-amber-700",
+  BROADCAST: "bg-blue-100 text-blue-700",
+  SENT_TO_SHOPS: "bg-blue-100 text-blue-700",
+  OFFERS_RECEIVED: "bg-purple-100 text-purple-700",
+  NEGOTIATING: "bg-orange-100 text-orange-700",
+  ACCEPTED: "bg-green-100 text-green-700",
+  COMPLETED: "bg-green-100 text-green-700",
+  CANCELLED: "bg-red-100 text-red-700",
+  EXPIRED: "bg-gray-100 text-gray-700",
 };
 
 export default function ShopRfqDetailPage() {
@@ -103,20 +110,22 @@ export default function ShopRfqDetailPage() {
   const router = useRouter();
   const { user } = useAuth();
   const rfqId = params.id as string;
-  
+
   const [rfq, setRfq] = useState<RfqDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [offerType, setOfferType] = useState<'ACCEPT' | 'COUNTER' | 'DECLINE'>('ACCEPT');
-  
+  const [offerType, setOfferType] = useState<"ACCEPT" | "COUNTER" | "DECLINE">(
+    "ACCEPT",
+  );
+
   // Offer form state
-  const [metalCost, setMetalCost] = useState('');
-  const [makingCharge, setMakingCharge] = useState('');
-  const [finishCost, setFinishCost] = useState('');
-  const [gemstoneCost, setGemstoneCost] = useState('');
-  const [estimatedDays, setEstimatedDays] = useState('');
-  const [shopNotes, setShopNotes] = useState('');
-  const [declineReason, setDeclineReason] = useState('');
+  const [metalCost, setMetalCost] = useState("");
+  const [makingCharge, setMakingCharge] = useState("");
+  const [finishCost, setFinishCost] = useState("");
+  const [gemstoneCost, setGemstoneCost] = useState("");
+  const [estimatedDays, setEstimatedDays] = useState("");
+  const [shopNotes, setShopNotes] = useState("");
+  const [declineReason, setDeclineReason] = useState("");
 
   useEffect(() => {
     if (rfqId) {
@@ -130,11 +139,11 @@ export default function ShopRfqDetailPage() {
       const response = await rfqApi.getById(rfqId);
       setRfq(response.data);
     } catch (error) {
-      console.error('Failed to load RFQ:', error);
+      console.error("Failed to load RFQ:", error);
       toast({
-        variant: 'destructive',
-        title: 'Failed to load RFQ',
-        description: 'Could not fetch RFQ details',
+        variant: "destructive",
+        title: "Failed to load RFQ",
+        description: "Could not fetch RFQ details",
       });
     } finally {
       setIsLoading(false);
@@ -142,20 +151,24 @@ export default function ShopRfqDetailPage() {
   };
 
   const submitOffer = async () => {
-    if (offerType === 'DECLINE' && !declineReason) {
+    if (offerType === "DECLINE" && !declineReason) {
       toast({
-        variant: 'destructive',
-        title: 'Missing Reason',
-        description: 'Please provide a reason for declining',
+        variant: "destructive",
+        title: "Missing Reason",
+        description: "Please provide a reason for declining",
       });
       return;
     }
 
-    if (offerType !== 'DECLINE' && (!metalCost || !makingCharge || !estimatedDays)) {
+    if (
+      offerType !== "DECLINE" &&
+      (!metalCost || !makingCharge || !estimatedDays)
+    ) {
       toast({
-        variant: 'destructive',
-        title: 'Missing Fields',
-        description: 'Please fill in metal cost, making charge, and estimated days',
+        variant: "destructive",
+        title: "Missing Fields",
+        description:
+          "Please fill in metal cost, making charge, and estimated days",
       });
       return;
     }
@@ -165,37 +178,40 @@ export default function ShopRfqDetailPage() {
       await offersApi.create({
         rfqId,
         offerType,
-        ...(offerType === 'DECLINE'
+        ...(offerType === "DECLINE"
           ? { declineReason }
           : {
               metalCostNpr: parseFloat(metalCost),
               makingChargeNpr: parseFloat(makingCharge),
               finishCostNpr: finishCost ? parseFloat(finishCost) : undefined,
-              gemstoneCostNpr: gemstoneCost ? parseFloat(gemstoneCost) : undefined,
+              gemstoneCostNpr: gemstoneCost
+                ? parseFloat(gemstoneCost)
+                : undefined,
               estimatedDays: parseInt(estimatedDays),
               shopNotes: shopNotes || undefined,
             }),
       });
       toast({
-        title: offerType === 'DECLINE' ? 'Request Declined' : 'Offer Submitted',
-        description: offerType === 'DECLINE' 
-          ? 'You have declined this request' 
-          : 'Your quote has been sent to the customer',
+        title: offerType === "DECLINE" ? "Request Declined" : "Offer Submitted",
+        description:
+          offerType === "DECLINE"
+            ? "You have declined this request"
+            : "Your quote has been sent to the customer",
       });
       loadRfq();
       // Reset form
-      setMetalCost('');
-      setMakingCharge('');
-      setFinishCost('');
-      setGemstoneCost('');
-      setEstimatedDays('');
-      setShopNotes('');
-      setDeclineReason('');
+      setMetalCost("");
+      setMakingCharge("");
+      setFinishCost("");
+      setGemstoneCost("");
+      setEstimatedDays("");
+      setShopNotes("");
+      setDeclineReason("");
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Submission Failed',
-        description: error.response?.data?.message || 'Could not submit offer',
+        variant: "destructive",
+        title: "Submission Failed",
+        description: error.response?.data?.message || "Could not submit offer",
       });
     } finally {
       setIsSubmitting(false);
@@ -203,24 +219,27 @@ export default function ShopRfqDetailPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
   const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency || 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency || "USD",
       minimumFractionDigits: 0,
     }).format(amount);
   };
 
   // Check if shop has already submitted an offer
   const myOffer = rfq?.offers?.find((o) => o.shopId === user?.shop?.id);
-  const canSubmitOffer = ['PENDING', 'BROADCAST', 'SENT_TO_SHOPS', 'OFFERS_RECEIVED'].includes(rfq?.status || '') && !myOffer;
+  const canSubmitOffer =
+    ["PENDING", "BROADCAST", "SENT_TO_SHOPS", "OFFERS_RECEIVED"].includes(
+      rfq?.status || "",
+    ) && !myOffer;
 
   if (isLoading) {
     return (
@@ -241,7 +260,9 @@ export default function ShopRfqDetailPage() {
           <div className="text-center py-12">
             <FileQuestion className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
             <h2 className="text-xl font-semibold">RFQ Not Found</h2>
-            <p className="text-muted-foreground">The request you're looking for doesn't exist.</p>
+            <p className="text-muted-foreground">
+              The request you're looking for doesn't exist.
+            </p>
             <Button onClick={() => router.back()} className="mt-4">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Go Back
@@ -270,8 +291,8 @@ export default function ShopRfqDetailPage() {
                 </p>
               </div>
             </div>
-            <Badge className={statusColors[rfq.status] || 'bg-gray-100'}>
-              {rfq.status.replace(/_/g, ' ')}
+            <Badge className={statusColors[rfq.status] || "bg-gray-100"}>
+              {rfq.status.replace(/_/g, " ")}
             </Badge>
           </div>
 
@@ -286,45 +307,67 @@ export default function ShopRfqDetailPage() {
                 <CardContent className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-muted-foreground">Jewellery Type</Label>
-                      <p className="font-medium">{rfq.jewelleryType?.replace(/_/g, ' ')}</p>
+                      <Label className="text-muted-foreground">
+                        Jewellery Type
+                      </Label>
+                      <p className="font-medium">
+                        {rfq.jewelleryType?.replace(/_/g, " ")}
+                      </p>
                     </div>
                     <div>
-                      <Label className="text-muted-foreground">Build Method</Label>
-                      <p className="font-medium">{rfq.buildMethod?.replace(/_/g, ' ')}</p>
+                      <Label className="text-muted-foreground">
+                        Build Method
+                      </Label>
+                      <p className="font-medium">
+                        {rfq.buildMethod?.replace(/_/g, " ")}
+                      </p>
                     </div>
                     {rfq.composition?.baseAlloy && (
                       <div>
-                        <Label className="text-muted-foreground">Base Metal</Label>
+                        <Label className="text-muted-foreground">
+                          Base Metal
+                        </Label>
                         <p className="font-medium">
-                          {rfq.composition.baseAlloy.metal} {rfq.composition.baseAlloy.purity}
+                          {rfq.composition.baseAlloy.metal}{" "}
+                          {rfq.composition.baseAlloy.purity}
                         </p>
                       </div>
                     )}
                     {rfq.composition?.outerLayer && (
                       <div>
-                        <Label className="text-muted-foreground">Outer Layer</Label>
+                        <Label className="text-muted-foreground">
+                          Outer Layer
+                        </Label>
                         <p className="font-medium">
-                          {rfq.composition.outerLayer.metal} {rfq.composition.outerLayer.purity}
+                          {rfq.composition.outerLayer.metal}{" "}
+                          {rfq.composition.outerLayer.purity}
                         </p>
                       </div>
                     )}
                     {rfq.targetTotalWeightG && (
                       <div>
-                        <Label className="text-muted-foreground">Target Weight</Label>
+                        <Label className="text-muted-foreground">
+                          Target Weight
+                        </Label>
                         <div className="flex items-center gap-1">
                           <Scale className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{rfq.targetTotalWeightG}g</span>
+                          <span className="font-medium">
+                            {rfq.targetTotalWeightG}g
+                          </span>
                         </div>
                       </div>
                     )}
                     <div>
-                      <Label className="text-muted-foreground">Budget Range</Label>
+                      <Label className="text-muted-foreground">
+                        Budget Range
+                      </Label>
                       {rfq.budgetMaxNpr ? (
                         <div className="flex items-center gap-1">
                           <DollarSign className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium">
-                            {rfq.budgetMinNpr ? `Rs. ${rfq.budgetMinNpr.toLocaleString()} - ` : ''}
+                            {rfq.budgetMinNpr
+                              ? `Rs. ${rfq.budgetMinNpr.toLocaleString()} - `
+                              : ""}
                             Rs. {rfq.budgetMaxNpr.toLocaleString()}
                           </span>
                         </div>
@@ -334,14 +377,20 @@ export default function ShopRfqDetailPage() {
                     </div>
                     {rfq.surfaceFinish && (
                       <div>
-                        <Label className="text-muted-foreground">Surface Finish</Label>
+                        <Label className="text-muted-foreground">
+                          Surface Finish
+                        </Label>
                         <p className="font-medium">{rfq.surfaceFinish}</p>
                       </div>
                     )}
                     {rfq.preferredDeliveryDays && (
                       <div>
-                        <Label className="text-muted-foreground">Preferred Delivery</Label>
-                        <p className="font-medium">{rfq.preferredDeliveryDays} days</p>
+                        <Label className="text-muted-foreground">
+                          Preferred Delivery
+                        </Label>
+                        <p className="font-medium">
+                          {rfq.preferredDeliveryDays} days
+                        </p>
                       </div>
                     )}
                   </div>
@@ -350,7 +399,9 @@ export default function ShopRfqDetailPage() {
                     <>
                       <Separator />
                       <div>
-                        <Label className="text-muted-foreground">Special Instructions</Label>
+                        <Label className="text-muted-foreground">
+                          Special Instructions
+                        </Label>
                         <p className="mt-1">{rfq.specialInstructions}</p>
                       </div>
                     </>
@@ -366,14 +417,59 @@ export default function ShopRfqDetailPage() {
                         </Label>
                         <div className="mt-2 space-y-2">
                           {rfq.gemstones.map((gem, idx) => (
-                            <div key={gem.id || idx} className="flex justify-between text-sm bg-gray-50 p-2 rounded">
-                              <span>{gem.stoneType} ({gem.shape})</span>
+                            <div
+                              key={gem.id || idx}
+                              className="flex justify-between text-sm bg-gray-50 p-2 rounded"
+                            >
+                              <span>
+                                {gem.stoneType} ({gem.shape})
+                              </span>
                               <span className="text-muted-foreground">
-                                {gem.count}x {gem.caratWeight && `${gem.caratWeight}ct`}
+                                {gem.count}x{" "}
+                                {gem.caratWeight && `${gem.caratWeight}ct`}
                               </span>
                             </div>
                           ))}
                         </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Reference Images / AI Design Preview */}
+                  {rfq.referenceImages && rfq.referenceImages.length > 0 && (
+                    <>
+                      <Separator />
+                      <div>
+                        <Label className="text-muted-foreground flex items-center gap-2">
+                          <ImageIcon className="h-4 w-4" />
+                          Reference Images
+                        </Label>
+                        <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {rfq.referenceImages.map((url, idx) => (
+                            <div
+                              key={idx}
+                              className="relative aspect-square rounded-lg overflow-hidden border bg-gray-50"
+                            >
+                              <img
+                                src={url}
+                                alt={`Reference ${idx + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                              {idx === 0 && (
+                                <div className="absolute top-1 right-1">
+                                  <Badge className="bg-amber-500 text-white text-xs">
+                                    <Sparkles className="h-2 w-2 mr-1" />
+                                    AI Design
+                                  </Badge>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Customer-provided reference images for the desired
+                          design.
+                        </p>
                       </div>
                     </>
                   )}
@@ -394,8 +490,8 @@ export default function ShopRfqDetailPage() {
                     <div className="flex gap-2">
                       <Button
                         type="button"
-                        variant={offerType === 'ACCEPT' ? 'default' : 'outline'}
-                        onClick={() => setOfferType('ACCEPT')}
+                        variant={offerType === "ACCEPT" ? "default" : "outline"}
+                        onClick={() => setOfferType("ACCEPT")}
                         className="flex-1"
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
@@ -403,8 +499,10 @@ export default function ShopRfqDetailPage() {
                       </Button>
                       <Button
                         type="button"
-                        variant={offerType === 'COUNTER' ? 'default' : 'outline'}
-                        onClick={() => setOfferType('COUNTER')}
+                        variant={
+                          offerType === "COUNTER" ? "default" : "outline"
+                        }
+                        onClick={() => setOfferType("COUNTER")}
                         className="flex-1"
                       >
                         <MessageSquare className="h-4 w-4 mr-2" />
@@ -412,8 +510,10 @@ export default function ShopRfqDetailPage() {
                       </Button>
                       <Button
                         type="button"
-                        variant={offerType === 'DECLINE' ? 'destructive' : 'outline'}
-                        onClick={() => setOfferType('DECLINE')}
+                        variant={
+                          offerType === "DECLINE" ? "destructive" : "outline"
+                        }
+                        onClick={() => setOfferType("DECLINE")}
                         className="flex-1"
                       >
                         <XCircle className="h-4 w-4 mr-2" />
@@ -421,9 +521,11 @@ export default function ShopRfqDetailPage() {
                       </Button>
                     </div>
 
-                    {offerType === 'DECLINE' ? (
+                    {offerType === "DECLINE" ? (
                       <div className="space-y-2">
-                        <Label htmlFor="declineReason">Reason for Declining</Label>
+                        <Label htmlFor="declineReason">
+                          Reason for Declining
+                        </Label>
                         <Textarea
                           id="declineReason"
                           placeholder="Please provide a reason..."
@@ -436,7 +538,9 @@ export default function ShopRfqDetailPage() {
                       <>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="metalCost">Metal Cost (NPR) *</Label>
+                            <Label htmlFor="metalCost">
+                              Metal Cost (NPR) *
+                            </Label>
                             <Input
                               id="metalCost"
                               type="number"
@@ -446,7 +550,9 @@ export default function ShopRfqDetailPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="makingCharge">Making Charge (NPR) *</Label>
+                            <Label htmlFor="makingCharge">
+                              Making Charge (NPR) *
+                            </Label>
                             <Input
                               id="makingCharge"
                               type="number"
@@ -458,7 +564,9 @@ export default function ShopRfqDetailPage() {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="finishCost">Finish Cost (NPR)</Label>
+                            <Label htmlFor="finishCost">
+                              Finish Cost (NPR)
+                            </Label>
                             <Input
                               id="finishCost"
                               type="number"
@@ -468,7 +576,9 @@ export default function ShopRfqDetailPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="gemstoneCost">Gemstone Cost (NPR)</Label>
+                            <Label htmlFor="gemstoneCost">
+                              Gemstone Cost (NPR)
+                            </Label>
                             <Input
                               id="gemstoneCost"
                               type="number"
@@ -479,7 +589,9 @@ export default function ShopRfqDetailPage() {
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="estimatedDays">Estimated Delivery (days) *</Label>
+                          <Label htmlFor="estimatedDays">
+                            Estimated Delivery (days) *
+                          </Label>
                           <Input
                             id="estimatedDays"
                             type="number"
@@ -499,11 +611,17 @@ export default function ShopRfqDetailPage() {
                           />
                         </div>
                         {/* Total Preview */}
-                        {(metalCost || makingCharge || finishCost || gemstoneCost) && (
+                        {(metalCost ||
+                          makingCharge ||
+                          finishCost ||
+                          gemstoneCost) && (
                           <div className="bg-gray-50 p-3 rounded-md">
-                            <p className="text-sm text-muted-foreground">Estimated Total</p>
+                            <p className="text-sm text-muted-foreground">
+                              Estimated Total
+                            </p>
                             <p className="text-lg font-bold">
-                              Rs. {(
+                              Rs.{" "}
+                              {(
                                 (parseFloat(metalCost) || 0) +
                                 (parseFloat(makingCharge) || 0) +
                                 (parseFloat(finishCost) || 0) +
@@ -519,14 +637,16 @@ export default function ShopRfqDetailPage() {
                       onClick={submitOffer}
                       disabled={isSubmitting}
                       className="w-full"
-                      variant={offerType === 'DECLINE' ? 'destructive' : 'default'}
+                      variant={
+                        offerType === "DECLINE" ? "destructive" : "default"
+                      }
                     >
                       {isSubmitting ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           Submitting...
                         </>
-                      ) : offerType === 'DECLINE' ? (
+                      ) : offerType === "DECLINE" ? (
                         <>
                           <XCircle className="h-4 w-4 mr-2" />
                           Decline Request
@@ -534,7 +654,8 @@ export default function ShopRfqDetailPage() {
                       ) : (
                         <>
                           <Send className="h-4 w-4 mr-2" />
-                          Submit {offerType === 'COUNTER' ? 'Counter-Offer' : 'Quote'}
+                          Submit{" "}
+                          {offerType === "COUNTER" ? "Counter-Offer" : "Quote"}
                         </>
                       )}
                     </Button>
@@ -544,10 +665,18 @@ export default function ShopRfqDetailPage() {
 
               {/* My Offer (if submitted) */}
               {myOffer && (
-                <Card className={myOffer.offerType === 'DECLINE' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
+                <Card
+                  className={
+                    myOffer.offerType === "DECLINE"
+                      ? "border-red-200 bg-red-50"
+                      : "border-green-200 bg-green-50"
+                  }
+                >
                   <CardHeader>
-                    <CardTitle className={`flex items-center gap-2 ${myOffer.offerType === 'DECLINE' ? 'text-red-800' : 'text-green-800'}`}>
-                      {myOffer.offerType === 'DECLINE' ? (
+                    <CardTitle
+                      className={`flex items-center gap-2 ${myOffer.offerType === "DECLINE" ? "text-red-800" : "text-green-800"}`}
+                    >
+                      {myOffer.offerType === "DECLINE" ? (
                         <>
                           <XCircle className="h-5 w-5" />
                           You Declined This Request
@@ -561,39 +690,62 @@ export default function ShopRfqDetailPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {myOffer.offerType !== 'DECLINE' ? (
+                    {myOffer.offerType !== "DECLINE" ? (
                       <>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                           <div>
-                            <Label className="text-muted-foreground">Metal Cost</Label>
-                            <p className="font-medium">Rs. {myOffer.metalCostNpr?.toLocaleString() || 0}</p>
+                            <Label className="text-muted-foreground">
+                              Metal Cost
+                            </Label>
+                            <p className="font-medium">
+                              Rs. {myOffer.metalCostNpr?.toLocaleString() || 0}
+                            </p>
                           </div>
                           <div>
-                            <Label className="text-muted-foreground">Making Charge</Label>
-                            <p className="font-medium">Rs. {myOffer.makingChargeNpr?.toLocaleString() || 0}</p>
+                            <Label className="text-muted-foreground">
+                              Making Charge
+                            </Label>
+                            <p className="font-medium">
+                              Rs.{" "}
+                              {myOffer.makingChargeNpr?.toLocaleString() || 0}
+                            </p>
                           </div>
                           <div>
-                            <Label className="text-muted-foreground">Total</Label>
-                            <p className="font-medium text-lg">Rs. {myOffer.totalPriceNpr?.toLocaleString() || 0}</p>
+                            <Label className="text-muted-foreground">
+                              Total
+                            </Label>
+                            <p className="font-medium text-lg">
+                              Rs. {myOffer.totalPriceNpr?.toLocaleString() || 0}
+                            </p>
                           </div>
                           <div>
-                            <Label className="text-muted-foreground">Delivery</Label>
-                            <p className="font-medium">{myOffer.estimatedDays} days</p>
+                            <Label className="text-muted-foreground">
+                              Delivery
+                            </Label>
+                            <p className="font-medium">
+                              {myOffer.estimatedDays} days
+                            </p>
                           </div>
                         </div>
                         <div className="mt-4 flex items-center gap-2">
-                          <Label className="text-muted-foreground">Status:</Label>
+                          <Label className="text-muted-foreground">
+                            Status:
+                          </Label>
                           <Badge variant="outline">{myOffer.status}</Badge>
                         </div>
                         {myOffer.shopNotes && (
                           <div className="mt-4">
-                            <Label className="text-muted-foreground">Your Notes</Label>
+                            <Label className="text-muted-foreground">
+                              Your Notes
+                            </Label>
                             <p className="text-sm mt-1">{myOffer.shopNotes}</p>
                           </div>
                         )}
                       </>
                     ) : (
-                      <p className="text-muted-foreground">You have declined this request.</p>
+                      <p className="text-muted-foreground">
+                        You have declined this request.
+                      </p>
                     )}
                   </CardContent>
                 </Card>
@@ -650,7 +802,9 @@ export default function ShopRfqDetailPage() {
                 <CardContent>
                   <div className="flex items-center gap-2">
                     <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-2xl font-bold">{rfq.offers?.length || 0}</span>
+                    <span className="text-2xl font-bold">
+                      {rfq.offers?.length || 0}
+                    </span>
                     <span className="text-muted-foreground">total offers</span>
                   </div>
                 </CardContent>

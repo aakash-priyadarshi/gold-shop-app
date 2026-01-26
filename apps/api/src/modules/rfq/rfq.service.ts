@@ -1,17 +1,21 @@
 import {
-  Injectable,
   BadRequestException,
-  NotFoundException,
   ForbiddenException,
-} from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { ShopsService } from '../shops/shops.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import { AuditService } from '../audit/audit.service';
-import { CreateRfqDto } from './dto/create-rfq.dto';
-import { BroadcastRfqDto } from './dto/broadcast-rfq.dto';
-import { RfqStatus, BuildMethod, JewelleryType } from '@prisma/client';
-import { validateComposition, validateMethodDRequirements, ValidationResult } from './validation/composition-validator';
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { BuildMethod, JewelleryType, RfqStatus } from "@prisma/client";
+import { PrismaService } from "../../prisma/prisma.service";
+import { AuditService } from "../audit/audit.service";
+import { NotificationsService } from "../notifications/notifications.service";
+import { ShopsService } from "../shops/shops.service";
+import { BroadcastRfqDto } from "./dto/broadcast-rfq.dto";
+import { CreateRfqDto } from "./dto/create-rfq.dto";
+import {
+  validateComposition,
+  validateMethodDRequirements,
+  ValidationResult,
+} from "./validation/composition-validator";
 
 @Injectable()
 export class RfqService {
@@ -28,10 +32,10 @@ export class RfqService {
   async create(customerId: string, dto: CreateRfqDto) {
     // Validate composition based on build method
     const validationResult = this.validateBuildMethodComposition(dto);
-    
+
     if (!validationResult.isValid) {
       throw new BadRequestException({
-        message: 'Invalid composition for selected build method',
+        message: "Invalid composition for selected build method",
         errors: validationResult.errors,
       });
     }
@@ -45,6 +49,7 @@ export class RfqService {
         jewelleryType: dto.jewelleryType as JewelleryType,
         buildMethod: dto.buildMethod as BuildMethod,
         composition: JSON.parse(JSON.stringify(dto.composition)),
+        designId: dto.designId, // Link to Design Gallery if from "Build This"
         targetTotalWeightG: dto.targetTotalWeightG,
         targetGoldWeightG: dto.targetGoldWeightG,
         budgetMinNpr: dto.budgetMinNpr,
@@ -61,11 +66,14 @@ export class RfqService {
 
     await this.auditService.log({
       userId: customerId,
-      actorType: 'USER',
-      action: 'CREATE',
-      resourceType: 'RFQ',
+      actorType: "USER",
+      action: "CREATE",
+      resourceType: "RFQ",
       resourceId: rfq.id,
-      newValue: { buildMethod: dto.buildMethod, jewelleryType: dto.jewelleryType },
+      newValue: {
+        buildMethod: dto.buildMethod,
+        jewelleryType: dto.jewelleryType,
+      },
     });
 
     return rfq;
@@ -81,7 +89,7 @@ export class RfqService {
     });
 
     if (!rfq) {
-      throw new NotFoundException('RFQ not found');
+      throw new NotFoundException("RFQ not found");
     }
 
     // Filter shops by capabilities
@@ -117,35 +125,42 @@ export class RfqService {
 
     // Get system default gold rate for fallback
     const systemRate = await this.prisma.marketRate.findFirst({
-      where: { metalCode: 'XAU', country: 'NP' },
-      orderBy: { validFrom: 'desc' },
+      where: { metalCode: "XAU", country: "NP" },
+      orderBy: { validFrom: "desc" },
     });
     const defaultGoldRatePerGram = systemRate?.ratePerGram || 10000;
 
     // Calculate price estimate and rating for each shop
     const shopsWithPrices = shops.map((shop) => {
       // Get shop's gold rate or fall back to system rate
-      const shopGoldRate = shop.metalRates.find(r => 
-        r.metalType === 'GOLD_24K' || r.metalType === 'GOLD_22K'
+      const shopGoldRate = shop.metalRates.find(
+        (r) => r.metalType === "GOLD_24K" || r.metalType === "GOLD_22K",
       );
-      const goldRatePerGram = shopGoldRate?.ratePerGramNpr || defaultGoldRatePerGram;
-      
+      const goldRatePerGram =
+        shopGoldRate?.ratePerGramNpr || defaultGoldRatePerGram;
+
       // Estimate price based on target weight
-      const targetWeight = rfq.targetGoldWeightG || rfq.targetTotalWeightG || 10;
+      const targetWeight =
+        rfq.targetGoldWeightG || rfq.targetTotalWeightG || 10;
       const metalCost = targetWeight * goldRatePerGram;
       const makingCharge = metalCost * ((shop.makingChargePercent || 10) / 100);
       const estimatedPrice = Math.round(metalCost + makingCharge);
 
       // Calculate average rating
-      const averageRating = shop.ratings.length > 0
-        ? shop.ratings.reduce((sum, r) => sum + r.overall, 0) / shop.ratings.length
-        : null;
+      const averageRating =
+        shop.ratings.length > 0
+          ? shop.ratings.reduce((sum, r) => sum + r.overall, 0) /
+            shop.ratings.length
+          : null;
 
       // Calculate location priority (1=same city, 2=same country, 3=global)
       let locationPriority = 3;
-      if (customerCity && shop.city.toLowerCase() === customerCity.toLowerCase()) {
+      if (
+        customerCity &&
+        shop.city.toLowerCase() === customerCity.toLowerCase()
+      ) {
         locationPriority = 1;
-      } else if (shop.country === 'NP') {
+      } else if (shop.country === "NP") {
         locationPriority = 2;
       }
 
@@ -186,24 +201,28 @@ export class RfqService {
     });
 
     if (!rfq) {
-      throw new NotFoundException('RFQ not found');
+      throw new NotFoundException("RFQ not found");
     }
 
     if (rfq.customerId !== customerId) {
-      throw new ForbiddenException('Not authorized to broadcast this RFQ');
+      throw new ForbiddenException("Not authorized to broadcast this RFQ");
     }
 
     if (rfq.status !== RfqStatus.DRAFT) {
-      throw new BadRequestException('RFQ has already been broadcast');
+      throw new BadRequestException("RFQ has already been broadcast");
     }
 
     // Validate shops exist and have capabilities
-    const eligibleShopIds = (await this.getEligibleShops(rfqId)).map((s) => s.id);
-    const invalidShops = dto.shopIds.filter((id) => !eligibleShopIds.includes(id));
+    const eligibleShopIds = (await this.getEligibleShops(rfqId)).map(
+      (s) => s.id,
+    );
+    const invalidShops = dto.shopIds.filter(
+      (id) => !eligibleShopIds.includes(id),
+    );
 
     if (invalidShops.length > 0) {
       throw new BadRequestException(
-        `Some shops are not eligible for this RFQ: ${invalidShops.join(', ')}`,
+        `Some shops are not eligible for this RFQ: ${invalidShops.join(", ")}`,
       );
     }
 
@@ -248,25 +267,25 @@ export class RfqService {
       if (shop) {
         await this.notificationsService.create({
           userId: shop.userId,
-          type: 'RFQ_RECEIVED',
-          titleKey: 'notification.rfqReceived.title',
-          bodyKey: 'notification.rfqReceived.body',
+          type: "RFQ_RECEIVED",
+          titleKey: "notification.rfqReceived.title",
+          bodyKey: "notification.rfqReceived.body",
           bodyParams: {
             jewelleryType: rfq.jewelleryType,
             buildMethod: rfq.buildMethod,
           },
-          referenceType: 'RFQ',
+          referenceType: "RFQ",
           referenceId: rfqId,
-          channels: ['EMAIL', 'PUSH'],
+          channels: ["EMAIL", "PUSH"],
         });
       }
     }
 
     await this.auditService.log({
       userId: customerId,
-      actorType: 'USER',
-      action: 'BROADCAST',
-      resourceType: 'RFQ',
+      actorType: "USER",
+      action: "BROADCAST",
+      resourceType: "RFQ",
       resourceId: rfqId,
       newValue: { shopCount: dto.shopIds.length },
     });
@@ -274,7 +293,7 @@ export class RfqService {
     return {
       ...updatedRfq,
       message: `RFQ sent to ${dto.shopIds.length} shops`,
-      messageKey: 'helper.rfqSentToShops',
+      messageKey: "helper.rfqSentToShops",
       messageParams: { count: dto.shopIds.length },
     };
   }
@@ -313,7 +332,7 @@ export class RfqService {
             },
           },
           orderBy: {
-            createdAt: 'desc',
+            createdAt: "desc",
           },
         },
         selectedOffer: true,
@@ -321,7 +340,7 @@ export class RfqService {
     });
 
     if (!rfq) {
-      throw new NotFoundException('RFQ not found');
+      throw new NotFoundException("RFQ not found");
     }
 
     // Access control
@@ -329,8 +348,8 @@ export class RfqService {
     const isShopkeeper = rfq.targetedShops.some(
       (t) => t.shopId === userId, // This would need shop lookup
     );
-    const isAdmin = userRole === 'ADMIN';
-    const isSupport = userRole === 'SUPPORT';
+    const isAdmin = userRole === "ADMIN";
+    const isSupport = userRole === "SUPPORT";
 
     if (!isCustomer && !isAdmin && !isSupport) {
       // Check if user is a targeted shopkeeper
@@ -338,8 +357,11 @@ export class RfqService {
         where: { userId },
       });
 
-      if (!userShop || !rfq.targetedShops.some((t) => t.shopId === userShop.id)) {
-        throw new ForbiddenException('Not authorized to view this RFQ');
+      if (
+        !userShop ||
+        !rfq.targetedShops.some((t) => t.shopId === userShop.id)
+      ) {
+        throw new ForbiddenException("Not authorized to view this RFQ");
       }
     }
 
@@ -370,7 +392,7 @@ export class RfqService {
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
     });
   }
@@ -409,7 +431,7 @@ export class RfqService {
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
     });
   }
@@ -425,14 +447,15 @@ export class RfqService {
     const result = validateComposition(composition);
 
     // Additional METHOD_D validation
-    if (dto.buildMethod === 'METHOD_D') {
+    if (dto.buildMethod === "METHOD_D") {
       if (!validateMethodDRequirements(composition)) {
         result.isValid = false;
         result.errors.push({
-          code: 'METHOD_D_REQUIREMENTS_NOT_MET',
-          field: 'composition',
-          message: 'Method D requires pattern, mode, and at least one weight specification',
-          messageKey: 'validation.methodD.requirementsNotMet',
+          code: "METHOD_D_REQUIREMENTS_NOT_MET",
+          field: "composition",
+          message:
+            "Method D requires pattern, mode, and at least one weight specification",
+          messageKey: "validation.methodD.requirementsNotMet",
         });
       }
     }
@@ -443,11 +466,13 @@ export class RfqService {
   /**
    * Estimate price range based on current market rates
    */
-  private async estimatePriceRange(dto: CreateRfqDto): Promise<{ min: number; max: number }> {
+  private async estimatePriceRange(
+    dto: CreateRfqDto,
+  ): Promise<{ min: number; max: number }> {
     // Get average market rates
     const marketRates = await this.prisma.marketRate.findMany({
       where: {
-        country: 'NP', // Default to Nepal
+        country: "NP", // Default to Nepal
         validUntil: null,
       },
     });
@@ -456,16 +481,16 @@ export class RfqService {
     let baseRate = 0;
     const composition = dto.composition as any;
 
-    if (dto.buildMethod === 'METHOD_A' || dto.buildMethod === 'METHOD_B') {
+    if (dto.buildMethod === "METHOD_A" || dto.buildMethod === "METHOD_B") {
       // For solid/alloy methods, use gold rate
-      const goldRate = marketRates.find((r) => r.metalCode === 'GOLD_24K');
+      const goldRate = marketRates.find((r) => r.metalCode === "GOLD_24K");
       baseRate = goldRate?.ratePerGram || 10000; // Default fallback
-    } else if (dto.buildMethod === 'METHOD_C') {
+    } else if (dto.buildMethod === "METHOD_C") {
       // For plated items, use base metal rate + plating cost
       baseRate = 500; // Base metal average
-    } else if (dto.buildMethod === 'METHOD_D') {
+    } else if (dto.buildMethod === "METHOD_D") {
       // Multi-metal: weighted calculation
-      const goldRate = marketRates.find((r) => r.metalCode === 'GOLD_24K');
+      const goldRate = marketRates.find((r) => r.metalCode === "GOLD_24K");
       const goldPercent = composition.modeConfig?.goldPercentByWeight || 50;
       baseRate = ((goldRate?.ratePerGram || 10000) * goldPercent) / 100 + 200;
     }
@@ -473,7 +498,7 @@ export class RfqService {
     const weight = dto.targetTotalWeightG || 10; // Default 10g
     const basePrice = baseRate * weight;
     const makingChargeMin = basePrice * 0.08;
-    const makingChargeMax = basePrice * 0.20;
+    const makingChargeMax = basePrice * 0.2;
 
     return {
       min: Math.round(basePrice + makingChargeMin),
@@ -507,24 +532,27 @@ export class RfqService {
     });
 
     if (!rfq) {
-      throw new NotFoundException('RFQ not found');
+      throw new NotFoundException("RFQ not found");
     }
 
     if (rfq.customerId !== customerId) {
-      throw new ForbiddenException('Not authorized');
+      throw new ForbiddenException("Not authorized");
     }
 
-    if (rfq.status !== RfqStatus.OFFERS_RECEIVED && rfq.status !== RfqStatus.SENT_TO_SHOPS) {
-      throw new BadRequestException('Cannot select offer at this stage');
+    if (
+      rfq.status !== RfqStatus.OFFERS_RECEIVED &&
+      rfq.status !== RfqStatus.SENT_TO_SHOPS
+    ) {
+      throw new BadRequestException("Cannot select offer at this stage");
     }
 
     const offer = rfq.offers.find((o) => o.id === offerId);
     if (!offer) {
-      throw new BadRequestException('Offer not found for this RFQ');
+      throw new BadRequestException("Offer not found for this RFQ");
     }
 
-    if (offer.status !== 'ACCEPTED' && offer.status !== 'COUNTERED') {
-      throw new BadRequestException('Cannot select this offer');
+    if (offer.status !== "ACCEPTED" && offer.status !== "COUNTERED") {
+      throw new BadRequestException("Cannot select this offer");
     }
 
     // Update RFQ and offer
@@ -542,7 +570,7 @@ export class RfqService {
       await tx.rfqOffer.update({
         where: { id: offerId },
         data: {
-          status: 'SELECTED',
+          status: "SELECTED",
           paymentDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
         },
       });
@@ -552,9 +580,9 @@ export class RfqService {
         where: {
           rfqId,
           id: { not: offerId },
-          status: { in: ['PENDING', 'ACCEPTED', 'COUNTERED'] },
+          status: { in: ["PENDING", "ACCEPTED", "COUNTERED"] },
         },
-        data: { status: 'EXPIRED' },
+        data: { status: "EXPIRED" },
       });
 
       return tx.rfqOffer.findUnique({
@@ -567,20 +595,20 @@ export class RfqService {
     if (result) {
       await this.notificationsService.create({
         userId: result.shop.userId,
-        type: 'OFFER_SELECTED',
-        titleKey: 'notification.offerSelected.title',
-        bodyKey: 'notification.offerSelected.body',
-        referenceType: 'OFFER',
+        type: "OFFER_SELECTED",
+        titleKey: "notification.offerSelected.title",
+        bodyKey: "notification.offerSelected.body",
+        referenceType: "OFFER",
         referenceId: offerId,
-        channels: ['EMAIL', 'PUSH', 'SMS'],
+        channels: ["EMAIL", "PUSH", "SMS"],
       });
     }
 
     await this.auditService.log({
       userId: customerId,
-      actorType: 'USER',
-      action: 'SELECT_OFFER',
-      resourceType: 'RFQ',
+      actorType: "USER",
+      action: "SELECT_OFFER",
+      resourceType: "RFQ",
       resourceId: rfqId,
       newValue: { offerId },
     });
@@ -588,8 +616,8 @@ export class RfqService {
     return {
       rfqId,
       offerId,
-      message: 'Offer selected. Please pay booking fee within 24 hours.',
-      messageKey: 'helper.offerSelected',
+      message: "Offer selected. Please pay booking fee within 24 hours.",
+      messageKey: "helper.offerSelected",
       paymentDeadline: result?.paymentDeadline,
       bookingFeeNpr: result?.bookingFeeNpr,
     };

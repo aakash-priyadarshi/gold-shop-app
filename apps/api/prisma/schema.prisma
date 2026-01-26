@@ -284,6 +284,7 @@ model RfqRequest {
   addGoldPlating        Boolean         @default(false)
   platingType           String?
   platingTier           String?
+  designId              String? // Link to Design Gallery if created via "Build This"
   targetTotalWeightG    Float?
   targetGoldWeightG     Float?
   budgetMinNpr          Float?
@@ -307,9 +308,11 @@ model RfqRequest {
   customer      User?           @relation("CustomerRfqs", fields: [customerId], references: [id])
   selectedOffer RfqOffer?       @relation("SelectedOffer", fields: [selectedOfferId], references: [id])
   targetedShops RfqShopTarget[]
+  design        Design?         @relation(fields: [designId], references: [id])
 
   @@index([customerId])
   @@index([status])
+  @@index([designId])
 }
 
 model RfqGemstone {
@@ -1185,6 +1188,7 @@ model Design {
   
   // Relations
   likes           DesignLike[]
+  rfqRequests     RfqRequest[]  // RFQs created from this design via "Build This"
   
   @@index([jewelryType])
   @@index([buildMethod])

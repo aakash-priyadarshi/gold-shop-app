@@ -29,6 +29,7 @@ import { Request as ExpressRequest } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
 import { DesignsService } from "./designs.service";
+import { DescriptionGeneratorService } from "./description-generator.service";
 
 interface AuthenticatedRequest extends ExpressRequest {
   user?: {
@@ -232,7 +233,10 @@ class UpdateVisibilityDto {
 export class DesignsController {
   private readonly logger = new Logger(DesignsController.name);
 
-  constructor(private readonly designsService: DesignsService) {}
+  constructor(
+    private readonly designsService: DesignsService,
+    private readonly descriptionGenService: DescriptionGeneratorService,
+  ) {}
 
   /**
    * Create a new design with AI-generated image
@@ -448,5 +452,19 @@ export class DesignsController {
     @Request() req: AuthenticatedRequest,
   ) {
     return this.designsService.deleteDesign(id, req.user!.id);
+  }
+
+  /**
+   * Get AI description service status (Admin only)
+   */
+  @Get("admin/description-service-status")
+  @UseGuards(JwtAuthGuard)
+  async getDescriptionServiceStatus(@Request() req: AuthenticatedRequest) {
+    // Check if user is admin
+    if (req.user?.role !== "ADMIN") {
+      throw new HttpException("Forbidden", HttpStatus.FORBIDDEN);
+    }
+
+    return this.descriptionGenService.getServiceStatus();
   }
 }

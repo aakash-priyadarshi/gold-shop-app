@@ -243,7 +243,16 @@ export default function DesignGalleryPage() {
     try {
       // Call the API to get the RFQ prefill data
       const response = await api.post(`/designs/${design.id}/build`);
-      const prefillData = response.data;
+      const apiResponse = response.data;
+
+      // Flatten the API response structure for the RFQ form
+      // API returns: { success, designId, imageUrl, prefill: {...} }
+      // RFQ form expects: { designId, imageUrl, jewelleryType, buildMethod, ... }
+      const prefillData = {
+        designId: apiResponse.designId,
+        imageUrl: apiResponse.imageUrl,
+        ...apiResponse.prefill, // Spread the nested prefill data
+      };
 
       // Store in sessionStorage for the RFQ form to pick up
       sessionStorage.setItem("rfq-prefill", JSON.stringify(prefillData));
@@ -674,6 +683,18 @@ export default function DesignGalleryPage() {
 
                 {/* Details */}
                 <div className="space-y-4">
+                  {/* AI-Generated Description - Show first */}
+                  {(() => {
+                    const desc = selectedDesign.additionalSpecs?.description;
+                    return desc ? (
+                      <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg p-4 border border-amber-200">
+                        <p className="text-sm text-gray-700 leading-relaxed italic">
+                          &ldquo;{String(desc)}&rdquo;
+                        </p>
+                      </div>
+                    ) : null;
+                  })()}
+
                   {/* Specifications */}
                   <div>
                     <h4 className="font-medium mb-2 flex items-center gap-2">
@@ -705,6 +726,18 @@ export default function DesignGalleryPage() {
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Color</span>
                           <span>{selectedDesign.metalColor}</span>
+                        </div>
+                      )}
+                      {selectedDesign.surfaceFinish && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Finish</span>
+                          <span>{selectedDesign.surfaceFinish.replace(/_/g, " ")}</span>
+                        </div>
+                      )}
+                      {selectedDesign.weightCategory && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Weight</span>
+                          <span>{selectedDesign.weightCategory.replace(/_/g, " ")}</span>
                         </div>
                       )}
                     </div>
@@ -756,19 +789,6 @@ export default function DesignGalleryPage() {
                         </div>
                       </div>
                     )}
-
-                  {/* Description from additionalSpecs */}
-                  {(() => {
-                    const desc = selectedDesign.additionalSpecs?.description;
-                    return desc ? (
-                      <div>
-                        <h4 className="font-medium mb-2">Description</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {String(desc)}
-                        </p>
-                      </div>
-                    ) : null;
-                  })()}
 
                   {/* Stats */}
                   <div className="flex items-center gap-4 py-3 border-y">
