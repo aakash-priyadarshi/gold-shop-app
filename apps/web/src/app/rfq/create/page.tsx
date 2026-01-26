@@ -113,6 +113,48 @@ const JEWELLERY_TYPES = [
   { value: "OTHER", label: "Other" },
 ];
 
+// Jewelry type images for hover preview
+const JEWELLERY_TYPE_IMAGES: Record<string, string> = {
+  RING: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=200&h=200&fit=crop",
+  NECKLACE: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=200&h=200&fit=crop",
+  BRACELET: "https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=200&h=200&fit=crop",
+  EARRING: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=200&h=200&fit=crop",
+  PENDANT: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=200&h=200&fit=crop",
+  BANGLE: "https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=200&h=200&fit=crop",
+  CHAIN: "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=200&h=200&fit=crop",
+  ANKLET: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=200&h=200&fit=crop",
+  BROOCH: "https://images.unsplash.com/photo-1576022162028-a3c9748e6c5e?w=200&h=200&fit=crop",
+  OTHER: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=200&h=200&fit=crop",
+};
+
+// Surface finish images for hover preview
+const SURFACE_FINISH_IMAGES: Record<string, { image: string; description: string }> = {
+  POLISHED: {
+    image: "https://images.unsplash.com/photo-1603561591411-07134e71a2a9?w=200&h=200&fit=crop",
+    description: "Mirror-like shine, highly reflective surface",
+  },
+  MATTE: {
+    image: "https://images.unsplash.com/photo-1590736969955-71cc94901144?w=200&h=200&fit=crop",
+    description: "Non-reflective, soft brushed appearance",
+  },
+  SATIN: {
+    image: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=200&h=200&fit=crop",
+    description: "Subtle sheen between matte and polish",
+  },
+  HAMMERED: {
+    image: "https://images.unsplash.com/photo-1610375461246-83df859d849d?w=200&h=200&fit=crop",
+    description: "Textured surface with small indentations",
+  },
+  SANDBLAST: {
+    image: "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=200&h=200&fit=crop",
+    description: "Frosted, granular texture",
+  },
+  ANTIQUE: {
+    image: "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=200&h=200&fit=crop",
+    description: "Oxidized finish for vintage look",
+  },
+};
+
 // Weight guidance for each jewelry type (in grams)
 const WEIGHT_GUIDANCE: Record<string, { range: string; note: string }> = {
   RING: {
@@ -141,7 +183,7 @@ const WEIGHT_GUIDANCE: Record<string, { range: string; note: string }> = {
   },
   CHAIN: {
     range: "5-25g",
-    note: "Depends on length and style. 18\" light chain 5-10g, 24\" medium chain 15-25g.",
+    note: 'Depends on length and style. 18" light chain 5-10g, 24" medium chain 15-25g.',
   },
   ANKLET: {
     range: "2-8g",
@@ -1883,24 +1925,32 @@ export default function CreateRfqPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {JEWELLERY_TYPES.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
+                          <Tooltip key={type.value}>
+                            <TooltipTrigger asChild>
+                              <div>
+                                <SelectItem value={type.value}>
+                                  {type.label}
+                                </SelectItem>
+                              </div>
+                            </TooltipTrigger>
+                            {JEWELLERY_TYPE_IMAGES[type.value] && (
+                              <TooltipContent side="right" className="p-0 overflow-hidden">
+                                <div className="w-40">
+                                  <img
+                                    src={JEWELLERY_TYPE_IMAGES[type.value]}
+                                    alt={type.label}
+                                    className="w-full h-32 object-cover"
+                                  />
+                                  <p className="text-xs p-2 text-center font-medium bg-white">
+                                    {type.label}
+                                  </p>
+                                </div>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
                         ))}
                       </SelectContent>
                     </Select>
-                    {/* Weight guidance message */}
-                    {formData.jewelleryType && WEIGHT_GUIDANCE[formData.jewelleryType] && (
-                      <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mt-2">
-                        <p className="text-sm text-amber-800">
-                          <span className="font-medium">💡 Typical weight for {JEWELLERY_TYPES.find(t => t.value === formData.jewelleryType)?.label || formData.jewelleryType}: </span>
-                          <span className="font-semibold">{WEIGHT_GUIDANCE[formData.jewelleryType].range}</span>
-                        </p>
-                        <p className="text-xs text-amber-700 mt-1">
-                          {WEIGHT_GUIDANCE[formData.jewelleryType].note}
-                        </p>
-                      </div>
-                    )}
                   </div>
 
                   {/* Template Selector - shows when jewellery type is selected */}
@@ -1983,6 +2033,27 @@ export default function CreateRfqPage() {
                   {!hasRealTemplate && (
                     <div className="space-y-2">
                       <Label>Estimated Weight ({weightUnitSymbol})</Label>
+                      {/* Weight guidance message */}
+                      {formData.jewelleryType &&
+                        WEIGHT_GUIDANCE[formData.jewelleryType] && (
+                          <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+                            <p className="text-sm text-amber-800">
+                              <span className="font-medium">
+                                💡 Typical weight for{" "}
+                                {JEWELLERY_TYPES.find(
+                                  (t) => t.value === formData.jewelleryType,
+                                )?.label || formData.jewelleryType}
+                                :{" "}
+                              </span>
+                              <span className="font-semibold">
+                                {WEIGHT_GUIDANCE[formData.jewelleryType].range}
+                              </span>
+                            </p>
+                            <p className="text-xs text-amber-700 mt-1">
+                              {WEIGHT_GUIDANCE[formData.jewelleryType].note}
+                            </p>
+                          </div>
+                        )}
                       <Input
                         type="number"
                         step="0.1"
@@ -2457,28 +2528,177 @@ export default function CreateRfqPage() {
                       <SelectContent>
                         {surfaceFinishes.length > 0 ? (
                           surfaceFinishes.map((type) => (
-                            <SelectItem key={type.id} value={type.id}>
-                              {type.name}
-                            </SelectItem>
+                            <Tooltip key={type.id}>
+                              <TooltipTrigger asChild>
+                                <div>
+                                  <SelectItem value={type.id}>
+                                    {type.name}
+                                  </SelectItem>
+                                </div>
+                              </TooltipTrigger>
+                              {SURFACE_FINISH_IMAGES[type.id] && (
+                                <TooltipContent side="right" className="p-0 overflow-hidden">
+                                  <div className="w-44">
+                                    <img
+                                      src={SURFACE_FINISH_IMAGES[type.id].image}
+                                      alt={type.name}
+                                      className="w-full h-32 object-cover"
+                                    />
+                                    <div className="p-2 bg-white">
+                                      <p className="text-xs font-medium">{type.name}</p>
+                                      <p className="text-xs text-gray-500 mt-0.5">
+                                        {SURFACE_FINISH_IMAGES[type.id].description}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
                           ))
                         ) : (
                           <>
-                            <SelectItem value="POLISHED">
-                              High Polish / Mirror Finish
-                            </SelectItem>
-                            <SelectItem value="MATTE">
-                              Matte / Brushed Finish
-                            </SelectItem>
-                            <SelectItem value="SATIN">Satin Finish</SelectItem>
-                            <SelectItem value="HAMMERED">
-                              Hammered Texture
-                            </SelectItem>
-                            <SelectItem value="SANDBLAST">
-                              Sandblasted
-                            </SelectItem>
-                            <SelectItem value="ANTIQUE">
-                              Antique / Oxidized
-                            </SelectItem>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div>
+                                  <SelectItem value="POLISHED">
+                                    High Polish / Mirror Finish
+                                  </SelectItem>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="p-0 overflow-hidden">
+                                <div className="w-44">
+                                  <img
+                                    src={SURFACE_FINISH_IMAGES.POLISHED.image}
+                                    alt="Polished"
+                                    className="w-full h-32 object-cover"
+                                  />
+                                  <div className="p-2 bg-white">
+                                    <p className="text-xs font-medium">High Polish</p>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                      {SURFACE_FINISH_IMAGES.POLISHED.description}
+                                    </p>
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div>
+                                  <SelectItem value="MATTE">
+                                    Matte / Brushed Finish
+                                  </SelectItem>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="p-0 overflow-hidden">
+                                <div className="w-44">
+                                  <img
+                                    src={SURFACE_FINISH_IMAGES.MATTE.image}
+                                    alt="Matte"
+                                    className="w-full h-32 object-cover"
+                                  />
+                                  <div className="p-2 bg-white">
+                                    <p className="text-xs font-medium">Matte / Brushed</p>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                      {SURFACE_FINISH_IMAGES.MATTE.description}
+                                    </p>
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div>
+                                  <SelectItem value="SATIN">Satin Finish</SelectItem>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="p-0 overflow-hidden">
+                                <div className="w-44">
+                                  <img
+                                    src={SURFACE_FINISH_IMAGES.SATIN.image}
+                                    alt="Satin"
+                                    className="w-full h-32 object-cover"
+                                  />
+                                  <div className="p-2 bg-white">
+                                    <p className="text-xs font-medium">Satin Finish</p>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                      {SURFACE_FINISH_IMAGES.SATIN.description}
+                                    </p>
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div>
+                                  <SelectItem value="HAMMERED">
+                                    Hammered Texture
+                                  </SelectItem>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="p-0 overflow-hidden">
+                                <div className="w-44">
+                                  <img
+                                    src={SURFACE_FINISH_IMAGES.HAMMERED.image}
+                                    alt="Hammered"
+                                    className="w-full h-32 object-cover"
+                                  />
+                                  <div className="p-2 bg-white">
+                                    <p className="text-xs font-medium">Hammered Texture</p>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                      {SURFACE_FINISH_IMAGES.HAMMERED.description}
+                                    </p>
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div>
+                                  <SelectItem value="SANDBLAST">
+                                    Sandblasted
+                                  </SelectItem>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="p-0 overflow-hidden">
+                                <div className="w-44">
+                                  <img
+                                    src={SURFACE_FINISH_IMAGES.SANDBLAST.image}
+                                    alt="Sandblasted"
+                                    className="w-full h-32 object-cover"
+                                  />
+                                  <div className="p-2 bg-white">
+                                    <p className="text-xs font-medium">Sandblasted</p>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                      {SURFACE_FINISH_IMAGES.SANDBLAST.description}
+                                    </p>
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div>
+                                  <SelectItem value="ANTIQUE">
+                                    Antique / Oxidized
+                                  </SelectItem>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="p-0 overflow-hidden">
+                                <div className="w-44">
+                                  <img
+                                    src={SURFACE_FINISH_IMAGES.ANTIQUE.image}
+                                    alt="Antique"
+                                    className="w-full h-32 object-cover"
+                                  />
+                                  <div className="p-2 bg-white">
+                                    <p className="text-xs font-medium">Antique / Oxidized</p>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                      {SURFACE_FINISH_IMAGES.ANTIQUE.description}
+                                    </p>
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
                           </>
                         )}
                       </SelectContent>
