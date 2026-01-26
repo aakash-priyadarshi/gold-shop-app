@@ -300,6 +300,21 @@ export default function DesignGalleryPage() {
           </div>
         )}
 
+        {/* Orivraa Logo Watermark - Bottom Right */}
+        {design.imageUrl && (
+          <div className="absolute bottom-2 right-2 bg-white/80 backdrop-blur-sm rounded-md px-1.5 py-0.5 shadow-sm">
+            <div className="flex items-center gap-1">
+              <Image 
+                src="/brand/orivraa-icon.svg" 
+                alt="Orivraa" 
+                width={14}
+                height={14}
+              />
+              <span className="text-[10px] font-semibold text-gray-700">Orivraa</span>
+            </div>
+          </div>
+        )}
+
         {/* Overlay on hover */}
         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
           <Button
@@ -635,6 +650,20 @@ export default function DesignGalleryPage() {
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <Gem className="h-16 w-16 text-gray-300" />
+                    </div>
+                  )}
+                  {/* Orivraa Logo Watermark - Bottom Right */}
+                  {selectedDesign.imageUrl && (
+                    <div className="absolute bottom-3 right-3 bg-white/80 backdrop-blur-sm rounded-md px-2 py-1 shadow-sm">
+                      <div className="flex items-center gap-1">
+                        <Image 
+                          src="/brand/orivraa-icon.svg" 
+                          alt="Orivraa" 
+                          width={16}
+                          height={16}
+                        />
+                        <span className="text-xs font-semibold text-gray-700">Orivraa</span>
+                      </div>
                     </div>
                   )}
                 </div>

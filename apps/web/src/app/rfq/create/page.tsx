@@ -2652,11 +2652,23 @@ export default function CreateRfqPage() {
                           alt="AI Generated Design Preview"
                           className="w-full rounded-lg shadow-md border"
                         />
+                        {/* AI Generated Badge - Top Right */}
                         <div className="absolute top-2 right-2">
                           <Badge className="bg-amber-500 text-white">
                             <Sparkles className="h-3 w-3 mr-1" />
                             AI Generated
                           </Badge>
+                        </div>
+                        {/* Orivraa Logo Watermark - Bottom Right */}
+                        <div className="absolute bottom-2 right-2 bg-white/80 backdrop-blur-sm rounded-md px-2 py-1 shadow-sm">
+                          <div className="flex items-center gap-1">
+                            <img 
+                              src="/brand/orivraa-icon.svg" 
+                              alt="Orivraa" 
+                              className="h-4 w-4"
+                            />
+                            <span className="text-xs font-semibold text-gray-700">Orivraa</span>
+                          </div>
                         </div>
                       </div>
                     ) : (
