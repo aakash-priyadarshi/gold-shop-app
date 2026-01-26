@@ -658,9 +658,15 @@ export default function CreateRfqPage() {
         shareToGallery,
       };
 
-      console.log("[Generate Preview] Making API call to:", `${API_URL}/designs`);
-      console.log("[Generate Preview] Design specs:", JSON.stringify(designSpecs, null, 2));
-      
+      console.log(
+        "[Generate Preview] Making API call to:",
+        `${API_URL}/designs`,
+      );
+      console.log(
+        "[Generate Preview] Design specs:",
+        JSON.stringify(designSpecs, null, 2),
+      );
+
       const response = await fetch(`${API_URL}/designs`, {
         method: "POST",
         headers: {
@@ -679,25 +685,39 @@ export default function CreateRfqPage() {
       }
 
       const result = await response.json();
-      console.log("[Generate Preview] API response:", JSON.stringify(result, null, 2));
-      
+      console.log(
+        "[Generate Preview] API response:",
+        JSON.stringify(result, null, 2),
+      );
+
       // API returns { design: {...}, cached: boolean }
       const design = result.design;
       if (!design) {
         console.error("[Generate Preview] No design object in response!");
         throw new Error("Invalid response from API - no design object");
       }
-      
-      console.log("[Generate Preview] Image URL from response:", design.imageUrl);
-      
+
+      console.log(
+        "[Generate Preview] Image URL from response:",
+        design.imageUrl,
+      );
+
       setDesignPreviewUrl(design.imageUrl);
       setDesignId(design.id);
-      
-      console.log("[Generate Preview] State updated - designId:", design.id, "imageUrl:", design.imageUrl);
+
+      console.log(
+        "[Generate Preview] State updated - designId:",
+        design.id,
+        "imageUrl:",
+        design.imageUrl,
+      );
 
       // Add the generated image to reference images
       if (design.imageUrl) {
-        console.log("[Generate Preview] Adding to reference images:", design.imageUrl);
+        console.log(
+          "[Generate Preview] Adding to reference images:",
+          design.imageUrl,
+        );
         setFormData((prev) => ({
           ...prev,
           referenceImages: [

@@ -222,8 +222,14 @@ export class ImageGenerationService {
         specs.surfaceFinish.toLowerCase()
       : "";
 
-    // Build base description
-    let description = `Professional product photograph of a ${jewelryType}`;
+    // Build base description - emphasize "plain" or "simple" when no gemstones
+    const plainDescriptor = !specs.hasGemstones ? "plain solid metal " : "";
+    let description = `Professional product photograph of a ${plainDescriptor}${jewelryType}`;
+    
+    // Add explicit no-gemstone instruction in description for rings/pendants
+    if (!specs.hasGemstones && ['RING', 'PENDANT', 'EARRING'].includes(specs.jewelryType)) {
+      description += ` without any gemstones or stones - a simple, elegant ${jewelryType} made entirely of metal`;
+    }
 
     // Add specifications section
     const specLines: string[] = [];
@@ -388,6 +394,9 @@ export class ImageGenerationService {
           specs.settingStyle.toLowerCase();
         specLines.push(`- Setting: ${settingDesc}`);
       }
+    } else {
+      // Explicitly state no gemstones when hasGemstones is false
+      specLines.push(`- Design: Plain metal only, NO gemstones, NO stones, NO diamonds`);
     }
 
     // Additional gemstones if multiple exist
@@ -398,6 +407,20 @@ export class ImageGenerationService {
     }
 
     // Build full prompt
+    // Build forbidden items list based on specs
+    const forbiddenItems = [
+      "No hands, fingers, skin, or body parts",
+      "No mannequins or display stands",
+      "No text, logos, or watermarks",
+      "No additional jewelry pieces",
+      "No reflections of environment",
+    ];
+    
+    // Add gemstone restriction if no gemstones selected
+    if (!specs.hasGemstones) {
+      forbiddenItems.push("No gemstones, diamonds, crystals, or stones of any kind - this is a plain metal piece only");
+    }
+
     const prompt = `${description}.
 
 Specifications:
@@ -413,11 +436,7 @@ Style requirements:
 - Clean, centered composition
 
 Forbidden:
-- No hands, fingers, skin, or body parts
-- No mannequins or display stands
-- No text, logos, or watermarks
-- No additional jewelry pieces
-- No reflections of environment`;
+${forbiddenItems.map(item => `- ${item}`).join("\n")}`;
 
     return prompt;
   }
