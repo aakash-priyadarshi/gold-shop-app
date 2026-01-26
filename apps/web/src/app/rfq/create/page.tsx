@@ -47,11 +47,13 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  Clock,
   Gem,
   Image as ImageIcon,
   Info,
   Loader2,
   Phone,
+  RotateCcw,
   ShieldCheck,
   Sparkles,
   Upload,
@@ -60,6 +62,18 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+// Alert Dialog for resume draft prompt
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // New pricing components
 import {
@@ -460,6 +474,84 @@ export default function CreateRfqPage() {
   const [designId, setDesignId] = useState<string | null>(null);
   const [fromDesign, setFromDesign] = useState(false);
 
+  // Draft autosave state
+  const DRAFT_STORAGE_KEY = "rfq-draft";
+  const [showResumeDraftDialog, setShowResumeDraftDialog] = useState(false);
+  const [savedDraftTimestamp, setSavedDraftTimestamp] = useState<string | null>(null);
+  const [draftChecked, setDraftChecked] = useState(false);
+
+  // Check for saved draft on mount
+  useEffect(() => {
+    // Don't check if coming from design gallery (prefill takes priority)
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get("from") === "design") {
+      setDraftChecked(true);
+      return;
+    }
+
+    // Check for saved draft
+    try {
+      const savedDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (savedDraft) {
+        const draft = JSON.parse(savedDraft);
+        // Check if draft has meaningful content (not just defaults)
+        const hasContent = draft.formData?.jewelleryType || 
+                          draft.formData?.metalType || 
+                          draft.formData?.description ||
+                          draft.designPreviewUrl;
+        if (hasContent && draft.timestamp) {
+          setSavedDraftTimestamp(draft.timestamp);
+          setShowResumeDraftDialog(true);
+        } else {
+          setDraftChecked(true);
+        }
+      } else {
+        setDraftChecked(true);
+      }
+    } catch (err) {
+      console.error("Failed to check for draft:", err);
+      setDraftChecked(true);
+    }
+  }, []);
+
+  // Resume draft handler
+  const handleResumeDraft = useCallback(() => {
+    try {
+      const savedDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (savedDraft) {
+        const draft = JSON.parse(savedDraft);
+        if (draft.formData) {
+          setFormData(draft.formData);
+        }
+        if (draft.designPreviewUrl) {
+          setDesignPreviewUrl(draft.designPreviewUrl);
+        }
+        if (draft.designId) {
+          setDesignId(draft.designId);
+        }
+        if (draft.shareToGallery !== undefined) {
+          setShareToGallery(draft.shareToGallery);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to restore draft:", err);
+    }
+    setShowResumeDraftDialog(false);
+    setDraftChecked(true);
+  }, []);
+
+  // Start fresh handler (clear draft)
+  const handleStartFresh = useCallback(() => {
+    localStorage.removeItem(DRAFT_STORAGE_KEY);
+    setShowResumeDraftDialog(false);
+    setDraftChecked(true);
+  }, []);
+
+  // Clear draft when form is successfully submitted
+  const clearDraft = useCallback(() => {
+    localStorage.removeItem(DRAFT_STORAGE_KEY);
+  }, []);
+
   // Handle prefill from Design Gallery ("Build me this")
   useEffect(() => {
     // Check if coming from design gallery
@@ -783,6 +875,44 @@ export default function CreateRfqPage() {
     deadline: "",
     specialInstructions: "",
   });
+
+  // Autosave draft when form changes (debounced)
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  useEffect(() => {
+    // Don't save if draft dialog is still showing or coming from design gallery
+    if (!draftChecked || fromDesign) return;
+
+    // Clear previous timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Debounce save - wait 1 second after last change
+    saveTimeoutRef.current = setTimeout(() => {
+      // Only save if there's meaningful content
+      const hasContent = formData.jewelleryType || 
+                        formData.metalType || 
+                        formData.description ||
+                        designPreviewUrl;
+      
+      if (hasContent) {
+        const draft = {
+          formData,
+          designPreviewUrl,
+          designId,
+          shareToGallery,
+          timestamp: new Date().toISOString(),
+        };
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+      }
+    }, 1000);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [formData, designPreviewUrl, designId, shareToGallery, draftChecked, fromDesign]);
 
   // Fetch initial data
   useEffect(() => {
@@ -1406,6 +1536,8 @@ export default function CreateRfqPage() {
       }
 
       const data = await response.json();
+      // Clear draft after successful submission
+      clearDraft();
       router.push(`/rfq/${data.id}`);
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -1490,6 +1622,46 @@ export default function CreateRfqPage() {
 
   return (
     <TooltipProvider>
+      {/* Resume Draft Dialog */}
+      <AlertDialog open={showResumeDraftDialog} onOpenChange={setShowResumeDraftDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-amber-500" />
+              Resume Your Design?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                We found a draft of your custom jewelry request from{" "}
+                <span className="font-medium text-gray-900">
+                  {savedDraftTimestamp
+                    ? new Date(savedDraftTimestamp).toLocaleString()
+                    : "earlier"}
+                </span>
+                .
+              </p>
+              <p>Would you like to continue where you left off?</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={handleStartFresh}
+              className="flex items-center gap-2"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Start Fresh
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleResumeDraft}
+              className="bg-amber-600 hover:bg-amber-700 flex items-center gap-2"
+            >
+              <ArrowRight className="h-4 w-4" />
+              Resume Draft
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="flex min-h-screen flex-col">
         <Header />
 
