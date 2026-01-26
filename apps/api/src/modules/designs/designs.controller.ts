@@ -70,7 +70,7 @@ class CreateDesignDto {
     cut?: string;
     settingStyle?: string;
     count?: number;
-    sizeValue?: string;
+    sizeValue?: number;
     sizeUnit?: string;
   }>;
 }
