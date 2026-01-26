@@ -284,6 +284,18 @@ export const adminApi = {
   sendTestEmail: (email: string) => api.post("/admin/email/test", { email }),
   updateAdminEmail: (data: { email: string; currentPassword: string }) =>
     api.patch("/admin/email/admin-address", data),
+
+  // AI Description Service
+  getAiDescriptionServiceStatus: () =>
+    api.get("/designs/admin/description-service-status"),
+  updateAiDescriptionDailyLimit: (limit: number) =>
+    api.patch("/designs/admin/description-service/daily-limit", { limit }),
+  resetAiDescriptionRateLimit: () =>
+    api.post("/designs/admin/description-service/reset-rate-limit"),
+  clearAiDescriptionQueue: () =>
+    api.post("/designs/admin/description-service/clear-queue"),
+  processAiDescriptionQueue: () =>
+    api.post("/designs/admin/description-service/process-queue"),
 };
 
 // Materials API

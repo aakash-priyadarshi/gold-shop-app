@@ -460,11 +460,69 @@ export class DesignsController {
   @Get("admin/description-service-status")
   @UseGuards(JwtAuthGuard)
   async getDescriptionServiceStatus(@Request() req: AuthenticatedRequest) {
-    // Check if user is admin
     if (req.user?.role !== "ADMIN") {
       throw new HttpException("Forbidden", HttpStatus.FORBIDDEN);
     }
 
     return this.descriptionGenService.getServiceStatus();
+  }
+
+  /**
+   * Update AI description daily request limit (Admin only)
+   */
+  @Patch("admin/description-service/daily-limit")
+  @UseGuards(JwtAuthGuard)
+  async updateDescriptionDailyLimit(
+    @Request() req: AuthenticatedRequest,
+    @Body() body: { limit: number },
+  ) {
+    if (req.user?.role !== "ADMIN") {
+      throw new HttpException("Forbidden", HttpStatus.FORBIDDEN);
+    }
+
+    if (!body.limit || typeof body.limit !== "number") {
+      throw new HttpException("Invalid limit value", HttpStatus.BAD_REQUEST);
+    }
+
+    return this.descriptionGenService.updateDailyLimit(body.limit);
+  }
+
+  /**
+   * Reset AI description rate limit (Admin only)
+   */
+  @Post("admin/description-service/reset-rate-limit")
+  @UseGuards(JwtAuthGuard)
+  async resetDescriptionRateLimit(@Request() req: AuthenticatedRequest) {
+    if (req.user?.role !== "ADMIN") {
+      throw new HttpException("Forbidden", HttpStatus.FORBIDDEN);
+    }
+
+    return this.descriptionGenService.resetRateLimit();
+  }
+
+  /**
+   * Clear AI description queue (Admin only)
+   */
+  @Post("admin/description-service/clear-queue")
+  @UseGuards(JwtAuthGuard)
+  async clearDescriptionQueue(@Request() req: AuthenticatedRequest) {
+    if (req.user?.role !== "ADMIN") {
+      throw new HttpException("Forbidden", HttpStatus.FORBIDDEN);
+    }
+
+    return this.descriptionGenService.clearQueue();
+  }
+
+  /**
+   * Force process AI description queue (Admin only)
+   */
+  @Post("admin/description-service/process-queue")
+  @UseGuards(JwtAuthGuard)
+  async processDescriptionQueue(@Request() req: AuthenticatedRequest) {
+    if (req.user?.role !== "ADMIN") {
+      throw new HttpException("Forbidden", HttpStatus.FORBIDDEN);
+    }
+
+    return this.descriptionGenService.forceProcessQueue();
   }
 }

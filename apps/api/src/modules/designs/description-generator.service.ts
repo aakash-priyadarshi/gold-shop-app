@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -27,82 +28,143 @@ interface RateLimitState {
   isLimited: boolean;
   limitedAt: Date | null;
   resumeAt: Date | null;
-  consecutiveFailures: number;
+  dailyRequestCount: number;
+  dailyResetAt: Date | null;
   lastAlertSentAt: Date | null;
 }
 
+interface ServiceConfig {
+  dailyRequestLimit: number;
+  cooldownHours: number;
+  alertCooldownHours: number;
+}
+
 /**
- * Hugging Face Free Tier Limits (as of 2024):
- * - ~30,000 requests/month for inference API
- * - Rate limit: ~1 request/second
- * - Model loading time: First request may be slow (cold start)
+ * Gemini Flash Pricing (as of 2024):
+ * - Input: ~$0.35 per 1M tokens
+ * - Output: ~$1.05 per 1M tokens
+ * - Cost per description request: ~$0.00007
  * 
  * This service implements:
- * 1. Primary: Hugging Face Flan-T5-Large API
+ * 1. Primary: Google Gemini Flash API
  * 2. Fallback: Pre-built templates
  * 3. Queue system for rate-limited requests
- * 4. 24-hour cooldown when limits are hit
+ * 4. Configurable daily request limits (default: 1M/day)
  * 5. Admin alerts on failures
+ * 6. Admin-configurable rate limits
  */
 @Injectable()
 export class DescriptionGeneratorService implements OnModuleInit {
   private readonly logger = new Logger(DescriptionGeneratorService.name);
   
-  // Hugging Face API configuration
-  private readonly HF_API_URL = 'https://api-inference.huggingface.co/models/google/flan-t5-large';
-  private readonly HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN; // Optional but recommended
+  // Gemini API configuration
+  private readonly GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+  private readonly apiKey: string;
   
-  // Rate limiting state (in production, use Redis for distributed state)
+  // Rate limiting state
   private rateLimitState: RateLimitState = {
     isLimited: false,
     limitedAt: null,
     resumeAt: null,
-    consecutiveFailures: 0,
+    dailyRequestCount: 0,
+    dailyResetAt: null,
     lastAlertSentAt: null,
   };
   
-  // In-memory queue (in production, use database or Redis queue)
+  // In-memory queue
   private descriptionQueue: QueuedDescription[] = [];
   
-  // Rate limit thresholds
-  private readonly MAX_CONSECUTIVE_FAILURES = 3;
-  private readonly COOLDOWN_HOURS = 24;
-  private readonly ALERT_COOLDOWN_HOURS = 6; // Don't spam admins
+  // Default configuration (can be overridden from admin panel)
+  private config: ServiceConfig = {
+    dailyRequestLimit: 1000000, // 1 million per day
+    cooldownHours: 24,
+    alertCooldownHours: 6,
+  };
+  
+  // Config keys for database storage
+  private readonly CONFIG_KEYS = {
+    QUEUE: 'description_generation_queue',
+    RATE_LIMIT_STATE: 'description_rate_limit_state',
+    SERVICE_CONFIG: 'description_service_config',
+  };
   
   constructor(
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
-  ) {}
+    private configService: ConfigService,
+  ) {
+    this.apiKey = this.configService.get<string>('GEMINI_API_KEY') || '';
+  }
 
   async onModuleInit() {
-    // Load any pending queue items from database on startup
+    await this.loadConfigFromDatabase();
+    await this.loadRateLimitStateFromDatabase();
     await this.loadQueueFromDatabase();
-    this.logger.log('Description Generator Service initialized');
+    this.initializeDailyReset();
+    this.logger.log('Description Generator Service initialized with Gemini Flash');
+    this.logger.log(`Daily request limit: ${this.config.dailyRequestLimit.toLocaleString()}`);
+  }
+
+  /**
+   * Initialize daily request counter reset
+   */
+  private initializeDailyReset(): void {
+    const now = new Date();
+    if (!this.rateLimitState.dailyResetAt || now >= this.rateLimitState.dailyResetAt) {
+      this.resetDailyCounter();
+    }
+  }
+
+  /**
+   * Reset daily request counter
+   */
+  private resetDailyCounter(): void {
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    
+    this.rateLimitState.dailyRequestCount = 0;
+    this.rateLimitState.dailyResetAt = tomorrow;
+    this.rateLimitState.isLimited = false;
+    this.rateLimitState.limitedAt = null;
+    this.rateLimitState.resumeAt = null;
+    
+    this.saveRateLimitStateToDatabase();
+    this.logger.log('Daily request counter reset');
   }
 
   /**
    * Main entry point - generates description with fallback handling
    */
   async generateDescription(designId: string, specs: JewelrySpecs): Promise<string> {
+    // Check daily reset
+    if (this.rateLimitState.dailyResetAt && new Date() >= this.rateLimitState.dailyResetAt) {
+      this.resetDailyCounter();
+    }
+    
     // Check if we're rate limited
     if (this.isRateLimited()) {
       this.logger.warn(`Rate limited - adding design ${designId} to queue`);
       await this.addToQueue(designId, specs);
-      // Return template immediately while queued for AI generation later
+      return this.generateTemplateDescription(specs);
+    }
+
+    // Check API key
+    if (!this.apiKey) {
+      this.logger.warn('GEMINI_API_KEY not configured - using template');
       return this.generateTemplateDescription(specs);
     }
 
     try {
-      // Try AI generation first
-      const aiDescription = await this.generateWithHuggingFace(specs);
+      const aiDescription = await this.generateWithGemini(specs);
       
       if (aiDescription) {
-        // Reset failure counter on success
-        this.rateLimitState.consecutiveFailures = 0;
+        this.rateLimitState.dailyRequestCount++;
+        await this.saveRateLimitStateToDatabase();
         return aiDescription;
       }
       
-      // AI returned empty, use template
       return this.generateTemplateDescription(specs);
     } catch (error) {
       this.handleApiError(error, designId, specs);
@@ -111,106 +173,109 @@ export class DescriptionGeneratorService implements OnModuleInit {
   }
 
   /**
-   * Generate description using Hugging Face API
+   * Generate description using Gemini Flash API
    */
-  private async generateWithHuggingFace(specs: JewelrySpecs): Promise<string | null> {
+  private async generateWithGemini(specs: JewelrySpecs): Promise<string | null> {
     const prompt = this.buildPrompt(specs);
     
     try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      
-      // Add token if available (higher rate limits)
-      if (this.HF_TOKEN) {
-        headers['Authorization'] = `Bearer ${this.HF_TOKEN}`;
-      }
-
-      const response = await fetch(this.HF_API_URL, {
+      const response = await fetch(`${this.GEMINI_API_URL}?key=${this.apiKey}`, {
         method: 'POST',
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          inputs: prompt,
-          parameters: {
-            max_new_tokens: 150,
+          contents: [{
+            parts: [{
+              text: prompt,
+            }],
+          }],
+          generationConfig: {
             temperature: 0.7,
-            do_sample: true,
+            maxOutputTokens: 100, // ~200 characters max
+            topP: 0.9,
           },
-          options: {
-            wait_for_model: true, // Wait if model is loading
-          },
+          safetySettings: [
+            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+          ],
         }),
       });
 
-      // Handle rate limiting response
+      // Handle rate limiting (429)
       if (response.status === 429) {
-        this.logger.warn('Hugging Face rate limit hit (429)');
+        this.logger.warn('Gemini rate limit hit (429)');
         this.activateRateLimit('API returned 429 Too Many Requests');
         return null;
       }
 
-      // Handle model loading (503)
-      if (response.status === 503) {
-        const data = await response.json();
-        if (data.error?.includes('loading')) {
-          this.logger.log('Model is loading, will retry...');
-          // Wait and retry once
-          await this.sleep(10000);
-          return this.generateWithHuggingFace(specs);
+      // Handle quota exceeded
+      if (response.status === 403) {
+        const errorData = await response.json().catch(() => ({}));
+        if (errorData.error?.message?.includes('quota')) {
+          this.logger.warn('Gemini quota exceeded');
+          this.activateRateLimit('API quota exceeded');
+          return null;
         }
-        return null;
       }
 
       if (!response.ok) {
-        this.logger.error(`HuggingFace API error: ${response.status}`);
+        const errorText = await response.text();
+        this.logger.error(`Gemini API error: ${response.status} - ${errorText}`);
         return null;
       }
 
       const result = await response.json();
       
-      // Handle array response format
-      if (Array.isArray(result) && result[0]?.generated_text) {
-        return this.cleanGeneratedText(result[0].generated_text, prompt);
-      }
+      // Extract text from Gemini response
+      const generatedText = result.candidates?.[0]?.content?.parts?.[0]?.text;
       
-      // Handle object response format
-      if (result.generated_text) {
-        return this.cleanGeneratedText(result.generated_text, prompt);
+      if (generatedText) {
+        return this.cleanGeneratedText(generatedText);
       }
 
       return null;
     } catch (error) {
-      this.logger.error('HuggingFace API call failed:', error);
+      this.logger.error('Gemini API call failed:', error);
       throw error;
     }
   }
 
   /**
-   * Build the prompt for the AI model
+   * Build the prompt for Gemini
    */
   private buildPrompt(specs: JewelrySpecs): string {
     const metalDesc = this.getMetalDescription(specs);
     const gemstoneDesc = specs.hasGemstones 
-      ? ` adorned with ${specs.gemstoneShape || ''} ${specs.gemstoneType || 'gemstone'}`.trim()
+      ? ` with ${specs.gemstoneShape || ''} ${specs.gemstoneType || 'gemstone'}`.trim()
       : '';
-    const finishDesc = specs.surfaceFinish ? ` with ${this.formatFinish(specs.surfaceFinish)} finish` : '';
+    const finishDesc = specs.surfaceFinish ? ` and ${this.formatFinish(specs.surfaceFinish)} finish` : '';
 
-    return `Write a short, elegant product description (2-3 sentences) for this jewelry piece:
-Type: ${this.formatJewelryType(specs.jewelryType)}
+    return `Write a single elegant jewelry product description in 1-2 sentences (max 200 characters).
+
+Jewelry: ${this.formatJewelryType(specs.jewelryType)}
 Metal: ${metalDesc}${gemstoneDesc}${finishDesc}
 
-Description:`;
+Requirements:
+- Be concise and luxurious
+- Highlight craftsmanship
+- No bullet points or lists
+- Just the description text, no labels`;
   }
 
   /**
    * Clean up the AI generated text
    */
-  private cleanGeneratedText(text: string, prompt: string): string {
-    // Remove the prompt if it's included in response
-    let cleaned = text.replace(prompt, '').trim();
+  private cleanGeneratedText(text: string): string {
+    let cleaned = text.trim();
     
     // Remove common prefixes
-    cleaned = cleaned.replace(/^(Description:|Here is|Here's|This is)\s*/i, '').trim();
+    cleaned = cleaned.replace(/^(Description:|Here is|Here's|This is|Product Description:)\s*/i, '').trim();
+    
+    // Remove quotes if present
+    cleaned = cleaned.replace(/^["']|["']$/g, '').trim();
     
     // Capitalize first letter
     if (cleaned.length > 0) {
@@ -220,6 +285,11 @@ Description:`;
     // Ensure it ends with a period
     if (cleaned && !cleaned.endsWith('.') && !cleaned.endsWith('!')) {
       cleaned += '.';
+    }
+    
+    // Truncate to 200 characters if needed
+    if (cleaned.length > 200) {
+      cleaned = cleaned.substring(0, 197) + '...';
     }
     
     return cleaned;
@@ -233,20 +303,16 @@ Description:`;
     const metalDesc = this.getMetalDescription(specs);
     const finishDesc = this.getFinishDescription(specs.surfaceFinish);
     
-    // Opening adjectives pool
     const openingAdjectives = this.getOpeningAdjectives(specs);
     const opening = openingAdjectives[Math.floor(Math.random() * openingAdjectives.length)];
     
-    // Build gemstone clause
     const gemstoneClause = specs.hasGemstones 
       ? this.buildGemstoneClause(specs)
       : '';
     
-    // Closing statements pool
     const closingStatements = this.getClosingStatements(specs);
     const closing = closingStatements[Math.floor(Math.random() * closingStatements.length)];
     
-    // Construct the description based on jewelry type
     let description = '';
     
     switch (specs.jewelryType?.toUpperCase()) {
@@ -254,38 +320,43 @@ Description:`;
         description = `${opening} ring crafted in ${metalDesc}${gemstoneClause}${finishDesc}. ${closing}`;
         break;
       case 'NECKLACE':
-        description = `${opening} necklace fashioned in ${metalDesc}${gemstoneClause}${finishDesc}. This elegant piece drapes gracefully, ${closing.toLowerCase()}`;
+        description = `${opening} necklace fashioned in ${metalDesc}${gemstoneClause}${finishDesc}. This elegant piece drapes gracefully.`;
         break;
       case 'PENDANT':
         description = `${opening} pendant created in ${metalDesc}${gemstoneClause}${finishDesc}. ${closing}`;
         break;
       case 'BRACELET':
-        description = `${opening} bracelet designed in ${metalDesc}${gemstoneClause}${finishDesc}. This stunning piece wraps the wrist in elegance, ${closing.toLowerCase()}`;
+        description = `${opening} bracelet designed in ${metalDesc}${gemstoneClause}${finishDesc}. A stunning piece for the wrist.`;
         break;
       case 'BANGLE':
         description = `${opening} bangle handcrafted in ${metalDesc}${gemstoneClause}${finishDesc}. ${closing}`;
         break;
       case 'EARRING':
       case 'EARRINGS':
-        description = `${opening} earrings crafted in ${metalDesc}${gemstoneClause}${finishDesc}. These exquisite pieces frame the face with sophistication, ${closing.toLowerCase()}`;
+        description = `${opening} earrings crafted in ${metalDesc}${gemstoneClause}${finishDesc}. Frames the face with elegance.`;
         break;
       case 'CHAIN':
         description = `${opening} chain meticulously crafted in ${metalDesc}${finishDesc}. ${closing}`;
         break;
       case 'ANKLET':
-        description = `${opening} anklet designed in ${metalDesc}${gemstoneClause}${finishDesc}. This delicate piece adds a touch of elegance, ${closing.toLowerCase()}`;
+        description = `${opening} anklet designed in ${metalDesc}${gemstoneClause}${finishDesc}. A delicate touch of elegance.`;
         break;
       case 'NOSE_PIN':
         description = `${opening} nose pin delicately crafted in ${metalDesc}${gemstoneClause}${finishDesc}. ${closing}`;
         break;
       case 'MANGALSUTRA':
-        description = `${opening} mangalsutra traditionally crafted in ${metalDesc}${gemstoneClause}${finishDesc}. This sacred piece symbolizes eternal love and commitment.`;
+        description = `${opening} mangalsutra traditionally crafted in ${metalDesc}${gemstoneClause}${finishDesc}. A sacred symbol of love.`;
         break;
       case 'MAANG_TIKKA':
-        description = `${opening} maang tikka elegantly designed in ${metalDesc}${gemstoneClause}${finishDesc}. This traditional piece adorns the forehead with timeless grace.`;
+        description = `${opening} maang tikka elegantly designed in ${metalDesc}${gemstoneClause}${finishDesc}. Traditional grace.`;
         break;
       default:
         description = `${opening} ${jewelryType.toLowerCase()} crafted in ${metalDesc}${gemstoneClause}${finishDesc}. ${closing}`;
+    }
+    
+    // Ensure template descriptions are also max 200 chars
+    if (description.length > 200) {
+      description = description.substring(0, 197) + '...';
     }
     
     return description;
@@ -298,11 +369,11 @@ Description:`;
     const base = ['An exquisite', 'A stunning', 'An elegant', 'A beautiful', 'A magnificent'];
     
     if (specs.hasGemstones) {
-      return [...base, 'A dazzling', 'A brilliant', 'A radiant', 'A captivating'];
+      return [...base, 'A dazzling', 'A brilliant', 'A radiant'];
     }
     
     if (specs.karat?.includes('22') || specs.karat?.includes('24')) {
-      return [...base, 'A luxurious', 'A premium', 'An opulent'];
+      return [...base, 'A luxurious', 'A premium'];
     }
     
     return base;
@@ -313,18 +384,13 @@ Description:`;
    */
   private getClosingStatements(specs: JewelrySpecs): string[] {
     const base = [
-      'Perfect for both everyday elegance and special occasions.',
-      'A timeless piece that celebrates fine craftsmanship.',
-      'Designed to be treasured for generations.',
-      'A perfect blend of tradition and contemporary style.',
+      'Perfect for any occasion.',
+      'Timeless craftsmanship.',
+      'Designed to be treasured.',
     ];
     
     if (specs.hasGemstones) {
-      return [
-        ...base,
-        'The gemstone catches light beautifully, creating a mesmerizing display.',
-        'A stunning piece where precious metal meets brilliant stone.',
-      ];
+      return [...base, 'Brilliance meets elegance.'];
     }
     
     return base;
@@ -338,15 +404,11 @@ Description:`;
     
     const stone = specs.gemstoneType ? this.formatGemstone(specs.gemstoneType) : 'gemstone';
     const shape = specs.gemstoneShape ? `${this.formatShape(specs.gemstoneShape)} ` : '';
-    const color = specs.gemstoneColor ? `${specs.gemstoneColor.toLowerCase()} ` : '';
-    const setting = specs.settingStyle ? ` in a ${this.formatSetting(specs.settingStyle)} setting` : '';
     
-    // Vary the phrasing
     const phrases = [
-      `, adorned with a ${color}${shape}${stone}${setting}`,
-      `, featuring a stunning ${color}${shape}${stone}${setting}`,
-      `, embellished with a brilliant ${color}${shape}${stone}${setting}`,
-      `, crowned with a captivating ${color}${shape}${stone}${setting}`,
+      `, adorned with a ${shape}${stone}`,
+      `, featuring a ${shape}${stone}`,
+      `, with a stunning ${shape}${stone}`,
     ];
     
     return phrases[Math.floor(Math.random() * phrases.length)];
@@ -368,9 +430,8 @@ Description:`;
    */
   private getFinishDescription(finish?: string): string {
     if (!finish) return '';
-    
     const formatted = this.formatFinish(finish);
-    return ` with a ${formatted} finish`;
+    return ` with ${formatted} finish`;
   }
 
   // ============ Formatting Helpers ============
@@ -384,10 +445,10 @@ Description:`;
     
     const metalMap: Record<string, string> = {
       'GOLD': 'gold',
-      'GOLD_24K': '24-karat gold',
-      'GOLD_22K': '22-karat gold',
-      'GOLD_18K': '18-karat gold',
-      'GOLD_14K': '14-karat gold',
+      'GOLD_24K': '24K gold',
+      'GOLD_22K': '22K gold',
+      'GOLD_18K': '18K gold',
+      'GOLD_14K': '14K gold',
       'SILVER': 'silver',
       'SILVER_925': 'sterling silver',
       'PLATINUM': 'platinum',
@@ -402,12 +463,12 @@ Description:`;
     if (!finish) return '';
     
     const finishMap: Record<string, string> = {
-      'HIGH_POLISH': 'lustrous high-polish',
-      'MATTE': 'refined matte',
-      'BRUSHED': 'elegant brushed',
-      'HAMMERED': 'artisanal hammered',
-      'TEXTURED': 'beautifully textured',
-      'SATIN': 'smooth satin',
+      'HIGH_POLISH': 'high-polish',
+      'MATTE': 'matte',
+      'BRUSHED': 'brushed',
+      'HAMMERED': 'hammered',
+      'TEXTURED': 'textured',
+      'SATIN': 'satin',
     };
     
     return finishMap[finish] || finish.replace(/_/g, ' ').toLowerCase();
@@ -444,27 +505,9 @@ Description:`;
       'PEAR': 'pear-shaped',
       'MARQUISE': 'marquise-cut',
       'HEART': 'heart-shaped',
-      'RADIANT': 'radiant-cut',
-      'ASSCHER': 'asscher-cut',
     };
     
     return shapeMap[shape] || shape.replace(/_/g, ' ').toLowerCase();
-  }
-
-  private formatSetting(setting?: string): string {
-    if (!setting) return '';
-    
-    const settingMap: Record<string, string> = {
-      'PRONG': 'classic prong',
-      'BEZEL': 'sleek bezel',
-      'CHANNEL': 'elegant channel',
-      'PAVE': 'sparkling pavé',
-      'HALO': 'dazzling halo',
-      'TENSION': 'modern tension',
-      'FLUSH': 'seamless flush',
-    };
-    
-    return settingMap[setting] || setting.replace(/_/g, ' ').toLowerCase();
   }
 
   // ============ Rate Limiting & Queue Management ============
@@ -473,19 +516,28 @@ Description:`;
    * Check if we're currently rate limited
    */
   private isRateLimited(): boolean {
-    if (!this.rateLimitState.isLimited) return false;
-    
-    // Check if cooldown period has passed
-    if (this.rateLimitState.resumeAt && new Date() >= this.rateLimitState.resumeAt) {
-      this.logger.log('Rate limit cooldown period ended, resuming API calls');
-      this.rateLimitState.isLimited = false;
-      this.rateLimitState.limitedAt = null;
-      this.rateLimitState.resumeAt = null;
-      this.rateLimitState.consecutiveFailures = 0;
-      return false;
+    // Check if daily limit exceeded
+    if (this.rateLimitState.dailyRequestCount >= this.config.dailyRequestLimit) {
+      if (!this.rateLimitState.isLimited) {
+        this.activateRateLimit('Daily request limit reached');
+      }
+      return true;
     }
     
-    return true;
+    // Check cooldown
+    if (this.rateLimitState.isLimited && this.rateLimitState.resumeAt) {
+      if (new Date() >= this.rateLimitState.resumeAt) {
+        this.rateLimitState.isLimited = false;
+        this.rateLimitState.limitedAt = null;
+        this.rateLimitState.resumeAt = null;
+        this.saveRateLimitStateToDatabase();
+        this.logger.log('Rate limit cooldown ended');
+        return false;
+      }
+      return true;
+    }
+    
+    return false;
   }
 
   /**
@@ -493,19 +545,15 @@ Description:`;
    */
   private activateRateLimit(reason: string): void {
     const now = new Date();
-    const resumeAt = new Date(now.getTime() + this.COOLDOWN_HOURS * 60 * 60 * 1000);
+    const resumeAt = new Date(now.getTime() + this.config.cooldownHours * 60 * 60 * 1000);
     
-    this.rateLimitState = {
-      isLimited: true,
-      limitedAt: now,
-      resumeAt,
-      consecutiveFailures: this.rateLimitState.consecutiveFailures + 1,
-      lastAlertSentAt: this.rateLimitState.lastAlertSentAt,
-    };
+    this.rateLimitState.isLimited = true;
+    this.rateLimitState.limitedAt = now;
+    this.rateLimitState.resumeAt = resumeAt;
     
-    this.logger.warn(`Rate limit activated. Reason: ${reason}. Will resume at: ${resumeAt.toISOString()}`);
+    this.saveRateLimitStateToDatabase();
+    this.logger.warn(`Rate limit activated. Reason: ${reason}. Resume at: ${resumeAt.toISOString()}`);
     
-    // Send admin alert (with cooldown to avoid spam)
     this.sendAdminAlert(reason);
   }
 
@@ -513,15 +561,9 @@ Description:`;
    * Handle API errors
    */
   private handleApiError(error: any, designId: string, specs: JewelrySpecs): void {
-    this.rateLimitState.consecutiveFailures++;
-    
     this.logger.error(`API error for design ${designId}:`, error.message);
-    
-    // If too many consecutive failures, activate rate limit
-    if (this.rateLimitState.consecutiveFailures >= this.MAX_CONSECUTIVE_FAILURES) {
-      this.activateRateLimit(`${this.MAX_CONSECUTIVE_FAILURES} consecutive API failures`);
-      this.addToQueue(designId, specs);
-    }
+    // Add to queue for retry
+    this.addToQueue(designId, specs);
   }
 
   /**
@@ -530,17 +572,14 @@ Description:`;
   private async sendAdminAlert(reason: string): Promise<void> {
     const now = new Date();
     
-    // Check alert cooldown
     if (this.rateLimitState.lastAlertSentAt) {
       const hoursSinceLastAlert = (now.getTime() - this.rateLimitState.lastAlertSentAt.getTime()) / (1000 * 60 * 60);
-      if (hoursSinceLastAlert < this.ALERT_COOLDOWN_HOURS) {
-        this.logger.log('Skipping admin alert - cooldown period active');
+      if (hoursSinceLastAlert < this.config.alertCooldownHours) {
         return;
       }
     }
     
     try {
-      // Get all admin users
       const admins = await this.prisma.user.findMany({
         where: { role: 'ADMIN' },
         select: { id: true },
@@ -548,8 +587,8 @@ Description:`;
       
       const resumeTime = this.rateLimitState.resumeAt?.toLocaleString() || 'Unknown';
       const queueSize = this.descriptionQueue.length;
+      const dailyUsage = `${this.rateLimitState.dailyRequestCount.toLocaleString()}/${this.config.dailyRequestLimit.toLocaleString()}`;
       
-      // Create notification for each admin
       for (const admin of admins) {
         await this.notificationsService.create({
           userId: admin.id,
@@ -561,12 +600,14 @@ Description:`;
             reason,
             queueSize,
             resumeTime,
+            dailyUsage,
           },
           channels: ['IN_APP', 'EMAIL'],
         });
       }
       
       this.rateLimitState.lastAlertSentAt = now;
+      this.saveRateLimitStateToDatabase();
       this.logger.log(`Admin alert sent to ${admins.length} admins`);
     } catch (error) {
       this.logger.error('Failed to send admin alert:', error);
@@ -577,7 +618,6 @@ Description:`;
    * Add design to queue for later processing
    */
   private async addToQueue(designId: string, specs: JewelrySpecs): Promise<void> {
-    // Check if already in queue
     if (this.descriptionQueue.some(item => item.designId === designId)) {
       return;
     }
@@ -590,39 +630,29 @@ Description:`;
     };
     
     this.descriptionQueue.push(queueItem);
-    
-    // Persist to database
     await this.saveQueueToDatabase();
     
     this.logger.log(`Added design ${designId} to queue. Queue size: ${this.descriptionQueue.length}`);
   }
 
-  /**
-   * Save queue to database for persistence across restarts
-   */
+  // ============ Database Persistence ============
+
   private async saveQueueToDatabase(): Promise<void> {
     try {
-      // Use SystemConfig or a dedicated table
       await this.prisma.systemConfig.upsert({
-        where: { key: 'description_generation_queue' },
+        where: { key: this.CONFIG_KEYS.QUEUE },
         update: { value: JSON.stringify(this.descriptionQueue) },
-        create: { 
-          key: 'description_generation_queue', 
-          value: JSON.stringify(this.descriptionQueue),
-        },
+        create: { key: this.CONFIG_KEYS.QUEUE, value: JSON.stringify(this.descriptionQueue) },
       });
     } catch (error) {
-      this.logger.error('Failed to save queue to database:', error);
+      this.logger.error('Failed to save queue:', error);
     }
   }
 
-  /**
-   * Load queue from database on startup
-   */
   private async loadQueueFromDatabase(): Promise<void> {
     try {
       const config = await this.prisma.systemConfig.findUnique({
-        where: { key: 'description_generation_queue' },
+        where: { key: this.CONFIG_KEYS.QUEUE },
       });
       
       if (config?.value && typeof config.value === 'string') {
@@ -630,19 +660,83 @@ Description:`;
         this.logger.log(`Loaded ${this.descriptionQueue.length} items from queue`);
       }
     } catch (error) {
-      this.logger.error('Failed to load queue from database:', error);
+      this.logger.error('Failed to load queue:', error);
       this.descriptionQueue = [];
     }
   }
+
+  private async saveRateLimitStateToDatabase(): Promise<void> {
+    try {
+      await this.prisma.systemConfig.upsert({
+        where: { key: this.CONFIG_KEYS.RATE_LIMIT_STATE },
+        update: { value: JSON.stringify(this.rateLimitState) },
+        create: { key: this.CONFIG_KEYS.RATE_LIMIT_STATE, value: JSON.stringify(this.rateLimitState) },
+      });
+    } catch (error) {
+      this.logger.error('Failed to save rate limit state:', error);
+    }
+  }
+
+  private async loadRateLimitStateFromDatabase(): Promise<void> {
+    try {
+      const config = await this.prisma.systemConfig.findUnique({
+        where: { key: this.CONFIG_KEYS.RATE_LIMIT_STATE },
+      });
+      
+      if (config?.value && typeof config.value === 'string') {
+        const stored = JSON.parse(config.value);
+        this.rateLimitState = {
+          ...this.rateLimitState,
+          ...stored,
+          dailyResetAt: stored.dailyResetAt ? new Date(stored.dailyResetAt) : null,
+          limitedAt: stored.limitedAt ? new Date(stored.limitedAt) : null,
+          resumeAt: stored.resumeAt ? new Date(stored.resumeAt) : null,
+          lastAlertSentAt: stored.lastAlertSentAt ? new Date(stored.lastAlertSentAt) : null,
+        };
+        this.logger.log(`Loaded rate limit state. Daily count: ${this.rateLimitState.dailyRequestCount}`);
+      }
+    } catch (error) {
+      this.logger.error('Failed to load rate limit state:', error);
+    }
+  }
+
+  private async saveConfigToDatabase(): Promise<void> {
+    try {
+      await this.prisma.systemConfig.upsert({
+        where: { key: this.CONFIG_KEYS.SERVICE_CONFIG },
+        update: { value: JSON.stringify(this.config) },
+        create: { key: this.CONFIG_KEYS.SERVICE_CONFIG, value: JSON.stringify(this.config) },
+      });
+    } catch (error) {
+      this.logger.error('Failed to save config:', error);
+    }
+  }
+
+  private async loadConfigFromDatabase(): Promise<void> {
+    try {
+      const config = await this.prisma.systemConfig.findUnique({
+        where: { key: this.CONFIG_KEYS.SERVICE_CONFIG },
+      });
+      
+      if (config?.value && typeof config.value === 'string') {
+        const stored = JSON.parse(config.value);
+        this.config = { ...this.config, ...stored };
+        this.logger.log(`Loaded config. Daily limit: ${this.config.dailyRequestLimit}`);
+      }
+    } catch (error) {
+      this.logger.error('Failed to load config:', error);
+    }
+  }
+
+  // ============ Cron Jobs ============
 
   /**
    * Process queued descriptions - runs every hour
    */
   @Cron(CronExpression.EVERY_HOUR)
   async processQueue(): Promise<void> {
-    // Don't process if rate limited
     if (this.isRateLimited()) {
-      this.logger.log('Queue processing skipped - still rate limited');
+      this.logger.log('Queue processing skipped - rate limited');
       return;
     }
     
@@ -650,27 +744,24 @@ Description:`;
       return;
     }
     
-    this.logger.log(`Processing description queue. Items: ${this.descriptionQueue.length}`);
+    this.logger.log(`Processing queue. Items: ${this.descriptionQueue.length}`);
     
     const processedIds: string[] = [];
     
     for (const item of this.descriptionQueue) {
-      // Check rate limit again (might get triggered during processing)
-      if (this.isRateLimited()) {
-        break;
-      }
+      if (this.isRateLimited()) break;
       
       try {
-        const description = await this.generateWithHuggingFace(item.specs);
+        const description = await this.generateWithGemini(item.specs);
         
         if (description) {
-          // Update the design with AI-generated description
+          const existingSpecs = await this.getExistingAdditionalSpecs(item.designId);
+          
           await this.prisma.design.update({
             where: { id: item.designId },
             data: {
               additionalSpecs: {
-                // Preserve existing specs
-                ...(await this.getExistingAdditionalSpecs(item.designId)),
+                ...existingSpecs,
                 description,
                 descriptionSource: 'AI',
                 descriptionGeneratedAt: new Date().toISOString(),
@@ -678,28 +769,34 @@ Description:`;
             },
           });
           
+          this.rateLimitState.dailyRequestCount++;
           processedIds.push(item.id);
-          this.logger.log(`Successfully processed queued description for design ${item.designId}`);
+          this.logger.log(`Processed queued design ${item.designId}`);
         }
         
-        // Small delay between requests to be respectful to API
-        await this.sleep(1000);
+        // Small delay between requests
+        await this.sleep(500);
       } catch (error) {
-        this.logger.error(`Failed to process queued item ${item.designId}:`, error);
-        // Continue with next item
+        this.logger.error(`Failed to process ${item.designId}:`, error);
       }
     }
     
-    // Remove processed items from queue
     this.descriptionQueue = this.descriptionQueue.filter(item => !processedIds.includes(item.id));
     await this.saveQueueToDatabase();
+    await this.saveRateLimitStateToDatabase();
     
-    this.logger.log(`Queue processing complete. Processed: ${processedIds.length}, Remaining: ${this.descriptionQueue.length}`);
+    this.logger.log(`Queue processed. Done: ${processedIds.length}, Remaining: ${this.descriptionQueue.length}`);
   }
 
   /**
-   * Get existing additionalSpecs for a design
+   * Daily reset cron job - runs at midnight
    */
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async dailyReset(): Promise<void> {
+    this.logger.log('Running daily reset');
+    this.resetDailyCounter();
+  }
+
   private async getExistingAdditionalSpecs(designId: string): Promise<Record<string, any>> {
     try {
       const design = await this.prisma.design.findUnique({
@@ -712,6 +809,12 @@ Description:`;
     }
   }
 
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // ============ Admin API Methods ============
+
   /**
    * Get current service status (for admin dashboard)
    */
@@ -719,20 +822,91 @@ Description:`;
     isRateLimited: boolean;
     resumeAt: Date | null;
     queueSize: number;
-    consecutiveFailures: number;
+    dailyRequestCount: number;
+    dailyRequestLimit: number;
+    dailyResetAt: Date | null;
+    usagePercentage: number;
+    estimatedCost: string;
   } {
+    const usagePercentage = Math.round((this.rateLimitState.dailyRequestCount / this.config.dailyRequestLimit) * 100);
+    // Cost: ~$0.00007 per request
+    const estimatedCost = `$${(this.rateLimitState.dailyRequestCount * 0.00007).toFixed(4)}`;
+    
     return {
       isRateLimited: this.rateLimitState.isLimited,
       resumeAt: this.rateLimitState.resumeAt,
       queueSize: this.descriptionQueue.length,
-      consecutiveFailures: this.rateLimitState.consecutiveFailures,
+      dailyRequestCount: this.rateLimitState.dailyRequestCount,
+      dailyRequestLimit: this.config.dailyRequestLimit,
+      dailyResetAt: this.rateLimitState.dailyResetAt,
+      usagePercentage,
+      estimatedCost,
     };
   }
 
   /**
-   * Utility: Sleep function
+   * Update daily request limit (admin only)
    */
-  private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  async updateDailyLimit(newLimit: number): Promise<{ success: boolean; message: string }> {
+    if (newLimit < 1000) {
+      return { success: false, message: 'Limit must be at least 1,000 requests' };
+    }
+    
+    if (newLimit > 10000000) {
+      return { success: false, message: 'Limit cannot exceed 10 million requests' };
+    }
+    
+    this.config.dailyRequestLimit = newLimit;
+    await this.saveConfigToDatabase();
+    
+    // If we were rate limited due to daily limit and new limit is higher, remove limit
+    if (this.rateLimitState.isLimited && this.rateLimitState.dailyRequestCount < newLimit) {
+      this.rateLimitState.isLimited = false;
+      this.rateLimitState.limitedAt = null;
+      this.rateLimitState.resumeAt = null;
+      await this.saveRateLimitStateToDatabase();
+    }
+    
+    this.logger.log(`Daily limit updated to ${newLimit.toLocaleString()}`);
+    return { success: true, message: `Daily limit updated to ${newLimit.toLocaleString()} requests` };
+  }
+
+  /**
+   * Reset rate limit manually (admin only)
+   */
+  async resetRateLimit(): Promise<{ success: boolean; message: string }> {
+    this.rateLimitState.isLimited = false;
+    this.rateLimitState.limitedAt = null;
+    this.rateLimitState.resumeAt = null;
+    await this.saveRateLimitStateToDatabase();
+    
+    this.logger.log('Rate limit manually reset by admin');
+    return { success: true, message: 'Rate limit has been reset' };
+  }
+
+  /**
+   * Clear the queue (admin only)
+   */
+  async clearQueue(): Promise<{ success: boolean; message: string; clearedCount: number }> {
+    const count = this.descriptionQueue.length;
+    this.descriptionQueue = [];
+    await this.saveQueueToDatabase();
+    
+    this.logger.log(`Queue cleared. Removed ${count} items`);
+    return { success: true, message: `Cleared ${count} items from queue`, clearedCount: count };
+  }
+
+  /**
+   * Force process queue now (admin only)
+   */
+  async forceProcessQueue(): Promise<{ success: boolean; message: string }> {
+    if (this.descriptionQueue.length === 0) {
+      return { success: false, message: 'Queue is empty' };
+    }
+    
+    // Run queue processing
+    await this.processQueue();
+    
+    return { success: true, message: `Queue processing triggered. Remaining: ${this.descriptionQueue.length}` };
   }
 }

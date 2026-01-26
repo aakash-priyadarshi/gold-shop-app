@@ -35,7 +35,9 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { adminApi } from "@/lib/api";
 import {
+  AlertTriangle,
   Bell,
+  Bot,
   CheckCircle2,
   Database,
   DollarSign,
@@ -44,10 +46,12 @@ import {
   Loader2,
   Mail,
   Percent,
+  Play,
   RefreshCw,
   Send,
   Settings,
   Shield,
+  Trash2,
   XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -91,6 +95,24 @@ export default function AdminSettingsPage() {
   });
   const [updatingAdminEmail, setUpdatingAdminEmail] = useState(false);
 
+  // AI Description Service state
+  const [aiServiceStatus, setAiServiceStatus] = useState<{
+    isRateLimited: boolean;
+    resumeAt: string | null;
+    queueSize: number;
+    dailyRequestCount: number;
+    dailyRequestLimit: number;
+    dailyResetAt: string | null;
+    usagePercentage: number;
+    estimatedCost: string;
+  } | null>(null);
+  const [loadingAiStatus, setLoadingAiStatus] = useState(true);
+  const [newDailyLimit, setNewDailyLimit] = useState("");
+  const [updatingLimit, setUpdatingLimit] = useState(false);
+  const [resettingRateLimit, setResettingRateLimit] = useState(false);
+  const [clearingQueue, setClearingQueue] = useState(false);
+  const [processingQueue, setProcessingQueue] = useState(false);
+
   // Fetch email status on mount
   useEffect(() => {
     const fetchEmailStatus = async () => {
@@ -105,6 +127,130 @@ export default function AdminSettingsPage() {
     };
     fetchEmailStatus();
   }, []);
+
+  // Fetch AI service status on mount
+  useEffect(() => {
+    const fetchAiServiceStatus = async () => {
+      try {
+        const response = await adminApi.getAiDescriptionServiceStatus();
+        setAiServiceStatus(response.data);
+        if (response.data?.dailyRequestLimit) {
+          setNewDailyLimit(response.data.dailyRequestLimit.toString());
+        }
+      } catch (error) {
+        console.error("Failed to fetch AI service status:", error);
+      } finally {
+        setLoadingAiStatus(false);
+      }
+    };
+    fetchAiServiceStatus();
+    
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchAiServiceStatus, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const refreshAiServiceStatus = async () => {
+    setLoadingAiStatus(true);
+    try {
+      const response = await adminApi.getAiDescriptionServiceStatus();
+      setAiServiceStatus(response.data);
+    } catch (error) {
+      console.error("Failed to fetch AI service status:", error);
+    } finally {
+      setLoadingAiStatus(false);
+    }
+  };
+
+  const handleUpdateDailyLimit = async () => {
+    const limit = parseInt(newDailyLimit);
+    if (isNaN(limit) || limit < 1000) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Limit",
+        description: "Limit must be at least 1,000 requests.",
+      });
+      return;
+    }
+
+    setUpdatingLimit(true);
+    try {
+      const response = await adminApi.updateAiDescriptionDailyLimit(limit);
+      toast({
+        title: "Limit Updated",
+        description: response.data.message,
+      });
+      await refreshAiServiceStatus();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: error?.response?.data?.message || "Could not update limit.",
+      });
+    } finally {
+      setUpdatingLimit(false);
+    }
+  };
+
+  const handleResetRateLimit = async () => {
+    setResettingRateLimit(true);
+    try {
+      await adminApi.resetAiDescriptionRateLimit();
+      toast({
+        title: "Rate Limit Reset",
+        description: "AI service rate limit has been cleared.",
+      });
+      await refreshAiServiceStatus();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Reset Failed",
+        description: "Could not reset rate limit.",
+      });
+    } finally {
+      setResettingRateLimit(false);
+    }
+  };
+
+  const handleClearAiQueue = async () => {
+    setClearingQueue(true);
+    try {
+      const response = await adminApi.clearAiDescriptionQueue();
+      toast({
+        title: "Queue Cleared",
+        description: response.data.message,
+      });
+      await refreshAiServiceStatus();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Clear Failed",
+        description: "Could not clear queue.",
+      });
+    } finally {
+      setClearingQueue(false);
+    }
+  };
+
+  const handleProcessQueue = async () => {
+    setProcessingQueue(true);
+    try {
+      const response = await adminApi.processAiDescriptionQueue();
+      toast({
+        title: "Queue Processing",
+        description: response.data.message,
+      });
+      await refreshAiServiceStatus();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Process Failed",
+        description: "Could not process queue.",
+      });
+    } finally {
+      setProcessingQueue(false);
+    }
+  };
 
   const handleSendTestEmail = async () => {
     if (!testEmail) {
@@ -766,6 +912,190 @@ export default function AdminSettingsPage() {
                       </DialogContent>
                     </Dialog>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* AI Description Service Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bot className="h-5 w-5" />
+                  AI Description Service
+                </CardTitle>
+                <CardDescription>
+                  Manage Gemini-powered jewelry description generation
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Service Status */}
+                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    {loadingAiStatus ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    ) : aiServiceStatus?.isRateLimited ? (
+                      <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                    ) : (
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    )}
+                    <div>
+                      <p className="font-medium">Service Status</p>
+                      <p className="text-sm text-muted-foreground">
+                        {loadingAiStatus
+                          ? "Checking status..."
+                          : aiServiceStatus?.isRateLimited
+                            ? `Rate limited until ${aiServiceStatus.resumeAt ? new Date(aiServiceStatus.resumeAt).toLocaleString() : "Unknown"}`
+                            : "Active • Using Gemini Flash API"}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge
+                    variant={
+                      aiServiceStatus?.isRateLimited ? "destructive" : "default"
+                    }
+                  >
+                    {loadingAiStatus
+                      ? "Loading"
+                      : aiServiceStatus?.isRateLimited
+                        ? "Limited"
+                        : "Active"}
+                  </Badge>
+                </div>
+
+                {/* Usage Stats */}
+                {aiServiceStatus && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="p-4 border rounded-lg text-center">
+                      <p className="text-2xl font-bold">
+                        {aiServiceStatus.dailyRequestCount.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Requests Today
+                      </p>
+                    </div>
+                    <div className="p-4 border rounded-lg text-center">
+                      <p className="text-2xl font-bold">
+                        {aiServiceStatus.usagePercentage}%
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Daily Usage
+                      </p>
+                    </div>
+                    <div className="p-4 border rounded-lg text-center">
+                      <p className="text-2xl font-bold">
+                        {aiServiceStatus.queueSize}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Queued Items
+                      </p>
+                    </div>
+                    <div className="p-4 border rounded-lg text-center">
+                      <p className="text-2xl font-bold text-green-600">
+                        {aiServiceStatus.estimatedCost}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Est. Cost Today
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Daily Limit Config */}
+                <div className="space-y-3 pt-4 border-t">
+                  <Label>Daily Request Limit</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Maximum AI description requests per day. Current limit:{" "}
+                    <strong>
+                      {aiServiceStatus?.dailyRequestLimit?.toLocaleString() ||
+                        "1,000,000"}
+                    </strong>
+                  </p>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      placeholder="e.g., 1000000"
+                      value={newDailyLimit}
+                      onChange={(e) => setNewDailyLimit(e.target.value)}
+                      className="flex-1"
+                      min={1000}
+                      max={10000000}
+                    />
+                    <Button
+                      onClick={handleUpdateDailyLimit}
+                      disabled={updatingLimit}
+                    >
+                      {updatingLimit ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Update"
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Cost estimate: ~$0.00007 per request = ~$70 for 1M requests
+                  </p>
+                </div>
+
+                {/* Admin Actions */}
+                <div className="space-y-3 pt-4 border-t">
+                  <Label>Admin Actions</Label>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={refreshAiServiceStatus}
+                      disabled={loadingAiStatus}
+                    >
+                      {loadingAiStatus ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                      )}
+                      Refresh Status
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleResetRateLimit}
+                      disabled={resettingRateLimit || !aiServiceStatus?.isRateLimited}
+                    >
+                      {resettingRateLimit ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <XCircle className="h-4 w-4 mr-2" />
+                      )}
+                      Reset Rate Limit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleProcessQueue}
+                      disabled={processingQueue || !aiServiceStatus?.queueSize}
+                    >
+                      {processingQueue ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Play className="h-4 w-4 mr-2" />
+                      )}
+                      Process Queue
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleClearAiQueue}
+                      disabled={clearingQueue || !aiServiceStatus?.queueSize}
+                    >
+                      {clearingQueue ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4 mr-2" />
+                      )}
+                      Clear Queue
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Queue processes automatically every hour. Resets daily at midnight.
+                  </p>
                 </div>
               </CardContent>
             </Card>
