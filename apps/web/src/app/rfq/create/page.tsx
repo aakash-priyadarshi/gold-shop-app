@@ -2662,12 +2662,14 @@ export default function CreateRfqPage() {
                         {/* Orivraa Logo Watermark - Bottom Right */}
                         <div className="absolute bottom-2 right-2 bg-white/80 backdrop-blur-sm rounded-md px-2 py-1 shadow-sm">
                           <div className="flex items-center gap-1">
-                            <img 
-                              src="/brand/orivraa-icon.svg" 
-                              alt="Orivraa" 
+                            <img
+                              src="/brand/orivraa-icon.svg"
+                              alt="Orivraa"
                               className="h-4 w-4"
                             />
-                            <span className="text-xs font-semibold text-gray-700">Orivraa</span>
+                            <span className="text-xs font-semibold text-gray-700">
+                              Orivraa
+                            </span>
                           </div>
                         </div>
                       </div>

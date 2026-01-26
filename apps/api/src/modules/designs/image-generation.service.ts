@@ -225,9 +225,12 @@ export class ImageGenerationService {
     // Build base description - emphasize "plain" or "simple" when no gemstones
     const plainDescriptor = !specs.hasGemstones ? "plain solid metal " : "";
     let description = `Professional product photograph of a ${plainDescriptor}${jewelryType}`;
-    
+
     // Add explicit no-gemstone instruction in description for rings/pendants
-    if (!specs.hasGemstones && ['RING', 'PENDANT', 'EARRING'].includes(specs.jewelryType)) {
+    if (
+      !specs.hasGemstones &&
+      ["RING", "PENDANT", "EARRING"].includes(specs.jewelryType)
+    ) {
       description += ` without any gemstones or stones - a simple, elegant ${jewelryType} made entirely of metal`;
     }
 
@@ -396,7 +399,9 @@ export class ImageGenerationService {
       }
     } else {
       // Explicitly state no gemstones when hasGemstones is false
-      specLines.push(`- Design: Plain metal only, NO gemstones, NO stones, NO diamonds`);
+      specLines.push(
+        `- Design: Plain metal only, NO gemstones, NO stones, NO diamonds`,
+      );
     }
 
     // Additional gemstones if multiple exist
@@ -411,14 +416,17 @@ export class ImageGenerationService {
     const forbiddenItems = [
       "No hands, fingers, skin, or body parts",
       "No mannequins or display stands",
-      "No text, logos, or watermarks",
+      "ABSOLUTELY NO TEXT of any kind - no letters, numbers, words, labels, stamps, engravings, or markings on the jewelry or background",
+      "No logos, watermarks, or brand names",
       "No additional jewelry pieces",
       "No reflections of environment",
     ];
-    
+
     // Add gemstone restriction if no gemstones selected
     if (!specs.hasGemstones) {
-      forbiddenItems.push("No gemstones, diamonds, crystals, or stones of any kind - this is a plain metal piece only");
+      forbiddenItems.push(
+        "No gemstones, diamonds, crystals, or stones of any kind - this is a plain metal piece only",
+      );
     }
 
     const prompt = `${description}.
@@ -434,9 +442,10 @@ Style requirements:
 - Sharp focus, high detail on facets and metal
 - Photorealistic product photography
 - Clean, centered composition
+- The jewelry must have NO text, engravings, stamps, or markings visible
 
 Forbidden:
-${forbiddenItems.map(item => `- ${item}`).join("\n")}`;
+${forbiddenItems.map((item) => `- ${item}`).join("\n")}`;
 
     return prompt;
   }

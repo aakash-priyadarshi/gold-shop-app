@@ -304,13 +304,15 @@ export default function DesignGalleryPage() {
         {design.imageUrl && (
           <div className="absolute bottom-2 right-2 bg-white/80 backdrop-blur-sm rounded-md px-1.5 py-0.5 shadow-sm">
             <div className="flex items-center gap-1">
-              <Image 
-                src="/brand/orivraa-icon.svg" 
-                alt="Orivraa" 
+              <Image
+                src="/brand/orivraa-icon.svg"
+                alt="Orivraa"
                 width={14}
                 height={14}
               />
-              <span className="text-[10px] font-semibold text-gray-700">Orivraa</span>
+              <span className="text-[10px] font-semibold text-gray-700">
+                Orivraa
+              </span>
             </div>
           </div>
         )}
@@ -656,13 +658,15 @@ export default function DesignGalleryPage() {
                   {selectedDesign.imageUrl && (
                     <div className="absolute bottom-3 right-3 bg-white/80 backdrop-blur-sm rounded-md px-2 py-1 shadow-sm">
                       <div className="flex items-center gap-1">
-                        <Image 
-                          src="/brand/orivraa-icon.svg" 
-                          alt="Orivraa" 
+                        <Image
+                          src="/brand/orivraa-icon.svg"
+                          alt="Orivraa"
                           width={16}
                           height={16}
                         />
-                        <span className="text-xs font-semibold text-gray-700">Orivraa</span>
+                        <span className="text-xs font-semibold text-gray-700">
+                          Orivraa
+                        </span>
                       </div>
                     </div>
                   )}
