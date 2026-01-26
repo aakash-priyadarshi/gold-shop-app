@@ -128,12 +128,21 @@ const JEWELLERY_TYPE_IMAGES: Record<string, string> = {
 };
 
 // Surface finish images for hover preview (AI-generated using Imagen 4)
-const SURFACE_FINISH_IMAGES: Record<string, { image: string; description: string }> = {
-  POLISHED: {
+// Including various key formats for API compatibility
+const SURFACE_FINISH_IMAGES: Record<
+  string,
+  { image: string; description: string }
+> = {
+  // API IDs (from backend SURFACE_FINISHES)
+  HIGH_POLISH: {
     image: "/previews/finishes/polished.png",
     description: "Mirror-like shine, highly reflective surface",
   },
   MATTE: {
+    image: "/previews/finishes/matte.png",
+    description: "Non-reflective, soft appearance",
+  },
+  BRUSHED: {
     image: "/previews/finishes/matte.png",
     description: "Non-reflective, soft brushed appearance",
   },
@@ -144,6 +153,31 @@ const SURFACE_FINISH_IMAGES: Record<string, { image: string; description: string
   HAMMERED: {
     image: "/previews/finishes/hammered.png",
     description: "Textured surface with small indentations",
+  },
+  SANDBLASTED: {
+    image: "/previews/finishes/sandblast.png",
+    description: "Frosted, granular texture",
+  },
+  FLORENTINE: {
+    image: "/previews/finishes/matte.png",
+    description: "Cross-hatched matte texture",
+  },
+  BARK_TEXTURE: {
+    image: "/previews/finishes/hammered.png",
+    description: "Natural bark-like texture",
+  },
+  DIAMOND_CUT: {
+    image: "/previews/finishes/polished.png",
+    description: "Precision faceted cuts for sparkle",
+  },
+  ENGRAVED: {
+    image: "/previews/finishes/hammered.png",
+    description: "Decorative carved patterns",
+  },
+  // Fallback uppercase keys (for hardcoded SelectItems)
+  POLISHED: {
+    image: "/previews/finishes/polished.png",
+    description: "Mirror-like shine, highly reflective surface",
   },
   SANDBLAST: {
     image: "/previews/finishes/sandblast.png",
@@ -1934,7 +1968,10 @@ export default function CreateRfqPage() {
                               </div>
                             </TooltipTrigger>
                             {JEWELLERY_TYPE_IMAGES[type.value] && (
-                              <TooltipContent side="right" className="p-0 overflow-hidden">
+                              <TooltipContent
+                                side="right"
+                                className="p-0 overflow-hidden"
+                              >
                                 <div className="w-40">
                                   <img
                                     src={JEWELLERY_TYPE_IMAGES[type.value]}
@@ -2537,7 +2574,10 @@ export default function CreateRfqPage() {
                                 </div>
                               </TooltipTrigger>
                               {SURFACE_FINISH_IMAGES[type.id] && (
-                                <TooltipContent side="right" className="p-0 overflow-hidden">
+                                <TooltipContent
+                                  side="right"
+                                  className="p-0 overflow-hidden"
+                                >
                                   <div className="w-44">
                                     <img
                                       src={SURFACE_FINISH_IMAGES[type.id].image}
@@ -2545,9 +2585,14 @@ export default function CreateRfqPage() {
                                       className="w-full h-32 object-cover"
                                     />
                                     <div className="p-2 bg-white">
-                                      <p className="text-xs font-medium">{type.name}</p>
+                                      <p className="text-xs font-medium">
+                                        {type.name}
+                                      </p>
                                       <p className="text-xs text-gray-500 mt-0.5">
-                                        {SURFACE_FINISH_IMAGES[type.id].description}
+                                        {
+                                          SURFACE_FINISH_IMAGES[type.id]
+                                            .description
+                                        }
                                       </p>
                                     </div>
                                   </div>
@@ -2565,7 +2610,10 @@ export default function CreateRfqPage() {
                                   </SelectItem>
                                 </div>
                               </TooltipTrigger>
-                              <TooltipContent side="right" className="p-0 overflow-hidden">
+                              <TooltipContent
+                                side="right"
+                                className="p-0 overflow-hidden"
+                              >
                                 <div className="w-44">
                                   <img
                                     src={SURFACE_FINISH_IMAGES.POLISHED.image}
@@ -2573,9 +2621,14 @@ export default function CreateRfqPage() {
                                     className="w-full h-32 object-cover"
                                   />
                                   <div className="p-2 bg-white">
-                                    <p className="text-xs font-medium">High Polish</p>
+                                    <p className="text-xs font-medium">
+                                      High Polish
+                                    </p>
                                     <p className="text-xs text-gray-500 mt-0.5">
-                                      {SURFACE_FINISH_IMAGES.POLISHED.description}
+                                      {
+                                        SURFACE_FINISH_IMAGES.POLISHED
+                                          .description
+                                      }
                                     </p>
                                   </div>
                                 </div>
@@ -2589,7 +2642,10 @@ export default function CreateRfqPage() {
                                   </SelectItem>
                                 </div>
                               </TooltipTrigger>
-                              <TooltipContent side="right" className="p-0 overflow-hidden">
+                              <TooltipContent
+                                side="right"
+                                className="p-0 overflow-hidden"
+                              >
                                 <div className="w-44">
                                   <img
                                     src={SURFACE_FINISH_IMAGES.MATTE.image}
@@ -2597,7 +2653,9 @@ export default function CreateRfqPage() {
                                     className="w-full h-32 object-cover"
                                   />
                                   <div className="p-2 bg-white">
-                                    <p className="text-xs font-medium">Matte / Brushed</p>
+                                    <p className="text-xs font-medium">
+                                      Matte / Brushed
+                                    </p>
                                     <p className="text-xs text-gray-500 mt-0.5">
                                       {SURFACE_FINISH_IMAGES.MATTE.description}
                                     </p>
@@ -2608,10 +2666,15 @@ export default function CreateRfqPage() {
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div>
-                                  <SelectItem value="SATIN">Satin Finish</SelectItem>
+                                  <SelectItem value="SATIN">
+                                    Satin Finish
+                                  </SelectItem>
                                 </div>
                               </TooltipTrigger>
-                              <TooltipContent side="right" className="p-0 overflow-hidden">
+                              <TooltipContent
+                                side="right"
+                                className="p-0 overflow-hidden"
+                              >
                                 <div className="w-44">
                                   <img
                                     src={SURFACE_FINISH_IMAGES.SATIN.image}
@@ -2619,7 +2682,9 @@ export default function CreateRfqPage() {
                                     className="w-full h-32 object-cover"
                                   />
                                   <div className="p-2 bg-white">
-                                    <p className="text-xs font-medium">Satin Finish</p>
+                                    <p className="text-xs font-medium">
+                                      Satin Finish
+                                    </p>
                                     <p className="text-xs text-gray-500 mt-0.5">
                                       {SURFACE_FINISH_IMAGES.SATIN.description}
                                     </p>
@@ -2635,7 +2700,10 @@ export default function CreateRfqPage() {
                                   </SelectItem>
                                 </div>
                               </TooltipTrigger>
-                              <TooltipContent side="right" className="p-0 overflow-hidden">
+                              <TooltipContent
+                                side="right"
+                                className="p-0 overflow-hidden"
+                              >
                                 <div className="w-44">
                                   <img
                                     src={SURFACE_FINISH_IMAGES.HAMMERED.image}
@@ -2643,9 +2711,14 @@ export default function CreateRfqPage() {
                                     className="w-full h-32 object-cover"
                                   />
                                   <div className="p-2 bg-white">
-                                    <p className="text-xs font-medium">Hammered Texture</p>
+                                    <p className="text-xs font-medium">
+                                      Hammered Texture
+                                    </p>
                                     <p className="text-xs text-gray-500 mt-0.5">
-                                      {SURFACE_FINISH_IMAGES.HAMMERED.description}
+                                      {
+                                        SURFACE_FINISH_IMAGES.HAMMERED
+                                          .description
+                                      }
                                     </p>
                                   </div>
                                 </div>
@@ -2659,7 +2732,10 @@ export default function CreateRfqPage() {
                                   </SelectItem>
                                 </div>
                               </TooltipTrigger>
-                              <TooltipContent side="right" className="p-0 overflow-hidden">
+                              <TooltipContent
+                                side="right"
+                                className="p-0 overflow-hidden"
+                              >
                                 <div className="w-44">
                                   <img
                                     src={SURFACE_FINISH_IMAGES.SANDBLAST.image}
@@ -2667,9 +2743,14 @@ export default function CreateRfqPage() {
                                     className="w-full h-32 object-cover"
                                   />
                                   <div className="p-2 bg-white">
-                                    <p className="text-xs font-medium">Sandblasted</p>
+                                    <p className="text-xs font-medium">
+                                      Sandblasted
+                                    </p>
                                     <p className="text-xs text-gray-500 mt-0.5">
-                                      {SURFACE_FINISH_IMAGES.SANDBLAST.description}
+                                      {
+                                        SURFACE_FINISH_IMAGES.SANDBLAST
+                                          .description
+                                      }
                                     </p>
                                   </div>
                                 </div>
@@ -2683,7 +2764,10 @@ export default function CreateRfqPage() {
                                   </SelectItem>
                                 </div>
                               </TooltipTrigger>
-                              <TooltipContent side="right" className="p-0 overflow-hidden">
+                              <TooltipContent
+                                side="right"
+                                className="p-0 overflow-hidden"
+                              >
                                 <div className="w-44">
                                   <img
                                     src={SURFACE_FINISH_IMAGES.ANTIQUE.image}
@@ -2691,9 +2775,14 @@ export default function CreateRfqPage() {
                                     className="w-full h-32 object-cover"
                                   />
                                   <div className="p-2 bg-white">
-                                    <p className="text-xs font-medium">Antique / Oxidized</p>
+                                    <p className="text-xs font-medium">
+                                      Antique / Oxidized
+                                    </p>
                                     <p className="text-xs text-gray-500 mt-0.5">
-                                      {SURFACE_FINISH_IMAGES.ANTIQUE.description}
+                                      {
+                                        SURFACE_FINISH_IMAGES.ANTIQUE
+                                          .description
+                                      }
                                     </p>
                                   </div>
                                 </div>
