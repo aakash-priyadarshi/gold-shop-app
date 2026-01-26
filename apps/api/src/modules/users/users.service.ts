@@ -1,11 +1,16 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { UserRole } from '@prisma/client';
-import * as bcrypt from 'bcryptjs';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { UserRole } from "@prisma/client";
+import * as bcrypt from "bcryptjs";
+import { PrismaService } from "../../prisma/prisma.service";
 
 // Currency codes matching the Prisma enum (CurrencyCode will be available after Prisma regeneration)
-type CurrencyCode = 'NPR' | 'INR' | 'AED' | 'USD' | 'GBP' | 'EUR';
-const DEFAULT_CURRENCY: CurrencyCode = 'NPR';
+type CurrencyCode = "NPR" | "INR" | "AED" | "USD" | "GBP" | "EUR";
+const DEFAULT_CURRENCY: CurrencyCode = "NPR";
 
 interface UpdateProfileData {
   firstName?: string;
@@ -49,7 +54,7 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     // Transform to maintain backward compatibility
@@ -65,45 +70,44 @@ export class UsersService {
     });
   }
 
-  async updateProfile(
-    userId: string,
-    data: UpdateProfileData,
-  ) {
+  async updateProfile(userId: string, data: UpdateProfileData) {
     // Handle combined 'name' field by splitting into firstName/lastName
     let firstName = data.firstName;
     let lastName = data.lastName;
-    
+
     if (data.name && !firstName && !lastName) {
-      const nameParts = data.name.trim().split(' ');
-      firstName = nameParts[0] || '';
-      lastName = nameParts.slice(1).join(' ') || '';
+      const nameParts = data.name.trim().split(" ");
+      firstName = nameParts[0] || "";
+      lastName = nameParts.slice(1).join(" ") || "";
     }
 
     // Build update data with all supported fields
     const updateData: any = {};
     if (firstName !== undefined) updateData.firstName = firstName;
     if (lastName !== undefined) updateData.lastName = lastName;
-    
+
     // If phone is being changed, check if it's different from current and reset verification
     if (data.phone !== undefined) {
       const currentUser = await this.prisma.user.findUnique({
         where: { id: userId },
         select: { phone: true },
       });
-      
+
       updateData.phone = data.phone;
-      
+
       // If phone number is different from current, reset phoneVerifiedAt
       // This makes the old number available for others to use
       if (currentUser && currentUser.phone !== data.phone) {
         updateData.phoneVerifiedAt = null;
       }
     }
-    
-    if (data.preferredLanguage !== undefined) updateData.preferredLanguage = data.preferredLanguage;
-    if (data.preferredCurrency !== undefined) updateData.preferredCurrency = data.preferredCurrency;
+
+    if (data.preferredLanguage !== undefined)
+      updateData.preferredLanguage = data.preferredLanguage;
+    if (data.preferredCurrency !== undefined)
+      updateData.preferredCurrency = data.preferredCurrency;
     if (data.country !== undefined) updateData.preferredCountry = data.country; // Map 'country' from DTO to 'preferredCountry' in schema
-    
+
     return this.prisma.user.update({
       where: { id: userId },
       data: updateData,
@@ -145,7 +149,7 @@ export class UsersService {
             take: 1,
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
       }),
       this.prisma.user.count({
         where: role ? { role } : undefined,
@@ -153,7 +157,7 @@ export class UsersService {
     ]);
 
     // Transform to maintain backward compatibility
-    const transformedUsers = users.map(user => ({
+    const transformedUsers = users.map((user) => ({
       ...user,
       shop: user.shops?.[0] || null,
     }));
@@ -175,23 +179,23 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     if (user.role === UserRole.ADMIN) {
-      throw new ForbiddenException('Cannot suspend admin users');
+      throw new ForbiddenException("Cannot suspend admin users");
     }
 
     return this.prisma.user.update({
       where: { id: userId },
-      data: { status: 'SUSPENDED' },
+      data: { status: "SUSPENDED" },
     });
   }
 
   async activateUser(userId: string) {
     return this.prisma.user.update({
       where: { id: userId },
-      data: { status: 'ACTIVE' },
+      data: { status: "ACTIVE" },
     });
   }
 
@@ -205,14 +209,14 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     return {
-      language: user.preferredLanguage || 'en',
+      language: user.preferredLanguage || "en",
       currency: (user as any).preferredCurrency || DEFAULT_CURRENCY,
-      country: (user as any).preferredCountry || 'US',
-      theme: (user as any).themeMode || 'system',
+      country: (user as any).preferredCountry || "US",
+      theme: (user as any).themeMode || "system",
     };
   }
 
@@ -233,25 +237,29 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     // Use any cast for new fields until Prisma client is regenerated
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data: {
-        ...(data.preferredLanguage && { preferredLanguage: data.preferredLanguage }),
-        ...(data.preferredCurrency && { preferredCurrency: data.preferredCurrency } as any),
-        ...(data.preferredCountry && { preferredCountry: data.preferredCountry } as any),
-        ...(data.themeMode && { themeMode: data.themeMode } as any),
+        ...(data.preferredLanguage && {
+          preferredLanguage: data.preferredLanguage,
+        }),
+        ...(data.preferredCurrency &&
+          ({ preferredCurrency: data.preferredCurrency } as any)),
+        ...(data.preferredCountry &&
+          ({ preferredCountry: data.preferredCountry } as any)),
+        ...(data.themeMode && ({ themeMode: data.themeMode } as any)),
       },
     });
 
     return {
-      language: updated.preferredLanguage || 'en',
+      language: updated.preferredLanguage || "en",
       currency: (updated as any).preferredCurrency || DEFAULT_CURRENCY,
-      country: (updated as any).preferredCountry || 'US',
-      theme: (updated as any).themeMode || 'system',
+      country: (updated as any).preferredCountry || "US",
+      theme: (updated as any).themeMode || "system",
     };
   }
 
@@ -268,7 +276,7 @@ export class UsersService {
     });
 
     if (!shop) {
-      throw new NotFoundException('Shop not found or not owned by user');
+      throw new NotFoundException("Shop not found or not owned by user");
     }
 
     await this.prisma.user.update({
@@ -277,7 +285,7 @@ export class UsersService {
     });
 
     return {
-      message: 'Active shop updated',
+      message: "Active shop updated",
       activeShopId: shopId,
       shopName: shop.shopName,
     };
@@ -296,13 +304,13 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     // Verify current password
     const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!isValid) {
-      throw new BadRequestException('Current password is incorrect');
+      throw new BadRequestException("Current password is incorrect");
     }
 
     // Hash new password
@@ -313,6 +321,6 @@ export class UsersService {
       data: { passwordHash: newPasswordHash },
     });
 
-    return { message: 'Password updated successfully' };
+    return { message: "Password updated successfully" };
   }
 }

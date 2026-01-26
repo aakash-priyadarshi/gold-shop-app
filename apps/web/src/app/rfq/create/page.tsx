@@ -320,7 +320,8 @@ export default function CreateRfqPage() {
   const isAdmin = mounted && user?.role === "ADMIN";
   // Admins are exempt from phone verification requirement
   const isPhoneVerified = mounted && (isAdmin || !!user?.phoneVerifiedAt);
-  const isSeller = mounted && (user?.role === "SHOPKEEPER" || user?.role === "ADMIN");
+  const isSeller =
+    mounted && (user?.role === "SHOPKEEPER" || user?.role === "ADMIN");
   const isShopVerified = mounted && !!user?.shop?.isVerified;
 
   // For sellers: need phone + KYC (shop verified) - but admins exempt from KYC too
@@ -595,7 +596,7 @@ export default function CreateRfqPage() {
           cut: gem.cut,
           settingStyle: gem.settingStyle,
           count: gem.count,
-          sizeValue: gem.sizeValue,
+          sizeValue: parseFloat(gem.sizeValue) || 0, // Convert string to number
           sizeUnit: gem.sizeUnit,
         }));
       }

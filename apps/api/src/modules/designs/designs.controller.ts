@@ -11,6 +11,17 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { BuildMethod, JewelleryType, WeightCategory } from "@prisma/client";
+import {
+  IsBoolean,
+  IsEnum,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  ValidateNested,
+  IsArray,
+} from "class-validator";
+import { Type } from "class-transformer";
 import { Request as ExpressRequest } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
@@ -24,58 +35,193 @@ interface AuthenticatedRequest extends ExpressRequest {
   };
 }
 
-class CreateDesignDto {
-  jewelryType: JewelleryType;
-  buildMethod: BuildMethod;
-  metalType?: string;
-  metalColor?: string;
-  metalDescription?: string;
-  weightCategory?: WeightCategory;
-  estimatedWeight?: number;
-  surfaceFinish?: string;
-  hasGemstones?: boolean;
-  primaryStone?: string;
-  stoneCut?: string;
-  stoneCarat?: number;
-  stoneColor?: string;
-  stoneClarity?: string;
-  stoneCutGrade?: string;
-  stoneCount?: number;
+class AlloyDetailsDto {
+  @IsOptional()
+  @IsString()
+  baseMetal?: string;
+
+  @IsOptional()
+  @IsString()
+  karat?: string;
+
+  @IsOptional()
+  @IsString()
+  alloyFamily?: string;
+
+  @IsOptional()
+  @IsString()
+  recipePresetId?: string;
+}
+
+class PlatingDetailsDto {
+  @IsOptional()
+  @IsString()
+  baseMetal?: string;
+
+  @IsOptional()
+  @IsString()
+  platingType?: string;
+
+  @IsOptional()
+  @IsString()
+  platingTier?: string;
+}
+
+class ItalianMachineDetailsDto {
+  @IsOptional()
+  @IsString()
+  purity?: string;
+
+  @IsOptional()
+  @IsString()
+  chainStyle?: string;
+}
+
+class GemstoneDto {
+  @IsOptional()
+  @IsString()
+  stoneType?: string;
+
+  @IsOptional()
+  @IsString()
+  shape?: string;
+
+  @IsOptional()
+  @IsString()
+  color?: string;
+
+  @IsOptional()
+  @IsString()
+  clarity?: string;
+
+  @IsOptional()
+  @IsString()
+  cut?: string;
+
+  @IsOptional()
+  @IsString()
   settingStyle?: string;
+
+  @IsOptional()
+  @IsNumber()
+  count?: number;
+
+  @IsOptional()
+  @IsNumber()
+  sizeValue?: number;
+
+  @IsOptional()
+  @IsString()
+  sizeUnit?: string;
+}
+
+class CreateDesignDto {
+  @IsEnum(JewelleryType)
+  jewelryType: JewelleryType;
+
+  @IsEnum(BuildMethod)
+  buildMethod: BuildMethod;
+
+  @IsOptional()
+  @IsString()
+  metalType?: string;
+
+  @IsOptional()
+  @IsString()
+  metalColor?: string;
+
+  @IsOptional()
+  @IsString()
+  metalDescription?: string;
+
+  @IsOptional()
+  @IsEnum(WeightCategory)
+  weightCategory?: WeightCategory;
+
+  @IsOptional()
+  @IsNumber()
+  estimatedWeight?: number;
+
+  @IsOptional()
+  @IsString()
+  surfaceFinish?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  hasGemstones?: boolean;
+
+  @IsOptional()
+  @IsString()
+  primaryStone?: string;
+
+  @IsOptional()
+  @IsString()
+  stoneCut?: string;
+
+  @IsOptional()
+  @IsNumber()
+  stoneCarat?: number;
+
+  @IsOptional()
+  @IsString()
+  stoneColor?: string;
+
+  @IsOptional()
+  @IsString()
+  stoneClarity?: string;
+
+  @IsOptional()
+  @IsString()
+  stoneCutGrade?: string;
+
+  @IsOptional()
+  @IsNumber()
+  stoneCount?: number;
+
+  @IsOptional()
+  @IsString()
+  settingStyle?: string;
+
+  @IsOptional()
+  @IsObject()
   additionalSpecs?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsString()
   referenceImageUrl?: string;
+
+  @IsOptional()
+  @IsBoolean()
   shareToGallery?: boolean;
+
+  @IsOptional()
+  @IsString()
   creatorName?: string;
-  // Method-specific details for enhanced prompts
-  alloyDetails?: {
-    baseMetal?: string;
-    karat?: string;
-    alloyFamily?: string;
-    recipePresetId?: string;
-  };
-  platingDetails?: {
-    baseMetal?: string;
-    platingType?: string;
-    platingTier?: string;
-  };
-  italianMachineDetails?: {
-    purity?: string;
-    chainStyle?: string;
-  };
-  gemstones?: Array<{
-    stoneType?: string;
-    shape?: string;
-    color?: string;
-    clarity?: string;
-    cut?: string;
-    settingStyle?: string;
-    count?: number;
-    sizeValue?: number;
-    sizeUnit?: string;
-  }>;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AlloyDetailsDto)
+  alloyDetails?: AlloyDetailsDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PlatingDetailsDto)
+  platingDetails?: PlatingDetailsDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ItalianMachineDetailsDto)
+  italianMachineDetails?: ItalianMachineDetailsDto;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GemstoneDto)
+  gemstones?: GemstoneDto[];
 }
 
 class UpdateVisibilityDto {
+  @IsBoolean()
   isPublic: boolean;
 }
 

@@ -1,23 +1,23 @@
-import { 
-  Injectable, 
-  UnauthorizedException, 
-  ConflictException,
+import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
-  NotFoundException,
+  Injectable,
   Logger,
-} from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcryptjs';
-import * as crypto from 'crypto';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AuditService } from '../audit/audit.service';
-import { MailService } from '../mail/mail.service';
-import { OtpService } from './otp.service';
-import { RedisService } from '../../common/redis';
-import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
-import { UserRole, UserStatus, CurrencyCode } from '@prisma/client';
+  NotFoundException,
+  UnauthorizedException,
+} from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
+import { CurrencyCode, UserRole, UserStatus } from "@prisma/client";
+import * as bcrypt from "bcryptjs";
+import * as crypto from "crypto";
+import { RedisService } from "../../common/redis";
+import { PrismaService } from "../../prisma/prisma.service";
+import { AuditService } from "../audit/audit.service";
+import { MailService } from "../mail/mail.service";
+import { LoginDto } from "./dto/login.dto";
+import { RegisterDto } from "./dto/register.dto";
+import { OtpService } from "./otp.service";
 
 export interface JwtPayload {
   sub: string;
@@ -68,11 +68,15 @@ export class AuthService {
   /**
    * Check if email exists (with Redis caching)
    */
-  async checkEmailExists(email: string): Promise<{ exists: boolean; userId?: string }> {
+  async checkEmailExists(
+    email: string,
+  ): Promise<{ exists: boolean; userId?: string }> {
     // Check Redis cache first
     const cached = await this.redisService.getCachedEmailExists(email);
     if (cached !== null) {
-      this.logger.debug(`Email existence check from cache: ${email} -> ${cached.exists}`);
+      this.logger.debug(
+        `Email existence check from cache: ${email} -> ${cached.exists}`,
+      );
       return cached;
     }
 
@@ -83,21 +87,29 @@ export class AuthService {
     });
 
     const result = { exists: !!user, userId: user?.id };
-    
+
     // Cache the result
-    await this.redisService.cacheEmailExists(email, result.exists, result.userId);
-    
+    await this.redisService.cacheEmailExists(
+      email,
+      result.exists,
+      result.userId,
+    );
+
     return result;
   }
 
   /**
    * Check if phone exists (with Redis caching)
    */
-  async checkPhoneExists(phone: string): Promise<{ exists: boolean; userId?: string }> {
+  async checkPhoneExists(
+    phone: string,
+  ): Promise<{ exists: boolean; userId?: string }> {
     // Check Redis cache first
     const cached = await this.redisService.getCachedPhoneExists(phone);
     if (cached !== null) {
-      this.logger.debug(`Phone existence check from cache: ${phone} -> ${cached.exists}`);
+      this.logger.debug(
+        `Phone existence check from cache: ${phone} -> ${cached.exists}`,
+      );
       return cached;
     }
 
@@ -108,10 +120,14 @@ export class AuthService {
     });
 
     const result = { exists: !!user, userId: user?.id };
-    
+
     // Cache the result
-    await this.redisService.cachePhoneExists(phone, result.exists, result.userId);
-    
+    await this.redisService.cachePhoneExists(
+      phone,
+      result.exists,
+      result.userId,
+    );
+
     return result;
   }
 
@@ -120,24 +136,29 @@ export class AuthService {
    * SHOPKEEPER registration requires shop details
    * Returns registration info and sends verification OTP
    */
-  async register(dto: RegisterDto, ipAddress?: string): Promise<RegisterResponse> {
+  async register(
+    dto: RegisterDto,
+    ipAddress?: string,
+  ): Promise<RegisterResponse> {
     // Check if email already exists (using cached check)
     const emailCheck = await this.checkEmailExists(dto.email);
     if (emailCheck.exists) {
-      throw new ConflictException('Email already registered');
+      throw new ConflictException("Email already registered");
     }
 
     // Check phone if provided (using cached check)
     if (dto.phone) {
       const phoneCheck = await this.checkPhoneExists(dto.phone);
       if (phoneCheck.exists) {
-        throw new ConflictException('Phone number already registered');
+        throw new ConflictException("Phone number already registered");
       }
     }
 
     // Validate shopkeeper registration has shop details
-    if (dto.role === 'SHOPKEEPER' && !dto.shop) {
-      throw new BadRequestException('Shop details are required for shopkeeper registration');
+    if (dto.role === "SHOPKEEPER" && !dto.shop) {
+      throw new BadRequestException(
+        "Shop details are required for shopkeeper registration",
+      );
     }
 
     // Hash password
@@ -162,15 +183,15 @@ export class AuthService {
           role: dto.role as UserRole,
           status: UserStatus.PENDING_VERIFICATION, // All users start pending until email verified
           emailVerified: false,
-          preferredLanguage: dto.preferredLanguage || 'en',
+          preferredLanguage: dto.preferredLanguage || "en",
           preferredCurrency,
         },
       });
 
       let shop = null;
-      
+
       // Create shop for shopkeeper
-      if (dto.role === 'SHOPKEEPER' && dto.shop) {
+      if (dto.role === "SHOPKEEPER" && dto.shop) {
         shop = await tx.shop.create({
           data: {
             userId: user.id,
@@ -192,12 +213,12 @@ export class AuthService {
     // Log audit
     await this.auditService.log({
       userId: result.user.id,
-      actorType: 'USER',
-      action: 'REGISTER',
-      resourceType: 'USER',
+      actorType: "USER",
+      action: "REGISTER",
+      resourceType: "USER",
       resourceId: result.user.id,
-      newValue: { 
-        email: result.user.email, 
+      newValue: {
+        email: result.user.email,
         role: result.user.role,
         shopId: result.shop?.id,
       },
@@ -226,7 +247,8 @@ export class AuthService {
 
     return {
       success: true,
-      message: 'Registration successful. Please verify your email with the OTP sent.',
+      message:
+        "Registration successful. Please verify your email with the OTP sent.",
       userId: result.user.id,
       email: result.user.email,
       requiresVerification: true,
@@ -243,15 +265,15 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new BadRequestException('User not found');
+      throw new BadRequestException("User not found");
     }
 
     if (user.emailVerified) {
-      throw new BadRequestException('Email already verified');
+      throw new BadRequestException("Email already verified");
     }
 
     // Verify the OTP
-    await this.otpService.verifyOtp(userId, 'EMAIL_VERIFICATION', code);
+    await this.otpService.verifyOtp(userId, "EMAIL_VERIFICATION", code);
 
     // Update user status to active after email verification
     await this.prisma.user.update({
@@ -259,15 +281,21 @@ export class AuthService {
       data: {
         emailVerified: true,
         emailVerifiedAt: new Date(),
-        status: user.role === 'SHOPKEEPER' ? UserStatus.PENDING_VERIFICATION : UserStatus.ACTIVE,
+        status:
+          user.role === "SHOPKEEPER"
+            ? UserStatus.PENDING_VERIFICATION
+            : UserStatus.ACTIVE,
       },
     });
 
     this.logger.log(`Email verified for user: ${user.email}`);
 
     // Send welcome email
-    this.mailService.sendWelcome(user.email, user.firstName)
-      .catch(err => this.logger.error(`Failed to send welcome email: ${err.message}`));
+    this.mailService
+      .sendWelcome(user.email, user.firstName)
+      .catch((err) =>
+        this.logger.error(`Failed to send welcome email: ${err.message}`),
+      );
 
     // Generate tokens and log the user in
     // Get the active shop for the user (first shop or by activeShopId)
@@ -278,48 +306,66 @@ export class AuthService {
   /**
    * Resend verification OTP
    */
-  async resendVerificationOtp(email: string, ipAddress?: string): Promise<{ success: boolean; message: string }> {
+  async resendVerificationOtp(
+    email: string,
+    ipAddress?: string,
+  ): Promise<{ success: boolean; message: string }> {
     const user = await this.prisma.user.findUnique({
       where: { email },
     });
 
     if (!user) {
       // Don't reveal if email exists
-      return { success: true, message: 'If the email exists, a verification code has been sent.' };
+      return {
+        success: true,
+        message: "If the email exists, a verification code has been sent.",
+      };
     }
 
     if (user.emailVerified) {
-      throw new BadRequestException('Email already verified');
+      throw new BadRequestException("Email already verified");
     }
 
-    await this.otpService.sendVerificationOtpByEmail(user.email, user.id, user.firstName, ipAddress);
-    return { success: true, message: 'Verification code sent to your email.' };
+    await this.otpService.sendVerificationOtpByEmail(
+      user.email,
+      user.id,
+      user.firstName,
+      ipAddress,
+    );
+    return { success: true, message: "Verification code sent to your email." };
   }
 
   /**
    * Login with email and password
    */
-  async login(dto: LoginDto, ipAddress?: string, userAgent?: string): Promise<AuthResponse> {
+  async login(
+    dto: LoginDto,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<AuthResponse> {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
       include: { shops: true },
     });
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException("Invalid credentials");
     }
 
     // Verify password
-    const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
+    const isPasswordValid = await bcrypt.compare(
+      dto.password,
+      user.passwordHash,
+    );
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException("Invalid credentials");
     }
 
     // Check if email is verified
     if (!user.emailVerified) {
       throw new ForbiddenException({
-        message: 'Email not verified',
-        code: 'EMAIL_NOT_VERIFIED',
+        message: "Email not verified",
+        code: "EMAIL_NOT_VERIFIED",
         userId: user.id,
         email: user.email,
       });
@@ -327,11 +373,13 @@ export class AuthService {
 
     // Check if user is active
     if (user.status === UserStatus.SUSPENDED) {
-      throw new UnauthorizedException('Account suspended. Please contact support.');
+      throw new UnauthorizedException(
+        "Account suspended. Please contact support.",
+      );
     }
 
     if (user.status === UserStatus.DEACTIVATED) {
-      throw new UnauthorizedException('Account deactivated');
+      throw new UnauthorizedException("Account deactivated");
     }
 
     // Update last login
@@ -343,21 +391,29 @@ export class AuthService {
     // Log audit
     await this.auditService.log({
       userId: user.id,
-      actorType: 'USER',
-      action: 'LOGIN',
-      resourceType: 'USER',
+      actorType: "USER",
+      action: "LOGIN",
+      resourceType: "USER",
       resourceId: user.id,
       ipAddress,
       userAgent,
     });
 
-    return this.generateTokens(user, user.shops?.[0] || null, ipAddress, userAgent);
+    return this.generateTokens(
+      user,
+      user.shops?.[0] || null,
+      ipAddress,
+      userAgent,
+    );
   }
 
   /**
    * Request password reset OTP
    */
-  async forgotPassword(email: string, ipAddress?: string): Promise<{ success: boolean; message: string }> {
+  async forgotPassword(
+    email: string,
+    ipAddress?: string,
+  ): Promise<{ success: boolean; message: string }> {
     return this.otpService.sendPasswordResetOtp(email, ipAddress);
   }
 
@@ -365,15 +421,19 @@ export class AuthService {
    * Reset password with OTP
    */
   async resetPassword(
-    email: string, 
-    code: string, 
-    newPassword: string
+    email: string,
+    code: string,
+    newPassword: string,
   ): Promise<{ success: boolean; message: string }> {
     // Verify OTP
-    const result = await this.otpService.verifyOtpByEmail(email, 'PASSWORD_RESET', code);
+    const result = await this.otpService.verifyOtpByEmail(
+      email,
+      "PASSWORD_RESET",
+      code,
+    );
 
     if (!result.success || !result.userId) {
-      throw new BadRequestException('Invalid or expired code');
+      throw new BadRequestException("Invalid or expired code");
     }
 
     // Hash new password
@@ -398,15 +458,19 @@ export class AuthService {
     // Log audit
     await this.auditService.log({
       userId: result.userId,
-      actorType: 'USER',
-      action: 'PASSWORD_RESET',
-      resourceType: 'USER',
+      actorType: "USER",
+      action: "PASSWORD_RESET",
+      resourceType: "USER",
       resourceId: result.userId,
     });
 
     this.logger.log(`Password reset for user: ${email}`);
 
-    return { success: true, message: 'Password reset successful. Please login with your new password.' };
+    return {
+      success: true,
+      message:
+        "Password reset successful. Please login with your new password.",
+    };
   }
 
   /**
@@ -415,25 +479,29 @@ export class AuthService {
    * For SHOPKEEPER: creates user first, then requires shop setup on frontend
    * For login mode: if account doesn't exist, returns accountNotFound flag
    */
-  async googleAuth(googleUser: {
-    googleId: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    picture?: string;
-    requestedRole?: string;
-    mode?: string; // 'login' or 'register'
-  }, ipAddress?: string, userAgent?: string): Promise<AuthResponse> {
-    const requestedRole = googleUser.requestedRole === 'SHOPKEEPER' ? UserRole.SHOPKEEPER : UserRole.CUSTOMER;
-    const mode = googleUser.mode || 'login'; // Default to login mode
-    
+  async googleAuth(
+    googleUser: {
+      googleId: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      picture?: string;
+      requestedRole?: string;
+      mode?: string; // 'login' or 'register'
+    },
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<AuthResponse> {
+    const requestedRole =
+      googleUser.requestedRole === "SHOPKEEPER"
+        ? UserRole.SHOPKEEPER
+        : UserRole.CUSTOMER;
+    const mode = googleUser.mode || "login"; // Default to login mode
+
     // Check if user exists by googleId or email
     let user = await this.prisma.user.findFirst({
       where: {
-        OR: [
-          { googleId: googleUser.googleId },
-          { email: googleUser.email },
-        ],
+        OR: [{ googleId: googleUser.googleId }, { email: googleUser.email }],
       },
       include: { shops: true },
     });
@@ -443,22 +511,27 @@ export class AuthService {
       if (!user.googleId) {
         await this.prisma.user.update({
           where: { id: user.id },
-          data: { 
+          data: {
             googleId: googleUser.googleId,
             emailVerified: true, // Google verified the email
             emailVerifiedAt: user.emailVerifiedAt || new Date(),
-            status: user.status === UserStatus.PENDING_VERIFICATION ? UserStatus.ACTIVE : user.status,
+            status:
+              user.status === UserStatus.PENDING_VERIFICATION
+                ? UserStatus.ACTIVE
+                : user.status,
           },
         });
       }
 
       // Check if user is active
       if (user.status === UserStatus.SUSPENDED) {
-        throw new UnauthorizedException('Account suspended. Please contact support.');
+        throw new UnauthorizedException(
+          "Account suspended. Please contact support.",
+        );
       }
 
       if (user.status === UserStatus.DEACTIVATED) {
-        throw new UnauthorizedException('Account deactivated');
+        throw new UnauthorizedException("Account deactivated");
       }
 
       // Update last login
@@ -470,32 +543,39 @@ export class AuthService {
       // Log audit
       await this.auditService.log({
         userId: user.id,
-        actorType: 'USER',
-        action: 'LOGIN',
-        resourceType: 'USER',
+        actorType: "USER",
+        action: "LOGIN",
+        resourceType: "USER",
         resourceId: user.id,
-        metadata: { method: 'google' },
+        metadata: { method: "google" },
         ipAddress,
         userAgent,
       });
 
-      const tokens = await this.generateTokens(user, user.shops?.[0] || null, ipAddress, userAgent);
-      
+      const tokens = await this.generateTokens(
+        user,
+        user.shops?.[0] || null,
+        ipAddress,
+        userAgent,
+      );
+
       // If user is SHOPKEEPER but has no shop, they need to complete setup
       if (user.role === UserRole.SHOPKEEPER && !user.shops?.length) {
         return { ...tokens, needsShopSetup: true };
       }
-      
+
       return tokens;
     }
 
     // User doesn't exist
     // If mode is 'login', indicate account not found instead of creating
-    if (mode === 'login') {
-      this.logger.log(`Google OAuth login attempted for non-existent account: ${googleUser.email}`);
+    if (mode === "login") {
+      this.logger.log(
+        `Google OAuth login attempted for non-existent account: ${googleUser.email}`,
+      );
       throw new NotFoundException({
-        message: 'No account found with this email. Please register first.',
-        code: 'ACCOUNT_NOT_FOUND',
+        message: "No account found with this email. Please register first.",
+        code: "ACCOUNT_NOT_FOUND",
         email: googleUser.email,
       });
     }
@@ -507,13 +587,16 @@ export class AuthService {
         googleId: googleUser.googleId,
         firstName: googleUser.firstName,
         lastName: googleUser.lastName,
-        passwordHash: '', // No password for OAuth users
+        passwordHash: "", // No password for OAuth users
         role: requestedRole,
         // SHOPKEEPER accounts via OAuth start as PENDING_VERIFICATION until shop is created
-        status: requestedRole === UserRole.SHOPKEEPER ? UserStatus.PENDING_VERIFICATION : UserStatus.ACTIVE,
+        status:
+          requestedRole === UserRole.SHOPKEEPER
+            ? UserStatus.PENDING_VERIFICATION
+            : UserStatus.ACTIVE,
         emailVerified: true, // Google verified the email
         emailVerifiedAt: new Date(),
-        preferredLanguage: 'en',
+        preferredLanguage: "en",
         preferredCurrency: CurrencyCode.NPR,
       },
     });
@@ -524,21 +607,31 @@ export class AuthService {
     // Log audit
     await this.auditService.log({
       userId: newUser.id,
-      actorType: 'USER',
-      action: 'REGISTER',
-      resourceType: 'USER',
+      actorType: "USER",
+      action: "REGISTER",
+      resourceType: "USER",
       resourceId: newUser.id,
-      newValue: { email: newUser.email, method: 'google', role: requestedRole },
+      newValue: { email: newUser.email, method: "google", role: requestedRole },
     });
 
-    this.logger.log(`New Google OAuth user registered: ${googleUser.email} as ${requestedRole}`);
+    this.logger.log(
+      `New Google OAuth user registered: ${googleUser.email} as ${requestedRole}`,
+    );
 
     // Send welcome email
-    this.mailService.sendWelcome(newUser.email, newUser.firstName)
-      .catch(err => this.logger.error(`Failed to send welcome email: ${err.message}`));
+    this.mailService
+      .sendWelcome(newUser.email, newUser.firstName)
+      .catch((err) =>
+        this.logger.error(`Failed to send welcome email: ${err.message}`),
+      );
 
-    const tokens = await this.generateTokens(newUser, null, ipAddress, userAgent);
-    
+    const tokens = await this.generateTokens(
+      newUser,
+      null,
+      ipAddress,
+      userAgent,
+    );
+
     // If SHOPKEEPER, they need to complete shop setup
     if (requestedRole === UserRole.SHOPKEEPER) {
       return { ...tokens, needsShopSetup: true };
@@ -550,10 +643,14 @@ export class AuthService {
   /**
    * Refresh access token using refresh token
    */
-  async refreshToken(refreshToken: string, ipAddress?: string, userAgent?: string): Promise<AuthResponse> {
+  async refreshToken(
+    refreshToken: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<AuthResponse> {
     // Try new RefreshToken table first, fall back to Session
     const tokenHash = this.hashToken(refreshToken);
-    
+
     // Check RefreshToken table
     const storedToken = await this.prisma.refreshToken.findUnique({
       where: { tokenHash },
@@ -563,17 +660,23 @@ export class AuthService {
     if (storedToken) {
       // Check if token is valid
       if (storedToken.revokedAt) {
-        this.logger.warn(`Refresh token reuse detected for user ${storedToken.userId}`);
-        throw new UnauthorizedException('Refresh token has been revoked');
+        this.logger.warn(
+          `Refresh token reuse detected for user ${storedToken.userId}`,
+        );
+        throw new UnauthorizedException("Refresh token has been revoked");
       }
 
       if (storedToken.expiresAt < new Date()) {
-        throw new UnauthorizedException('Refresh token has expired');
+        throw new UnauthorizedException("Refresh token has expired");
       }
 
       const user = storedToken.user;
-      if (!user || user.status === UserStatus.SUSPENDED || user.status === UserStatus.DEACTIVATED) {
-        throw new UnauthorizedException('User account is not active');
+      if (
+        !user ||
+        user.status === UserStatus.SUSPENDED ||
+        user.status === UserStatus.DEACTIVATED
+      ) {
+        throw new UnauthorizedException("User account is not active");
       }
 
       // Revoke old token (rotation)
@@ -582,7 +685,12 @@ export class AuthService {
         data: { revokedAt: new Date() },
       });
 
-      return this.generateTokens(user, user.shops?.[0] || null, ipAddress, userAgent);
+      return this.generateTokens(
+        user,
+        user.shops?.[0] || null,
+        ipAddress,
+        userAgent,
+      );
     }
 
     // Fall back to legacy Session table
@@ -591,7 +699,7 @@ export class AuthService {
     });
 
     if (!session || session.expiresAt < new Date()) {
-      throw new UnauthorizedException('Invalid or expired refresh token');
+      throw new UnauthorizedException("Invalid or expired refresh token");
     }
 
     const user = await this.prisma.user.findUnique({
@@ -600,7 +708,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException("User not found");
     }
 
     // Delete old session
@@ -608,7 +716,12 @@ export class AuthService {
       where: { id: session.id },
     });
 
-    return this.generateTokens(user, user.shops?.[0] || null, ipAddress, userAgent);
+    return this.generateTokens(
+      user,
+      user.shops?.[0] || null,
+      ipAddress,
+      userAgent,
+    );
   }
 
   /**
@@ -617,7 +730,7 @@ export class AuthService {
   async getMe(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { 
+      include: {
         shops: {
           select: {
             id: true,
@@ -633,7 +746,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException("User not found");
     }
 
     return {
@@ -680,7 +793,13 @@ export class AuthService {
   }
 
   private async generateTokens(
-    user: { id: string; email: string; firstName: string; lastName: string; role: UserRole },
+    user: {
+      id: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      role: UserRole;
+    },
     shop?: { id: string; shopName: string } | null,
     ipAddress?: string,
     userAgent?: string,
@@ -735,11 +854,11 @@ export class AuthService {
   }
 
   private generateRefreshToken(): string {
-    return crypto.randomBytes(64).toString('hex');
+    return crypto.randomBytes(64).toString("hex");
   }
 
   private hashToken(token: string): string {
-    return crypto.createHash('sha256').update(token).digest('hex');
+    return crypto.createHash("sha256").update(token).digest("hex");
   }
 
   async logout(userId: string, token?: string) {
@@ -749,7 +868,7 @@ export class AuthService {
         where: { tokenHash, userId },
         data: { revokedAt: new Date() },
       });
-      
+
       await this.prisma.session.deleteMany({
         where: { userId, token },
       });
@@ -757,9 +876,9 @@ export class AuthService {
 
     await this.auditService.log({
       userId,
-      actorType: 'USER',
-      action: 'LOGOUT',
-      resourceType: 'USER',
+      actorType: "USER",
+      action: "LOGOUT",
+      resourceType: "USER",
       resourceId: userId,
     });
   }
