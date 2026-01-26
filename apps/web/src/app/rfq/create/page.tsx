@@ -113,6 +113,50 @@ const JEWELLERY_TYPES = [
   { value: "OTHER", label: "Other" },
 ];
 
+// Weight guidance for each jewelry type (in grams)
+const WEIGHT_GUIDANCE: Record<string, { range: string; note: string }> = {
+  RING: {
+    range: "1-7g",
+    note: "Women's rings typically 1-3g, men's rings 4-7g. Heavy statement rings can go up to 15g.",
+  },
+  NECKLACE: {
+    range: "5-30g",
+    note: "Simple chains 5-10g, medium pendants with chain 10-20g, heavy statement necklaces 30g+.",
+  },
+  BRACELET: {
+    range: "5-20g",
+    note: "Delicate bracelets 5-8g, tennis bracelets 10-15g, chunky designs 15-25g.",
+  },
+  EARRING: {
+    range: "1-6g",
+    note: "Per pair. Studs 0.5-2g, small hoops 1-3g, statement earrings 4-8g per pair.",
+  },
+  PENDANT: {
+    range: "1-10g",
+    note: "Excludes chain. Small pendants 1-3g, medium 3-6g, large statement pendants 8-15g.",
+  },
+  BANGLE: {
+    range: "8-30g",
+    note: "Thin bangles 8-12g, medium 15-20g, broad/heavy bangles 25-40g.",
+  },
+  CHAIN: {
+    range: "5-25g",
+    note: "Depends on length and style. 18\" light chain 5-10g, 24\" medium chain 15-25g.",
+  },
+  ANKLET: {
+    range: "2-8g",
+    note: "Simple chains 2-4g, with charms or broader designs 5-10g.",
+  },
+  BROOCH: {
+    range: "5-20g",
+    note: "Small brooches 5-8g, medium 10-15g, elaborate designs 15-25g.",
+  },
+  OTHER: {
+    range: "Varies",
+    note: "Weight depends on the specific item. Contact us if unsure.",
+  },
+};
+
 // Build methods with labels per spec
 const BUILD_METHODS = [
   {
@@ -1845,6 +1889,18 @@ export default function CreateRfqPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {/* Weight guidance message */}
+                    {formData.jewelleryType && WEIGHT_GUIDANCE[formData.jewelleryType] && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mt-2">
+                        <p className="text-sm text-amber-800">
+                          <span className="font-medium">💡 Typical weight for {JEWELLERY_TYPES.find(t => t.value === formData.jewelleryType)?.label || formData.jewelleryType}: </span>
+                          <span className="font-semibold">{WEIGHT_GUIDANCE[formData.jewelleryType].range}</span>
+                        </p>
+                        <p className="text-xs text-amber-700 mt-1">
+                          {WEIGHT_GUIDANCE[formData.jewelleryType].note}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Template Selector - shows when jewellery type is selected */}
