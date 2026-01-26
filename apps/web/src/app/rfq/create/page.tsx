@@ -113,21 +113,21 @@ const JEWELLERY_TYPES = [
   { value: "OTHER", label: "Other" },
 ];
 
-// Jewelry type images for hover preview (AI-generated using Imagen 4)
+// Jewelry type images for hover preview (AI-generated, hosted on Cloudflare R2 CDN)
 const JEWELLERY_TYPE_IMAGES: Record<string, string> = {
-  RING: "/previews/jewelry/ring.png",
-  NECKLACE: "/previews/jewelry/necklace.png",
-  BRACELET: "/previews/jewelry/bracelet.png",
-  EARRING: "/previews/jewelry/earring.png",
-  PENDANT: "/previews/jewelry/pendant.png",
-  BANGLE: "/previews/jewelry/bangle.png",
-  CHAIN: "/previews/jewelry/chain.png",
-  ANKLET: "/previews/jewelry/anklet.png",
-  BROOCH: "/previews/jewelry/brooch.png",
-  OTHER: "/previews/jewelry/ring.png",
+  RING: "https://images.orivraa.com/product/1769445057895-wcn56633.png",
+  NECKLACE: "https://images.orivraa.com/product/1769445053991-4ytp6cgd.png",
+  BRACELET: "https://images.orivraa.com/product/1769445045824-zjp8yki3.png",
+  EARRING: "https://images.orivraa.com/product/1769445051626-dm5ke087.png",
+  PENDANT: "https://images.orivraa.com/product/1769445056509-on5a83b5.png",
+  BANGLE: "https://images.orivraa.com/product/1769445043166-phaausjg.png",
+  CHAIN: "https://images.orivraa.com/product/1769445050194-b6e62x3n.png",
+  ANKLET: "https://images.orivraa.com/product/1769445041034-oa8hfslv.png",
+  BROOCH: "https://images.orivraa.com/product/1769445047396-q4pss35p.png",
+  OTHER: "https://images.orivraa.com/product/1769445057895-wcn56633.png",
 };
 
-// Surface finish images for hover preview (AI-generated using Imagen 4)
+// Surface finish images for hover preview (AI-generated, hosted on Cloudflare R2 CDN)
 // Including various key formats for API compatibility
 const SURFACE_FINISH_IMAGES: Record<
   string,
@@ -135,56 +135,56 @@ const SURFACE_FINISH_IMAGES: Record<
 > = {
   // API IDs (from backend SURFACE_FINISHES)
   HIGH_POLISH: {
-    image: "/previews/finishes/polished.png",
+    image: "https://images.orivraa.com/product/1769445067325-644vabv1.png",
     description: "Mirror-like shine, highly reflective surface",
   },
   MATTE: {
-    image: "/previews/finishes/matte.png",
+    image: "https://images.orivraa.com/product/1769445064701-hd5jgymd.png",
     description: "Non-reflective, soft appearance",
   },
   BRUSHED: {
-    image: "/previews/finishes/matte.png",
+    image: "https://images.orivraa.com/product/1769445064701-hd5jgymd.png",
     description: "Non-reflective, soft brushed appearance",
   },
   SATIN: {
-    image: "/previews/finishes/satin.png",
+    image: "https://images.orivraa.com/product/1769445073480-ji4q1p05.png",
     description: "Subtle sheen between matte and polish",
   },
   HAMMERED: {
-    image: "/previews/finishes/hammered.png",
+    image: "https://images.orivraa.com/product/1769445062183-qd3i944l.png",
     description: "Textured surface with small indentations",
   },
   SANDBLASTED: {
-    image: "/previews/finishes/sandblast.png",
+    image: "https://images.orivraa.com/product/1769445070947-3o0y4equ.png",
     description: "Frosted, granular texture",
   },
   FLORENTINE: {
-    image: "/previews/finishes/matte.png",
+    image: "https://images.orivraa.com/product/1769445064701-hd5jgymd.png",
     description: "Cross-hatched matte texture",
   },
   BARK_TEXTURE: {
-    image: "/previews/finishes/hammered.png",
+    image: "https://images.orivraa.com/product/1769445062183-qd3i944l.png",
     description: "Natural bark-like texture",
   },
   DIAMOND_CUT: {
-    image: "/previews/finishes/polished.png",
+    image: "https://images.orivraa.com/product/1769445067325-644vabv1.png",
     description: "Precision faceted cuts for sparkle",
   },
   ENGRAVED: {
-    image: "/previews/finishes/hammered.png",
+    image: "https://images.orivraa.com/product/1769445062183-qd3i944l.png",
     description: "Decorative carved patterns",
   },
   // Fallback uppercase keys (for hardcoded SelectItems)
   POLISHED: {
-    image: "/previews/finishes/polished.png",
+    image: "https://images.orivraa.com/product/1769445067325-644vabv1.png",
     description: "Mirror-like shine, highly reflective surface",
   },
   SANDBLAST: {
-    image: "/previews/finishes/sandblast.png",
+    image: "https://images.orivraa.com/product/1769445070947-3o0y4equ.png",
     description: "Frosted, granular texture",
   },
   ANTIQUE: {
-    image: "/previews/finishes/antique.png",
+    image: "https://images.orivraa.com/product/1769445059769-uqh0w2ze.png",
     description: "Oxidized finish for vintage look",
   },
 };
