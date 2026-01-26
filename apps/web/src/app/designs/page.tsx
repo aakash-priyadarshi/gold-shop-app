@@ -161,7 +161,7 @@ export default function DesignGalleryPage() {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: "12",
-        sortBy,
+        sort: sortBy,
       });
 
       if (jewelryType !== "all") {
