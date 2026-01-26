@@ -29,6 +29,7 @@ class CreateDesignDto {
   buildMethod: BuildMethod;
   metalType?: string;
   metalColor?: string;
+  metalDescription?: string;
   weightCategory?: WeightCategory;
   estimatedWeight?: number;
   surfaceFinish?: string;
@@ -37,11 +38,41 @@ class CreateDesignDto {
   stoneCut?: string;
   stoneCarat?: number;
   stoneColor?: string;
+  stoneClarity?: string;
+  stoneCutGrade?: string;
+  stoneCount?: number;
   settingStyle?: string;
   additionalSpecs?: Record<string, unknown>;
   referenceImageUrl?: string;
   shareToGallery?: boolean;
   creatorName?: string;
+  // Method-specific details for enhanced prompts
+  alloyDetails?: {
+    baseMetal?: string;
+    karat?: string;
+    alloyFamily?: string;
+    recipePresetId?: string;
+  };
+  platingDetails?: {
+    baseMetal?: string;
+    platingType?: string;
+    platingTier?: string;
+  };
+  italianMachineDetails?: {
+    purity?: string;
+    chainStyle?: string;
+  };
+  gemstones?: Array<{
+    stoneType?: string;
+    shape?: string;
+    color?: string;
+    clarity?: string;
+    cut?: string;
+    settingStyle?: string;
+    count?: number;
+    sizeValue?: string;
+    sizeUnit?: string;
+  }>;
 }
 
 class UpdateVisibilityDto {
