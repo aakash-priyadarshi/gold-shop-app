@@ -25,7 +25,7 @@ import {
   TrendingUp,
   Workflow,
 } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 // ═══════════════════════════════════════════
 // TYPES
@@ -99,6 +99,12 @@ export function LivePricingPanel({
   marketRatesWarning,
   currencySymbol = "₹",
 }: LivePricingPanelProps) {
+  // Hydration fix - only show relative time after mount
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Calculate estimate whenever form data changes
   const estimate = useMemo(() => {
     if (!marketRates) return null;
@@ -180,12 +186,12 @@ export function LivePricingPanel({
 
         {/* Footer */}
         <div className="text-xs text-muted-foreground border-t pt-2 space-y-1">
-          {/* Last fetched timestamp */}
+          {/* Last fetched timestamp - only show relative time after mount to prevent hydration mismatch */}
           {marketRates?.updatedAt && (
             <p className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
               <span>
-                Last fetched on: {formatLastFetched(marketRates.updatedAt)}
+                Last fetched on: {mounted ? formatLastFetched(marketRates.updatedAt) : new Date(marketRates.updatedAt).toLocaleDateString()}
               </span>
             </p>
           )}
