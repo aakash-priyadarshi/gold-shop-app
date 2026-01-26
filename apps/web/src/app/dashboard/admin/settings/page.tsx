@@ -144,7 +144,7 @@ export default function AdminSettingsPage() {
       }
     };
     fetchAiServiceStatus();
-    
+
     // Refresh every 30 seconds
     const interval = setInterval(fetchAiServiceStatus, 30000);
     return () => clearInterval(interval);
@@ -185,7 +185,8 @@ export default function AdminSettingsPage() {
       toast({
         variant: "destructive",
         title: "Update Failed",
-        description: error?.response?.data?.message || "Could not update limit.",
+        description:
+          error?.response?.data?.message || "Could not update limit.",
       });
     } finally {
       setUpdatingLimit(false);
@@ -1057,7 +1058,9 @@ export default function AdminSettingsPage() {
                       variant="outline"
                       size="sm"
                       onClick={handleResetRateLimit}
-                      disabled={resettingRateLimit || !aiServiceStatus?.isRateLimited}
+                      disabled={
+                        resettingRateLimit || !aiServiceStatus?.isRateLimited
+                      }
                     >
                       {resettingRateLimit ? (
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1094,7 +1097,8 @@ export default function AdminSettingsPage() {
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Queue processes automatically every hour. Resets daily at midnight.
+                    Queue processes automatically every hour. Resets daily at
+                    midnight.
                   </p>
                 </div>
               </CardContent>

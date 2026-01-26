@@ -14,8 +14,8 @@ import {
   WeightCategory,
 } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
-import { ImageGenerationService } from "./image-generation.service";
 import { DescriptionGeneratorService } from "./description-generator.service";
+import { ImageGenerationService } from "./image-generation.service";
 
 interface CreateDesignDto {
   jewelryType: JewelleryType;
@@ -210,7 +210,8 @@ export class DesignsService {
       jewelryType: dto.jewelryType,
       metalType: dto.metalType || "",
       metalColor: dto.metalColor,
-      karat: dto.alloyDetails?.karat || this.extractKaratFromMetal(dto.metalType),
+      karat:
+        dto.alloyDetails?.karat || this.extractKaratFromMetal(dto.metalType),
       surfaceFinish: dto.surfaceFinish,
       hasGemstones: dto.hasGemstones || false,
       gemstoneType: dto.primaryStone,
@@ -220,10 +221,11 @@ export class DesignsService {
     };
 
     // Generate description - this will use AI with template fallback
-    const generatedDescription = await this.descriptionGenService.generateDescription(
-      specHash, // Use specHash as temporary ID, will update with real ID
-      descriptionSpecs,
-    );
+    const generatedDescription =
+      await this.descriptionGenService.generateDescription(
+        specHash, // Use specHash as temporary ID, will update with real ID
+        descriptionSpecs,
+      );
 
     // Create the design record with description
     const design = await this.prisma.design.create({
@@ -687,6 +689,108 @@ export class DesignsService {
         },
       },
     });
+  }
+
+  /**
+   * Get similar designs based on characteristic matching
+   * Only returns designs that match at least 80% of provided characteristics
+   */
+  async getSimilarDesigns(
+    specs: {
+      jewelryType: JewelleryType;
+      buildMethod?: BuildMethod;
+      metalType?: string;
+      hasGemstones?: boolean;
+      primaryStone?: string;
+      surfaceFinish?: string;
+    },
+    limit: number = 6,
+  ) {
+    // Count provided characteristics (excluding jewelryType which is mandatory)
+    const characteristics: { field: string; value: unknown }[] = [];
+
+    if (specs.buildMethod)
+      characteristics.push({ field: "buildMethod", value: specs.buildMethod });
+    if (specs.metalType)
+      characteristics.push({ field: "metalType", value: specs.metalType });
+    if (specs.hasGemstones !== undefined)
+      characteristics.push({
+        field: "hasGemstones",
+        value: specs.hasGemstones,
+      });
+    if (specs.primaryStone)
+      characteristics.push({
+        field: "primaryStone",
+        value: specs.primaryStone,
+      });
+    if (specs.surfaceFinish)
+      characteristics.push({
+        field: "surfaceFinish",
+        value: specs.surfaceFinish,
+      });
+
+    // First, get all public designs of the same jewelry type
+    const candidateDesigns = await this.prisma.design.findMany({
+      where: {
+        isPublic: true,
+        isApproved: true,
+        jewelryType: specs.jewelryType,
+      },
+      orderBy: [{ ordersCount: "desc" }, { likesCount: "desc" }],
+      take: 50, // Get more candidates to filter
+      include: {
+        creator: {
+          select: {
+            id: true,
+            firstName: true,
+          },
+        },
+      },
+    });
+
+    // Calculate similarity score for each design
+    const scoredDesigns = candidateDesigns.map((design) => {
+      let matchCount = 0;
+      const totalCharacteristics = characteristics.length;
+
+      for (const char of characteristics) {
+        const designValue = (design as Record<string, unknown>)[char.field];
+        if (designValue === char.value) {
+          matchCount++;
+        }
+      }
+
+      // Calculate similarity percentage (jewelryType always matches, so add 1)
+      const similarityScore =
+        totalCharacteristics > 0
+          ? ((matchCount + 1) / (totalCharacteristics + 1)) * 100
+          : 100; // If no characteristics provided, 100% match on jewelryType alone
+
+      return {
+        ...design,
+        similarityScore,
+        matchedCharacteristics: matchCount + 1, // +1 for jewelryType
+        totalCharacteristics: totalCharacteristics + 1,
+      };
+    });
+
+    // Filter to only designs with 80%+ similarity
+    const similarDesigns = scoredDesigns
+      .filter((d) => d.similarityScore >= 80)
+      .sort((a, b) => {
+        // Sort by similarity first, then by popularity
+        if (b.similarityScore !== a.similarityScore) {
+          return b.similarityScore - a.similarityScore;
+        }
+        return (b.ordersCount || 0) - (a.ordersCount || 0);
+      })
+      .slice(0, limit);
+
+    return {
+      designs: similarDesigns,
+      total: similarDesigns.length,
+      jewelryType: specs.jewelryType,
+    };
   }
 
   /**

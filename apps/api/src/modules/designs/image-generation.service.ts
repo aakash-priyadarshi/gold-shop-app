@@ -429,10 +429,23 @@ export class ImageGenerationService {
       );
     }
 
+    // Add user's custom description if provided
+    const userDescription = specs.additionalSpecs?.description as string;
+    const customDesignNotes = userDescription
+      ? `\n\nCustom Design Requirements:\n${userDescription}`
+      : "";
+
+    // Add regeneration feedback if provided (for refinement requests)
+    const regenerationFeedback = specs.additionalSpecs
+      ?.regenerationFeedback as string;
+    const feedbackNotes = regenerationFeedback
+      ? `\n\nDesign Refinement Notes (important - user wants these changes):\n${regenerationFeedback}`
+      : "";
+
     const prompt = `${description}.
 
 Specifications:
-${specLines.join("\n")}
+${specLines.join("\n")}${customDesignNotes}${feedbackNotes}
 
 Style requirements:
 - Pure white background (#FFFFFF)
@@ -525,15 +538,15 @@ Forbidden:
 
     try {
       // Use Google Imagen 4 via the predict endpoint
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${this.apiKey}`;
-      this.logger.debug(
-        `Calling Imagen API at: ${apiUrl.replace(this.apiKey, "***")}`,
-      );
+      // Note: API key should be passed as header, not query parameter
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict`;
+      this.logger.debug(`Calling Imagen API at: ${apiUrl}`);
 
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-goog-api-key": this.apiKey,
         },
         body: JSON.stringify({
           instances: [{ prompt: prompt }],

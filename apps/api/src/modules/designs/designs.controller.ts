@@ -28,8 +28,8 @@ import {
 import { Request as ExpressRequest } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
-import { DesignsService } from "./designs.service";
 import { DescriptionGeneratorService } from "./description-generator.service";
+import { DesignsService } from "./designs.service";
 
 interface AuthenticatedRequest extends ExpressRequest {
   user?: {
@@ -313,6 +313,38 @@ export class DesignsController {
   @Get("featured")
   async getFeaturedDesigns(@Query("limit") limit?: string) {
     return this.designsService.getFeaturedDesigns(parseInt(limit || "8", 10));
+  }
+
+  /**
+   * Get similar designs based on characteristics
+   * Returns designs that match at least 80% of characteristics
+   */
+  @Get("similar")
+  async getSimilarDesigns(
+    @Query("jewelryType") jewelryType: JewelleryType,
+    @Query("buildMethod") buildMethod?: BuildMethod,
+    @Query("metalType") metalType?: string,
+    @Query("hasGemstones") hasGemstones?: string,
+    @Query("primaryStone") primaryStone?: string,
+    @Query("surfaceFinish") surfaceFinish?: string,
+    @Query("limit") limit?: string,
+  ) {
+    return this.designsService.getSimilarDesigns(
+      {
+        jewelryType,
+        buildMethod,
+        metalType,
+        hasGemstones:
+          hasGemstones === "true"
+            ? true
+            : hasGemstones === "false"
+              ? false
+              : undefined,
+        primaryStone,
+        surfaceFinish,
+      },
+      parseInt(limit || "6", 10),
+    );
   }
 
   /**

@@ -473,6 +473,23 @@ export default function CreateRfqPage() {
   const [shareToGallery, setShareToGallery] = useState(true); // Default to checked
   const [designId, setDesignId] = useState<string | null>(null);
   const [fromDesign, setFromDesign] = useState(false);
+  const [regenerationFeedback, setRegenerationFeedback] = useState(""); // For refinement requests
+
+  // Similar designs suggestions state
+  interface SimilarDesign {
+    id: string;
+    imageUrl: string;
+    jewelryType: string;
+    buildMethod: string;
+    metalType?: string;
+    likesCount: number;
+    ordersCount: number;
+    similarityScore: number;
+    creator?: { id: string; firstName: string };
+  }
+  const [similarDesigns, setSimilarDesigns] = useState<SimilarDesign[]>([]);
+  const [loadingSimilarDesigns, setLoadingSimilarDesigns] = useState(false);
+  const [similarDesignsChecked, setSimilarDesignsChecked] = useState(false);
 
   // Draft autosave state
   const DRAFT_STORAGE_KEY = "rfq-draft";
@@ -749,6 +766,7 @@ export default function CreateRfqPage() {
           }),
         additionalSpecs: {
           description: formData.description,
+          regenerationFeedback: regenerationFeedback || undefined, // Include refinement notes if any
         },
         shareToGallery,
       };
@@ -1038,6 +1056,67 @@ export default function CreateRfqPage() {
     };
     fetchPresets();
   }, [formData.hasGemstones]);
+
+  // Fetch similar designs when user enters Step 3
+  useEffect(() => {
+    if (step !== 3 || !formData.jewelleryType || similarDesignsChecked) return;
+
+    const fetchSimilarDesigns = async () => {
+      setLoadingSimilarDesigns(true);
+      setSimilarDesignsChecked(true);
+
+      try {
+        // Build query params based on current form data
+        const params = new URLSearchParams();
+        params.append("jewelryType", formData.jewelleryType);
+        if (formData.buildMethod)
+          params.append("buildMethod", formData.buildMethod);
+        if (formData.metalType) params.append("metalType", formData.metalType);
+        if (formData.hasGemstones !== undefined)
+          params.append("hasGemstones", String(formData.hasGemstones));
+        if (formData.hasGemstones && formData.gemstonesV2.length > 0) {
+          params.append("primaryStone", formData.gemstonesV2[0].stoneType);
+        }
+        if (formData.surfaceFinish)
+          params.append("surfaceFinish", formData.surfaceFinish);
+        params.append("limit", "6");
+
+        const res = await fetch(
+          `${API_URL}/designs/similar?${params.toString()}`,
+        );
+        if (res.ok) {
+          const data = await res.json();
+          // Only show if we have designs with 80%+ similarity
+          if (data.designs && data.designs.length > 0) {
+            setSimilarDesigns(data.designs);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch similar designs:", err);
+      } finally {
+        setLoadingSimilarDesigns(false);
+      }
+    };
+
+    fetchSimilarDesigns();
+  }, [
+    step,
+    formData.jewelleryType,
+    formData.buildMethod,
+    formData.metalType,
+    formData.hasGemstones,
+    formData.gemstonesV2,
+    formData.surfaceFinish,
+    similarDesignsChecked,
+  ]);
+
+  // Reset similar designs check when going back to earlier steps
+  useEffect(() => {
+    if (step < 3) {
+      setSimilarDesignsChecked(false);
+      setSimilarDesigns([]);
+    }
+  }, [step]);
 
   // Helper to check if a real template is selected (not "custom")
   const hasRealTemplate =
@@ -1587,6 +1666,8 @@ export default function CreateRfqPage() {
           !!formData.methodCConfig?.baseMetal &&
           !!formData.methodCConfig?.platingType
         );
+      case "METHOD_D":
+        return !!formData.methodDConfig?.purity;
       default:
         return !!formData.metalType;
     }
@@ -2529,7 +2610,7 @@ export default function CreateRfqPage() {
                     <Label>Description *</Label>
                     <Textarea
                       rows={4}
-                      placeholder="Describe your design in detail. Include dimensions, style preferences, any specific patterns or motifs you want..."
+                      placeholder="Describe the design you're envisioning. Include style (traditional, modern, minimalist), patterns or motifs (floral, geometric, filigree), dimensions, and any specific details. This description helps our AI create a preview and helps sellers understand exactly what you want to craft."
                       value={formData.description}
                       onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                         updateFormData("description", e.target.value)
@@ -2763,6 +2844,68 @@ export default function CreateRfqPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {/* Similar Designs Suggestions */}
+                  {(loadingSimilarDesigns || similarDesigns.length > 0) && (
+                    <div className="space-y-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-purple-600" />
+                        <div>
+                          <h3 className="font-medium text-purple-900">
+                            It seems you&apos;re designing a{" "}
+                            {JEWELLERY_TYPES.find(
+                              (t) => t.value === formData.jewelleryType,
+                            )?.label || formData.jewelleryType}
+                          </h3>
+                          <p className="text-sm text-purple-700">
+                            We have some great designs you might like!
+                          </p>
+                        </div>
+                      </div>
+
+                      {loadingSimilarDesigns ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                          <span className="ml-2 text-sm text-purple-600">
+                            Finding similar designs...
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                          {similarDesigns.slice(0, 5).map((design) => (
+                            <Link
+                              key={design.id}
+                              href={`/designs?selected=${design.id}`}
+                              className="group relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-purple-400 transition-all"
+                            >
+                              <img
+                                src={design.imageUrl}
+                                alt={`${design.jewelryType} design`}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="absolute bottom-1 left-1 right-1">
+                                  <p className="text-[10px] text-white font-medium truncate">
+                                    {Math.round(design.similarityScore)}% match
+                                  </p>
+                                </div>
+                              </div>
+                            </Link>
+                          ))}
+                          {/* See More Thumbnail */}
+                          <Link
+                            href={`/designs?jewelryType=${formData.jewelleryType}&sort=popular`}
+                            className="group relative aspect-square rounded-lg overflow-hidden bg-purple-100 hover:bg-purple-200 transition-colors flex flex-col items-center justify-center border-2 border-dashed border-purple-300 hover:border-purple-400"
+                          >
+                            <ArrowRight className="h-6 w-6 text-purple-600 group-hover:translate-x-1 transition-transform" />
+                            <span className="text-xs text-purple-700 font-medium mt-1">
+                              See More
+                            </span>
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* AI Design Preview Section - At top of Step 3 */}
                   <div className="space-y-4 p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg border border-amber-200">
                     <div className="flex items-center justify-between">
@@ -2876,6 +3019,25 @@ export default function CreateRfqPage() {
                       </div>
                     )}
 
+                    {/* Regeneration Feedback Field - Only show when preview exists */}
+                    {designPreviewUrl && (
+                      <div className="w-full max-w-sm mx-auto space-y-2">
+                        <Label className="text-sm text-gray-600">
+                          Don't like the AI design? Describe what you'd like to
+                          change:
+                        </Label>
+                        <Textarea
+                          rows={2}
+                          placeholder="e.g., Make it more traditional, add more detail, make the band thinner..."
+                          value={regenerationFeedback}
+                          onChange={(
+                            e: React.ChangeEvent<HTMLTextAreaElement>,
+                          ) => setRegenerationFeedback(e.target.value)}
+                          className="text-sm"
+                        />
+                      </div>
+                    )}
+
                     {/* Generate Button - Disabled if not signed in or phone not verified */}
                     <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
                       <Tooltip>
@@ -2887,7 +3049,7 @@ export default function CreateRfqPage() {
                               disabled={
                                 generatingPreview ||
                                 !formData.jewelleryType ||
-                                !formData.metalType ||
+                                !hasValidMetalSelection() ||
                                 !isLoggedIn ||
                                 !isPhoneVerified
                               }

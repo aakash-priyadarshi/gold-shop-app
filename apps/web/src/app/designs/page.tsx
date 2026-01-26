@@ -731,13 +731,17 @@ export default function DesignGalleryPage() {
                       {selectedDesign.surfaceFinish && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Finish</span>
-                          <span>{selectedDesign.surfaceFinish.replace(/_/g, " ")}</span>
+                          <span>
+                            {selectedDesign.surfaceFinish.replace(/_/g, " ")}
+                          </span>
                         </div>
                       )}
                       {selectedDesign.weightCategory && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Weight</span>
-                          <span>{selectedDesign.weightCategory.replace(/_/g, " ")}</span>
+                          <span>
+                            {selectedDesign.weightCategory.replace(/_/g, " ")}
+                          </span>
                         </div>
                       )}
                     </div>
