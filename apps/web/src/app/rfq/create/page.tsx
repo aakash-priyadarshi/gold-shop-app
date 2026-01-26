@@ -527,6 +527,8 @@ export default function CreateRfqPage() {
 
   // Generate AI Preview
   const generatePreview = async () => {
+    console.log("[Generate Preview] Button clicked, isAuthenticated:", isAuthenticated);
+    
     if (!isAuthenticated) {
       router.push("/auth/login?callbackUrl=/rfq/create");
       return;
