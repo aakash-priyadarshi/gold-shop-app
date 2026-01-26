@@ -113,44 +113,44 @@ const JEWELLERY_TYPES = [
   { value: "OTHER", label: "Other" },
 ];
 
-// Jewelry type images for hover preview
+// Jewelry type images for hover preview (AI-generated using Imagen 4)
 const JEWELLERY_TYPE_IMAGES: Record<string, string> = {
-  RING: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=200&h=200&fit=crop",
-  NECKLACE: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=200&h=200&fit=crop",
-  BRACELET: "https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=200&h=200&fit=crop",
-  EARRING: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=200&h=200&fit=crop",
-  PENDANT: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=200&h=200&fit=crop",
-  BANGLE: "https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=200&h=200&fit=crop",
-  CHAIN: "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=200&h=200&fit=crop",
-  ANKLET: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=200&h=200&fit=crop",
-  BROOCH: "https://images.unsplash.com/photo-1576022162028-a3c9748e6c5e?w=200&h=200&fit=crop",
-  OTHER: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=200&h=200&fit=crop",
+  RING: "/previews/jewelry/ring.png",
+  NECKLACE: "/previews/jewelry/necklace.png",
+  BRACELET: "/previews/jewelry/bracelet.png",
+  EARRING: "/previews/jewelry/earring.png",
+  PENDANT: "/previews/jewelry/pendant.png",
+  BANGLE: "/previews/jewelry/bangle.png",
+  CHAIN: "/previews/jewelry/chain.png",
+  ANKLET: "/previews/jewelry/anklet.png",
+  BROOCH: "/previews/jewelry/brooch.png",
+  OTHER: "/previews/jewelry/ring.png",
 };
 
-// Surface finish images for hover preview
+// Surface finish images for hover preview (AI-generated using Imagen 4)
 const SURFACE_FINISH_IMAGES: Record<string, { image: string; description: string }> = {
   POLISHED: {
-    image: "https://images.unsplash.com/photo-1603561591411-07134e71a2a9?w=200&h=200&fit=crop",
+    image: "/previews/finishes/polished.png",
     description: "Mirror-like shine, highly reflective surface",
   },
   MATTE: {
-    image: "https://images.unsplash.com/photo-1590736969955-71cc94901144?w=200&h=200&fit=crop",
+    image: "/previews/finishes/matte.png",
     description: "Non-reflective, soft brushed appearance",
   },
   SATIN: {
-    image: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=200&h=200&fit=crop",
+    image: "/previews/finishes/satin.png",
     description: "Subtle sheen between matte and polish",
   },
   HAMMERED: {
-    image: "https://images.unsplash.com/photo-1610375461246-83df859d849d?w=200&h=200&fit=crop",
+    image: "/previews/finishes/hammered.png",
     description: "Textured surface with small indentations",
   },
   SANDBLAST: {
-    image: "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=200&h=200&fit=crop",
+    image: "/previews/finishes/sandblast.png",
     description: "Frosted, granular texture",
   },
   ANTIQUE: {
-    image: "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=200&h=200&fit=crop",
+    image: "/previews/finishes/antique.png",
     description: "Oxidized finish for vintage look",
   },
 };
