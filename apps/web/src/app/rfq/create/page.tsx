@@ -52,12 +52,16 @@ import {
   Image as ImageIcon,
   Info,
   Loader2,
+  MapPin,
   Phone,
   RotateCcw,
   ShieldCheck,
   Sparkles,
+  Star,
   Upload,
   X,
+  Filter,
+  MessageCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -610,6 +614,70 @@ export default function CreateRfqPage() {
   const [similarDesigns, setSimilarDesigns] = useState<SimilarDesign[]>([]);
   const [loadingSimilarDesigns, setLoadingSimilarDesigns] = useState(false);
   const [similarDesignsChecked, setSimilarDesignsChecked] = useState(false);
+
+  // Step 4: Submission success and seller matching state
+  interface MatchingSeller {
+    id: string;
+    shopName: string;
+    shopNameNe?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    address?: string;
+    contactPhone?: string;
+    whatsappNumber?: string;
+    isVerified: boolean;
+    makingChargePercent: number;
+    codEnabled: boolean;
+    estimatedPrice: number;
+    materialCost: number;
+    makingCharge: number;
+    hasCustomRate: boolean;
+    averageRating: number;
+    reviewCount: number;
+    locationScore: number;
+    locationMatch: "same_city" | "same_state" | "same_country" | "other";
+    supportedJewelleryTypes: string[];
+    supportedMethods: string[];
+    supportedFinishes: string[];
+  }
+  
+  interface SellerMatchingStats {
+    totalMatching: number;
+    sameCityCount: number;
+    sameStateCount: number;
+    avgPrice: number;
+    minPrice: number;
+    maxPrice: number;
+  }
+
+  const [submittedRfqId, setSubmittedRfqId] = useState<string | null>(null);
+  const [matchingSellers, setMatchingSellers] = useState<MatchingSeller[]>([]);
+  const [sellerStats, setSellerStats] = useState<SellerMatchingStats | null>(null);
+  const [loadingSellers, setLoadingSellers] = useState(false);
+  const [sellerSortBy, setSellerSortBy] = useState<"location" | "price" | "rating" | "popularity">("location");
+  const [sellerMinRating, setSellerMinRating] = useState<number | undefined>(undefined);
+  const [sellerMaxPrice, setSellerMaxPrice] = useState<number | undefined>(undefined);
+
+  // Congratulatory messages with username placeholder
+  const CONGRATULATORY_MESSAGES = [
+    "🎉 Congratulations {name}! Your custom jewellery request has been submitted successfully!",
+    "✨ Amazing choice, {name}! Your dream jewellery is now being matched with expert sellers.",
+    "🌟 Well done, {name}! Your unique design request is on its way to our trusted sellers.",
+    "💎 Fantastic, {name}! Your custom piece is about to come to life.",
+    "🎊 Excellent, {name}! We're finding the perfect artisans for your jewellery.",
+    "✨ Beautiful selection, {name}! Expert craftsmen are ready to bring your vision to life.",
+    "🏆 Great job, {name}! Your request is now live and sellers are reviewing it.",
+    "💫 Wonderful, {name}! Let's find the perfect maker for your custom jewellery.",
+  ];
+
+  const getCongratulatoryMessage = () => {
+    const name = user?.firstName || "there";
+    const randomIndex = Math.floor(Math.random() * CONGRATULATORY_MESSAGES.length);
+    return CONGRATULATORY_MESSAGES[randomIndex].replace("{name}", name);
+  };
+
+  const [congratsMessage] = useState(getCongratulatoryMessage);
 
   // Draft autosave state
   const DRAFT_STORAGE_KEY = "rfq-draft";
@@ -1312,6 +1380,77 @@ export default function CreateRfqPage() {
     displayToGrams,
   ]);
 
+  // Function to fetch matching sellers for Step 4
+  const fetchMatchingSellers = useCallback(async () => {
+    setLoadingSellers(true);
+    try {
+      const weight = getWeightFromTemplate();
+      
+      // Get metal type based on build method
+      let metalType = formData.metalType;
+      if (formData.buildMethod === "METHOD_B" && formData.alloyConfig?.baseMetal) {
+        metalType = formData.alloyConfig.baseMetal;
+      } else if (formData.buildMethod === "METHOD_C" && formData.methodCConfig?.baseMetal) {
+        metalType = formData.methodCConfig.baseMetal;
+      } else if (formData.buildMethod === "METHOD_D" && formData.methodDConfig?.purity) {
+        metalType = formData.methodDConfig.purity;
+      }
+      
+      const params = new URLSearchParams({
+        jewelleryType: formData.jewelleryType,
+        buildMethod: formData.buildMethod || "METHOD_A",
+        estimatedWeight: String(weight || 5),
+        sortBy: sellerSortBy,
+        pageSize: "20",
+      });
+      
+      if (metalType) params.append("metalType", metalType);
+      if (formData.surfaceFinish) params.append("surfaceFinish", formData.surfaceFinish);
+      if (sellerMinRating !== undefined) params.append("minRating", String(sellerMinRating));
+      if (sellerMaxPrice !== undefined) params.append("maxPrice", String(sellerMaxPrice));
+      
+      // Add customer location if available from user profile
+      // For now, we use the selected country from preferences
+      if (country) params.append("customerCountry", country);
+      
+      const response = await fetch(`${API_URL}/shops/matching?${params.toString()}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setMatchingSellers(data.sellers || []);
+        setSellerStats(data.stats || null);
+      } else {
+        console.error("Failed to fetch matching sellers");
+        setMatchingSellers([]);
+      }
+    } catch (err) {
+      console.error("Error fetching matching sellers:", err);
+      setMatchingSellers([]);
+    } finally {
+      setLoadingSellers(false);
+    }
+  }, [
+    getWeightFromTemplate,
+    formData.jewelleryType,
+    formData.buildMethod,
+    formData.metalType,
+    formData.surfaceFinish,
+    formData.alloyConfig,
+    formData.methodCConfig,
+    formData.methodDConfig,
+    sellerSortBy,
+    sellerMinRating,
+    sellerMaxPrice,
+    country,
+  ]);
+
+  // Refetch sellers when filters change (only on Step 4)
+  useEffect(() => {
+    if (step === 4 && submittedRfqId) {
+      fetchMatchingSellers();
+    }
+  }, [step, submittedRfqId, sellerSortBy, sellerMinRating, sellerMaxPrice, fetchMatchingSellers]);
+
   // Fetch price estimate using the new pricing engine
   const fetchPriceEstimate = useCallback(async () => {
     if (!formData.buildMethod) return;
@@ -1758,7 +1897,13 @@ export default function CreateRfqPage() {
       const data = await response.json();
       // Clear draft after successful submission
       clearDraft();
-      router.push(`/rfq/${data.id}`);
+      
+      // Store RFQ ID and move to Step 4 (seller matching)
+      setSubmittedRfqId(data.id);
+      setStep(4);
+      
+      // Fetch matching sellers
+      fetchMatchingSellers();
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -1895,12 +2040,14 @@ export default function CreateRfqPage() {
             {/* Progress Steps */}
             <div className="mb-8">
               <div className="flex items-center justify-between">
-                {[1, 2, 3].map((s) => (
+                {[1, 2, 3, 4].map((s) => (
                   <div key={s} className="flex items-center">
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
                         step >= s
-                          ? "bg-gold-500 text-white"
+                          ? s === 4 && step === 4
+                            ? "bg-green-500 text-white"
+                            : "bg-gold-500 text-white"
                           : "bg-gray-200 text-gray-500"
                       }`}
                     >
@@ -1913,11 +2060,13 @@ export default function CreateRfqPage() {
                         ? "Basic Info"
                         : s === 2
                           ? "Design Details"
-                          : "Budget & Timeline"}
+                          : s === 3
+                            ? "Budget & Timeline"
+                            : "Find Sellers"}
                     </span>
-                    {s < 3 && (
+                    {s < 4 && (
                       <div
-                        className={`w-16 sm:w-24 h-1 mx-4 ${step > s ? "bg-gold-500" : "bg-gray-200"}`}
+                        className={`w-12 sm:w-16 h-1 mx-2 ${step > s ? "bg-gold-500" : "bg-gray-200"}`}
                       />
                     )}
                   </div>
@@ -3828,6 +3977,293 @@ export default function CreateRfqPage() {
                   </div>
                 </CardContent>
               </Card>
+            )}
+
+            {/* Step 4: Seller Matching (Post-Submission) */}
+            {step === 4 && submittedRfqId && (
+              <div className="space-y-6">
+                {/* Congratulations Card */}
+                <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
+                  <CardContent className="pt-6">
+                    <div className="text-center mb-6">
+                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
+                        <Check className="h-8 w-8 text-green-600" />
+                      </div>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                        {congratsMessage}
+                      </h2>
+                      <p className="text-gray-600">
+                        Your request ID: <code className="font-mono bg-gray-100 px-2 py-1 rounded">{submittedRfqId.slice(0, 8)}...</code>
+                      </p>
+                    </div>
+
+                    {/* Preview Image & Summary */}
+                    <div className="grid md:grid-cols-2 gap-6 mt-6">
+                      {/* Design Preview */}
+                      <div className="bg-white rounded-lg p-4 shadow-sm">
+                        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                          <Sparkles className="h-5 w-5 text-gold-500" />
+                          Your Jewellery Design
+                        </h3>
+                        {designPreviewUrl ? (
+                          <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
+                            <img
+                              src={getImageUrl(designPreviewUrl)}
+                              alt="Your jewellery design"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="aspect-square rounded-lg bg-gradient-to-br from-gold-50 to-amber-100 flex items-center justify-center">
+                            <div className="text-center p-4">
+                              <Gem className="h-12 w-12 text-gold-400 mx-auto mb-2" />
+                              <p className="text-sm text-gray-500">Custom design based on your specifications</p>
+                            </div>
+                          </div>
+                        )}
+                        <p className="text-sm text-gray-500 mt-2 text-center italic">
+                          This is how your custom jewellery will look
+                        </p>
+                      </div>
+
+                      {/* Order Summary */}
+                      <div className="bg-white rounded-lg p-4 shadow-sm">
+                        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                          <Info className="h-5 w-5 text-blue-500" />
+                          Order Summary
+                        </h3>
+                        <div className="space-y-3">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-500">Jewellery Type:</span>
+                            <span className="font-medium capitalize">{formData.jewelleryType?.toLowerCase().replace("_", " ")}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-500">Build Method:</span>
+                            <span className="font-medium">{formData.buildMethod?.replace("METHOD_", "Method ")}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-500">Estimated Weight:</span>
+                            <span className="font-medium">{formatWeight(getWeightFromTemplate())}</span>
+                          </div>
+                          {formData.surfaceFinish && (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-500">Surface Finish:</span>
+                              <span className="font-medium capitalize">{formData.surfaceFinish.toLowerCase().replace("_", " ")}</span>
+                            </div>
+                          )}
+                          <div className="border-t pt-3 mt-3">
+                            <div className="flex justify-between">
+                              <span className="text-gray-700 font-medium">Estimated Price:</span>
+                              <span className="text-lg font-bold text-gold-600">
+                                {priceEstimate ? `${currencyInfo?.symbol || "Rs."}${priceEstimate.total.toLocaleString()}` : "Pending quotes"}
+                              </span>
+                            </div>
+                            {formData.budgetMax && (
+                              <div className="flex justify-between text-sm mt-1">
+                                <span className="text-gray-500">Your Budget:</span>
+                                <span className="text-green-600 font-medium">
+                                  Up to {currencyInfo?.symbol || "Rs."}{parseFloat(formData.budgetMax).toLocaleString()}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Seller Matching Section */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <MapPin className="h-6 w-6 text-gold-500" />
+                          Matching Sellers
+                        </CardTitle>
+                        <CardDescription>
+                          {sellerStats ? (
+                            <>Found {sellerStats.totalMatching} seller{sellerStats.totalMatching !== 1 ? "s" : ""} who can create your jewellery</>
+                          ) : (
+                            "Finding the best artisans for your order..."
+                          )}
+                        </CardDescription>
+                      </div>
+                      {sellerStats && sellerStats.totalMatching > 0 && (
+                        <div className="text-right text-sm text-gray-500">
+                          <div>Price range: {currencyInfo?.symbol || "Rs."}{sellerStats.minPrice.toLocaleString()} - {currencyInfo?.symbol || "Rs."}{sellerStats.maxPrice.toLocaleString()}</div>
+                          {sellerStats.sameCityCount > 0 && (
+                            <div className="text-green-600">{sellerStats.sameCityCount} in your city</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {/* Filters */}
+                    <div className="flex flex-wrap gap-4 mb-6 pb-4 border-b">
+                      <div className="flex items-center gap-2">
+                        <Filter className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm text-gray-500">Sort by:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {(["location", "price", "rating", "popularity"] as const).map((sortOption) => (
+                          <button
+                            key={sortOption}
+                            onClick={() => setSellerSortBy(sortOption)}
+                            className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                              sellerSortBy === sortOption
+                                ? "bg-gold-500 text-white"
+                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            }`}
+                          >
+                            {sortOption === "location" ? "📍 Nearest" : 
+                             sortOption === "price" ? "💰 Lowest Price" : 
+                             sortOption === "rating" ? "⭐ Top Rated" : "🔥 Most Popular"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Seller List */}
+                    {loadingSellers ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-gold-500" />
+                        <span className="ml-3 text-gray-500">Finding matching sellers...</span>
+                      </div>
+                    ) : matchingSellers.length === 0 ? (
+                      <div className="text-center py-12">
+                        <MapPin className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                        <h3 className="font-medium text-gray-700 mb-1">No matching sellers found</h3>
+                        <p className="text-sm text-gray-500">
+                          We couldn&apos;t find sellers matching your requirements. <br />
+                          Your request has been saved and you&apos;ll be notified when sellers respond.
+                        </p>
+                        <Link
+                          href={`/rfq/${submittedRfqId}`}
+                          className="inline-flex items-center gap-2 mt-4 text-gold-600 hover:text-gold-700 font-medium"
+                        >
+                          View your request
+                          <ArrowRight className="h-4 w-4" />
+                        </Link>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {matchingSellers.map((seller, index) => (
+                          <div
+                            key={seller.id}
+                            className={`border rounded-lg p-4 hover:shadow-md transition-shadow ${
+                              seller.locationMatch === "same_city" ? "border-green-200 bg-green-50/50" : ""
+                            }`}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="font-semibold text-gray-900">{seller.shopName}</h4>
+                                  {seller.isVerified && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <ShieldCheck className="h-4 w-4 text-blue-500" />
+                                      </TooltipTrigger>
+                                      <TooltipContent>Verified Seller</TooltipContent>
+                                    </Tooltip>
+                                  )}
+                                  {seller.locationMatch === "same_city" && (
+                                    <Badge className="bg-green-100 text-green-700 text-xs">Same City</Badge>
+                                  )}
+                                  {seller.locationMatch === "same_state" && (
+                                    <Badge className="bg-blue-100 text-blue-700 text-xs">Same State</Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-4 text-sm text-gray-500 mb-2">
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="h-3.5 w-3.5" />
+                                    {[seller.city, seller.state, seller.country].filter(Boolean).join(", ") || "Location not specified"}
+                                  </span>
+                                  {seller.averageRating > 0 && (
+                                    <span className="flex items-center gap-1">
+                                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                                      {seller.averageRating.toFixed(1)} ({seller.reviewCount} reviews)
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  {seller.codEnabled && (
+                                    <Badge variant="outline" className="text-xs">COD Available</Badge>
+                                  )}
+                                  <Badge variant="outline" className="text-xs">
+                                    Making: {seller.makingChargePercent}%
+                                  </Badge>
+                                  {seller.hasCustomRate && (
+                                    <Badge variant="outline" className="text-xs text-green-600 border-green-200">
+                                      Custom Pricing
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-right ml-4">
+                                <div className="text-lg font-bold text-gold-600">
+                                  {currencyInfo?.symbol || "Rs."}{seller.estimatedPrice.toLocaleString()}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  Material: {currencyInfo?.symbol || "Rs."}{seller.materialCost.toLocaleString()}<br />
+                                  Making: {currencyInfo?.symbol || "Rs."}{seller.makingCharge.toLocaleString()}
+                                </div>
+                                <div className="mt-3 flex gap-2">
+                                  {seller.whatsappNumber && (
+                                    <a
+                                      href={`https://wa.me/${seller.whatsappNumber.replace(/[^0-9]/g, "")}?text=Hi, I'm interested in your jewellery services.`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition-colors"
+                                    >
+                                      <MessageCircle className="h-4 w-4" />
+                                      WhatsApp
+                                    </a>
+                                  )}
+                                  {seller.contactPhone && (
+                                    <a
+                                      href={`tel:${seller.contactPhone}`}
+                                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 transition-colors"
+                                    >
+                                      <Phone className="h-4 w-4" />
+                                      Call
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex justify-between items-center mt-8 pt-6 border-t">
+                      <Link
+                        href={`/rfq/${submittedRfqId}`}
+                        className="text-gold-600 hover:text-gold-700 font-medium flex items-center gap-2"
+                      >
+                        View full request details
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                      <Link href="/rfq/create">
+                        <Button variant="outline" onClick={() => {
+                          // Reset form for new request
+                          setStep(1);
+                          setSubmittedRfqId(null);
+                          setMatchingSellers([]);
+                          setSellerStats(null);
+                        }}>
+                          <Sparkles className="mr-2 h-4 w-4" />
+                          Create Another Request
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             )}
           </div>
         </main>

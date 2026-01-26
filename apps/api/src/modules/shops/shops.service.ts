@@ -1095,4 +1095,215 @@ export class ShopsService {
 
     return { success: true, message: "Shop deleted successfully" };
   }
+
+  /**
+   * Find matching sellers for an RFQ with dynamic pricing
+   * Sellers are ranked by: same city first, then by rating/reviews
+   */
+  async findMatchingSellers(params: {
+    jewelleryType: string;
+    buildMethod: string;
+    metalType?: string;
+    surfaceFinish?: string;
+    estimatedWeight: number;
+    customerCity?: string;
+    customerState?: string;
+    customerCountry?: string;
+    // Filters
+    minRating?: number;
+    maxPrice?: number;
+    sortBy?: "price" | "rating" | "location" | "popularity";
+    page?: number;
+    pageSize?: number;
+  }) {
+    const {
+      jewelleryType,
+      buildMethod,
+      metalType,
+      surfaceFinish,
+      estimatedWeight,
+      customerCity,
+      customerState,
+      customerCountry = "NP",
+      minRating,
+      maxPrice,
+      sortBy = "location",
+      page = 1,
+      pageSize = 20,
+    } = params;
+
+    // Build base query for shops that can fulfill this order
+    const where: any = {
+      isActive: true,
+      isVerified: true,
+      supportedJewelleryTypes: { has: jewelleryType },
+      supportedMethods: { has: buildMethod },
+    };
+
+    // If metal type specified, check if shop supports it
+    if (metalType) {
+      where.supportedMaterials = { has: metalType };
+    }
+
+    // Fetch all matching shops with their pricing and ratings
+    const shops = await this.prisma.shop.findMany({
+      where,
+      include: {
+        metalRates: true,
+        finishPricing: true,
+        ratings: {
+          select: { overall: true },
+        },
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        _count: {
+          select: {
+            ratings: true,
+          },
+        },
+      },
+    });
+
+    // Calculate price for each shop and enrich data
+    const enrichedShops = shops.map((shop) => {
+      // Calculate average rating
+      const avgRating =
+        shop.ratings.length > 0
+          ? shop.ratings.reduce((sum, r) => sum + r.overall, 0) /
+            shop.ratings.length
+          : 0;
+
+      // Calculate estimated price for this shop
+      // Use shop's custom rate if available, otherwise use a default
+      const shopMetalRate = shop.metalRates.find(
+        (r) => r.metalType === metalType
+      );
+      const baseRatePerGram = shopMetalRate?.ratePerGramNpr || 8500; // Default gold rate
+      const materialCost = baseRatePerGram * estimatedWeight;
+      const makingCharge =
+        materialCost * ((shop.makingChargePercent || 10) / 100);
+      const estimatedPrice = materialCost + makingCharge;
+
+      // Calculate location score (0-3: same city = 3, same state = 2, same country = 1, other = 0)
+      let locationScore = 0;
+      if (customerCity && shop.city?.toLowerCase() === customerCity.toLowerCase()) {
+        locationScore = 3;
+      } else if (customerState && shop.state?.toLowerCase() === customerState.toLowerCase()) {
+        locationScore = 2;
+      } else if (customerCountry && shop.country?.toLowerCase() === customerCountry.toLowerCase()) {
+        locationScore = 1;
+      }
+
+      return {
+        id: shop.id,
+        shopName: shop.shopName,
+        shopNameNe: shop.shopNameNe,
+        city: shop.city,
+        state: shop.state,
+        country: shop.country,
+        address: shop.address,
+        contactPhone: shop.contactPhone,
+        whatsappNumber: shop.whatsappNumber,
+        isVerified: shop.isVerified,
+        makingChargePercent: shop.makingChargePercent || 10,
+        codEnabled: shop.codEnabled,
+        // Pricing
+        estimatedPrice: Math.round(estimatedPrice),
+        materialCost: Math.round(materialCost),
+        makingCharge: Math.round(makingCharge),
+        hasCustomRate: !!shopMetalRate,
+        // Ratings
+        averageRating: Math.round(avgRating * 10) / 10,
+        reviewCount: shop._count.ratings,
+        // Location matching
+        locationScore,
+        locationMatch:
+          locationScore === 3
+            ? "same_city"
+            : locationScore === 2
+              ? "same_state"
+              : locationScore === 1
+                ? "same_country"
+                : "other",
+        // Capabilities
+        supportedJewelleryTypes: shop.supportedJewelleryTypes,
+        supportedMethods: shop.supportedMethods,
+        supportedFinishes: shop.supportedFinishes,
+      };
+    });
+
+    // Apply filters
+    let filtered = enrichedShops;
+
+    if (minRating !== undefined) {
+      filtered = filtered.filter((s) => s.averageRating >= minRating);
+    }
+
+    if (maxPrice !== undefined) {
+      filtered = filtered.filter((s) => s.estimatedPrice <= maxPrice);
+    }
+
+    // Sort based on sortBy parameter
+    switch (sortBy) {
+      case "price":
+        filtered.sort((a, b) => a.estimatedPrice - b.estimatedPrice);
+        break;
+      case "rating":
+        filtered.sort((a, b) => b.averageRating - a.averageRating);
+        break;
+      case "popularity":
+        filtered.sort((a, b) => b.reviewCount - a.reviewCount);
+        break;
+      case "location":
+      default:
+        // Sort by location score (descending), then by rating (descending)
+        filtered.sort((a, b) => {
+          if (b.locationScore !== a.locationScore) {
+            return b.locationScore - a.locationScore;
+          }
+          return b.averageRating - a.averageRating;
+        });
+        break;
+    }
+
+    // Paginate
+    const total = filtered.length;
+    const skip = (page - 1) * pageSize;
+    const paginated = filtered.slice(skip, skip + pageSize);
+
+    return {
+      sellers: paginated,
+      meta: {
+        page,
+        pageSize,
+        totalCount: total,
+        totalPages: Math.ceil(total / pageSize),
+      },
+      stats: {
+        totalMatching: total,
+        sameCityCount: filtered.filter((s) => s.locationScore === 3).length,
+        sameStateCount: filtered.filter((s) => s.locationScore === 2).length,
+        avgPrice:
+          filtered.length > 0
+            ? Math.round(
+                filtered.reduce((sum, s) => sum + s.estimatedPrice, 0) /
+                  filtered.length
+              )
+            : 0,
+        minPrice:
+          filtered.length > 0
+            ? Math.min(...filtered.map((s) => s.estimatedPrice))
+            : 0,
+        maxPrice:
+          filtered.length > 0
+            ? Math.max(...filtered.map((s) => s.estimatedPrice))
+            : 0,
+      },
+    };
+  }
 }

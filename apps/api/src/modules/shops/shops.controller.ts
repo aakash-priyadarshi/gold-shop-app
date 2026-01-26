@@ -46,6 +46,41 @@ export class ShopsController {
     });
   }
 
+  // Public endpoint for finding matching sellers for an RFQ
+  @Get("matching")
+  @ApiOperation({ summary: "Find matching sellers for an RFQ with pricing" })
+  async findMatchingSellers(
+    @Query("jewelleryType") jewelleryType: string,
+    @Query("buildMethod") buildMethod: string,
+    @Query("metalType") metalType?: string,
+    @Query("surfaceFinish") surfaceFinish?: string,
+    @Query("estimatedWeight") estimatedWeight?: string,
+    @Query("customerCity") customerCity?: string,
+    @Query("customerState") customerState?: string,
+    @Query("customerCountry") customerCountry?: string,
+    @Query("minRating") minRating?: string,
+    @Query("maxPrice") maxPrice?: string,
+    @Query("sortBy") sortBy?: "price" | "rating" | "location" | "popularity",
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string
+  ) {
+    return this.shopsService.findMatchingSellers({
+      jewelleryType,
+      buildMethod,
+      metalType,
+      surfaceFinish,
+      estimatedWeight: estimatedWeight ? parseFloat(estimatedWeight) : 5,
+      customerCity,
+      customerState,
+      customerCountry,
+      minRating: minRating ? parseFloat(minRating) : undefined,
+      maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
+      sortBy,
+      page: page ? parseInt(page, 10) : 1,
+      pageSize: pageSize ? parseInt(pageSize, 10) : 20,
+    });
+  }
+
   @Get()
   @ApiOperation({ summary: "List all shops" })
   async findAll(
