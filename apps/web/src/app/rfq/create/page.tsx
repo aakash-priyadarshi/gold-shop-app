@@ -739,7 +739,14 @@ export default function CreateRfqPage() {
       if (savedDraft) {
         const draft = JSON.parse(savedDraft);
         if (draft.formData) {
-          setFormData(draft.formData);
+          // Filter out design preview URL from referenceImages (they shouldn't be shown on Step 2)
+          const cleanedFormData = {
+            ...draft.formData,
+            referenceImages: (draft.formData.referenceImages || []).filter(
+              (img: string) => img !== draft.designPreviewUrl,
+            ),
+          };
+          setFormData(cleanedFormData);
         }
         if (draft.designPreviewUrl) {
           setDesignPreviewUrl(draft.designPreviewUrl);
@@ -1028,22 +1035,8 @@ export default function CreateRfqPage() {
         design.imageUrl,
       );
 
-      // Add the generated image to reference images
-      if (design.imageUrl) {
-        console.log(
-          "[Generate Preview] Adding to reference images:",
-          design.imageUrl,
-        );
-        setFormData((prev) => ({
-          ...prev,
-          referenceImages: [
-            design.imageUrl,
-            ...prev.referenceImages.filter((img) => img !== design.imageUrl),
-          ],
-        }));
-      } else {
-        console.warn("[Generate Preview] No imageUrl in design!");
-      }
+      // NOTE: Don't add to referenceImages - the preview is shown via designPreviewUrl on Step 3
+      // Adding to referenceImages would show it on Step 2 which confuses users
     } catch (err: unknown) {
       console.error("[Generate Preview] Error caught:", err);
       if (err instanceof Error) {
@@ -3587,14 +3580,26 @@ export default function CreateRfqPage() {
                       <div className="relative w-full max-w-sm mx-auto">
                         <img
                           src={designPreviewUrl}
-                          alt={fromDesign ? "Selected Design" : "AI Generated Design Preview"}
+                          alt={
+                            fromDesign
+                              ? "Selected Design"
+                              : "AI Generated Design Preview"
+                          }
                           className="w-full rounded-lg shadow-md border"
                         />
                         {/* Badge - Top Right: Different for selected vs generated */}
                         <div className="absolute top-2 right-2">
-                          <Badge className={fromDesign && !generatingPreview ? "bg-purple-500 text-white" : "bg-amber-500 text-white"}>
+                          <Badge
+                            className={
+                              fromDesign && !generatingPreview
+                                ? "bg-purple-500 text-white"
+                                : "bg-amber-500 text-white"
+                            }
+                          >
                             <Sparkles className="h-3 w-3 mr-1" />
-                            {fromDesign && !generatingPreview ? "Selected Design" : "AI Generated"}
+                            {fromDesign && !generatingPreview
+                              ? "Selected Design"
+                              : "AI Generated"}
                           </Badge>
                         </div>
                         {/* Orivraa Logo Watermark - Bottom Right */}
@@ -3622,7 +3627,7 @@ export default function CreateRfqPage() {
                     {designPreviewUrl && (
                       <div className="w-full max-w-sm mx-auto space-y-2">
                         <Label className="text-sm text-gray-600">
-                          {fromDesign 
+                          {fromDesign
                             ? "Want to customize this design? Describe your changes:"
                             : "Don't like the AI design? Describe what you'd like to change:"}
                         </Label>
