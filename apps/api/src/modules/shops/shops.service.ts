@@ -1156,16 +1156,36 @@ export class ShopsService {
     });
 
     // Build base query for shops that can fulfill this order
+    // We use OR conditions to include shops with empty arrays (treat as "supports all")
     const where: any = {
       isActive: true,
       isVerified: true,
-      supportedJewelleryTypes: { has: jewelleryType },
-      supportedMethods: { has: buildMethod },
+      OR: [
+        // Shop explicitly supports this jewellery type
+        { supportedJewelleryTypes: { has: jewelleryType } },
+        // OR shop has empty array (legacy/unset = supports all)
+        { supportedJewelleryTypes: { equals: [] } },
+      ],
+      AND: [
+        {
+          OR: [
+            // Shop explicitly supports this build method
+            { supportedMethods: { has: buildMethod } },
+            // OR shop has empty array (legacy/unset = supports all)
+            { supportedMethods: { equals: [] } },
+          ],
+        },
+      ],
     };
 
-    // If metal type specified, check if shop supports it
+    // If metal type specified, check if shop supports it (or has empty array)
     if (metalType) {
-      where.supportedMaterials = { has: metalType };
+      where.AND.push({
+        OR: [
+          { supportedMaterials: { has: metalType } },
+          { supportedMaterials: { equals: [] } },
+        ],
+      });
     }
 
     // Debug: Log the where clause and check matching count before material filter
