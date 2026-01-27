@@ -54,7 +54,7 @@ export interface AuthContextType extends AuthState {
     email: string,
     password: string,
     turnstileToken?: string,
-    rememberMe?: boolean
+    rememberMe?: boolean,
   ) => Promise<void>;
   register: (data: RegisterData) => Promise<RegisterResponse>;
   verifyEmail: (userId: string, code: string) => Promise<void>;
@@ -63,11 +63,11 @@ export interface AuthContextType extends AuthState {
   resetPassword: (
     email: string,
     code: string,
-    newPassword: string
+    newPassword: string,
   ) => Promise<void>;
   googleLogin: (
     role?: "CUSTOMER" | "SHOPKEEPER",
-    mode?: "login" | "register"
+    mode?: "login" | "register",
   ) => void;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -170,7 +170,7 @@ const publicRoutes = [
 
 export const isRouteAllowedForRole = (
   pathname: string,
-  role: UserRole
+  role: UserRole,
 ): boolean => {
   // Public routes are always allowed
   if (publicRoutes.some((r) => pathname === r || pathname.startsWith(r))) {
@@ -230,7 +230,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Login function
   const login = useCallback(
-    async (email: string, password: string, turnstileToken?: string, rememberMe?: boolean) => {
+    async (
+      email: string,
+      password: string,
+      turnstileToken?: string,
+      rememberMe?: boolean,
+    ) => {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       try {
@@ -288,7 +293,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(message);
       }
     },
-    [router]
+    [router],
   );
 
   // Register function - returns registration response (requires email verification)
@@ -299,7 +304,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const response = await api.post<RegisterResponse>(
           "/auth/register",
-          data
+          data,
         );
 
         setState((prev) => ({
@@ -321,7 +326,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(message);
       }
     },
-    []
+    [],
   );
 
   // Verify email with OTP - completes registration and logs user in
@@ -369,7 +374,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(message);
       }
     },
-    [router]
+    [router],
   );
 
   // Resend verification OTP
@@ -408,14 +413,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(message);
       }
     },
-    []
+    [],
   );
 
   // Google OAuth login - redirects to backend OAuth endpoint with role and mode
   const googleLogin = useCallback(
     (
       role: "CUSTOMER" | "SHOPKEEPER" = "CUSTOMER",
-      mode: "login" | "register" = "login"
+      mode: "login" | "register" = "login",
     ) => {
       // Use getApiUrl to get the correct base URL with /api
       const apiBaseUrl =
@@ -429,7 +434,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // mode='register' - creates account if not exists
       window.location.href = `${baseUrl}/auth/google?role=${role}&mode=${mode}`;
     },
-    []
+    [],
   );
 
   // Logout function
@@ -492,7 +497,7 @@ export function useAuth(): AuthContextType {
 // HOC for protected routes
 export function withAuth<P extends object>(
   Component: React.ComponentType<P>,
-  allowedRoles?: UserRole[]
+  allowedRoles?: UserRole[],
 ) {
   return function ProtectedRoute(props: P) {
     const { user, isAuthenticated, isLoading } = useAuth();

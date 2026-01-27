@@ -816,12 +816,16 @@ export class AuthService {
     };
 
     // Use extended expiry when "remember me" is checked
-    const tokenExpiry = rememberMe ? this.refreshTokenExpiryRememberMe : this.refreshTokenExpiry;
+    const tokenExpiry = rememberMe
+      ? this.refreshTokenExpiryRememberMe
+      : this.refreshTokenExpiry;
     const accessTokenExpiry = rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60; // 30 days or 24 hours in seconds
 
     // Sign with custom expiry if rememberMe is true
-    const accessToken = rememberMe 
-      ? this.jwtService.sign(payload, { expiresIn: this.accessTokenExpiryRememberMe })
+    const accessToken = rememberMe
+      ? this.jwtService.sign(payload, {
+          expiresIn: this.accessTokenExpiryRememberMe,
+        })
       : this.jwtService.sign(payload);
     const refreshToken = this.generateRefreshToken();
     const tokenHash = this.hashToken(refreshToken);

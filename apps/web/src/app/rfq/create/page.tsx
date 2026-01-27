@@ -781,10 +781,9 @@ export default function CreateRfqPage() {
           const prefill = JSON.parse(prefillJson);
           setFromDesign(true);
 
-          // Set the design preview image if available
-          if (prefill.imageUrl) {
-            setDesignPreviewUrl(prefill.imageUrl);
-          }
+          // Store the design ID for reference, but DON'T set the preview URL yet
+          // User should click "Generate Preview" button to see the image
+          // This keeps the flow clean and non-confusing
           if (prefill.designId) {
             setDesignId(prefill.designId);
           }
@@ -1746,6 +1745,28 @@ export default function CreateRfqPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  // Handler to select a similar design as reference for AI preview
+  const handleSelectSimilarDesign = useCallback(
+    (design: SimilarDesign) => {
+      // Set the design image as the preview
+      setDesignPreviewUrl(design.imageUrl);
+      setDesignId(design.id);
+      setFromDesign(true);
+
+      // Populate form fields from the design (go back to step 1 and 2 configs)
+      if (design.jewelryType) {
+        setFormData((prev) => ({ ...prev, jewelleryType: design.jewelryType }));
+      }
+      if (design.buildMethod) {
+        setFormData((prev) => ({ ...prev, buildMethod: design.buildMethod as BuildMethod }));
+      }
+      if (design.metalType) {
+        setFormData((prev) => ({ ...prev, metalType: design.metalType || "" }));
+      }
+    },
+    [],
+  );
+
   // Add a new gemstone entry
   const addGemstone = () => {
     const newGemstone: GemstoneEntry = {
@@ -1877,42 +1898,21 @@ export default function CreateRfqPage() {
         },
         body: JSON.stringify({
           jewelleryType: formData.jewelleryType,
-          templateId: getTemplateId(),
-          weightCategory: formData.weightCategory,
+          buildMethod: formData.buildMethod,
           composition: {
             metalType: formData.metalType,
-            buildMethod: formData.buildMethod,
             estimatedWeight: weight,
             surfaceFinish: formData.surfaceFinish,
             hasGemstones: formData.hasGemstones,
             gemstoneDetails: formData.gemstoneDetails,
+            // Method-specific details
+            ...(formData.buildMethod === "METHOD_B" && {
+              alloyConfig: formData.alloyConfig,
+            }),
+            ...(formData.buildMethod === "METHOD_C" && {
+              methodCConfig: formData.methodCConfig,
+            }),
           },
-          // Method C plating fields
-          addGoldPlating:
-            formData.buildMethod === "METHOD_C"
-              ? formData.addGoldPlating
-              : false,
-          platingType: formData.addGoldPlating
-            ? formData.platingType
-            : undefined,
-          platingTier: formData.addGoldPlating
-            ? formData.platingTier
-            : undefined,
-          surfaceFinish: formData.surfaceFinish,
-          // Structured gemstones
-          gemstones:
-            formData.hasGemstones && formData.gemstones.length > 0
-              ? formData.gemstones.map((g) => ({
-                  stoneType: g.stoneType,
-                  shape: g.shape,
-                  sizeRange: g.size,
-                  colour: g.colour,
-                  settingStyle: g.settingStyle,
-                  count: g.count,
-                  presetId: g.presetId || undefined,
-                }))
-              : undefined,
-          descriptionEn: formData.description,
           // Include AI preview image in referenceImages if available
           referenceImages: designPreviewUrl
             ? [
@@ -1924,14 +1924,18 @@ export default function CreateRfqPage() {
             : formData.referenceImages,
           // Link to the design from gallery if coming from "Build This"
           designId: designId || undefined,
+          targetTotalWeightG: weight,
           budgetMinNpr: parseFloat(formData.budgetMin) || 0,
           budgetMaxNpr: parseFloat(formData.budgetMax) || 0,
-          deadline: formData.deadline
-            ? new Date(formData.deadline).toISOString()
-            : null,
-          specialInstructions: formData.specialInstructions,
-          // Include estimate for reference
-          estimatedPriceNpr: priceEstimate?.total,
+          preferredDeliveryDays: formData.deadline
+            ? Math.ceil(
+                (new Date(formData.deadline).getTime() - Date.now()) /
+                  (1000 * 60 * 60 * 24),
+              )
+            : undefined,
+          specialInstructions: formData.specialInstructions
+            ? `${formData.description ? formData.description + "\n\n" : ""}${formData.specialInstructions}`
+            : formData.description || undefined,
         }),
       });
 
@@ -3461,10 +3465,11 @@ export default function CreateRfqPage() {
                       ) : (
                         <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
                           {similarDesigns.slice(0, 5).map((design) => (
-                            <Link
+                            <button
                               key={design.id}
-                              href={`/designs?selected=${design.id}`}
-                              className="group relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-purple-400 transition-all"
+                              type="button"
+                              onClick={() => handleSelectSimilarDesign(design)}
+                              className="group relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-purple-400 transition-all cursor-pointer"
                             >
                               <img
                                 src={design.imageUrl}
@@ -3474,11 +3479,11 @@ export default function CreateRfqPage() {
                               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                                 <div className="absolute bottom-1 left-1 right-1">
                                   <p className="text-[10px] text-white font-medium truncate">
-                                    {Math.round(design.similarityScore)}% match
+                                    Click to use as reference
                                   </p>
                                 </div>
                               </div>
-                            </Link>
+                            </button>
                           ))}
                           {/* See More Thumbnail */}
                           <Link

@@ -15,7 +15,10 @@ export class LoginDto {
   @IsString()
   turnstileToken?: string;
 
-  @ApiPropertyOptional({ description: "Remember me for extended session (30 days)", default: false })
+  @ApiPropertyOptional({
+    description: "Remember me for extended session (30 days)",
+    default: false,
+  })
   @IsOptional()
   @IsBoolean()
   rememberMe?: boolean;
