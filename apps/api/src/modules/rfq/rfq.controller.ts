@@ -1,25 +1,25 @@
 import {
+  Body,
   Controller,
   Get,
-  Post,
-  Body,
   Param,
+  Post,
   Query,
   UseGuards,
-} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { RfqService } from './rfq.service';
-import { CreateRfqDto } from './dto/create-rfq.dto';
-import { BroadcastRfqDto } from './dto/broadcast-rfq.dto';
-import { SelectOfferDto } from './dto/select-offer.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { UserRole, RfqStatus } from '@prisma/client';
+} from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { RfqStatus, UserRole } from "@prisma/client";
+import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { Roles } from "../auth/decorators/roles.decorator";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RolesGuard } from "../auth/guards/roles.guard";
+import { BroadcastRfqDto } from "./dto/broadcast-rfq.dto";
+import { CreateRfqDto } from "./dto/create-rfq.dto";
+import { SelectOfferDto } from "./dto/select-offer.dto";
+import { RfqService } from "./rfq.service";
 
-@ApiTags('rfq')
-@Controller('rfq')
+@ApiTags("rfq")
+@Controller("rfq")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class RfqController {
@@ -27,65 +27,67 @@ export class RfqController {
 
   @Post()
   @Roles(UserRole.CUSTOMER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Create a new RFQ (Request for Quote)' })
-  async create(@CurrentUser('id') userId: string, @Body() dto: CreateRfqDto) {
+  @ApiOperation({ summary: "Create a new RFQ (Request for Quote)" })
+  async create(@CurrentUser("id") userId: string, @Body() dto: CreateRfqDto) {
     return this.rfqService.create(userId, dto);
   }
 
-  @Get('my-requests')
+  @Get("my-requests")
   @Roles(UserRole.CUSTOMER)
-  @ApiOperation({ summary: 'List all RFQs for current customer' })
+  @ApiOperation({ summary: "List all RFQs for current customer" })
   async findMyRequests(
-    @CurrentUser('id') userId: string,
-    @Query('status') status?: RfqStatus,
+    @CurrentUser("id") userId: string,
+    @Query("status") status?: RfqStatus,
   ) {
     return this.rfqService.findAllForCustomer(userId, status);
   }
 
-  @Get('shop-requests')
+  @Get("shop-requests")
   @Roles(UserRole.SHOPKEEPER)
-  @ApiOperation({ summary: 'List all RFQs received by shop' })
-  async findShopRequests(@CurrentUser('shopId') shopId: string) {
+  @ApiOperation({ summary: "List all RFQs received by shop" })
+  async findShopRequests(@CurrentUser("shopId") shopId: string) {
     return this.rfqService.findAllForShop(shopId);
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get RFQ details' })
+  @Get(":id")
+  @ApiOperation({ summary: "Get RFQ details" })
   async findOne(
-    @Param('id') id: string,
-    @CurrentUser('id') userId: string,
-    @CurrentUser('role') role: string,
+    @Param("id") id: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("role") role: string,
   ) {
     return this.rfqService.findOne(id, userId, role);
   }
 
-  @Get(':id/eligible-shops')
+  @Get(":id/eligible-shops")
   @Roles(UserRole.CUSTOMER)
-  @ApiOperation({ summary: 'Get shops eligible to receive this RFQ with price estimates' })
+  @ApiOperation({
+    summary: "Get shops eligible to receive this RFQ with price estimates",
+  })
   async getEligibleShops(
-    @Param('id') id: string,
-    @Query('customerCity') customerCity?: string,
+    @Param("id") id: string,
+    @Query("customerCity") customerCity?: string,
   ) {
     return this.rfqService.getEligibleShops(id, customerCity);
   }
 
-  @Post(':id/broadcast')
+  @Post(":id/broadcast")
   @Roles(UserRole.CUSTOMER)
-  @ApiOperation({ summary: 'Broadcast RFQ to selected shops' })
+  @ApiOperation({ summary: "Broadcast RFQ to selected shops" })
   async broadcast(
-    @Param('id') id: string,
-    @CurrentUser('id') userId: string,
+    @Param("id") id: string,
+    @CurrentUser("id") userId: string,
     @Body() dto: BroadcastRfqDto,
   ) {
     return this.rfqService.broadcast(id, userId, dto);
   }
 
-  @Post(':id/select-offer')
+  @Post(":id/select-offer")
   @Roles(UserRole.CUSTOMER)
-  @ApiOperation({ summary: 'Select an offer for the RFQ' })
+  @ApiOperation({ summary: "Select an offer for the RFQ" })
   async selectOffer(
-    @Param('id') id: string,
-    @CurrentUser('id') userId: string,
+    @Param("id") id: string,
+    @CurrentUser("id") userId: string,
     @Body() dto: SelectOfferDto,
   ) {
     return this.rfqService.selectOffer(id, dto.offerId, userId);

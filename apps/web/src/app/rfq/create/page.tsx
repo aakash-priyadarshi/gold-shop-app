@@ -1835,8 +1835,14 @@ export default function CreateRfqPage() {
 
   const handleSubmit = async () => {
     console.log("[RFQ Submit] Starting submission...");
+
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("token") : null;
     
-    if (status !== "authenticated") {
+    // Check both token AND session status for authentication
+    console.log("[RFQ Submit] Auth check - token exists:", !!token, "session status:", status);
+    
+    if (!token && status !== "authenticated") {
       console.log("[RFQ Submit] Not authenticated, redirecting to login");
       router.push("/auth/login?callbackUrl=/rfq/create");
       return;
@@ -1854,9 +1860,7 @@ export default function CreateRfqPage() {
     setError("");
 
     const weight = getWeightFromTemplate();
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    
+
     console.log("[RFQ Submit] Making API call to:", `${API_URL}/rfq`);
 
     try {
@@ -1927,7 +1931,7 @@ export default function CreateRfqPage() {
       });
 
       console.log("[RFQ Submit] Response status:", response.status);
-      
+
       if (!response.ok) {
         const data = await response.json();
         console.error("[RFQ Submit] API error:", data);
@@ -1936,7 +1940,7 @@ export default function CreateRfqPage() {
 
       const data = await response.json();
       console.log("[RFQ Submit] Success! RFQ ID:", data.id);
-      
+
       // Clear draft after successful submission
       clearDraft();
 
@@ -1955,7 +1959,10 @@ export default function CreateRfqPage() {
           console.log("[RFQ Submit] Design published to gallery successfully");
         } catch (publishErr) {
           // Don't fail the RFQ submission if gallery publish fails
-          console.error("[RFQ Submit] Failed to publish design to gallery:", publishErr);
+          console.error(
+            "[RFQ Submit] Failed to publish design to gallery:",
+            publishErr,
+          );
         }
       }
 

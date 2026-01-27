@@ -173,7 +173,11 @@ export class ImageGenerationService {
    * Used for caching and deduplication
    * NOTE: Includes description and regeneration feedback to generate new images when user provides feedback
    */
-  generateSpecHash(specs: DesignSpecs & { additionalSpecs?: { description?: string; regenerationFeedback?: string } }): string {
+  generateSpecHash(
+    specs: DesignSpecs & {
+      additionalSpecs?: { description?: string; regenerationFeedback?: string };
+    },
+  ): string {
     const normalized = {
       jewelryType: specs.jewelryType?.toUpperCase(),
       buildMethod: specs.buildMethod?.toUpperCase(),
@@ -190,8 +194,11 @@ export class ImageGenerationService {
       stoneColor: specs.stoneColor?.toUpperCase() || null,
       settingStyle: specs.settingStyle?.toUpperCase() || null,
       // Include description and regeneration feedback in hash to generate new images
-      description: specs.additionalSpecs?.description?.trim().toLowerCase() || null,
-      regenerationFeedback: specs.additionalSpecs?.regenerationFeedback?.trim().toLowerCase() || null,
+      description:
+        specs.additionalSpecs?.description?.trim().toLowerCase() || null,
+      regenerationFeedback:
+        specs.additionalSpecs?.regenerationFeedback?.trim().toLowerCase() ||
+        null,
     };
 
     return createHash("sha256")

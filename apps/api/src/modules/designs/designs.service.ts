@@ -188,6 +188,8 @@ export class DesignsService {
         platingDetails: dto.platingDetails,
         italianMachineDetails: dto.italianMachineDetails,
         gemstones: dto.gemstones,
+        // Include user's description and regeneration feedback for prompt building
+        additionalSpecs: dto.additionalSpecs,
       });
     }
 
