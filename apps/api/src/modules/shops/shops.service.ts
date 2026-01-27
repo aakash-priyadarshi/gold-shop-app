@@ -19,7 +19,7 @@ export class ShopsService {
   constructor(
     private prisma: PrismaService,
     private auditService: AuditService,
-    private redisService: RedisService
+    private redisService: RedisService,
   ) {}
 
   /**
@@ -27,7 +27,7 @@ export class ShopsService {
    */
   private async checkPhoneUniqueness(
     phone: string,
-    excludeUserId?: string
+    excludeUserId?: string,
   ): Promise<boolean> {
     const normalizedPhone = phone.trim();
     const cacheKey = `phone:${normalizedPhone}`;
@@ -62,7 +62,7 @@ export class ShopsService {
         await this.redisService.set(
           cacheKey,
           JSON.stringify({ userId: existingUser.id }),
-          3600
+          3600,
         );
       } catch (error) {
         // Ignore Redis errors
@@ -94,7 +94,7 @@ export class ShopsService {
 
     if (user.shops && user.shops.length > 0) {
       throw new BadRequestException(
-        "User already has a shop. Use the dashboard to add more shops."
+        "User already has a shop. Use the dashboard to add more shops.",
       );
     }
 
@@ -102,7 +102,7 @@ export class ShopsService {
     const phoneExists = await this.checkPhoneUniqueness(dto.userPhone, userId);
     if (phoneExists) {
       throw new ConflictException(
-        "This phone number is already registered. Please use a different number."
+        "This phone number is already registered. Please use a different number.",
       );
     }
 
@@ -271,12 +271,12 @@ export class ShopsService {
           shop.country === "IN"
             ? "INR"
             : shop.country === "AE"
-            ? "AED"
-            : shop.country === "US"
-            ? "USD"
-            : shop.country === "UK"
-            ? "GBP"
-            : "NPR",
+              ? "AED"
+              : shop.country === "US"
+                ? "USD"
+                : shop.country === "UK"
+                  ? "GBP"
+                  : "NPR",
         averageRating:
           shop.ratings.length > 0
             ? shop.ratings.reduce((sum, r) => sum + r.overall, 0) /
@@ -422,7 +422,7 @@ export class ShopsService {
   async updateMetalRates(
     shopId: string,
     userId: string,
-    dto: UpdateMetalRatesDto
+    dto: UpdateMetalRatesDto,
   ) {
     const shop = await this.prisma.shop.findUnique({
       where: { id: shopId },
@@ -455,8 +455,8 @@ export class ShopsService {
             ratePerGramNpr: rate.ratePerGramNpr,
             lastUpdatedAt: new Date(),
           },
-        })
-      )
+        }),
+      ),
     );
 
     await this.auditService.log({
@@ -797,7 +797,7 @@ export class ShopsService {
     const materials = allMaterials.map((material) => {
       const isAvailable = shop.supportedMaterials.includes(material.code);
       const shopRate = shop.metalRates.find(
-        (r) => r.metalType === material.code
+        (r) => r.metalType === material.code,
       );
       return {
         ...material,
@@ -823,7 +823,7 @@ export class ShopsService {
       materialCode: string;
       isAvailable: boolean;
       pricePerGramNpr?: number;
-    }>
+    }>,
   ) {
     if (!shopId) {
       throw new BadRequestException("Shop ID required");
@@ -845,7 +845,7 @@ export class ShopsService {
     // Update metal rates for materials with custom pricing
     const metalRateUpdates = materials
       .filter(
-        (m) => m.pricePerGramNpr !== undefined && m.pricePerGramNpr !== null
+        (m) => m.pricePerGramNpr !== undefined && m.pricePerGramNpr !== null,
       )
       .map((m) =>
         this.prisma.shopMetalRate.upsert({
@@ -864,7 +864,7 @@ export class ShopsService {
             ratePerGramNpr: m.pricePerGramNpr!,
             lastUpdatedAt: new Date(),
           },
-        })
+        }),
       );
 
     await Promise.all([
@@ -978,7 +978,7 @@ export class ShopsService {
       buildMethods?: string[];
       finishes?: string[];
       gemstones?: string[];
-    }
+    },
   ) {
     if (!shopId) {
       throw new BadRequestException("Shop ID required");
@@ -1181,7 +1181,7 @@ export class ShopsService {
       // Calculate estimated price for this shop
       // Use shop's custom rate if available, otherwise use a default
       const shopMetalRate = shop.metalRates.find(
-        (r) => r.metalType === metalType
+        (r) => r.metalType === metalType,
       );
       const baseRatePerGram = shopMetalRate?.ratePerGramNpr || 8500; // Default gold rate
       const materialCost = baseRatePerGram * estimatedWeight;
@@ -1191,11 +1191,20 @@ export class ShopsService {
 
       // Calculate location score (0-3: same city = 3, same state = 2, same country = 1, other = 0)
       let locationScore = 0;
-      if (customerCity && shop.city?.toLowerCase() === customerCity.toLowerCase()) {
+      if (
+        customerCity &&
+        shop.city?.toLowerCase() === customerCity.toLowerCase()
+      ) {
         locationScore = 3;
-      } else if (customerState && shop.state?.toLowerCase() === customerState.toLowerCase()) {
+      } else if (
+        customerState &&
+        shop.state?.toLowerCase() === customerState.toLowerCase()
+      ) {
         locationScore = 2;
-      } else if (customerCountry && shop.country?.toLowerCase() === customerCountry.toLowerCase()) {
+      } else if (
+        customerCountry &&
+        shop.country?.toLowerCase() === customerCountry.toLowerCase()
+      ) {
         locationScore = 1;
       }
 
@@ -1292,7 +1301,7 @@ export class ShopsService {
           filtered.length > 0
             ? Math.round(
                 filtered.reduce((sum, s) => sum + s.estimatedPrice, 0) /
-                  filtered.length
+                  filtered.length,
               )
             : 0,
         minPrice:

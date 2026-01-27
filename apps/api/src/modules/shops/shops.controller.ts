@@ -35,7 +35,7 @@ export class ShopsController {
     @Query("state") state?: string,
     @Query("city") city?: string,
     @Query("page") page?: string,
-    @Query("pageSize") pageSize?: string
+    @Query("pageSize") pageSize?: string,
   ) {
     return this.shopsService.findAll({
       country,
@@ -62,7 +62,7 @@ export class ShopsController {
     @Query("maxPrice") maxPrice?: string,
     @Query("sortBy") sortBy?: "price" | "rating" | "location" | "popularity",
     @Query("page") page?: string,
-    @Query("pageSize") pageSize?: string
+    @Query("pageSize") pageSize?: string,
   ) {
     return this.shopsService.findMatchingSellers({
       jewelleryType,
@@ -90,7 +90,7 @@ export class ShopsController {
     @Query("method") method?: string,
     @Query("verified") verified?: string,
     @Query("page") page?: string,
-    @Query("pageSize") pageSize?: string
+    @Query("pageSize") pageSize?: string,
   ) {
     return this.shopsService.findAll({
       country,
@@ -144,7 +144,7 @@ export class ShopsController {
   @ApiOperation({ summary: "Complete shop setup for OAuth SHOPKEEPER users" })
   async setupShop(
     @CurrentUser("id") userId: string,
-    @Body() dto: OAuthShopSetupDto
+    @Body() dto: OAuthShopSetupDto,
   ) {
     // This endpoint allows shopkeepers who signed up via Google OAuth to create their shop
     // Also validates and saves the user's phone number (must be unique)
@@ -171,7 +171,7 @@ export class ShopsController {
   @ApiOperation({ summary: "Update shop settings" })
   async updateMyShopSettings(
     @CurrentUser("id") userId: string,
-    @Body() dto: UpdateShopDto
+    @Body() dto: UpdateShopDto,
   ) {
     return this.shopsService.updateShopSettings(userId, dto);
   }
@@ -183,7 +183,7 @@ export class ShopsController {
   @ApiOperation({ summary: "Get shop analytics" })
   async getMyShopAnalytics(
     @CurrentUser("shopId") shopId: string,
-    @Query("period") period?: string
+    @Query("period") period?: string,
   ) {
     return this.shopsService.getShopAnalytics(shopId, period);
   }
@@ -212,7 +212,7 @@ export class ShopsController {
         isAvailable: boolean;
         pricePerGramNpr?: number;
       }>;
-    }
+    },
   ) {
     return this.shopsService.updateShopMaterials(shopId, userId, dto.materials);
   }
@@ -240,7 +240,7 @@ export class ShopsController {
       buildMethods?: string[];
       finishes?: string[];
       gemstones?: string[];
-    }
+    },
   ) {
     return this.shopsService.updateShopCapabilities(shopId, userId, dto);
   }
@@ -263,7 +263,7 @@ export class ShopsController {
   async update(
     @Param("id") id: string,
     @CurrentUser("id") userId: string,
-    @Body() dto: UpdateShopDto
+    @Body() dto: UpdateShopDto,
   ) {
     return this.shopsService.update(id, userId, dto);
   }
@@ -276,7 +276,7 @@ export class ShopsController {
   async updateMetalRates(
     @Param("id") id: string,
     @CurrentUser("id") userId: string,
-    @Body() dto: UpdateMetalRatesDto
+    @Body() dto: UpdateMetalRatesDto,
   ) {
     return this.shopsService.updateMetalRates(id, userId, dto);
   }
@@ -298,7 +298,7 @@ export class ShopsController {
   async adminUpdateShop(
     @Param("id") id: string,
     @CurrentUser("id") adminId: string,
-    @Body() dto: UpdateShopDto
+    @Body() dto: UpdateShopDto,
   ) {
     return this.shopsService.adminUpdateShop(id, adminId, dto);
   }
@@ -310,7 +310,7 @@ export class ShopsController {
   @ApiOperation({ summary: "Delete a shop (Admin only)" })
   async adminDeleteShop(
     @Param("id") id: string,
-    @CurrentUser("id") adminId: string
+    @CurrentUser("id") adminId: string,
   ) {
     return this.shopsService.adminDeleteShop(id, adminId);
   }

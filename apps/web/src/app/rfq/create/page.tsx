@@ -48,11 +48,13 @@ import {
   ArrowRight,
   Check,
   Clock,
+  Filter,
   Gem,
   Image as ImageIcon,
   Info,
   Loader2,
   MapPin,
+  MessageCircle,
   Phone,
   RotateCcw,
   ShieldCheck,
@@ -60,8 +62,6 @@ import {
   Star,
   Upload,
   X,
-  Filter,
-  MessageCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -641,7 +641,7 @@ export default function CreateRfqPage() {
     supportedMethods: string[];
     supportedFinishes: string[];
   }
-  
+
   interface SellerMatchingStats {
     totalMatching: number;
     sameCityCount: number;
@@ -653,11 +653,19 @@ export default function CreateRfqPage() {
 
   const [submittedRfqId, setSubmittedRfqId] = useState<string | null>(null);
   const [matchingSellers, setMatchingSellers] = useState<MatchingSeller[]>([]);
-  const [sellerStats, setSellerStats] = useState<SellerMatchingStats | null>(null);
+  const [sellerStats, setSellerStats] = useState<SellerMatchingStats | null>(
+    null,
+  );
   const [loadingSellers, setLoadingSellers] = useState(false);
-  const [sellerSortBy, setSellerSortBy] = useState<"location" | "price" | "rating" | "popularity">("location");
-  const [sellerMinRating, setSellerMinRating] = useState<number | undefined>(undefined);
-  const [sellerMaxPrice, setSellerMaxPrice] = useState<number | undefined>(undefined);
+  const [sellerSortBy, setSellerSortBy] = useState<
+    "location" | "price" | "rating" | "popularity"
+  >("location");
+  const [sellerMinRating, setSellerMinRating] = useState<number | undefined>(
+    undefined,
+  );
+  const [sellerMaxPrice, setSellerMaxPrice] = useState<number | undefined>(
+    undefined,
+  );
 
   // Congratulatory messages with username placeholder
   const CONGRATULATORY_MESSAGES = [
@@ -673,7 +681,9 @@ export default function CreateRfqPage() {
 
   const getCongratulatoryMessage = () => {
     const name = user?.firstName || "there";
-    const randomIndex = Math.floor(Math.random() * CONGRATULATORY_MESSAGES.length);
+    const randomIndex = Math.floor(
+      Math.random() * CONGRATULATORY_MESSAGES.length,
+    );
     return CONGRATULATORY_MESSAGES[randomIndex].replace("{name}", name);
   };
 
@@ -956,7 +966,8 @@ export default function CreateRfqPage() {
           description: formData.description,
           regenerationFeedback: regenerationFeedback || undefined, // Include refinement notes if any
         },
-        shareToGallery,
+        // Don't share to gallery during preview generation - only publish when RFQ is submitted
+        shareToGallery: false,
       };
 
       console.log(
@@ -1385,17 +1396,26 @@ export default function CreateRfqPage() {
     setLoadingSellers(true);
     try {
       const weight = getWeightFromTemplate();
-      
+
       // Get metal type based on build method
       let metalType = formData.metalType;
-      if (formData.buildMethod === "METHOD_B" && formData.alloyConfig?.baseMetal) {
+      if (
+        formData.buildMethod === "METHOD_B" &&
+        formData.alloyConfig?.baseMetal
+      ) {
         metalType = formData.alloyConfig.baseMetal;
-      } else if (formData.buildMethod === "METHOD_C" && formData.methodCConfig?.baseMetal) {
+      } else if (
+        formData.buildMethod === "METHOD_C" &&
+        formData.methodCConfig?.baseMetal
+      ) {
         metalType = formData.methodCConfig.baseMetal;
-      } else if (formData.buildMethod === "METHOD_D" && formData.methodDConfig?.purity) {
+      } else if (
+        formData.buildMethod === "METHOD_D" &&
+        formData.methodDConfig?.purity
+      ) {
         metalType = formData.methodDConfig.purity;
       }
-      
+
       const params = new URLSearchParams({
         jewelleryType: formData.jewelleryType,
         buildMethod: formData.buildMethod || "METHOD_A",
@@ -1403,18 +1423,23 @@ export default function CreateRfqPage() {
         sortBy: sellerSortBy,
         pageSize: "20",
       });
-      
+
       if (metalType) params.append("metalType", metalType);
-      if (formData.surfaceFinish) params.append("surfaceFinish", formData.surfaceFinish);
-      if (sellerMinRating !== undefined) params.append("minRating", String(sellerMinRating));
-      if (sellerMaxPrice !== undefined) params.append("maxPrice", String(sellerMaxPrice));
-      
+      if (formData.surfaceFinish)
+        params.append("surfaceFinish", formData.surfaceFinish);
+      if (sellerMinRating !== undefined)
+        params.append("minRating", String(sellerMinRating));
+      if (sellerMaxPrice !== undefined)
+        params.append("maxPrice", String(sellerMaxPrice));
+
       // Add customer location if available from user profile
       // For now, we use the selected country from preferences
       if (country) params.append("customerCountry", country);
-      
-      const response = await fetch(`${API_URL}/shops/matching?${params.toString()}`);
-      
+
+      const response = await fetch(
+        `${API_URL}/shops/matching?${params.toString()}`,
+      );
+
       if (response.ok) {
         const data = await response.json();
         setMatchingSellers(data.sellers || []);
@@ -1449,7 +1474,14 @@ export default function CreateRfqPage() {
     if (step === 4 && submittedRfqId) {
       fetchMatchingSellers();
     }
-  }, [step, submittedRfqId, sellerSortBy, sellerMinRating, sellerMaxPrice, fetchMatchingSellers]);
+  }, [
+    step,
+    submittedRfqId,
+    sellerSortBy,
+    sellerMinRating,
+    sellerMaxPrice,
+    fetchMatchingSellers,
+  ]);
 
   // Fetch price estimate using the new pricing engine
   const fetchPriceEstimate = useCallback(async () => {
@@ -1802,7 +1834,10 @@ export default function CreateRfqPage() {
   };
 
   const handleSubmit = async () => {
+    console.log("[RFQ Submit] Starting submission...");
+    
     if (status !== "authenticated") {
+      console.log("[RFQ Submit] Not authenticated, redirecting to login");
       router.push("/auth/login?callbackUrl=/rfq/create");
       return;
     }
@@ -1821,6 +1856,8 @@ export default function CreateRfqPage() {
     const weight = getWeightFromTemplate();
     const token =
       typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    
+    console.log("[RFQ Submit] Making API call to:", `${API_URL}/rfq`);
 
     try {
       const response = await fetch(`${API_URL}/rfq`, {
@@ -1889,20 +1926,46 @@ export default function CreateRfqPage() {
         }),
       });
 
+      console.log("[RFQ Submit] Response status:", response.status);
+      
       if (!response.ok) {
         const data = await response.json();
+        console.error("[RFQ Submit] API error:", data);
         throw new Error(data.message || "Failed to create request");
       }
 
       const data = await response.json();
+      console.log("[RFQ Submit] Success! RFQ ID:", data.id);
+      
       // Clear draft after successful submission
       clearDraft();
-      
+
+      // If user chose to share to gallery and we have a design, publish it now
+      if (shareToGallery && designId) {
+        console.log("[RFQ Submit] Publishing design to gallery:", designId);
+        try {
+          await fetch(`${API_URL}/designs/${designId}/visibility`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ isPublic: true }),
+          });
+          console.log("[RFQ Submit] Design published to gallery successfully");
+        } catch (publishErr) {
+          // Don't fail the RFQ submission if gallery publish fails
+          console.error("[RFQ Submit] Failed to publish design to gallery:", publishErr);
+        }
+      }
+
       // Store RFQ ID and move to Step 4 (seller matching)
+      console.log("[RFQ Submit] Moving to Step 4 with RFQ ID:", data.id);
       setSubmittedRfqId(data.id);
       setStep(4);
-      
+
       // Fetch matching sellers
+      console.log("[RFQ Submit] Fetching matching sellers...");
       fetchMatchingSellers();
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -3993,7 +4056,10 @@ export default function CreateRfqPage() {
                         {congratsMessage}
                       </h2>
                       <p className="text-gray-600">
-                        Your request ID: <code className="font-mono bg-gray-100 px-2 py-1 rounded">{submittedRfqId.slice(0, 8)}...</code>
+                        Your request ID:{" "}
+                        <code className="font-mono bg-gray-100 px-2 py-1 rounded">
+                          {submittedRfqId.slice(0, 8)}...
+                        </code>
                       </p>
                     </div>
 
@@ -4017,7 +4083,9 @@ export default function CreateRfqPage() {
                           <div className="aspect-square rounded-lg bg-gradient-to-br from-gold-50 to-amber-100 flex items-center justify-center">
                             <div className="text-center p-4">
                               <Gem className="h-12 w-12 text-gold-400 mx-auto mb-2" />
-                              <p className="text-sm text-gray-500">Custom design based on your specifications</p>
+                              <p className="text-sm text-gray-500">
+                                Custom design based on your specifications
+                              </p>
                             </div>
                           </div>
                         )}
@@ -4034,35 +4102,65 @@ export default function CreateRfqPage() {
                         </h3>
                         <div className="space-y-3">
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">Jewellery Type:</span>
-                            <span className="font-medium capitalize">{formData.jewelleryType?.toLowerCase().replace("_", " ")}</span>
+                            <span className="text-gray-500">
+                              Jewellery Type:
+                            </span>
+                            <span className="font-medium capitalize">
+                              {formData.jewelleryType
+                                ?.toLowerCase()
+                                .replace("_", " ")}
+                            </span>
                           </div>
                           <div className="flex justify-between text-sm">
                             <span className="text-gray-500">Build Method:</span>
-                            <span className="font-medium">{formData.buildMethod?.replace("METHOD_", "Method ")}</span>
+                            <span className="font-medium">
+                              {formData.buildMethod?.replace(
+                                "METHOD_",
+                                "Method ",
+                              )}
+                            </span>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">Estimated Weight:</span>
-                            <span className="font-medium">{formatWeight(getWeightFromTemplate())}</span>
+                            <span className="text-gray-500">
+                              Estimated Weight:
+                            </span>
+                            <span className="font-medium">
+                              {formatWeight(getWeightFromTemplate())}
+                            </span>
                           </div>
                           {formData.surfaceFinish && (
                             <div className="flex justify-between text-sm">
-                              <span className="text-gray-500">Surface Finish:</span>
-                              <span className="font-medium capitalize">{formData.surfaceFinish.toLowerCase().replace("_", " ")}</span>
+                              <span className="text-gray-500">
+                                Surface Finish:
+                              </span>
+                              <span className="font-medium capitalize">
+                                {formData.surfaceFinish
+                                  .toLowerCase()
+                                  .replace("_", " ")}
+                              </span>
                             </div>
                           )}
                           <div className="border-t pt-3 mt-3">
                             <div className="flex justify-between">
-                              <span className="text-gray-700 font-medium">Estimated Price:</span>
+                              <span className="text-gray-700 font-medium">
+                                Estimated Price:
+                              </span>
                               <span className="text-lg font-bold text-gold-600">
-                                {priceEstimate ? `${currencyInfo?.symbol || "Rs."}${priceEstimate.total.toLocaleString()}` : "Pending quotes"}
+                                {priceEstimate
+                                  ? `${currencyInfo?.symbol || "Rs."}${priceEstimate.total.toLocaleString()}`
+                                  : "Pending quotes"}
                               </span>
                             </div>
                             {formData.budgetMax && (
                               <div className="flex justify-between text-sm mt-1">
-                                <span className="text-gray-500">Your Budget:</span>
+                                <span className="text-gray-500">
+                                  Your Budget:
+                                </span>
                                 <span className="text-green-600 font-medium">
-                                  Up to {currencyInfo?.symbol || "Rs."}{parseFloat(formData.budgetMax).toLocaleString()}
+                                  Up to {currencyInfo?.symbol || "Rs."}
+                                  {parseFloat(
+                                    formData.budgetMax,
+                                  ).toLocaleString()}
                                 </span>
                               </div>
                             )}
@@ -4084,7 +4182,11 @@ export default function CreateRfqPage() {
                         </CardTitle>
                         <CardDescription>
                           {sellerStats ? (
-                            <>Found {sellerStats.totalMatching} seller{sellerStats.totalMatching !== 1 ? "s" : ""} who can create your jewellery</>
+                            <>
+                              Found {sellerStats.totalMatching} seller
+                              {sellerStats.totalMatching !== 1 ? "s" : ""} who
+                              can create your jewellery
+                            </>
                           ) : (
                             "Finding the best artisans for your order..."
                           )}
@@ -4092,9 +4194,16 @@ export default function CreateRfqPage() {
                       </div>
                       {sellerStats && sellerStats.totalMatching > 0 && (
                         <div className="text-right text-sm text-gray-500">
-                          <div>Price range: {currencyInfo?.symbol || "Rs."}{sellerStats.minPrice.toLocaleString()} - {currencyInfo?.symbol || "Rs."}{sellerStats.maxPrice.toLocaleString()}</div>
+                          <div>
+                            Price range: {currencyInfo?.symbol || "Rs."}
+                            {sellerStats.minPrice.toLocaleString()} -{" "}
+                            {currencyInfo?.symbol || "Rs."}
+                            {sellerStats.maxPrice.toLocaleString()}
+                          </div>
                           {sellerStats.sameCityCount > 0 && (
-                            <div className="text-green-600">{sellerStats.sameCityCount} in your city</div>
+                            <div className="text-green-600">
+                              {sellerStats.sameCityCount} in your city
+                            </div>
                           )}
                         </div>
                       )}
@@ -4108,7 +4217,9 @@ export default function CreateRfqPage() {
                         <span className="text-sm text-gray-500">Sort by:</span>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {(["location", "price", "rating", "popularity"] as const).map((sortOption) => (
+                        {(
+                          ["location", "price", "rating", "popularity"] as const
+                        ).map((sortOption) => (
                           <button
                             key={sortOption}
                             onClick={() => setSellerSortBy(sortOption)}
@@ -4118,9 +4229,13 @@ export default function CreateRfqPage() {
                                 : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                             }`}
                           >
-                            {sortOption === "location" ? "📍 Nearest" : 
-                             sortOption === "price" ? "💰 Lowest Price" : 
-                             sortOption === "rating" ? "⭐ Top Rated" : "🔥 Most Popular"}
+                            {sortOption === "location"
+                              ? "📍 Nearest"
+                              : sortOption === "price"
+                                ? "💰 Lowest Price"
+                                : sortOption === "rating"
+                                  ? "⭐ Top Rated"
+                                  : "🔥 Most Popular"}
                           </button>
                         ))}
                       </div>
@@ -4130,15 +4245,21 @@ export default function CreateRfqPage() {
                     {loadingSellers ? (
                       <div className="flex items-center justify-center py-12">
                         <Loader2 className="h-8 w-8 animate-spin text-gold-500" />
-                        <span className="ml-3 text-gray-500">Finding matching sellers...</span>
+                        <span className="ml-3 text-gray-500">
+                          Finding matching sellers...
+                        </span>
                       </div>
                     ) : matchingSellers.length === 0 ? (
                       <div className="text-center py-12">
                         <MapPin className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                        <h3 className="font-medium text-gray-700 mb-1">No matching sellers found</h3>
+                        <h3 className="font-medium text-gray-700 mb-1">
+                          No matching sellers found
+                        </h3>
                         <p className="text-sm text-gray-500">
-                          We couldn&apos;t find sellers matching your requirements. <br />
-                          Your request has been saved and you&apos;ll be notified when sellers respond.
+                          We couldn&apos;t find sellers matching your
+                          requirements. <br />
+                          Your request has been saved and you&apos;ll be
+                          notified when sellers respond.
                         </p>
                         <Link
                           href={`/rfq/${submittedRfqId}`}
@@ -4154,49 +4275,70 @@ export default function CreateRfqPage() {
                           <div
                             key={seller.id}
                             className={`border rounded-lg p-4 hover:shadow-md transition-shadow ${
-                              seller.locationMatch === "same_city" ? "border-green-200 bg-green-50/50" : ""
+                              seller.locationMatch === "same_city"
+                                ? "border-green-200 bg-green-50/50"
+                                : ""
                             }`}
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <h4 className="font-semibold text-gray-900">{seller.shopName}</h4>
+                                  <h4 className="font-semibold text-gray-900">
+                                    {seller.shopName}
+                                  </h4>
                                   {seller.isVerified && (
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <ShieldCheck className="h-4 w-4 text-blue-500" />
                                       </TooltipTrigger>
-                                      <TooltipContent>Verified Seller</TooltipContent>
+                                      <TooltipContent>
+                                        Verified Seller
+                                      </TooltipContent>
                                     </Tooltip>
                                   )}
                                   {seller.locationMatch === "same_city" && (
-                                    <Badge className="bg-green-100 text-green-700 text-xs">Same City</Badge>
+                                    <Badge className="bg-green-100 text-green-700 text-xs">
+                                      Same City
+                                    </Badge>
                                   )}
                                   {seller.locationMatch === "same_state" && (
-                                    <Badge className="bg-blue-100 text-blue-700 text-xs">Same State</Badge>
+                                    <Badge className="bg-blue-100 text-blue-700 text-xs">
+                                      Same State
+                                    </Badge>
                                   )}
                                 </div>
                                 <div className="flex items-center gap-4 text-sm text-gray-500 mb-2">
                                   <span className="flex items-center gap-1">
                                     <MapPin className="h-3.5 w-3.5" />
-                                    {[seller.city, seller.state, seller.country].filter(Boolean).join(", ") || "Location not specified"}
+                                    {[seller.city, seller.state, seller.country]
+                                      .filter(Boolean)
+                                      .join(", ") || "Location not specified"}
                                   </span>
                                   {seller.averageRating > 0 && (
                                     <span className="flex items-center gap-1">
                                       <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                                      {seller.averageRating.toFixed(1)} ({seller.reviewCount} reviews)
+                                      {seller.averageRating.toFixed(1)} (
+                                      {seller.reviewCount} reviews)
                                     </span>
                                   )}
                                 </div>
                                 <div className="flex flex-wrap gap-2 mt-2">
                                   {seller.codEnabled && (
-                                    <Badge variant="outline" className="text-xs">COD Available</Badge>
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
+                                      COD Available
+                                    </Badge>
                                   )}
                                   <Badge variant="outline" className="text-xs">
                                     Making: {seller.makingChargePercent}%
                                   </Badge>
                                   {seller.hasCustomRate && (
-                                    <Badge variant="outline" className="text-xs text-green-600 border-green-200">
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs text-green-600 border-green-200"
+                                    >
                                       Custom Pricing
                                     </Badge>
                                   )}
@@ -4204,11 +4346,15 @@ export default function CreateRfqPage() {
                               </div>
                               <div className="text-right ml-4">
                                 <div className="text-lg font-bold text-gold-600">
-                                  {currencyInfo?.symbol || "Rs."}{seller.estimatedPrice.toLocaleString()}
+                                  {currencyInfo?.symbol || "Rs."}
+                                  {seller.estimatedPrice.toLocaleString()}
                                 </div>
                                 <div className="text-xs text-gray-500">
-                                  Material: {currencyInfo?.symbol || "Rs."}{seller.materialCost.toLocaleString()}<br />
-                                  Making: {currencyInfo?.symbol || "Rs."}{seller.makingCharge.toLocaleString()}
+                                  Material: {currencyInfo?.symbol || "Rs."}
+                                  {seller.materialCost.toLocaleString()}
+                                  <br />
+                                  Making: {currencyInfo?.symbol || "Rs."}
+                                  {seller.makingCharge.toLocaleString()}
                                 </div>
                                 <div className="mt-3 flex gap-2">
                                   {seller.whatsappNumber && (
@@ -4249,13 +4395,16 @@ export default function CreateRfqPage() {
                         <ArrowRight className="h-4 w-4" />
                       </Link>
                       <Link href="/rfq/create">
-                        <Button variant="outline" onClick={() => {
-                          // Reset form for new request
-                          setStep(1);
-                          setSubmittedRfqId(null);
-                          setMatchingSellers([]);
-                          setSellerStats(null);
-                        }}>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            // Reset form for new request
+                            setStep(1);
+                            setSubmittedRfqId(null);
+                            setMatchingSellers([]);
+                            setSellerStats(null);
+                          }}
+                        >
                           <Sparkles className="mr-2 h-4 w-4" />
                           Create Another Request
                         </Button>

@@ -101,7 +101,7 @@ export class DesignsService {
    * Create a new design with AI-generated image
    */
   async createDesign(userId: string, dto: CreateDesignDto) {
-    // Generate spec hash for caching
+    // Generate spec hash for caching - includes description and regeneration feedback
     const specHash = this.imageGenService.generateSpecHash({
       jewelryType: dto.jewelryType,
       buildMethod: dto.buildMethod,
@@ -116,6 +116,8 @@ export class DesignsService {
       stoneCarat: dto.stoneCarat,
       stoneColor: dto.stoneColor,
       settingStyle: dto.settingStyle,
+      // Include additionalSpecs for cache key to generate new images on regeneration
+      additionalSpecs: dto.additionalSpecs,
     });
 
     // Check if identical design already exists

@@ -26,7 +26,7 @@ export class RfqController {
   constructor(private rfqService: RfqService) {}
 
   @Post()
-  @Roles(UserRole.CUSTOMER)
+  @Roles(UserRole.CUSTOMER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a new RFQ (Request for Quote)' })
   async create(@CurrentUser('id') userId: string, @Body() dto: CreateRfqDto) {
     return this.rfqService.create(userId, dto);
