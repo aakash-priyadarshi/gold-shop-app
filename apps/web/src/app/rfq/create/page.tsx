@@ -781,14 +781,18 @@ export default function CreateRfqPage() {
           const prefill = JSON.parse(prefillJson);
           setFromDesign(true);
 
-          // Store the design ID for reference, but DON'T set the preview URL yet
-          // User should click "Generate Preview" button to see the image
-          // This keeps the flow clean and non-confusing
+          // Set the design preview image for Step 3 AI Preview section
+          // This is the image user selected from gallery - show it prominently
+          if (prefill.imageUrl) {
+            setDesignPreviewUrl(prefill.imageUrl);
+          }
           if (prefill.designId) {
             setDesignId(prefill.designId);
           }
 
-          // Prefill form data
+          // Prefill form data with all specs from the design
+          // NOTE: Do NOT add to referenceImages - that would show on Step 2 which is confusing
+          // The design image will show on Step 3 in the AI Preview section
           setFormData((prev) => ({
             ...prev,
             jewelleryType: prefill.jewelleryType || prev.jewelleryType,
@@ -800,7 +804,8 @@ export default function CreateRfqPage() {
             surfaceFinish: prefill.surfaceFinish || prev.surfaceFinish,
             description: prefill.description || prev.description,
             hasGemstones: prefill.hasGemstones || false,
-            referenceImages: prefill.referenceImages || prev.referenceImages,
+            // Don't populate referenceImages from prefill - keep Step 2 clean
+            // referenceImages: prefill.referenceImages || prev.referenceImages,
           }));
 
           // Set gemstones if any
@@ -1746,26 +1751,26 @@ export default function CreateRfqPage() {
   };
 
   // Handler to select a similar design as reference for AI preview
-  const handleSelectSimilarDesign = useCallback(
-    (design: SimilarDesign) => {
-      // Set the design image as the preview
-      setDesignPreviewUrl(design.imageUrl);
-      setDesignId(design.id);
-      setFromDesign(true);
+  const handleSelectSimilarDesign = useCallback((design: SimilarDesign) => {
+    // Set the design image as the preview
+    setDesignPreviewUrl(design.imageUrl);
+    setDesignId(design.id);
+    setFromDesign(true);
 
-      // Populate form fields from the design (go back to step 1 and 2 configs)
-      if (design.jewelryType) {
-        setFormData((prev) => ({ ...prev, jewelleryType: design.jewelryType }));
-      }
-      if (design.buildMethod) {
-        setFormData((prev) => ({ ...prev, buildMethod: design.buildMethod as BuildMethod }));
-      }
-      if (design.metalType) {
-        setFormData((prev) => ({ ...prev, metalType: design.metalType || "" }));
-      }
-    },
-    [],
-  );
+    // Populate form fields from the design (go back to step 1 and 2 configs)
+    if (design.jewelryType) {
+      setFormData((prev) => ({ ...prev, jewelleryType: design.jewelryType }));
+    }
+    if (design.buildMethod) {
+      setFormData((prev) => ({
+        ...prev,
+        buildMethod: design.buildMethod as BuildMethod,
+      }));
+    }
+    if (design.metalType) {
+      setFormData((prev) => ({ ...prev, metalType: design.metalType || "" }));
+    }
+  }, []);
 
   // Add a new gemstone entry
   const addGemstone = () => {
@@ -3582,14 +3587,14 @@ export default function CreateRfqPage() {
                       <div className="relative w-full max-w-sm mx-auto">
                         <img
                           src={designPreviewUrl}
-                          alt="AI Generated Design Preview"
+                          alt={fromDesign ? "Selected Design" : "AI Generated Design Preview"}
                           className="w-full rounded-lg shadow-md border"
                         />
-                        {/* AI Generated Badge - Top Right */}
+                        {/* Badge - Top Right: Different for selected vs generated */}
                         <div className="absolute top-2 right-2">
-                          <Badge className="bg-amber-500 text-white">
+                          <Badge className={fromDesign && !generatingPreview ? "bg-purple-500 text-white" : "bg-amber-500 text-white"}>
                             <Sparkles className="h-3 w-3 mr-1" />
-                            AI Generated
+                            {fromDesign && !generatingPreview ? "Selected Design" : "AI Generated"}
                           </Badge>
                         </div>
                         {/* Orivraa Logo Watermark - Bottom Right */}
@@ -3613,12 +3618,13 @@ export default function CreateRfqPage() {
                       </div>
                     )}
 
-                    {/* Regeneration Feedback Field - Only show when preview exists */}
+                    {/* Customization Feedback Field - Show when preview exists */}
                     {designPreviewUrl && (
                       <div className="w-full max-w-sm mx-auto space-y-2">
                         <Label className="text-sm text-gray-600">
-                          Don't like the AI design? Describe what you'd like to
-                          change:
+                          {fromDesign 
+                            ? "Want to customize this design? Describe your changes:"
+                            : "Don't like the AI design? Describe what you'd like to change:"}
                         </Label>
                         <Textarea
                           rows={2}
