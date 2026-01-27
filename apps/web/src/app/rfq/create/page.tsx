@@ -1838,10 +1838,15 @@ export default function CreateRfqPage() {
 
     const token =
       typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    
+
     // Check both token AND session status for authentication
-    console.log("[RFQ Submit] Auth check - token exists:", !!token, "session status:", status);
-    
+    console.log(
+      "[RFQ Submit] Auth check - token exists:",
+      !!token,
+      "session status:",
+      status,
+    );
+
     if (!token && status !== "authenticated") {
       console.log("[RFQ Submit] Not authenticated, redirecting to login");
       router.push("/auth/login?callbackUrl=/rfq/create");

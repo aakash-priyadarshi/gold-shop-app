@@ -65,6 +65,7 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [hasVisited, setHasVisited] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true); // Default to checked for convenience
 
   // Email verification state (when user tries to login with unverified email)
   const [showVerification, setShowVerification] = useState(false);
@@ -200,7 +201,7 @@ function LoginForm() {
     clearError();
 
     try {
-      await login(data.email, data.password, turnstileToken);
+      await login(data.email, data.password, turnstileToken, rememberMe);
       toast({
         title: "Welcome back!",
         description: "You have successfully signed in.",
@@ -596,6 +597,23 @@ function LoginForm() {
                   {errors.password.message}
                 </p>
               )}
+            </div>
+
+            {/* Remember Me Checkbox */}
+            <div className="flex items-center gap-2 login-form-item">
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-gold-600 focus:ring-gold-500 cursor-pointer"
+              />
+              <Label
+                htmlFor="rememberMe"
+                className="text-sm text-gray-600 cursor-pointer select-none"
+              >
+                Remember me for 30 days
+              </Label>
             </div>
 
             {/* Turnstile CAPTCHA */}

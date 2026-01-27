@@ -55,6 +55,8 @@ export interface RegisterResponse {
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   private readonly refreshTokenExpiry = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+  private readonly refreshTokenExpiryRememberMe = 30 * 24 * 60 * 60 * 1000; // 30 days in ms when "remember me" is checked
+  private readonly accessTokenExpiryRememberMe = "30d"; // 30 days for access token when "remember me" is checked
 
   constructor(
     private prisma: PrismaService,
@@ -404,6 +406,7 @@ export class AuthService {
       user.shops?.[0] || null,
       ipAddress,
       userAgent,
+      dto.rememberMe,
     );
   }
 
@@ -803,6 +806,7 @@ export class AuthService {
     shop?: { id: string; shopName: string } | null,
     ipAddress?: string,
     userAgent?: string,
+    rememberMe?: boolean,
   ): Promise<AuthResponse> {
     const payload: JwtPayload = {
       sub: user.id,
@@ -811,7 +815,14 @@ export class AuthService {
       shopId: shop?.id,
     };
 
-    const accessToken = this.jwtService.sign(payload);
+    // Use extended expiry when "remember me" is checked
+    const tokenExpiry = rememberMe ? this.refreshTokenExpiryRememberMe : this.refreshTokenExpiry;
+    const accessTokenExpiry = rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60; // 30 days or 24 hours in seconds
+
+    // Sign with custom expiry if rememberMe is true
+    const accessToken = rememberMe 
+      ? this.jwtService.sign(payload, { expiresIn: this.accessTokenExpiryRememberMe })
+      : this.jwtService.sign(payload);
     const refreshToken = this.generateRefreshToken();
     const tokenHash = this.hashToken(refreshToken);
 
@@ -822,7 +833,7 @@ export class AuthService {
         tokenHash,
         ipAddress,
         userAgent,
-        expiresAt: new Date(Date.now() + this.refreshTokenExpiry),
+        expiresAt: new Date(Date.now() + tokenExpiry),
       },
     });
 
@@ -833,14 +844,14 @@ export class AuthService {
         token: refreshToken,
         ipAddress,
         userAgent,
-        expiresAt: new Date(Date.now() + this.refreshTokenExpiry),
+        expiresAt: new Date(Date.now() + tokenExpiry),
       },
     });
 
     return {
       accessToken,
       refreshToken,
-      expiresIn: 24 * 60 * 60, // 24 hours in seconds
+      expiresIn: accessTokenExpiry,
       user: {
         id: user.id,
         email: user.email,

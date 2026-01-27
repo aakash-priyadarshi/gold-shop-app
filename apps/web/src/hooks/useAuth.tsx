@@ -53,7 +53,8 @@ export interface AuthContextType extends AuthState {
   login: (
     email: string,
     password: string,
-    turnstileToken?: string
+    turnstileToken?: string,
+    rememberMe?: boolean
   ) => Promise<void>;
   register: (data: RegisterData) => Promise<RegisterResponse>;
   verifyEmail: (userId: string, code: string) => Promise<void>;
@@ -229,7 +230,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Login function
   const login = useCallback(
-    async (email: string, password: string, turnstileToken?: string) => {
+    async (email: string, password: string, turnstileToken?: string, rememberMe?: boolean) => {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       try {
@@ -237,6 +238,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email,
           password,
           turnstileToken,
+          rememberMe: rememberMe ?? false,
         });
 
         const { accessToken, refreshToken, user: userData } = response.data;

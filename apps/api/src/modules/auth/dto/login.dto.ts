@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEmail, IsOptional, IsString } from "class-validator";
+import { IsBoolean, IsEmail, IsOptional, IsString } from "class-validator";
 
 export class LoginDto {
   @ApiProperty({ example: "user@example.com" })
@@ -14,4 +14,9 @@ export class LoginDto {
   @IsOptional()
   @IsString()
   turnstileToken?: string;
+
+  @ApiPropertyOptional({ description: "Remember me for extended session (30 days)", default: false })
+  @IsOptional()
+  @IsBoolean()
+  rememberMe?: boolean;
 }
