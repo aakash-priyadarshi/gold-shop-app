@@ -1132,6 +1132,29 @@ export class ShopsService {
       pageSize = 20,
     } = params;
 
+    // Debug: Log incoming params
+    console.log('[findMatchingSellers] Params:', {
+      jewelleryType,
+      buildMethod,
+      metalType,
+      customerCity,
+      customerState,
+      customerCountry,
+    });
+
+    // First, let's see how many shops exist total
+    const totalShops = await this.prisma.shop.count();
+    const activeShops = await this.prisma.shop.count({ where: { isActive: true } });
+    const verifiedShops = await this.prisma.shop.count({ where: { isVerified: true } });
+    const activeAndVerified = await this.prisma.shop.count({ where: { isActive: true, isVerified: true } });
+    
+    console.log('[findMatchingSellers] Shop counts:', {
+      totalShops,
+      activeShops,
+      verifiedShops,
+      activeAndVerified,
+    });
+
     // Build base query for shops that can fulfill this order
     const where: any = {
       isActive: true,
@@ -1144,6 +1167,18 @@ export class ShopsService {
     if (metalType) {
       where.supportedMaterials = { has: metalType };
     }
+
+    // Debug: Log the where clause and check matching count before material filter
+    const withoutMaterialFilter = await this.prisma.shop.count({
+      where: {
+        isActive: true,
+        isVerified: true,
+        supportedJewelleryTypes: { has: jewelleryType },
+        supportedMethods: { has: buildMethod },
+      },
+    });
+    console.log('[findMatchingSellers] Shops matching jewelleryType+buildMethod:', withoutMaterialFilter);
+    console.log('[findMatchingSellers] Final where clause:', JSON.stringify(where, null, 2));
 
     // Fetch all matching shops with their pricing and ratings
     const shops = await this.prisma.shop.findMany({
@@ -1168,6 +1203,8 @@ export class ShopsService {
         },
       },
     });
+
+    console.log('[findMatchingSellers] Found shops:', shops.length);
 
     // Calculate price for each shop and enrich data
     const enrichedShops = shops.map((shop) => {
