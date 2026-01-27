@@ -8,6 +8,7 @@ import {
   NotFoundException,
   Param,
   Patch,
+  Post,
   Query,
   UseGuards,
 } from "@nestjs/common";
@@ -18,6 +19,7 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
+import { CreateAddressDto, UpdateAddressDto } from "./dto/address.dto";
 import { UpdatePreferencesDto } from "./dto/update-preferences.dto";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
 import { UsersService } from "./users.service";
@@ -72,6 +74,62 @@ export class UsersController {
       dto.currentPassword,
       dto.newPassword,
     );
+  }
+
+  // ================================
+  // DELIVERY ADDRESS ENDPOINTS
+  // ================================
+
+  @Get("me/addresses")
+  @ApiOperation({ summary: "Get all delivery addresses" })
+  async getAddresses(@CurrentUser("id") userId: string) {
+    return this.usersService.getAddresses(userId);
+  }
+
+  @Get("me/addresses/:id")
+  @ApiOperation({ summary: "Get a specific delivery address" })
+  async getAddress(
+    @CurrentUser("id") userId: string,
+    @Param("id") addressId: string,
+  ) {
+    return this.usersService.getAddress(userId, addressId);
+  }
+
+  @Post("me/addresses")
+  @ApiOperation({ summary: "Create a new delivery address" })
+  async createAddress(
+    @CurrentUser("id") userId: string,
+    @Body() dto: CreateAddressDto,
+  ) {
+    return this.usersService.createAddress(userId, dto);
+  }
+
+  @Patch("me/addresses/:id")
+  @ApiOperation({ summary: "Update a delivery address" })
+  async updateAddress(
+    @CurrentUser("id") userId: string,
+    @Param("id") addressId: string,
+    @Body() dto: UpdateAddressDto,
+  ) {
+    return this.usersService.updateAddress(userId, addressId, dto);
+  }
+
+  @Delete("me/addresses/:id")
+  @ApiOperation({ summary: "Delete a delivery address" })
+  async deleteAddress(
+    @CurrentUser("id") userId: string,
+    @Param("id") addressId: string,
+  ) {
+    return this.usersService.deleteAddress(userId, addressId);
+  }
+
+  @Patch("me/addresses/:id/default")
+  @ApiOperation({ summary: "Set a delivery address as default" })
+  async setDefaultAddress(
+    @CurrentUser("id") userId: string,
+    @Param("id") addressId: string,
+  ) {
+    return this.usersService.setDefaultAddress(userId, addressId);
   }
 
   @Get("me/preferences")

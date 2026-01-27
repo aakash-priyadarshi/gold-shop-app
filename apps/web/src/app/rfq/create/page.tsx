@@ -43,10 +43,13 @@ import {
 } from "@/store/preferences";
 import { fromGrams, toGrams } from "@gold-shop/shared";
 import {
+  AlertCircle,
   AlertTriangle,
   ArrowLeft,
   ArrowRight,
   Check,
+  ChevronDown,
+  ChevronUp,
   Clock,
   Filter,
   Gem,
@@ -57,6 +60,7 @@ import {
   MessageCircle,
   Phone,
   RotateCcw,
+  Settings,
   ShieldCheck,
   Sparkles,
   Star,
@@ -651,6 +655,21 @@ export default function CreateRfqPage() {
     maxPrice: number;
   }
 
+  // Delivery address type
+  interface DeliveryAddress {
+    id: string;
+    label: string;
+    fullName: string;
+    phone: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+    isDefault: boolean;
+  }
+
   const [submittedRfqId, setSubmittedRfqId] = useState<string | null>(null);
   const [matchingSellers, setMatchingSellers] = useState<MatchingSeller[]>([]);
   const [sellerStats, setSellerStats] = useState<SellerMatchingStats | null>(
@@ -666,6 +685,23 @@ export default function CreateRfqPage() {
   const [sellerMaxPrice, setSellerMaxPrice] = useState<number | undefined>(
     undefined,
   );
+
+  // Delivery address state for Step 4
+  const [deliveryAddresses, setDeliveryAddresses] = useState<DeliveryAddress[]>(
+    [],
+  );
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
+    null,
+  );
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
+
+  // Advanced filter state
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [filterCountry, setFilterCountry] = useState<string | undefined>(
+    undefined,
+  );
+  const [filterCity, setFilterCity] = useState<string | undefined>(undefined);
+  const [filterState, setFilterState] = useState<string | undefined>(undefined);
 
   // Congratulatory messages with username placeholder
   const CONGRATULATORY_MESSAGES = [
@@ -1388,6 +1424,41 @@ export default function CreateRfqPage() {
     displayToGrams,
   ]);
 
+  // Function to fetch customer's delivery addresses
+  const fetchDeliveryAddresses = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    setLoadingAddresses(true);
+    try {
+      const response = await fetch(`${API_URL}/users/me/addresses`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const addresses = await response.json();
+        setDeliveryAddresses(addresses);
+
+        // Auto-select default address if none selected
+        const defaultAddr = addresses.find((a: DeliveryAddress) => a.isDefault);
+        if (defaultAddr && !selectedAddressId) {
+          setSelectedAddressId(defaultAddr.id);
+        } else if (addresses.length > 0 && !selectedAddressId) {
+          setSelectedAddressId(addresses[0].id);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching delivery addresses:", err);
+    } finally {
+      setLoadingAddresses(false);
+    }
+  }, [selectedAddressId]);
+
+  // Get currently selected delivery address
+  const selectedAddress = useMemo(() => {
+    return deliveryAddresses.find((a) => a.id === selectedAddressId) || null;
+  }, [deliveryAddresses, selectedAddressId]);
+
   // Function to fetch matching sellers for Step 4
   const fetchMatchingSellers = useCallback(async () => {
     setLoadingSellers(true);
@@ -1429,9 +1500,17 @@ export default function CreateRfqPage() {
       if (sellerMaxPrice !== undefined)
         params.append("maxPrice", String(sellerMaxPrice));
 
-      // Add customer location if available from user profile
-      // For now, we use the selected country from preferences
-      if (country) params.append("customerCountry", country);
+      // Priority 1: Use advanced filter values if set
+      // Priority 2: Use selected delivery address location
+      // Priority 3: Fall back to user's preferred country
+      const effectiveCountry =
+        filterCountry || selectedAddress?.country || country;
+      const effectiveState = filterState || selectedAddress?.state;
+      const effectiveCity = filterCity || selectedAddress?.city;
+
+      if (effectiveCountry) params.append("customerCountry", effectiveCountry);
+      if (effectiveState) params.append("customerState", effectiveState);
+      if (effectiveCity) params.append("customerCity", effectiveCity);
 
       const response = await fetch(
         `${API_URL}/shops/matching?${params.toString()}`,
@@ -1464,7 +1543,18 @@ export default function CreateRfqPage() {
     sellerMinRating,
     sellerMaxPrice,
     country,
+    selectedAddress,
+    filterCountry,
+    filterState,
+    filterCity,
   ]);
+
+  // Fetch delivery addresses when reaching Step 4
+  useEffect(() => {
+    if (step === 4) {
+      fetchDeliveryAddresses();
+    }
+  }, [step, fetchDeliveryAddresses]);
 
   // Refetch sellers when filters change (only on Step 4)
   useEffect(() => {
@@ -1477,6 +1567,10 @@ export default function CreateRfqPage() {
     sellerSortBy,
     sellerMinRating,
     sellerMaxPrice,
+    selectedAddressId,
+    filterCountry,
+    filterState,
+    filterCity,
     fetchMatchingSellers,
   ]);
 
@@ -2035,7 +2129,7 @@ export default function CreateRfqPage() {
         }
         if (alloyConfig.karat && !alloyConfig.alloyFamily) {
           errors.push(
-            "Please select an alloy family (Yellow, White, Rose, or Green Gold)"
+            "Please select an alloy family (Yellow, White, Rose, or Green Gold)",
           );
         }
         if (
@@ -2044,13 +2138,13 @@ export default function CreateRfqPage() {
           !alloyConfig.recipePresetId
         ) {
           warnings.push(
-            "No alloy recipe selected. Please select a specific recipe for best results."
+            "No alloy recipe selected. Please select a specific recipe for best results.",
           );
         }
       } else if (alloyConfig.baseMetal === "SILVER") {
         if (!alloyConfig.silverPurity) {
           errors.push(
-            "Please select a silver purity (Sterling 925 or Argentium 935)"
+            "Please select a silver purity (Sterling 925 or Argentium 935)",
           );
         }
       }
@@ -4281,6 +4375,106 @@ export default function CreateRfqPage() {
                   </CardContent>
                 </Card>
 
+                {/* Delivery Address Selection */}
+                <Card className="border-blue-200 bg-blue-50/30">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <MapPin className="h-5 w-5 text-blue-500" />
+                      Delivery Location
+                    </CardTitle>
+                    <CardDescription>
+                      Select where you want your jewellery delivered to find
+                      sellers near you
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {loadingAddresses ? (
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Loading your addresses...</span>
+                      </div>
+                    ) : deliveryAddresses.length === 0 ? (
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />
+                          <div>
+                            <h4 className="font-medium text-amber-800">
+                              No delivery address set
+                            </h4>
+                            <p className="text-sm text-amber-700 mt-1">
+                              Add a delivery address to see sellers in your area
+                              first. You can still browse all sellers below.
+                            </p>
+                            <a
+                              href="/dashboard/customer/settings"
+                              className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium"
+                            >
+                              <MapPin className="h-4 w-4" />
+                              Add Delivery Address
+                              <ArrowRight className="h-4 w-4" />
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <label className="text-sm font-medium text-gray-700">
+                          Where do you want it delivered?
+                        </label>
+                        <div className="grid gap-2">
+                          {deliveryAddresses.map((addr) => (
+                            <button
+                              key={addr.id}
+                              onClick={() => setSelectedAddressId(addr.id)}
+                              className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
+                                selectedAddressId === addr.id
+                                  ? "border-blue-500 bg-blue-50"
+                                  : "border-gray-200 hover:border-gray-300 bg-white"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-gray-900">
+                                      {addr.label}
+                                    </span>
+                                    {addr.isDefault && (
+                                      <Badge className="bg-green-100 text-green-700 text-xs">
+                                        Default
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-gray-600 mt-1">
+                                    {addr.addressLine1}
+                                    {addr.addressLine2 &&
+                                      `, ${addr.addressLine2}`}
+                                  </p>
+                                  <p className="text-sm text-gray-500">
+                                    {addr.city}, {addr.state}, {addr.postalCode}
+                                  </p>
+                                  <p className="text-xs text-gray-400">
+                                    {addr.country}
+                                  </p>
+                                </div>
+                                {selectedAddressId === addr.id && (
+                                  <Check className="h-5 w-5 text-blue-500" />
+                                )}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                        <a
+                          href="/dashboard/customer/settings"
+                          className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+                        >
+                          <Settings className="h-3.5 w-3.5" />
+                          Manage addresses
+                        </a>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
                 {/* Seller Matching Section */}
                 <Card>
                   <CardHeader>
@@ -4349,7 +4543,146 @@ export default function CreateRfqPage() {
                           </button>
                         ))}
                       </div>
+
+                      {/* Advanced Filter Toggle */}
+                      <button
+                        onClick={() =>
+                          setShowAdvancedFilters(!showAdvancedFilters)
+                        }
+                        className="ml-auto flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                      >
+                        <Settings className="h-4 w-4" />
+                        Advanced Filters
+                        {showAdvancedFilters ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </button>
                     </div>
+
+                    {/* Advanced Filters Panel */}
+                    {showAdvancedFilters && (
+                      <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                          {/* Country Filter */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Country
+                            </label>
+                            <Select
+                              value={filterCountry || "all"}
+                              onValueChange={(val) =>
+                                setFilterCountry(
+                                  val === "all" ? undefined : val,
+                                )
+                              }
+                            >
+                              <SelectTrigger className="bg-white">
+                                <SelectValue placeholder="All countries" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">
+                                  All countries
+                                </SelectItem>
+                                {(
+                                  Object.entries(COUNTRIES) as [
+                                    string,
+                                    { name: string },
+                                  ][]
+                                ).map(([code, c]) => (
+                                  <SelectItem key={code} value={c.name}>
+                                    {c.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* State Filter */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              State / Region
+                            </label>
+                            <Input
+                              placeholder="e.g., Bihar, Maharashtra"
+                              value={filterState || ""}
+                              onChange={(e) =>
+                                setFilterState(e.target.value || undefined)
+                              }
+                              className="bg-white"
+                            />
+                          </div>
+
+                          {/* City Filter */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              City
+                            </label>
+                            <Input
+                              placeholder="e.g., Patna, Mumbai"
+                              value={filterCity || ""}
+                              onChange={(e) =>
+                                setFilterCity(e.target.value || undefined)
+                              }
+                              className="bg-white"
+                            />
+                          </div>
+
+                          {/* Rating & Price Filters */}
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Min Rating
+                              </label>
+                              <Select
+                                value={sellerMinRating?.toString() || "any"}
+                                onValueChange={(val) =>
+                                  setSellerMinRating(
+                                    val === "any" ? undefined : Number(val),
+                                  )
+                                }
+                              >
+                                <SelectTrigger className="bg-white">
+                                  <SelectValue placeholder="Any rating" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="any">
+                                    Any rating
+                                  </SelectItem>
+                                  <SelectItem value="4">⭐ 4+ stars</SelectItem>
+                                  <SelectItem value="3">⭐ 3+ stars</SelectItem>
+                                  <SelectItem value="2">⭐ 2+ stars</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Clear Filters Button */}
+                        {(filterCountry ||
+                          filterState ||
+                          filterCity ||
+                          sellerMinRating ||
+                          sellerMaxPrice) && (
+                          <div className="mt-4 pt-3 border-t">
+                            <button
+                              onClick={() => {
+                                setFilterCountry(undefined);
+                                setFilterState(undefined);
+                                setFilterCity(undefined);
+                                setSellerMinRating(undefined);
+                                setSellerMaxPrice(undefined);
+                              }}
+                              className="text-sm text-red-600 hover:text-red-700 flex items-center gap-1"
+                            >
+                              <X className="h-4 w-4" />
+                              Clear all filters
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Seller List */}
                     {loadingSellers ? (

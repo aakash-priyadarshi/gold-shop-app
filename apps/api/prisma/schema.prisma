@@ -48,11 +48,36 @@ model User {
   // Design gallery
   designs              Design[]                @relation("DesignCreator")
   designLikes          DesignLike[]
+  // Delivery addresses
+  deliveryAddresses    CustomerAddress[]
 
   @@index([email])
   @@index([phone])
   @@index([role])
   @@index([activeShopId])
+}
+
+// Customer delivery addresses
+model CustomerAddress {
+  id          String   @id @default(uuid())
+  userId      String
+  label       String   @default("Home") // Home, Work, Other
+  fullName    String
+  phone       String
+  addressLine1 String
+  addressLine2 String?
+  city        String
+  state       String
+  postalCode  String
+  country     String   @default("IN")
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isDefault])
 }
 
 // Track customer purchase statistics by currency

@@ -41,7 +41,7 @@ export class UsersService {
         status: true,
         preferredLanguage: true,
         preferredCurrency: true,
-        preferredCountry: true, // New field - may need regenerating Prisma client
+        preferredCountry: true,
         createdAt: true,
         shops: {
           select: {
@@ -50,7 +50,10 @@ export class UsersService {
           },
           take: 1,
         },
-      } as any, // Type cast needed until Prisma client is regenerated
+        deliveryAddresses: {
+          orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
+        },
+      } as any,
     });
 
     if (!user) {
@@ -322,5 +325,185 @@ export class UsersService {
     });
 
     return { message: "Password updated successfully" };
+  }
+
+  // ================================
+  // DELIVERY ADDRESS METHODS
+  // ================================
+
+  /**
+   * Get all delivery addresses for a user
+   */
+  async getAddresses(userId: string) {
+    return this.prisma.customerAddress.findMany({
+      where: { userId },
+      orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
+    });
+  }
+
+  /**
+   * Get a single address by ID
+   */
+  async getAddress(userId: string, addressId: string) {
+    const address = await this.prisma.customerAddress.findFirst({
+      where: { id: addressId, userId },
+    });
+
+    if (!address) {
+      throw new NotFoundException("Address not found");
+    }
+
+    return address;
+  }
+
+  /**
+   * Create a new delivery address
+   */
+  async createAddress(
+    userId: string,
+    data: {
+      label?: string;
+      fullName: string;
+      phone: string;
+      addressLine1: string;
+      addressLine2?: string;
+      city: string;
+      state: string;
+      postalCode: string;
+      country: string;
+      isDefault?: boolean;
+    },
+  ) {
+    // If this is the first address or marked as default, set other addresses as non-default
+    if (data.isDefault) {
+      await this.prisma.customerAddress.updateMany({
+        where: { userId, isDefault: true },
+        data: { isDefault: false },
+      });
+    }
+
+    // Check if this is the first address - make it default automatically
+    const existingCount = await this.prisma.customerAddress.count({
+      where: { userId },
+    });
+
+    return this.prisma.customerAddress.create({
+      data: {
+        userId,
+        label: data.label || "Home",
+        fullName: data.fullName,
+        phone: data.phone,
+        addressLine1: data.addressLine1,
+        addressLine2: data.addressLine2,
+        city: data.city,
+        state: data.state,
+        postalCode: data.postalCode,
+        country: data.country,
+        isDefault: data.isDefault || existingCount === 0, // First address is default
+      },
+    });
+  }
+
+  /**
+   * Update a delivery address
+   */
+  async updateAddress(
+    userId: string,
+    addressId: string,
+    data: {
+      label?: string;
+      fullName?: string;
+      phone?: string;
+      addressLine1?: string;
+      addressLine2?: string;
+      city?: string;
+      state?: string;
+      postalCode?: string;
+      country?: string;
+      isDefault?: boolean;
+    },
+  ) {
+    // Verify ownership
+    const address = await this.prisma.customerAddress.findFirst({
+      where: { id: addressId, userId },
+    });
+
+    if (!address) {
+      throw new NotFoundException("Address not found");
+    }
+
+    // If marking as default, unset others
+    if (data.isDefault) {
+      await this.prisma.customerAddress.updateMany({
+        where: { userId, isDefault: true, id: { not: addressId } },
+        data: { isDefault: false },
+      });
+    }
+
+    return this.prisma.customerAddress.update({
+      where: { id: addressId },
+      data,
+    });
+  }
+
+  /**
+   * Delete a delivery address
+   */
+  async deleteAddress(userId: string, addressId: string) {
+    // Verify ownership
+    const address = await this.prisma.customerAddress.findFirst({
+      where: { id: addressId, userId },
+    });
+
+    if (!address) {
+      throw new NotFoundException("Address not found");
+    }
+
+    await this.prisma.customerAddress.delete({
+      where: { id: addressId },
+    });
+
+    // If this was the default address, make another one default
+    if (address.isDefault) {
+      const firstAddress = await this.prisma.customerAddress.findFirst({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (firstAddress) {
+        await this.prisma.customerAddress.update({
+          where: { id: firstAddress.id },
+          data: { isDefault: true },
+        });
+      }
+    }
+
+    return { message: "Address deleted successfully" };
+  }
+
+  /**
+   * Set an address as default
+   */
+  async setDefaultAddress(userId: string, addressId: string) {
+    // Verify ownership
+    const address = await this.prisma.customerAddress.findFirst({
+      where: { id: addressId, userId },
+    });
+
+    if (!address) {
+      throw new NotFoundException("Address not found");
+    }
+
+    // Unset current default
+    await this.prisma.customerAddress.updateMany({
+      where: { userId, isDefault: true },
+      data: { isDefault: false },
+    });
+
+    // Set new default
+    return this.prisma.customerAddress.update({
+      where: { id: addressId },
+      data: { isDefault: true },
+    });
   }
 }
