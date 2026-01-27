@@ -2014,8 +2014,64 @@ export default function CreateRfqPage() {
         return !!formData.metalType;
     }
   };
+
+  // Composition validation for Method B - returns warnings/errors for incomplete config
+  const getCompositionValidation = (): {
+    isComplete: boolean;
+    errors: string[];
+    warnings: string[];
+  } => {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    if (formData.buildMethod === "METHOD_B") {
+      const alloyConfig = formData.alloyConfig;
+
+      if (!alloyConfig?.baseMetal) {
+        errors.push("Please select a base metal (Gold or Silver)");
+      } else if (alloyConfig.baseMetal === "GOLD") {
+        if (!alloyConfig.karat) {
+          errors.push("Please select a gold karat (22K, 18K, 14K, or 10K)");
+        }
+        if (alloyConfig.karat && !alloyConfig.alloyFamily) {
+          errors.push(
+            "Please select an alloy family (Yellow, White, Rose, or Green Gold)"
+          );
+        }
+        if (
+          alloyConfig.karat &&
+          alloyConfig.alloyFamily &&
+          !alloyConfig.recipePresetId
+        ) {
+          warnings.push(
+            "No alloy recipe selected. Please select a specific recipe for best results."
+          );
+        }
+      } else if (alloyConfig.baseMetal === "SILVER") {
+        if (!alloyConfig.silverPurity) {
+          errors.push(
+            "Please select a silver purity (Sterling 925 or Argentium 935)"
+          );
+        }
+      }
+    }
+
+    return {
+      isComplete: errors.length === 0,
+      errors,
+      warnings,
+    };
+  };
+
+  // Get composition validation state
+  const compositionValidation = getCompositionValidation();
+
+  // For Method B, require complete alloy config (including family and recipe)
   const canProceedToStep2 =
-    formData.jewelleryType && formData.buildMethod && hasValidMetalSelection();
+    formData.jewelleryType &&
+    formData.buildMethod &&
+    hasValidMetalSelection() &&
+    compositionValidation.isComplete;
   const canProceedToStep3 =
     formData.description && (hasRealTemplate || formData.estimatedWeight);
 
@@ -3099,6 +3155,32 @@ export default function CreateRfqPage() {
                       </p>
                     </div>
                   </div>
+
+                  {/* Composition Validation Warnings/Errors */}
+                  {formData.buildMethod === "METHOD_B" &&
+                    (compositionValidation.errors.length > 0 ||
+                      compositionValidation.warnings.length > 0) && (
+                      <div className="space-y-2">
+                        {compositionValidation.errors.map((err, idx) => (
+                          <div
+                            key={`err-${idx}`}
+                            className="bg-red-50 border border-red-200 rounded-lg p-3 flex gap-2"
+                          >
+                            <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
+                            <p className="text-sm text-red-700">{err}</p>
+                          </div>
+                        ))}
+                        {compositionValidation.warnings.map((warn, idx) => (
+                          <div
+                            key={`warn-${idx}`}
+                            className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2"
+                          >
+                            <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                            <p className="text-sm text-amber-700">{warn}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                   <div className="flex justify-end">
                     <Button

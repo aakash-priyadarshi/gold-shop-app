@@ -123,31 +123,127 @@ function validateMethodA(
 }
 
 /**
- * Validate Method B: Standard Alloy
+ * Validate Method B: Standard Alloy / Alloy Builder
  */
 function validateMethodB(
   composition: any,
   errors: ValidationError[],
   warnings: ValidationWarning[],
 ): void {
-  const validAlloys = ['GOLD_18K', 'GOLD_14K', 'GOLD_10K', 'STERLING_SILVER_925'];
-
-  if (!composition.standardAlloy) {
+  // Support both legacy standardAlloy format and new alloyConfig format
+  const hasStandardAlloy = !!composition.standardAlloy;
+  const hasAlloyConfig = !!composition.alloyConfig;
+  
+  // Valid gold karats for alloy
+  const validKarats = ['22K', '18K', '14K', '10K'];
+  // Valid alloy families
+  const validFamilies = ['YELLOW_GOLD', 'WHITE_GOLD', 'ROSE_GOLD', 'GREEN_GOLD'];
+  // Valid base metals
+  const validBaseMetals = ['GOLD', 'SILVER'];
+  
+  if (!hasStandardAlloy && !hasAlloyConfig) {
     errors.push({
       code: 'METHOD_B_MISSING_ALLOY',
-      field: 'standardAlloy',
-      message: 'Standard alloy must be selected',
+      field: 'alloyConfig',
+      message: 'Alloy configuration must be provided for Method B',
       messageKey: 'validation.methodB.missingAlloy',
     });
+    return;
   }
-
-  if (composition.standardAlloy && !validAlloys.includes(composition.standardAlloy)) {
-    errors.push({
-      code: 'METHOD_B_INVALID_ALLOY',
-      field: 'standardAlloy',
-      message: 'Only preset standard alloys are allowed. Custom percentages not permitted.',
-      messageKey: 'validation.methodB.invalidAlloy',
-    });
+  
+  // If using new alloyConfig format, validate it
+  if (hasAlloyConfig) {
+    const alloyConfig = composition.alloyConfig;
+    
+    // Validate base metal
+    if (!alloyConfig.baseMetal) {
+      errors.push({
+        code: 'METHOD_B_MISSING_BASE_METAL',
+        field: 'alloyConfig.baseMetal',
+        message: 'Base metal must be selected',
+        messageKey: 'validation.methodB.missingBaseMetal',
+      });
+    } else if (!validBaseMetals.includes(alloyConfig.baseMetal)) {
+      errors.push({
+        code: 'METHOD_B_INVALID_BASE_METAL',
+        field: 'alloyConfig.baseMetal',
+        message: 'Invalid base metal selected',
+        messageKey: 'validation.methodB.invalidBaseMetal',
+      });
+    }
+    
+    // For Gold base metal
+    if (alloyConfig.baseMetal === 'GOLD') {
+      // Validate karat
+      if (!alloyConfig.karat) {
+        errors.push({
+          code: 'METHOD_B_MISSING_KARAT',
+          field: 'alloyConfig.karat',
+          message: 'Gold karat must be selected',
+          messageKey: 'validation.methodB.missingKarat',
+        });
+      } else if (!validKarats.includes(alloyConfig.karat)) {
+        errors.push({
+          code: 'METHOD_B_INVALID_KARAT',
+          field: 'alloyConfig.karat',
+          message: 'Invalid gold karat selected',
+          messageKey: 'validation.methodB.invalidKarat',
+        });
+      }
+      
+      // Validate alloy family
+      if (!alloyConfig.alloyFamily) {
+        errors.push({
+          code: 'METHOD_B_MISSING_FAMILY',
+          field: 'alloyConfig.alloyFamily',
+          message: 'Alloy family (color) must be selected',
+          messageKey: 'validation.methodB.missingFamily',
+        });
+      } else if (!validFamilies.includes(alloyConfig.alloyFamily)) {
+        errors.push({
+          code: 'METHOD_B_INVALID_FAMILY',
+          field: 'alloyConfig.alloyFamily',
+          message: 'Invalid alloy family selected',
+          messageKey: 'validation.methodB.invalidFamily',
+        });
+      }
+      
+      // Validate recipe preset (optional but recommended)
+      if (!alloyConfig.recipePresetId) {
+        warnings.push({
+          code: 'METHOD_B_NO_RECIPE',
+          field: 'alloyConfig.recipePresetId',
+          message: 'No specific alloy recipe selected. Shop will use standard recipe.',
+          messageKey: 'validation.methodB.noRecipe',
+        });
+      }
+    }
+    
+    // For Silver base metal
+    if (alloyConfig.baseMetal === 'SILVER') {
+      if (!alloyConfig.silverPurity) {
+        errors.push({
+          code: 'METHOD_B_MISSING_SILVER_PURITY',
+          field: 'alloyConfig.silverPurity',
+          message: 'Silver purity must be selected',
+          messageKey: 'validation.methodB.missingSilverPurity',
+        });
+      }
+    }
+  }
+  
+  // Legacy standardAlloy format validation
+  if (hasStandardAlloy && !hasAlloyConfig) {
+    const validAlloys = ['GOLD_18K', 'GOLD_14K', 'GOLD_10K', 'STERLING_SILVER_925'];
+    
+    if (!validAlloys.includes(composition.standardAlloy)) {
+      errors.push({
+        code: 'METHOD_B_INVALID_ALLOY',
+        field: 'standardAlloy',
+        message: 'Only preset standard alloys are allowed. Custom percentages not permitted.',
+        messageKey: 'validation.methodB.invalidAlloy',
+      });
+    }
   }
 }
 
