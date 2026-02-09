@@ -461,6 +461,13 @@ export default function CreateRfqPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Hover preview for jewellery type dropdown
+  const [hoveredType, setHoveredType] = useState<string | null>(null);
+  const [hoverPos, setHoverPos] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  });
+
   // Hydration fix - track when component has mounted on client
   const [mounted, setMounted] = useState(false);
   const [minDate, setMinDate] = useState("");
@@ -2363,6 +2370,7 @@ export default function CreateRfqPage() {
                       onValueChange={(v: string) => {
                         updateFormData("jewelleryType", v);
                         updateFormData("templateId", ""); // Reset template
+                        setHoveredType(null);
                         // Reset build method if it's METHOD_D and new jewelry type doesn't support it
                         if (
                           formData.buildMethod === "METHOD_D" &&
@@ -2371,27 +2379,65 @@ export default function CreateRfqPage() {
                           updateFormData("buildMethod", "");
                         }
                       }}
+                      onOpenChange={(open) => {
+                        if (!open) setHoveredType(null);
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select jewellery type" />
                       </SelectTrigger>
                       <SelectContent>
                         {JEWELLERY_TYPES.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            <div className="flex items-center gap-2">
-                              {JEWELLERY_TYPE_IMAGES[type.value] && (
-                                <img
-                                  src={JEWELLERY_TYPE_IMAGES[type.value]}
-                                  alt={type.label}
-                                  className="w-6 h-6 rounded object-cover"
-                                />
-                              )}
-                              {type.label}
-                            </div>
+                          <SelectItem
+                            key={type.value}
+                            value={type.value}
+                            onMouseEnter={(e) => {
+                              if (JEWELLERY_TYPE_IMAGES[type.value]) {
+                                const rect =
+                                  e.currentTarget.getBoundingClientRect();
+                                setHoverPos({
+                                  top: rect.top,
+                                  left: rect.right + 8,
+                                });
+                                setHoveredType(type.value);
+                              }
+                            }}
+                            onMouseLeave={() => setHoveredType(null)}
+                          >
+                            {type.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    {/* Fixed-position hover preview - renders outside Select portal */}
+                    {hoveredType && JEWELLERY_TYPE_IMAGES[hoveredType] && (
+                      <div
+                        className="fixed z-[100] pointer-events-none"
+                        style={{
+                          top: hoverPos.top,
+                          left: hoverPos.left,
+                        }}
+                      >
+                        <div className="w-40 rounded-md border bg-white shadow-lg overflow-hidden -translate-y-1/4">
+                          <img
+                            src={JEWELLERY_TYPE_IMAGES[hoveredType]}
+                            alt={
+                              JEWELLERY_TYPES.find(
+                                (t) => t.value === hoveredType,
+                              )?.label || ""
+                            }
+                            className="w-full h-32 object-cover"
+                          />
+                          <p className="text-xs p-2 text-center font-medium">
+                            {
+                              JEWELLERY_TYPES.find(
+                                (t) => t.value === hoveredType,
+                              )?.label
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Template Selector - shows when jewellery type is selected */}
