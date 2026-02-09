@@ -1,30 +1,40 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { ShopGuard } from '@/components/auth/RouteGuard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ShopGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  Gem,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { materialsApi, shopsApi } from "@/lib/api";
+import {
+  CURRENCIES,
+  usePreferencesStore,
+  type CurrencyCode,
+} from "@/store/preferences";
+import {
   CircleDot,
+  Gem,
   Hammer,
-  Sparkles,
-  Save,
-  Loader2,
   Info,
-  TrendingUp,
+  Loader2,
   RefreshCw,
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { shopsApi, materialsApi } from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
-import { usePreferencesStore, CURRENCIES, type CurrencyCode } from '@/store/preferences';
+  Save,
+  Sparkles,
+  TrendingUp,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface Material {
   metal: string;
@@ -58,95 +68,128 @@ interface MarketRate {
 const DEFAULT_MAKING_CHARGE_PERCENT = 10;
 
 const allMaterials = [
-  { metal: 'GOLD', purity: '24K', label: 'Gold 24K (Pure)' },
-  { metal: 'GOLD', purity: '22K', label: 'Gold 22K' },
-  { metal: 'GOLD', purity: '18K', label: 'Gold 18K' },
-  { metal: 'GOLD', purity: '14K', label: 'Gold 14K' },
-  { metal: 'SILVER', purity: '925', label: 'Sterling Silver (925)' },
-  { metal: 'SILVER', purity: '999', label: 'Fine Silver (999)' },
-  { metal: 'PLATINUM', purity: '950', label: 'Platinum 950' },
+  { metal: "GOLD", purity: "24K", label: "Gold 24K (Pure)" },
+  { metal: "GOLD", purity: "22K", label: "Gold 22K" },
+  { metal: "GOLD", purity: "18K", label: "Gold 18K" },
+  { metal: "GOLD", purity: "14K", label: "Gold 14K" },
+  { metal: "SILVER", purity: "925", label: "Sterling Silver (925)" },
+  { metal: "SILVER", purity: "999", label: "Fine Silver (999)" },
+  { metal: "PLATINUM", purity: "950", label: "Platinum 950" },
 ];
 
 const allJewelleryTypes = [
-  'RING',
-  'NECKLACE',
-  'PENDANT',
-  'EARRING',
-  'BRACELET',
-  'BANGLE',
-  'CHAIN',
-  'ANKLET',
-  'BROOCH',
-  'TIE_PIN',
-  'CUFFLINKS',
-  'NOSE_PIN',
-  'MAANG_TIKKA',
-  'OTHER',
+  "RING",
+  "NECKLACE",
+  "PENDANT",
+  "EARRING",
+  "BRACELET",
+  "BANGLE",
+  "CHAIN",
+  "ANKLET",
+  "BROOCH",
+  "TIE_PIN",
+  "CUFFLINKS",
+  "NOSE_PIN",
+  "MAANG_TIKKA",
+  "OTHER",
 ];
 
 const allBuildMethods = [
-  { value: 'METHOD_A', label: 'Method A - Standard Gold/Silver' },
-  { value: 'METHOD_B', label: 'Method B - Gold Plated on Silver Core' },
-  { value: 'METHOD_C', label: 'Method C - Hollow/Tube Construction' },
-  { value: 'METHOD_D', label: 'Method D - Italian Machines (Chain/Bangle)' },
+  { value: "METHOD_A", label: "Method A - Standard Gold/Silver" },
+  { value: "METHOD_B", label: "Method B - Gold Plated on Silver Core" },
+  { value: "METHOD_C", label: "Method C - Hollow/Tube Construction" },
+  { value: "METHOD_D", label: "Method D - Italian Machines (Chain/Bangle)" },
 ];
 
 const allFinishes = [
-  'POLISHED',
-  'MATTE',
-  'BRUSHED',
-  'HAMMERED',
-  'SANDBLASTED',
-  'RHODIUM_PLATED',
-  'ANTIQUE',
-  'TWO_TONE',
+  "POLISHED",
+  "MATTE",
+  "BRUSHED",
+  "HAMMERED",
+  "SANDBLASTED",
+  "RHODIUM_PLATED",
+  "ANTIQUE",
+  "TWO_TONE",
 ];
 
 // Gemstones grouped by category
 const allGemstones = [
-  { id: 'DIAMOND_NATURAL', name: 'Diamond (Natural)', category: 'precious' },
-  { id: 'DIAMOND_LAB', name: 'Diamond (Lab-Grown)', category: 'precious' },
-  { id: 'RUBY', name: 'Ruby', category: 'precious' },
-  { id: 'SAPPHIRE', name: 'Sapphire', category: 'precious' },
-  { id: 'EMERALD', name: 'Emerald', category: 'precious' },
-  { id: 'MOISSANITE', name: 'Moissanite', category: 'alternative' },
-  { id: 'CUBIC_ZIRCONIA', name: 'Cubic Zirconia (CZ)', category: 'simulant' },
-  { id: 'PEARL', name: 'Pearl', category: 'organic' },
-  { id: 'AMETHYST', name: 'Amethyst', category: 'semi-precious' },
-  { id: 'TOPAZ', name: 'Topaz', category: 'semi-precious' },
-  { id: 'GARNET', name: 'Garnet', category: 'semi-precious' },
-  { id: 'OPAL', name: 'Opal', category: 'semi-precious' },
-  { id: 'TURQUOISE', name: 'Turquoise', category: 'semi-precious' },
-  { id: 'AQUAMARINE', name: 'Aquamarine', category: 'semi-precious' },
-  { id: 'PERIDOT', name: 'Peridot', category: 'semi-precious' },
-  { id: 'CITRINE', name: 'Citrine', category: 'semi-precious' },
+  { id: "DIAMOND_NATURAL", name: "Diamond (Natural)", category: "precious" },
+  { id: "DIAMOND_LAB", name: "Diamond (Lab-Grown)", category: "precious" },
+  { id: "RUBY", name: "Ruby", category: "precious" },
+  { id: "SAPPHIRE", name: "Sapphire", category: "precious" },
+  { id: "EMERALD", name: "Emerald", category: "precious" },
+  { id: "MOISSANITE", name: "Moissanite", category: "alternative" },
+  { id: "CUBIC_ZIRCONIA", name: "Cubic Zirconia (CZ)", category: "simulant" },
+  { id: "PEARL", name: "Pearl", category: "organic" },
+  { id: "AMETHYST", name: "Amethyst", category: "semi-precious" },
+  { id: "TOPAZ", name: "Topaz", category: "semi-precious" },
+  { id: "GARNET", name: "Garnet", category: "semi-precious" },
+  { id: "OPAL", name: "Opal", category: "semi-precious" },
+  { id: "TURQUOISE", name: "Turquoise", category: "semi-precious" },
+  { id: "AQUAMARINE", name: "Aquamarine", category: "semi-precious" },
+  { id: "PERIDOT", name: "Peridot", category: "semi-precious" },
+  { id: "CITRINE", name: "Citrine", category: "semi-precious" },
 ];
 
 const gemstoneCategories = [
-  { id: 'precious', name: 'Precious Stones', description: 'High-value natural gemstones' },
-  { id: 'alternative', name: 'Alternatives', description: 'Diamond alternatives and simulants' },
-  { id: 'simulant', name: 'Simulants', description: 'Synthetic gemstones' },
-  { id: 'organic', name: 'Organic', description: 'Naturally formed organic gems' },
-  { id: 'semi-precious', name: 'Semi-Precious', description: 'Beautiful colored gemstones' },
+  {
+    id: "precious",
+    name: "Precious Stones",
+    description: "High-value natural gemstones",
+  },
+  {
+    id: "alternative",
+    name: "Alternatives",
+    description: "Diamond alternatives and simulants",
+  },
+  { id: "simulant", name: "Simulants", description: "Synthetic gemstones" },
+  {
+    id: "organic",
+    name: "Organic",
+    description: "Naturally formed organic gems",
+  },
+  {
+    id: "semi-precious",
+    name: "Semi-Precious",
+    description: "Beautiful colored gemstones",
+  },
 ];
 
 export default function ShopInventoryPage() {
   const { user } = useAuth();
   const { currency } = usePreferencesStore();
-  const [materialsData, setMaterialsData] = useState<MaterialsData | null>(null);
-  const [capabilitiesData, setCapabilitiesData] = useState<CapabilitiesData | null>(null);
+  const [materialsData, setMaterialsData] = useState<MaterialsData | null>(
+    null,
+  );
+  const [capabilitiesData, setCapabilitiesData] =
+    useState<CapabilitiesData | null>(null);
   const [marketRates, setMarketRates] = useState<MarketRate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshingRates, setIsRefreshingRates] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // Get shop's country for market rates - default to user preference
-  const shopCountry = user?.shop?.country || 'NP';
+  const shopCountry = user?.shop?.country || "NP";
   // Map country to currency
-  const shopCurrency = shopCountry === 'IN' ? 'INR' : shopCountry === 'AE' ? 'AED' : shopCountry === 'US' ? 'USD' : shopCountry === 'UK' ? 'GBP' : shopCountry === 'EU' ? 'EUR' : 'NPR';
-  
+  const shopCurrency =
+    shopCountry === "IN"
+      ? "INR"
+      : shopCountry === "AE"
+        ? "AED"
+        : shopCountry === "US"
+          ? "USD"
+          : shopCountry === "UK"
+            ? "GBP"
+            : shopCountry === "EU"
+              ? "EUR"
+              : "NPR";
+
   // Get currency symbol
-  const currencySymbol = CURRENCIES[shopCurrency as CurrencyCode]?.symbol || CURRENCIES[currency as CurrencyCode]?.symbol || 'Rs.';
+  const currencySymbol =
+    CURRENCIES[shopCurrency as CurrencyCode]?.symbol ||
+    CURRENCIES[currency as CurrencyCode]?.symbol ||
+    "Rs.";
 
   useEffect(() => {
     if (user?.shop?.id) {
@@ -160,16 +203,34 @@ export default function ShopInventoryPage() {
       const [materialsRes, capabilitiesRes, ratesRes] = await Promise.all([
         shopsApi.getMaterials(),
         shopsApi.getCapabilities(),
-        materialsApi.getMarketRates({ currency: shopCurrency, country: shopCountry }),
+        materialsApi.getMarketRates({
+          currency: shopCurrency,
+          country: shopCountry,
+        }),
       ]);
       setMaterialsData(materialsRes.data);
-      // Ensure gemstones is always an array even if not returned from API
+      // Parse capabilities from API response
+      // API returns arrays of {code, name, isSupported} objects
       const capabilities = capabilitiesRes.data || {};
+
+      // Extract only the supported items (where isSupported is true)
+      const supportedJewelleryTypes = (capabilities.jewelleryTypes || [])
+        .filter((item: any) => item.isSupported || item === true)
+        .map((item: any) => (typeof item === "string" ? item : item.code));
+
+      const supportedBuildMethods = (capabilities.buildMethods || [])
+        .filter((item: any) => item.isSupported || item === true)
+        .map((item: any) => (typeof item === "string" ? item : item.code));
+
+      const supportedGemstones = (capabilities.gemstones || [])
+        .filter((item: any) => item.isSupported || item === true)
+        .map((item: any) => (typeof item === "string" ? item : item.code));
+
       setCapabilitiesData({
-        jewelleryTypes: capabilities.jewelleryTypes || [],
-        buildMethods: capabilities.buildMethods || [],
+        jewelleryTypes: supportedJewelleryTypes,
+        buildMethods: supportedBuildMethods,
         finishes: capabilities.supportedFinishes || capabilities.finishes || [],
-        gemstones: capabilities.gemstones?.map((g: any) => g.code || g) || capabilities.supportedGemstones || [],
+        gemstones: supportedGemstones,
       });
       // Market rates response has metals object, not array
       const ratesData = ratesRes.data?.metals || ratesRes.data || [];
@@ -180,17 +241,17 @@ export default function ShopInventoryPage() {
         const ratesArray = Object.entries(ratesData).map(([key, value]) => ({
           metalCode: key,
           ratePerGram: value as number,
-          source: ratesRes.data?.source || 'live',
+          source: ratesRes.data?.source || "live",
           country: shopCountry,
         }));
         setMarketRates(ratesArray);
       }
     } catch (error) {
-      console.error('Failed to load data:', error);
+      console.error("Failed to load data:", error);
       toast({
-        variant: 'destructive',
-        title: 'Failed to load inventory',
-        description: 'Could not fetch inventory data',
+        variant: "destructive",
+        title: "Failed to load inventory",
+        description: "Could not fetch inventory data",
       });
     } finally {
       setIsLoading(false);
@@ -200,7 +261,10 @@ export default function ShopInventoryPage() {
   const refreshMarketRates = async () => {
     setIsRefreshingRates(true);
     try {
-      const ratesRes = await materialsApi.getMarketRates({ currency: shopCurrency, country: shopCountry });
+      const ratesRes = await materialsApi.getMarketRates({
+        currency: shopCurrency,
+        country: shopCountry,
+      });
       const ratesData = ratesRes.data?.metals || ratesRes.data || [];
       if (Array.isArray(ratesData)) {
         setMarketRates(ratesData);
@@ -208,20 +272,20 @@ export default function ShopInventoryPage() {
         const ratesArray = Object.entries(ratesData).map(([key, value]) => ({
           metalCode: key,
           ratePerGram: value as number,
-          source: ratesRes.data?.source || 'live',
+          source: ratesRes.data?.source || "live",
           country: shopCountry,
         }));
         setMarketRates(ratesArray);
       }
       toast({
-        title: 'Rates Refreshed',
-        description: 'Market rates updated successfully',
+        title: "Rates Refreshed",
+        description: "Market rates updated successfully",
       });
     } catch (error) {
       toast({
-        variant: 'destructive',
-        title: 'Refresh Failed',
-        description: 'Could not refresh market rates',
+        variant: "destructive",
+        title: "Refresh Failed",
+        description: "Could not refresh market rates",
       });
     } finally {
       setIsRefreshingRates(false);
@@ -231,7 +295,7 @@ export default function ShopInventoryPage() {
   // Get market rate for a material
   const getMarketRate = (metal: string, purity: string): number | null => {
     const materialCode = `${metal}_${purity}`;
-    const rate = marketRates.find(r => r.metalCode === materialCode);
+    const rate = marketRates.find((r) => r.metalCode === materialCode);
     return rate?.ratePerGram ?? null;
   };
 
@@ -239,7 +303,7 @@ export default function ShopInventoryPage() {
   const getDefaultMakingCharge = (metal: string, purity: string): number => {
     const rate = getMarketRate(metal, purity);
     if (!rate) return 0;
-    return Math.round(rate * DEFAULT_MAKING_CHARGE_PERCENT / 100);
+    return Math.round((rate * DEFAULT_MAKING_CHARGE_PERCENT) / 100);
   };
 
   const saveMaterials = async () => {
@@ -250,14 +314,18 @@ export default function ShopInventoryPage() {
       // Transform data to match backend expected format
       const transformedMaterials = materialsData.materials.map((m) => ({
         materialCode: `${m.metal}_${m.purity}`,
-        isAvailable: materialsData.supportedMaterials.includes(`${m.metal}_${m.purity}`),
+        isAvailable: materialsData.supportedMaterials.includes(
+          `${m.metal}_${m.purity}`,
+        ),
         pricePerGramNpr: m.makingChargePerGram,
         minWeightGrams: m.minWeightGrams,
         maxWeightGrams: m.maxWeightGrams,
       }));
 
       // Also add supported materials that might not have pricing data
-      const existingCodes = new Set(transformedMaterials.map(m => m.materialCode));
+      const existingCodes = new Set(
+        transformedMaterials.map((m) => m.materialCode),
+      );
       for (const code of materialsData.supportedMaterials) {
         if (!existingCodes.has(code)) {
           transformedMaterials.push({
@@ -272,14 +340,15 @@ export default function ShopInventoryPage() {
 
       await shopsApi.updateMaterials({ materials: transformedMaterials });
       toast({
-        title: 'Materials Saved',
-        description: 'Your material settings have been updated',
+        title: "Materials Saved",
+        description: "Your material settings have been updated",
       });
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Save Failed',
-        description: error.response?.data?.message || 'Could not save materials',
+        variant: "destructive",
+        title: "Save Failed",
+        description:
+          error.response?.data?.message || "Could not save materials",
       });
     } finally {
       setIsSaving(false);
@@ -293,14 +362,15 @@ export default function ShopInventoryPage() {
     try {
       await shopsApi.updateCapabilities(capabilitiesData);
       toast({
-        title: 'Capabilities Saved',
-        description: 'Your capabilities have been updated',
+        title: "Capabilities Saved",
+        description: "Your capabilities have been updated",
       });
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Save Failed',
-        description: error.response?.data?.message || 'Could not save capabilities',
+        variant: "destructive",
+        title: "Save Failed",
+        description:
+          error.response?.data?.message || "Could not save capabilities",
       });
     } finally {
       setIsSaving(false);
@@ -323,7 +393,11 @@ export default function ShopInventoryPage() {
     });
   };
 
-  const updateMaterialPricing = (materialKey: string, field: string, value: number) => {
+  const updateMaterialPricing = (
+    materialKey: string,
+    field: string,
+    value: number,
+  ) => {
     if (!materialsData) return;
 
     const materials = materialsData.materials.map((m) => {
@@ -336,7 +410,7 @@ export default function ShopInventoryPage() {
 
     // If material doesn't exist, add it
     if (!materials.find((m) => `${m.metal}_${m.purity}` === materialKey)) {
-      const [metal, purity] = materialKey.split('_');
+      const [metal, purity] = materialKey.split("_");
       materials.push({
         metal,
         purity,
@@ -415,18 +489,20 @@ export default function ShopInventoryPage() {
   const toggleAllGemstonesInCategory = (category: string) => {
     if (!capabilitiesData) return;
 
-    const gemstonesInCategory = allGemstones.filter(g => g.category === category).map(g => g.id);
+    const gemstonesInCategory = allGemstones
+      .filter((g) => g.category === category)
+      .map((g) => g.id);
     const current = new Set(capabilitiesData.gemstones || []);
-    
+
     // Check if all in category are selected
-    const allSelected = gemstonesInCategory.every(id => current.has(id));
-    
+    const allSelected = gemstonesInCategory.every((id) => current.has(id));
+
     if (allSelected) {
       // Remove all in category
-      gemstonesInCategory.forEach(id => current.delete(id));
+      gemstonesInCategory.forEach((id) => current.delete(id));
     } else {
       // Add all in category
-      gemstonesInCategory.forEach(id => current.add(id));
+      gemstonesInCategory.forEach((id) => current.add(id));
     }
 
     setCapabilitiesData({
@@ -488,10 +564,17 @@ export default function ShopInventoryPage() {
                 {allMaterials.slice(0, 4).map((mat) => {
                   const rate = getMarketRate(mat.metal, mat.purity);
                   return (
-                    <div key={`${mat.metal}_${mat.purity}`} className="bg-white/50 dark:bg-black/20 rounded-lg p-3">
-                      <div className="text-xs text-amber-700 dark:text-amber-400">{mat.label}</div>
+                    <div
+                      key={`${mat.metal}_${mat.purity}`}
+                      className="bg-white/50 dark:bg-black/20 rounded-lg p-3"
+                    >
+                      <div className="text-xs text-amber-700 dark:text-amber-400">
+                        {mat.label}
+                      </div>
                       <div className="text-lg font-bold text-amber-900 dark:text-amber-200">
-                        {rate ? `${currencySymbol} ${rate.toLocaleString()}/g` : 'N/A'}
+                        {rate
+                          ? `${currencySymbol} ${rate.toLocaleString()}/g`
+                          : "N/A"}
                       </div>
                     </div>
                   );
@@ -502,11 +585,38 @@ export default function ShopInventoryPage() {
                   <Info className="h-4 w-4 inline mr-1" />
                   How Pricing Works:
                 </p>
-                <p><strong>Total Price = (Metal Weight × Live Rate) + Making Charges</strong></p>
+                <p>
+                  <strong>
+                    Total Price = (Metal Weight × Live Rate) + Making Charges
+                  </strong>
+                </p>
                 <ul className="list-disc pl-5 space-y-1 text-xs">
-                  <li><strong>Market Rate:</strong> Fetched live from FENEGOSIDA (Nepal) or international sources.</li>
-                  <li><strong>Making Charges:</strong> Set your own per gram rate below, or leave blank for system default (10% of metal value).</li>
-                  <li><strong>Example:</strong> 10g Gold 24K at {currencySymbol} {(getMarketRate('GOLD', '24K') || 12000).toLocaleString()}/g = {currencySymbol} {((getMarketRate('GOLD', '24K') || 12000) * 10).toLocaleString()} metal + {currencySymbol} {Math.round((getMarketRate('GOLD', '24K') || 12000) * 10 * 0.1).toLocaleString()} making = {currencySymbol} {Math.round((getMarketRate('GOLD', '24K') || 12000) * 10 * 1.1).toLocaleString()} total</li>
+                  <li>
+                    <strong>Market Rate:</strong> Fetched live from FENEGOSIDA
+                    (Nepal) or international sources.
+                  </li>
+                  <li>
+                    <strong>Making Charges:</strong> Set your own per gram rate
+                    below, or leave blank for system default (10% of metal
+                    value).
+                  </li>
+                  <li>
+                    <strong>Example:</strong> 10g Gold 24K at {currencySymbol}{" "}
+                    {(getMarketRate("GOLD", "24K") || 12000).toLocaleString()}/g
+                    = {currencySymbol}{" "}
+                    {(
+                      (getMarketRate("GOLD", "24K") || 12000) * 10
+                    ).toLocaleString()}{" "}
+                    metal + {currencySymbol}{" "}
+                    {Math.round(
+                      (getMarketRate("GOLD", "24K") || 12000) * 10 * 0.1,
+                    ).toLocaleString()}{" "}
+                    making = {currencySymbol}{" "}
+                    {Math.round(
+                      (getMarketRate("GOLD", "24K") || 12000) * 10 * 1.1,
+                    ).toLocaleString()}{" "}
+                    total
+                  </li>
                 </ul>
               </div>
             </CardContent>
@@ -537,18 +647,27 @@ export default function ShopInventoryPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {allMaterials.map((material) => {
                       const key = `${material.metal}_${material.purity}`;
-                      const isSelected = materialsData?.supportedMaterials?.includes(key);
+                      const isSelected =
+                        materialsData?.supportedMaterials?.includes(key);
                       const materialData = materialsData?.materials?.find(
-                        (m) => m.metal === material.metal && m.purity === material.purity
+                        (m) =>
+                          m.metal === material.metal &&
+                          m.purity === material.purity,
                       );
-                      const liveRate = getMarketRate(material.metal, material.purity);
-                      const defaultMaking = getDefaultMakingCharge(material.metal, material.purity);
+                      const liveRate = getMarketRate(
+                        material.metal,
+                        material.purity,
+                      );
+                      const defaultMaking = getDefaultMakingCharge(
+                        material.metal,
+                        material.purity,
+                      );
 
                       return (
                         <Card
                           key={key}
                           className={`cursor-pointer transition-all ${
-                            isSelected ? 'border-primary bg-primary/5' : ''
+                            isSelected ? "border-primary bg-primary/5" : ""
                           }`}
                         >
                           <CardContent className="pt-4">
@@ -565,7 +684,8 @@ export default function ShopInventoryPage() {
                                   {liveRate && (
                                     <div className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
                                       <TrendingUp className="h-3 w-3" />
-                                      Live: {currencySymbol} {liveRate.toLocaleString()}/g
+                                      Live: {currencySymbol}{" "}
+                                      {liveRate.toLocaleString()}/g
                                     </div>
                                   )}
                                 </div>
@@ -577,12 +697,20 @@ export default function ShopInventoryPage() {
                                 {liveRate && (
                                   <div className="bg-green-50 dark:bg-green-950/30 rounded p-2 text-xs">
                                     <div className="flex justify-between">
-                                      <span className="text-green-700 dark:text-green-400">Live Rate:</span>
-                                      <span className="font-medium">{currencySymbol} {liveRate.toLocaleString()}/g</span>
+                                      <span className="text-green-700 dark:text-green-400">
+                                        Live Rate:
+                                      </span>
+                                      <span className="font-medium">
+                                        {currencySymbol}{" "}
+                                        {liveRate.toLocaleString()}/g
+                                      </span>
                                     </div>
                                     <div className="flex justify-between text-muted-foreground">
                                       <span>Default Making (10%):</span>
-                                      <span>{currencySymbol} {defaultMaking.toLocaleString()}/g</span>
+                                      <span>
+                                        {currencySymbol}{" "}
+                                        {defaultMaking.toLocaleString()}/g
+                                      </span>
                                     </div>
                                   </div>
                                 )}
@@ -592,18 +720,21 @@ export default function ShopInventoryPage() {
                                   </Label>
                                   <Input
                                     type="number"
-                                    placeholder={`Default: ${defaultMaking || 'N/A'}`}
-                                    value={materialData?.makingChargePerGram || ''}
+                                    placeholder={`Default: ${defaultMaking || "N/A"}`}
+                                    value={
+                                      materialData?.makingChargePerGram || ""
+                                    }
                                     onChange={(e) =>
                                       updateMaterialPricing(
                                         key,
-                                        'makingChargePerGram',
-                                        parseFloat(e.target.value)
+                                        "makingChargePerGram",
+                                        parseFloat(e.target.value),
                                       )
                                     }
                                   />
                                   <p className="text-xs text-muted-foreground">
-                                    Leave blank to use default (10% of metal value)
+                                    Leave blank to use default (10% of metal
+                                    value)
                                   </p>
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
@@ -614,12 +745,12 @@ export default function ShopInventoryPage() {
                                     <Input
                                       type="number"
                                       placeholder="1"
-                                      value={materialData?.minWeightGrams || ''}
+                                      value={materialData?.minWeightGrams || ""}
                                       onChange={(e) =>
                                         updateMaterialPricing(
                                           key,
-                                          'minWeightGrams',
-                                          parseFloat(e.target.value)
+                                          "minWeightGrams",
+                                          parseFloat(e.target.value),
                                         )
                                       }
                                     />
@@ -631,12 +762,12 @@ export default function ShopInventoryPage() {
                                     <Input
                                       type="number"
                                       placeholder="100"
-                                      value={materialData?.maxWeightGrams || ''}
+                                      value={materialData?.maxWeightGrams || ""}
                                       onChange={(e) =>
                                         updateMaterialPricing(
                                           key,
-                                          'maxWeightGrams',
-                                          parseFloat(e.target.value)
+                                          "maxWeightGrams",
+                                          parseFloat(e.target.value),
                                         )
                                       }
                                     />
@@ -678,12 +809,15 @@ export default function ShopInventoryPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {gemstoneCategories.map((category) => {
-                    const gemstonesInCategory = allGemstones.filter(g => g.category === category.id);
-                    const selectedCount = gemstonesInCategory.filter(g => 
-                      (capabilitiesData?.gemstones || []).includes(g.id)
+                    const gemstonesInCategory = allGemstones.filter(
+                      (g) => g.category === category.id,
+                    );
+                    const selectedCount = gemstonesInCategory.filter((g) =>
+                      (capabilitiesData?.gemstones || []).includes(g.id),
                     ).length;
-                    const allSelected = selectedCount === gemstonesInCategory.length;
-                    
+                    const allSelected =
+                      selectedCount === gemstonesInCategory.length;
+
                     return (
                       <div key={category.id} className="space-y-3">
                         <div className="flex items-center justify-between">
@@ -694,24 +828,32 @@ export default function ShopInventoryPage() {
                                 {selectedCount}/{gemstonesInCategory.length}
                               </Badge>
                             </h3>
-                            <p className="text-xs text-muted-foreground">{category.description}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {category.description}
+                            </p>
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => toggleAllGemstonesInCategory(category.id)}
+                            onClick={() =>
+                              toggleAllGemstonesInCategory(category.id)
+                            }
                           >
-                            {allSelected ? 'Deselect All' : 'Select All'}
+                            {allSelected ? "Deselect All" : "Select All"}
                           </Button>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                           {gemstonesInCategory.map((gemstone) => {
-                            const isSelected = (capabilitiesData?.gemstones || []).includes(gemstone.id);
+                            const isSelected = (
+                              capabilitiesData?.gemstones || []
+                            ).includes(gemstone.id);
                             return (
                               <div
                                 key={gemstone.id}
                                 className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${
-                                  isSelected ? 'border-primary bg-primary/5' : 'hover:border-gray-300'
+                                  isSelected
+                                    ? "border-primary bg-primary/5"
+                                    : "hover:border-gray-300"
                                 }`}
                                 onClick={() => toggleGemstone(gemstone.id)}
                               >
@@ -756,18 +898,21 @@ export default function ShopInventoryPage() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {allJewelleryTypes.map((type) => {
-                      const isSelected = capabilitiesData?.jewelleryTypes?.includes(type);
+                      const isSelected =
+                        capabilitiesData?.jewelleryTypes?.includes(type);
                       return (
                         <div
                           key={type}
                           className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${
-                            isSelected ? 'border-primary bg-primary/5' : 'hover:border-gray-300'
+                            isSelected
+                              ? "border-primary bg-primary/5"
+                              : "hover:border-gray-300"
                           }`}
                           onClick={() => toggleJewelleryType(type)}
                         >
                           <Checkbox checked={isSelected} />
                           <Label className="cursor-pointer">
-                            {type.replace(/_/g, ' ')}
+                            {type.replace(/_/g, " ")}
                           </Label>
                         </div>
                       );
@@ -803,12 +948,15 @@ export default function ShopInventoryPage() {
                 <CardContent className="space-y-4">
                   <div className="space-y-3">
                     {allBuildMethods.map((method) => {
-                      const isSelected = capabilitiesData?.buildMethods?.includes(method.value);
+                      const isSelected =
+                        capabilitiesData?.buildMethods?.includes(method.value);
                       return (
                         <div
                           key={method.value}
                           className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-all ${
-                            isSelected ? 'border-primary bg-primary/5' : 'hover:border-gray-300'
+                            isSelected
+                              ? "border-primary bg-primary/5"
+                              : "hover:border-gray-300"
                           }`}
                           onClick={() => toggleBuildMethod(method.value)}
                         >
@@ -817,22 +965,22 @@ export default function ShopInventoryPage() {
                             <Label className="cursor-pointer font-medium">
                               {method.label}
                             </Label>
-                            {method.value === 'METHOD_A' && (
+                            {method.value === "METHOD_A" && (
                               <p className="text-sm text-muted-foreground mt-1">
                                 Standard solid gold or silver construction
                               </p>
                             )}
-                            {method.value === 'METHOD_B' && (
+                            {method.value === "METHOD_B" && (
                               <p className="text-sm text-muted-foreground mt-1">
                                 Silver core with gold plating overlay
                               </p>
                             )}
-                            {method.value === 'METHOD_C' && (
+                            {method.value === "METHOD_C" && (
                               <p className="text-sm text-muted-foreground mt-1">
                                 Hollow/tube construction for lightweight pieces
                               </p>
                             )}
-                            {method.value === 'METHOD_D' && (
+                            {method.value === "METHOD_D" && (
                               <p className="text-sm text-muted-foreground mt-1">
                                 Machine-made chains and bangles (Italian style)
                               </p>
@@ -872,18 +1020,21 @@ export default function ShopInventoryPage() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {allFinishes.map((finish) => {
-                      const isSelected = capabilitiesData?.finishes?.includes(finish);
+                      const isSelected =
+                        capabilitiesData?.finishes?.includes(finish);
                       return (
                         <div
                           key={finish}
                           className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${
-                            isSelected ? 'border-primary bg-primary/5' : 'hover:border-gray-300'
+                            isSelected
+                              ? "border-primary bg-primary/5"
+                              : "hover:border-gray-300"
                           }`}
                           onClick={() => toggleFinish(finish)}
                         >
                           <Checkbox checked={isSelected} />
                           <Label className="cursor-pointer">
-                            {finish.replace(/_/g, ' ')}
+                            {finish.replace(/_/g, " ")}
                           </Label>
                         </div>
                       );

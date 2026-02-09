@@ -2,6 +2,9 @@
 
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
+import { BuyerEducation } from "@/components/pricing/BuyerEducation";
+import { MarketComparison } from "@/components/pricing/MarketComparison";
+import { SellerTierBadge } from "@/components/pricing/SellerTierBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -644,6 +647,15 @@ export default function CreateRfqPage() {
     supportedJewelleryTypes: string[];
     supportedMethods: string[];
     supportedFinishes: string[];
+    // Seller performance & tier
+    sellerTier?: "STANDARD" | "SILVER" | "GOLD" | "ELITE";
+    badges?: string[];
+    sellerPerformance?: {
+      totalOrders: number;
+      successfulOrders: number;
+      avgRating: number;
+      onTimeDispatchRate: number;
+    } | null;
   }
 
   interface SellerMatchingStats {
@@ -4739,6 +4751,13 @@ export default function CreateRfqPage() {
                                       </TooltipContent>
                                     </Tooltip>
                                   )}
+                                  {seller.sellerTier &&
+                                    seller.sellerTier !== "STANDARD" && (
+                                      <SellerTierBadge
+                                        tier={seller.sellerTier}
+                                        compact
+                                      />
+                                    )}
                                   {seller.locationMatch === "same_city" && (
                                     <Badge className="bg-green-100 text-green-700 text-xs">
                                       Same City
@@ -4799,6 +4818,13 @@ export default function CreateRfqPage() {
                                   Making: {currencyInfo?.symbol || "Rs."}
                                   {seller.makingCharge.toLocaleString()}
                                 </div>
+                                <MarketComparison
+                                  ourPrice={seller.estimatedPrice}
+                                  currencySymbol={currencyInfo?.symbol || "Rs."}
+                                  makingChargePercent={
+                                    seller.makingChargePercent
+                                  }
+                                />
                                 <div className="mt-3 flex gap-2">
                                   {seller.whatsappNumber && (
                                     <a
@@ -4827,6 +4853,9 @@ export default function CreateRfqPage() {
                         ))}
                       </div>
                     )}
+
+                    {/* Buyer Education - Country-specific pricing callout */}
+                    <BuyerEducation country={country} />
 
                     {/* Actions */}
                     <div className="flex justify-between items-center mt-8 pt-6 border-t">

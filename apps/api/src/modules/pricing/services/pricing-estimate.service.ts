@@ -2,36 +2,36 @@
  * Pricing Estimate Service
  * Main service for calculating complete jewellery estimates
  * Combines metal, finish, and gemstone pricing with making charges
- * 
- * Key concept: Country determines the MARKET (pricing source), 
+ *
+ * Key concept: Country determines the MARKET (pricing source),
  * but currency is for DISPLAY and can be any supported currency.
  */
-import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { PricingFxService } from './pricing-fx.service';
-import { MaterialPricingService } from './material-pricing.service';
-import { FinishPricingService } from './finish-pricing.service';
-import { GemstonesPricingService } from './gemstones-pricing.service';
-import { MarketRatesService } from '../../market-rates/market-rates.service';
-import { FxRatesService } from '../../fx-rates/fx-rates.service';
-import { MarketRegion } from '../../market-rates/types';
+import { Injectable, Logger } from "@nestjs/common";
+import { PrismaService } from "../../../prisma/prisma.service";
+import { FxRatesService } from "../../fx-rates/fx-rates.service";
+import { MarketRatesService } from "../../market-rates/market-rates.service";
+import { MarketRegion } from "../../market-rates/types";
 import {
+  BuildMethod,
+  COUNTRY_DEFAULT_CURRENCY,
+  DEFAULT_COUNTRY_PREMIUM,
+  EstimateLineItem,
   EstimateRequest,
   EstimateResponse,
-  EstimateLineItem,
   EstimateWarning,
-  BuildMethod,
+  MaterialCode,
   SupportedCountry,
   SupportedCurrency,
-  MaterialCode,
-  DEFAULT_COUNTRY_PREMIUM,
-  COUNTRY_DEFAULT_CURRENCY,
-  TAX_RATES,
   TAX_NAMES,
-} from '../types';
+  TAX_RATES,
+} from "../types";
+import { FinishPricingService } from "./finish-pricing.service";
+import { GemstonesPricingService } from "./gemstones-pricing.service";
+import { MaterialPricingService } from "./material-pricing.service";
+import { PricingFxService } from "./pricing-fx.service";
 
-// Default making charge percentage (3%)
-const DEFAULT_MAKING_CHARGE_PCT = 3;
+// Default making charge percentage — should match platform config default
+const DEFAULT_MAKING_CHARGE_PCT = 10;
 
 @Injectable()
 export class PricingEstimateService {
@@ -49,11 +49,11 @@ export class PricingEstimateService {
 
   /**
    * Calculate complete pricing estimate
-   * 
+   *
    * Key concept:
    * - country: determines the MARKET (pricing source, taxes, adjustments)
    * - currency: determines the DISPLAY currency (can be any supported currency)
-   * 
+   *
    * Example: country=NP, currency=USD means:
    * - Use Nepal market prices (with Nepal adjustments/taxes)
    * - Display the result in USD
@@ -63,17 +63,22 @@ export class PricingEstimateService {
     // Use request currency for display, country's default for market pricing
     const displayCurrency: SupportedCurrency = request.currency;
     const marketCurrency: SupportedCurrency = COUNTRY_DEFAULT_CURRENCY[country];
-    
+
     this.logger.debug(
       `Calculating estimate: country=${country}, displayCurrency=${displayCurrency}, marketCurrency=${marketCurrency}`,
     );
-    
+
     const lineItems: EstimateLineItem[] = [];
     const warnings: EstimateWarning[] = [];
     let ratesUpdatedAt = new Date().toISOString();
 
     // Calculate metal costs based on build method (in market currency)
-    const metalResult = await this.calculateMetalCost(request, country, marketCurrency, shopId);
+    const metalResult = await this.calculateMetalCost(
+      request,
+      country,
+      marketCurrency,
+      shopId,
+    );
     lineItems.push(...metalResult.lineItems);
     warnings.push(...metalResult.warnings);
     if (metalResult.ratesUpdatedAt) {
@@ -81,12 +86,22 @@ export class PricingEstimateService {
     }
 
     // Calculate finish costs (if applicable) - in market currency
-    const finishResult = await this.calculateFinishCost(request, country, marketCurrency, shopId);
+    const finishResult = await this.calculateFinishCost(
+      request,
+      country,
+      marketCurrency,
+      shopId,
+    );
     lineItems.push(...finishResult.lineItems);
     warnings.push(...finishResult.warnings);
 
     // Calculate gemstone costs (if applicable) - in market currency
-    const gemstoneResult = await this.calculateGemstoneCost(request, country, marketCurrency, shopId);
+    const gemstoneResult = await this.calculateGemstoneCost(
+      request,
+      country,
+      marketCurrency,
+      shopId,
+    );
     lineItems.push(...gemstoneResult.lineItems);
     warnings.push(...gemstoneResult.warnings);
 
@@ -94,11 +109,12 @@ export class PricingEstimateService {
     const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
 
     // Calculate making charge
-    const makingChargePct = request.makingChargePct ?? DEFAULT_MAKING_CHARGE_PCT;
+    const makingChargePct =
+      request.makingChargePct ?? DEFAULT_MAKING_CHARGE_PCT;
     const makingCharge = (subtotal * makingChargePct) / 100;
 
     lineItems.push({
-      category: 'MAKING_CHARGE',
+      category: "MAKING_CHARGE",
       description: `Making Charge (${makingChargePct}%)`,
       amount: parseFloat(makingCharge.toFixed(2)),
       currency: marketCurrency,
@@ -110,7 +126,7 @@ export class PricingEstimateService {
     const taxes = taxableAmount * taxRate;
 
     lineItems.push({
-      category: 'TAX',
+      category: "TAX",
       description: TAX_NAMES[country] || `Tax (${(taxRate * 100).toFixed(0)}%)`,
       amount: parseFloat(taxes.toFixed(2)),
       currency: marketCurrency,
@@ -173,8 +189,9 @@ export class PricingEstimateService {
       taxes: parseFloat(finalTaxes.toFixed(2)),
       total: parseFloat(finalTotal.toFixed(2)),
       warnings,
-      disclaimer: 'This is an estimate only. Final quote depends on shop rates, exact specifications, and current market prices.',
-      source: shopId ? 'shop' : 'platform',
+      disclaimer:
+        "This is an estimate only. Final quote depends on shop rates, exact specifications, and current market prices.",
+      source: shopId ? "shop" : "platform",
       ratesUpdatedAt,
     };
   }
@@ -201,37 +218,42 @@ export class PricingEstimateService {
         // Solid precious metal
         if (!request.methodA) {
           warnings.push({
-            code: 'MISSING_METHOD_A_DETAILS',
-            message: 'Method A details (metal type and weight) are required',
-            severity: 'error',
+            code: "MISSING_METHOD_A_DETAILS",
+            message: "Method A details (metal type and weight) are required",
+            severity: "error",
           });
           break;
         }
 
         const { metal, totalWeightG } = request.methodA;
-        
+
         // Get live market rate for precious metal in market currency
-        const marketRates = await this.marketRatesService.getMarketRates(currency, country as any);
+        const marketRates = await this.marketRatesService.getMarketRates(
+          currency,
+          country as any,
+        );
         ratesUpdatedAt = marketRates.updatedAt;
 
-        const metalKey = metal.toUpperCase().replace(' ', '_') as keyof typeof marketRates.metals;
+        const metalKey = metal
+          .toUpperCase()
+          .replace(" ", "_") as keyof typeof marketRates.metals;
         const ratePerGram = marketRates.metals[metalKey] || 0;
 
         if (ratePerGram === 0) {
           warnings.push({
-            code: 'UNKNOWN_METAL',
+            code: "UNKNOWN_METAL",
             message: `Unknown metal type: ${metal}. Using estimate.`,
-            severity: 'warning',
+            severity: "warning",
           });
         }
 
         const metalCost = ratePerGram * totalWeightG;
-        
+
         lineItems.push({
-          category: 'METAL',
+          category: "METAL",
           description: `${metal} (${totalWeightG}g)`,
           quantity: totalWeightG,
-          unit: 'gram',
+          unit: "gram",
           ratePerUnit: parseFloat(ratePerGram.toFixed(2)),
           amount: parseFloat(metalCost.toFixed(2)),
           currency,
@@ -243,16 +265,16 @@ export class PricingEstimateService {
         // Standard alloy
         if (!request.methodB) {
           warnings.push({
-            code: 'MISSING_METHOD_B_DETAILS',
-            message: 'Method B details (alloy type and weight) are required',
-            severity: 'error',
+            code: "MISSING_METHOD_B_DETAILS",
+            message: "Method B details (alloy type and weight) are required",
+            severity: "error",
           });
           break;
         }
 
         const { alloy, totalWeightG } = request.methodB;
         const materialCode = alloy.toUpperCase() as MaterialCode;
-        
+
         const materialRate = await this.materialPricingService.getMaterialRate(
           materialCode,
           country,
@@ -260,12 +282,12 @@ export class PricingEstimateService {
         );
 
         const alloyCost = materialRate.ratePerGramLocal * totalWeightG;
-        
+
         lineItems.push({
-          category: 'METAL',
+          category: "METAL",
           description: `${alloy} (${totalWeightG}g)`,
           quantity: totalWeightG,
-          unit: 'gram',
+          unit: "gram",
           ratePerUnit: parseFloat(materialRate.ratePerGramLocal.toFixed(2)),
           amount: parseFloat(alloyCost.toFixed(2)),
           currency,
@@ -274,9 +296,9 @@ export class PricingEstimateService {
         // Add warning for restricted materials
         if (materialRate.isRestricted) {
           warnings.push({
-            code: 'RESTRICTED_MATERIAL',
+            code: "RESTRICTED_MATERIAL",
             message: `${alloy} is a restricted material. Shop must have compliance certification.`,
-            severity: 'warning',
+            severity: "warning",
           });
         }
         break;
@@ -286,15 +308,15 @@ export class PricingEstimateService {
         // Core metal + finish
         if (!request.methodC) {
           warnings.push({
-            code: 'MISSING_METHOD_C_DETAILS',
-            message: 'Method C details (core metal and weight) are required',
-            severity: 'error',
+            code: "MISSING_METHOD_C_DETAILS",
+            message: "Method C details (core metal and weight) are required",
+            severity: "error",
           });
           break;
         }
 
         const { coreMetal, totalWeightG } = request.methodC;
-        
+
         const materialRate = await this.materialPricingService.getMaterialRate(
           coreMetal,
           country,
@@ -302,12 +324,12 @@ export class PricingEstimateService {
         );
 
         const coreCost = materialRate.ratePerGramLocal * totalWeightG;
-        
+
         lineItems.push({
-          category: 'METAL',
+          category: "METAL",
           description: `${coreMetal} core (${totalWeightG}g)`,
           quantity: totalWeightG,
-          unit: 'gram',
+          unit: "gram",
           ratePerUnit: parseFloat(materialRate.ratePerGramLocal.toFixed(2)),
           amount: parseFloat(coreCost.toFixed(2)),
           currency,
@@ -319,37 +341,49 @@ export class PricingEstimateService {
         // Multi-metal construction
         if (!request.methodD) {
           warnings.push({
-            code: 'MISSING_METHOD_D_DETAILS',
-            message: 'Method D details are required',
-            severity: 'error',
+            code: "MISSING_METHOD_D_DETAILS",
+            message: "Method D details are required",
+            severity: "error",
           });
           break;
         }
 
-        const { primaryMetal, secondaryMetal, totalWeightG, primaryWeightG, primaryPercentage, pattern } = request.methodD;
-        
+        const {
+          primaryMetal,
+          secondaryMetal,
+          totalWeightG,
+          primaryWeightG,
+          primaryPercentage,
+          pattern,
+        } = request.methodD;
+
         // Calculate weights
         let primaryWeight = primaryWeightG || 0;
         let secondaryWeight = totalWeightG - primaryWeight;
-        
+
         if (primaryPercentage && !primaryWeightG) {
           primaryWeight = totalWeightG * (primaryPercentage / 100);
           secondaryWeight = totalWeightG - primaryWeight;
         }
 
         // Get precious metal rate - use market currency for pricing
-        const marketRates = await this.marketRatesService.getMarketRates(currency, country as MarketRegion);
+        const marketRates = await this.marketRatesService.getMarketRates(
+          currency,
+          country as MarketRegion,
+        );
         ratesUpdatedAt = marketRates.updatedAt;
 
-        const primaryKey = primaryMetal.toUpperCase().replace(' ', '_') as keyof typeof marketRates.metals;
+        const primaryKey = primaryMetal
+          .toUpperCase()
+          .replace(" ", "_") as keyof typeof marketRates.metals;
         const primaryRate = marketRates.metals[primaryKey] || 0;
         const primaryCost = primaryRate * primaryWeight;
 
         lineItems.push({
-          category: 'METAL',
+          category: "METAL",
           description: `${primaryMetal} (${primaryWeight.toFixed(2)}g)`,
           quantity: parseFloat(primaryWeight.toFixed(2)),
-          unit: 'gram',
+          unit: "gram",
           ratePerUnit: parseFloat(primaryRate.toFixed(2)),
           amount: parseFloat(primaryCost.toFixed(2)),
           currency,
@@ -364,10 +398,10 @@ export class PricingEstimateService {
         const secondaryCost = secondaryRate.ratePerGramLocal * secondaryWeight;
 
         lineItems.push({
-          category: 'METAL',
+          category: "METAL",
           description: `${secondaryMetal} (${secondaryWeight.toFixed(2)}g)`,
           quantity: parseFloat(secondaryWeight.toFixed(2)),
-          unit: 'gram',
+          unit: "gram",
           ratePerUnit: parseFloat(secondaryRate.ratePerGramLocal.toFixed(2)),
           amount: parseFloat(secondaryCost.toFixed(2)),
           currency,
@@ -375,9 +409,9 @@ export class PricingEstimateService {
 
         // Add multi-metal warning
         warnings.push({
-          code: 'MULTI_METAL_CONSTRUCTION',
+          code: "MULTI_METAL_CONSTRUCTION",
           message: `Multi-metal construction (${pattern}). Not solid gold unless 100% gold is selected.`,
-          severity: 'info',
+          severity: "info",
         });
         break;
       }
@@ -403,23 +437,26 @@ export class PricingEstimateService {
 
     // Check Method C specific finish
     const finish = request.methodC?.finish || request.finish;
-    
+
     if (!finish) {
       return { lineItems, warnings };
     }
 
     // Validate vermeil on sterling silver
-    if (request.buildMethod === BuildMethod.METHOD_C && request.methodC?.coreMetal) {
+    if (
+      request.buildMethod === BuildMethod.METHOD_C &&
+      request.methodC?.coreMetal
+    ) {
       const validation = this.finishPricingService.validateVermeil(
         finish.finishType,
         request.methodC.coreMetal,
       );
-      
+
       if (!validation.valid) {
         warnings.push({
-          code: 'INVALID_VERMEIL',
+          code: "INVALID_VERMEIL",
           message: validation.message!,
-          severity: 'error',
+          severity: "error",
         });
         return { lineItems, warnings };
       }
@@ -438,10 +475,10 @@ export class PricingEstimateService {
     );
 
     lineItems.push({
-      category: 'FINISH',
+      category: "FINISH",
       description,
       quantity: 1,
-      unit: 'piece',
+      unit: "piece",
       ratePerUnit: finishPrice.flatFeeLocal,
       amount: finishPrice.flatFeeLocal,
       currency,
@@ -470,7 +507,7 @@ export class PricingEstimateService {
     }
 
     const result = await this.gemstonePricingService.calculateTotalGemstoneCost(
-      request.gemstones.map(g => ({
+      request.gemstones.map((g) => ({
         stoneType: g.stoneType,
         sizeMm: g.sizeMm,
         caratWeight: g.caratWeight,
@@ -485,13 +522,15 @@ export class PricingEstimateService {
 
     // Convert breakdown to line items
     for (const item of result.breakdown) {
-      const category = item.description.includes('setting') ? 'SETTING' : 'GEMSTONE';
-      
+      const category = item.description.includes("setting")
+        ? "SETTING"
+        : "GEMSTONE";
+
       lineItems.push({
         category,
         description: item.description,
         quantity: item.quantity,
-        unit: 'piece',
+        unit: "piece",
         ratePerUnit: item.unitPrice,
         amount: item.total,
         currency,
@@ -509,17 +548,26 @@ export class PricingEstimateService {
     totalWeightG: number,
     metal: string,
     country: SupportedCountry,
-  ): Promise<{ minEstimate: number; maxEstimate: number; currency: SupportedCurrency }> {
+  ): Promise<{
+    minEstimate: number;
+    maxEstimate: number;
+    currency: SupportedCurrency;
+  }> {
     // Use country's default currency for quick estimates
     const currency: SupportedCurrency = COUNTRY_DEFAULT_CURRENCY[country];
-    
+
     // Get market rate for the metal
-    const marketRates = await this.marketRatesService.getMarketRates(currency, country as MarketRegion);
-    const metalKey = metal.toUpperCase().replace(' ', '_') as keyof typeof marketRates.metals;
+    const marketRates = await this.marketRatesService.getMarketRates(
+      currency,
+      country as MarketRegion,
+    );
+    const metalKey = metal
+      .toUpperCase()
+      .replace(" ", "_") as keyof typeof marketRates.metals;
     const ratePerGram = marketRates.metals[metalKey] || 0;
 
     const baseCost = ratePerGram * totalWeightG;
-    
+
     // Estimate range with 10-20% variation for making charges etc.
     const minEstimate = baseCost * 1.05; // 5% making charge
     const maxEstimate = baseCost * 1.25; // 25% with finishing etc.

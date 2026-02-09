@@ -142,7 +142,8 @@ export const offersApi = {
   update: (id: string, data: any) => api.patch(`/offers/${id}`, data),
   accept: (id: string) => api.post(`/offers/${id}/accept`),
   counter: (id: string, data: any) => api.post(`/offers/${id}/counter`, data),
-  decline: (id: string) => api.post(`/offers/${id}/decline`),
+  decline: (id: string, reason?: string) =>
+    api.post(`/offers/${id}/decline`, { reason }),
   getByRfq: (rfqId: string) => api.get(`/offers/rfq/${rfqId}`),
   withdraw: (id: string) => api.patch(`/offers/${id}/withdraw`),
 };
@@ -335,6 +336,23 @@ export const shopQuotesApi = {
   // Customer history
   getCustomerHistory: (customerId: string) =>
     api.get(`/shop-quotes/customer/${customerId}`),
+};
+
+// Platform Config API
+export const platformConfigApi = {
+  getAll: () => api.get("/platform-config"),
+  getPublic: () => api.get("/platform-config/public"),
+  update: (data: Record<string, number>) => api.patch("/platform-config", data),
+};
+
+// Seller Performance API
+export const sellerPerformanceApi = {
+  getMyDashboard: () => api.get("/seller-performance/my-dashboard"),
+  getShopPerformance: (shopId: string) =>
+    api.get(`/seller-performance/${shopId}`),
+  recalculate: (shopId: string) =>
+    api.post(`/seller-performance/recalculate/${shopId}`),
+  recalculateAll: () => api.post("/seller-performance/recalculate-all"),
 };
 
 export default api;

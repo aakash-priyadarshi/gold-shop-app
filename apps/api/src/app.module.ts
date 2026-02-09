@@ -22,8 +22,10 @@ import { NotificationsModule } from "./modules/notifications/notifications.modul
 import { OffersModule } from "./modules/offers/offers.module";
 import { OrdersModule } from "./modules/orders/orders.module";
 import { PaymentsModule } from "./modules/payments/payments.module";
+import { PlatformConfigModule } from "./modules/platform-config/platform-config.module";
 import { PricingModule } from "./modules/pricing/pricing.module";
 import { RfqModule } from "./modules/rfq/rfq.module";
+import { SellerPerformanceModule } from "./modules/seller-performance/seller-performance.module";
 import { ShopQuotesModule } from "./modules/shop-quotes/shop-quotes.module";
 import { ShopsModule } from "./modules/shops/shops.module";
 import { UsersModule } from "./modules/users/users.module";
@@ -86,6 +88,8 @@ import { PrismaModule } from "./prisma/prisma.module";
     CommissionModule,
     ShopQuotesModule,
     DesignsModule,
+    PlatformConfigModule,
+    SellerPerformanceModule,
   ],
 })
 export class AppModule {}

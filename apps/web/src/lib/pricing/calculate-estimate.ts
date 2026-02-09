@@ -381,7 +381,7 @@ export function calculateEstimate(request: EstimateRequest): EstimateBreakdown {
   let finishCost = 0;
 
   const currencySymbol = CURRENCY_SYMBOLS[request.currency] || "₹";
-  const makingChargePercent = request.makingChargePercent ?? 12;
+  const makingChargePercent = request.makingChargePercent ?? 10;
 
   // ─────────────────────────────────────────
   // METHOD A: Solid Precious Metal

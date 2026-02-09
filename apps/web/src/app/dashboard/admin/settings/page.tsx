@@ -33,9 +33,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { adminApi } from "@/lib/api";
+import { adminApi, platformConfigApi } from "@/lib/api";
 import {
   AlertTriangle,
+  Award,
   Bell,
   Bot,
   CheckCircle2,
@@ -48,10 +49,12 @@ import {
   Percent,
   Play,
   RefreshCw,
+  Save,
   Send,
   Settings,
   Shield,
   Trash2,
+  TrendingUp,
   XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -112,6 +115,58 @@ export default function AdminSettingsPage() {
   const [resettingRateLimit, setResettingRateLimit] = useState(false);
   const [clearingQueue, setClearingQueue] = useState(false);
   const [processingQueue, setProcessingQueue] = useState(false);
+
+  // Platform Config state
+  const [platformConfig, setPlatformConfig] = useState<Record<string, number>>(
+    {},
+  );
+  const [loadingConfig, setLoadingConfig] = useState(true);
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [configDirty, setConfigDirty] = useState(false);
+
+  // Fetch platform config on mount
+  useEffect(() => {
+    const fetchPlatformConfig = async () => {
+      try {
+        const response = await platformConfigApi.getAll();
+        setPlatformConfig(response.data);
+      } catch (error) {
+        console.error("Failed to fetch platform config:", error);
+      } finally {
+        setLoadingConfig(false);
+      }
+    };
+    fetchPlatformConfig();
+  }, []);
+
+  const updateConfigValue = (key: string, value: string) => {
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue)) {
+      setPlatformConfig((prev) => ({ ...prev, [key]: numValue }));
+      setConfigDirty(true);
+    }
+  };
+
+  const handleSavePlatformConfig = async () => {
+    setSavingConfig(true);
+    try {
+      await platformConfigApi.update(platformConfig);
+      toast({
+        title: "Configuration Saved",
+        description: "Platform configuration has been updated successfully.",
+      });
+      setConfigDirty(false);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Save Failed",
+        description:
+          error?.response?.data?.message || "Could not save configuration.",
+      });
+    } finally {
+      setSavingConfig(false);
+    }
+  };
 
   // Fetch email status on mount
   useEffect(() => {
@@ -410,7 +465,8 @@ export default function AdminSettingsPage() {
                   Platform Commission
                 </CardTitle>
                 <CardDescription>
-                  Default commission rate charged on transactions
+                  Commission rate charged on transactions (added to
+                  seller&apos;s making charge for customer-facing display)
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -421,8 +477,17 @@ export default function AdminSettingsPage() {
                       <Input
                         id="platformFee"
                         type="number"
-                        value="1"
-                        disabled
+                        min="0"
+                        max="50"
+                        step="0.1"
+                        value={platformConfig.platform_commission_rate ?? 5}
+                        onChange={(e) =>
+                          updateConfigValue(
+                            "platform_commission_rate",
+                            e.target.value,
+                          )
+                        }
+                        disabled={loadingConfig}
                         className="w-24"
                       />
                       <span className="text-muted-foreground">%</span>
@@ -430,8 +495,10 @@ export default function AdminSettingsPage() {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground">
-                      Platform earns 1% on each successful transaction. This
-                      setting is currently read-only.
+                      Platform commission is combined with the seller&apos;s
+                      making charge and shown as a single &quot;making
+                      charge&quot; to customers. E.g., seller 15% + platform 5%
+                      = 20% displayed.
                     </p>
                   </div>
                 </div>
@@ -511,46 +578,262 @@ export default function AdminSettingsPage() {
                   <div className="space-y-2">
                     <Label>Default Making Charge</Label>
                     <div className="flex items-center gap-2">
-                      <Input value="10" disabled className="w-24" />
+                      <Input
+                        type="number"
+                        min="0"
+                        max="50"
+                        step="0.1"
+                        value={
+                          platformConfig.default_making_charge_percent ?? 10
+                        }
+                        onChange={(e) =>
+                          updateConfigValue(
+                            "default_making_charge_percent",
+                            e.target.value,
+                          )
+                        }
+                        disabled={loadingConfig}
+                        className="w-24"
+                      />
                       <span className="text-muted-foreground">%</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Applied when shop hasn't set custom rates
+                      Applied when shop hasn&apos;t set custom rates
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <Label>Default Margin</Label>
+                    <Label>Price Flagging Threshold</Label>
                     <div className="flex items-center gap-2">
-                      <Input value="2" disabled className="w-24" />
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={platformConfig.price_flagging_threshold ?? 50}
+                        onChange={(e) =>
+                          updateConfigValue(
+                            "price_flagging_threshold",
+                            e.target.value,
+                          )
+                        }
+                        disabled={loadingConfig}
+                        className="w-24"
+                      />
                       <span className="text-muted-foreground">%</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Default shop margin on metal price
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Market Rate Cache TTL</Label>
-                    <div className="flex items-center gap-2">
-                      <Input value="5" disabled className="w-24" />
-                      <span className="text-muted-foreground">minutes</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      How long market rates are cached
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>FX Rate Cache TTL</Label>
-                    <div className="flex items-center gap-2">
-                      <Input value="60" disabled className="w-24" />
-                      <span className="text-muted-foreground">minutes</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      How long FX rates are cached
+                      Flag prices exceeding this % above average
                     </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Making Charge Caps per Tier */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5" />
+                  Making Charge Caps by Seller Tier
+                </CardTitle>
+                <CardDescription>
+                  Maximum making charge percentage sellers can set based on
+                  their performance tier
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[
+                    {
+                      tier: "Standard",
+                      key: "making_charge_cap_standard",
+                      color: "bg-gray-100 border-gray-300",
+                      default: 15,
+                    },
+                    {
+                      tier: "Silver",
+                      key: "making_charge_cap_silver",
+                      color: "bg-slate-100 border-slate-400",
+                      default: 18,
+                    },
+                    {
+                      tier: "Gold",
+                      key: "making_charge_cap_gold",
+                      color: "bg-yellow-50 border-yellow-400",
+                      default: 22,
+                    },
+                    {
+                      tier: "Elite",
+                      key: "making_charge_cap_elite",
+                      color: "bg-purple-50 border-purple-400",
+                      default: 100,
+                    },
+                  ].map(({ tier, key, color, default: def }) => (
+                    <div
+                      key={key}
+                      className={`p-4 rounded-lg border-2 ${color}`}
+                    >
+                      <p className="font-semibold text-sm mb-2">{tier}</p>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="1"
+                          value={platformConfig[key] ?? def}
+                          onChange={(e) =>
+                            updateConfigValue(key, e.target.value)
+                          }
+                          disabled={loadingConfig}
+                          className="w-20"
+                        />
+                        <span className="text-muted-foreground text-sm">%</span>
+                      </div>
+                      {key === "making_charge_cap_elite" && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          100% = uncapped
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Elite Seller Criteria */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Elite Seller Criteria
+                </CardTitle>
+                <CardDescription>
+                  Minimum thresholds sellers must meet to qualify for Elite tier
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label>Min. Completed Orders</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={platformConfig.elite_min_orders ?? 100}
+                      onChange={(e) =>
+                        updateConfigValue("elite_min_orders", e.target.value)
+                      }
+                      disabled={loadingConfig}
+                      className="w-28"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Max. Cancellation Rate (%)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={platformConfig.elite_max_cancellation_rate ?? 2}
+                      onChange={(e) =>
+                        updateConfigValue(
+                          "elite_max_cancellation_rate",
+                          e.target.value,
+                        )
+                      }
+                      disabled={loadingConfig}
+                      className="w-28"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Min. Average Rating</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="5"
+                      step="0.1"
+                      value={platformConfig.elite_min_rating ?? 4.7}
+                      onChange={(e) =>
+                        updateConfigValue("elite_min_rating", e.target.value)
+                      }
+                      disabled={loadingConfig}
+                      className="w-28"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Min. Tenure (months)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={platformConfig.elite_min_tenure_months ?? 6}
+                      onChange={(e) =>
+                        updateConfigValue(
+                          "elite_min_tenure_months",
+                          e.target.value,
+                        )
+                      }
+                      disabled={loadingConfig}
+                      className="w-28"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Min. Positive Feedback (%)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={platformConfig.elite_min_positive_feedback ?? 90}
+                      onChange={(e) =>
+                        updateConfigValue(
+                          "elite_min_positive_feedback",
+                          e.target.value,
+                        )
+                      }
+                      disabled={loadingConfig}
+                      className="w-28"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Min. On-Time Dispatch (%)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={platformConfig.elite_min_on_time_dispatch ?? 95}
+                      onChange={(e) =>
+                        updateConfigValue(
+                          "elite_min_on_time_dispatch",
+                          e.target.value,
+                        )
+                      }
+                      disabled={loadingConfig}
+                      className="w-28"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Save Configuration Button */}
+            {configDirty && (
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleSavePlatformConfig}
+                  disabled={savingConfig}
+                  className="gap-2"
+                >
+                  {savingConfig ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  {savingConfig ? "Saving..." : "Save Platform Configuration"}
+                </Button>
+              </div>
+            )}
 
             {/* Security Settings */}
             <Card>

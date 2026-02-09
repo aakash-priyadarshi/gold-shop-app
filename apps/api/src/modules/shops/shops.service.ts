@@ -1133,7 +1133,7 @@ export class ShopsService {
     } = params;
 
     // Debug: Log incoming params
-    console.log('[findMatchingSellers] Params:', {
+    console.log("[findMatchingSellers] Params:", {
       jewelleryType,
       buildMethod,
       metalType,
@@ -1144,11 +1144,17 @@ export class ShopsService {
 
     // First, let's see how many shops exist total
     const totalShops = await this.prisma.shop.count();
-    const activeShops = await this.prisma.shop.count({ where: { isActive: true } });
-    const verifiedShops = await this.prisma.shop.count({ where: { isVerified: true } });
-    const activeAndVerified = await this.prisma.shop.count({ where: { isActive: true, isVerified: true } });
-    
-    console.log('[findMatchingSellers] Shop counts:', {
+    const activeShops = await this.prisma.shop.count({
+      where: { isActive: true },
+    });
+    const verifiedShops = await this.prisma.shop.count({
+      where: { isVerified: true },
+    });
+    const activeAndVerified = await this.prisma.shop.count({
+      where: { isActive: true, isVerified: true },
+    });
+
+    console.log("[findMatchingSellers] Shop counts:", {
       totalShops,
       activeShops,
       verifiedShops,
@@ -1197,11 +1203,17 @@ export class ShopsService {
         supportedMethods: { has: buildMethod },
       },
     });
-    console.log('[findMatchingSellers] Shops matching jewelleryType+buildMethod:', withoutMaterialFilter);
-    console.log('[findMatchingSellers] Final where clause:', JSON.stringify(where, null, 2));
+    console.log(
+      "[findMatchingSellers] Shops matching jewelleryType+buildMethod:",
+      withoutMaterialFilter,
+    );
+    console.log(
+      "[findMatchingSellers] Final where clause:",
+      JSON.stringify(where, null, 2),
+    );
 
     // Fetch all matching shops with their pricing and ratings
-    const shops = await this.prisma.shop.findMany({
+    const shops = (await this.prisma.shop.findMany({
       where,
       include: {
         metalRates: true,
@@ -1221,24 +1233,36 @@ export class ShopsService {
             ratings: true,
           },
         },
+        badges: {
+          where: { isActive: true },
+          select: { badgeType: true, awardedAt: true },
+        },
+        performance: {
+          select: {
+            totalOrders: true,
+            successfulOrders: true,
+            avgRating: true,
+            onTimeDispatchRate: true,
+          },
+        },
       },
-    });
+    })) as any[];
 
-    console.log('[findMatchingSellers] Found shops:', shops.length);
+    console.log("[findMatchingSellers] Found shops:", shops.length);
 
     // Calculate price for each shop and enrich data
     const enrichedShops = shops.map((shop) => {
       // Calculate average rating
       const avgRating =
         shop.ratings.length > 0
-          ? shop.ratings.reduce((sum, r) => sum + r.overall, 0) /
+          ? shop.ratings.reduce((sum: number, r: any) => sum + r.overall, 0) /
             shop.ratings.length
           : 0;
 
       // Calculate estimated price for this shop
       // Use shop's custom rate if available, otherwise use a default
       const shopMetalRate = shop.metalRates.find(
-        (r) => r.metalType === metalType,
+        (r: any) => r.metalType === metalType,
       );
       const baseRatePerGram = shopMetalRate?.ratePerGramNpr || 8500; // Default gold rate
       const materialCost = baseRatePerGram * estimatedWeight;
@@ -1278,6 +1302,17 @@ export class ShopsService {
         isVerified: shop.isVerified,
         makingChargePercent: shop.makingChargePercent || 10,
         codEnabled: shop.codEnabled,
+        // Seller tier & badges
+        sellerTier: shop.sellerTier || "STANDARD",
+        badges: shop.badges?.map((b: any) => b.badgeType) || [],
+        sellerPerformance: shop.performance
+          ? {
+              totalOrders: shop.performance.totalOrders,
+              successfulOrders: shop.performance.successfulOrders,
+              avgRating: shop.performance.avgRating,
+              onTimeDispatchRate: shop.performance.onTimeDispatchRate,
+            }
+          : null,
         // Pricing
         estimatedPrice: Math.round(estimatedPrice),
         materialCost: Math.round(materialCost),

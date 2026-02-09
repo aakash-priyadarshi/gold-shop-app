@@ -1,13 +1,16 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { CommissionStatus, CurrencyCode } from '@prisma/client';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { CommissionStatus } from "@prisma/client";
+import { PrismaService } from "../../prisma/prisma.service";
+import { PlatformConfigService } from "../platform-config/platform-config.service";
 
-const COMMISSION_RATE = 0.01; // 1% commission
-const SETTLEMENT_DAYS = 21;   // Days to settle commission
+const SETTLEMENT_DAYS = 21; // Days to settle commission
 
 @Injectable()
 export class CommissionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly platformConfig: PlatformConfigService,
+  ) {}
 
   /**
    * Create commission ledger entry when shopkeeper marks order as paid at shop
@@ -19,15 +22,17 @@ export class CommissionService {
     });
 
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException("Order not found");
     }
 
     // Calculate due date (21 days from now)
     const dueAt = new Date();
     dueAt.setDate(dueAt.getDate() + SETTLEMENT_DAYS);
 
-    // Calculate commission amount
-    const commissionAmount = order.totalNpr * COMMISSION_RATE;
+    // Calculate commission amount using dynamic platform rate
+    const commissionRate =
+      (await this.platformConfig.getPlatformCommissionRate()) / 100;
+    const commissionAmount = order.totalNpr * commissionRate;
 
     // Check if ledger entry already exists
     const existing = await this.prisma.commissionLedger.findUnique({
@@ -41,7 +46,7 @@ export class CommissionService {
         data: {
           orderTotal: order.totalNpr,
           amount: commissionAmount,
-          status: 'PENDING',
+          status: "PENDING",
           dueAt,
           updatedAt: new Date(),
         },
@@ -54,10 +59,10 @@ export class CommissionService {
         orderId,
         shopId: order.shopId,
         orderTotal: order.totalNpr,
-        commissionRate: COMMISSION_RATE,
+        commissionRate: commissionRate,
         amount: commissionAmount,
-        currency: order.displayCurrency || 'NPR',
-        status: 'PENDING',
+        currency: order.displayCurrency || "NPR",
+        status: "PENDING",
         dueAt,
       },
     });
@@ -72,14 +77,14 @@ export class CommissionService {
     });
 
     if (!commission) {
-      throw new NotFoundException('Commission record not found');
+      throw new NotFoundException("Commission record not found");
     }
 
     // Update commission status
     const updated = await this.prisma.commissionLedger.update({
       where: { id: commissionId },
       data: {
-        status: 'PAID',
+        status: "PAID",
         paidAt: new Date(),
         notes: notes || commission.notes,
         updatedAt: new Date(),
@@ -102,7 +107,7 @@ export class CommissionService {
     // Find all pending commissions that are past due date
     const overdueCommissions = await this.prisma.commissionLedger.findMany({
       where: {
-        status: 'PENDING',
+        status: "PENDING",
         dueAt: { lt: now },
       },
       include: {
@@ -121,7 +126,7 @@ export class CommissionService {
       await this.prisma.commissionLedger.update({
         where: { id: commission.id },
         data: {
-          status: 'OVERDUE',
+          status: "OVERDUE",
           updatedAt: new Date(),
         },
       });
@@ -153,7 +158,7 @@ export class CommissionService {
     const overdueCount = await this.prisma.commissionLedger.count({
       where: {
         shopId,
-        status: 'OVERDUE',
+        status: "OVERDUE",
       },
     });
 
@@ -186,12 +191,12 @@ export class CommissionService {
     const where: any = {};
     if (status) where.status = status;
     if (shopId) where.shopId = shopId;
-    
+
     // Search by shop name or order number
     if (search) {
       where.OR = [
-        { shop: { businessName: { contains: search, mode: 'insensitive' } } },
-        { order: { orderNumber: { contains: search, mode: 'insensitive' } } },
+        { shop: { businessName: { contains: search, mode: "insensitive" } } },
+        { order: { orderNumber: { contains: search, mode: "insensitive" } } },
       ];
     }
 
@@ -202,7 +207,7 @@ export class CommissionService {
           shop: true,
           order: true,
         },
-        orderBy: { dueAt: 'asc' },
+        orderBy: { dueAt: "asc" },
         skip,
         take: limit,
       }),
@@ -224,7 +229,7 @@ export class CommissionService {
   async getShopCommissions(shopId: string) {
     return this.prisma.commissionLedger.findMany({
       where: { shopId },
-      orderBy: { dueAt: 'asc' },
+      orderBy: { dueAt: "asc" },
     });
   }
 
@@ -248,18 +253,18 @@ export class CommissionService {
 
     for (const commission of commissions) {
       switch (commission.status) {
-        case 'PENDING':
+        case "PENDING":
           summary.totalPending += commission.amount;
           summary.pendingCount++;
           if (!summary.nextDueDate || commission.dueAt < summary.nextDueDate) {
             summary.nextDueDate = commission.dueAt;
           }
           break;
-        case 'OVERDUE':
+        case "OVERDUE":
           summary.totalOverdue += commission.amount;
           summary.overdueCount++;
           break;
-        case 'PAID':
+        case "PAID":
           summary.totalPaid += commission.amount;
           summary.paidCount++;
           break;
@@ -278,13 +283,13 @@ export class CommissionService {
     });
 
     if (!commission) {
-      throw new NotFoundException('Commission record not found');
+      throw new NotFoundException("Commission record not found");
     }
 
     const updated = await this.prisma.commissionLedger.update({
       where: { id: commissionId },
       data: {
-        status: 'WAIVED',
+        status: "WAIVED",
         notes: reason,
         updatedAt: new Date(),
       },
@@ -303,34 +308,30 @@ export class CommissionService {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const [
-      pendingStats,
-      overdueStats,
-      paidStats,
-      shopsOnHold,
-    ] = await Promise.all([
-      this.prisma.commissionLedger.aggregate({
-        where: { status: 'PENDING' },
-        _count: true,
-        _sum: { amount: true },
-      }),
-      this.prisma.commissionLedger.aggregate({
-        where: { status: 'OVERDUE' },
-        _count: true,
-        _sum: { amount: true },
-      }),
-      this.prisma.commissionLedger.aggregate({
-        where: {
-          status: 'PAID',
-          paidAt: { gte: startOfMonth },
-        },
-        _count: true,
-        _sum: { amount: true },
-      }),
-      this.prisma.shop.count({
-        where: { isOnHold: true },
-      }),
-    ]);
+    const [pendingStats, overdueStats, paidStats, shopsOnHold] =
+      await Promise.all([
+        this.prisma.commissionLedger.aggregate({
+          where: { status: "PENDING" },
+          _count: true,
+          _sum: { amount: true },
+        }),
+        this.prisma.commissionLedger.aggregate({
+          where: { status: "OVERDUE" },
+          _count: true,
+          _sum: { amount: true },
+        }),
+        this.prisma.commissionLedger.aggregate({
+          where: {
+            status: "PAID",
+            paidAt: { gte: startOfMonth },
+          },
+          _count: true,
+          _sum: { amount: true },
+        }),
+        this.prisma.shop.count({
+          where: { isOnHold: true },
+        }),
+      ]);
 
     return {
       totalPending: pendingStats._count,
@@ -352,7 +353,7 @@ export class CommissionService {
     });
 
     if (!shop) {
-      throw new NotFoundException('Shop not found');
+      throw new NotFoundException("Shop not found");
     }
 
     return this.prisma.shop.update({

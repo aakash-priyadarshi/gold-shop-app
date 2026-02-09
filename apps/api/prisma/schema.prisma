@@ -192,6 +192,18 @@ model Shop {
   holdReason              String?
   isOnHold                Boolean               @default(false)
   lastComplianceCheckAt   DateTime?
+
+  // Seller tier & performance fields
+  sellerTier              SellerTier            @default(STANDARD)
+  tierUnlockedAt          DateTime?
+  tierLockedReason        String?
+  eliteFastTracked        Boolean               @default(false)
+  makingChargeCap         Float                 @default(15)  // Dynamic cap per tier
+  suspendedAt             DateTime?
+  suspensionCount         Int                   @default(0)
+  disputeCount            Int                   @default(0)
+  firstSaleAt             DateTime?
+
   commissionLedgers       CommissionLedger[]
   inventoryItems          InventoryItem[]
   orders                  Order[]
@@ -204,10 +216,13 @@ model Shop {
   priceOverrides          ShopPriceOverride[]
   ratings                 ShopRating[]
   verificationRequests    VerificationRequest[] @relation("ShopVerificationRequests")
+  performance             SellerPerformance?
+  badges                  SellerBadge[]
 
   @@index([userId])
   @@index([country, city])
   @@index([isActive, isVerified])
+  @@index([sellerTier])
 }
 
 model ShopMetalRate {
@@ -683,6 +698,47 @@ model SystemConfig {
   value     Json
   updatedBy String?
   updatedAt DateTime @updatedAt
+}
+
+model SellerPerformance {
+  id                    String   @id @default(uuid())
+  shopId                String   @unique
+  totalOrders           Int      @default(0)
+  successfulOrders      Int      @default(0)
+  cancelledOrders       Int      @default(0)
+  refundedOrders        Int      @default(0)
+  cancellationRate      Float    @default(0)   // percentage
+  refundRate            Float    @default(0)   // percentage
+  avgRating             Float    @default(0)   // overall all-time
+  avgRating60Days       Float    @default(0)   // rolling 60-day
+  positiveFeedbackRate  Float    @default(0)   // percentage >= 4 stars
+  onTimeDispatchRate    Float    @default(0)   // percentage shipped on time
+  totalRevenue          Float    @default(0)
+  responseTimeHours     Float    @default(0)   // avg response time to RFQs
+  firstSaleAt           DateTime?
+  lastOrderAt           DateTime?
+  lastCalculatedAt      DateTime @default(now())
+  shop                  Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId])
+  @@index([avgRating60Days])
+  @@index([cancellationRate])
+}
+
+model SellerBadge {
+  id          String    @id @default(uuid())
+  shopId      String
+  badgeType   BadgeType
+  awardedAt   DateTime  @default(now())
+  expiresAt   DateTime?
+  isActive    Boolean   @default(true)
+  awardedBy   String?   // admin userId or 'SYSTEM'
+  reason      String?
+  shop        Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, badgeType])
+  @@index([shopId])
+  @@index([badgeType, isActive])
 }
 
 model MarketRate {
@@ -1597,4 +1653,22 @@ enum CommissionStatus {
   PAID
   OVERDUE
   WAIVED
+}
+
+enum SellerTier {
+  STANDARD
+  SILVER
+  GOLD
+  ELITE
+}
+
+enum BadgeType {
+  VERIFIED
+  ELITE_SELLER
+  TOP_CHOICE
+  CAMPAIGN_PARTICIPANT
+  ESCROW_PARTNER
+  EXPRESS_SHIPPING
+  HALLMARK_CERTIFIED
+  TRUSTED_SELLER
 }

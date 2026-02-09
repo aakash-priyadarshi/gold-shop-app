@@ -1,5 +1,6 @@
-import { Injectable, OnModuleDestroy, Logger } from '@nestjs/common';
-import { Redis } from '@upstash/redis';
+import { Injectable, Logger } from "@nestjs/common";
+import { Cron } from "@nestjs/schedule";
+import { Redis } from "@upstash/redis";
 
 @Injectable()
 export class RedisService {
@@ -9,9 +10,11 @@ export class RedisService {
   constructor() {
     const restUrl = process.env.UPSTASH_REDIS_REST_URL;
     const restToken = process.env.UPSTASH_REDIS_REST_TOKEN;
-    
+
     if (!restUrl || !restToken) {
-      this.logger.warn('Upstash Redis credentials not found. Redis caching will be disabled.');
+      this.logger.warn(
+        "Upstash Redis credentials not found. Redis caching will be disabled.",
+      );
       // Create a dummy client that won't be used
       this.client = null as any;
       return;
@@ -22,7 +25,21 @@ export class RedisService {
       token: restToken,
     });
 
-    this.logger.log('Connected to Upstash Redis');
+    this.logger.log("Connected to Upstash Redis");
+  }
+
+  /**
+   * Keep-alive ping — runs every 3 days to prevent Upstash from archiving the free-tier DB
+   */
+  @Cron("0 0 */3 * *") // At midnight every 3 days
+  async keepAlive(): Promise<void> {
+    if (!this.isAvailable()) return;
+    try {
+      const result = await this.client.ping();
+      this.logger.log(`Redis keep-alive ping: ${result}`);
+    } catch (error) {
+      this.logger.error(`Redis keep-alive ping failed: ${error.message}`);
+    }
   }
 
   /**
@@ -91,7 +108,11 @@ export class RedisService {
   /**
    * Set multiple hash fields
    */
-  async hset(key: string, data: Record<string, string>, ttlSeconds?: number): Promise<void> {
+  async hset(
+    key: string,
+    data: Record<string, string>,
+    ttlSeconds?: number,
+  ): Promise<void> {
     if (!this.isAvailable()) return;
     try {
       await this.client.hset(key, data);
@@ -121,23 +142,33 @@ export class RedisService {
   // Auth-specific cache methods
   // ===========================
 
-  private readonly EMAIL_CACHE_PREFIX = 'auth:email:';
-  private readonly PHONE_CACHE_PREFIX = 'auth:phone:';
+  private readonly EMAIL_CACHE_PREFIX = "auth:email:";
+  private readonly PHONE_CACHE_PREFIX = "auth:phone:";
   private readonly CACHE_TTL = 3600; // 1 hour
 
   /**
    * Cache email existence check result
    */
-  async cacheEmailExists(email: string, exists: boolean, userId?: string): Promise<void> {
+  async cacheEmailExists(
+    email: string,
+    exists: boolean,
+    userId?: string,
+  ): Promise<void> {
     const key = `${this.EMAIL_CACHE_PREFIX}${email.toLowerCase()}`;
-    const value = JSON.stringify({ exists, userId: userId || null, cachedAt: Date.now() });
+    const value = JSON.stringify({
+      exists,
+      userId: userId || null,
+      cachedAt: Date.now(),
+    });
     await this.set(key, value, this.CACHE_TTL);
   }
 
   /**
    * Get cached email existence
    */
-  async getCachedEmailExists(email: string): Promise<{ exists: boolean; userId?: string } | null> {
+  async getCachedEmailExists(
+    email: string,
+  ): Promise<{ exists: boolean; userId?: string } | null> {
     const key = `${this.EMAIL_CACHE_PREFIX}${email.toLowerCase()}`;
     const value = await this.get(key);
     if (value) {
@@ -162,16 +193,26 @@ export class RedisService {
   /**
    * Cache phone existence check result
    */
-  async cachePhoneExists(phone: string, exists: boolean, userId?: string): Promise<void> {
+  async cachePhoneExists(
+    phone: string,
+    exists: boolean,
+    userId?: string,
+  ): Promise<void> {
     const key = `${this.PHONE_CACHE_PREFIX}${phone}`;
-    const value = JSON.stringify({ exists, userId: userId || null, cachedAt: Date.now() });
+    const value = JSON.stringify({
+      exists,
+      userId: userId || null,
+      cachedAt: Date.now(),
+    });
     await this.set(key, value, this.CACHE_TTL);
   }
 
   /**
    * Get cached phone existence
    */
-  async getCachedPhoneExists(phone: string): Promise<{ exists: boolean; userId?: string } | null> {
+  async getCachedPhoneExists(
+    phone: string,
+  ): Promise<{ exists: boolean; userId?: string } | null> {
     const key = `${this.PHONE_CACHE_PREFIX}${phone}`;
     const value = await this.get(key);
     if (value) {
@@ -193,4 +234,3 @@ export class RedisService {
     await this.del(key);
   }
 }
-

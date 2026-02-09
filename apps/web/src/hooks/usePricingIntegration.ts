@@ -1,14 +1,14 @@
 /**
  * RFQ Pricing Integration Hooks
- * 
+ *
  * Helper hooks and utilities to integrate the new pricing components
  * into the existing RFQ create page with minimal disruption.
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { GemstoneEntry as NewGemstoneEntry } from '@/components/pricing/GemstoneEditor';
-import { usePreferencesStore } from '@/store/preferences';
-import { getApiUrl } from '@/lib/api';
+import { GemstoneEntry as NewGemstoneEntry } from "@/components/pricing/GemstoneEditor";
+import { getApiUrl } from "@/lib/api";
+import { usePreferencesStore } from "@/store/preferences";
+import { useCallback, useEffect, useState } from "react";
 
 const API_URL = getApiUrl();
 
@@ -30,13 +30,16 @@ export interface LegacyGemstoneEntry {
 /**
  * Convert new GemstoneEntry to legacy format for backwards compatibility
  */
-export function convertToLegacyGemstone(gem: NewGemstoneEntry): LegacyGemstoneEntry {
+export function convertToLegacyGemstone(
+  gem: NewGemstoneEntry,
+): LegacyGemstoneEntry {
   return {
-    presetId: 'custom',
+    presetId: "custom",
     stoneType: gem.stoneType,
     shape: gem.shape,
-    size: gem.sizeUnit === 'CARAT' ? `${gem.sizeValue}ct` : `${gem.sizeValue}mm`,
-    colour: gem.color || '',
+    size:
+      gem.sizeUnit === "CARAT" ? `${gem.sizeValue}ct` : `${gem.sizeValue}mm`,
+    colour: gem.color || "",
     settingStyle: gem.settingStyle,
     count: gem.count,
   };
@@ -45,30 +48,34 @@ export function convertToLegacyGemstone(gem: NewGemstoneEntry): LegacyGemstoneEn
 /**
  * Convert legacy gemstone to new format
  */
-export function convertFromLegacyGemstone(legacy: LegacyGemstoneEntry): NewGemstoneEntry {
+export function convertFromLegacyGemstone(
+  legacy: LegacyGemstoneEntry,
+): NewGemstoneEntry {
   // Parse size string like "5mm" or "0.5ct"
   const sizeMatch = legacy.size.match(/^([\d.]+)(mm|ct)?$/i);
   const sizeValue = sizeMatch ? parseFloat(sizeMatch[1]) : 1;
-  const sizeUnit = legacy.size.toLowerCase().includes('ct') ? 'CARAT' : 'MM';
+  const sizeUnit = legacy.size.toLowerCase().includes("ct") ? "CARAT" : "MM";
 
   return {
     id: `gem-${Date.now()}`,
     stoneType: legacy.stoneType,
     origin: determineOrigin(legacy.stoneType),
-    shape: legacy.shape || 'ROUND',
+    shape: legacy.shape || "ROUND",
     sizeValue: String(sizeValue),
     sizeUnit,
     color: legacy.colour,
     clarity: undefined,
     cut: undefined,
-    settingStyle: legacy.settingStyle || 'PRONG',
+    settingStyle: legacy.settingStyle || "PRONG",
     count: legacy.count || 1,
   };
 }
 
-function determineOrigin(stoneType: string): 'NATURAL' | 'LAB' {
-  const labStones = ['MOISSANITE', 'CUBIC_ZIRCONIA', 'DIAMOND_LAB'];
-  return labStones.some(s => stoneType.toUpperCase().includes(s)) ? 'LAB' : 'NATURAL';
+function determineOrigin(stoneType: string): "NATURAL" | "LAB" {
+  const labStones = ["MOISSANITE", "CUBIC_ZIRCONIA", "DIAMOND_LAB"];
+  return labStones.some((s) => stoneType.toUpperCase().includes(s))
+    ? "LAB"
+    : "NATURAL";
 }
 
 // ═══════════════════════════════════════════
@@ -94,7 +101,11 @@ export interface PriceEstimateResponse {
   };
   displayCurrency: string;
   marketCountry: string;
-  warnings?: { code: string; message: string; severity: 'info' | 'warning' | 'error' }[];
+  warnings?: {
+    code: string;
+    message: string;
+    severity: "info" | "warning" | "error";
+  }[];
 }
 
 export interface SellerPrice {
@@ -129,7 +140,7 @@ export function useSellerComparison(params: {
   const [sellers, setSellers] = useState<SellerPrice[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const country = usePreferencesStore((state) => state.country);
   const currency = usePreferencesStore((state) => state.currency);
 
@@ -143,8 +154,8 @@ export function useSellerComparison(params: {
 
     try {
       const response = await fetch(`${API_URL}/pricing/seller-comparison`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           marketCountry: country,
           displayCurrency: currency,
@@ -153,12 +164,12 @@ export function useSellerComparison(params: {
           totalWeightG: params.weightGrams,
           finishType: params.finishType,
           finishTier: params.finishTier,
-          gemstones: params.gemstones?.map(g => ({
+          gemstones: params.gemstones?.map((g) => ({
             stoneType: g.stoneType,
             origin: g.origin,
-            caratWeight: g.sizeUnit === 'CARAT' ? g.sizeValue : undefined,
-            sizeMm: g.sizeUnit === 'MM' ? g.sizeValue : undefined,
-            qualityGrade: g.clarity || 'STANDARD',
+            caratWeight: g.sizeUnit === "CARAT" ? g.sizeValue : undefined,
+            sizeMm: g.sizeUnit === "MM" ? g.sizeValue : undefined,
+            qualityGrade: g.clarity || "STANDARD",
             settingType: g.settingStyle,
             count: g.count,
           })),
@@ -166,16 +177,18 @@ export function useSellerComparison(params: {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch seller prices');
+        throw new Error("Failed to fetch seller prices");
       }
 
       const data = await response.json();
       setSellers(data.sellers || []);
     } catch (err) {
-      console.error('Seller comparison error:', err);
-      setError('Unable to load seller prices');
+      console.error("Seller comparison error:", err);
+      setError("Unable to load seller prices");
       // Return mock data for demo
-      setSellers(generateMockSellers(country, params.weightGrams, params.metalType));
+      setSellers(
+        generateMockSellers(country, params.weightGrams, params.metalType),
+      );
     } finally {
       setLoading(false);
     }
@@ -194,41 +207,64 @@ export function useSellerComparison(params: {
 function generateMockSellers(
   country: string,
   weightGrams: number,
-  metalType: string
+  metalType: string,
 ): SellerPrice[] {
   const basePrice = getBasePrice(metalType) * weightGrams;
-  const countryShops: Record<string, { name: string; city: string; rating: number; mcPct: number }[]> = {
+  const countryShops: Record<
+    string,
+    { name: string; city: string; rating: number; mcPct: number }[]
+  > = {
     NP: [
-      { name: 'Ramesh Gold House', city: 'Kathmandu', rating: 4.8, mcPct: 12 },
-      { name: 'Suna Jewellers', city: 'Kathmandu', rating: 4.6, mcPct: 10 },
-      { name: 'Fewa Gold House', city: 'Pokhara', rating: 4.5, mcPct: 11 },
+      { name: "Ramesh Gold House", city: "Kathmandu", rating: 4.8, mcPct: 12 },
+      { name: "Suna Jewellers", city: "Kathmandu", rating: 4.6, mcPct: 10 },
+      { name: "Fewa Gold House", city: "Pokhara", rating: 4.5, mcPct: 11 },
     ],
     IN: [
-      { name: 'Mumbai Gold & Diamonds', city: 'Mumbai', rating: 4.7, mcPct: 8 },
-      { name: 'Mittal Jewellers Delhi', city: 'New Delhi', rating: 4.5, mcPct: 10 },
+      { name: "Mumbai Gold & Diamonds", city: "Mumbai", rating: 4.7, mcPct: 8 },
+      {
+        name: "Mittal Jewellers Delhi",
+        city: "New Delhi",
+        rating: 4.5,
+        mcPct: 10,
+      },
     ],
     AE: [
-      { name: 'Dubai Gold Souk Jewels', city: 'Dubai', rating: 4.9, mcPct: 5 },
+      { name: "Dubai Gold Souk Jewels", city: "Dubai", rating: 4.9, mcPct: 5 },
     ],
     UK: [
-      { name: 'Hatton Garden Jewellers', city: 'London', rating: 4.6, mcPct: 15 },
+      {
+        name: "Hatton Garden Jewellers",
+        city: "London",
+        rating: 4.6,
+        mcPct: 15,
+      },
     ],
     US: [
-      { name: 'Diamond District NYC', city: 'New York', rating: 4.7, mcPct: 12 },
+      {
+        name: "Diamond District NYC",
+        city: "New York",
+        rating: 4.7,
+        mcPct: 12,
+      },
     ],
     EU: [
-      { name: 'Berlin Schmuck Atelier', city: 'Berlin', rating: 4.5, mcPct: 18 },
+      {
+        name: "Berlin Schmuck Atelier",
+        city: "Berlin",
+        rating: 4.5,
+        mcPct: 18,
+      },
     ],
   };
 
-  const shops = countryShops[country] || countryShops['NP'];
-  
+  const shops = countryShops[country] || countryShops["NP"];
+
   return shops.map((shop, index) => {
     const makingCharge = basePrice * (shop.mcPct / 100);
     const subtotal = basePrice + makingCharge;
     const taxRate = getTaxRate(country);
     const tax = subtotal * taxRate;
-    
+
     return {
       shopId: `shop-${index + 1}`,
       shopName: shop.name,
@@ -268,11 +304,11 @@ function getTaxRate(country: string): number {
     NP: 0.13,
     IN: 0.03,
     AE: 0.05,
-    UK: 0.20,
+    UK: 0.2,
     EU: 0.19,
     US: 0.08,
   };
-  return rates[country] || 0.10;
+  return rates[country] || 0.1;
 }
 
 // ═══════════════════════════════════════════
@@ -293,7 +329,7 @@ export function useRealTimePrice(params: RealTimePriceParams) {
   const [estimate, setEstimate] = useState<PriceEstimateResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const country = usePreferencesStore((state) => state.country);
   const currency = usePreferencesStore((state) => state.currency);
 
@@ -307,23 +343,23 @@ export function useRealTimePrice(params: RealTimePriceParams) {
 
     try {
       const response = await fetch(`${API_URL}/pricing/calculate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           marketCountry: country,
           displayCurrency: currency,
           buildMethod: params.buildMethod,
           primaryMetal: params.metalType,
           totalWeightG: params.weightGrams,
-          makingChargePct: params.makingChargePercent || 12,
+          makingChargePct: params.makingChargePercent || 10,
           finishType: params.finishType,
           finishTier: params.finishTier,
-          gemstones: params.gemstones?.map(g => ({
+          gemstones: params.gemstones?.map((g) => ({
             stoneType: g.stoneType,
             origin: g.origin,
-            caratWeight: g.sizeUnit === 'CARAT' ? g.sizeValue : undefined,
-            sizeMm: g.sizeUnit === 'MM' ? g.sizeValue : undefined,
-            qualityGrade: g.clarity || 'STANDARD',
+            caratWeight: g.sizeUnit === "CARAT" ? g.sizeValue : undefined,
+            sizeMm: g.sizeUnit === "MM" ? g.sizeValue : undefined,
+            qualityGrade: g.clarity || "STANDARD",
             settingType: g.settingStyle,
             count: g.count,
           })),
@@ -331,7 +367,7 @@ export function useRealTimePrice(params: RealTimePriceParams) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to calculate price');
+        throw new Error("Failed to calculate price");
       }
 
       const data = await response.json();
@@ -339,8 +375,12 @@ export function useRealTimePrice(params: RealTimePriceParams) {
         metalCost: data.subtotalUsd * (data.explanation?.fxRate?.rate || 1),
         makingCharge: data.makingCharge,
         platingCost: 0,
-        gemstoneCost: data.lineItems?.find((l: any) => l.category === 'GEMSTONE')?.amountLocal || 0,
-        finishCost: data.lineItems?.find((l: any) => l.category === 'FINISH')?.amountLocal || 0,
+        gemstoneCost:
+          data.lineItems?.find((l: any) => l.category === "GEMSTONE")
+            ?.amountLocal || 0,
+        finishCost:
+          data.lineItems?.find((l: any) => l.category === "FINISH")
+            ?.amountLocal || 0,
         subtotal: data.subtotal,
         tax: data.taxes,
         taxBreakdown: data.explanation?.taxCalculation?.breakdown,
@@ -350,15 +390,15 @@ export function useRealTimePrice(params: RealTimePriceParams) {
           metalType: params.metalType,
           weightGrams: params.weightGrams,
           ratePerGram: data.subtotal / params.weightGrams,
-          makingChargePercent: params.makingChargePercent || 12,
+          makingChargePercent: params.makingChargePercent || 10,
         },
         displayCurrency: currency,
         marketCountry: country,
         warnings: data.warnings,
       });
     } catch (err) {
-      console.error('Price calculation error:', err);
-      setError('Unable to calculate price');
+      console.error("Price calculation error:", err);
+      setError("Unable to calculate price");
       // Return local estimate
       setEstimate(calculateLocalEstimate(params, country, currency));
     } finally {
@@ -381,27 +421,37 @@ export function useRealTimePrice(params: RealTimePriceParams) {
 function calculateLocalEstimate(
   params: RealTimePriceParams,
   country: string,
-  currency: string
+  currency: string,
 ): PriceEstimateResponse {
   const basePrice = getBasePrice(params.metalType) * params.weightGrams;
-  const makingChargePercent = params.makingChargePercent || 12;
+  const makingChargePercent = params.makingChargePercent || 10;
   const makingCharge = basePrice * (makingChargePercent / 100);
-  
+
   // Estimate gemstone costs
   let gemstoneCost = 0;
   if (params.gemstones) {
     gemstoneCost = params.gemstones.reduce((sum, gem) => {
-      const pricePerUnit = getGemstonePrice(gem.stoneType, gem.origin || 'NATURAL');
-      const sizeVal = typeof gem.sizeValue === 'string' ? parseFloat(gem.sizeValue) || 0 : gem.sizeValue;
-      const quantity = gem.sizeUnit === 'CARAT' ? sizeVal : sizeVal / 5; // rough conversion
-      return sum + (pricePerUnit * quantity * gem.count);
+      const pricePerUnit = getGemstonePrice(
+        gem.stoneType,
+        gem.origin || "NATURAL",
+      );
+      const sizeVal =
+        typeof gem.sizeValue === "string"
+          ? parseFloat(gem.sizeValue) || 0
+          : gem.sizeValue;
+      const quantity = gem.sizeUnit === "CARAT" ? sizeVal : sizeVal / 5; // rough conversion
+      return sum + pricePerUnit * quantity * gem.count;
     }, 0);
   }
 
   // Estimate finish cost
   let finishCost = 0;
   if (params.finishType) {
-    finishCost = getFinishPrice(params.finishType, params.finishTier, params.weightGrams);
+    finishCost = getFinishPrice(
+      params.finishType,
+      params.finishTier,
+      params.weightGrams,
+    );
   }
 
   const subtotal = basePrice + makingCharge + gemstoneCost + finishCost;
@@ -418,7 +468,9 @@ function calculateLocalEstimate(
     finishCost,
     subtotal,
     tax,
-    taxBreakdown: [{ name: country === 'IN' ? 'GST' : 'VAT', rate: taxRate, amount: tax }],
+    taxBreakdown: [
+      { name: country === "IN" ? "GST" : "VAT", rate: taxRate, amount: tax },
+    ],
     platformFee,
     total,
     breakdown: {
@@ -432,7 +484,10 @@ function calculateLocalEstimate(
   };
 }
 
-function getGemstonePrice(stoneType: string, origin: 'NATURAL' | 'LAB'): number {
+function getGemstonePrice(
+  stoneType: string,
+  origin: "NATURAL" | "LAB",
+): number {
   const prices: Record<string, Record<string, number>> = {
     DIAMOND: { NATURAL: 150000, LAB: 30000 },
     DIAMOND_NATURAL: { NATURAL: 150000, LAB: 150000 },
@@ -450,7 +505,11 @@ function getGemstonePrice(stoneType: string, origin: 'NATURAL' | 'LAB'): number 
   return prices[stoneType.toUpperCase()]?.[origin] || 5000;
 }
 
-function getFinishPrice(finishType: string, tier?: string, weightGrams?: number): number {
+function getFinishPrice(
+  finishType: string,
+  tier?: string,
+  weightGrams?: number,
+): number {
   const basePrices: Record<string, Record<string, number>> = {
     GOLD_PLATING: { LIGHT: 500, STANDARD: 1000, PREMIUM: 2000 },
     ROSE_GOLD_PLATING: { LIGHT: 500, STANDARD: 1000, PREMIUM: 2000 },
@@ -462,11 +521,14 @@ function getFinishPrice(finishType: string, tier?: string, weightGrams?: number)
     HAMMERED: { STANDARD: 500 },
     OXIDIZED: { STANDARD: 400 },
   };
-  const base = basePrices[finishType.toUpperCase()]?.[tier?.toUpperCase() || 'STANDARD'] || 500;
+  const base =
+    basePrices[finishType.toUpperCase()]?.[tier?.toUpperCase() || "STANDARD"] ||
+    500;
   // Add per-gram cost for platings
-  if (finishType.includes('PLATING') && weightGrams) {
-    const perGramRate = tier === 'PREMIUM' ? 100 : tier === 'STANDARD' ? 50 : 25;
-    return base + (perGramRate * weightGrams);
+  if (finishType.includes("PLATING") && weightGrams) {
+    const perGramRate =
+      tier === "PREMIUM" ? 100 : tier === "STANDARD" ? 50 : 25;
+    return base + perGramRate * weightGrams;
   }
   return base;
 }
@@ -475,9 +537,4 @@ function getFinishPrice(finishType: string, tier?: string, weightGrams?: number)
 // EXPORTS
 // ═══════════════════════════════════════════
 
-export {
-  getBasePrice,
-  getTaxRate,
-  getGemstonePrice,
-  getFinishPrice,
-};
+export { getBasePrice, getFinishPrice, getGemstonePrice, getTaxRate };
