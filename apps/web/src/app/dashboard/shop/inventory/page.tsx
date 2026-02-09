@@ -154,7 +154,9 @@ export default function ShopInventoryPage() {
     useState<CapabilitiesData | null>(null);
   const [marketRates, setMarketRates] = useState<MarketRate[]>([]);
   const [gemstonePricing, setGemstonePricing] = useState<any[]>([]);
-  const [gemstoneOverrides, setGemstoneOverrides] = useState<Record<string, number>>({});
+  const [gemstoneOverrides, setGemstoneOverrides] = useState<
+    Record<string, number>
+  >({});
   const [isSavingGemstones, setIsSavingGemstones] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshingRates, setIsRefreshingRates] = useState(false);
@@ -169,15 +171,16 @@ export default function ShopInventoryPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [materialsRes, capabilitiesRes, ratesRes, gemPricingRes] = await Promise.all([
-        shopsApi.getMaterials(),
-        shopsApi.getCapabilities(),
-        materialsApi.getMarketRates({
-          currency: shopCurrency,
-          country: shopCountry,
-        }),
-        shopsApi.getGemstonePricing().catch(() => ({ data: { rates: [] } })),
-      ]);
+      const [materialsRes, capabilitiesRes, ratesRes, gemPricingRes] =
+        await Promise.all([
+          shopsApi.getMaterials(),
+          shopsApi.getCapabilities(),
+          materialsApi.getMarketRates({
+            currency: shopCurrency,
+            country: shopCountry,
+          }),
+          shopsApi.getGemstonePricing().catch(() => ({ data: { rates: [] } })),
+        ]);
       // Load gemstone pricing
       const gemRates = gemPricingRes.data?.rates || [];
       setGemstonePricing(gemRates);
@@ -202,8 +205,10 @@ export default function ShopInventoryPage() {
         }
         // Split code like "GOLD_24K" into metal="GOLD" and purity="24K"
         const lastUnderscore = code.lastIndexOf("_");
-        const metal = lastUnderscore > 0 ? code.substring(0, lastUnderscore) : code;
-        const purity = lastUnderscore > 0 ? code.substring(lastUnderscore + 1) : "";
+        const metal =
+          lastUnderscore > 0 ? code.substring(0, lastUnderscore) : code;
+        const purity =
+          lastUnderscore > 0 ? code.substring(lastUnderscore + 1) : "";
         return {
           metal,
           purity,
@@ -311,7 +316,9 @@ export default function ShopInventoryPage() {
   const getMarketRate = (metal: string, purity: string): number | null => {
     const materialCode = `${metal}_${purity}`;
     const rateKey = normalizeRateKey(materialCode);
-    const rate = marketRates.find((r) => r.metalCode === rateKey || r.metalCode === materialCode);
+    const rate = marketRates.find(
+      (r) => r.metalCode === rateKey || r.metalCode === materialCode,
+    );
     return rate?.ratePerGram ?? null;
   };
 
@@ -397,33 +404,37 @@ export default function ShopInventoryPage() {
     setIsSavingGemstones(true);
     try {
       // Convert overrides map to rates array
-      const rates = Object.entries(gemstoneOverrides).map(([key, price]) => {
-        const [stoneType, origin, sizeCategory, qualityTier] = key.split("_").reduce(
-          (acc: string[], part, i, arr) => {
-            // Re-parse the key: stoneType_origin_sizeCategory_qualityTier
-            // But sizeCategory contains hyphens like "0.1-0.25ct"
-            return acc;
-          },
-          [],
-        );
-        // Parse correctly using the stored pricing data
-        const matchingRate = gemstonePricing.find((r: any) => {
-          const rKey = `${r.stoneType}_${r.origin}_${r.sizeCategory}_${r.qualityTier}`;
-          return rKey === key;
-        });
-        return matchingRate
-          ? {
-              stoneType: matchingRate.stoneType,
-              origin: matchingRate.origin,
-              sizeCategory: matchingRate.sizeCategory,
-              qualityTier: matchingRate.qualityTier,
-              pricePerStone: price,
-            }
-          : null;
-      }).filter(Boolean);
+      const rates = Object.entries(gemstoneOverrides)
+        .map(([key, price]) => {
+          const [stoneType, origin, sizeCategory, qualityTier] = key
+            .split("_")
+            .reduce((acc: string[], part, i, arr) => {
+              // Re-parse the key: stoneType_origin_sizeCategory_qualityTier
+              // But sizeCategory contains hyphens like "0.1-0.25ct"
+              return acc;
+            }, []);
+          // Parse correctly using the stored pricing data
+          const matchingRate = gemstonePricing.find((r: any) => {
+            const rKey = `${r.stoneType}_${r.origin}_${r.sizeCategory}_${r.qualityTier}`;
+            return rKey === key;
+          });
+          return matchingRate
+            ? {
+                stoneType: matchingRate.stoneType,
+                origin: matchingRate.origin,
+                sizeCategory: matchingRate.sizeCategory,
+                qualityTier: matchingRate.qualityTier,
+                pricePerStone: price,
+              }
+            : null;
+        })
+        .filter(Boolean);
 
       if (rates.length === 0) {
-        toast({ title: "No Changes", description: "No pricing overrides to save" });
+        toast({
+          title: "No Changes",
+          description: "No pricing overrides to save",
+        });
         return;
       }
 
@@ -436,7 +447,8 @@ export default function ShopInventoryPage() {
       toast({
         variant: "destructive",
         title: "Save Failed",
-        description: error.response?.data?.message || "Could not save gemstone pricing",
+        description:
+          error.response?.data?.message || "Could not save gemstone pricing",
       });
     } finally {
       setIsSavingGemstones(false);
@@ -1171,7 +1183,8 @@ export default function ShopInventoryPage() {
                       Gemstone Pricing
                     </CardTitle>
                     <CardDescription>
-                      Set your own prices or use system defaults. Leave blank to use the default price.
+                      Set your own prices or use system defaults. Leave blank to
+                      use the default price.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
@@ -1185,81 +1198,123 @@ export default function ShopInventoryPage() {
                         stoneGroups.get(key)!.push(r);
                       });
 
-                      return Array.from(stoneGroups.entries()).map(([groupKey, stoneRates]) => {
-                        const [stoneType, origin] = groupKey.split("|");
-                        const displayName = origin === "LAB_GROWN"
-                          ? `${stoneType.replace(/_/g, " ")} (Lab-Grown)`
-                          : stoneType.replace(/_/g, " ");
-                        const sizeCategories = Array.from(new Set(stoneRates.map((r: any) => r.sizeCategory)));
+                      return Array.from(stoneGroups.entries()).map(
+                        ([groupKey, stoneRates]) => {
+                          const [stoneType, origin] = groupKey.split("|");
+                          const displayName =
+                            origin === "LAB_GROWN"
+                              ? `${stoneType.replace(/_/g, " ")} (Lab-Grown)`
+                              : stoneType.replace(/_/g, " ");
+                          const sizeCategories = Array.from(
+                            new Set(stoneRates.map((r: any) => r.sizeCategory)),
+                          );
 
-                        return (
-                          <div key={groupKey} className="space-y-3">
-                            <h3 className="font-medium text-sm capitalize">
-                              {displayName.toLowerCase().replace(/_/g, " ")}
-                            </h3>
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-sm">
-                                <thead>
-                                  <tr className="border-b">
-                                    <th className="text-left p-2">Size</th>
-                                    <th className="text-right p-2">Quality</th>
-                                    <th className="text-right p-2">System Default</th>
-                                    <th className="text-right p-2">Your Price ({currencySymbol})</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {sizeCategories.map((size) => {
-                                    const qualityRates = stoneRates.filter((r: any) => r.sizeCategory === size);
-                                    return qualityRates.map((rate: any, idx: number) => {
-                                      const overrideKey = `${rate.stoneType}_${rate.origin}_${rate.sizeCategory}_${rate.qualityTier}`;
-                                      return (
-                                        <tr key={overrideKey} className="border-b hover:bg-muted/50">
-                                          {idx === 0 && (
-                                            <td className="p-2 font-medium" rowSpan={qualityRates.length}>
-                                              {size}
-                                            </td>
-                                          )}
-                                          <td className="p-2 text-right">
-                                            <Badge variant="outline" className="text-xs">
-                                              {rate.qualityTier}
-                                            </Badge>
-                                          </td>
-                                          <td className="p-2 text-right text-muted-foreground">
-                                            {currencySymbol}{rate.systemDefault.toLocaleString()}
-                                          </td>
-                                          <td className="p-2 text-right">
-                                            <Input
-                                              type="number"
-                                              className="w-28 ml-auto text-right h-8"
-                                              placeholder={rate.systemDefault.toLocaleString()}
-                                              value={gemstoneOverrides[overrideKey] ?? ""}
-                                              onChange={(e) => {
-                                                const val = e.target.value;
-                                                setGemstoneOverrides((prev) => {
-                                                  if (val === "") {
-                                                    const next = { ...prev };
-                                                    delete next[overrideKey];
-                                                    return next;
-                                                  }
-                                                  return { ...prev, [overrideKey]: parseFloat(val) };
-                                                });
-                                              }}
-                                            />
-                                          </td>
-                                        </tr>
+                          return (
+                            <div key={groupKey} className="space-y-3">
+                              <h3 className="font-medium text-sm capitalize">
+                                {displayName.toLowerCase().replace(/_/g, " ")}
+                              </h3>
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                  <thead>
+                                    <tr className="border-b">
+                                      <th className="text-left p-2">Size</th>
+                                      <th className="text-right p-2">
+                                        Quality
+                                      </th>
+                                      <th className="text-right p-2">
+                                        System Default
+                                      </th>
+                                      <th className="text-right p-2">
+                                        Your Price ({currencySymbol})
+                                      </th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {sizeCategories.map((size) => {
+                                      const qualityRates = stoneRates.filter(
+                                        (r: any) => r.sizeCategory === size,
                                       );
-                                    });
-                                  })}
-                                </tbody>
-                              </table>
+                                      return qualityRates.map(
+                                        (rate: any, idx: number) => {
+                                          const overrideKey = `${rate.stoneType}_${rate.origin}_${rate.sizeCategory}_${rate.qualityTier}`;
+                                          return (
+                                            <tr
+                                              key={overrideKey}
+                                              className="border-b hover:bg-muted/50"
+                                            >
+                                              {idx === 0 && (
+                                                <td
+                                                  className="p-2 font-medium"
+                                                  rowSpan={qualityRates.length}
+                                                >
+                                                  {size}
+                                                </td>
+                                              )}
+                                              <td className="p-2 text-right">
+                                                <Badge
+                                                  variant="outline"
+                                                  className="text-xs"
+                                                >
+                                                  {rate.qualityTier}
+                                                </Badge>
+                                              </td>
+                                              <td className="p-2 text-right text-muted-foreground">
+                                                {currencySymbol}
+                                                {rate.systemDefault.toLocaleString()}
+                                              </td>
+                                              <td className="p-2 text-right">
+                                                <Input
+                                                  type="number"
+                                                  className="w-28 ml-auto text-right h-8"
+                                                  placeholder={rate.systemDefault.toLocaleString()}
+                                                  value={
+                                                    gemstoneOverrides[
+                                                      overrideKey
+                                                    ] ?? ""
+                                                  }
+                                                  onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setGemstoneOverrides(
+                                                      (prev) => {
+                                                        if (val === "") {
+                                                          const next = {
+                                                            ...prev,
+                                                          };
+                                                          delete next[
+                                                            overrideKey
+                                                          ];
+                                                          return next;
+                                                        }
+                                                        return {
+                                                          ...prev,
+                                                          [overrideKey]:
+                                                            parseFloat(val),
+                                                        };
+                                                      },
+                                                    );
+                                                  }}
+                                                />
+                                              </td>
+                                            </tr>
+                                          );
+                                        },
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
                             </div>
-                          </div>
-                        );
-                      });
+                          );
+                        },
+                      );
                     })()}
 
                     <div className="flex justify-end pt-4">
-                      <Button onClick={saveGemstonePricing} disabled={isSavingGemstones}>
+                      <Button
+                        onClick={saveGemstonePricing}
+                        disabled={isSavingGemstones}
+                      >
                         {isSavingGemstones ? (
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         ) : (

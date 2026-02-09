@@ -1080,16 +1080,39 @@ export class ShopsService {
     }
 
     // System default gemstone prices (same structure as DEFAULT_GEMSTONE_PRICES_NPR)
-    const defaultPrices: Record<string, Record<string, Record<string, number>>> = {
+    const defaultPrices: Record<
+      string,
+      Record<string, Record<string, number>>
+    > = {
       DIAMOND: {
         "0.1-0.25ct": { LOW: 8000, MEDIUM: 15000, HIGH: 25000, PREMIUM: 30000 },
-        "0.25-0.5ct": { LOW: 25000, MEDIUM: 50000, HIGH: 80000, PREMIUM: 100000 },
-        "0.5-1ct": { LOW: 80000, MEDIUM: 150000, HIGH: 250000, PREMIUM: 350000 },
-        "1-2ct": { LOW: 200000, MEDIUM: 400000, HIGH: 700000, PREMIUM: 1000000 },
+        "0.25-0.5ct": {
+          LOW: 25000,
+          MEDIUM: 50000,
+          HIGH: 80000,
+          PREMIUM: 100000,
+        },
+        "0.5-1ct": {
+          LOW: 80000,
+          MEDIUM: 150000,
+          HIGH: 250000,
+          PREMIUM: 350000,
+        },
+        "1-2ct": {
+          LOW: 200000,
+          MEDIUM: 400000,
+          HIGH: 700000,
+          PREMIUM: 1000000,
+        },
       },
       DIAMOND_LAB: {
         "0.1-0.25ct": { LOW: 5200, MEDIUM: 9750, HIGH: 16250, PREMIUM: 19500 },
-        "0.25-0.5ct": { LOW: 16250, MEDIUM: 32500, HIGH: 52000, PREMIUM: 65000 },
+        "0.25-0.5ct": {
+          LOW: 16250,
+          MEDIUM: 32500,
+          HIGH: 52000,
+          PREMIUM: 65000,
+        },
         "0.5-1ct": { LOW: 52000, MEDIUM: 97500, HIGH: 162500, PREMIUM: 227500 },
         "1-2ct": { LOW: 130000, MEDIUM: 260000, HIGH: 455000, PREMIUM: 650000 },
       },
@@ -1126,7 +1149,8 @@ export class ShopsService {
       for (const [sizeCategory, qualities] of Object.entries(sizes)) {
         for (const [qualityTier, defaultPrice] of Object.entries(qualities)) {
           const origin = stoneType === "DIAMOND_LAB" ? "LAB_GROWN" : "NATURAL";
-          const normalizedStone = stoneType === "DIAMOND_LAB" ? "DIAMOND" : stoneType;
+          const normalizedStone =
+            stoneType === "DIAMOND_LAB" ? "DIAMOND" : stoneType;
           const shopRate = shop.gemstoneRates.find(
             (r) =>
               r.stoneType === normalizedStone &&

@@ -139,10 +139,10 @@ const JEWELLERY_TYPE_IMAGES: Record<string, string> = {
   CHAIN: "https://images.orivraa.com/product/1769445050194-b6e62x3n.png",
   ANKLET: "https://images.orivraa.com/product/1769445041034-oa8hfslv.png",
   BROOCH: "https://images.orivraa.com/product/1769445047396-q4pss35p.png",
-  TIE_PIN: "https://images.orivraa.com/product/1769445057895-wcn56633.png",
-  CUFFLINKS: "https://images.orivraa.com/product/1769445057895-wcn56633.png",
-  NOSE_PIN: "https://images.orivraa.com/product/1769445057895-wcn56633.png",
-  MAANG_TIKKA: "https://images.orivraa.com/product/1769445057895-wcn56633.png",
+  TIE_PIN: "https://images.orivraa.com/product/1770654788358-98tpi91v.png",
+  CUFFLINKS: "https://images.orivraa.com/product/1770654794011-mbmfttye.png",
+  NOSE_PIN: "https://images.orivraa.com/product/1770654801812-rx6d93j5.png",
+  MAANG_TIKKA: "https://images.orivraa.com/product/1770654756626-gmaz323x.png",
   OTHER: "https://images.orivraa.com/product/1769445057895-wcn56633.png",
 };
 
