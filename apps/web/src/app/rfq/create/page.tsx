@@ -124,6 +124,7 @@ const JEWELLERY_TYPES = [
   { value: "TIE_PIN", label: "Tie Pin" },
   { value: "CUFFLINKS", label: "Cufflinks" },
   { value: "NOSE_PIN", label: "Nose Pin" },
+  { value: "MANGALSUTRA", label: "Mangalsutra" },
   { value: "MAANG_TIKKA", label: "Maang Tikka" },
   { value: "OTHER", label: "Other" },
 ];
@@ -142,6 +143,7 @@ const JEWELLERY_TYPE_IMAGES: Record<string, string> = {
   TIE_PIN: "https://images.orivraa.com/product/1770654788358-98tpi91v.png",
   CUFFLINKS: "https://images.orivraa.com/product/1770654794011-mbmfttye.png",
   NOSE_PIN: "https://images.orivraa.com/product/1770654801812-rx6d93j5.png",
+  MANGALSUTRA: "https://images.orivraa.com/product/1770658985031-60d4dogq.png",
   MAANG_TIKKA: "https://images.orivraa.com/product/1770654756626-gmaz323x.png",
   OTHER: "https://images.orivraa.com/product/1769445057895-wcn56633.png",
 };
@@ -257,6 +259,10 @@ const WEIGHT_GUIDANCE: Record<string, { range: string; note: string }> = {
   NOSE_PIN: {
     range: "0.3-2g",
     note: "Studs 0.3-0.5g, small hoops/rings 0.5-1g, decorative nose pins up to 2g.",
+  },
+  MANGALSUTRA: {
+    range: "10-30g",
+    note: "Short mangalsutra 10-15g, medium length 15-20g, traditional long designs 25-40g.",
   },
   MAANG_TIKKA: {
     range: "3-10g",
@@ -2371,32 +2377,18 @@ export default function CreateRfqPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {JEWELLERY_TYPES.map((type) => (
-                          <Tooltip key={type.value}>
-                            <TooltipTrigger asChild>
-                              <div>
-                                <SelectItem value={type.value}>
-                                  {type.label}
-                                </SelectItem>
-                              </div>
-                            </TooltipTrigger>
-                            {JEWELLERY_TYPE_IMAGES[type.value] && (
-                              <TooltipContent
-                                side="right"
-                                className="p-0 overflow-hidden"
-                              >
-                                <div className="w-40">
-                                  <img
-                                    src={JEWELLERY_TYPE_IMAGES[type.value]}
-                                    alt={type.label}
-                                    className="w-full h-32 object-cover"
-                                  />
-                                  <p className="text-xs p-2 text-center font-medium bg-white">
-                                    {type.label}
-                                  </p>
-                                </div>
-                              </TooltipContent>
-                            )}
-                          </Tooltip>
+                          <SelectItem key={type.value} value={type.value}>
+                            <div className="flex items-center gap-2">
+                              {JEWELLERY_TYPE_IMAGES[type.value] && (
+                                <img
+                                  src={JEWELLERY_TYPE_IMAGES[type.value]}
+                                  alt={type.label}
+                                  className="w-6 h-6 rounded object-cover"
+                                />
+                              )}
+                              {type.label}
+                            </div>
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
