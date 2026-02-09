@@ -96,6 +96,13 @@ export const JEWELLERY_TYPE_DATA: Record<string, JewelleryTypeInfo> = {
     description:
       "Small stud or ring worn on the nose. Very lightweight, 0.3–2g.",
   },
+  MANGALSUTRA: {
+    value: "MANGALSUTRA",
+    label: "Mangalsutra",
+    image: `${CDN}/1770658985031-60d4dogq.png`,
+    description:
+      "Sacred necklace with black beads and gold pendant, symbolising marriage. 10–30g.",
+  },
   MAANG_TIKKA: {
     value: "MAANG_TIKKA",
     label: "Maang Tikka",

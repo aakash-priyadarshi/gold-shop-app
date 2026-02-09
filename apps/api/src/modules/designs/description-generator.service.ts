@@ -384,6 +384,15 @@ Requirements:
       case "ANKLET":
         description = `${opening} anklet designed in ${metalDesc}${gemstoneClause}${finishDesc}. A delicate touch of elegance.`;
         break;
+      case "BROOCH":
+        description = `${opening} brooch artfully crafted in ${metalDesc}${gemstoneClause}${finishDesc}. A distinguished statement piece.`;
+        break;
+      case "TIE_PIN":
+        description = `${opening} tie pin crafted in ${metalDesc}${gemstoneClause}${finishDesc}. A refined accent of sophistication.`;
+        break;
+      case "CUFFLINKS":
+        description = `${opening} cufflinks designed in ${metalDesc}${gemstoneClause}${finishDesc}. The epitome of polished elegance.`;
+        break;
       case "NOSE_PIN":
         description = `${opening} nose pin delicately crafted in ${metalDesc}${gemstoneClause}${finishDesc}. ${closing}`;
         break;

@@ -61,10 +61,10 @@ export class CreateShopQuoteDto {
   customer: WalkInCustomerDto;
 
   @ApiProperty({
-    enum: ['RING', 'NECKLACE', 'BRACELET', 'BANGLE', 'EARRING', 'PENDANT', 'CHAIN', 'ANKLET', 'NOSE_PIN', 'MANGALSUTRA', 'MAANG_TIKKA', 'OTHER'],
+    enum: ['RING', 'NECKLACE', 'BRACELET', 'BANGLE', 'EARRING', 'PENDANT', 'CHAIN', 'ANKLET', 'BROOCH', 'TIE_PIN', 'CUFFLINKS', 'NOSE_PIN', 'MANGALSUTRA', 'MAANG_TIKKA', 'OTHER'],
     example: 'RING',
   })
-  @IsEnum(['RING', 'NECKLACE', 'BRACELET', 'BANGLE', 'EARRING', 'PENDANT', 'CHAIN', 'ANKLET', 'NOSE_PIN', 'MANGALSUTRA', 'MAANG_TIKKA', 'OTHER'])
+  @IsEnum(['RING', 'NECKLACE', 'BRACELET', 'BANGLE', 'EARRING', 'PENDANT', 'CHAIN', 'ANKLET', 'BROOCH', 'TIE_PIN', 'CUFFLINKS', 'NOSE_PIN', 'MANGALSUTRA', 'MAANG_TIKKA', 'OTHER'])
   jewelleryType: string;
 
   @ApiProperty({
