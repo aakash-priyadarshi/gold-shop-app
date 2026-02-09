@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
@@ -24,13 +25,18 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { authApi, shopsApi } from "@/lib/api";
+import { authApi, sellerPerformanceApi, shopsApi } from "@/lib/api";
 import {
+  AlertTriangle,
+  ArrowUpRight,
+  Award,
   Building2,
   CheckCircle,
   CreditCard,
+  Crown,
   Globe,
   Info,
   Loader2,
@@ -39,8 +45,11 @@ import {
   Phone,
   Save,
   Settings,
+  Shield,
   Loader2 as SpinnerIcon,
+  Star,
   Store,
+  TrendingUp,
   Wallet,
   XCircle,
 } from "lucide-react";
@@ -108,11 +117,87 @@ const currencies = [
   { code: "SGD", name: "Singapore Dollar (S$)", symbol: "S$" },
 ];
 
+interface TierDashboard {
+  performance: any;
+  shop: {
+    sellerTier: string;
+    tierUnlockedAt: string | null;
+    makingChargeCap: number | null;
+    makingChargePercent: number | null;
+    isVerified: boolean;
+    eliteFastTracked: boolean;
+  };
+  badges: any[];
+  nextTier: string | null;
+  tierProgress: Record<
+    string,
+    { current: number | boolean; required: number | boolean; met: boolean }
+  >;
+  overallProgress: { met: number; total: number; percentage: number };
+}
+
+const TIER_META: Record<
+  string,
+  {
+    label: string;
+    icon: any;
+    color: string;
+    bg: string;
+    border: string;
+    gradient: string;
+  }
+> = {
+  STANDARD: {
+    label: "Standard",
+    icon: Shield,
+    color: "text-gray-600",
+    bg: "bg-gray-100",
+    border: "border-gray-300",
+    gradient: "from-gray-200 to-gray-100",
+  },
+  SILVER: {
+    label: "Silver",
+    icon: Star,
+    color: "text-slate-700",
+    bg: "bg-slate-100",
+    border: "border-slate-400",
+    gradient: "from-slate-300 to-slate-100",
+  },
+  GOLD: {
+    label: "Gold",
+    icon: Award,
+    color: "text-yellow-700",
+    bg: "bg-yellow-50",
+    border: "border-yellow-400",
+    gradient: "from-yellow-300 to-yellow-50",
+  },
+  ELITE: {
+    label: "Elite",
+    icon: Crown,
+    color: "text-purple-700",
+    bg: "bg-purple-50",
+    border: "border-purple-400",
+    gradient: "from-purple-300 to-purple-50",
+  },
+};
+
+const CRITERIA_LABELS: Record<string, { label: string; unit: string; lowerIsBetter?: boolean }> = {
+  orders: { label: "Completed Orders", unit: "" },
+  cancellationRate: { label: "Cancellation Rate", unit: "%", lowerIsBetter: true },
+  rating: { label: "Average Rating (60d)", unit: "★" },
+  tenure: { label: "Shop Tenure", unit: " months" },
+  positiveFeedback: { label: "Positive Feedback", unit: "%" },
+  onTimeDispatch: { label: "On-Time Dispatch", unit: "%" },
+  verified: { label: "Shop Verified", unit: "" },
+};
+
 export default function ShopSettingsPage() {
   const { user } = useAuth();
   const [shopData, setShopData] = useState<ShopData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [tierDashboard, setTierDashboard] = useState<TierDashboard | null>(null);
+  const [tierLoading, setTierLoading] = useState(false);
 
   // Phone availability check state
   const [phoneCheckState, setPhoneCheckState] = useState<{
@@ -175,8 +260,22 @@ export default function ShopSettingsPage() {
   useEffect(() => {
     if (user?.shop?.id) {
       loadSettings();
+      loadTierDashboard();
     }
   }, [user?.shop?.id]);
+
+  const loadTierDashboard = async () => {
+    setTierLoading(true);
+    try {
+      const response = await sellerPerformanceApi.getMyDashboard();
+      setTierDashboard(response.data);
+    } catch (error) {
+      console.error("Failed to load tier dashboard:", error);
+      // Silently fail — tier info is supplementary
+    } finally {
+      setTierLoading(false);
+    }
+  };
 
   const loadSettings = async () => {
     setIsLoading(true);
@@ -596,8 +695,160 @@ export default function ShopSettingsPage() {
                     </div>
                   </div>
 
+                  {/* ── Seller Tier & Making Charge ───────────────── */}
                   <div className="border-t pt-4 space-y-4">
-                    <h4 className="font-medium">Pricing Settings</h4>
+                    <h4 className="font-medium flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      Your Seller Tier & Making Charge
+                    </h4>
+
+                    {/* Current Tier Card */}
+                    {tierLoading ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading tier information...
+                      </div>
+                    ) : tierDashboard ? (
+                      <div className="space-y-4">
+                        {/* Current Tier Banner */}
+                        {(() => {
+                          const currentTier = tierDashboard.shop?.sellerTier || "STANDARD";
+                          const meta = TIER_META[currentTier] || TIER_META.STANDARD;
+                          const TierIcon = meta.icon;
+                          const cap = tierDashboard.shop?.makingChargeCap;
+                          return (
+                            <div className={`rounded-lg border-2 ${meta.border} bg-gradient-to-r ${meta.gradient} p-4`}>
+                              <div className="flex items-center justify-between flex-wrap gap-3">
+                                <div className="flex items-center gap-3">
+                                  <div className={`p-2 rounded-full ${meta.bg}`}>
+                                    <TierIcon className={`h-6 w-6 ${meta.color}`} />
+                                  </div>
+                                  <div>
+                                    <p className={`font-bold text-lg ${meta.color}`}>
+                                      {meta.label} Tier
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {currentTier === "STANDARD"
+                                        ? "Complete milestones below to unlock higher tiers"
+                                        : currentTier === "ELITE"
+                                          ? "You've reached the highest tier — no cap on making charge!"
+                                          : `Making charge cap: up to ${cap}%`}
+                                    </p>
+                                  </div>
+                                </div>
+                                {tierDashboard.shop?.tierUnlockedAt && currentTier !== "STANDARD" && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Since {new Date(tierDashboard.shop.tierUnlockedAt).toLocaleDateString()}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Progress to Next Tier */}
+                        {tierDashboard.nextTier && (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <h5 className="text-sm font-semibold flex items-center gap-1.5">
+                                <ArrowUpRight className="h-4 w-4" />
+                                Progress to {TIER_META[tierDashboard.nextTier]?.label || tierDashboard.nextTier}
+                              </h5>
+                              <span className="text-sm font-bold text-primary">
+                                {tierDashboard.overallProgress.percentage}%
+                              </span>
+                            </div>
+                            <Progress value={tierDashboard.overallProgress.percentage} className="h-2" />
+                            <div className="grid gap-2">
+                              {Object.entries(tierDashboard.tierProgress).map(([key, criterion]) => {
+                                const meta = CRITERIA_LABELS[key];
+                                if (!meta) return null;
+                                const isBool = typeof criterion.required === "boolean";
+                                return (
+                                  <div
+                                    key={key}
+                                    className={`flex items-center justify-between rounded-md px-3 py-2 text-sm border ${
+                                      criterion.met
+                                        ? "bg-green-50 border-green-200"
+                                        : "bg-amber-50 border-amber-200"
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      {criterion.met ? (
+                                        <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                      ) : (
+                                        <XCircle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                                      )}
+                                      <span>{meta.label}</span>
+                                    </div>
+                                    <span className="font-mono text-xs">
+                                      {isBool ? (
+                                        criterion.current ? "Yes" : "No"
+                                      ) : meta.lowerIsBetter ? (
+                                        <>
+                                          {Number(criterion.current).toFixed(1)}{meta.unit}
+                                          {" "}/ ≤ {Number(criterion.required).toFixed(1)}{meta.unit}
+                                        </>
+                                      ) : (
+                                        <>
+                                          {typeof criterion.current === "number" && criterion.current % 1 !== 0
+                                            ? Number(criterion.current).toFixed(1)
+                                            : criterion.current}
+                                          {meta.unit}
+                                          {" "}/ {typeof criterion.required === "number" && criterion.required % 1 !== 0
+                                            ? Number(criterion.required).toFixed(1)
+                                            : criterion.required}
+                                          {meta.unit}
+                                        </>
+                                      )}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Show all 4 tier roadmap */}
+                        <div className="rounded-lg border p-3 bg-muted/30">
+                          <h5 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Tier Roadmap</h5>
+                          <div className="flex items-center gap-1">
+                            {(["STANDARD", "SILVER", "GOLD", "ELITE"] as const).map((t, i) => {
+                              const m = TIER_META[t];
+                              const isCurrentOrPast =
+                                ["STANDARD", "SILVER", "GOLD", "ELITE"].indexOf(
+                                  tierDashboard.shop?.sellerTier || "STANDARD"
+                                ) >= i;
+                              return (
+                                <div key={t} className="flex items-center gap-1 flex-1">
+                                  <div
+                                    className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium flex-1 justify-center ${
+                                      isCurrentOrPast
+                                        ? `${m.bg} ${m.color} border ${m.border}`
+                                        : "bg-muted text-muted-foreground border border-muted"
+                                    }`}
+                                  >
+                                    {React.createElement(m.icon, { className: "h-3 w-3" })}
+                                    <span className="hidden sm:inline">{m.label}</span>
+                                  </div>
+                                  {i < 3 && (
+                                    <div className={`h-px w-2 ${isCurrentOrPast ? "bg-primary" : "bg-muted-foreground/30"}`} />
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 border rounded-lg p-3">
+                        <p className="text-sm text-muted-foreground">
+                          Tier information will appear once your shop has some activity.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Making Charge Input with Live Validation */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="makingCharge">
@@ -610,16 +861,42 @@ export default function ShopSettingsPage() {
                           max="100"
                           step="0.5"
                           value={shopData.makingChargePercent ?? 10}
-                          onChange={(e) =>
-                            updateShopData({
-                              makingChargePercent:
-                                parseFloat(e.target.value) || 10,
-                            })
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value) || 0;
+                            updateShopData({ makingChargePercent: val });
+                          }}
+                          className={
+                            tierDashboard?.shop?.makingChargeCap != null &&
+                            (shopData.makingChargePercent ?? 10) > tierDashboard.shop.makingChargeCap
+                              ? "border-red-400 focus-visible:ring-red-400"
+                              : ""
                           }
                         />
-                        <p className="text-xs text-muted-foreground">
-                          Applied to all materials if not specified individually
-                        </p>
+                        {/* Live cap warning */}
+                        {tierDashboard?.shop?.makingChargeCap != null &&
+                          (shopData.makingChargePercent ?? 10) > tierDashboard.shop.makingChargeCap ? (
+                          <div className="flex items-start gap-2 rounded-md bg-red-50 border border-red-200 px-3 py-2">
+                            <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                            <div className="text-xs text-red-700">
+                              <p className="font-medium">
+                                Exceeds your {TIER_META[tierDashboard.shop.sellerTier]?.label || "Standard"} tier cap of {tierDashboard.shop.makingChargeCap}%
+                              </p>
+                              <p>
+                                {tierDashboard.nextTier
+                                  ? `Upgrade to ${TIER_META[tierDashboard.nextTier]?.label} tier to increase your cap. Your offer will be rejected if making charge exceeds ${tierDashboard.shop.makingChargeCap}%.`
+                                  : `Your offers will be rejected if making charge exceeds ${tierDashboard.shop.makingChargeCap}%.`}
+                              </p>
+                            </div>
+                          </div>
+                        ) : tierDashboard?.shop?.makingChargeCap != null ? (
+                          <p className="text-xs text-muted-foreground">
+                            Your {TIER_META[tierDashboard.shop.sellerTier]?.label || "Standard"} tier allows up to {tierDashboard.shop.makingChargeCap}% making charge
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            Applied to all materials if not specified individually
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="minOrder">Minimum Order Value</Label>
