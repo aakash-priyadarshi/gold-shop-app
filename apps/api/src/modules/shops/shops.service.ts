@@ -1315,6 +1315,7 @@ export class ShopsService {
   /**
    * Find matching sellers for an RFQ with dynamic pricing
    * Sellers are ranked by: same city first, then by rating/reviews
+   * By default, only shows sellers from the same country unless includeInternational is true
    */
   async findMatchingSellers(params: {
     jewelleryType: string;
@@ -1331,6 +1332,7 @@ export class ShopsService {
     sortBy?: "price" | "rating" | "location" | "popularity";
     page?: number;
     pageSize?: number;
+    includeInternational?: boolean; // Default false - only same country sellers
   }) {
     const {
       jewelleryType,
@@ -1340,12 +1342,13 @@ export class ShopsService {
       estimatedWeight,
       customerCity,
       customerState,
-      customerCountry = "NP",
+      customerCountry = "India",
       minRating,
       maxPrice,
       sortBy = "location",
       page = 1,
       pageSize = 20,
+      includeInternational = false,
     } = params;
 
     // Debug: Log incoming params
@@ -1407,6 +1410,16 @@ export class ShopsService {
           { supportedMaterials: { has: metalType } },
           { supportedMaterials: { equals: [] } },
         ],
+      });
+    }
+
+    // By default, only show same-country sellers unless includeInternational is true
+    if (!includeInternational && customerCountry) {
+      where.AND.push({
+        country: {
+          equals: customerCountry,
+          mode: "insensitive",
+        },
       });
     }
 

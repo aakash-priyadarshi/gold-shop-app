@@ -63,8 +63,10 @@ import {
   MessageCircle,
   Phone,
   RotateCcw,
+  Send,
   Settings,
   ShieldCheck,
+  ShoppingBag,
   Sparkles,
   Star,
   Upload,
@@ -751,6 +753,16 @@ export default function CreateRfqPage() {
   );
   const [filterCity, setFilterCity] = useState<string | undefined>(undefined);
   const [filterState, setFilterState] = useState<string | undefined>(undefined);
+  const [includeInternational, setIncludeInternational] = useState(false);
+
+  // Order request modal state
+  const [selectedSeller, setSelectedSeller] = useState<MatchingSeller | null>(
+    null,
+  );
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [orderBudget, setOrderBudget] = useState("");
+  const [orderMessage, setOrderMessage] = useState("");
+  const [sendingOrder, setSendingOrder] = useState(false);
 
   // Congratulatory messages with username placeholder
   const CONGRATULATORY_MESSAGES = [
@@ -1560,6 +1572,8 @@ export default function CreateRfqPage() {
       if (effectiveCountry) params.append("customerCountry", effectiveCountry);
       if (effectiveState) params.append("customerState", effectiveState);
       if (effectiveCity) params.append("customerCity", effectiveCity);
+      // Include international sellers only if toggled on
+      if (includeInternational) params.append("includeInternational", "true");
 
       const response = await fetch(
         `${API_URL}/shops/matching?${params.toString()}`,
@@ -1596,6 +1610,7 @@ export default function CreateRfqPage() {
     filterCountry,
     filterState,
     filterCity,
+    includeInternational,
   ]);
 
   // Fetch delivery addresses when reaching Step 4
@@ -4757,7 +4772,8 @@ export default function CreateRfqPage() {
                           filterState ||
                           filterCity ||
                           sellerMinRating ||
-                          sellerMaxPrice) && (
+                          sellerMaxPrice ||
+                          includeInternational) && (
                           <div className="mt-4 pt-3 border-t">
                             <button
                               onClick={() => {
@@ -4766,6 +4782,7 @@ export default function CreateRfqPage() {
                                 setFilterCity(undefined);
                                 setSellerMinRating(undefined);
                                 setSellerMaxPrice(undefined);
+                                setIncludeInternational(false);
                               }}
                               className="text-sm text-red-600 hover:text-red-700 flex items-center gap-1"
                             >
@@ -4774,6 +4791,30 @@ export default function CreateRfqPage() {
                             </button>
                           </div>
                         )}
+
+                        {/* Include International Sellers Toggle */}
+                        <div className="mt-4 pt-3 border-t">
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={includeInternational}
+                              onChange={(e) =>
+                                setIncludeInternational(e.target.checked)
+                              }
+                              className="w-4 h-4 rounded border-gray-300 text-amber-500 focus:ring-amber-500"
+                            />
+                            <div>
+                              <span className="text-sm font-medium text-gray-700">
+                                🌍 Include international sellers
+                              </span>
+                              <p className="text-xs text-gray-500">
+                                Show sellers from other countries. International
+                                orders can be picked up from Orivraa routing
+                                centres.
+                              </p>
+                            </div>
+                          </label>
+                        </div>
                       </div>
                     )}
 
@@ -4807,13 +4848,30 @@ export default function CreateRfqPage() {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {matchingSellers.map((seller, index) => (
+                        {matchingSellers.map((seller, index) => {
+                          const platformCommission = 5;
+                          const totalMakingPercent =
+                            seller.makingChargePercent + platformCommission;
+                          const totalMakingCharge = Math.round(
+                            seller.materialCost *
+                              (totalMakingPercent / 100),
+                          );
+                          const totalPrice =
+                            seller.materialCost + totalMakingCharge;
+                          const isInternational =
+                            seller.country &&
+                            country &&
+                            seller.country.toLowerCase() !==
+                              country.toLowerCase();
+                          return (
                           <div
                             key={seller.id}
                             className={`border rounded-lg p-4 hover:shadow-md transition-shadow ${
                               seller.locationMatch === "same_city"
                                 ? "border-green-200 bg-green-50/50"
-                                : ""
+                                : isInternational
+                                  ? "border-orange-200 bg-orange-50/30"
+                                  : ""
                             }`}
                           >
                             <div className="flex items-start justify-between">
@@ -4849,6 +4907,11 @@ export default function CreateRfqPage() {
                                       Same State
                                     </Badge>
                                   )}
+                                  {isInternational && (
+                                    <Badge className="bg-orange-100 text-orange-700 text-xs">
+                                      🌍 International
+                                    </Badge>
+                                  )}
                                 </div>
                                 <div className="flex items-center gap-4 text-sm text-gray-500 mb-2">
                                   <span className="flex items-center gap-1">
@@ -4866,7 +4929,7 @@ export default function CreateRfqPage() {
                                   )}
                                 </div>
                                 <div className="flex flex-wrap gap-2 mt-2">
-                                  {seller.codEnabled && (
+                                  {seller.codEnabled && !isInternational && (
                                     <Badge
                                       variant="outline"
                                       className="text-xs"
@@ -4875,7 +4938,7 @@ export default function CreateRfqPage() {
                                     </Badge>
                                   )}
                                   <Badge variant="outline" className="text-xs">
-                                    Making: {seller.makingChargePercent}%
+                                    Making Charge: {totalMakingPercent}%
                                   </Badge>
                                   {seller.hasCustomRate && (
                                     <Badge
@@ -4886,52 +4949,63 @@ export default function CreateRfqPage() {
                                     </Badge>
                                   )}
                                 </div>
+
+                                {/* International delivery notice */}
+                                {isInternational && (
+                                  <div className="mt-3 p-2.5 bg-orange-50 border border-orange-200 rounded-lg">
+                                    <p className="text-xs text-orange-800 flex items-start gap-1.5">
+                                      <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                                      <span>
+                                        <strong>International Order:</strong>{" "}
+                                        This item will not be delivered directly
+                                        to you. You can pick it up from an
+                                        Orivraa routing centre in your city.
+                                        Location details will be shared once the
+                                        order is received by Orivraa.
+                                      </span>
+                                    </p>
+                                  </div>
+                                )}
                               </div>
                               <div className="text-right ml-4">
                                 <div className="text-lg font-bold text-gold-600">
                                   {currencyInfo?.symbol || "Rs."}
-                                  {seller.estimatedPrice.toLocaleString()}
+                                  {totalPrice.toLocaleString()}
                                 </div>
                                 <div className="text-xs text-gray-500">
                                   Material: {currencyInfo?.symbol || "Rs."}
                                   {seller.materialCost.toLocaleString()}
                                   <br />
-                                  Making: {currencyInfo?.symbol || "Rs."}
-                                  {seller.makingCharge.toLocaleString()}
+                                  Making ({totalMakingPercent}%):{" "}
+                                  {currencyInfo?.symbol || "Rs."}
+                                  {totalMakingCharge.toLocaleString()}
                                 </div>
                                 <MarketComparison
-                                  ourPrice={seller.estimatedPrice}
+                                  ourPrice={totalPrice}
                                   currencySymbol={currencyInfo?.symbol || "Rs."}
-                                  makingChargePercent={
-                                    seller.makingChargePercent
-                                  }
+                                  makingChargePercent={totalMakingPercent}
                                 />
-                                <div className="mt-3 flex gap-2">
-                                  {seller.whatsappNumber && (
-                                    <a
-                                      href={`https://wa.me/${seller.whatsappNumber.replace(/[^0-9]/g, "")}?text=Hi, I'm interested in your jewellery services.`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition-colors"
-                                    >
-                                      <MessageCircle className="h-4 w-4" />
-                                      WhatsApp
-                                    </a>
-                                  )}
-                                  {seller.contactPhone && (
-                                    <a
-                                      href={`tel:${seller.contactPhone}`}
-                                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 transition-colors"
-                                    >
-                                      <Phone className="h-4 w-4" />
-                                      Call
-                                    </a>
-                                  )}
+                                <div className="mt-3">
+                                  <button
+                                    onClick={() => {
+                                      setSelectedSeller(seller);
+                                      setOrderBudget(
+                                        String(totalPrice),
+                                      );
+                                      setOrderMessage("");
+                                      setShowOrderModal(true);
+                                    }}
+                                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-amber-950 font-semibold text-sm rounded-lg hover:from-amber-400 hover:via-yellow-300 hover:to-amber-400 shadow-sm hover:shadow transition-all"
+                                  >
+                                    <ShoppingBag className="h-4 w-4" />
+                                    Order from this seller
+                                  </button>
                                 </div>
                               </div>
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
 
@@ -4972,6 +5046,180 @@ export default function CreateRfqPage() {
 
         <Footer />
       </div>
+
+      {/* Order from Seller Modal */}
+      <AlertDialog open={showOrderModal} onOpenChange={setShowOrderModal}>
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <ShoppingBag className="h-5 w-5 text-amber-500" />
+              Send Order Request
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4">
+                {selectedSeller && (
+                  <>
+                    <p className="text-gray-600">
+                      You&apos;re sending your custom jewellery request to{" "}
+                      <strong>{selectedSeller.shopName}</strong>
+                      {selectedSeller.city && ` in ${selectedSeller.city}`}.
+                    </p>
+
+                    {/* International notice */}
+                    {selectedSeller.country &&
+                      country &&
+                      selectedSeller.country.toLowerCase() !==
+                        country.toLowerCase() && (
+                        <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                          <p className="text-sm text-orange-800 flex items-start gap-2">
+                            <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                            <span>
+                              <strong>International Order:</strong> This order
+                              will be crafted in {selectedSeller.country} and
+                              shipped to an Orivraa routing centre near you.
+                              You&apos;ll pick it up from there after quality
+                              verification. Location details will be shared once
+                              the order is received.
+                            </span>
+                          </p>
+                        </div>
+                      )}
+
+                    {/* Budget input */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Your Budget ({currencyInfo?.symbol || "Rs."})
+                      </label>
+                      <Input
+                        type="number"
+                        placeholder="Enter your budget"
+                        value={orderBudget}
+                        onChange={(e) => setOrderBudget(e.target.value)}
+                        className="text-lg font-semibold"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Seller&apos;s estimated price:{" "}
+                        {currencyInfo?.symbol || "Rs."}
+                        {(() => {
+                          const platformCommission = 5;
+                          const totalMakingPercent =
+                            selectedSeller.makingChargePercent +
+                            platformCommission;
+                          const totalMakingCharge = Math.round(
+                            selectedSeller.materialCost *
+                              (totalMakingPercent / 100),
+                          );
+                          return (
+                            selectedSeller.materialCost + totalMakingCharge
+                          ).toLocaleString();
+                        })()}
+                        . The seller may counter with a different price.
+                      </p>
+                    </div>
+
+                    {/* Optional message */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Message to Seller (Optional)
+                      </label>
+                      <Textarea
+                        placeholder="Any specific requirements or notes for the seller..."
+                        value={orderMessage}
+                        onChange={(e) => setOrderMessage(e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+
+                    {/* Flow explanation */}
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-xs text-blue-800">
+                        <strong>What happens next:</strong> The seller will
+                        review your request and can accept, counter with a
+                        different price, or decline. If they counter, you can
+                        accept or reject — no further bargaining. Track your
+                        order from your dashboard.
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={sendingOrder}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={sendingOrder || !orderBudget}
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!selectedSeller || !submittedRfqId || !orderBudget) return;
+                setSendingOrder(true);
+                try {
+                  const token =
+                    typeof window !== "undefined"
+                      ? localStorage.getItem("token")
+                      : null;
+                  if (!token) {
+                    setError("Please log in to send an order request");
+                    return;
+                  }
+                  const budgetNum = parseFloat(orderBudget);
+                  const response = await fetch(
+                    `${API_URL}/rfq/${submittedRfqId}/send-to-seller`,
+                    {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                      },
+                      body: JSON.stringify({
+                        shopId: selectedSeller.id,
+                        budgetMinNpr: Math.round(budgetNum * 0.9),
+                        budgetMaxNpr: Math.round(budgetNum),
+                        message: orderMessage || undefined,
+                      }),
+                    },
+                  );
+
+                  if (response.ok) {
+                    const data = await response.json();
+                    setShowOrderModal(false);
+                    // Navigate to customer's RFQ tracking page
+                    router.push(
+                      `/dashboard/customer/rfqs/${submittedRfqId}`,
+                    );
+                  } else {
+                    const errorData = await response.json().catch(() => null);
+                    setError(
+                      errorData?.message ||
+                        "Failed to send order request. Please try again.",
+                    );
+                  }
+                } catch (err) {
+                  setError("Failed to send order request. Please try again.");
+                } finally {
+                  setSendingOrder(false);
+                }
+              }}
+              className="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-amber-950 font-semibold hover:from-amber-400 hover:via-yellow-300 hover:to-amber-400"
+            >
+              {sendingOrder ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Send Order Request
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </TooltipProvider>
   );
 }
