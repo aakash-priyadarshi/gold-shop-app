@@ -771,7 +771,7 @@ export default function ShopInventoryPage() {
                                             key,
                                             updates,
                                           );
-                                        }}}
+                                        }}
                                       />
                                       <span
                                         className={`text-xs flex items-center gap-0.5 ${(materialData?.chargeMode || "flat") === "percent" ? "font-semibold" : "text-muted-foreground"}`}
