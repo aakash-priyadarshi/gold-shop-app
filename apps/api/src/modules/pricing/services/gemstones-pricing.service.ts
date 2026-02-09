@@ -333,8 +333,38 @@ export class GemstonesPricingService {
     sizeRange: string,
     qualityTier: QualityTier,
   ): Promise<GemstonePrice | null> {
-    // TODO: Query ShopGemstonePrice table when implemented
-    return null;
+    try {
+      // Determine origin from stoneType
+      const origin = stoneType === StoneType.DIAMOND ? "NATURAL" : "NATURAL";
+
+      const shopRate = await this.prisma.shopGemstoneRate.findFirst({
+        where: {
+          shopId,
+          stoneType: stoneType,
+          sizeCategory: sizeRange,
+          qualityTier: qualityTier,
+          origin,
+        },
+      });
+
+      if (shopRate) {
+        return {
+          stoneType,
+          sizeUnit: sizeRange.includes("ct") ? "CARAT" as const : "MM" as const,
+          sizeMin: 0,
+          sizeMax: 0,
+          qualityTier,
+          pricePerStone: shopRate.pricePerStone,
+          currency: "NPR" as any,
+          source: "manual" as const,
+          updatedAt: shopRate.lastUpdatedAt?.toISOString() || new Date().toISOString(),
+        };
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
   }
 
   /**

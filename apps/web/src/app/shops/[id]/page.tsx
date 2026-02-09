@@ -248,6 +248,15 @@ export default function ShopDetailPage() {
     }
   };
 
+  // Market rates use PLATINUM_PT950 but shop stores PLATINUM_950
+  const normalizeRateKey = (code: string): string => {
+    const keyMap: Record<string, string> = {
+      PLATINUM_950: "PLATINUM_PT950",
+      PLATINUM_900: "PLATINUM_PT900",
+    };
+    return keyMap[code] || code;
+  };
+
   const getCurrency = () => {
     if (!shop) return { code: "NPR", symbol: "रू" };
     return {
@@ -1062,7 +1071,10 @@ export default function ShopDetailPage() {
                               const pricing = shop.materialsPricing?.find(
                                 (p) => p.materialCode === material,
                               );
-                              const liveRate = marketRates[material] || 0;
+                              const liveRate =
+                                marketRates[normalizeRateKey(material)] ||
+                                marketRates[material] ||
+                                0;
                               const makingCharge =
                                 pricing?.makingChargePerGram ?? null;
                               const total =

@@ -121,6 +121,10 @@ const JEWELLERY_TYPES = [
   { value: "CHAIN", label: "Chain" },
   { value: "ANKLET", label: "Anklet" },
   { value: "BROOCH", label: "Brooch" },
+  { value: "TIE_PIN", label: "Tie Pin" },
+  { value: "CUFFLINKS", label: "Cufflinks" },
+  { value: "NOSE_PIN", label: "Nose Pin" },
+  { value: "MAANG_TIKKA", label: "Maang Tikka" },
   { value: "OTHER", label: "Other" },
 ];
 
@@ -135,6 +139,10 @@ const JEWELLERY_TYPE_IMAGES: Record<string, string> = {
   CHAIN: "https://images.orivraa.com/product/1769445050194-b6e62x3n.png",
   ANKLET: "https://images.orivraa.com/product/1769445041034-oa8hfslv.png",
   BROOCH: "https://images.orivraa.com/product/1769445047396-q4pss35p.png",
+  TIE_PIN: "https://images.orivraa.com/product/1769445057895-wcn56633.png",
+  CUFFLINKS: "https://images.orivraa.com/product/1769445057895-wcn56633.png",
+  NOSE_PIN: "https://images.orivraa.com/product/1769445057895-wcn56633.png",
+  MAANG_TIKKA: "https://images.orivraa.com/product/1769445057895-wcn56633.png",
   OTHER: "https://images.orivraa.com/product/1769445057895-wcn56633.png",
 };
 
@@ -237,6 +245,22 @@ const WEIGHT_GUIDANCE: Record<string, { range: string; note: string }> = {
   BROOCH: {
     range: "5-20g",
     note: "Small brooches 5-8g, medium 10-15g, elaborate designs 15-25g.",
+  },
+  TIE_PIN: {
+    range: "3-8g",
+    note: "Simple tie pins 3-5g, decorative designs with gemstones 5-8g.",
+  },
+  CUFFLINKS: {
+    range: "5-15g",
+    note: "Per pair. Simple cufflinks 5-8g, ornate designs 10-15g.",
+  },
+  NOSE_PIN: {
+    range: "0.3-2g",
+    note: "Studs 0.3-0.5g, small hoops/rings 0.5-1g, decorative nose pins up to 2g.",
+  },
+  MAANG_TIKKA: {
+    range: "3-10g",
+    note: "Simple designs 3-5g, medium with stones 5-8g, elaborate bridal pieces 8-15g.",
   },
   OTHER: {
     range: "Varies",

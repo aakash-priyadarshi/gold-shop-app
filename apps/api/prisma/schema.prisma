@@ -216,6 +216,7 @@ model Shop {
   walkInCustomers         WalkInCustomer[]
   user                    User                  @relation(fields: [userId], references: [id])
   finishPricing           ShopFinishPricing[]
+  gemstoneRates           ShopGemstoneRate[]
   metalRates              ShopMetalRate[]
   priceOverrides          ShopPriceOverride[]
   ratings                 ShopRating[]
@@ -250,6 +251,21 @@ model ShopFinishPricing {
   shop       Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@unique([shopId, finishType, tier])
+  @@index([shopId])
+}
+
+model ShopGemstoneRate {
+  id            String   @id @default(uuid())
+  shopId        String
+  stoneType     String   // e.g. DIAMOND, RUBY, EMERALD, SAPPHIRE, etc.
+  origin        String   @default("NATURAL") // NATURAL or LAB_GROWN
+  sizeCategory  String   // e.g. "0.1-0.25", "0.25-0.5", "0.5-1", "1-2" (carat ranges)
+  qualityTier   String   @default("MEDIUM") // LOW, MEDIUM, HIGH, PREMIUM
+  pricePerStone Float    // NPR per stone
+  lastUpdatedAt DateTime @default(now())
+  shop          Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, stoneType, origin, sizeCategory, qualityTier])
   @@index([shopId])
 }
 
@@ -1369,6 +1385,9 @@ enum JewelleryType {
   PENDANT
   CHAIN
   ANKLET
+  BROOCH
+  TIE_PIN
+  CUFFLINKS
   NOSE_PIN
   MANGALSUTRA
   MAANG_TIKKA

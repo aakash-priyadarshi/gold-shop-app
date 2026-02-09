@@ -249,6 +249,37 @@ export class ShopsController {
     return this.shopsService.updateShopCapabilities(shopId, userId, dto);
   }
 
+  @Get("my-shop/gemstone-pricing")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Get shop gemstone pricing (overrides + system defaults)" })
+  async getMyShopGemstonePricing(@CurrentUser("shopId") shopId: string) {
+    return this.shopsService.getShopGemstonePricing(shopId);
+  }
+
+  @Put("my-shop/gemstone-pricing")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Update shop gemstone pricing" })
+  async updateMyShopGemstonePricing(
+    @CurrentUser("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @Body()
+    dto: {
+      rates: Array<{
+        stoneType: string;
+        origin: string;
+        sizeCategory: string;
+        qualityTier: string;
+        pricePerStone: number;
+      }>;
+    },
+  ) {
+    return this.shopsService.updateShopGemstonePricing(shopId, userId, dto.rates);
+  }
+
   // ═══════════════════════════════════════════════════════════════
   // PUBLIC ENDPOINTS
   // ═══════════════════════════════════════════════════════════════

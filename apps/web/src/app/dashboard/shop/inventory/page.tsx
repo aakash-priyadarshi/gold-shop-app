@@ -22,14 +22,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  FINISH_DATA,
-  JEWELLERY_TYPE_DATA,
-} from "@/lib/jewellery-constants";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { materialsApi, shopsApi } from "@/lib/api";
+import { FINISH_DATA, JEWELLERY_TYPE_DATA } from "@/lib/jewellery-constants";
 import {
   CircleDot,
   Eye,
@@ -156,6 +153,9 @@ export default function ShopInventoryPage() {
   const [capabilitiesData, setCapabilitiesData] =
     useState<CapabilitiesData | null>(null);
   const [marketRates, setMarketRates] = useState<MarketRate[]>([]);
+  const [gemstonePricing, setGemstonePricing] = useState<any[]>([]);
+  const [gemstoneOverrides, setGemstoneOverrides] = useState<Record<string, number>>({});
+  const [isSavingGemstones, setIsSavingGemstones] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshingRates, setIsRefreshingRates] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -169,15 +169,52 @@ export default function ShopInventoryPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [materialsRes, capabilitiesRes, ratesRes] = await Promise.all([
+      const [materialsRes, capabilitiesRes, ratesRes, gemPricingRes] = await Promise.all([
         shopsApi.getMaterials(),
         shopsApi.getCapabilities(),
         materialsApi.getMarketRates({
           currency: shopCurrency,
           country: shopCountry,
         }),
+        shopsApi.getGemstonePricing().catch(() => ({ data: { rates: [] } })),
       ]);
-      setMaterialsData(materialsRes.data);
+      // Load gemstone pricing
+      const gemRates = gemPricingRes.data?.rates || [];
+      setGemstonePricing(gemRates);
+      // Pre-populate overrides from existing shop prices
+      const overrides: Record<string, number> = {};
+      gemRates.forEach((r: any) => {
+        if (r.shopPrice !== null) {
+          const key = `${r.stoneType}_${r.origin}_${r.sizeCategory}_${r.qualityTier}`;
+          overrides[key] = r.shopPrice;
+        }
+      });
+      setGemstoneOverrides(overrides);
+      // Transform backend materials format to frontend format
+      // Backend returns: {materials: [{code, isAvailable, pricePerGramNpr}], makingChargePercent}
+      // Frontend needs: {materials: [{metal, purity, makingChargePerGram}], supportedMaterials: string[]}
+      const backendMaterials = materialsRes.data?.materials || [];
+      const supportedMaterials: string[] = [];
+      const frontendMaterials: Material[] = backendMaterials.map((m: any) => {
+        const code: string = m.code || "";
+        if (m.isAvailable) {
+          supportedMaterials.push(code);
+        }
+        // Split code like "GOLD_24K" into metal="GOLD" and purity="24K"
+        const lastUnderscore = code.lastIndexOf("_");
+        const metal = lastUnderscore > 0 ? code.substring(0, lastUnderscore) : code;
+        const purity = lastUnderscore > 0 ? code.substring(lastUnderscore + 1) : "";
+        return {
+          metal,
+          purity,
+          isAvailable: m.isAvailable || false,
+          makingChargePerGram: m.pricePerGramNpr || undefined,
+        };
+      });
+      setMaterialsData({
+        materials: frontendMaterials,
+        supportedMaterials,
+      });
       // Parse capabilities from API response
       // API returns arrays of {code, name, isSupported} objects
       const capabilities = capabilitiesRes.data || {};
@@ -262,9 +299,19 @@ export default function ShopInventoryPage() {
   };
 
   // Get market rate for a material
+  // Market rates use PLATINUM_PT950 format but shop uses PLATINUM_950
+  const normalizeRateKey = (code: string): string => {
+    const keyMap: Record<string, string> = {
+      PLATINUM_950: "PLATINUM_PT950",
+      PLATINUM_900: "PLATINUM_PT900",
+    };
+    return keyMap[code] || code;
+  };
+
   const getMarketRate = (metal: string, purity: string): number | null => {
     const materialCode = `${metal}_${purity}`;
-    const rate = marketRates.find((r) => r.metalCode === materialCode);
+    const rateKey = normalizeRateKey(materialCode);
+    const rate = marketRates.find((r) => r.metalCode === rateKey || r.metalCode === materialCode);
     return rate?.ratePerGram ?? null;
   };
 
@@ -343,6 +390,56 @@ export default function ShopInventoryPage() {
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const saveGemstonePricing = async () => {
+    setIsSavingGemstones(true);
+    try {
+      // Convert overrides map to rates array
+      const rates = Object.entries(gemstoneOverrides).map(([key, price]) => {
+        const [stoneType, origin, sizeCategory, qualityTier] = key.split("_").reduce(
+          (acc: string[], part, i, arr) => {
+            // Re-parse the key: stoneType_origin_sizeCategory_qualityTier
+            // But sizeCategory contains hyphens like "0.1-0.25ct"
+            return acc;
+          },
+          [],
+        );
+        // Parse correctly using the stored pricing data
+        const matchingRate = gemstonePricing.find((r: any) => {
+          const rKey = `${r.stoneType}_${r.origin}_${r.sizeCategory}_${r.qualityTier}`;
+          return rKey === key;
+        });
+        return matchingRate
+          ? {
+              stoneType: matchingRate.stoneType,
+              origin: matchingRate.origin,
+              sizeCategory: matchingRate.sizeCategory,
+              qualityTier: matchingRate.qualityTier,
+              pricePerStone: price,
+            }
+          : null;
+      }).filter(Boolean);
+
+      if (rates.length === 0) {
+        toast({ title: "No Changes", description: "No pricing overrides to save" });
+        return;
+      }
+
+      await shopsApi.updateGemstonePricing({ rates });
+      toast({
+        title: "Gemstone Pricing Saved",
+        description: `Updated pricing for ${rates.length} gemstone configurations`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Save Failed",
+        description: error.response?.data?.message || "Could not save gemstone pricing",
+      });
+    } finally {
+      setIsSavingGemstones(false);
     }
   };
 
@@ -1064,6 +1161,116 @@ export default function ShopInventoryPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Gemstone Pricing Card */}
+              {gemstonePricing.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Gem className="h-5 w-5" />
+                      Gemstone Pricing
+                    </CardTitle>
+                    <CardDescription>
+                      Set your own prices or use system defaults. Leave blank to use the default price.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Group by stone type */}
+                    {(() => {
+                      // Group by unique stoneType + origin combinations
+                      const stoneGroups = new Map<string, any[]>();
+                      gemstonePricing.forEach((r: any) => {
+                        const key = `${r.stoneType}|${r.origin}`;
+                        if (!stoneGroups.has(key)) stoneGroups.set(key, []);
+                        stoneGroups.get(key)!.push(r);
+                      });
+
+                      return Array.from(stoneGroups.entries()).map(([groupKey, stoneRates]) => {
+                        const [stoneType, origin] = groupKey.split("|");
+                        const displayName = origin === "LAB_GROWN"
+                          ? `${stoneType.replace(/_/g, " ")} (Lab-Grown)`
+                          : stoneType.replace(/_/g, " ");
+                        const sizeCategories = Array.from(new Set(stoneRates.map((r: any) => r.sizeCategory)));
+
+                        return (
+                          <div key={groupKey} className="space-y-3">
+                            <h3 className="font-medium text-sm capitalize">
+                              {displayName.toLowerCase().replace(/_/g, " ")}
+                            </h3>
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b">
+                                    <th className="text-left p-2">Size</th>
+                                    <th className="text-right p-2">Quality</th>
+                                    <th className="text-right p-2">System Default</th>
+                                    <th className="text-right p-2">Your Price ({currencySymbol})</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {sizeCategories.map((size) => {
+                                    const qualityRates = stoneRates.filter((r: any) => r.sizeCategory === size);
+                                    return qualityRates.map((rate: any, idx: number) => {
+                                      const overrideKey = `${rate.stoneType}_${rate.origin}_${rate.sizeCategory}_${rate.qualityTier}`;
+                                      return (
+                                        <tr key={overrideKey} className="border-b hover:bg-muted/50">
+                                          {idx === 0 && (
+                                            <td className="p-2 font-medium" rowSpan={qualityRates.length}>
+                                              {size}
+                                            </td>
+                                          )}
+                                          <td className="p-2 text-right">
+                                            <Badge variant="outline" className="text-xs">
+                                              {rate.qualityTier}
+                                            </Badge>
+                                          </td>
+                                          <td className="p-2 text-right text-muted-foreground">
+                                            {currencySymbol}{rate.systemDefault.toLocaleString()}
+                                          </td>
+                                          <td className="p-2 text-right">
+                                            <Input
+                                              type="number"
+                                              className="w-28 ml-auto text-right h-8"
+                                              placeholder={rate.systemDefault.toLocaleString()}
+                                              value={gemstoneOverrides[overrideKey] ?? ""}
+                                              onChange={(e) => {
+                                                const val = e.target.value;
+                                                setGemstoneOverrides((prev) => {
+                                                  if (val === "") {
+                                                    const next = { ...prev };
+                                                    delete next[overrideKey];
+                                                    return next;
+                                                  }
+                                                  return { ...prev, [overrideKey]: parseFloat(val) };
+                                                });
+                                              }}
+                                            />
+                                          </td>
+                                        </tr>
+                                      );
+                                    });
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+
+                    <div className="flex justify-end pt-4">
+                      <Button onClick={saveGemstonePricing} disabled={isSavingGemstones}>
+                        {isSavingGemstones ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Save className="h-4 w-4 mr-2" />
+                        )}
+                        Save Gemstone Pricing
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
             {/* Jewellery Types Tab */}

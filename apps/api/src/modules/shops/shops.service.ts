@@ -1063,6 +1063,163 @@ export class ShopsService {
   }
 
   /**
+   * Get shop gemstone pricing (shop-specific overrides + system defaults)
+   */
+  async getShopGemstonePricing(shopId: string) {
+    if (!shopId) {
+      throw new BadRequestException("Shop ID required");
+    }
+
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      include: { gemstoneRates: true },
+    });
+
+    if (!shop) {
+      throw new NotFoundException("Shop not found");
+    }
+
+    // System default gemstone prices (same structure as DEFAULT_GEMSTONE_PRICES_NPR)
+    const defaultPrices: Record<string, Record<string, Record<string, number>>> = {
+      DIAMOND: {
+        "0.1-0.25ct": { LOW: 8000, MEDIUM: 15000, HIGH: 25000, PREMIUM: 30000 },
+        "0.25-0.5ct": { LOW: 25000, MEDIUM: 50000, HIGH: 80000, PREMIUM: 100000 },
+        "0.5-1ct": { LOW: 80000, MEDIUM: 150000, HIGH: 250000, PREMIUM: 350000 },
+        "1-2ct": { LOW: 200000, MEDIUM: 400000, HIGH: 700000, PREMIUM: 1000000 },
+      },
+      DIAMOND_LAB: {
+        "0.1-0.25ct": { LOW: 5200, MEDIUM: 9750, HIGH: 16250, PREMIUM: 19500 },
+        "0.25-0.5ct": { LOW: 16250, MEDIUM: 32500, HIGH: 52000, PREMIUM: 65000 },
+        "0.5-1ct": { LOW: 52000, MEDIUM: 97500, HIGH: 162500, PREMIUM: 227500 },
+        "1-2ct": { LOW: 130000, MEDIUM: 260000, HIGH: 455000, PREMIUM: 650000 },
+      },
+      RUBY: {
+        "1-3mm": { LOW: 2000, MEDIUM: 5000, HIGH: 15000, PREMIUM: 40000 },
+        "3-5mm": { LOW: 5000, MEDIUM: 15000, HIGH: 40000, PREMIUM: 100000 },
+        "5-8mm": { LOW: 15000, MEDIUM: 40000, HIGH: 100000, PREMIUM: 300000 },
+      },
+      SAPPHIRE: {
+        "1-3mm": { LOW: 2000, MEDIUM: 5000, HIGH: 15000, PREMIUM: 35000 },
+        "3-5mm": { LOW: 5000, MEDIUM: 15000, HIGH: 35000, PREMIUM: 90000 },
+        "5-8mm": { LOW: 15000, MEDIUM: 35000, HIGH: 90000, PREMIUM: 250000 },
+      },
+      EMERALD: {
+        "1-3mm": { LOW: 3000, MEDIUM: 8000, HIGH: 20000, PREMIUM: 50000 },
+        "3-5mm": { LOW: 8000, MEDIUM: 20000, HIGH: 50000, PREMIUM: 150000 },
+        "5-8mm": { LOW: 20000, MEDIUM: 50000, HIGH: 150000, PREMIUM: 400000 },
+      },
+      MOISSANITE: {
+        "1-3mm": { LOW: 1500, MEDIUM: 3000, HIGH: 5000, PREMIUM: 8000 },
+        "3-5mm": { LOW: 3000, MEDIUM: 6000, HIGH: 10000, PREMIUM: 15000 },
+        "5-8mm": { LOW: 6000, MEDIUM: 12000, HIGH: 20000, PREMIUM: 30000 },
+      },
+      CZ: {
+        "1-3mm": { LOW: 50, MEDIUM: 100, HIGH: 200, PREMIUM: 300 },
+        "3-5mm": { LOW: 100, MEDIUM: 200, HIGH: 400, PREMIUM: 600 },
+        "5-8mm": { LOW: 200, MEDIUM: 400, HIGH: 800, PREMIUM: 1200 },
+      },
+    };
+
+    // Build response: for each stone type & size & quality, show system default + shop override
+    const rates: any[] = [];
+    for (const [stoneType, sizes] of Object.entries(defaultPrices)) {
+      for (const [sizeCategory, qualities] of Object.entries(sizes)) {
+        for (const [qualityTier, defaultPrice] of Object.entries(qualities)) {
+          const origin = stoneType === "DIAMOND_LAB" ? "LAB_GROWN" : "NATURAL";
+          const normalizedStone = stoneType === "DIAMOND_LAB" ? "DIAMOND" : stoneType;
+          const shopRate = shop.gemstoneRates.find(
+            (r) =>
+              r.stoneType === normalizedStone &&
+              r.origin === origin &&
+              r.sizeCategory === sizeCategory &&
+              r.qualityTier === qualityTier,
+          );
+
+          rates.push({
+            stoneType: normalizedStone,
+            origin,
+            sizeCategory,
+            qualityTier,
+            systemDefault: defaultPrice,
+            shopPrice: shopRate?.pricePerStone ?? null,
+            effectivePrice: shopRate?.pricePerStone ?? defaultPrice,
+            lastUpdatedAt: shopRate?.lastUpdatedAt ?? null,
+          });
+        }
+      }
+    }
+
+    return { rates };
+  }
+
+  /**
+   * Update shop gemstone pricing (set per-stone overrides)
+   */
+  async updateShopGemstonePricing(
+    shopId: string,
+    userId: string,
+    rates: Array<{
+      stoneType: string;
+      origin: string;
+      sizeCategory: string;
+      qualityTier: string;
+      pricePerStone: number;
+    }>,
+  ) {
+    if (!shopId) {
+      throw new BadRequestException("Shop ID required");
+    }
+
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+    });
+
+    if (!shop || shop.userId !== userId) {
+      throw new ForbiddenException("Not authorized");
+    }
+
+    // Upsert each gemstone rate
+    await Promise.all(
+      rates.map((rate) =>
+        this.prisma.shopGemstoneRate.upsert({
+          where: {
+            shopId_stoneType_origin_sizeCategory_qualityTier: {
+              shopId,
+              stoneType: rate.stoneType,
+              origin: rate.origin,
+              sizeCategory: rate.sizeCategory,
+              qualityTier: rate.qualityTier,
+            },
+          },
+          update: {
+            pricePerStone: rate.pricePerStone,
+            lastUpdatedAt: new Date(),
+          },
+          create: {
+            shopId,
+            stoneType: rate.stoneType,
+            origin: rate.origin,
+            sizeCategory: rate.sizeCategory,
+            qualityTier: rate.qualityTier,
+            pricePerStone: rate.pricePerStone,
+          },
+        }),
+      ),
+    );
+
+    await this.auditService.log({
+      userId,
+      actorType: "USER",
+      action: "UPDATE",
+      resourceType: "SHOP_GEMSTONE_RATES",
+      resourceId: shopId,
+      newValue: { ratesUpdated: rates.length },
+    });
+
+    return { success: true, updatedCount: rates.length };
+  }
+
+  /**
    * Admin: Update any shop
    */
   async adminUpdateShop(shopId: string, adminId: string, dto: UpdateShopDto) {

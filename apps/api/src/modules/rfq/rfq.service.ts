@@ -86,24 +86,47 @@ export class RfqService {
   async getEligibleShops(rfqId: string, customerCity?: string) {
     const rfq = await this.prisma.rfqRequest.findUnique({
       where: { id: rfqId },
+      include: { gemstones: true },
     });
 
     if (!rfq) {
       throw new NotFoundException("RFQ not found");
     }
 
+    // Extract material code from composition (e.g. "GOLD_22K", "SILVER_925")
+    const composition = rfq.composition as any;
+    const materialCode: string | undefined =
+      composition?.preciousMetal || composition?.metalType || undefined;
+
+    // Extract gemstone types from RFQ gemstones
+    const gemstoneTypes = rfq.gemstones.map((g) => g.stoneType);
+
+    // Build dynamic filter: always require jewelleryType + buildMethod
+    const whereClause: any = {
+      isActive: true,
+      isVerified: true,
+      supportedJewelleryTypes: { has: rfq.jewelleryType },
+      supportedMethods: { has: rfq.buildMethod },
+    };
+
+    // Filter by material if specified
+    if (materialCode) {
+      whereClause.supportedMaterials = { has: materialCode };
+    }
+
+    // Filter by surface finish if specified
+    if (rfq.surfaceFinish) {
+      whereClause.supportedFinishes = { has: rfq.surfaceFinish };
+    }
+
+    // Filter by gemstones — shop must support all requested gemstone types
+    if (gemstoneTypes.length > 0) {
+      whereClause.supportedGemstones = { hasEvery: gemstoneTypes };
+    }
+
     // Filter shops by capabilities
     const shops = await this.prisma.shop.findMany({
-      where: {
-        isActive: true,
-        isVerified: true,
-        supportedJewelleryTypes: {
-          has: rfq.jewelleryType,
-        },
-        supportedMethods: {
-          has: rfq.buildMethod,
-        },
-      },
+      where: whereClause,
       select: {
         id: true,
         shopName: true,
@@ -123,26 +146,36 @@ export class RfqService {
       },
     });
 
-    // Get system default gold rate for fallback
+    // Get system default rate for the requested material (fallback to gold)
+    const targetMetal = materialCode || "GOLD_24K";
     const systemRate = await this.prisma.marketRate.findFirst({
-      where: { metalCode: "XAU", country: "NP" },
+      where: { metalCode: targetMetal, country: "NP" },
       orderBy: { validFrom: "desc" },
     });
-    const defaultGoldRatePerGram = systemRate?.ratePerGram || 10000;
+    // Fallback: if specific metal not found, try GOLD_24K
+    let defaultRatePerGram = systemRate?.ratePerGram || 0;
+    if (!defaultRatePerGram) {
+      const goldFallback = await this.prisma.marketRate.findFirst({
+        where: { metalCode: "GOLD_24K", country: "NP" },
+        orderBy: { validFrom: "desc" },
+      });
+      defaultRatePerGram = goldFallback?.ratePerGram || 10000;
+    }
 
     // Calculate price estimate and rating for each shop
     const shopsWithPrices = shops.map((shop) => {
-      // Get shop's gold rate or fall back to system rate
-      const shopGoldRate = shop.metalRates.find(
+      // Get shop's rate for the requested material or fall back to system rate
+      const shopRate = shop.metalRates.find(
+        (r) => r.metalType === targetMetal,
+      ) || shop.metalRates.find(
         (r) => r.metalType === "GOLD_24K" || r.metalType === "GOLD_22K",
       );
-      const goldRatePerGram =
-        shopGoldRate?.ratePerGramNpr || defaultGoldRatePerGram;
+      const ratePerGram = shopRate?.ratePerGramNpr || defaultRatePerGram;
 
       // Estimate price based on target weight
       const targetWeight =
         rfq.targetGoldWeightG || rfq.targetTotalWeightG || 10;
-      const metalCost = targetWeight * goldRatePerGram;
+      const metalCost = targetWeight * ratePerGram;
       const makingCharge = metalCost * ((shop.makingChargePercent || 10) / 100);
       const estimatedPrice = Math.round(metalCost + makingCharge);
 
@@ -176,7 +209,7 @@ export class RfqService {
         codEnabled: shop.codEnabled,
         averageRating,
         estimatedPrice,
-        goldRatePerGram,
+        metalRatePerGram: ratePerGram,
         locationPriority,
       };
     });

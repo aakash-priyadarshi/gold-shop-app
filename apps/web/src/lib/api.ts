@@ -105,6 +105,10 @@ export const shopsApi = {
   getCapabilities: () => api.get("/shops/my-shop/capabilities"),
   updateCapabilities: (data: any) =>
     api.put("/shops/my-shop/capabilities", data),
+  // Gemstone pricing management
+  getGemstonePricing: () => api.get("/shops/my-shop/gemstone-pricing"),
+  updateGemstonePricing: (data: any) =>
+    api.put("/shops/my-shop/gemstone-pricing", data),
   // Profile
   updateProfile: (data: {
     about?: string;
