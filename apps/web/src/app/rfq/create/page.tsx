@@ -2059,8 +2059,7 @@ export default function CreateRfqPage() {
               coreMetal: formData.methodCConfig?.baseMetal || "BRASS",
               addGoldPlating: !!formData.methodCConfig?.platingType,
               platingTier: formData.methodCConfig?.platingTier || "STANDARD",
-              isVermeil:
-                formData.methodCConfig?.platingType === "VERMEIL",
+              isVermeil: formData.methodCConfig?.platingType === "VERMEIL",
             }),
             // Method D: Multi-Metal / Italian Machine Made
             ...(formData.buildMethod === "METHOD_D" && {
