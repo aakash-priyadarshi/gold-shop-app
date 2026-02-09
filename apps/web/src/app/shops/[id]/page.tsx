@@ -468,7 +468,7 @@ export default function ShopDetailPage() {
               <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/60" />
             </div>
           ) : (
-            <div className="h-48 md:h-64 bg-gradient-to-br from-amber-600 to-amber-800" />
+            <div className="h-48 md:h-64 bg-gradient-to-br from-neutral-100 via-amber-50 to-amber-100" />
           )}
 
           <div className="container mx-auto px-4 relative -mt-16 pb-8">
@@ -556,7 +556,7 @@ export default function ShopDetailPage() {
                   <DialogTrigger asChild>
                     <Button
                       size="lg"
-                      className="bg-amber-600 text-white hover:bg-amber-700"
+                      className="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-amber-950 font-semibold shadow-lg hover:shadow-xl hover:from-amber-400 hover:via-yellow-300 hover:to-amber-400 border border-amber-300/50 transition-all duration-200"
                     >
                       <SparklesIcon className="h-5 w-5 mr-2" />
                       Custom Order
@@ -1075,8 +1075,15 @@ export default function ShopDetailPage() {
                                 marketRates[normalizeRateKey(material)] ||
                                 marketRates[material] ||
                                 0;
+                              // Use custom making charge if set, otherwise calculate from default %
                               const makingCharge =
-                                pricing?.makingChargePerGram ?? null;
+                                pricing?.makingChargePerGram ??
+                                (liveRate && shop.makingChargePercent != null
+                                  ? Math.round(
+                                      (liveRate * shop.makingChargePercent) /
+                                        100,
+                                    )
+                                  : null);
                               const total =
                                 liveRate && makingCharge !== null
                                   ? liveRate + makingCharge
