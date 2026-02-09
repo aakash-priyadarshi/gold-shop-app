@@ -1077,7 +1077,10 @@ export default function ShopDetailPage() {
                                   className="border-b last:border-0"
                                 >
                                   <td className="py-3">
-                                    <Badge variant="outline" className="font-medium">
+                                    <Badge
+                                      variant="outline"
+                                      className="font-medium"
+                                    >
                                       {material?.replace(/_/g, " ")}
                                     </Badge>
                                   </td>
@@ -1090,17 +1093,16 @@ export default function ShopDetailPage() {
                                     {makingCharge !== null
                                       ? `${symbol}${makingCharge.toLocaleString()}`
                                       : "—"}
-                                    {makingCharge !== null &&
-                                      liveRate > 0 && (
-                                        <span className="ml-1 text-xs text-muted-foreground">
-                                          (
-                                          {(
-                                            (makingCharge / liveRate) *
-                                            100
-                                          ).toFixed(1)}
-                                          %)
-                                        </span>
-                                      )}
+                                    {makingCharge !== null && liveRate > 0 && (
+                                      <span className="ml-1 text-xs text-muted-foreground">
+                                        (
+                                        {(
+                                          (makingCharge / liveRate) *
+                                          100
+                                        ).toFixed(1)}
+                                        %)
+                                      </span>
+                                    )}
                                   </td>
                                   <td className="py-3 text-right font-semibold tabular-nums">
                                     {total !== null

@@ -331,9 +331,7 @@ export class ShopsService {
     // metalRates stores the making charge per gram (ratePerGramNpr) set by the seller
     const materialsPricing = (shop.supportedMaterials || []).map(
       (materialCode: string) => {
-        const rate = shop.metalRates.find(
-          (r) => r.metalType === materialCode,
-        );
+        const rate = shop.metalRates.find((r) => r.metalType === materialCode);
         return {
           materialCode,
           makingChargePerGram: rate?.ratePerGramNpr || null,

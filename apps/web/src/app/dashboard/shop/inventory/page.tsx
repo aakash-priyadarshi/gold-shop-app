@@ -14,6 +14,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -21,10 +22,12 @@ import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { materialsApi, shopsApi } from "@/lib/api";
 import {
   CircleDot,
+  Eye,
   Gem,
   Hammer,
   Info,
   Loader2,
+  Percent,
   RefreshCw,
   Save,
   Sparkles,
