@@ -2041,17 +2041,37 @@ export default function CreateRfqPage() {
           jewelleryType: formData.jewelleryType,
           buildMethod: formData.buildMethod,
           composition: {
-            metalType: formData.metalType,
+            // Common fields
             estimatedWeight: weight,
             surfaceFinish: formData.surfaceFinish,
             hasGemstones: formData.hasGemstones,
             gemstoneDetails: formData.gemstoneDetails,
-            // Method-specific details
+            // Method A: Solid Precious Metal
+            ...(formData.buildMethod === "METHOD_A" && {
+              preciousMetal: formData.metalType,
+            }),
+            // Method B: Standard Alloy / Alloy Builder
             ...(formData.buildMethod === "METHOD_B" && {
               alloyConfig: formData.alloyConfig,
             }),
+            // Method C: Core Metal + Finish (flatten to top-level fields)
             ...(formData.buildMethod === "METHOD_C" && {
-              methodCConfig: formData.methodCConfig,
+              coreMetal: formData.methodCConfig?.baseMetal || "BRASS",
+              addGoldPlating: !!formData.methodCConfig?.platingType,
+              platingTier: formData.methodCConfig?.platingTier || "STANDARD",
+              isVermeil:
+                formData.methodCConfig?.platingType === "VERMEIL",
+            }),
+            // Method D: Multi-Metal / Italian Machine Made
+            ...(formData.buildMethod === "METHOD_D" && {
+              multiMetalPattern: "TWO_TONE_SPLIT" as const,
+              multiMetalMode: "MODE_D1" as const,
+              modeConfig: {
+                goldPurity: formData.methodDConfig?.purity || "18K",
+                baseMetal: "STAINLESS_STEEL_316L",
+                goldPercentByWeight: 30,
+                targetTotalWeightG: weight,
+              },
             }),
           },
           // Include AI preview image in referenceImages if available
