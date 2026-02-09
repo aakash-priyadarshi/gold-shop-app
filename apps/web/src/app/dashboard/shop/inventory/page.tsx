@@ -379,7 +379,7 @@ export default function ShopInventoryPage() {
   const updateMaterialPricing = (
     materialKey: string,
     field: string,
-    value: number,
+    value: number | string,
   ) => {
     if (!materialsData) return;
 
