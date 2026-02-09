@@ -239,14 +239,57 @@ export class SellerPerformanceService {
    * Calculate what tier a seller should be based on performance + criteria
    */
   private async calculateTier(perf: any, shop: any): Promise<SellerTier> {
+    // Load ALL tier criteria in one batch
     const [
-      minOrders,
-      maxCancellation,
-      minRating,
-      minTenureMonths,
-      minPositiveFeedback,
-      minOnTimeDispatch,
+      // Silver criteria
+      silverMinOrders,
+      silverMaxCancellation,
+      silverMinRating,
+      silverMinTenureMonths,
+      // Gold criteria
+      goldMinOrders,
+      goldMaxCancellation,
+      goldMinRating,
+      goldMinTenureMonths,
+      goldMinPositiveFeedback,
+      goldMinOnTimeDispatch,
+      goldRequiresVerified,
+      // Elite criteria
+      eliteMinOrders,
+      eliteMaxCancellation,
+      eliteMinRating,
+      eliteMinTenureMonths,
+      eliteMinPositiveFeedback,
+      eliteMinOnTimeDispatch,
     ] = await Promise.all([
+      // Silver
+      this.configService.getValue(PlatformConfigService.KEYS.SILVER_MIN_ORDERS),
+      this.configService.getValue(
+        PlatformConfigService.KEYS.SILVER_MAX_CANCELLATION_RATE,
+      ),
+      this.configService.getValue(PlatformConfigService.KEYS.SILVER_MIN_RATING),
+      this.configService.getValue(
+        PlatformConfigService.KEYS.SILVER_MIN_TENURE_MONTHS,
+      ),
+      // Gold
+      this.configService.getValue(PlatformConfigService.KEYS.GOLD_MIN_ORDERS),
+      this.configService.getValue(
+        PlatformConfigService.KEYS.GOLD_MAX_CANCELLATION_RATE,
+      ),
+      this.configService.getValue(PlatformConfigService.KEYS.GOLD_MIN_RATING),
+      this.configService.getValue(
+        PlatformConfigService.KEYS.GOLD_MIN_TENURE_MONTHS,
+      ),
+      this.configService.getValue(
+        PlatformConfigService.KEYS.GOLD_MIN_POSITIVE_FEEDBACK,
+      ),
+      this.configService.getValue(
+        PlatformConfigService.KEYS.GOLD_MIN_ON_TIME_DISPATCH,
+      ),
+      this.configService.getValue(
+        PlatformConfigService.KEYS.GOLD_REQUIRES_VERIFIED,
+      ),
+      // Elite
       this.configService.getValue(PlatformConfigService.KEYS.ELITE_MIN_ORDERS),
       this.configService.getValue(
         PlatformConfigService.KEYS.ELITE_MAX_CANCELLATION_RATE,
@@ -267,22 +310,29 @@ export class SellerPerformanceService {
     const tenureMs = Date.now() - new Date(shop.createdAt).getTime();
     const tenureMonths = tenureMs / (30 * 24 * 60 * 60 * 1000);
 
-    // Check for disqualifications
+    // Disqualifications — any suspension or excessive disputes = forced STANDARD
     if (shop.suspensionCount > 0 || shop.disputeCount > 3) {
       return SellerTier.STANDARD;
     }
 
-    // Check ELITE eligibility
+    // ── ELITE ────────────────────────────────────────────
+    // Strictest tier: all metrics must be excellent + must be verified
     const isEliteEligible =
-      perf.successfulOrders >= minOrders &&
-      perf.cancellationRate <= maxCancellation &&
-      perf.avgRating60Days >= minRating &&
-      tenureMonths >= minTenureMonths &&
-      perf.positiveFeedbackRate >= minPositiveFeedback &&
-      perf.onTimeDispatchRate >= minOnTimeDispatch &&
+      perf.successfulOrders >= eliteMinOrders &&
+      perf.cancellationRate <= eliteMaxCancellation &&
+      perf.avgRating60Days >= eliteMinRating &&
+      tenureMonths >= eliteMinTenureMonths &&
+      perf.positiveFeedbackRate >= eliteMinPositiveFeedback &&
+      perf.onTimeDispatchRate >= eliteMinOnTimeDispatch &&
       shop.isVerified;
 
-    // Fast-track elite (campaign/escrow/express participation)
+    if (isEliteEligible) {
+      return SellerTier.ELITE;
+    }
+
+    // ── GOLD ─────────────────────────────────────────────
+    // High performer: strong metrics + feedback/dispatch checks + optionally verified
+    // Fast-track: campaign/escrow/express badge holders get relaxed criteria
     const isFastTrackEligible =
       shop.eliteFastTracked ||
       shop.badges?.some((b: any) =>
@@ -291,41 +341,40 @@ export class SellerPerformanceService {
         ),
       );
 
-    if (isEliteEligible) {
-      return SellerTier.ELITE;
-    }
+    const isGoldEligible =
+      perf.successfulOrders >= goldMinOrders &&
+      perf.cancellationRate <= goldMaxCancellation &&
+      perf.avgRating60Days >= goldMinRating &&
+      tenureMonths >= goldMinTenureMonths &&
+      perf.positiveFeedbackRate >= goldMinPositiveFeedback &&
+      perf.onTimeDispatchRate >= goldMinOnTimeDispatch &&
+      (goldRequiresVerified === 0 || shop.isVerified);
 
-    // Fast-track can achieve GOLD even without full ELITE criteria
-    if (
+    // Fast-track path to Gold: relaxed by 25% on orders/rating
+    const isFastTrackGold =
       isFastTrackEligible &&
-      perf.successfulOrders >= minOrders * 0.5 &&
-      perf.avgRating60Days >= 4.5 &&
-      perf.cancellationRate <= maxCancellation + 1
-    ) {
+      perf.successfulOrders >= goldMinOrders * 0.75 &&
+      perf.avgRating60Days >= goldMinRating - 0.2 &&
+      perf.cancellationRate <= goldMaxCancellation + 1;
+
+    if (isGoldEligible || isFastTrackGold) {
       return SellerTier.GOLD;
     }
 
-    // Check GOLD eligibility (relaxed criteria)
-    if (
-      perf.successfulOrders >= minOrders * 0.75 &&
-      perf.cancellationRate <= maxCancellation + 1 &&
-      perf.avgRating60Days >= 4.5 &&
-      tenureMonths >= minTenureMonths * 0.75 &&
-      shop.isVerified
-    ) {
-      return SellerTier.GOLD;
-    }
+    // ── SILVER ───────────────────────────────────────────
+    // Entry-level proven seller: basic track record established
+    const isSilverEligible =
+      perf.successfulOrders >= silverMinOrders &&
+      perf.cancellationRate <= silverMaxCancellation &&
+      perf.avgRating60Days >= silverMinRating &&
+      tenureMonths >= silverMinTenureMonths;
 
-    // Check SILVER eligibility
-    if (
-      perf.successfulOrders >= minOrders * 0.3 &&
-      perf.cancellationRate <= maxCancellation + 3 &&
-      perf.avgRating60Days >= 4.0 &&
-      tenureMonths >= 3
-    ) {
+    if (isSilverEligible) {
       return SellerTier.SILVER;
     }
 
+    // ── STANDARD ─────────────────────────────────────────
+    // Default tier: all new sellers start here, no criteria needed
     return SellerTier.STANDARD;
   }
 
@@ -413,36 +462,60 @@ export class SellerPerformanceService {
       }),
     ]);
 
-    // Calculate tier progress
-    const [
-      minOrders,
-      maxCancellation,
-      minRating,
-      minTenureMonths,
-      minPositive,
-      minOnTime,
-    ] = await Promise.all([
-      this.configService.getValue(PlatformConfigService.KEYS.ELITE_MIN_ORDERS),
-      this.configService.getValue(
-        PlatformConfigService.KEYS.ELITE_MAX_CANCELLATION_RATE,
-      ),
-      this.configService.getValue(PlatformConfigService.KEYS.ELITE_MIN_RATING),
-      this.configService.getValue(
-        PlatformConfigService.KEYS.ELITE_MIN_TENURE_MONTHS,
-      ),
-      this.configService.getValue(
-        PlatformConfigService.KEYS.ELITE_MIN_POSITIVE_FEEDBACK,
-      ),
-      this.configService.getValue(
-        PlatformConfigService.KEYS.ELITE_MIN_ON_TIME_DISPATCH,
-      ),
-    ]);
+    // Determine next tier and load its criteria
+    const currentTier = shop?.sellerTier || "STANDARD";
+    const nextTier =
+      currentTier === "STANDARD"
+        ? "SILVER"
+        : currentTier === "SILVER"
+          ? "GOLD"
+          : currentTier === "GOLD"
+            ? "ELITE"
+            : null; // ELITE has no next tier
+
+    // Load criteria for the next tier (or Elite if already Elite)
+    const targetTier = nextTier || "ELITE";
+    const prefix = targetTier.toLowerCase();
+
+    const criteriaKeys = {
+      minOrders: `${prefix}_min_orders`,
+      maxCancellation: `${prefix}_max_cancellation_rate`,
+      minRating: `${prefix}_min_rating`,
+      minTenureMonths: `${prefix}_min_tenure_months`,
+    };
+
+    // Gold and Elite have additional criteria
+    const hasAdvancedCriteria = targetTier === "GOLD" || targetTier === "ELITE";
+    const advancedKeys = hasAdvancedCriteria
+      ? {
+          minPositive: `${prefix}_min_positive_feedback`,
+          minOnTime: `${prefix}_min_on_time_dispatch`,
+        }
+      : null;
+
+    const [minOrders, maxCancellation, minRating, minTenureMonths] =
+      await Promise.all([
+        this.configService.getValue(criteriaKeys.minOrders),
+        this.configService.getValue(criteriaKeys.maxCancellation),
+        this.configService.getValue(criteriaKeys.minRating),
+        this.configService.getValue(criteriaKeys.minTenureMonths),
+      ]);
+
+    let minPositive = 0;
+    let minOnTime = 0;
+    if (advancedKeys) {
+      [minPositive, minOnTime] = await Promise.all([
+        this.configService.getValue(advancedKeys.minPositive),
+        this.configService.getValue(advancedKeys.minOnTime),
+      ]);
+    }
 
     const tenureMs =
       Date.now() - new Date(shop?.createdAt || Date.now()).getTime();
     const tenureMonths = tenureMs / (30 * 24 * 60 * 60 * 1000);
 
-    const tierProgress = {
+    // Build tier progress (what's needed for the next tier)
+    const tierProgress: Record<string, any> = {
       orders: {
         current: performance?.successfulOrders || 0,
         required: minOrders,
@@ -463,22 +536,29 @@ export class SellerPerformanceService {
         required: minTenureMonths,
         met: tenureMonths >= minTenureMonths,
       },
-      positiveFeedback: {
+    };
+
+    if (hasAdvancedCriteria) {
+      tierProgress.positiveFeedback = {
         current: performance?.positiveFeedbackRate || 0,
         required: minPositive,
         met: (performance?.positiveFeedbackRate || 0) >= minPositive,
-      },
-      onTimeDispatch: {
+      };
+      tierProgress.onTimeDispatch = {
         current: performance?.onTimeDispatchRate || 0,
         required: minOnTime,
         met: (performance?.onTimeDispatchRate || 0) >= minOnTime,
-      },
-      verified: {
+      };
+    }
+
+    // Gold and Elite require verification
+    if (targetTier === "GOLD" || targetTier === "ELITE") {
+      tierProgress.verified = {
         current: shop?.isVerified || false,
         required: true,
         met: shop?.isVerified || false,
-      },
-    };
+      };
+    }
 
     const totalCriteria = Object.keys(tierProgress).length;
     const metCriteria = Object.values(tierProgress).filter(
@@ -496,6 +576,7 @@ export class SellerPerformanceService {
         eliteFastTracked: shop?.eliteFastTracked,
       },
       badges,
+      nextTier: nextTier, // null if already ELITE
       tierProgress,
       overallProgress: {
         met: metCriteria,

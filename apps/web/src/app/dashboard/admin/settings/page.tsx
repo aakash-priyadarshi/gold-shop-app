@@ -700,119 +700,370 @@ export default function AdminSettingsPage() {
               </CardContent>
             </Card>
 
-            {/* Elite Seller Criteria */}
+            {/* Seller Tier Criteria */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5" />
-                  Elite Seller Criteria
+                  Seller Tier Criteria
                 </CardTitle>
                 <CardDescription>
-                  Minimum thresholds sellers must meet to qualify for Elite tier
+                  Minimum thresholds sellers must meet to qualify for each tier.
+                  Standard is the default — no criteria needed.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <Label>Min. Completed Orders</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={platformConfig.elite_min_orders ?? 100}
-                      onChange={(e) =>
-                        updateConfigValue("elite_min_orders", e.target.value)
-                      }
-                      disabled={loadingConfig}
-                      className="w-28"
-                    />
+              <CardContent className="space-y-8">
+                {/* Silver Tier */}
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-3 h-3 rounded-full bg-slate-400" />
+                    <h4 className="font-semibold text-slate-700">
+                      Silver Tier
+                    </h4>
+                    <span className="text-xs text-muted-foreground">
+                      — Entry-level proven seller
+                    </span>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Max. Cancellation Rate (%)</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      value={platformConfig.elite_max_cancellation_rate ?? 2}
-                      onChange={(e) =>
-                        updateConfigValue(
-                          "elite_max_cancellation_rate",
-                          e.target.value,
-                        )
-                      }
-                      disabled={loadingConfig}
-                      className="w-28"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pl-5 border-l-2 border-slate-300">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Min. Orders</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={platformConfig.silver_min_orders ?? 30}
+                        onChange={(e) =>
+                          updateConfigValue(
+                            "silver_min_orders",
+                            e.target.value,
+                          )
+                        }
+                        disabled={loadingConfig}
+                        className="w-24"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Max. Cancel Rate (%)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={
+                          platformConfig.silver_max_cancellation_rate ?? 5
+                        }
+                        onChange={(e) =>
+                          updateConfigValue(
+                            "silver_max_cancellation_rate",
+                            e.target.value,
+                          )
+                        }
+                        disabled={loadingConfig}
+                        className="w-24"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Min. Rating</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="5"
+                        step="0.1"
+                        value={platformConfig.silver_min_rating ?? 4.0}
+                        onChange={(e) =>
+                          updateConfigValue(
+                            "silver_min_rating",
+                            e.target.value,
+                          )
+                        }
+                        disabled={loadingConfig}
+                        className="w-24"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Min. Tenure (months)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={
+                          platformConfig.silver_min_tenure_months ?? 3
+                        }
+                        onChange={(e) =>
+                          updateConfigValue(
+                            "silver_min_tenure_months",
+                            e.target.value,
+                          )
+                        }
+                        disabled={loadingConfig}
+                        className="w-24"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Min. Average Rating</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="5"
-                      step="0.1"
-                      value={platformConfig.elite_min_rating ?? 4.7}
-                      onChange={(e) =>
-                        updateConfigValue("elite_min_rating", e.target.value)
-                      }
-                      disabled={loadingConfig}
-                      className="w-28"
-                    />
+                </div>
+
+                {/* Gold Tier */}
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                    <h4 className="font-semibold text-yellow-700">Gold Tier</h4>
+                    <span className="text-xs text-muted-foreground">
+                      — High-performing, reliable seller
+                    </span>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Min. Tenure (months)</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={platformConfig.elite_min_tenure_months ?? 6}
-                      onChange={(e) =>
-                        updateConfigValue(
-                          "elite_min_tenure_months",
-                          e.target.value,
-                        )
-                      }
-                      disabled={loadingConfig}
-                      className="w-28"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-5 border-l-2 border-yellow-400">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Min. Orders</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={platformConfig.gold_min_orders ?? 75}
+                        onChange={(e) =>
+                          updateConfigValue("gold_min_orders", e.target.value)
+                        }
+                        disabled={loadingConfig}
+                        className="w-24"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Max. Cancel Rate (%)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={
+                          platformConfig.gold_max_cancellation_rate ?? 3
+                        }
+                        onChange={(e) =>
+                          updateConfigValue(
+                            "gold_max_cancellation_rate",
+                            e.target.value,
+                          )
+                        }
+                        disabled={loadingConfig}
+                        className="w-24"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Min. Rating</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="5"
+                        step="0.1"
+                        value={platformConfig.gold_min_rating ?? 4.5}
+                        onChange={(e) =>
+                          updateConfigValue("gold_min_rating", e.target.value)
+                        }
+                        disabled={loadingConfig}
+                        className="w-24"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Min. Tenure (months)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={platformConfig.gold_min_tenure_months ?? 5}
+                        onChange={(e) =>
+                          updateConfigValue(
+                            "gold_min_tenure_months",
+                            e.target.value,
+                          )
+                        }
+                        disabled={loadingConfig}
+                        className="w-24"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">
+                        Min. Positive Feedback (%)
+                      </Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={
+                          platformConfig.gold_min_positive_feedback ?? 80
+                        }
+                        onChange={(e) =>
+                          updateConfigValue(
+                            "gold_min_positive_feedback",
+                            e.target.value,
+                          )
+                        }
+                        disabled={loadingConfig}
+                        className="w-24"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">
+                        Min. On-Time Dispatch (%)
+                      </Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={
+                          platformConfig.gold_min_on_time_dispatch ?? 90
+                        }
+                        onChange={(e) =>
+                          updateConfigValue(
+                            "gold_min_on_time_dispatch",
+                            e.target.value,
+                          )
+                        }
+                        disabled={loadingConfig}
+                        className="w-24"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Min. Positive Feedback (%)</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="1"
-                      value={platformConfig.elite_min_positive_feedback ?? 90}
-                      onChange={(e) =>
-                        updateConfigValue(
-                          "elite_min_positive_feedback",
-                          e.target.value,
-                        )
-                      }
-                      disabled={loadingConfig}
-                      className="w-28"
-                    />
+                  <p className="text-xs text-muted-foreground mt-2 pl-5">
+                    Gold sellers must also be verified. Fast-track available via
+                    campaign/escrow/express badges (25% relaxed criteria).
+                  </p>
+                </div>
+
+                {/* Elite Tier */}
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-3 h-3 rounded-full bg-purple-500" />
+                    <h4 className="font-semibold text-purple-700">
+                      Elite Tier
+                    </h4>
+                    <span className="text-xs text-muted-foreground">
+                      — Best-in-class, premium craftsmanship
+                    </span>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Min. On-Time Dispatch (%)</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="1"
-                      value={platformConfig.elite_min_on_time_dispatch ?? 95}
-                      onChange={(e) =>
-                        updateConfigValue(
-                          "elite_min_on_time_dispatch",
-                          e.target.value,
-                        )
-                      }
-                      disabled={loadingConfig}
-                      className="w-28"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-5 border-l-2 border-purple-400">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Min. Orders</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={platformConfig.elite_min_orders ?? 100}
+                        onChange={(e) =>
+                          updateConfigValue("elite_min_orders", e.target.value)
+                        }
+                        disabled={loadingConfig}
+                        className="w-24"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Max. Cancel Rate (%)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={
+                          platformConfig.elite_max_cancellation_rate ?? 2
+                        }
+                        onChange={(e) =>
+                          updateConfigValue(
+                            "elite_max_cancellation_rate",
+                            e.target.value,
+                          )
+                        }
+                        disabled={loadingConfig}
+                        className="w-24"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Min. Rating</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="5"
+                        step="0.1"
+                        value={platformConfig.elite_min_rating ?? 4.7}
+                        onChange={(e) =>
+                          updateConfigValue("elite_min_rating", e.target.value)
+                        }
+                        disabled={loadingConfig}
+                        className="w-24"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Min. Tenure (months)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={platformConfig.elite_min_tenure_months ?? 6}
+                        onChange={(e) =>
+                          updateConfigValue(
+                            "elite_min_tenure_months",
+                            e.target.value,
+                          )
+                        }
+                        disabled={loadingConfig}
+                        className="w-24"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">
+                        Min. Positive Feedback (%)
+                      </Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={
+                          platformConfig.elite_min_positive_feedback ?? 90
+                        }
+                        onChange={(e) =>
+                          updateConfigValue(
+                            "elite_min_positive_feedback",
+                            e.target.value,
+                          )
+                        }
+                        disabled={loadingConfig}
+                        className="w-24"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">
+                        Min. On-Time Dispatch (%)
+                      </Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={
+                          platformConfig.elite_min_on_time_dispatch ?? 95
+                        }
+                        onChange={(e) =>
+                          updateConfigValue(
+                            "elite_min_on_time_dispatch",
+                            e.target.value,
+                          )
+                        }
+                        disabled={loadingConfig}
+                        className="w-24"
+                      />
+                    </div>
                   </div>
+                  <p className="text-xs text-muted-foreground mt-2 pl-5">
+                    Elite sellers must be verified. Making charge cap is
+                    effectively uncapped (100%).
+                  </p>
+                </div>
+
+                {/* Standard Tier Info */}
+                <div className="bg-gray-50 rounded-lg p-4 text-sm text-muted-foreground">
+                  <strong>Standard (default):</strong> All new sellers start
+                  here. No minimum criteria — any registered seller with an
+                  active shop is Standard tier. Making charge cap:{" "}
+                  {platformConfig.making_charge_cap_standard ?? 15}%.
                 </div>
               </CardContent>
             </Card>

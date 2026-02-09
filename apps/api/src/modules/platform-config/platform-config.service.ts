@@ -20,6 +20,20 @@ export class PlatformConfigService {
     MAKING_CHARGE_CAP_SILVER: "making_charge_cap_silver",
     MAKING_CHARGE_CAP_GOLD: "making_charge_cap_gold",
     MAKING_CHARGE_CAP_ELITE: "making_charge_cap_elite",
+    // Silver tier criteria
+    SILVER_MIN_ORDERS: "silver_min_orders",
+    SILVER_MAX_CANCELLATION_RATE: "silver_max_cancellation_rate",
+    SILVER_MIN_RATING: "silver_min_rating",
+    SILVER_MIN_TENURE_MONTHS: "silver_min_tenure_months",
+    // Gold tier criteria
+    GOLD_MIN_ORDERS: "gold_min_orders",
+    GOLD_MAX_CANCELLATION_RATE: "gold_max_cancellation_rate",
+    GOLD_MIN_RATING: "gold_min_rating",
+    GOLD_MIN_TENURE_MONTHS: "gold_min_tenure_months",
+    GOLD_MIN_POSITIVE_FEEDBACK: "gold_min_positive_feedback",
+    GOLD_MIN_ON_TIME_DISPATCH: "gold_min_on_time_dispatch",
+    GOLD_REQUIRES_VERIFIED: "gold_requires_verified",
+    // Elite tier criteria
     ELITE_MIN_ORDERS: "elite_min_orders",
     ELITE_MAX_CANCELLATION_RATE: "elite_max_cancellation_rate",
     ELITE_MIN_RATING: "elite_min_rating",
@@ -37,6 +51,20 @@ export class PlatformConfigService {
     [PlatformConfigService.KEYS.MAKING_CHARGE_CAP_SILVER]: 18,
     [PlatformConfigService.KEYS.MAKING_CHARGE_CAP_GOLD]: 22,
     [PlatformConfigService.KEYS.MAKING_CHARGE_CAP_ELITE]: 100, // effectively uncapped
+    // Silver: entry-level proven seller
+    [PlatformConfigService.KEYS.SILVER_MIN_ORDERS]: 30,
+    [PlatformConfigService.KEYS.SILVER_MAX_CANCELLATION_RATE]: 5,
+    [PlatformConfigService.KEYS.SILVER_MIN_RATING]: 4.0,
+    [PlatformConfigService.KEYS.SILVER_MIN_TENURE_MONTHS]: 3,
+    // Gold: high-performing seller
+    [PlatformConfigService.KEYS.GOLD_MIN_ORDERS]: 75,
+    [PlatformConfigService.KEYS.GOLD_MAX_CANCELLATION_RATE]: 3,
+    [PlatformConfigService.KEYS.GOLD_MIN_RATING]: 4.5,
+    [PlatformConfigService.KEYS.GOLD_MIN_TENURE_MONTHS]: 5,
+    [PlatformConfigService.KEYS.GOLD_MIN_POSITIVE_FEEDBACK]: 80,
+    [PlatformConfigService.KEYS.GOLD_MIN_ON_TIME_DISPATCH]: 90,
+    [PlatformConfigService.KEYS.GOLD_REQUIRES_VERIFIED]: 1, // 1 = yes, 0 = no
+    // Elite: best-in-class seller
     [PlatformConfigService.KEYS.ELITE_MIN_ORDERS]: 100,
     [PlatformConfigService.KEYS.ELITE_MAX_CANCELLATION_RATE]: 2,
     [PlatformConfigService.KEYS.ELITE_MIN_RATING]: 4.7,
