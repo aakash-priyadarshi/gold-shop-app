@@ -76,6 +76,7 @@ const navItems: NavItem[] = [
   { label: 'RFQ Requests', href: '/dashboard/shop/rfqs', icon: ClipboardList, roles: ['SHOPKEEPER'] },
   { label: 'Analytics', href: '/dashboard/shop/analytics', icon: TrendingUp, roles: ['SHOPKEEPER'] },
   { label: 'Profile', href: '/dashboard/shop/profile', icon: UserCircle, roles: ['SHOPKEEPER'] },
+  { label: 'Shop Profile', href: '/dashboard/shop/shop-profile', icon: Store, roles: ['SHOPKEEPER'] },
   { label: 'Shop Settings', href: '/dashboard/shop/settings', icon: Settings, roles: ['SHOPKEEPER'] },
   
   // Customer routes

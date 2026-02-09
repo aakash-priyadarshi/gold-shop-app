@@ -17,12 +17,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { materialsApi, shopsApi } from "@/lib/api";
-import {
-  CURRENCIES,
-  usePreferencesStore,
-  type CurrencyCode,
-} from "@/store/preferences";
 import {
   CircleDot,
   Gem,
@@ -158,7 +154,7 @@ const gemstoneCategories = [
 
 export default function ShopInventoryPage() {
   const { user } = useAuth();
-  const { currency } = usePreferencesStore();
+  const { currencyCode: shopCurrency, symbol: currencySymbol, country: shopCountry } = useShopCurrency();
   const [materialsData, setMaterialsData] = useState<MaterialsData | null>(
     null,
   );
@@ -168,28 +164,6 @@ export default function ShopInventoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshingRates, setIsRefreshingRates] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
-  // Get shop's country for market rates - default to user preference
-  const shopCountry = user?.shop?.country || "NP";
-  // Map country to currency
-  const shopCurrency =
-    shopCountry === "IN"
-      ? "INR"
-      : shopCountry === "AE"
-        ? "AED"
-        : shopCountry === "US"
-          ? "USD"
-          : shopCountry === "UK"
-            ? "GBP"
-            : shopCountry === "EU"
-              ? "EUR"
-              : "NPR";
-
-  // Get currency symbol
-  const currencySymbol =
-    CURRENCIES[shopCurrency as CurrencyCode]?.symbol ||
-    CURRENCIES[currency as CurrencyCode]?.symbol ||
-    "Rs.";
 
   useEffect(() => {
     if (user?.shop?.id) {

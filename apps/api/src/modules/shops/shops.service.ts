@@ -3,12 +3,15 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import { RedisService } from "../../common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
+import { PlatformConfigService } from "../platform-config/platform-config.service";
+import { ContentModerationService } from "./content-moderation.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
 import { OAuthShopSetupDto } from "./dto/oauth-shop-setup.dto";
 import { UpdateMetalRatesDto } from "./dto/update-metal-rates.dto";
@@ -16,10 +19,14 @@ import { UpdateShopDto } from "./dto/update-shop.dto";
 
 @Injectable()
 export class ShopsService {
+  private readonly logger = new Logger(ShopsService.name);
+
   constructor(
     private prisma: PrismaService,
     private auditService: AuditService,
     private redisService: RedisService,
+    private configService: PlatformConfigService,
+    private moderationService: ContentModerationService,
   ) {}
 
   /**
@@ -302,12 +309,15 @@ export class ShopsService {
         finishPricing: true,
         ratings: {
           take: 10,
+          where: { isPublic: true },
           orderBy: { createdAt: "desc" },
           select: {
             overall: true,
             quality: true,
             reviewText: true,
             createdAt: true,
+            sellerReply: true,
+            sellerRepliedAt: true,
           },
         },
       },
@@ -598,6 +608,18 @@ export class ShopsService {
 
     if (!shop) {
       throw new NotFoundException("Shop not found for this user");
+    }
+
+    // Enforce making charge cap based on seller tier
+    if (dto.makingChargePercent !== undefined) {
+      const cap = await this.configService.getMakingChargeCap(
+        shop.sellerTier || "STANDARD",
+      );
+      if (dto.makingChargePercent > cap) {
+        throw new BadRequestException(
+          `Making charge ${dto.makingChargePercent}% exceeds your ${shop.sellerTier} tier cap of ${cap}%. Upgrade your tier to increase the limit.`,
+        );
+      }
     }
 
     const previousValue = { ...shop };
@@ -1406,5 +1428,199 @@ export class ShopsService {
             : 0,
       },
     };
+  }
+
+  // ── Shop Profile Methods ──────────────────────────────
+
+  /**
+   * Update shop profile (about, images, name) with content moderation
+   */
+  async updateShopProfile(
+    userId: string,
+    data: { about?: string; profileImage?: string; coverImage?: string; shopName?: string },
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { activeShopId: true },
+    });
+
+    const shop = await this.prisma.shop.findFirst({
+      where: user?.activeShopId
+        ? { id: user.activeShopId, userId }
+        : { userId },
+    });
+
+    if (!shop) {
+      throw new NotFoundException("Shop not found");
+    }
+
+    // Moderate about text if provided
+    if (data.about !== undefined && data.about.trim().length > 0) {
+      const modResult = await this.moderationService.moderateAboutText(data.about);
+      if (!modResult.safe) {
+        throw new BadRequestException({
+          message: "Your about section contains content that violates our policy",
+          violations: modResult.violations,
+        });
+      }
+    }
+
+    const updateData: any = {};
+    if (data.about !== undefined) updateData.about = data.about;
+    if (data.profileImage !== undefined) updateData.profileImage = data.profileImage;
+    if (data.coverImage !== undefined) updateData.coverImage = data.coverImage;
+    if (data.shopName) updateData.shopName = data.shopName;
+
+    const updated = await this.prisma.shop.update({
+      where: { id: shop.id },
+      data: updateData,
+    });
+
+    return updated;
+  }
+
+  // ── Review Management Methods ────────────────────────
+
+  /**
+   * Get reviews for a shop (seller dashboard view)
+   */
+  async getShopReviews(shopId: string, opts: { page: number; pageSize: number }) {
+    if (!shopId) throw new BadRequestException("Shop ID required");
+
+    const [reviews, total] = await Promise.all([
+      this.prisma.shopRating.findMany({
+        where: { shopId },
+        orderBy: { createdAt: "desc" },
+        skip: (opts.page - 1) * opts.pageSize,
+        take: opts.pageSize,
+      }),
+      this.prisma.shopRating.count({ where: { shopId } }),
+    ]);
+
+    // Fetch customer names separately (avoid direct relation since schema doesn't have FK)
+    const customerIds = [...new Set(reviews.map((r) => r.customerId))];
+    const customers = await this.prisma.user.findMany({
+      where: { id: { in: customerIds } },
+      select: { id: true, firstName: true, lastName: true },
+    });
+
+    const customerMap = new Map(customers.map((c) => [c.id, c]));
+
+    const enrichedReviews = reviews.map((r) => ({
+      ...r,
+      customer: customerMap.get(r.customerId) || { firstName: "Customer", lastName: "" },
+    }));
+
+    return {
+      reviews: enrichedReviews,
+      meta: {
+        page: opts.page,
+        pageSize: opts.pageSize,
+        totalCount: total,
+        totalPages: Math.ceil(total / opts.pageSize),
+      },
+    };
+  }
+
+  /**
+   * Reply to a customer review
+   */
+  async replyToReview(shopId: string, reviewId: string, reply: string) {
+    if (!shopId) throw new BadRequestException("Shop ID required");
+    if (!reply?.trim()) throw new BadRequestException("Reply cannot be empty");
+
+    const review = await this.prisma.shopRating.findFirst({
+      where: { id: reviewId, shopId },
+    });
+
+    if (!review) {
+      throw new NotFoundException("Review not found");
+    }
+
+    // Moderate reply text too
+    const modResult = await this.moderationService.moderateAboutText(reply);
+    if (!modResult.safe) {
+      throw new BadRequestException({
+        message: "Your reply contains content that violates our policy",
+        violations: modResult.violations,
+      });
+    }
+
+    return this.prisma.shopRating.update({
+      where: { id: reviewId },
+      data: {
+        sellerReply: reply.trim(),
+        sellerRepliedAt: new Date(),
+      },
+    });
+  }
+
+  /**
+   * Request admin to delete a review (seller explains why)
+   */
+  async requestReviewDeletion(shopId: string, reviewId: string, reason: string) {
+    if (!shopId) throw new BadRequestException("Shop ID required");
+    if (!reason?.trim() || reason.trim().length < 20) {
+      throw new BadRequestException("Please provide a detailed reason (at least 20 characters)");
+    }
+
+    const review = await this.prisma.shopRating.findFirst({
+      where: { id: reviewId, shopId },
+    });
+
+    if (!review) {
+      throw new NotFoundException("Review not found");
+    }
+
+    if (review.deleteRequested && review.deleteRequestStatus === "PENDING") {
+      throw new BadRequestException("A deletion request is already pending for this review");
+    }
+
+    return this.prisma.shopRating.update({
+      where: { id: reviewId },
+      data: {
+        deleteRequested: true,
+        deleteRequestReason: reason.trim(),
+        deleteRequestAt: new Date(),
+        deleteRequestStatus: "PENDING",
+      },
+    });
+  }
+
+  /**
+   * Admin handles review deletion request (approve/reject)
+   */
+  async handleReviewDeletionRequest(
+    reviewId: string,
+    adminId: string,
+    action: "APPROVED" | "REJECTED",
+  ) {
+    const review = await this.prisma.shopRating.findUnique({
+      where: { id: reviewId },
+    });
+
+    if (!review) {
+      throw new NotFoundException("Review not found");
+    }
+
+    if (review.deleteRequestStatus !== "PENDING") {
+      throw new BadRequestException("No pending deletion request for this review");
+    }
+
+    const updateData: any = {
+      deleteRequestStatus: action,
+      deleteReviewedBy: adminId,
+      deleteReviewedAt: new Date(),
+    };
+
+    // If approved, hide the review
+    if (action === "APPROVED") {
+      updateData.isPublic = false;
+    }
+
+    return this.prisma.shopRating.update({
+      where: { id: reviewId },
+      data: updateData,
+    });
   }
 }

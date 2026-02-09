@@ -153,9 +153,13 @@ model Shop {
   shopName                String
   shopNameNe              String?
   shopNameHi              String?
+  slug                    String?               @unique
   description             String?
   descriptionNe           String?
   descriptionHi           String?
+  about                   String?               // Moderated about section (no contacts allowed)
+  profileImage            String?               // Shop profile picture URL
+  coverImage              String?               // Shop cover/banner image URL
   country                 String                @default("NP")
   state                   String?
   city                    String
@@ -648,7 +652,20 @@ model ShopRating {
   createdAt     DateTime @default(now())
   shop          Shop     @relation(fields: [shopId], references: [id])
 
+  // Seller reply
+  sellerReply   String?
+  sellerRepliedAt DateTime?
+
+  // Deletion request
+  deleteRequested      Boolean  @default(false)
+  deleteRequestReason  String?
+  deleteRequestAt      DateTime?
+  deleteRequestStatus  String?  @default("NONE") // NONE, PENDING, APPROVED, REJECTED
+  deleteReviewedBy     String?
+  deleteReviewedAt     DateTime?
+
   @@index([shopId])
+  @@index([customerId])
 }
 
 model Notification {

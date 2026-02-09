@@ -22,7 +22,7 @@ import {
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { shopsApi, ordersApi, rfqApi, inventoryApi } from '@/lib/api';
-import { usePreferencesStore, CURRENCIES, type CurrencyCode } from '@/store/preferences';
+import { useShopCurrency } from '@/hooks/useShopCurrency';
 
 interface Stat {
   title: string;
@@ -65,12 +65,7 @@ const statusColors: Record<string, string> = {
 
 export default function ShopDashboard() {
   const { user } = useAuth();
-  const { currency } = usePreferencesStore();
-  
-  // Get shop-based currency from shop's country
-  const shopCountry = user?.shop?.country || 'NP';
-  const shopCurrency = shopCountry === 'IN' ? 'INR' : shopCountry === 'AE' ? 'AED' : shopCountry === 'US' ? 'USD' : shopCountry === 'UK' ? 'GBP' : 'NPR';
-  const currencySymbol = CURRENCIES[shopCurrency as CurrencyCode]?.symbol || CURRENCIES[currency as CurrencyCode]?.symbol || 'Rs.';
+  const { currencyCode: shopCurrency, symbol: currencySymbol, format: formatCurrency } = useShopCurrency();
   
   const [stats, setStats] = useState<Stat[]>([]);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);

@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneInput, needsCountryCode } from "@/components/ui/phone-input";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -25,9 +25,9 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { authApi, sellerPerformanceApi, shopsApi } from "@/lib/api";
 import {
   AlertTriangle,
@@ -53,7 +53,7 @@ import {
   Wallet,
   XCircle,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 interface ShopData {
   id: string;
@@ -181,9 +181,16 @@ const TIER_META: Record<
   },
 };
 
-const CRITERIA_LABELS: Record<string, { label: string; unit: string; lowerIsBetter?: boolean }> = {
+const CRITERIA_LABELS: Record<
+  string,
+  { label: string; unit: string; lowerIsBetter?: boolean }
+> = {
   orders: { label: "Completed Orders", unit: "" },
-  cancellationRate: { label: "Cancellation Rate", unit: "%", lowerIsBetter: true },
+  cancellationRate: {
+    label: "Cancellation Rate",
+    unit: "%",
+    lowerIsBetter: true,
+  },
   rating: { label: "Average Rating (60d)", unit: "★" },
   tenure: { label: "Shop Tenure", unit: " months" },
   positiveFeedback: { label: "Positive Feedback", unit: "%" },
@@ -193,10 +200,13 @@ const CRITERIA_LABELS: Record<string, { label: string; unit: string; lowerIsBett
 
 export default function ShopSettingsPage() {
   const { user } = useAuth();
+  const { placeholders: countryPlaceholders, symbol: currencySymbol } = useShopCurrency();
   const [shopData, setShopData] = useState<ShopData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [tierDashboard, setTierDashboard] = useState<TierDashboard | null>(null);
+  const [tierDashboard, setTierDashboard] = useState<TierDashboard | null>(
+    null,
+  );
   const [tierLoading, setTierLoading] = useState(false);
 
   // Phone availability check state
@@ -505,7 +515,7 @@ export default function ShopSettingsPage() {
                             updateShopData({ contactPhone: value });
                             checkPhoneAvailability(value);
                           }}
-                          placeholder="+977 98XXXXXXXX"
+                          placeholder={countryPlaceholders.phone}
                           error={phoneCheckState.exists === true}
                         />
                         {/* Real-time phone check indicator */}
@@ -555,7 +565,7 @@ export default function ShopSettingsPage() {
                         onChange={(e) =>
                           updateShopData({ whatsappNumber: e.target.value })
                         }
-                        placeholder="+977 98XXXXXXXX"
+                        placeholder={countryPlaceholders.phone}
                       />
                     </div>
                   </div>
@@ -608,7 +618,7 @@ export default function ShopSettingsPage() {
                         onChange={(e) =>
                           updateShopData({ state: e.target.value })
                         }
-                        placeholder="Bagmati"
+                        placeholder={countryPlaceholders.state}
                       />
                     </div>
                   </div>
@@ -621,18 +631,18 @@ export default function ShopSettingsPage() {
                         onChange={(e) =>
                           updateShopData({ city: e.target.value })
                         }
-                        placeholder="Kathmandu"
+                        placeholder={countryPlaceholders.city}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="pincode">Postal Code</Label>
+                      <Label htmlFor="pincode">{countryPlaceholders.pincodeLabel}</Label>
                       <Input
                         id="pincode"
                         value={shopData.pincode || ""}
                         onChange={(e) =>
                           updateShopData({ pincode: e.target.value })
                         }
-                        placeholder="44600"
+                        placeholder={countryPlaceholders.pincode}
                       />
                     </div>
                   </div>
@@ -712,19 +722,29 @@ export default function ShopSettingsPage() {
                       <div className="space-y-4">
                         {/* Current Tier Banner */}
                         {(() => {
-                          const currentTier = tierDashboard.shop?.sellerTier || "STANDARD";
-                          const meta = TIER_META[currentTier] || TIER_META.STANDARD;
+                          const currentTier =
+                            tierDashboard.shop?.sellerTier || "STANDARD";
+                          const meta =
+                            TIER_META[currentTier] || TIER_META.STANDARD;
                           const TierIcon = meta.icon;
                           const cap = tierDashboard.shop?.makingChargeCap;
                           return (
-                            <div className={`rounded-lg border-2 ${meta.border} bg-gradient-to-r ${meta.gradient} p-4`}>
+                            <div
+                              className={`rounded-lg border-2 ${meta.border} bg-gradient-to-r ${meta.gradient} p-4`}
+                            >
                               <div className="flex items-center justify-between flex-wrap gap-3">
                                 <div className="flex items-center gap-3">
-                                  <div className={`p-2 rounded-full ${meta.bg}`}>
-                                    <TierIcon className={`h-6 w-6 ${meta.color}`} />
+                                  <div
+                                    className={`p-2 rounded-full ${meta.bg}`}
+                                  >
+                                    <TierIcon
+                                      className={`h-6 w-6 ${meta.color}`}
+                                    />
                                   </div>
                                   <div>
-                                    <p className={`font-bold text-lg ${meta.color}`}>
+                                    <p
+                                      className={`font-bold text-lg ${meta.color}`}
+                                    >
                                       {meta.label} Tier
                                     </p>
                                     <p className="text-sm text-muted-foreground">
@@ -736,11 +756,15 @@ export default function ShopSettingsPage() {
                                     </p>
                                   </div>
                                 </div>
-                                {tierDashboard.shop?.tierUnlockedAt && currentTier !== "STANDARD" && (
-                                  <p className="text-xs text-muted-foreground">
-                                    Since {new Date(tierDashboard.shop.tierUnlockedAt).toLocaleDateString()}
-                                  </p>
-                                )}
+                                {tierDashboard.shop?.tierUnlockedAt &&
+                                  currentTier !== "STANDARD" && (
+                                    <p className="text-xs text-muted-foreground">
+                                      Since{" "}
+                                      {new Date(
+                                        tierDashboard.shop.tierUnlockedAt,
+                                      ).toLocaleDateString()}
+                                    </p>
+                                  )}
                               </div>
                             </div>
                           );
@@ -752,75 +776,108 @@ export default function ShopSettingsPage() {
                             <div className="flex items-center justify-between">
                               <h5 className="text-sm font-semibold flex items-center gap-1.5">
                                 <ArrowUpRight className="h-4 w-4" />
-                                Progress to {TIER_META[tierDashboard.nextTier]?.label || tierDashboard.nextTier}
+                                Progress to{" "}
+                                {TIER_META[tierDashboard.nextTier]?.label ||
+                                  tierDashboard.nextTier}
                               </h5>
                               <span className="text-sm font-bold text-primary">
                                 {tierDashboard.overallProgress.percentage}%
                               </span>
                             </div>
-                            <Progress value={tierDashboard.overallProgress.percentage} className="h-2" />
+                            <Progress
+                              value={tierDashboard.overallProgress.percentage}
+                              className="h-2"
+                            />
                             <div className="grid gap-2">
-                              {Object.entries(tierDashboard.tierProgress).map(([key, criterion]) => {
-                                const meta = CRITERIA_LABELS[key];
-                                if (!meta) return null;
-                                const isBool = typeof criterion.required === "boolean";
-                                return (
-                                  <div
-                                    key={key}
-                                    className={`flex items-center justify-between rounded-md px-3 py-2 text-sm border ${
-                                      criterion.met
-                                        ? "bg-green-50 border-green-200"
-                                        : "bg-amber-50 border-amber-200"
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      {criterion.met ? (
-                                        <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
-                                      ) : (
-                                        <XCircle className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                                      )}
-                                      <span>{meta.label}</span>
+                              {Object.entries(tierDashboard.tierProgress).map(
+                                ([key, criterion]) => {
+                                  const meta = CRITERIA_LABELS[key];
+                                  if (!meta) return null;
+                                  const isBool =
+                                    typeof criterion.required === "boolean";
+                                  return (
+                                    <div
+                                      key={key}
+                                      className={`flex items-center justify-between rounded-md px-3 py-2 text-sm border ${
+                                        criterion.met
+                                          ? "bg-green-50 border-green-200"
+                                          : "bg-amber-50 border-amber-200"
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        {criterion.met ? (
+                                          <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                        ) : (
+                                          <XCircle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                                        )}
+                                        <span>{meta.label}</span>
+                                      </div>
+                                      <span className="font-mono text-xs">
+                                        {isBool ? (
+                                          criterion.current ? (
+                                            "Yes"
+                                          ) : (
+                                            "No"
+                                          )
+                                        ) : meta.lowerIsBetter ? (
+                                          <>
+                                            {Number(criterion.current).toFixed(
+                                              1,
+                                            )}
+                                            {meta.unit} / ≤{" "}
+                                            {Number(criterion.required).toFixed(
+                                              1,
+                                            )}
+                                            {meta.unit}
+                                          </>
+                                        ) : (
+                                          <>
+                                            {typeof criterion.current ===
+                                              "number" &&
+                                            criterion.current % 1 !== 0
+                                              ? Number(
+                                                  criterion.current,
+                                                ).toFixed(1)
+                                              : criterion.current}
+                                            {meta.unit} /{" "}
+                                            {typeof criterion.required ===
+                                              "number" &&
+                                            criterion.required % 1 !== 0
+                                              ? Number(
+                                                  criterion.required,
+                                                ).toFixed(1)
+                                              : criterion.required}
+                                            {meta.unit}
+                                          </>
+                                        )}
+                                      </span>
                                     </div>
-                                    <span className="font-mono text-xs">
-                                      {isBool ? (
-                                        criterion.current ? "Yes" : "No"
-                                      ) : meta.lowerIsBetter ? (
-                                        <>
-                                          {Number(criterion.current).toFixed(1)}{meta.unit}
-                                          {" "}/ ≤ {Number(criterion.required).toFixed(1)}{meta.unit}
-                                        </>
-                                      ) : (
-                                        <>
-                                          {typeof criterion.current === "number" && criterion.current % 1 !== 0
-                                            ? Number(criterion.current).toFixed(1)
-                                            : criterion.current}
-                                          {meta.unit}
-                                          {" "}/ {typeof criterion.required === "number" && criterion.required % 1 !== 0
-                                            ? Number(criterion.required).toFixed(1)
-                                            : criterion.required}
-                                          {meta.unit}
-                                        </>
-                                      )}
-                                    </span>
-                                  </div>
-                                );
-                              })}
+                                  );
+                                },
+                              )}
                             </div>
                           </div>
                         )}
 
                         {/* Show all 4 tier roadmap */}
                         <div className="rounded-lg border p-3 bg-muted/30">
-                          <h5 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Tier Roadmap</h5>
+                          <h5 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+                            Tier Roadmap
+                          </h5>
                           <div className="flex items-center gap-1">
-                            {(["STANDARD", "SILVER", "GOLD", "ELITE"] as const).map((t, i) => {
+                            {(
+                              ["STANDARD", "SILVER", "GOLD", "ELITE"] as const
+                            ).map((t, i) => {
                               const m = TIER_META[t];
                               const isCurrentOrPast =
                                 ["STANDARD", "SILVER", "GOLD", "ELITE"].indexOf(
-                                  tierDashboard.shop?.sellerTier || "STANDARD"
+                                  tierDashboard.shop?.sellerTier || "STANDARD",
                                 ) >= i;
                               return (
-                                <div key={t} className="flex items-center gap-1 flex-1">
+                                <div
+                                  key={t}
+                                  className="flex items-center gap-1 flex-1"
+                                >
                                   <div
                                     className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium flex-1 justify-center ${
                                       isCurrentOrPast
@@ -828,11 +885,17 @@ export default function ShopSettingsPage() {
                                         : "bg-muted text-muted-foreground border border-muted"
                                     }`}
                                   >
-                                    {React.createElement(m.icon, { className: "h-3 w-3" })}
-                                    <span className="hidden sm:inline">{m.label}</span>
+                                    {React.createElement(m.icon, {
+                                      className: "h-3 w-3",
+                                    })}
+                                    <span className="hidden sm:inline">
+                                      {m.label}
+                                    </span>
                                   </div>
                                   {i < 3 && (
-                                    <div className={`h-px w-2 ${isCurrentOrPast ? "bg-primary" : "bg-muted-foreground/30"}`} />
+                                    <div
+                                      className={`h-px w-2 ${isCurrentOrPast ? "bg-primary" : "bg-muted-foreground/30"}`}
+                                    />
                                   )}
                                 </div>
                               );
@@ -843,7 +906,8 @@ export default function ShopSettingsPage() {
                     ) : (
                       <div className="bg-gray-50 border rounded-lg p-3">
                         <p className="text-sm text-muted-foreground">
-                          Tier information will appear once your shop has some activity.
+                          Tier information will appear once your shop has some
+                          activity.
                         </p>
                       </div>
                     )}
@@ -867,19 +931,25 @@ export default function ShopSettingsPage() {
                           }}
                           className={
                             tierDashboard?.shop?.makingChargeCap != null &&
-                            (shopData.makingChargePercent ?? 10) > tierDashboard.shop.makingChargeCap
+                            (shopData.makingChargePercent ?? 10) >
+                              tierDashboard.shop.makingChargeCap
                               ? "border-red-400 focus-visible:ring-red-400"
                               : ""
                           }
                         />
                         {/* Live cap warning */}
                         {tierDashboard?.shop?.makingChargeCap != null &&
-                          (shopData.makingChargePercent ?? 10) > tierDashboard.shop.makingChargeCap ? (
+                        (shopData.makingChargePercent ?? 10) >
+                          tierDashboard.shop.makingChargeCap ? (
                           <div className="flex items-start gap-2 rounded-md bg-red-50 border border-red-200 px-3 py-2">
                             <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
                             <div className="text-xs text-red-700">
                               <p className="font-medium">
-                                Exceeds your {TIER_META[tierDashboard.shop.sellerTier]?.label || "Standard"} tier cap of {tierDashboard.shop.makingChargeCap}%
+                                Exceeds your{" "}
+                                {TIER_META[tierDashboard.shop.sellerTier]
+                                  ?.label || "Standard"}{" "}
+                                tier cap of {tierDashboard.shop.makingChargeCap}
+                                %
                               </p>
                               <p>
                                 {tierDashboard.nextTier
@@ -890,11 +960,16 @@ export default function ShopSettingsPage() {
                           </div>
                         ) : tierDashboard?.shop?.makingChargeCap != null ? (
                           <p className="text-xs text-muted-foreground">
-                            Your {TIER_META[tierDashboard.shop.sellerTier]?.label || "Standard"} tier allows up to {tierDashboard.shop.makingChargeCap}% making charge
+                            Your{" "}
+                            {TIER_META[tierDashboard.shop.sellerTier]?.label ||
+                              "Standard"}{" "}
+                            tier allows up to{" "}
+                            {tierDashboard.shop.makingChargeCap}% making charge
                           </p>
                         ) : (
                           <p className="text-xs text-muted-foreground">
-                            Applied to all materials if not specified individually
+                            Applied to all materials if not specified
+                            individually
                           </p>
                         )}
                       </div>
@@ -909,7 +984,7 @@ export default function ShopSettingsPage() {
                               minOrderValueNpr: parseInt(e.target.value) || 0,
                             })
                           }
-                          placeholder="e.g., 10000"
+                          placeholder={countryPlaceholders.minOrderExample}
                         />
                       </div>
                     </div>
@@ -963,7 +1038,7 @@ export default function ShopSettingsPage() {
                               parseInt(e.target.value) || undefined,
                           })
                         }
-                        placeholder="e.g., 100000"
+                        placeholder={countryPlaceholders.maxCodExample}
                       />
                       <p className="text-xs text-muted-foreground">
                         Leave empty for no limit
@@ -988,7 +1063,7 @@ export default function ShopSettingsPage() {
                           onChange={(e) =>
                             updateBankDetails({ bankName: e.target.value })
                           }
-                          placeholder="Nepal Bank Limited"
+                          placeholder={countryPlaceholders.bankName}
                         />
                       </div>
                       <div className="space-y-2">
@@ -999,7 +1074,7 @@ export default function ShopSettingsPage() {
                           onChange={(e) =>
                             updateBankDetails({ branchName: e.target.value })
                           }
-                          placeholder="New Road Branch"
+                          placeholder={countryPlaceholders.bankBranch}
                         />
                       </div>
                       <div className="space-y-2">
@@ -1028,7 +1103,7 @@ export default function ShopSettingsPage() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="swiftCode">
-                          SWIFT/BIC Code (for international)
+                          {countryPlaceholders.swiftLabel} (for international)
                         </Label>
                         <Input
                           id="swiftCode"

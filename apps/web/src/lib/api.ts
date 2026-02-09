@@ -105,6 +105,22 @@ export const shopsApi = {
   getCapabilities: () => api.get("/shops/my-shop/capabilities"),
   updateCapabilities: (data: any) =>
     api.put("/shops/my-shop/capabilities", data),
+  // Profile
+  updateProfile: (data: {
+    about?: string;
+    profileImage?: string;
+    coverImage?: string;
+    shopName?: string;
+  }) => api.patch("/shops/my-shop/profile", data),
+  moderateAbout: (text: string) =>
+    api.post("/shops/my-shop/moderate-about", { text }),
+  // Reviews
+  getMyReviews: (params?: { page?: number; pageSize?: number }) =>
+    api.get("/shops/my-shop/reviews", { params }),
+  replyToReview: (reviewId: string, reply: string) =>
+    api.patch(`/shops/my-shop/reviews/${reviewId}/reply`, { reply }),
+  requestReviewDeletion: (reviewId: string, reason: string) =>
+    api.post(`/shops/my-shop/reviews/${reviewId}/request-delete`, { reason }),
 };
 
 // Inventory API

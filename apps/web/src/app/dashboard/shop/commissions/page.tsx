@@ -27,6 +27,7 @@ import {
 import api from '@/lib/api';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
+import { useShopCurrency } from '@/hooks/useShopCurrency';
 import { ShopCommissionStatus } from '@/components/shop/ShopCommissionStatus';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,7 @@ interface CommissionLedger {
 
 export default function ShopCommissionsPage() {
   const { user } = useAuth();
+  const { currencyCode, locale, symbol } = useShopCurrency();
   const [commissions, setCommissions] = useState<CommissionLedger[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -82,10 +84,10 @@ export default function ShopCommissionsPage() {
     fetchCommissions();
   }, [fetchCommissions]);
 
-  const formatCurrency = (amount: number, currency: string = 'NPR') => {
-    return new Intl.NumberFormat('en-NP', {
+  const formatCurrency = (amount: number, cur: string = currencyCode) => {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: currency,
+      currency: cur,
       minimumFractionDigits: 2,
     }).format(amount);
   };

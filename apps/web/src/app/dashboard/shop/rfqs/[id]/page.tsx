@@ -25,6 +25,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { offersApi, rfqApi } from "@/lib/api";
 import {
   ArrowLeft,
@@ -126,6 +127,7 @@ export default function ShopRfqDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
+  const shopCurrencyData = useShopCurrency();
   const rfqId = params.id as string;
 
   const [rfq, setRfq] = useState<RfqDetails | null>(null);
@@ -397,10 +399,11 @@ export default function ShopRfqDetailPage() {
     });
   };
 
-  const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat("en-US", {
+  const formatCurrency = (amount: number, currency?: string) => {
+    const { currencyCode, locale } = shopCurrencyData;
+    return new Intl.NumberFormat(locale, {
       style: "currency",
-      currency: currency || "USD",
+      currency: currency || currencyCode,
       minimumFractionDigits: 0,
     }).format(amount);
   };

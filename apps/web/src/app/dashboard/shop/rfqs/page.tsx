@@ -31,6 +31,7 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { rfqApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { useShopCurrency } from '@/hooks/useShopCurrency';
 
 interface Rfq {
   id: string;
@@ -84,6 +85,7 @@ const statusColors: Record<string, string> = {
 
 export default function ShopRfqsPage() {
   const { user } = useAuth();
+  const { symbol: currencySymbol, format: formatShopCurrency } = useShopCurrency();
   const [rfqs, setRfqs] = useState<Rfq[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -244,8 +246,8 @@ export default function ShopRfqsPage() {
                             <div className="flex items-center gap-1">
                               <DollarSign className="h-3 w-3 text-muted-foreground" />
                               <span className="text-sm">
-                                {rfq.budgetMinNpr ? `Rs. ${rfq.budgetMinNpr.toLocaleString()} - ` : ''}
-                                Rs. {rfq.budgetMaxNpr.toLocaleString()}
+                                {rfq.budgetMinNpr ? `${currencySymbol} ${rfq.budgetMinNpr.toLocaleString()} - ` : ''}
+                                {currencySymbol} {rfq.budgetMaxNpr.toLocaleString()}
                               </span>
                             </div>
                           ) : (

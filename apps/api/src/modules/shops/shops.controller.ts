@@ -21,11 +21,15 @@ import { OAuthShopSetupDto } from "./dto/oauth-shop-setup.dto";
 import { UpdateMetalRatesDto } from "./dto/update-metal-rates.dto";
 import { UpdateShopDto } from "./dto/update-shop.dto";
 import { ShopsService } from "./shops.service";
+import { ContentModerationService } from "./content-moderation.service";
 
 @ApiTags("shops")
 @Controller("shops")
 export class ShopsController {
-  constructor(private shopsService: ShopsService) {}
+  constructor(
+    private shopsService: ShopsService,
+    private moderationService: ContentModerationService,
+  ) {}
 
   // Public endpoint for verified shops listing (for /shops page)
   @Get("public")
@@ -313,5 +317,86 @@ export class ShopsController {
     @CurrentUser("id") adminId: string,
   ) {
     return this.shopsService.adminDeleteShop(id, adminId);
+  }
+
+  // ── Shop Profile Endpoints ──────────────────────────
+
+  @Patch("my-shop/profile")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Update shop profile (about, images)" })
+  async updateShopProfile(
+    @CurrentUser("id") userId: string,
+    @Body() body: { about?: string; profileImage?: string; coverImage?: string; shopName?: string },
+  ) {
+    return this.shopsService.updateShopProfile(userId, body);
+  }
+
+  @Post("my-shop/moderate-about")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Check about text for policy violations (live)" })
+  async moderateAbout(@Body() body: { text: string }) {
+    return this.moderationService.moderateAboutText(body.text);
+  }
+
+  // ── Review Management Endpoints ─────────────────────
+
+  @Get("my-shop/reviews")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Get all reviews for current shop" })
+  async getMyReviews(
+    @CurrentUser("shopId") shopId: string,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+  ) {
+    return this.shopsService.getShopReviews(shopId, {
+      page: page ? parseInt(page, 10) : 1,
+      pageSize: pageSize ? parseInt(pageSize, 10) : 20,
+    });
+  }
+
+  @Patch("my-shop/reviews/:reviewId/reply")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Reply to a customer review" })
+  async replyToReview(
+    @CurrentUser("shopId") shopId: string,
+    @Param("reviewId") reviewId: string,
+    @Body() body: { reply: string },
+  ) {
+    return this.shopsService.replyToReview(shopId, reviewId, body.reply);
+  }
+
+  @Post("my-shop/reviews/:reviewId/request-delete")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Request admin to delete a review" })
+  async requestReviewDeletion(
+    @CurrentUser("shopId") shopId: string,
+    @Param("reviewId") reviewId: string,
+    @Body() body: { reason: string },
+  ) {
+    return this.shopsService.requestReviewDeletion(shopId, reviewId, body.reason);
+  }
+
+  // Admin endpoint to handle review deletion requests
+  @Patch("admin/reviews/:reviewId/handle-delete")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Approve or reject review deletion request (Admin)" })
+  async handleReviewDeletion(
+    @Param("reviewId") reviewId: string,
+    @CurrentUser("id") adminId: string,
+    @Body() body: { action: "APPROVED" | "REJECTED" },
+  ) {
+    return this.shopsService.handleReviewDeletionRequest(reviewId, adminId, body.action);
   }
 }

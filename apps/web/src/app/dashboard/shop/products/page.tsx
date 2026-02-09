@@ -61,6 +61,7 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { inventoryApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { useShopCurrency } from '@/hooks/useShopCurrency';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { getImageUrl } from '@/lib/image-upload';
 
@@ -184,17 +185,7 @@ const emptyForm: ProductFormData = {
   gemstones: [],
 };
 
-// Currency based on country
-const getCurrencyFromCountry = (country: string) => {
-  const currencies: Record<string, { code: string; symbol: string }> = {
-    NP: { code: 'NPR', symbol: 'रू' },
-    IN: { code: 'INR', symbol: '₹' },
-    AE: { code: 'AED', symbol: 'د.إ' },
-    US: { code: 'USD', symbol: '$' },
-    UK: { code: 'GBP', symbol: '£' },
-  };
-  return currencies[country] || currencies['NP'];
-};
+// Currency from hook (replaces inline mapping)
 
 export default function ShopProductsPage() {
   const { user } = useAuth();
@@ -204,8 +195,8 @@ export default function ShopProductsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   
   // Shop-based currency
-  const shopCountry = user?.shop?.country || 'NP';
-  const currency = getCurrencyFromCountry(shopCountry);
+  const { currencyCode, symbol: currencySymbol, format: formatCurrency } = useShopCurrency();
+  const currency = { code: currencyCode, symbol: currencySymbol };
   
   // Weight unit state
   const [weightUnit, setWeightUnit] = useState<'gram' | 'tola'>('gram');

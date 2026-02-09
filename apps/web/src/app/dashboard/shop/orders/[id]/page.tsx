@@ -34,6 +34,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
 import api from "@/lib/api";
 import {
   AlertTriangle,
@@ -53,18 +54,6 @@ import {
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-
-// Currency based on country
-const getCurrencySymbol = (country: string) => {
-  const symbols: Record<string, string> = {
-    NP: "रू",
-    IN: "₹",
-    AE: "د.إ",
-    US: "$",
-    UK: "£",
-  };
-  return symbols[country] || "Rs.";
-};
 
 interface OrderDetails {
   id: string;
@@ -163,11 +152,8 @@ export default function ShopOrderDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
+  const { symbol: currencySymbol, format: formatCurrency } = useShopCurrency();
   const orderId = params.id as string;
-
-  // Shop-based currency
-  const shopCountry = user?.shop?.country || "NP";
-  const currencySymbol = getCurrencySymbol(shopCountry);
 
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -251,14 +237,6 @@ export default function ShopOrderDetailPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency || "USD",
-      minimumFractionDigits: 0,
-    }).format(amount);
   };
 
   if (isLoading) {

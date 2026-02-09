@@ -64,6 +64,10 @@ interface Shop {
   id: string;
   shopName: string;
   description?: string;
+  about?: string;
+  profileImage?: string;
+  coverImage?: string;
+  sellerTier?: string;
   country: string;
   state?: string;
   city: string;
@@ -78,7 +82,7 @@ interface Shop {
   supportedJewelleryTypes: string[];
   averageRating?: number;
   totalRatings?: number;
-  userId?: string; // Owner's user ID
+  userId?: string;
   user?: {
     id?: string;
     firstName: string;
@@ -127,6 +131,13 @@ const JEWELLERY_TYPES = [
   "MAANG_TIKKA",
   "OTHER",
 ];
+
+const TIER_COLORS: Record<string, string> = {
+  STANDARD: 'bg-gray-100 text-gray-700',
+  SILVER: 'bg-slate-100 text-slate-700',
+  GOLD: 'bg-amber-100 text-amber-700',
+  ELITE: 'bg-purple-100 text-purple-700',
+};
 
 export default function ShopDetailPage() {
   const params = useParams();
@@ -408,20 +419,35 @@ export default function ShopDetailPage() {
         )}
 
         {/* Hero Section */}
-        <div className="bg-gradient-to-br from-amber-600 to-amber-800 text-white py-12">
-          <div className="container mx-auto px-4">
+        <div className="relative">
+          {/* Cover Image */}
+          {shop.coverImage ? (
+            <div className="h-48 md:h-64 w-full overflow-hidden">
+              <img src={shop.coverImage} alt="Shop cover" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/60" />
+            </div>
+          ) : (
+            <div className="h-48 md:h-64 bg-gradient-to-br from-amber-600 to-amber-800" />
+          )}
+          
+          <div className="container mx-auto px-4 relative -mt-16 pb-8">
             <Button
               variant="ghost"
-              className="text-white/80 hover:text-white mb-4"
+              className="absolute -top-32 text-white/80 hover:text-white"
               onClick={() => router.push("/shops")}
             >
               <ChevronLeftIcon className="h-4 w-4 mr-1" />
               All Shops
             </Button>
 
-            <div className="flex flex-col md:flex-row md:items-center gap-6">
-              <div className="h-24 w-24 rounded-xl bg-white/10 flex items-center justify-center">
-                <BuildingStorefrontIcon className="h-12 w-12 text-white" />
+            <div className="flex flex-col md:flex-row md:items-end gap-6">
+              {/* Profile Image */}
+              <div className="h-28 w-28 rounded-xl border-4 border-white bg-white shadow-lg flex items-center justify-center overflow-hidden">
+                {shop.profileImage ? (
+                  <img src={shop.profileImage} alt={shop.shopName} className="w-full h-full object-cover" />
+                ) : (
+                  <BuildingStorefrontIcon className="h-12 w-12 text-amber-600" />
+                )}
               </div>
 
               <div className="flex-1">
@@ -435,10 +461,15 @@ export default function ShopDetailPage() {
                       Verified
                     </Badge>
                   )}
+                  {shop.sellerTier && shop.sellerTier !== 'STANDARD' && (
+                    <Badge className={TIER_COLORS[shop.sellerTier] || 'bg-gray-100'}>
+                      {shop.sellerTier === 'ELITE' ? '👑' : shop.sellerTier === 'GOLD' ? '🥇' : '🥈'} {shop.sellerTier}
+                    </Badge>
+                  )}
                 </div>
 
                 {shop.description && (
-                  <p className="text-amber-100 text-lg mb-4">
+                  <p className="text-muted-foreground text-lg mb-2">
                     {shop.description}
                   </p>
                 )}
@@ -473,7 +504,7 @@ export default function ShopDetailPage() {
                   <DialogTrigger asChild>
                     <Button
                       size="lg"
-                      className="bg-white text-amber-700 hover:bg-amber-50"
+                      className="bg-amber-600 text-white hover:bg-amber-700"
                     >
                       <SparklesIcon className="h-5 w-5 mr-2" />
                       Custom Order
@@ -621,7 +652,7 @@ export default function ShopDetailPage() {
                   </DialogContent>
                 </Dialog>
 
-                {shop.contactPhone && (
+                {isShopOwner && shop.contactPhone && (
                   <a href={`tel:${shop.contactPhone}`}>
                     <Button
                       size="lg"
@@ -775,6 +806,18 @@ export default function ShopDetailPage() {
                 </CardContent>
               </Card>
 
+              {/* About Section */}
+              {shop.about && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>About Us</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground whitespace-pre-line">{shop.about}</p>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Reviews */}
               {shop.ratings && shop.ratings.length > 0 && (
                 <Card>
@@ -786,7 +829,7 @@ export default function ShopDetailPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {shop.ratings.map((review, idx) => (
+                      {shop.ratings.filter((r: any) => r.isPublic !== false).map((review: any, idx: number) => (
                         <div key={idx} className="border-b pb-4 last:border-0">
                           <div className="flex items-center gap-2 mb-2">
                             <div className="flex">
@@ -811,6 +854,20 @@ export default function ShopDetailPage() {
                           {review.reviewText && (
                             <p className="text-sm">{review.reviewText}</p>
                           )}
+                          {/* Seller Reply */}
+                          {review.sellerReply && (
+                            <div className="mt-3 ml-4 pl-4 border-l-2 border-amber-200 bg-amber-50/50 rounded-r-lg p-3">
+                              <p className="text-xs font-medium text-amber-700 mb-1">
+                                Seller Reply
+                              </p>
+                              <p className="text-sm text-amber-900">{review.sellerReply}</p>
+                              {review.sellerRepliedAt && (
+                                <p className="text-xs text-amber-600 mt-1">
+                                  {new Date(review.sellerRepliedAt).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -824,18 +881,16 @@ export default function ShopDetailPage() {
               {/* Contact Info */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Contact Information</CardTitle>
+                  <CardTitle>Shop Information</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-start gap-3">
                     <MapPinIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
-                      <p className="font-medium">Address</p>
+                      <p className="font-medium">Location</p>
                       <p className="text-sm text-muted-foreground">
-                        {shop.address}
-                        {shop.city && `, ${shop.city}`}
+                        {shop.city}
                         {shop.state && `, ${shop.state}`}
-                        {shop.pincode && ` - ${shop.pincode}`}
                       </p>
                       <p className="text-sm text-muted-foreground flex items-center gap-1">
                         <FlagImage code={shop.country as FlagCode} size={14} />{" "}
@@ -844,7 +899,8 @@ export default function ShopDetailPage() {
                     </div>
                   </div>
 
-                  {shop.contactPhone && (
+                  {/* Only show phone/email to shop owner */}
+                  {isShopOwner && shop.contactPhone && (
                     <div className="flex items-start gap-3">
                       <PhoneIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                       <div>
@@ -859,7 +915,7 @@ export default function ShopDetailPage() {
                     </div>
                   )}
 
-                  {shop.contactEmail && (
+                  {isShopOwner && shop.contactEmail && (
                     <div className="flex items-start gap-3">
                       <EnvelopeIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                       <div>
@@ -871,6 +927,15 @@ export default function ShopDetailPage() {
                           {shop.contactEmail}
                         </a>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Non-owners see a message to use platform */}
+                  {!isShopOwner && (
+                    <div className="bg-gray-50 rounded-lg p-3 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Use Custom Order or platform messaging to contact this shop
+                      </p>
                     </div>
                   )}
 

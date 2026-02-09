@@ -29,11 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { shopQuotesApi } from "@/lib/api";
-import {
-  CURRENCIES,
-  usePreferencesStore,
-  type CurrencyCode,
-} from "@/store/preferences";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
 import {
   CheckCircle,
   Clock,
@@ -126,24 +122,7 @@ const statusConfig: Record<
 
 export default function ShopQuotesPage() {
   const { user } = useAuth();
-  const { currency } = usePreferencesStore();
-
-  // Get shop-based currency from shop's country
-  const shopCountry = user?.shop?.country || "NP";
-  const shopCurrency =
-    shopCountry === "IN"
-      ? "INR"
-      : shopCountry === "AE"
-      ? "AED"
-      : shopCountry === "US"
-      ? "USD"
-      : shopCountry === "UK"
-      ? "GBP"
-      : "NPR";
-  const currencySymbol =
-    CURRENCIES[shopCurrency as CurrencyCode]?.symbol ||
-    CURRENCIES[currency as CurrencyCode]?.symbol ||
-    "Rs.";
+  const { currencyCode: shopCurrency, symbol: currencySymbol, format: formatShopCurrency } = useShopCurrency();
 
   const [quotes, setQuotes] = useState<ShopQuote[]>([]);
   const [stats, setStats] = useState<QuoteStats | null>(null);
