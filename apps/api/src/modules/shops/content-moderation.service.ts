@@ -1,5 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { createHash } from "crypto";
+import { RedisService } from "../../common";
 
 /**
  * Content Moderation Service
@@ -9,6 +11,7 @@ import { ConfigService } from "@nestjs/config";
  * 2. Detect vulgar/offensive language
  * 3. Return structured moderation result
  *
+ * Includes Redis caching to avoid repeated Gemini API calls for the same text.
  * Used for shop "about" sections where sellers must not share contact info.
  */
 @Injectable()
@@ -17,13 +20,29 @@ export class ContentModerationService {
   private readonly GEMINI_API_URL =
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
   private readonly apiKey: string;
+  private readonly CACHE_PREFIX = "moderation:";
+  private readonly CACHE_TTL = 86400; // 24 hours
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private redisService: RedisService,
+  ) {
     this.apiKey = this.configService.get<string>("GEMINI_API_KEY") || "";
   }
 
   /**
+   * Generate a short hash of the text for cache key
+   */
+  private getTextHash(text: string): string {
+    return createHash("sha256")
+      .update(text.trim().toLowerCase())
+      .digest("hex")
+      .slice(0, 16);
+  }
+
+  /**
    * Moderate text content for the shop "about" section.
+   * Uses Redis cache to avoid repeated Gemini API calls.
    * Returns { safe: boolean, violations: string[], sanitized?: string }
    */
   async moderateAboutText(text: string): Promise<{
@@ -41,6 +60,18 @@ export class ContentModerationService {
       return { safe: false, violations: quickViolations };
     }
 
+    // Check Redis cache before calling Gemini
+    const cacheKey = `${this.CACHE_PREFIX}${this.getTextHash(text)}`;
+    try {
+      const cached = await this.redisService.get(cacheKey);
+      if (cached) {
+        this.logger.debug(`Moderation cache hit for key: ${cacheKey}`);
+        return JSON.parse(cached);
+      }
+    } catch {
+      // Cache miss or error — proceed to API
+    }
+
     // Use Gemini for deeper semantic analysis
     if (!this.apiKey) {
       this.logger.warn(
@@ -50,7 +81,20 @@ export class ContentModerationService {
     }
 
     try {
-      return await this.moderateWithGemini(text);
+      const result = await this.moderateWithGemini(text);
+
+      // Cache the result (both safe and unsafe) for 24h
+      try {
+        await this.redisService.set(
+          cacheKey,
+          JSON.stringify(result),
+          this.CACHE_TTL,
+        );
+      } catch {
+        // Non-critical — caching failure shouldn't block moderation
+      }
+
+      return result;
     } catch (error) {
       this.logger.error(
         "Gemini moderation failed, falling back to regex-only:",
@@ -62,13 +106,80 @@ export class ContentModerationService {
   }
 
   /**
-   * Quick regex-based check for phone numbers, emails, URLs, addresses
+   * Normalize obfuscated text before regex checking.
+   * Strips separators, converts spelled-out/leetspeak digits, etc.
+   */
+  private normalizeForDigitDetection(text: string): string {
+    let normalized = text.toLowerCase();
+
+    // Replace spelled-out numbers with digits
+    const wordToDigit: Record<string, string> = {
+      zero: "0",
+      one: "1",
+      two: "2",
+      three: "3",
+      four: "4",
+      five: "5",
+      six: "6",
+      seven: "7",
+      eight: "8",
+      nine: "9",
+      oh: "0",
+      o: "0",
+      nought: "0",
+    };
+    // Match whole words — "one", "two", etc.
+    for (const [word, digit] of Object.entries(wordToDigit)) {
+      // Use word boundary but handle "o" carefully (only standalone or as digit substitute)
+      if (word === "o") {
+        normalized = normalized.replace(/\bo\b/g, digit);
+      } else {
+        normalized = normalized.replace(
+          new RegExp(`\\b${word}\\b`, "g"),
+          digit,
+        );
+      }
+    }
+
+    // Replace leetspeak / homoglyph characters
+    const homoglyphs: Record<string, string> = {
+      l: "1",
+      i: "1",
+      "!": "1",
+      "|": "1",
+      z: "2",
+      e: "3",
+      a: "4",
+      s: "5",
+      b: "8",
+      g: "9",
+      q: "9",
+    };
+    // Only apply homoglyph replacement in sequences that look like digit attempts
+    // (surrounded by actual digits or separators)
+    // We do this by first stripping common separators between digits
+    normalized = normalized.replace(/(\d)[.\-\s,_|/\\]+(\d)/g, "$1$2");
+
+    return normalized;
+  }
+
+  /**
+   * Quick regex-based check for phone numbers, emails, URLs, addresses.
+   * Catches creative obfuscation patterns including:
+   * - Dotted digits: 6.2.0.3.9.6.5.5.5.7
+   * - Spaced digits: 6 2 0 3 9 6 5 5 5 7
+   * - Spelled-out: six two zero three nine six five five five seven
+   * - Dash/comma separated: 6-2-0-3, 620,396,5557
+   * - Parenthesized: (620) 396 5557
+   * - Mixed: s1x tw0 thr33
    */
   private quickRegexCheck(text: string): string[] {
     const violations: string[] = [];
     const normalized = text.toLowerCase();
 
-    // Phone numbers (international formats)
+    // ── PHONE NUMBER DETECTION ────────────────────────────
+
+    // 1. Standard phone formats (international, grouped)
     const phonePatterns = [
       /(?:\+?\d{1,4}[\s-]?)?\(?\d{2,4}\)?[\s.-]?\d{3,4}[\s.-]?\d{3,4}/g,
       /\b\d{10,14}\b/g,
@@ -82,17 +193,77 @@ export class ContentModerationService {
       }
     }
 
-    // Email addresses
+    // 2. Digits separated by dots, dashes, spaces, commas, underscores, pipes
+    // e.g. "6.2.0.3.9.6.5.5.5.7" or "6-2-0-3-9-6-5-5-5-7" or "6 2 0 3 9 6 5 5 5 7"
+    if (violations.length === 0) {
+      const separatedDigits =
+        /\d[\s.\-_,|/\\]+\d[\s.\-_,|/\\]+\d[\s.\-_,|/\\]+\d[\s.\-_,|/\\]+\d[\s.\-_,|/\\]+\d[\s.\-_,|/\\]+\d/g;
+      if (separatedDigits.test(text)) {
+        // Verify it's 7+ digits when separators are stripped
+        const digitsOnly = text.replace(/[^\d]/g, "");
+        if (digitsOnly.length >= 7) {
+          violations.push(
+            "Separated digits detected as phone number — personal contacts are not allowed",
+          );
+        }
+      }
+    }
+
+    // 3. Spelled-out digit sequences: "six two zero three nine six five five five seven"
+    if (violations.length === 0) {
+      const digitWords =
+        /\b(zero|one|two|three|four|five|six|seven|eight|nine|oh|nought)\b/gi;
+      const matches = normalized.match(digitWords);
+      if (matches && matches.length >= 7) {
+        violations.push(
+          "Spelled-out phone number detected — personal contacts are not allowed",
+        );
+      }
+    }
+
+    // 4. Normalized digit extraction — catches mixed obfuscation
+    // After normalizing spelled words to digits and stripping separators,
+    // check for any run of 7+ consecutive digits
+    if (violations.length === 0) {
+      const normalizedText = this.normalizeForDigitDetection(text);
+      const digitRuns = normalizedText.match(/\d{7,}/g);
+      if (digitRuns && digitRuns.length > 0) {
+        // Only flag if not already caught and doesn't look like a year range or normal number
+        const suspicious = digitRuns.some(
+          (run) => run.length >= 7 && run.length <= 15,
+        );
+        if (suspicious) {
+          violations.push(
+            "Hidden phone number pattern detected — personal contacts are not allowed",
+          );
+        }
+      }
+    }
+
+    // ── EMAIL DETECTION ────────────────────────────────
+
     if (/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g.test(text)) {
       violations.push(
         "Email address detected — personal contacts are not allowed",
       );
     }
 
-    // URLs / social media handles
+    // Obfuscated email: "name at gmail dot com", "name [at] domain [dot] com"
+    if (
+      /\b\w+\s*(?:\[?\s*at\s*\]?|@)\s*\w+\s*(?:\[?\s*dot\s*\]?|\.)\s*(?:com|net|org|io|co|in|np)\b/gi.test(
+        normalized,
+      )
+    ) {
+      violations.push(
+        "Obfuscated email detected — personal contacts are not allowed",
+      );
+    }
+
+    // ── URL / SOCIAL MEDIA DETECTION ──────────────────
+
     if (
       /(?:https?:\/\/|www\.)[^\s]+/gi.test(text) ||
-      /(?:facebook|instagram|twitter|tiktok|youtube|whatsapp|telegram|viber)\.com/gi.test(
+      /(?:facebook|instagram|twitter|tiktok|youtube|whatsapp|telegram|viber|snapchat|linkedin|pinterest)\.com/gi.test(
         normalized,
       )
     ) {
@@ -108,9 +279,21 @@ export class ContentModerationService {
       );
     }
 
-    // Explicit "call me", "contact me", "WhatsApp" solicitations
+    // Platform references without URLs: "follow us on instagram", "find me on facebook"
+    if (
+      /\b(?:follow|find|message|dm|ping|add)\s+(?:me|us|them)?\s*(?:on|at|via)\s+(?:instagram|facebook|twitter|whatsapp|telegram|viber|tiktok|snapchat)\b/gi.test(
+        normalized,
+      )
+    ) {
+      violations.push(
+        "Social media reference detected — not allowed in about section",
+      );
+    }
+
+    // ── CONTACT SOLICITATION ──────────────────────────
+
     const contactSolicitation =
-      /\b(call\s*(?:me|us)|contact\s*(?:me|us)|whatsapp\s*(?:me|us|number|no)|reach\s*(?:me|us))\b/gi;
+      /\b(call\s*(?:me|us)|contact\s*(?:me|us)|whatsapp\s*(?:me|us|number|no)|reach\s*(?:me|us)|dm\s*(?:me|us)|ping\s*(?:me|us)|text\s*(?:me|us)|msg\s*(?:me|us)|phone\s*(?:me|us))\b/gi;
     if (contactSolicitation.test(normalized)) {
       violations.push(
         "Contact solicitation detected — not allowed in about section",

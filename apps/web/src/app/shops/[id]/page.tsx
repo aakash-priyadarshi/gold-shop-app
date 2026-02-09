@@ -34,7 +34,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import api from "@/lib/api";
+import api, { materialsApi } from "@/lib/api";
 import {
   BuildingStorefrontIcon,
   CheckBadgeIcon,
@@ -50,12 +50,14 @@ import {
 } from "@heroicons/react/24/outline";
 import { StarIcon as StarSolidIcon } from "@heroicons/react/24/solid";
 import {
+  DollarSign,
   Loader2,
   Minus,
   Package,
   Plus,
   Scale,
   ShoppingBag,
+  TrendingUp,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -80,6 +82,11 @@ interface Shop {
   businessHours?: string;
   supportedMaterials: string[];
   supportedJewelleryTypes: string[];
+  makingChargePercent?: number;
+  materialsPricing?: Array<{
+    materialCode: string;
+    makingChargePerGram: number | null;
+  }>;
   averageRating?: number;
   totalRatings?: number;
   userId?: string;
@@ -165,6 +172,9 @@ export default function ShopDetailPage() {
   });
   const [submittingOrder, setSubmittingOrder] = useState(false);
 
+  // Market rates for pricing display
+  const [marketRates, setMarketRates] = useState<Record<string, number>>({});
+
   // Product quantity state for cart
   const [quantities, setQuantities] = useState<Record<string, number>>({});
 
@@ -179,6 +189,24 @@ export default function ShopDetailPage() {
       loadShopProducts();
     }
   }, [shopId]);
+
+  // Fetch market rates when shop loads
+  useEffect(() => {
+    if (shop?.country) {
+      const countryInfo = COUNTRIES[shop.country];
+      if (countryInfo) {
+        materialsApi
+          .getMarketRates({
+            currency: countryInfo.currency,
+            country: shop.country,
+          })
+          .then((res: any) => {
+            setMarketRates(res.data?.metals || {});
+          })
+          .catch(() => setMarketRates({}));
+      }
+    }
+  }, [shop?.country]);
 
   // Check if current user is the shop owner
   const isShopOwner =
@@ -999,21 +1027,102 @@ export default function ShopDetailPage() {
                 </CardContent>
               </Card>
 
-              {/* Supported Materials */}
+              {/* Materials & Pricing */}
               {shop.supportedMaterials &&
                 shop.supportedMaterials.length > 0 && (
                   <Card>
                     <CardHeader>
-                      <CardTitle>Materials We Work With</CardTitle>
+                      <CardTitle className="flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-amber-600" />
+                        Materials & Making Charges
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        Compare pricing per gram to find the best deal
+                      </p>
                     </CardHeader>
                     <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        {shop.supportedMaterials.map((material) => (
-                          <Badge key={material} variant="outline">
-                            {material?.replace(/_/g, " ") || material}
-                          </Badge>
-                        ))}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b text-left">
+                              <th className="pb-2 font-medium">Material</th>
+                              <th className="pb-2 font-medium text-right">
+                                Market Rate /g
+                              </th>
+                              <th className="pb-2 font-medium text-right">
+                                Making Charge /g
+                              </th>
+                              <th className="pb-2 font-medium text-right">
+                                Total /g
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {shop.supportedMaterials.map((material) => {
+                              const pricing = shop.materialsPricing?.find(
+                                (p) => p.materialCode === material,
+                              );
+                              const liveRate = marketRates[material] || 0;
+                              const makingCharge =
+                                pricing?.makingChargePerGram ?? null;
+                              const total =
+                                liveRate && makingCharge !== null
+                                  ? liveRate + makingCharge
+                                  : null;
+                              const { symbol } = getCurrency();
+
+                              return (
+                                <tr
+                                  key={material}
+                                  className="border-b last:border-0"
+                                >
+                                  <td className="py-3">
+                                    <Badge variant="outline" className="font-medium">
+                                      {material?.replace(/_/g, " ")}
+                                    </Badge>
+                                  </td>
+                                  <td className="py-3 text-right tabular-nums">
+                                    {liveRate
+                                      ? `${symbol}${liveRate.toLocaleString()}`
+                                      : "—"}
+                                  </td>
+                                  <td className="py-3 text-right tabular-nums">
+                                    {makingCharge !== null
+                                      ? `${symbol}${makingCharge.toLocaleString()}`
+                                      : "—"}
+                                    {makingCharge !== null &&
+                                      liveRate > 0 && (
+                                        <span className="ml-1 text-xs text-muted-foreground">
+                                          (
+                                          {(
+                                            (makingCharge / liveRate) *
+                                            100
+                                          ).toFixed(1)}
+                                          %)
+                                        </span>
+                                      )}
+                                  </td>
+                                  <td className="py-3 text-right font-semibold tabular-nums">
+                                    {total !== null
+                                      ? `${symbol}${total.toLocaleString()}`
+                                      : "—"}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
+                      {shop.makingChargePercent !== undefined && (
+                        <p className="mt-3 text-xs text-muted-foreground">
+                          <DollarSign className="inline h-3 w-3 mr-1" />
+                          Default making charge rate:{" "}
+                          <span className="font-medium">
+                            {shop.makingChargePercent}%
+                          </span>{" "}
+                          of metal rate
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
                 )}

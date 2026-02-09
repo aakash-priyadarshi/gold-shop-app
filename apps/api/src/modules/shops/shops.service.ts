@@ -327,8 +327,23 @@ export class ShopsService {
       throw new NotFoundException("Shop not found");
     }
 
+    // Build a materials pricing map for public display
+    // metalRates stores the making charge per gram (ratePerGramNpr) set by the seller
+    const materialsPricing = (shop.supportedMaterials || []).map(
+      (materialCode: string) => {
+        const rate = shop.metalRates.find(
+          (r) => r.metalType === materialCode,
+        );
+        return {
+          materialCode,
+          makingChargePerGram: rate?.ratePerGramNpr || null,
+        };
+      },
+    );
+
     return {
       ...shop,
+      materialsPricing,
       averageRating:
         shop.ratings.length > 0
           ? shop.ratings.reduce((sum, r) => sum + r.overall, 0) /

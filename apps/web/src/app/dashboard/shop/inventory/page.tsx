@@ -37,6 +37,8 @@ interface Material {
   purity: string;
   isAvailable: boolean;
   makingChargePerGram?: number;
+  makingChargePercent?: number;
+  chargeMode?: "flat" | "percent";
   minWeightGrams?: number;
   maxWeightGrams?: number;
 }
@@ -692,29 +694,149 @@ export default function ShopInventoryPage() {
                                     </div>
                                   </div>
                                 )}
-                                <div className="space-y-1">
-                                  <Label className="text-xs text-muted-foreground">
-                                    Your Making Charge ({currencySymbol}/gram)
-                                  </Label>
-                                  <Input
-                                    type="number"
-                                    placeholder={`Default: ${defaultMaking || "N/A"}`}
-                                    value={
-                                      materialData?.makingChargePerGram || ""
-                                    }
-                                    onChange={(e) =>
-                                      updateMaterialPricing(
-                                        key,
-                                        "makingChargePerGram",
-                                        parseFloat(e.target.value),
-                                      )
-                                    }
-                                  />
-                                  <p className="text-xs text-muted-foreground">
-                                    Leave blank to use default (10% of metal
-                                    value)
-                                  </p>
+
+                                {/* Making charge mode toggle */}
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-muted-foreground">
+                                      Making Charge Mode
+                                    </Label>
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className={`text-xs ${(materialData?.chargeMode || "flat") === "flat" ? "font-semibold" : "text-muted-foreground"}`}
+                                      >
+                                        {currencySymbol}/g
+                                      </span>
+                                      <Switch
+                                        checked={
+                                          (materialData?.chargeMode ||
+                                            "flat") === "percent"
+                                        }
+                                        onCheckedChange={(checked) => {
+                                          updateMaterialPricing(
+                                            key,
+                                            "chargeMode",
+                                            checked ? "percent" : "flat",
+                                          );
+                                          if (checked && liveRate) {
+                                            // Calculate percent from existing flat rate or default 10%
+                                            const currentFlat =
+                                              materialData?.makingChargePerGram ||
+                                              defaultMaking;
+                                            const pct =
+                                              currentFlat && liveRate
+                                                ? Math.round(
+                                                    (currentFlat / liveRate) *
+                                                      100 *
+                                                      100,
+                                                  ) / 100
+                                                : 10;
+                                            updateMaterialPricing(
+                                              key,
+                                              "makingChargePercent",
+                                              pct,
+                                            );
+                                          } else if (!checked && liveRate) {
+                                            // Calculate flat from existing percent
+                                            const pct =
+                                              materialData?.makingChargePercent ||
+                                              10;
+                                            const flat = Math.round(
+                                              (liveRate * pct) / 100,
+                                            );
+                                            updateMaterialPricing(
+                                              key,
+                                              "makingChargePerGram",
+                                              flat,
+                                            );
+                                          }
+                                        }}
+                                      />
+                                      <span
+                                        className={`text-xs flex items-center gap-0.5 ${(materialData?.chargeMode || "flat") === "percent" ? "font-semibold" : "text-muted-foreground"}`}
+                                      >
+                                        <Percent className="h-3 w-3" /> %
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {(materialData?.chargeMode || "flat") ===
+                                  "percent" ? (
+                                    <div className="space-y-1">
+                                      <Label className="text-xs text-muted-foreground">
+                                        Making Charge Percentage (%)
+                                      </Label>
+                                      <Input
+                                        type="number"
+                                        step="0.1"
+                                        min="0"
+                                        placeholder="e.g., 10"
+                                        value={
+                                          materialData?.makingChargePercent ??
+                                          ""
+                                        }
+                                        onChange={(e) => {
+                                          const pct = parseFloat(
+                                            e.target.value,
+                                          );
+                                          updateMaterialPricing(
+                                            key,
+                                            "makingChargePercent",
+                                            pct,
+                                          );
+                                          if (liveRate && !isNaN(pct)) {
+                                            updateMaterialPricing(
+                                              key,
+                                              "makingChargePerGram",
+                                              Math.round(
+                                                (liveRate * pct) / 100,
+                                              ),
+                                            );
+                                          }
+                                        }}
+                                      />
+                                      {liveRate &&
+                                        materialData?.makingChargePercent && (
+                                          <p className="text-xs text-muted-foreground">
+                                            = {currencySymbol}{" "}
+                                            {Math.round(
+                                              (liveRate *
+                                                materialData.makingChargePercent) /
+                                                100,
+                                            ).toLocaleString()}
+                                            /g making charge
+                                          </p>
+                                        )}
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-1">
+                                      <Label className="text-xs text-muted-foreground">
+                                        Your Making Charge ({currencySymbol}
+                                        /gram)
+                                      </Label>
+                                      <Input
+                                        type="number"
+                                        placeholder={`Default: ${defaultMaking || "N/A"}`}
+                                        value={
+                                          materialData?.makingChargePerGram ||
+                                          ""
+                                        }
+                                        onChange={(e) =>
+                                          updateMaterialPricing(
+                                            key,
+                                            "makingChargePerGram",
+                                            parseFloat(e.target.value),
+                                          )
+                                        }
+                                      />
+                                      <p className="text-xs text-muted-foreground">
+                                        Leave blank to use default (10% of metal
+                                        value)
+                                      </p>
+                                    </div>
+                                  )}
                                 </div>
+
                                 <div className="grid grid-cols-2 gap-2">
                                   <div className="space-y-1">
                                     <Label className="text-xs text-muted-foreground">
@@ -751,6 +873,68 @@ export default function ShopInventoryPage() {
                                     />
                                   </div>
                                 </div>
+
+                                {/* Customer Preview */}
+                                {liveRate && (
+                                  <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 space-y-2">
+                                    <div className="flex items-center gap-1.5 text-xs font-medium text-blue-700 dark:text-blue-400">
+                                      <Eye className="h-3.5 w-3.5" />
+                                      Customer View Preview
+                                    </div>
+                                    {(() => {
+                                      const making =
+                                        materialData?.makingChargePerGram ||
+                                        defaultMaking;
+                                      const total = liveRate + making;
+                                      const makingPct =
+                                        liveRate > 0
+                                          ? ((making / liveRate) * 100).toFixed(
+                                              1,
+                                            )
+                                          : "0";
+                                      return (
+                                        <div className="grid grid-cols-3 gap-2 text-center">
+                                          <div className="bg-white dark:bg-black/20 rounded p-2">
+                                            <p className="text-[10px] text-muted-foreground uppercase">
+                                              Metal Rate
+                                            </p>
+                                            <p className="text-sm font-bold">
+                                              {currencySymbol}{" "}
+                                              {liveRate.toLocaleString()}
+                                            </p>
+                                            <p className="text-[10px] text-muted-foreground">
+                                              per gram
+                                            </p>
+                                          </div>
+                                          <div className="bg-white dark:bg-black/20 rounded p-2">
+                                            <p className="text-[10px] text-muted-foreground uppercase">
+                                              Making
+                                            </p>
+                                            <p className="text-sm font-bold text-amber-600">
+                                              {currencySymbol}{" "}
+                                              {making.toLocaleString()}
+                                            </p>
+                                            <p className="text-[10px] text-muted-foreground">
+                                              ({makingPct}%) /g
+                                            </p>
+                                          </div>
+                                          <div className="bg-white dark:bg-black/20 rounded p-2">
+                                            <p className="text-[10px] text-muted-foreground uppercase">
+                                              Total
+                                            </p>
+                                            <p className="text-sm font-bold text-green-600">
+                                              {currencySymbol}{" "}
+                                              {total.toLocaleString()}
+                                            </p>
+                                            <p className="text-[10px] text-muted-foreground">
+                                              per gram
+                                            </p>
+                                          </div>
+                                        </div>
+                                      );
+                                    })()}
+                                  </div>
+                                )}
                               </div>
                             )}
                           </CardContent>
