@@ -24,28 +24,40 @@ import {
 import {
   Plus,
   Loader2,
-  MessageSquare,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  Eye,
   FileText,
+  Eye,
 } from 'lucide-react';
 import api from '@/lib/api';
 
 interface RFQ {
   id: string;
   jewelleryType: string;
-  metalType: string;
-  purity: string;
-  weight: number;
-  budget: number | null;
-  description: string;
+  buildMethod: string;
+  composition: Record<string, unknown>;
+  targetTotalWeightG: number;
+  budgetMinNpr: number;
+  budgetMaxNpr: number;
   status: string;
   createdAt: string;
-  _count?: {
-    offers: number;
-  };
+  offers?: Array<{
+    id: string;
+    status: string;
+    totalPriceNpr: number;
+    shop?: { shopName: string };
+  }>;
+}
+
+const ACTIVE_STATUSES = ['DRAFT', 'SENT_TO_SHOPS', 'OFFERS_RECEIVED', 'OFFER_SELECTED'];
+const COMPLETED_STATUSES = ['CONFIRMED', 'COMPLETED'];
+const CLOSED_STATUSES = ['CANCELLED', 'EXPIRED'];
+
+function getMetalLabel(rfq: RFQ): string {
+  const comp = rfq.composition as any;
+  if (comp?.preciousMetal) return comp.preciousMetal.replace(/_/g, ' ');
+  if (comp?.alloyConfig?.baseMetal) return `${comp.alloyConfig.baseMetal} Alloy`;
+  if (comp?.coreMetal) return comp.coreMetal.replace(/_/g, ' ');
+  if (comp?.metalType) return comp.metalType.replace(/_/g, ' ');
+  return rfq.buildMethod?.replace('METHOD_', 'Method ') || '—';
 }
 
 export default function CustomerRFQsPage() {
@@ -75,33 +87,41 @@ export default function CustomerRFQsPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'OPEN':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Open</Badge>;
-      case 'IN_PROGRESS':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">In Progress</Badge>;
+      case 'DRAFT':
+        return <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">Draft</Badge>;
+      case 'SENT_TO_SHOPS':
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Sent to Seller</Badge>;
+      case 'OFFERS_RECEIVED':
+        return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">Offers Received</Badge>;
+      case 'OFFER_SELECTED':
+        return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Offer Selected</Badge>;
+      case 'CONFIRMED':
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Confirmed</Badge>;
       case 'COMPLETED':
         return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Completed</Badge>;
       case 'CANCELLED':
         return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Cancelled</Badge>;
+      case 'EXPIRED':
+        return <Badge variant="outline" className="bg-gray-50 text-gray-500 border-gray-200">Expired</Badge>;
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return <Badge variant="secondary">{status.replace(/_/g, ' ')}</Badge>;
     }
   };
 
   const filteredRFQs = rfqs.filter((rfq) => {
     if (activeTab === 'all') return true;
-    if (activeTab === 'open') return rfq.status === 'OPEN';
-    if (activeTab === 'in-progress') return rfq.status === 'IN_PROGRESS';
-    if (activeTab === 'completed') return rfq.status === 'COMPLETED' || rfq.status === 'CANCELLED';
+    if (activeTab === 'active') return ACTIVE_STATUSES.includes(rfq.status);
+    if (activeTab === 'completed') return COMPLETED_STATUSES.includes(rfq.status);
+    if (activeTab === 'closed') return CLOSED_STATUSES.includes(rfq.status);
     return true;
   });
 
   const stats = {
     total: rfqs.length,
-    open: rfqs.filter((r) => r.status === 'OPEN').length,
-    inProgress: rfqs.filter((r) => r.status === 'IN_PROGRESS').length,
-    completed: rfqs.filter((r) => r.status === 'COMPLETED').length,
-    totalOffers: rfqs.reduce((sum, r) => sum + (r._count?.offers || 0), 0),
+    active: rfqs.filter((r) => ACTIVE_STATUSES.includes(r.status)).length,
+    completed: rfqs.filter((r) => COMPLETED_STATUSES.includes(r.status)).length,
+    closed: rfqs.filter((r) => CLOSED_STATUSES.includes(r.status)).length,
+    totalOffers: rfqs.reduce((sum, r) => sum + (r.offers?.length || 0), 0),
   };
 
   if (isLoading) {
@@ -122,13 +142,13 @@ export default function CustomerRFQsPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">My Requests</h1>
+              <h1 className="text-2xl font-bold">My Custom Orders</h1>
               <p className="text-muted-foreground">
-                View and manage your quote requests
+                Track your custom jewellery requests and seller responses
               </p>
             </div>
             <Button asChild>
-              <Link href="/dashboard/customer/rfqs/new">
+              <Link href="/rfq/create">
                 <Plus className="h-4 w-4 mr-2" />
                 New Request
               </Link>
@@ -147,18 +167,10 @@ export default function CustomerRFQsPage() {
             </Card>
             <Card>
               <CardHeader className="p-4 pb-2">
-                <CardDescription>Open</CardDescription>
+                <CardDescription>Active</CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                <p className="text-2xl font-bold text-blue-600">{stats.open}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="p-4 pb-2">
-                <CardDescription>In Progress</CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <p className="text-2xl font-bold text-yellow-600">{stats.inProgress}</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.active}</p>
               </CardContent>
             </Card>
             <Card>
@@ -167,6 +179,14 @@ export default function CustomerRFQsPage() {
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="p-4 pb-2">
+                <CardDescription>Closed</CardDescription>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <p className="text-2xl font-bold text-gray-500">{stats.closed}</p>
               </CardContent>
             </Card>
             <Card>
@@ -182,15 +202,15 @@ export default function CustomerRFQsPage() {
           {/* RFQ List */}
           <Card>
             <CardHeader>
-              <CardTitle>Quote Requests</CardTitle>
+              <CardTitle>Custom Orders</CardTitle>
             </CardHeader>
             <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="mb-4">
                   <TabsTrigger value="all">All ({rfqs.length})</TabsTrigger>
-                  <TabsTrigger value="open">Open ({stats.open})</TabsTrigger>
-                  <TabsTrigger value="in-progress">In Progress ({stats.inProgress})</TabsTrigger>
-                  <TabsTrigger value="completed">Closed ({rfqs.length - stats.open - stats.inProgress})</TabsTrigger>
+                  <TabsTrigger value="active">Active ({stats.active})</TabsTrigger>
+                  <TabsTrigger value="completed">Completed ({stats.completed})</TabsTrigger>
+                  <TabsTrigger value="closed">Closed ({stats.closed})</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value={activeTab} className="mt-0">
@@ -200,11 +220,11 @@ export default function CustomerRFQsPage() {
                       <h3 className="font-medium mb-2">No requests found</h3>
                       <p className="text-muted-foreground text-sm mb-4">
                         {activeTab === 'all'
-                          ? "You haven't created any quote requests yet"
+                          ? "You haven't created any custom order requests yet"
                           : `No ${activeTab} requests`}
                       </p>
                       <Button asChild>
-                        <Link href="/dashboard/customer/rfqs/new">Create Your First Request</Link>
+                        <Link href="/rfq/create">Create Your First Request</Link>
                       </Button>
                     </div>
                   ) : (
@@ -228,15 +248,15 @@ export default function CustomerRFQsPage() {
                               {rfq.jewelleryType}
                             </TableCell>
                             <TableCell>
-                              {rfq.metalType} {rfq.purity}
+                              {getMetalLabel(rfq)}
                             </TableCell>
-                            <TableCell>{rfq.weight}g</TableCell>
+                            <TableCell>{rfq.targetTotalWeightG ? `${rfq.targetTotalWeightG}g` : '-'}</TableCell>
                             <TableCell>
-                              {rfq.budget ? `$${rfq.budget.toLocaleString()}` : '-'}
+                              {rfq.budgetMaxNpr ? `Rs. ${rfq.budgetMaxNpr.toLocaleString()}` : '-'}
                             </TableCell>
                             <TableCell>
                               <Badge variant="secondary">
-                                {rfq._count?.offers || 0} offers
+                                {rfq.offers?.length || 0} offers
                               </Badge>
                             </TableCell>
                             <TableCell>{getStatusBadge(rfq.status)}</TableCell>

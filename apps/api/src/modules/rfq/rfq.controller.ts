@@ -92,4 +92,23 @@ export class RfqController {
   ) {
     return this.rfqService.selectOffer(id, dto.offerId, userId);
   }
+
+  @Post(":id/send-to-seller")
+  @Roles(UserRole.CUSTOMER)
+  @ApiOperation({
+    summary: "Send RFQ directly to a single seller with optional budget update",
+  })
+  async sendToSeller(
+    @Param("id") id: string,
+    @CurrentUser("id") userId: string,
+    @Body()
+    dto: {
+      shopId: string;
+      budgetMinNpr?: number;
+      budgetMaxNpr?: number;
+      message?: string;
+    },
+  ) {
+    return this.rfqService.sendToSeller(id, userId, dto);
+  }
 }

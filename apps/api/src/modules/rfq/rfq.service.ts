@@ -332,6 +332,118 @@ export class RfqService {
   }
 
   /**
+   * Send RFQ directly to a single seller with optional budget update
+   * Customer selects a seller from matching results and sends the request
+   */
+  async sendToSeller(
+    rfqId: string,
+    customerId: string,
+    dto: {
+      shopId: string;
+      budgetMinNpr?: number;
+      budgetMaxNpr?: number;
+      message?: string;
+    },
+  ) {
+    const rfq = await this.prisma.rfqRequest.findUnique({
+      where: { id: rfqId },
+    });
+
+    if (!rfq) {
+      throw new NotFoundException("RFQ not found");
+    }
+
+    if (rfq.customerId !== customerId) {
+      throw new ForbiddenException("You can only send your own RFQ");
+    }
+
+    if (rfq.status !== RfqStatus.DRAFT) {
+      throw new BadRequestException(
+        "RFQ has already been sent. Cannot send again.",
+      );
+    }
+
+    // Verify shop exists and is active
+    const shop = await this.prisma.shop.findFirst({
+      where: { id: dto.shopId, isActive: true },
+      include: {
+        user: { select: { id: true, firstName: true, email: true } },
+      },
+    });
+
+    if (!shop) {
+      throw new NotFoundException("Shop not found or is not active");
+    }
+
+    // Update budget if provided, then broadcast
+    const updateData: any = {
+      status: RfqStatus.SENT_TO_SHOPS,
+      broadcastAt: new Date(),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      broadcastSnapshot: JSON.parse(JSON.stringify(rfq)),
+    };
+
+    if (dto.budgetMinNpr !== undefined) {
+      updateData.budgetMinNpr = dto.budgetMinNpr;
+    }
+    if (dto.budgetMaxNpr !== undefined) {
+      updateData.budgetMaxNpr = dto.budgetMaxNpr;
+    }
+    if (dto.message) {
+      updateData.specialInstructions = rfq.specialInstructions
+        ? `${rfq.specialInstructions}\n\n[Customer Note to Seller]: ${dto.message}`
+        : `[Customer Note to Seller]: ${dto.message}`;
+    }
+
+    const updatedRfq = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.rfqRequest.update({
+        where: { id: rfqId },
+        data: updateData,
+      });
+
+      // Create the shop target record
+      await tx.rfqShopTarget.create({
+        data: {
+          rfqId: rfqId,
+          shopId: dto.shopId,
+        },
+      });
+
+      return updated;
+    });
+
+    // Notify the seller
+    if (shop.user) {
+      await this.notificationsService.notify({
+        userId: shop.user.id,
+        type: "RFQ_RECEIVED",
+        channels: ["EMAIL", "PUSH"],
+        data: {
+          rfqId: rfqId,
+          jewelleryType: rfq.jewelleryType,
+          buildMethod: rfq.buildMethod,
+          budgetRange: `${dto.budgetMinNpr || rfq.budgetMinNpr} - ${dto.budgetMaxNpr || rfq.budgetMaxNpr}`,
+        },
+      });
+    }
+
+    await this.auditService.log({
+      userId: customerId,
+      actorType: "USER",
+      action: "BROADCAST",
+      resourceType: "RFQ",
+      resourceId: rfqId,
+      newValue: { shopId: dto.shopId, shopName: shop.shopName },
+    });
+
+    return {
+      ...updatedRfq,
+      message: `Order request sent to ${shop.shopName}`,
+      shopName: shop.shopName,
+    };
+  }
+
+  /**
    * Get RFQ by ID with offers
    */
   async findOne(rfqId: string, userId: string, userRole: string) {
@@ -442,7 +554,12 @@ export class RfqService {
           },
         },
         status: {
-          in: [RfqStatus.SENT_TO_SHOPS, RfqStatus.OFFERS_RECEIVED],
+          in: [
+            RfqStatus.SENT_TO_SHOPS,
+            RfqStatus.OFFERS_RECEIVED,
+            RfqStatus.OFFER_SELECTED,
+            RfqStatus.CONFIRMED,
+          ],
         },
       },
       include: {

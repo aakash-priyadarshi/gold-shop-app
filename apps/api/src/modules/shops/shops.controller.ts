@@ -67,6 +67,7 @@ export class ShopsController {
     @Query("sortBy") sortBy?: "price" | "rating" | "location" | "popularity",
     @Query("page") page?: string,
     @Query("pageSize") pageSize?: string,
+    @Query("includeInternational") includeInternational?: string,
   ) {
     return this.shopsService.findMatchingSellers({
       jewelleryType,
@@ -82,6 +83,7 @@ export class ShopsController {
       sortBy,
       page: page ? parseInt(page, 10) : 1,
       pageSize: pageSize ? parseInt(pageSize, 10) : 20,
+      includeInternational: includeInternational === "true",
     });
   }
 
