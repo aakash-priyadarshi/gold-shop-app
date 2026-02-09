@@ -133,10 +133,10 @@ const JEWELLERY_TYPES = [
 ];
 
 const TIER_COLORS: Record<string, string> = {
-  STANDARD: 'bg-gray-100 text-gray-700',
-  SILVER: 'bg-slate-100 text-slate-700',
-  GOLD: 'bg-amber-100 text-amber-700',
-  ELITE: 'bg-purple-100 text-purple-700',
+  STANDARD: "bg-gray-100 text-gray-700",
+  SILVER: "bg-slate-100 text-slate-700",
+  GOLD: "bg-amber-100 text-amber-700",
+  ELITE: "bg-purple-100 text-purple-700",
 };
 
 export default function ShopDetailPage() {
@@ -423,13 +423,17 @@ export default function ShopDetailPage() {
           {/* Cover Image */}
           {shop.coverImage ? (
             <div className="h-48 md:h-64 w-full overflow-hidden">
-              <img src={shop.coverImage} alt="Shop cover" className="w-full h-full object-cover" />
+              <img
+                src={shop.coverImage}
+                alt="Shop cover"
+                className="w-full h-full object-cover"
+              />
               <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/60" />
             </div>
           ) : (
             <div className="h-48 md:h-64 bg-gradient-to-br from-amber-600 to-amber-800" />
           )}
-          
+
           <div className="container mx-auto px-4 relative -mt-16 pb-8">
             <Button
               variant="ghost"
@@ -444,7 +448,11 @@ export default function ShopDetailPage() {
               {/* Profile Image */}
               <div className="h-28 w-28 rounded-xl border-4 border-white bg-white shadow-lg flex items-center justify-center overflow-hidden">
                 {shop.profileImage ? (
-                  <img src={shop.profileImage} alt={shop.shopName} className="w-full h-full object-cover" />
+                  <img
+                    src={shop.profileImage}
+                    alt={shop.shopName}
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   <BuildingStorefrontIcon className="h-12 w-12 text-amber-600" />
                 )}
@@ -461,9 +469,16 @@ export default function ShopDetailPage() {
                       Verified
                     </Badge>
                   )}
-                  {shop.sellerTier && shop.sellerTier !== 'STANDARD' && (
-                    <Badge className={TIER_COLORS[shop.sellerTier] || 'bg-gray-100'}>
-                      {shop.sellerTier === 'ELITE' ? '👑' : shop.sellerTier === 'GOLD' ? '🥇' : '🥈'} {shop.sellerTier}
+                  {shop.sellerTier && shop.sellerTier !== "STANDARD" && (
+                    <Badge
+                      className={TIER_COLORS[shop.sellerTier] || "bg-gray-100"}
+                    >
+                      {shop.sellerTier === "ELITE"
+                        ? "👑"
+                        : shop.sellerTier === "GOLD"
+                          ? "🥇"
+                          : "🥈"}{" "}
+                      {shop.sellerTier}
                     </Badge>
                   )}
                 </div>
@@ -813,7 +828,9 @@ export default function ShopDetailPage() {
                     <CardTitle>About Us</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-muted-foreground whitespace-pre-line">{shop.about}</p>
+                    <p className="text-muted-foreground whitespace-pre-line">
+                      {shop.about}
+                    </p>
                   </CardContent>
                 </Card>
               )}
@@ -829,47 +846,58 @@ export default function ShopDetailPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {shop.ratings.filter((r: any) => r.isPublic !== false).map((review: any, idx: number) => (
-                        <div key={idx} className="border-b pb-4 last:border-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="flex">
-                              {[...Array(5)].map((_, i) =>
-                                i < review.overall ? (
-                                  <StarSolidIcon
-                                    key={i}
-                                    className="h-4 w-4 text-amber-400"
-                                  />
-                                ) : (
-                                  <StarIcon
-                                    key={i}
-                                    className="h-4 w-4 text-gray-300"
-                                  />
-                                ),
-                              )}
+                      {shop.ratings
+                        .filter((r: any) => r.isPublic !== false)
+                        .map((review: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="border-b pb-4 last:border-0"
+                          >
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="flex">
+                                {[...Array(5)].map((_, i) =>
+                                  i < review.overall ? (
+                                    <StarSolidIcon
+                                      key={i}
+                                      className="h-4 w-4 text-amber-400"
+                                    />
+                                  ) : (
+                                    <StarIcon
+                                      key={i}
+                                      className="h-4 w-4 text-gray-300"
+                                    />
+                                  ),
+                                )}
+                              </div>
+                              <span className="text-sm text-muted-foreground">
+                                {new Date(
+                                  review.createdAt,
+                                ).toLocaleDateString()}
+                              </span>
                             </div>
-                            <span className="text-sm text-muted-foreground">
-                              {new Date(review.createdAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                          {review.reviewText && (
-                            <p className="text-sm">{review.reviewText}</p>
-                          )}
-                          {/* Seller Reply */}
-                          {review.sellerReply && (
-                            <div className="mt-3 ml-4 pl-4 border-l-2 border-amber-200 bg-amber-50/50 rounded-r-lg p-3">
-                              <p className="text-xs font-medium text-amber-700 mb-1">
-                                Seller Reply
-                              </p>
-                              <p className="text-sm text-amber-900">{review.sellerReply}</p>
-                              {review.sellerRepliedAt && (
-                                <p className="text-xs text-amber-600 mt-1">
-                                  {new Date(review.sellerRepliedAt).toLocaleDateString()}
+                            {review.reviewText && (
+                              <p className="text-sm">{review.reviewText}</p>
+                            )}
+                            {/* Seller Reply */}
+                            {review.sellerReply && (
+                              <div className="mt-3 ml-4 pl-4 border-l-2 border-amber-200 bg-amber-50/50 rounded-r-lg p-3">
+                                <p className="text-xs font-medium text-amber-700 mb-1">
+                                  Seller Reply
                                 </p>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                                <p className="text-sm text-amber-900">
+                                  {review.sellerReply}
+                                </p>
+                                {review.sellerRepliedAt && (
+                                  <p className="text-xs text-amber-600 mt-1">
+                                    {new Date(
+                                      review.sellerRepliedAt,
+                                    ).toLocaleDateString()}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
                     </div>
                   </CardContent>
                 </Card>
@@ -934,7 +962,8 @@ export default function ShopDetailPage() {
                   {!isShopOwner && (
                     <div className="bg-gray-50 rounded-lg p-3 text-center">
                       <p className="text-sm text-muted-foreground">
-                        Use Custom Order or platform messaging to contact this shop
+                        Use Custom Order or platform messaging to contact this
+                        shop
                       </p>
                     </div>
                   )}

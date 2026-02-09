@@ -1,10 +1,17 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { ShopGuard } from '@/components/auth/RouteGuard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { ShopGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { ShopCommissionStatus } from "@/components/shop/ShopCommissionStatus";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -12,32 +19,49 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
+import { useAuth } from "@/hooks/useAuth";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
+import api from "@/lib/api";
+import { format, formatDistanceToNow } from "date-fns";
 import {
   AlertTriangle,
+  Ban,
+  Calendar,
   CheckCircle,
   Clock,
   DollarSign,
-  Calendar,
-  Loader2,
-  Store,
-  Ban,
   ExternalLink,
-} from 'lucide-react';
-import api from '@/lib/api';
-import { formatDistanceToNow, format } from 'date-fns';
-import { useAuth } from '@/hooks/useAuth';
-import { useShopCurrency } from '@/hooks/useShopCurrency';
-import { ShopCommissionStatus } from '@/components/shop/ShopCommissionStatus';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+  Loader2,
+} from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 
 // Commission status styles
-const statusStyles: Record<string, { color: string; icon: any; label: string }> = {
-  PENDING: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Pending' },
-  OVERDUE: { color: 'bg-red-100 text-red-800', icon: AlertTriangle, label: 'Overdue' },
-  PAID: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Paid' },
-  WAIVED: { color: 'bg-gray-100 text-gray-800', icon: DollarSign, label: 'Waived' },
+const statusStyles: Record<
+  string,
+  { color: string; icon: any; label: string }
+> = {
+  PENDING: {
+    color: "bg-yellow-100 text-yellow-800",
+    icon: Clock,
+    label: "Pending",
+  },
+  OVERDUE: {
+    color: "bg-red-100 text-red-800",
+    icon: AlertTriangle,
+    label: "Overdue",
+  },
+  PAID: {
+    color: "bg-green-100 text-green-800",
+    icon: CheckCircle,
+    label: "Paid",
+  },
+  WAIVED: {
+    color: "bg-gray-100 text-gray-800",
+    icon: DollarSign,
+    label: "Waived",
+  },
 };
 
 interface CommissionLedger {
@@ -45,7 +69,7 @@ interface CommissionLedger {
   orderId: string;
   amount: number;
   currency: string;
-  status: 'PENDING' | 'OVERDUE' | 'PAID' | 'WAIVED';
+  status: "PENDING" | "OVERDUE" | "PAID" | "WAIVED";
   dueAt: string;
   paidAt?: string;
   createdAt: string;
@@ -67,13 +91,13 @@ export default function ShopCommissionsPage() {
 
   const fetchCommissions = useCallback(async () => {
     if (!shopId) return;
-    
+
     try {
       setLoading(true);
       const response = await api.get(`/commission/shop/${shopId}/ledger`);
       setCommissions(response.data || []);
     } catch (error) {
-      console.error('Failed to fetch commissions:', error);
+      console.error("Failed to fetch commissions:", error);
       setCommissions([]);
     } finally {
       setLoading(false);
@@ -86,7 +110,7 @@ export default function ShopCommissionsPage() {
 
   const formatCurrency = (amount: number, cur: string = currencyCode) => {
     return new Intl.NumberFormat(locale, {
-      style: 'currency',
+      style: "currency",
       currency: cur,
       minimumFractionDigits: 2,
     }).format(amount);
@@ -98,7 +122,9 @@ export default function ShopCommissionsPage() {
         <div className="space-y-6 p-6">
           {/* Header */}
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Commission Ledger</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Commission Ledger
+            </h1>
             <p className="text-muted-foreground">
               Track your commission obligations for paid-at-shop orders
             </p>
@@ -106,7 +132,7 @@ export default function ShopCommissionsPage() {
 
           {/* Shop Status Banner */}
           {shopId && (
-            <ShopCommissionStatus 
+            <ShopCommissionStatus
               shopId={shopId}
               isOnHold={isOnHold}
               holdReason={holdReason}
@@ -131,7 +157,8 @@ export default function ShopCommissionsPage() {
                   <DollarSign className="h-12 w-12 text-muted-foreground/50 mb-4" />
                   <h3 className="text-lg font-medium">No commission records</h3>
                   <p className="text-sm text-muted-foreground">
-                    Commission entries will appear when customers pay at your shop
+                    Commission entries will appear when customers pay at your
+                    shop
                   </p>
                 </div>
               ) : (
@@ -148,26 +175,40 @@ export default function ShopCommissionsPage() {
                   </TableHeader>
                   <TableBody>
                     {commissions.map((commission) => {
-                      const style = statusStyles[commission.status] || statusStyles.PENDING;
+                      const style =
+                        statusStyles[commission.status] || statusStyles.PENDING;
                       const StatusIcon = style.icon;
-                      const isOverdue = commission.status === 'OVERDUE' || 
-                        (commission.status === 'PENDING' && new Date(commission.dueAt) < new Date());
-                      
+                      const isOverdue =
+                        commission.status === "OVERDUE" ||
+                        (commission.status === "PENDING" &&
+                          new Date(commission.dueAt) < new Date());
+
                       return (
-                        <TableRow key={commission.id} className={isOverdue ? 'bg-red-50' : ''}>
+                        <TableRow
+                          key={commission.id}
+                          className={isOverdue ? "bg-red-50" : ""}
+                        >
                           <TableCell>
                             <div className="font-medium">
-                              {commission.order?.orderNumber || commission.orderId.slice(0, 8)}
+                              {commission.order?.orderNumber ||
+                                commission.orderId.slice(0, 8)}
                             </div>
                           </TableCell>
                           <TableCell>
-                            {commission.order ? formatCurrency(commission.order.totalNpr) : '-'}
+                            {commission.order
+                              ? formatCurrency(commission.order.totalNpr)
+                              : "-"}
                           </TableCell>
                           <TableCell>
                             <div className="font-medium">
-                              {formatCurrency(commission.amount, commission.currency)}
+                              {formatCurrency(
+                                commission.amount,
+                                commission.currency,
+                              )}
                             </div>
-                            <div className="text-xs text-muted-foreground">1% commission</div>
+                            <div className="text-xs text-muted-foreground">
+                              1% commission
+                            </div>
                           </TableCell>
                           <TableCell>
                             <Badge className={style.color}>
@@ -178,16 +219,29 @@ export default function ShopCommissionsPage() {
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Calendar className="h-4 w-4 text-muted-foreground" />
-                              <span className={isOverdue ? 'text-red-600 font-medium' : ''}>
-                                {format(new Date(commission.dueAt), 'MMM dd, yyyy')}
+                              <span
+                                className={
+                                  isOverdue ? "text-red-600 font-medium" : ""
+                                }
+                              >
+                                {format(
+                                  new Date(commission.dueAt),
+                                  "MMM dd, yyyy",
+                                )}
                               </span>
                             </div>
-                            <div className={`text-xs ${isOverdue ? 'text-red-600' : 'text-muted-foreground'}`}>
-                              {formatDistanceToNow(new Date(commission.dueAt), { addSuffix: true })}
+                            <div
+                              className={`text-xs ${isOverdue ? "text-red-600" : "text-muted-foreground"}`}
+                            >
+                              {formatDistanceToNow(new Date(commission.dueAt), {
+                                addSuffix: true,
+                              })}
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Link href={`/dashboard/shop/orders/${commission.orderId}`}>
+                            <Link
+                              href={`/dashboard/shop/orders/${commission.orderId}`}
+                            >
                               <Button variant="outline" size="sm">
                                 View Order
                                 <ExternalLink className="ml-1 h-3 w-3" />
@@ -212,27 +266,35 @@ export default function ShopCommissionsPage() {
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="text-center p-4 bg-muted rounded-lg">
                   <div className="text-3xl font-bold text-primary">1%</div>
-                  <div className="text-sm text-muted-foreground">Commission Rate</div>
+                  <div className="text-sm text-muted-foreground">
+                    Commission Rate
+                  </div>
                 </div>
                 <div className="text-center p-4 bg-muted rounded-lg">
                   <div className="text-3xl font-bold text-primary">21</div>
-                  <div className="text-sm text-muted-foreground">Days to Settle</div>
+                  <div className="text-sm text-muted-foreground">
+                    Days to Settle
+                  </div>
                 </div>
                 <div className="text-center p-4 bg-muted rounded-lg">
                   <div className="flex items-center justify-center gap-2">
                     <Ban className="h-6 w-6 text-red-500" />
                   </div>
-                  <div className="text-sm text-muted-foreground mt-1">Shop Hold if Overdue</div>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    Shop Hold if Overdue
+                  </div>
                 </div>
               </div>
               <div className="text-sm text-muted-foreground">
                 <p className="mb-2">
-                  <strong>How it works:</strong> When a customer pays at your shop, a 1% commission is recorded. 
-                  You have 21 days to settle this commission with the platform.
+                  <strong>How it works:</strong> When a customer pays at your
+                  shop, a 1% commission is recorded. You have 21 days to settle
+                  this commission with the platform.
                 </p>
                 <p>
-                  <strong>Important:</strong> Failure to settle commissions within 21 days will result in your shop 
-                  being placed on hold. While on hold, new orders cannot be placed at your shop.
+                  <strong>Important:</strong> Failure to settle commissions
+                  within 21 days will result in your shop being placed on hold.
+                  While on hold, new orders cannot be placed at your shop.
                 </p>
               </div>
             </CardContent>

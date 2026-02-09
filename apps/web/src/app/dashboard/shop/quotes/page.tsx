@@ -28,8 +28,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { shopQuotesApi } from "@/lib/api";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { shopQuotesApi } from "@/lib/api";
 import {
   CheckCircle,
   Clock,
@@ -122,7 +122,11 @@ const statusConfig: Record<
 
 export default function ShopQuotesPage() {
   const { user } = useAuth();
-  const { currencyCode: shopCurrency, symbol: currencySymbol, format: formatShopCurrency } = useShopCurrency();
+  const {
+    currencyCode: shopCurrency,
+    symbol: currencySymbol,
+    format: formatShopCurrency,
+  } = useShopCurrency();
 
   const [quotes, setQuotes] = useState<ShopQuote[]>([]);
   const [stats, setStats] = useState<QuoteStats | null>(null);
@@ -428,7 +432,7 @@ export default function ShopQuotesPage() {
                                         onClick={() =>
                                           handleStatusUpdate(
                                             quote.id,
-                                            "CONFIRMED"
+                                            "CONFIRMED",
                                           )
                                         }
                                       >
@@ -441,7 +445,7 @@ export default function ShopQuotesPage() {
                                         onClick={() =>
                                           handleStatusUpdate(
                                             quote.id,
-                                            "IN_PROGRESS"
+                                            "IN_PROGRESS",
                                           )
                                         }
                                       >
@@ -464,7 +468,7 @@ export default function ShopQuotesPage() {
                                         onClick={() =>
                                           handleStatusUpdate(
                                             quote.id,
-                                            "COMPLETED"
+                                            "COMPLETED",
                                           )
                                         }
                                       >
@@ -473,13 +477,13 @@ export default function ShopQuotesPage() {
                                       </DropdownMenuItem>
                                     )}
                                     {!["COMPLETED", "CANCELLED"].includes(
-                                      quote.status
+                                      quote.status,
                                     ) && (
                                       <DropdownMenuItem
                                         onClick={() =>
                                           handleStatusUpdate(
                                             quote.id,
-                                            "CANCELLED"
+                                            "CANCELLED",
                                           )
                                         }
                                         className="text-red-600"

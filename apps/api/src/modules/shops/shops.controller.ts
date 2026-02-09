@@ -16,12 +16,12 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
+import { ContentModerationService } from "./content-moderation.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
 import { OAuthShopSetupDto } from "./dto/oauth-shop-setup.dto";
 import { UpdateMetalRatesDto } from "./dto/update-metal-rates.dto";
 import { UpdateShopDto } from "./dto/update-shop.dto";
 import { ShopsService } from "./shops.service";
-import { ContentModerationService } from "./content-moderation.service";
 
 @ApiTags("shops")
 @Controller("shops")
@@ -328,7 +328,13 @@ export class ShopsController {
   @ApiOperation({ summary: "Update shop profile (about, images)" })
   async updateShopProfile(
     @CurrentUser("id") userId: string,
-    @Body() body: { about?: string; profileImage?: string; coverImage?: string; shopName?: string },
+    @Body()
+    body: {
+      about?: string;
+      profileImage?: string;
+      coverImage?: string;
+      shopName?: string;
+    },
   ) {
     return this.shopsService.updateShopProfile(userId, body);
   }
@@ -383,7 +389,11 @@ export class ShopsController {
     @Param("reviewId") reviewId: string,
     @Body() body: { reason: string },
   ) {
-    return this.shopsService.requestReviewDeletion(shopId, reviewId, body.reason);
+    return this.shopsService.requestReviewDeletion(
+      shopId,
+      reviewId,
+      body.reason,
+    );
   }
 
   // Admin endpoint to handle review deletion requests
@@ -391,12 +401,18 @@ export class ShopsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Approve or reject review deletion request (Admin)" })
+  @ApiOperation({
+    summary: "Approve or reject review deletion request (Admin)",
+  })
   async handleReviewDeletion(
     @Param("reviewId") reviewId: string,
     @CurrentUser("id") adminId: string,
     @Body() body: { action: "APPROVED" | "REJECTED" },
   ) {
-    return this.shopsService.handleReviewDeletionRequest(reviewId, adminId, body.action);
+    return this.shopsService.handleReviewDeletionRequest(
+      reviewId,
+      adminId,
+      body.action,
+    );
   }
 }

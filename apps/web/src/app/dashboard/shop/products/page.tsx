@@ -1,39 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { ShopGuard } from '@/components/auth/RouteGuard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { ShopGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,27 +11,54 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
-  Plus,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useImageUpload } from "@/hooks/useImageUpload";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { inventoryApi } from "@/lib/api";
+import { getImageUrl } from "@/lib/image-upload";
+import {
   Edit,
-  Trash2,
-  Eye,
-  Package,
-  Loader2,
-  Search,
-  Image as ImageIcon,
-  DollarSign,
-  Scale,
-  Tag,
   GripVertical,
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { inventoryApi } from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
-import { useShopCurrency } from '@/hooks/useShopCurrency';
-import { useImageUpload } from '@/hooks/useImageUpload';
-import { getImageUrl } from '@/lib/image-upload';
+  Image as ImageIcon,
+  Loader2,
+  Package,
+  Plus,
+  Scale,
+  Search,
+  Trash2,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface InventoryItem {
   id: string;
@@ -85,58 +80,88 @@ interface InventoryItem {
 }
 
 const jewelleryTypes = [
-  'RING',
-  'NECKLACE',
-  'PENDANT',
-  'EARRING',
-  'BRACELET',
-  'BANGLE',
-  'CHAIN',
-  'ANKLET',
-  'BROOCH',
-  'NOSE_PIN',
-  'MAANG_TIKKA',
-  'OTHER',
+  "RING",
+  "NECKLACE",
+  "PENDANT",
+  "EARRING",
+  "BRACELET",
+  "BANGLE",
+  "CHAIN",
+  "ANKLET",
+  "BROOCH",
+  "NOSE_PIN",
+  "MAANG_TIKKA",
+  "OTHER",
 ];
 
 const buildMethods = [
-  { value: 'METHOD_A', label: 'Method A - Solid Pure Metal', description: 'Handcrafted from solid gold/silver without any base metal. Highest purity, traditional craftsmanship.' },
-  { value: 'METHOD_B', label: 'Method B - Gold/Silver Alloy', description: 'Mixed with other metals for durability. Standard jewellery making method used by most jewellers.' },
-  { value: 'METHOD_C', label: 'Method C - Plated/Coated', description: 'Base metal coated with gold/silver layer. Affordable option with similar appearance.' },
-  { value: 'METHOD_D', label: 'Method D - Machine Made', description: 'Factory manufactured with precision. Consistent quality and modern designs.' },
+  {
+    value: "METHOD_A",
+    label: "Method A - Solid Pure Metal",
+    description:
+      "Handcrafted from solid gold/silver without any base metal. Highest purity, traditional craftsmanship.",
+  },
+  {
+    value: "METHOD_B",
+    label: "Method B - Gold/Silver Alloy",
+    description:
+      "Mixed with other metals for durability. Standard jewellery making method used by most jewellers.",
+  },
+  {
+    value: "METHOD_C",
+    label: "Method C - Plated/Coated",
+    description:
+      "Base metal coated with gold/silver layer. Affordable option with similar appearance.",
+  },
+  {
+    value: "METHOD_D",
+    label: "Method D - Machine Made",
+    description:
+      "Factory manufactured with precision. Consistent quality and modern designs.",
+  },
 ];
 
 const statusColors: Record<string, string> = {
-  AVAILABLE: 'bg-green-100 text-green-700',
-  SOLD: 'bg-blue-100 text-blue-700',
-  RESERVED: 'bg-amber-100 text-amber-700',
-  UNAVAILABLE: 'bg-gray-100 text-gray-700',
+  AVAILABLE: "bg-green-100 text-green-700",
+  SOLD: "bg-blue-100 text-blue-700",
+  RESERVED: "bg-amber-100 text-amber-700",
+  UNAVAILABLE: "bg-gray-100 text-gray-700",
 };
 
 // Gemstone types (same as RFQ)
 const gemstoneTypes = [
-  { code: 'DIAMOND', name: 'Diamond' },
-  { code: 'RUBY', name: 'Ruby' },
-  { code: 'EMERALD', name: 'Emerald' },
-  { code: 'SAPPHIRE', name: 'Sapphire' },
-  { code: 'PEARL', name: 'Pearl' },
-  { code: 'AMETHYST', name: 'Amethyst' },
-  { code: 'TOPAZ', name: 'Topaz' },
-  { code: 'OPAL', name: 'Opal' },
-  { code: 'GARNET', name: 'Garnet' },
-  { code: 'TURQUOISE', name: 'Turquoise' },
-  { code: 'CORAL', name: 'Coral' },
-  { code: 'JADE', name: 'Jade' },
-  { code: 'CITRINE', name: 'Citrine' },
-  { code: 'PERIDOT', name: 'Peridot' },
-  { code: 'AQUAMARINE', name: 'Aquamarine' },
-  { code: 'OTHER', name: 'Other' },
+  { code: "DIAMOND", name: "Diamond" },
+  { code: "RUBY", name: "Ruby" },
+  { code: "EMERALD", name: "Emerald" },
+  { code: "SAPPHIRE", name: "Sapphire" },
+  { code: "PEARL", name: "Pearl" },
+  { code: "AMETHYST", name: "Amethyst" },
+  { code: "TOPAZ", name: "Topaz" },
+  { code: "OPAL", name: "Opal" },
+  { code: "GARNET", name: "Garnet" },
+  { code: "TURQUOISE", name: "Turquoise" },
+  { code: "CORAL", name: "Coral" },
+  { code: "JADE", name: "Jade" },
+  { code: "CITRINE", name: "Citrine" },
+  { code: "PERIDOT", name: "Peridot" },
+  { code: "AQUAMARINE", name: "Aquamarine" },
+  { code: "OTHER", name: "Other" },
 ];
 
 // Gemstone cuts
 const gemstoneCuts = [
-  'Round', 'Princess', 'Oval', 'Marquise', 'Pear', 'Cushion', 
-  'Emerald Cut', 'Asscher', 'Radiant', 'Heart', 'Cabochon', 'Other'
+  "Round",
+  "Princess",
+  "Oval",
+  "Marquise",
+  "Pear",
+  "Cushion",
+  "Emerald Cut",
+  "Asscher",
+  "Radiant",
+  "Heart",
+  "Cabochon",
+  "Other",
 ];
 
 // Weight unit conversion
@@ -169,18 +194,18 @@ interface ProductFormData {
 }
 
 const emptyForm: ProductFormData = {
-  nameEn: '',
-  descriptionEn: '',
-  sku: '',
-  jewelleryType: '',
-  buildMethod: 'METHOD_A',
-  metalType: 'GOLD',
-  purity: '22K',
-  totalWeightGrams: '',
-  metalValueNpr: '',
-  makingChargeNpr: '',
-  gemstoneValueNpr: '0',
-  stockQuantity: '1',
+  nameEn: "",
+  descriptionEn: "",
+  sku: "",
+  jewelleryType: "",
+  buildMethod: "METHOD_A",
+  metalType: "GOLD",
+  purity: "22K",
+  totalWeightGrams: "",
+  metalValueNpr: "",
+  makingChargeNpr: "",
+  gemstoneValueNpr: "0",
+  stockQuantity: "1",
   images: [],
   gemstones: [],
 };
@@ -191,63 +216,73 @@ export default function ShopProductsPage() {
   const { user } = useAuth();
   const [products, setProducts] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+
   // Shop-based currency
-  const { currencyCode, symbol: currencySymbol, format: formatCurrency } = useShopCurrency();
+  const {
+    currencyCode,
+    symbol: currencySymbol,
+    format: formatCurrency,
+  } = useShopCurrency();
   const currency = { code: currencyCode, symbol: currencySymbol };
-  
+
   // Weight unit state
-  const [weightUnit, setWeightUnit] = useState<'gram' | 'tola'>('gram');
-  
+  const [weightUnit, setWeightUnit] = useState<"gram" | "tola">("gram");
+
   // Form state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<InventoryItem | null>(null);
+  const [editingProduct, setEditingProduct] = useState<InventoryItem | null>(
+    null,
+  );
   const [formData, setFormData] = useState<ProductFormData>(emptyForm);
-  const [newImageUrl, setNewImageUrl] = useState('');
+  const [newImageUrl, setNewImageUrl] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
-  
+
   // Image upload hook
-  const { uploading: isUploadingImage, progress: imageProgress, upload: uploadImage } = useImageUpload({
-    type: 'product',
+  const {
+    uploading: isUploadingImage,
+    progress: imageProgress,
+    upload: uploadImage,
+  } = useImageUpload({
+    type: "product",
     onSuccess: (result) => {
       if (result.url) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           images: [...prev.images, result.url!],
         }));
         toast({
-          title: 'Image Uploaded',
-          description: 'Image uploaded to cloud successfully',
+          title: "Image Uploaded",
+          description: "Image uploaded to cloud successfully",
         });
       }
     },
     onError: (error) => {
       toast({
-        variant: 'destructive',
-        title: 'Upload Failed',
+        variant: "destructive",
+        title: "Upload Failed",
         description: error,
       });
     },
   });
-  
+
   // Delete confirmation
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // Weight conversion helpers
   const gramsToTola = (grams: number) => grams / TOLA_TO_GRAM;
   const tolaToGrams = (tola: number) => tola * TOLA_TO_GRAM;
-  
+
   const getDisplayWeight = (grams: number) => {
-    if (weightUnit === 'tola') {
+    if (weightUnit === "tola") {
       return gramsToTola(grams).toFixed(2);
     }
     return grams.toFixed(2);
   };
 
-  const getWeightLabel = () => weightUnit === 'tola' ? 'tola' : 'g';
+  const getWeightLabel = () => (weightUnit === "tola" ? "tola" : "g");
 
   useEffect(() => {
     if (user?.shop?.id) {
@@ -260,18 +295,21 @@ export default function ShopProductsPage() {
     setIsLoading(true);
     try {
       const params: any = {};
-      if (statusFilter !== 'all') {
+      if (statusFilter !== "all") {
         params.status = statusFilter;
       }
-      const response = await inventoryApi.getShopInventory(user.shop.id, params);
+      const response = await inventoryApi.getShopInventory(
+        user.shop.id,
+        params,
+      );
       const items = response.data?.items || response.data || [];
       setProducts(Array.isArray(items) ? items : []);
     } catch (error) {
-      console.error('Failed to load products:', error);
+      console.error("Failed to load products:", error);
       toast({
-        variant: 'destructive',
-        title: 'Failed to load products',
-        description: 'Could not fetch your products',
+        variant: "destructive",
+        title: "Failed to load products",
+        description: "Could not fetch your products",
       });
       setProducts([]);
     } finally {
@@ -293,12 +331,12 @@ export default function ShopProductsPage() {
     const comp = product.composition || {};
     setFormData({
       nameEn: product.nameEn,
-      descriptionEn: product.descriptionEn || '',
+      descriptionEn: product.descriptionEn || "",
       sku: product.sku,
       jewelleryType: product.jewelleryType,
       buildMethod: product.buildMethod,
-      metalType: comp.baseAlloy?.metal || comp.metal || 'GOLD',
-      purity: comp.baseAlloy?.purity || comp.purity || '22K',
+      metalType: comp.baseAlloy?.metal || comp.metal || "GOLD",
+      purity: comp.baseAlloy?.purity || comp.purity || "22K",
       totalWeightGrams: product.totalWeightGrams.toString(),
       metalValueNpr: product.metalValueNpr.toString(),
       makingChargeNpr: product.makingChargeNpr.toString(),
@@ -314,33 +352,33 @@ export default function ShopProductsPage() {
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     // Check max 3 images
     if (formData.images.length >= 3) {
       toast({
-        variant: 'destructive',
-        title: 'Maximum Images Reached',
-        description: 'You can upload a maximum of 3 images per product',
+        variant: "destructive",
+        title: "Maximum Images Reached",
+        description: "You can upload a maximum of 3 images per product",
       });
-      e.target.value = '';
+      e.target.value = "";
       return;
     }
-    
+
     // Check file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast({
-        variant: 'destructive',
-        title: 'File Too Large',
-        description: 'Please select an image smaller than 10MB',
+        variant: "destructive",
+        title: "File Too Large",
+        description: "Please select an image smaller than 10MB",
       });
       return;
     }
-    
+
     // Upload to Cloudflare R2
     await uploadImage(file);
-    
+
     // Reset the input
-    e.target.value = '';
+    e.target.value = "";
   };
 
   // Gemstone helpers
@@ -349,7 +387,7 @@ export default function ShopProductsPage() {
       ...formData,
       gemstones: [
         ...formData.gemstones,
-        { type: '', cut: '', caratWeight: 0, valueNpr: 0 },
+        { type: "", cut: "", caratWeight: 0, valueNpr: 0 },
       ],
     });
   };
@@ -358,9 +396,12 @@ export default function ShopProductsPage() {
     const newGemstones = [...formData.gemstones];
     newGemstones[index] = { ...newGemstones[index], [field]: value };
     setFormData({ ...formData, gemstones: newGemstones });
-    
+
     // Update total gemstone value
-    const totalGemstoneValue = newGemstones.reduce((sum, g) => sum + (g.valueNpr || 0), 0);
+    const totalGemstoneValue = newGemstones.reduce(
+      (sum, g) => sum + (g.valueNpr || 0),
+      0,
+    );
     setFormData((prev) => ({
       ...prev,
       gemstones: newGemstones,
@@ -370,7 +411,10 @@ export default function ShopProductsPage() {
 
   const removeGemstone = (index: number) => {
     const newGemstones = formData.gemstones.filter((_, i) => i !== index);
-    const totalGemstoneValue = newGemstones.reduce((sum, g) => sum + (g.valueNpr || 0), 0);
+    const totalGemstoneValue = newGemstones.reduce(
+      (sum, g) => sum + (g.valueNpr || 0),
+      0,
+    );
     setFormData({
       ...formData,
       gemstones: newGemstones,
@@ -382,19 +426,25 @@ export default function ShopProductsPage() {
     if (!user?.shop?.id) return;
 
     // Validation
-    if (!formData.nameEn || !formData.sku || !formData.jewelleryType || !formData.totalWeightGrams) {
+    if (
+      !formData.nameEn ||
+      !formData.sku ||
+      !formData.jewelleryType ||
+      !formData.totalWeightGrams
+    ) {
       toast({
-        variant: 'destructive',
-        title: 'Missing Fields',
-        description: 'Please fill in all required fields',
+        variant: "destructive",
+        title: "Missing Fields",
+        description: "Please fill in all required fields",
       });
       return;
     }
 
     // Convert weight if in tola
-    const weightInGrams = weightUnit === 'tola' 
-      ? tolaToGrams(parseFloat(formData.totalWeightGrams))
-      : parseFloat(formData.totalWeightGrams);
+    const weightInGrams =
+      weightUnit === "tola"
+        ? tolaToGrams(parseFloat(formData.totalWeightGrams))
+        : parseFloat(formData.totalWeightGrams);
 
     setIsSubmitting(true);
     try {
@@ -422,14 +472,14 @@ export default function ShopProductsPage() {
       if (editingProduct) {
         await inventoryApi.update(editingProduct.id, dto);
         toast({
-          title: 'Product Updated',
-          description: 'Your product has been updated successfully',
+          title: "Product Updated",
+          description: "Your product has been updated successfully",
         });
       } else {
         await inventoryApi.create(user.shop.id, dto);
         toast({
-          title: 'Product Created',
-          description: 'Your product has been added to inventory',
+          title: "Product Created",
+          description: "Your product has been added to inventory",
         });
       }
 
@@ -437,9 +487,9 @@ export default function ShopProductsPage() {
       loadProducts();
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: editingProduct ? 'Update Failed' : 'Create Failed',
-        description: error.response?.data?.message || 'Could not save product',
+        variant: "destructive",
+        title: editingProduct ? "Update Failed" : "Create Failed",
+        description: error.response?.data?.message || "Could not save product",
       });
     } finally {
       setIsSubmitting(false);
@@ -452,16 +502,17 @@ export default function ShopProductsPage() {
     try {
       await inventoryApi.delete(deleteId);
       toast({
-        title: 'Product Deleted',
-        description: 'The product has been removed from inventory',
+        title: "Product Deleted",
+        description: "The product has been removed from inventory",
       });
       setDeleteId(null);
       loadProducts();
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Delete Failed',
-        description: error.response?.data?.message || 'Could not delete product',
+        variant: "destructive",
+        title: "Delete Failed",
+        description:
+          error.response?.data?.message || "Could not delete product",
       });
     }
   };
@@ -472,7 +523,7 @@ export default function ShopProductsPage() {
         ...formData,
         images: [...formData.images, newImageUrl],
       });
-      setNewImageUrl('');
+      setNewImageUrl("");
     }
   };
 
@@ -490,9 +541,10 @@ export default function ShopProductsPage() {
     return metal + making + gemstone;
   };
 
-  const filteredProducts = products.filter((p) =>
-    p.nameEn.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.sku.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredProducts = products.filter(
+    (p) =>
+      p.nameEn.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.sku.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -555,7 +607,9 @@ export default function ShopProductsPage() {
                 <div className="text-center py-12 text-muted-foreground">
                   <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No products found</p>
-                  <p className="text-sm">Add your first product to start selling</p>
+                  <p className="text-sm">
+                    Add your first product to start selling
+                  </p>
                   <Button onClick={openAddDialog} className="mt-4">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Product
@@ -582,7 +636,10 @@ export default function ShopProductsPage() {
                             <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
                               {product.images?.[0] ? (
                                 <img
-                                  src={getImageUrl(product.images[0], 'thumbnail')}
+                                  src={getImageUrl(
+                                    product.images[0],
+                                    "thumbnail",
+                                  )}
                                   alt={product.nameEn}
                                   className="w-full h-full object-cover"
                                 />
@@ -592,35 +649,51 @@ export default function ShopProductsPage() {
                             </div>
                             <div>
                               <p className="font-medium">{product.nameEn}</p>
-                              <p className="text-xs text-muted-foreground">{product.sku}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {product.sku}
+                              </p>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">
-                            {product.jewelleryType?.replace(/_/g, ' ')}
+                            {product.jewelleryType?.replace(/_/g, " ")}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Scale className="h-3 w-3 text-muted-foreground" />
-                            <span>{getDisplayWeight(product.totalWeightGrams)} {getWeightLabel()}</span>
+                            <span>
+                              {getDisplayWeight(product.totalWeightGrams)}{" "}
+                              {getWeightLabel()}
+                            </span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <span className="font-medium">
-                              {currency.symbol} {product.totalPriceNpr?.toLocaleString() || 0}
+                              {currency.symbol}{" "}
+                              {product.totalPriceNpr?.toLocaleString() || 0}
                             </span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={product.stockQuantity > 0 ? 'default' : 'destructive'}>
+                          <Badge
+                            variant={
+                              product.stockQuantity > 0
+                                ? "default"
+                                : "destructive"
+                            }
+                          >
                             {product.stockQuantity}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge className={statusColors[product.status] || 'bg-gray-100'}>
+                          <Badge
+                            className={
+                              statusColors[product.status] || "bg-gray-100"
+                            }
+                          >
                             {product.status}
                           </Badge>
                         </TableCell>
@@ -659,12 +732,12 @@ export default function ShopProductsPage() {
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {editingProduct ? 'Edit Product' : 'Add New Product'}
+                {editingProduct ? "Edit Product" : "Add New Product"}
               </DialogTitle>
               <DialogDescription>
                 {editingProduct
-                  ? 'Update your product details'
-                  : 'Add a new jewellery item to your inventory'}
+                  ? "Update your product details"
+                  : "Add a new jewellery item to your inventory"}
               </DialogDescription>
             </DialogHeader>
 
@@ -676,7 +749,9 @@ export default function ShopProductsPage() {
                   <Input
                     id="name"
                     value={formData.nameEn}
-                    onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, nameEn: e.target.value })
+                    }
                     placeholder="e.g., 22K Gold Wedding Ring"
                   />
                 </div>
@@ -685,7 +760,9 @@ export default function ShopProductsPage() {
                   <Input
                     id="sku"
                     value={formData.sku}
-                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, sku: e.target.value })
+                    }
                     placeholder="SKU-XXXX"
                     disabled={!!editingProduct}
                   />
@@ -694,7 +771,9 @@ export default function ShopProductsPage() {
                   <Label htmlFor="jewelleryType">Jewellery Type *</Label>
                   <Select
                     value={formData.jewelleryType}
-                    onValueChange={(v) => setFormData({ ...formData, jewelleryType: v })}
+                    onValueChange={(v) =>
+                      setFormData({ ...formData, jewelleryType: v })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select type" />
@@ -702,7 +781,7 @@ export default function ShopProductsPage() {
                     <SelectContent>
                       {jewelleryTypes.map((type) => (
                         <SelectItem key={type} value={type}>
-                          {type.replace(/_/g, ' ')}
+                          {type.replace(/_/g, " ")}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -715,7 +794,9 @@ export default function ShopProductsPage() {
                 <Textarea
                   id="description"
                   value={formData.descriptionEn}
-                  onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, descriptionEn: e.target.value })
+                  }
                   placeholder="Describe your product..."
                   rows={3}
                 />
@@ -727,7 +808,9 @@ export default function ShopProductsPage() {
                   <Label htmlFor="buildMethod">Build Method</Label>
                   <Select
                     value={formData.buildMethod}
-                    onValueChange={(v) => setFormData({ ...formData, buildMethod: v })}
+                    onValueChange={(v) =>
+                      setFormData({ ...formData, buildMethod: v })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -745,7 +828,9 @@ export default function ShopProductsPage() {
                   <Label htmlFor="metalType">Metal Type</Label>
                   <Select
                     value={formData.metalType}
-                    onValueChange={(v) => setFormData({ ...formData, metalType: v })}
+                    onValueChange={(v) =>
+                      setFormData({ ...formData, metalType: v })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -761,7 +846,9 @@ export default function ShopProductsPage() {
                   <Label htmlFor="purity">Purity</Label>
                   <Select
                     value={formData.purity}
-                    onValueChange={(v) => setFormData({ ...formData, purity: v })}
+                    onValueChange={(v) =>
+                      setFormData({ ...formData, purity: v })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -786,19 +873,19 @@ export default function ShopProductsPage() {
                     <div className="flex gap-1 text-xs">
                       <Button
                         type="button"
-                        variant={weightUnit === 'gram' ? 'default' : 'outline'}
+                        variant={weightUnit === "gram" ? "default" : "outline"}
                         size="sm"
                         className="h-6 px-2 text-xs"
-                        onClick={() => setWeightUnit('gram')}
+                        onClick={() => setWeightUnit("gram")}
                       >
                         Gram
                       </Button>
                       <Button
                         type="button"
-                        variant={weightUnit === 'tola' ? 'default' : 'outline'}
+                        variant={weightUnit === "tola" ? "default" : "outline"}
                         size="sm"
                         className="h-6 px-2 text-xs"
-                        onClick={() => setWeightUnit('tola')}
+                        onClick={() => setWeightUnit("tola")}
                       >
                         Tola
                       </Button>
@@ -809,12 +896,23 @@ export default function ShopProductsPage() {
                     type="number"
                     step="0.01"
                     value={formData.totalWeightGrams}
-                    onChange={(e) => setFormData({ ...formData, totalWeightGrams: e.target.value })}
-                    placeholder={weightUnit === 'gram' ? 'e.g., 5.5g' : 'e.g., 0.47 tola'}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        totalWeightGrams: e.target.value,
+                      })
+                    }
+                    placeholder={
+                      weightUnit === "gram" ? "e.g., 5.5g" : "e.g., 0.47 tola"
+                    }
                   />
                   {formData.totalWeightGrams && (
                     <p className="text-xs text-muted-foreground">
-                      = {getDisplayWeight(parseFloat(formData.totalWeightGrams) || 0)} {getWeightLabel()}
+                      ={" "}
+                      {getDisplayWeight(
+                        parseFloat(formData.totalWeightGrams) || 0,
+                      )}{" "}
+                      {getWeightLabel()}
                     </p>
                   )}
                 </div>
@@ -824,7 +922,12 @@ export default function ShopProductsPage() {
                     id="stock"
                     type="number"
                     value={formData.stockQuantity}
-                    onChange={(e) => setFormData({ ...formData, stockQuantity: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        stockQuantity: e.target.value,
+                      })
+                    }
                     placeholder="1"
                   />
                 </div>
@@ -847,9 +950,14 @@ export default function ShopProductsPage() {
                 {formData.gemstones.length > 0 && (
                   <div className="space-y-3">
                     {formData.gemstones.map((gem, idx) => (
-                      <div key={idx} className="border rounded-lg p-3 space-y-3">
+                      <div
+                        key={idx}
+                        className="border rounded-lg p-3 space-y-3"
+                      >
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium">Gemstone #{idx + 1}</span>
+                          <span className="text-sm font-medium">
+                            Gemstone #{idx + 1}
+                          </span>
                           <Button
                             type="button"
                             variant="ghost"
@@ -863,7 +971,9 @@ export default function ShopProductsPage() {
                         <div className="grid grid-cols-2 gap-3">
                           <Select
                             value={gem.type}
-                            onValueChange={(v) => updateGemstone(idx, 'type', v)}
+                            onValueChange={(v) =>
+                              updateGemstone(idx, "type", v)
+                            }
                           >
                             <SelectTrigger className="h-9">
                               <SelectValue placeholder="Type" />
@@ -877,8 +987,8 @@ export default function ShopProductsPage() {
                             </SelectContent>
                           </Select>
                           <Select
-                            value={gem.cut || ''}
-                            onValueChange={(v) => updateGemstone(idx, 'cut', v)}
+                            value={gem.cut || ""}
+                            onValueChange={(v) => updateGemstone(idx, "cut", v)}
                           >
                             <SelectTrigger className="h-9">
                               <SelectValue placeholder="Cut" />
@@ -896,15 +1006,27 @@ export default function ShopProductsPage() {
                             step="0.01"
                             placeholder="Carat weight"
                             className="h-9"
-                            value={gem.caratWeight || ''}
-                            onChange={(e) => updateGemstone(idx, 'caratWeight', parseFloat(e.target.value) || 0)}
+                            value={gem.caratWeight || ""}
+                            onChange={(e) =>
+                              updateGemstone(
+                                idx,
+                                "caratWeight",
+                                parseFloat(e.target.value) || 0,
+                              )
+                            }
                           />
                           <Input
                             type="number"
                             placeholder={`Value (${currency.code})`}
                             className="h-9"
-                            value={gem.valueNpr || ''}
-                            onChange={(e) => updateGemstone(idx, 'valueNpr', parseFloat(e.target.value) || 0)}
+                            value={gem.valueNpr || ""}
+                            onChange={(e) =>
+                              updateGemstone(
+                                idx,
+                                "valueNpr",
+                                parseFloat(e.target.value) || 0,
+                              )
+                            }
                           />
                         </div>
                       </div>
@@ -916,37 +1038,60 @@ export default function ShopProductsPage() {
               {/* Pricing */}
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="metalValue">Metal Value ({currency.code})</Label>
+                  <Label htmlFor="metalValue">
+                    Metal Value ({currency.code})
+                  </Label>
                   <Input
                     id="metalValue"
                     type="number"
                     value={formData.metalValueNpr}
-                    onChange={(e) => setFormData({ ...formData, metalValueNpr: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        metalValueNpr: e.target.value,
+                      })
+                    }
                     placeholder="e.g., 50000"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="makingCharge">Making Charge ({currency.code})</Label>
+                  <Label htmlFor="makingCharge">
+                    Making Charge ({currency.code})
+                  </Label>
                   <Input
                     id="makingCharge"
                     type="number"
                     value={formData.makingChargeNpr}
-                    onChange={(e) => setFormData({ ...formData, makingChargeNpr: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        makingChargeNpr: e.target.value,
+                      })
+                    }
                     placeholder="e.g., 5000"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="gemstoneValue">Gemstone Value ({currency.code})</Label>
+                  <Label htmlFor="gemstoneValue">
+                    Gemstone Value ({currency.code})
+                  </Label>
                   <Input
                     id="gemstoneValue"
                     type="number"
                     value={formData.gemstoneValueNpr}
-                    onChange={(e) => setFormData({ ...formData, gemstoneValueNpr: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        gemstoneValueNpr: e.target.value,
+                      })
+                    }
                     placeholder="e.g., 10000"
                     readOnly={formData.gemstones.length > 0}
                   />
                   {formData.gemstones.length > 0 && (
-                    <p className="text-xs text-muted-foreground">Auto-calculated from gemstones</p>
+                    <p className="text-xs text-muted-foreground">
+                      Auto-calculated from gemstones
+                    </p>
                   )}
                 </div>
               </div>
@@ -964,9 +1109,11 @@ export default function ShopProductsPage() {
               {/* Images */}
               <div className="space-y-3">
                 <Label>Product Images (max 3)</Label>
-                
+
                 {/* File Upload */}
-                <div className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${formData.images.length >= 3 ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary/50'}`}>
+                <div
+                  className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${formData.images.length >= 3 ? "opacity-50 cursor-not-allowed" : "hover:border-primary/50"}`}
+                >
                   <input
                     type="file"
                     accept="image/*"
@@ -975,14 +1122,21 @@ export default function ShopProductsPage() {
                     id="image-upload"
                     disabled={isUploadingImage || formData.images.length >= 3}
                   />
-                  <label htmlFor="image-upload" className={formData.images.length >= 3 ? 'cursor-not-allowed' : 'cursor-pointer'}>
+                  <label
+                    htmlFor="image-upload"
+                    className={
+                      formData.images.length >= 3
+                        ? "cursor-not-allowed"
+                        : "cursor-pointer"
+                    }
+                  >
                     {isUploadingImage ? (
                       <div className="flex flex-col items-center justify-center gap-2">
                         <Loader2 className="h-5 w-5 animate-spin" />
                         <span>Uploading... {imageProgress}%</span>
                         <div className="w-full max-w-xs h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-primary transition-all duration-300" 
+                          <div
+                            className="h-full bg-primary transition-all duration-300"
                             style={{ width: `${imageProgress}%` }}
                           />
                         </div>
@@ -1021,24 +1175,29 @@ export default function ShopProductsPage() {
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {formData.images.map((url, idx) => (
-                        <div 
-                          key={url} 
-                          className={`relative group cursor-move ${idx === 0 ? 'ring-2 ring-gold-500 ring-offset-2' : ''}`}
+                        <div
+                          key={url}
+                          className={`relative group cursor-move ${idx === 0 ? "ring-2 ring-gold-500 ring-offset-2" : ""}`}
                           draggable
                           onDragStart={(e) => {
-                            e.dataTransfer.setData('text/plain', idx.toString());
+                            e.dataTransfer.setData(
+                              "text/plain",
+                              idx.toString(),
+                            );
                           }}
                           onDragOver={(e) => {
                             e.preventDefault();
-                            e.currentTarget.classList.add('opacity-50');
+                            e.currentTarget.classList.add("opacity-50");
                           }}
                           onDragLeave={(e) => {
-                            e.currentTarget.classList.remove('opacity-50');
+                            e.currentTarget.classList.remove("opacity-50");
                           }}
                           onDrop={(e) => {
                             e.preventDefault();
-                            e.currentTarget.classList.remove('opacity-50');
-                            const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+                            e.currentTarget.classList.remove("opacity-50");
+                            const fromIdx = parseInt(
+                              e.dataTransfer.getData("text/plain"),
+                            );
                             const toIdx = idx;
                             if (fromIdx !== toIdx) {
                               const newImages = [...formData.images];
@@ -1057,7 +1216,7 @@ export default function ShopProductsPage() {
                             </div>
                           )}
                           <img
-                            src={getImageUrl(url, 'thumbnail')}
+                            src={getImageUrl(url, "thumbnail")}
                             alt={`Product ${idx + 1}`}
                             className="w-20 h-20 object-cover rounded-lg border"
                           />
@@ -1087,9 +1246,9 @@ export default function ShopProductsPage() {
                     Saving...
                   </>
                 ) : editingProduct ? (
-                  'Update Product'
+                  "Update Product"
                 ) : (
-                  'Add Product'
+                  "Add Product"
                 )}
               </Button>
             </DialogFooter>
@@ -1102,7 +1261,8 @@ export default function ShopProductsPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Product</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete this product? This action cannot be undone.
+                Are you sure you want to delete this product? This action cannot
+                be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

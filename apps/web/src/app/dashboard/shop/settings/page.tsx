@@ -200,7 +200,8 @@ const CRITERIA_LABELS: Record<
 
 export default function ShopSettingsPage() {
   const { user } = useAuth();
-  const { placeholders: countryPlaceholders, symbol: currencySymbol } = useShopCurrency();
+  const { placeholders: countryPlaceholders, symbol: currencySymbol } =
+    useShopCurrency();
   const [shopData, setShopData] = useState<ShopData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -635,7 +636,9 @@ export default function ShopSettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="pincode">{countryPlaceholders.pincodeLabel}</Label>
+                      <Label htmlFor="pincode">
+                        {countryPlaceholders.pincodeLabel}
+                      </Label>
                       <Input
                         id="pincode"
                         value={shopData.pincode || ""}

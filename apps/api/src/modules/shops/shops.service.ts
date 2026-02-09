@@ -1437,7 +1437,12 @@ export class ShopsService {
    */
   async updateShopProfile(
     userId: string,
-    data: { about?: string; profileImage?: string; coverImage?: string; shopName?: string },
+    data: {
+      about?: string;
+      profileImage?: string;
+      coverImage?: string;
+      shopName?: string;
+    },
   ) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -1456,10 +1461,13 @@ export class ShopsService {
 
     // Moderate about text if provided
     if (data.about !== undefined && data.about.trim().length > 0) {
-      const modResult = await this.moderationService.moderateAboutText(data.about);
+      const modResult = await this.moderationService.moderateAboutText(
+        data.about,
+      );
       if (!modResult.safe) {
         throw new BadRequestException({
-          message: "Your about section contains content that violates our policy",
+          message:
+            "Your about section contains content that violates our policy",
           violations: modResult.violations,
         });
       }
@@ -1467,7 +1475,8 @@ export class ShopsService {
 
     const updateData: any = {};
     if (data.about !== undefined) updateData.about = data.about;
-    if (data.profileImage !== undefined) updateData.profileImage = data.profileImage;
+    if (data.profileImage !== undefined)
+      updateData.profileImage = data.profileImage;
     if (data.coverImage !== undefined) updateData.coverImage = data.coverImage;
     if (data.shopName) updateData.shopName = data.shopName;
 
@@ -1484,7 +1493,10 @@ export class ShopsService {
   /**
    * Get reviews for a shop (seller dashboard view)
    */
-  async getShopReviews(shopId: string, opts: { page: number; pageSize: number }) {
+  async getShopReviews(
+    shopId: string,
+    opts: { page: number; pageSize: number },
+  ) {
     if (!shopId) throw new BadRequestException("Shop ID required");
 
     const [reviews, total] = await Promise.all([
@@ -1508,7 +1520,10 @@ export class ShopsService {
 
     const enrichedReviews = reviews.map((r) => ({
       ...r,
-      customer: customerMap.get(r.customerId) || { firstName: "Customer", lastName: "" },
+      customer: customerMap.get(r.customerId) || {
+        firstName: "Customer",
+        lastName: "",
+      },
     }));
 
     return {
@@ -1558,10 +1573,16 @@ export class ShopsService {
   /**
    * Request admin to delete a review (seller explains why)
    */
-  async requestReviewDeletion(shopId: string, reviewId: string, reason: string) {
+  async requestReviewDeletion(
+    shopId: string,
+    reviewId: string,
+    reason: string,
+  ) {
     if (!shopId) throw new BadRequestException("Shop ID required");
     if (!reason?.trim() || reason.trim().length < 20) {
-      throw new BadRequestException("Please provide a detailed reason (at least 20 characters)");
+      throw new BadRequestException(
+        "Please provide a detailed reason (at least 20 characters)",
+      );
     }
 
     const review = await this.prisma.shopRating.findFirst({
@@ -1573,7 +1594,9 @@ export class ShopsService {
     }
 
     if (review.deleteRequested && review.deleteRequestStatus === "PENDING") {
-      throw new BadRequestException("A deletion request is already pending for this review");
+      throw new BadRequestException(
+        "A deletion request is already pending for this review",
+      );
     }
 
     return this.prisma.shopRating.update({
@@ -1604,7 +1627,9 @@ export class ShopsService {
     }
 
     if (review.deleteRequestStatus !== "PENDING") {
-      throw new BadRequestException("No pending deletion request for this review");
+      throw new BadRequestException(
+        "No pending deletion request for this review",
+      );
     }
 
     const updateData: any = {

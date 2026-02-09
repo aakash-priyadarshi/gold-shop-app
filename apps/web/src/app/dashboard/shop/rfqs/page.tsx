@@ -1,12 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { ShopGuard } from '@/components/auth/RouteGuard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { ShopGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -14,24 +12,25 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { rfqApi } from "@/lib/api";
 import {
-  FileQuestion,
-  Eye,
-  Clock,
   CheckCircle,
-  XCircle,
-  MessageSquare,
+  Clock,
   DollarSign,
+  Eye,
+  FileQuestion,
   Loader2,
+  MessageSquare,
   Scale,
-  Plus,
   UserPlus,
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { rfqApi } from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
-import { useShopCurrency } from '@/hooks/useShopCurrency';
+  XCircle,
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 interface Rfq {
   id: string;
@@ -71,21 +70,22 @@ interface Rfq {
 }
 
 const statusColors: Record<string, string> = {
-  DRAFT: 'bg-gray-100 text-gray-700',
-  PENDING: 'bg-amber-100 text-amber-700',
-  BROADCAST: 'bg-blue-100 text-blue-700',
-  SENT_TO_SHOPS: 'bg-blue-100 text-blue-700',
-  OFFERS_RECEIVED: 'bg-purple-100 text-purple-700',
-  NEGOTIATING: 'bg-orange-100 text-orange-700',
-  ACCEPTED: 'bg-green-100 text-green-700',
-  COMPLETED: 'bg-green-100 text-green-700',
-  CANCELLED: 'bg-red-100 text-red-700',
-  EXPIRED: 'bg-gray-100 text-gray-700',
+  DRAFT: "bg-gray-100 text-gray-700",
+  PENDING: "bg-amber-100 text-amber-700",
+  BROADCAST: "bg-blue-100 text-blue-700",
+  SENT_TO_SHOPS: "bg-blue-100 text-blue-700",
+  OFFERS_RECEIVED: "bg-purple-100 text-purple-700",
+  NEGOTIATING: "bg-orange-100 text-orange-700",
+  ACCEPTED: "bg-green-100 text-green-700",
+  COMPLETED: "bg-green-100 text-green-700",
+  CANCELLED: "bg-red-100 text-red-700",
+  EXPIRED: "bg-gray-100 text-gray-700",
 };
 
 export default function ShopRfqsPage() {
   const { user } = useAuth();
-  const { symbol: currencySymbol, format: formatShopCurrency } = useShopCurrency();
+  const { symbol: currencySymbol, format: formatShopCurrency } =
+    useShopCurrency();
   const [rfqs, setRfqs] = useState<Rfq[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -105,11 +105,11 @@ export default function ShopRfqsPage() {
       }
       setRfqs(rfqsArr);
     } catch (error) {
-      console.error('Failed to load RFQs:', error);
+      console.error("Failed to load RFQs:", error);
       toast({
-        variant: 'destructive',
-        title: 'Failed to load RFQs',
-        description: 'Could not fetch RFQ data',
+        variant: "destructive",
+        title: "Failed to load RFQs",
+        description: "Could not fetch RFQ data",
       });
       setRfqs([]);
     } finally {
@@ -118,42 +118,44 @@ export default function ShopRfqsPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
   const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency || 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency || "USD",
       minimumFractionDigits: 0,
     }).format(amount);
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'PENDING':
-      case 'BROADCAST':
-      case 'SENT_TO_SHOPS':
+      case "PENDING":
+      case "BROADCAST":
+      case "SENT_TO_SHOPS":
         return <Clock className="h-3 w-3" />;
-      case 'OFFERS_RECEIVED':
-      case 'NEGOTIATING':
+      case "OFFERS_RECEIVED":
+      case "NEGOTIATING":
         return <MessageSquare className="h-3 w-3" />;
-      case 'ACCEPTED':
-      case 'COMPLETED':
+      case "ACCEPTED":
+      case "COMPLETED":
         return <CheckCircle className="h-3 w-3" />;
-      case 'CANCELLED':
-      case 'EXPIRED':
+      case "CANCELLED":
+      case "EXPIRED":
         return <XCircle className="h-3 w-3" />;
       default:
         return null;
     }
   };
 
-  const pendingCount = rfqs.filter((r) => ['PENDING', 'BROADCAST', 'SENT_TO_SHOPS'].includes(r.status)).length;
+  const pendingCount = rfqs.filter((r) =>
+    ["PENDING", "BROADCAST", "SENT_TO_SHOPS"].includes(r.status),
+  ).length;
 
   return (
     <ShopGuard>
@@ -168,7 +170,10 @@ export default function ShopRfqsPage() {
             </div>
             <div className="flex items-center gap-3">
               {pendingCount > 0 && (
-                <Badge variant="secondary" className="text-amber-700 bg-amber-100">
+                <Badge
+                  variant="secondary"
+                  className="text-amber-700 bg-amber-100"
+                >
                   {pendingCount} Pending
                 </Badge>
               )}
@@ -213,9 +218,11 @@ export default function ShopRfqsPage() {
                       <TableRow key={rfq.id}>
                         <TableCell>
                           <div>
-                            <p className="font-medium">{rfq.jewelleryType?.replace(/_/g, ' ')}</p>
+                            <p className="font-medium">
+                              {rfq.jewelleryType?.replace(/_/g, " ")}
+                            </p>
                             <p className="text-xs text-muted-foreground">
-                              {rfq.buildMethod?.replace(/_/g, ' ')}
+                              {rfq.buildMethod?.replace(/_/g, " ")}
                             </p>
                           </div>
                         </TableCell>
@@ -230,7 +237,8 @@ export default function ShopRfqsPage() {
                           <div className="text-sm space-y-1">
                             {rfq.composition?.baseAlloy && (
                               <p>
-                                {rfq.composition.baseAlloy.metal} {rfq.composition.baseAlloy.purity}
+                                {rfq.composition.baseAlloy.metal}{" "}
+                                {rfq.composition.baseAlloy.purity}
                               </p>
                             )}
                             {rfq.targetTotalWeightG && (
@@ -246,18 +254,29 @@ export default function ShopRfqsPage() {
                             <div className="flex items-center gap-1">
                               <DollarSign className="h-3 w-3 text-muted-foreground" />
                               <span className="text-sm">
-                                {rfq.budgetMinNpr ? `${currencySymbol} ${rfq.budgetMinNpr.toLocaleString()} - ` : ''}
-                                {currencySymbol} {rfq.budgetMaxNpr.toLocaleString()}
+                                {rfq.budgetMinNpr
+                                  ? `${currencySymbol} ${rfq.budgetMinNpr.toLocaleString()} - `
+                                  : ""}
+                                {currencySymbol}{" "}
+                                {rfq.budgetMaxNpr.toLocaleString()}
                               </span>
                             </div>
                           ) : (
-                            <span className="text-muted-foreground text-sm">Not specified</span>
+                            <span className="text-muted-foreground text-sm">
+                              Not specified
+                            </span>
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge className={statusColors[rfq.status] || 'bg-gray-100'}>
+                          <Badge
+                            className={
+                              statusColors[rfq.status] || "bg-gray-100"
+                            }
+                          >
                             {getStatusIcon(rfq.status)}
-                            <span className="ml-1">{rfq.status?.replace(/_/g, ' ')}</span>
+                            <span className="ml-1">
+                              {rfq.status?.replace(/_/g, " ")}
+                            </span>
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -269,9 +288,13 @@ export default function ShopRfqsPage() {
                           <Link href={`/dashboard/shop/rfqs/${rfq.id}`}>
                             <Button size="sm" variant="outline">
                               <Eye className="h-4 w-4 mr-1" />
-                              {['PENDING', 'BROADCAST', 'SENT_TO_SHOPS'].includes(rfq.status)
-                                ? 'Quote'
-                                : 'View'}
+                              {[
+                                "PENDING",
+                                "BROADCAST",
+                                "SENT_TO_SHOPS",
+                              ].includes(rfq.status)
+                                ? "Quote"
+                                : "View"}
                             </Button>
                           </Link>
                         </TableCell>

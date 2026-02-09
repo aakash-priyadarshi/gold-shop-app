@@ -1,6 +1,5 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,8 +23,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
@@ -51,6 +50,7 @@ import {
   TrendingUp,
   XCircle,
 } from "lucide-react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 // ── Types ────────────────────────────────────────────
 
@@ -229,29 +229,26 @@ export default function ShopPublicProfilePage() {
 
   // ── About Text Moderation (Live) ─────────────────
 
-  const checkAboutContent = useCallback(
-    (text: string) => {
-      if (aboutCheckTimeout.current) clearTimeout(aboutCheckTimeout.current);
-      if (!text.trim()) {
-        setAboutViolations([]);
-        return;
-      }
+  const checkAboutContent = useCallback((text: string) => {
+    if (aboutCheckTimeout.current) clearTimeout(aboutCheckTimeout.current);
+    if (!text.trim()) {
+      setAboutViolations([]);
+      return;
+    }
 
-      setAboutChecking(true);
-      aboutCheckTimeout.current = setTimeout(async () => {
-        try {
-          const res = await shopsApi.moderateAbout(text);
-          const data = res.data;
-          setAboutViolations(data.safe ? [] : data.violations || []);
-        } catch {
-          setAboutViolations([]);
-        } finally {
-          setAboutChecking(false);
-        }
-      }, 800);
-    },
-    [],
-  );
+    setAboutChecking(true);
+    aboutCheckTimeout.current = setTimeout(async () => {
+      try {
+        const res = await shopsApi.moderateAbout(text);
+        const data = res.data;
+        setAboutViolations(data.safe ? [] : data.violations || []);
+      } catch {
+        setAboutViolations([]);
+      } finally {
+        setAboutChecking(false);
+      }
+    }, 800);
+  }, []);
 
   const handleAboutChange = (text: string) => {
     setAboutText(text);
@@ -345,10 +342,9 @@ export default function ShopPublicProfilePage() {
       toast({
         variant: "destructive",
         title: "Reply failed",
-        description:
-          violations
-            ? violations.join(", ")
-            : error.response?.data?.message || "Could not post reply",
+        description: violations
+          ? violations.join(", ")
+          : error.response?.data?.message || "Could not post reply",
       });
     } finally {
       setSavingReply(false);
@@ -618,16 +614,16 @@ export default function ShopPublicProfilePage() {
                       {/* Live moderation feedback */}
                       {aboutChecking && (
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Loader2 className="h-3 w-3 animate-spin" />{" "}
-                          Checking content...
+                          <Loader2 className="h-3 w-3 animate-spin" /> Checking
+                          content...
                         </p>
                       )}
 
                       {aboutViolations.length > 0 && (
                         <div className="rounded-md bg-red-50 border border-red-200 p-3 space-y-1">
                           <p className="text-sm font-medium text-red-800 flex items-center gap-1">
-                            <AlertTriangle className="h-4 w-4" /> Content
-                            policy violation
+                            <AlertTriangle className="h-4 w-4" /> Content policy
+                            violation
                           </p>
                           {aboutViolations.map((v, i) => (
                             <p key={i} className="text-xs text-red-700">
@@ -720,9 +716,7 @@ export default function ShopPublicProfilePage() {
                           <TierIcon className={`h-8 w-8 ${tierMeta.color}`} />
                         </div>
                         <div>
-                          <h2
-                            className={`text-xl font-bold ${tierMeta.color}`}
-                          >
+                          <h2 className={`text-xl font-bold ${tierMeta.color}`}>
                             {tierMeta.label} Tier
                           </h2>
                           <p className="text-sm text-muted-foreground">
@@ -741,8 +735,10 @@ export default function ShopPublicProfilePage() {
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <ArrowUpRight className="h-5 w-5" />
-                          Progress to{" "}
-                          {TIER_META[tierDashboard.nextTier]?.label} Tier
+                          Progress to {
+                            TIER_META[tierDashboard.nextTier]?.label
+                          }{" "}
+                          Tier
                         </CardTitle>
                         <CardDescription>
                           {tierDashboard.overallProgress.met}/
@@ -797,7 +793,8 @@ export default function ShopPublicProfilePage() {
                                       </>
                                     ) : (
                                       <>
-                                        {typeof criterion.current === "number" &&
+                                        {typeof criterion.current ===
+                                          "number" &&
                                         criterion.current % 1 !== 0
                                           ? Number(criterion.current).toFixed(1)
                                           : criterion.current}
@@ -805,7 +802,9 @@ export default function ShopPublicProfilePage() {
                                         {typeof criterion.required ===
                                           "number" &&
                                         (criterion.required as number) % 1 !== 0
-                                          ? Number(criterion.required).toFixed(1)
+                                          ? Number(criterion.required).toFixed(
+                                              1,
+                                            )
                                           : criterion.required}
                                         {meta.unit}
                                       </>
@@ -830,42 +829,42 @@ export default function ShopPublicProfilePage() {
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center gap-2">
-                        {(
-                          ["STANDARD", "SILVER", "GOLD", "ELITE"] as const
-                        ).map((t, i) => {
-                          const m = TIER_META[t];
-                          const tierOrder = [
-                            "STANDARD",
-                            "SILVER",
-                            "GOLD",
-                            "ELITE",
-                          ];
-                          const isCurrentOrPast =
-                            tierOrder.indexOf(currentTier) >= i;
-                          return (
-                            <React.Fragment key={t}>
-                              <div
-                                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium flex-1 justify-center ${
-                                  isCurrentOrPast
-                                    ? `${m.bg} ${m.color} border-2 ${m.border}`
-                                    : "bg-muted text-muted-foreground border border-muted"
-                                }`}
-                              >
-                                {React.createElement(m.icon, {
-                                  className: "h-4 w-4",
-                                })}
-                                <span className="hidden sm:inline">
-                                  {m.label}
-                                </span>
-                              </div>
-                              {i < 3 && (
+                        {(["STANDARD", "SILVER", "GOLD", "ELITE"] as const).map(
+                          (t, i) => {
+                            const m = TIER_META[t];
+                            const tierOrder = [
+                              "STANDARD",
+                              "SILVER",
+                              "GOLD",
+                              "ELITE",
+                            ];
+                            const isCurrentOrPast =
+                              tierOrder.indexOf(currentTier) >= i;
+                            return (
+                              <React.Fragment key={t}>
                                 <div
-                                  className={`h-0.5 w-4 rounded ${isCurrentOrPast ? "bg-primary" : "bg-muted-foreground/20"}`}
-                                />
-                              )}
-                            </React.Fragment>
-                          );
-                        })}
+                                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium flex-1 justify-center ${
+                                    isCurrentOrPast
+                                      ? `${m.bg} ${m.color} border-2 ${m.border}`
+                                      : "bg-muted text-muted-foreground border border-muted"
+                                  }`}
+                                >
+                                  {React.createElement(m.icon, {
+                                    className: "h-4 w-4",
+                                  })}
+                                  <span className="hidden sm:inline">
+                                    {m.label}
+                                  </span>
+                                </div>
+                                {i < 3 && (
+                                  <div
+                                    className={`h-0.5 w-4 rounded ${isCurrentOrPast ? "bg-primary" : "bg-muted-foreground/20"}`}
+                                  />
+                                )}
+                              </React.Fragment>
+                            );
+                          },
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -883,8 +882,7 @@ export default function ShopPublicProfilePage() {
                           {[
                             {
                               label: "Total Orders",
-                              value:
-                                tierDashboard.performance.totalOrders || 0,
+                              value: tierDashboard.performance.totalOrders || 0,
                             },
                             {
                               label: "Successful",
@@ -904,9 +902,7 @@ export default function ShopPublicProfilePage() {
                               key={stat.label}
                               className="text-center p-3 rounded-lg bg-muted/50"
                             >
-                              <p className="text-2xl font-bold">
-                                {stat.value}
-                              </p>
+                              <p className="text-2xl font-bold">{stat.value}</p>
                               <p className="text-xs text-muted-foreground">
                                 {stat.label}
                               </p>
@@ -1034,8 +1030,7 @@ export default function ShopPublicProfilePage() {
                               setReplyText("");
                             }}
                           >
-                            <MessageSquare className="h-3.5 w-3.5 mr-1" />{" "}
-                            Reply
+                            <MessageSquare className="h-3.5 w-3.5 mr-1" /> Reply
                           </Button>
                         )}
                         {review.deleteRequestStatus === "NONE" && (

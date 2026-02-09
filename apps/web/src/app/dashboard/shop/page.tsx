@@ -1,34 +1,39 @@
-'use client';
+"use client";
 
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { ShopkeeperGuard } from '@/components/auth/RouteGuard';
-import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { ShopkeeperGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  Package,
-  ShoppingCart,
-  TrendingUp,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { useAuth } from "@/hooks/useAuth";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { inventoryApi, ordersApi, rfqApi, shopsApi } from "@/lib/api";
+import {
   AlertCircle,
-  DollarSign,
   ArrowUpRight,
-  Plus,
   Eye,
   MessageSquare,
+  Package,
+  Plus,
+  ShoppingCart,
   Star,
-} from 'lucide-react';
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { shopsApi, ordersApi, rfqApi, inventoryApi } from '@/lib/api';
-import { useShopCurrency } from '@/hooks/useShopCurrency';
+  TrendingUp,
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 interface Stat {
   title: string;
   value: string;
   change: string;
-  changeType: 'positive' | 'negative';
+  changeType: "positive" | "negative";
   icon: any;
   description: string;
 }
@@ -57,16 +62,20 @@ interface LowStockItem {
 }
 
 const statusColors: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  processing: 'bg-blue-100 text-blue-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
+  pending: "bg-yellow-100 text-yellow-800",
+  processing: "bg-blue-100 text-blue-800",
+  completed: "bg-green-100 text-green-800",
+  cancelled: "bg-red-100 text-red-800",
 };
 
 export default function ShopDashboard() {
   const { user } = useAuth();
-  const { currencyCode: shopCurrency, symbol: currencySymbol, format: formatCurrency } = useShopCurrency();
-  
+  const {
+    currencyCode: shopCurrency,
+    symbol: currencySymbol,
+    format: formatCurrency,
+  } = useShopCurrency();
+
   const [stats, setStats] = useState<Stat[]>([]);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [rfqRequests, setRfqRequests] = useState<RFQRequest[]>([]);
@@ -82,78 +91,113 @@ export default function ShopDashboard() {
       shopsApi.getDashboard(),
       ordersApi.getShopOrders(shopId, { page: 1, pageSize: 3 }),
       rfqApi.getShopRequests({ page: 1, pageSize: 3 }),
-      inventoryApi.getShopInventory(shopId, { lowStock: true, limit: 3 })
-    ]).then(([dashboardRes, ordersRes, rfqRes, lowStockRes]) => {
-      const dash = dashboardRes.data?.stats || dashboardRes.data || {};
-      setStats([
-        {
-          title: 'Active Orders',
-          value: dash.activeOrders?.toString() || '0',
-          change: '+0',
-          changeType: 'positive',
-          icon: ShoppingCart,
-          description: 'Orders in progress',
-        },
-        {
-          title: 'Pending RFQs',
-          value: dash.pendingRfqs?.toString() || '0',
-          change: '+0',
-          changeType: 'positive',
-          icon: MessageSquare,
-          description: 'Awaiting response',
-        },
-        {
-          title: 'Avg Rating',
-          value: dash.averageRating ? dash.averageRating.toFixed(1) : 'N/A',
-          change: '+0',
-          changeType: 'positive',
-          icon: Star,
-          description: `${dash.recentRatings || 0} reviews`,
-        },
-        {
-          title: "Shop Status",
-          value: user?.shop?.isVerified ? 'Verified' : 'Pending',
-          change: user?.shop?.isVerified ? '✓' : '!',
-          changeType: user?.shop?.isVerified ? 'positive' : 'negative',
-          icon: Package,
-          description: user?.shop?.isVerified ? 'Shop is verified' : 'Awaiting verification',
-        },
-      ]);
+      inventoryApi.getShopInventory(shopId, { lowStock: true, limit: 3 }),
+    ])
+      .then(([dashboardRes, ordersRes, rfqRes, lowStockRes]) => {
+        const dash = dashboardRes.data?.stats || dashboardRes.data || {};
+        setStats([
+          {
+            title: "Active Orders",
+            value: dash.activeOrders?.toString() || "0",
+            change: "+0",
+            changeType: "positive",
+            icon: ShoppingCart,
+            description: "Orders in progress",
+          },
+          {
+            title: "Pending RFQs",
+            value: dash.pendingRfqs?.toString() || "0",
+            change: "+0",
+            changeType: "positive",
+            icon: MessageSquare,
+            description: "Awaiting response",
+          },
+          {
+            title: "Avg Rating",
+            value: dash.averageRating ? dash.averageRating.toFixed(1) : "N/A",
+            change: "+0",
+            changeType: "positive",
+            icon: Star,
+            description: `${dash.recentRatings || 0} reviews`,
+          },
+          {
+            title: "Shop Status",
+            value: user?.shop?.isVerified ? "Verified" : "Pending",
+            change: user?.shop?.isVerified ? "✓" : "!",
+            changeType: user?.shop?.isVerified ? "positive" : "negative",
+            icon: Package,
+            description: user?.shop?.isVerified
+              ? "Shop is verified"
+              : "Awaiting verification",
+          },
+        ]);
 
-      const orders = ordersRes.data?.items || ordersRes.data?.orders || ordersRes.data || [];
-      setRecentOrders(Array.isArray(orders) ? orders.slice(0, 3).map((o: any) => ({
-        id: o.id,
-        customer: o.customer?.firstName || o.customerName || 'Unknown',
-        items: o.itemsSummary || o.items?.map((i: any) => i.name).join(', ') || o.productSnapshot?.nameEn || 'Custom Order',
-        amount: o.totalNpr ? `${shopCurrency} ${o.totalNpr.toLocaleString()}` : (o.amount ? `${shopCurrency} ${o.amount.toLocaleString()}` : ''),
-        status: o.status,
-      })) : []);
+        const orders =
+          ordersRes.data?.items ||
+          ordersRes.data?.orders ||
+          ordersRes.data ||
+          [];
+        setRecentOrders(
+          Array.isArray(orders)
+            ? orders.slice(0, 3).map((o: any) => ({
+                id: o.id,
+                customer: o.customer?.firstName || o.customerName || "Unknown",
+                items:
+                  o.itemsSummary ||
+                  o.items?.map((i: any) => i.name).join(", ") ||
+                  o.productSnapshot?.nameEn ||
+                  "Custom Order",
+                amount: o.totalNpr
+                  ? `${shopCurrency} ${o.totalNpr.toLocaleString()}`
+                  : o.amount
+                    ? `${shopCurrency} ${o.amount.toLocaleString()}`
+                    : "",
+                status: o.status,
+              }))
+            : [],
+        );
 
-      const rfqs = rfqRes.data?.items || rfqRes.data?.rfqs || rfqRes.data || [];
-      setRfqRequests(Array.isArray(rfqs) ? rfqs.slice(0, 3).map((r: any) => ({
-        id: r.id,
-        customer: r.customer?.firstName || r.customerName || 'Unknown',
-        request: r.jewelleryType || r.request || r.title || 'Custom Request',
-        budget: r.budgetMaxNpr ? `${shopCurrency} ${r.budgetMaxNpr.toLocaleString()}` : (r.budget ? `${shopCurrency} ${r.budget.toLocaleString()}` : 'N/A'),
-        date: r.createdAt ? r.createdAt.slice(0, 10) : '',
-      })) : []);
+        const rfqs =
+          rfqRes.data?.items || rfqRes.data?.rfqs || rfqRes.data || [];
+        setRfqRequests(
+          Array.isArray(rfqs)
+            ? rfqs.slice(0, 3).map((r: any) => ({
+                id: r.id,
+                customer: r.customer?.firstName || r.customerName || "Unknown",
+                request:
+                  r.jewelleryType || r.request || r.title || "Custom Request",
+                budget: r.budgetMaxNpr
+                  ? `${shopCurrency} ${r.budgetMaxNpr.toLocaleString()}`
+                  : r.budget
+                    ? `${shopCurrency} ${r.budget.toLocaleString()}`
+                    : "N/A",
+                date: r.createdAt ? r.createdAt.slice(0, 10) : "",
+              }))
+            : [],
+        );
 
-      const lowStock = lowStockRes.data?.items || lowStockRes.data || [];
-      setLowStockItems(Array.isArray(lowStock) ? lowStock.map((item: any) => ({
-        id: item.id,
-        name: item.nameEn || item.name,
-        stock: item.stockQuantity || item.stock || 0,
-        minStock: item.minStock || 5,
-      })) : []);
-    }).catch((err) => {
-      console.error('Dashboard load error:', err);
-      setStats([]);
-      setRecentOrders([]);
-      setRfqRequests([]);
-      setLowStockItems([]);
-    }).finally(() => {
-      setIsLoading(false);
-    });
+        const lowStock = lowStockRes.data?.items || lowStockRes.data || [];
+        setLowStockItems(
+          Array.isArray(lowStock)
+            ? lowStock.map((item: any) => ({
+                id: item.id,
+                name: item.nameEn || item.name,
+                stock: item.stockQuantity || item.stock || 0,
+                minStock: item.minStock || 5,
+              }))
+            : [],
+        );
+      })
+      .catch((err) => {
+        console.error("Dashboard load error:", err);
+        setStats([]);
+        setRecentOrders([]);
+        setRfqRequests([]);
+        setLowStockItems([]);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, [user, shopCurrency]);
 
   return (
@@ -187,9 +231,12 @@ export default function ShopDashboard() {
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
               <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
               <div>
-                <h3 className="font-medium text-yellow-800">Shop Verification Pending</h3>
+                <h3 className="font-medium text-yellow-800">
+                  Shop Verification Pending
+                </h3>
                 <p className="text-sm text-yellow-700 mt-1">
-                  Your shop is currently under review. Some features may be limited until verification is complete.
+                  Your shop is currently under review. Some features may be
+                  limited until verification is complete.
                 </p>
               </div>
             </div>
@@ -204,22 +251,36 @@ export default function ShopDashboard() {
                       <p className="text-sm text-gray-500">{stat.title}</p>
                       <p className="text-2xl font-bold mt-1">{stat.value}</p>
                     </div>
-                    <div className={`p-3 rounded-full ${
-                      stat.changeType === 'positive' ? 'bg-green-100' : 'bg-red-100'
-                    }`}>
-                      <stat.icon className={`h-5 w-5 ${
-                        stat.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
-                      }`} />
+                    <div
+                      className={`p-3 rounded-full ${
+                        stat.changeType === "positive"
+                          ? "bg-green-100"
+                          : "bg-red-100"
+                      }`}
+                    >
+                      <stat.icon
+                        className={`h-5 w-5 ${
+                          stat.changeType === "positive"
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      />
                     </div>
                   </div>
                   <div className="flex items-center mt-2 text-sm">
-                    <span className={`flex items-center ${
-                      stat.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
-                    }`}>
+                    <span
+                      className={`flex items-center ${
+                        stat.changeType === "positive"
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
                       <ArrowUpRight className="h-4 w-4 mr-1" />
                       {stat.change}
                     </span>
-                    <span className="text-gray-500 ml-2">{stat.description}</span>
+                    <span className="text-gray-500 ml-2">
+                      {stat.description}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
@@ -250,7 +311,11 @@ export default function ShopDashboard() {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-medium">{order.id}</p>
-                          <Badge className={statusColors[order.status] || 'bg-gray-100'}>
+                          <Badge
+                            className={
+                              statusColors[order.status] || "bg-gray-100"
+                            }
+                          >
                             {order.status}
                           </Badge>
                         </div>
@@ -290,9 +355,13 @@ export default function ShopDashboard() {
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="font-medium">{rfq.customer}</p>
-                          <p className="text-sm text-gray-600 mt-1">{rfq.request}</p>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {rfq.request}
+                          </p>
                         </div>
-                        <span className="text-xs text-gray-400">{rfq.date}</span>
+                        <span className="text-xs text-gray-400">
+                          {rfq.date}
+                        </span>
                       </div>
                       <div className="flex items-center justify-between mt-3">
                         <Badge variant="outline">Budget: {rfq.budget}</Badge>
@@ -324,9 +393,14 @@ export default function ShopDashboard() {
                           {item.stock} / {item.minStock} units
                         </span>
                       </div>
-                      <Progress value={(item.stock / item.minStock) * 100} className="h-2" />
+                      <Progress
+                        value={(item.stock / item.minStock) * 100}
+                        className="h-2"
+                      />
                     </div>
-                    <Button size="sm" variant="outline">Restock</Button>
+                    <Button size="sm" variant="outline">
+                      Restock
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -339,25 +413,41 @@ export default function ShopDashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2" asChild>
+                <Button
+                  variant="outline"
+                  className="h-auto py-4 flex flex-col items-center gap-2"
+                  asChild
+                >
                   <Link href="/dashboard/shop/products">
                     <Plus className="h-6 w-6" />
                     <span>Add Product</span>
                   </Link>
                 </Button>
-                <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2" asChild>
+                <Button
+                  variant="outline"
+                  className="h-auto py-4 flex flex-col items-center gap-2"
+                  asChild
+                >
                   <Link href="/dashboard/shop/orders">
                     <ShoppingCart className="h-6 w-6" />
                     <span>View Orders</span>
                   </Link>
                 </Button>
-                <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2" asChild>
+                <Button
+                  variant="outline"
+                  className="h-auto py-4 flex flex-col items-center gap-2"
+                  asChild
+                >
                   <Link href="/dashboard/shop/analytics">
                     <TrendingUp className="h-6 w-6" />
                     <span>Analytics</span>
                   </Link>
                 </Button>
-                <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2" asChild>
+                <Button
+                  variant="outline"
+                  className="h-auto py-4 flex flex-col items-center gap-2"
+                  asChild
+                >
                   <Link href="/dashboard/shop/settings">
                     <Star className="h-6 w-6" />
                     <span>Shop Settings</span>

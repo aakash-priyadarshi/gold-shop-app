@@ -154,7 +154,11 @@ const gemstoneCategories = [
 
 export default function ShopInventoryPage() {
   const { user } = useAuth();
-  const { currencyCode: shopCurrency, symbol: currencySymbol, country: shopCountry } = useShopCurrency();
+  const {
+    currencyCode: shopCurrency,
+    symbol: currencySymbol,
+    country: shopCountry,
+  } = useShopCurrency();
   const [materialsData, setMaterialsData] = useState<MaterialsData | null>(
     null,
   );

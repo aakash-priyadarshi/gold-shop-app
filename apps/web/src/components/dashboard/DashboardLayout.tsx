@@ -1,11 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useAuth, UserRole } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { BrandLogo } from "@/components/brand/BrandLogo";
+import { ShopSwitcher } from "@/components/dashboard/ShopSwitcher";
+import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,98 +12,219 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '@/components/ui/sheet';
-import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
-import { BrandLogo } from '@/components/brand/BrandLogo';
-import { ShopSwitcher } from '@/components/dashboard/ShopSwitcher';
-import { BRAND } from '@/config/brand';
+} from "@/components/ui/sheet";
+import { BRAND } from "@/config/brand";
+import { useAuth, UserRole } from "@/hooks/useAuth";
+import { adminApi } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard,
-  Users,
-  Store,
-  Package,
-  ShoppingCart,
+  ChevronDown,
+  ClipboardList,
+  CreditCard,
   FileText,
-  Settings,
+  Heart,
+  Home,
+  LayoutDashboard,
   LogOut,
   Menu,
-  ChevronDown,
+  Package,
   Search,
-  TrendingUp,
+  Settings,
   Shield,
-  ClipboardList,
-  Heart,
-  CreditCard,
+  ShoppingCart,
+  Store,
+  TrendingUp,
   UserCircle,
-  Home,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { adminApi } from '@/lib/api';
+  Users,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface NavItem {
   label: string;
   href: string;
   icon: React.ElementType;
   roles: UserRole[];
-  badge?: number | 'dynamic';
+  badge?: number | "dynamic";
   badgeKey?: string;
 }
 
 const navItems: NavItem[] = [
   // Admin routes
-  { label: 'Dashboard', href: '/dashboard/admin', icon: LayoutDashboard, roles: ['ADMIN'] },
-  { label: 'Users', href: '/dashboard/admin/users', icon: Users, roles: ['ADMIN'] },
-  { label: 'Shops', href: '/dashboard/admin/shops', icon: Store, roles: ['ADMIN'] },
-  { label: 'Orders', href: '/dashboard/admin/orders', icon: ShoppingCart, roles: ['ADMIN'], badge: 'dynamic', badgeKey: 'pendingOrders' },
-  { label: 'Verifications', href: '/dashboard/admin/verifications', icon: Shield, roles: ['ADMIN'], badge: 'dynamic', badgeKey: 'pendingVerifications' },
-  { label: 'Reports', href: '/dashboard/admin/reports', icon: FileText, roles: ['ADMIN'], badge: 'dynamic', badgeKey: 'openReports' },
-  { label: 'Profile', href: '/dashboard/admin/profile', icon: UserCircle, roles: ['ADMIN'] },
-  { label: 'Settings', href: '/dashboard/admin/settings', icon: Settings, roles: ['ADMIN'] },
-  
-  // Shopkeeper routes
-  { label: 'Dashboard', href: '/dashboard/shop', icon: LayoutDashboard, roles: ['SHOPKEEPER'] },
-  { label: 'Products', href: '/dashboard/shop/products', icon: Store, roles: ['SHOPKEEPER'] },
-  { label: 'Inventory', href: '/dashboard/shop/inventory', icon: Package, roles: ['SHOPKEEPER'] },
-  { label: 'Orders', href: '/dashboard/shop/orders', icon: ShoppingCart, roles: ['SHOPKEEPER'] },
-  { label: 'RFQ Requests', href: '/dashboard/shop/rfqs', icon: ClipboardList, roles: ['SHOPKEEPER'] },
-  { label: 'Analytics', href: '/dashboard/shop/analytics', icon: TrendingUp, roles: ['SHOPKEEPER'] },
-  { label: 'Profile', href: '/dashboard/shop/profile', icon: UserCircle, roles: ['SHOPKEEPER'] },
-  { label: 'Shop Profile', href: '/dashboard/shop/shop-profile', icon: Store, roles: ['SHOPKEEPER'] },
-  { label: 'Shop Settings', href: '/dashboard/shop/settings', icon: Settings, roles: ['SHOPKEEPER'] },
-  
-  // Customer routes
-  { label: 'Dashboard', href: '/dashboard/customer', icon: LayoutDashboard, roles: ['CUSTOMER'] },
-  { label: 'My Orders', href: '/dashboard/customer/orders', icon: ShoppingCart, roles: ['CUSTOMER'] },
-  { label: 'My RFQs', href: '/dashboard/customer/rfqs', icon: ClipboardList, roles: ['CUSTOMER'] },
-  { label: 'Wishlist', href: '/dashboard/customer/wishlist', icon: Heart, roles: ['CUSTOMER'] },
-  { label: 'Payments', href: '/dashboard/customer/payments', icon: CreditCard, roles: ['CUSTOMER'] },
-  { label: 'Settings', href: '/dashboard/customer/settings', icon: Settings, roles: ['CUSTOMER'] },
-];
+  {
+    label: "Dashboard",
+    href: "/dashboard/admin",
+    icon: LayoutDashboard,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Users",
+    href: "/dashboard/admin/users",
+    icon: Users,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Shops",
+    href: "/dashboard/admin/shops",
+    icon: Store,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Orders",
+    href: "/dashboard/admin/orders",
+    icon: ShoppingCart,
+    roles: ["ADMIN"],
+    badge: "dynamic",
+    badgeKey: "pendingOrders",
+  },
+  {
+    label: "Verifications",
+    href: "/dashboard/admin/verifications",
+    icon: Shield,
+    roles: ["ADMIN"],
+    badge: "dynamic",
+    badgeKey: "pendingVerifications",
+  },
+  {
+    label: "Reports",
+    href: "/dashboard/admin/reports",
+    icon: FileText,
+    roles: ["ADMIN"],
+    badge: "dynamic",
+    badgeKey: "openReports",
+  },
+  {
+    label: "Profile",
+    href: "/dashboard/admin/profile",
+    icon: UserCircle,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Settings",
+    href: "/dashboard/admin/settings",
+    icon: Settings,
+    roles: ["ADMIN"],
+  },
 
+  // Shopkeeper routes
+  {
+    label: "Dashboard",
+    href: "/dashboard/shop",
+    icon: LayoutDashboard,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Products",
+    href: "/dashboard/shop/products",
+    icon: Store,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Inventory",
+    href: "/dashboard/shop/inventory",
+    icon: Package,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Orders",
+    href: "/dashboard/shop/orders",
+    icon: ShoppingCart,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "RFQ Requests",
+    href: "/dashboard/shop/rfqs",
+    icon: ClipboardList,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Analytics",
+    href: "/dashboard/shop/analytics",
+    icon: TrendingUp,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Profile",
+    href: "/dashboard/shop/profile",
+    icon: UserCircle,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Shop Profile",
+    href: "/dashboard/shop/shop-profile",
+    icon: Store,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Shop Settings",
+    href: "/dashboard/shop/settings",
+    icon: Settings,
+    roles: ["SHOPKEEPER"],
+  },
+
+  // Customer routes
+  {
+    label: "Dashboard",
+    href: "/dashboard/customer",
+    icon: LayoutDashboard,
+    roles: ["CUSTOMER"],
+  },
+  {
+    label: "My Orders",
+    href: "/dashboard/customer/orders",
+    icon: ShoppingCart,
+    roles: ["CUSTOMER"],
+  },
+  {
+    label: "My RFQs",
+    href: "/dashboard/customer/rfqs",
+    icon: ClipboardList,
+    roles: ["CUSTOMER"],
+  },
+  {
+    label: "Wishlist",
+    href: "/dashboard/customer/wishlist",
+    icon: Heart,
+    roles: ["CUSTOMER"],
+  },
+  {
+    label: "Payments",
+    href: "/dashboard/customer/payments",
+    icon: CreditCard,
+    roles: ["CUSTOMER"],
+  },
+  {
+    label: "Settings",
+    href: "/dashboard/customer/settings",
+    icon: Settings,
+    roles: ["CUSTOMER"],
+  },
+];
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
 // Shared sidebar content component
-function SidebarContent({ 
-  user, 
-  userNavItems, 
-  pathname, 
-  badgeCounts, 
-  onNavClick, 
+function SidebarContent({
+  user,
+  userNavItems,
+  pathname,
+  badgeCounts,
+  onNavClick,
   onLogout,
   getRoleBadge,
-  getInitials 
+  getInitials,
 }: {
-  user: ReturnType<typeof useAuth>['user'];
+  user: ReturnType<typeof useAuth>["user"];
   userNavItems: NavItem[];
   pathname: string;
   badgeCounts: Record<string, number>;
@@ -114,7 +234,7 @@ function SidebarContent({
   getInitials: () => string;
 }) {
   if (!user) return null;
-  
+
   return (
     <div className="flex flex-col h-full">
       {/* User info */}
@@ -136,7 +256,9 @@ function SidebarContent({
         </div>
         {user.shop && (
           <div className="mt-3 p-3 bg-gradient-to-r from-gold-50 to-amber-50 rounded-xl border border-gold-100">
-            <p className="text-xs text-gray-500 font-medium mb-2">Active Shop</p>
+            <p className="text-xs text-gray-500 font-medium mb-2">
+              Active Shop
+            </p>
             <ShopSwitcher currentShopId={user.shop.id} />
             {!user.shop.isVerified && (
               <span className="inline-flex items-center mt-2 px-2 py-0.5 text-xs font-medium text-orange-700 bg-orange-100 rounded-full">
@@ -151,32 +273,37 @@ function SidebarContent({
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-thin">
         {userNavItems.map((item) => {
           const isActive = pathname === item.href;
-          const badgeCount = item.badge === 'dynamic' && item.badgeKey 
-            ? badgeCounts[item.badgeKey] 
-            : item.badge;
+          const badgeCount =
+            item.badge === "dynamic" && item.badgeKey
+              ? badgeCounts[item.badgeKey]
+              : item.badge;
           return (
             <Link
               key={item.href}
               href={item.href}
               onClick={onNavClick}
               className={cn(
-                'flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 touch-target',
+                "flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 touch-target",
                 isActive
-                  ? 'bg-gradient-to-r from-gold-500 to-gold-600 text-white shadow-lg shadow-gold-500/25'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 active:scale-[0.98]'
+                  ? "bg-gradient-to-r from-gold-500 to-gold-600 text-white shadow-lg shadow-gold-500/25"
+                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 active:scale-[0.98]",
               )}
             >
               <div className="flex items-center gap-3">
-                <item.icon className={cn('h-5 w-5', isActive && 'text-white')} />
+                <item.icon
+                  className={cn("h-5 w-5", isActive && "text-white")}
+                />
                 <span>{item.label}</span>
               </div>
               {badgeCount && Number(badgeCount) > 0 && (
-                <span className={cn(
-                  'px-2 py-0.5 text-xs font-semibold rounded-full',
-                  isActive 
-                    ? 'bg-white/20 text-white' 
-                    : 'bg-red-100 text-red-700'
-                )}>
+                <span
+                  className={cn(
+                    "px-2 py-0.5 text-xs font-semibold rounded-full",
+                    isActive
+                      ? "bg-white/20 text-white"
+                      : "bg-red-100 text-red-700",
+                  )}
+                >
                   {badgeCount}
                 </span>
               )}
@@ -222,9 +349,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Fetch dynamic badge counts for admin
   useEffect(() => {
-    if (user?.role === 'ADMIN') {
-      adminApi.getStats()
-        .then(res => {
+    if (user?.role === "ADMIN") {
+      adminApi
+        .getStats()
+        .then((res) => {
           setBadgeCounts({
             pendingVerifications: res.data.pendingVerifications || 0,
             openReports: res.data.openReports || 0,
@@ -251,21 +379,25 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   // Filter nav items for user's role
-  const userNavItems = navItems.filter(item => item.roles.includes(user.role));
+  const userNavItems = navItems.filter((item) =>
+    item.roles.includes(user.role),
+  );
 
   const getRoleBadge = (role: UserRole) => {
     switch (role) {
-      case 'ADMIN':
+      case "ADMIN":
         return <span className="status-badge status-badge-purple">Admin</span>;
-      case 'SHOPKEEPER':
+      case "SHOPKEEPER":
         return <span className="status-badge status-badge-blue">Seller</span>;
-      case 'CUSTOMER':
-        return <span className="status-badge status-badge-green">Customer</span>;
+      case "CUSTOMER":
+        return (
+          <span className="status-badge status-badge-green">Customer</span>
+        );
     }
   };
 
   const getInitials = () => {
-    return `${user.firstName?.charAt(0) || ''}${user.lastName?.charAt(0) || ''}`.toUpperCase();
+    return `${user.firstName?.charAt(0) || ""}${user.lastName?.charAt(0) || ""}`.toUpperCase();
   };
 
   return (
@@ -276,7 +408,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Mobile Menu Button */}
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="touch-target -ml-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="touch-target -ml-2"
+              >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Open menu</span>
               </Button>
@@ -288,7 +424,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   <span className="font-bold text-lg">{BRAND.name}</span>
                 </SheetTitle>
               </SheetHeader>
-              <SidebarContent 
+              <SidebarContent
                 user={user}
                 userNavItems={userNavItems}
                 pathname={pathname}
@@ -323,7 +459,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                   <div>
-                    <p className="font-medium">{user.firstName} {user.lastName}</p>
+                    <p className="font-medium">
+                      {user.firstName} {user.lastName}
+                    </p>
                     <p className="text-xs text-gray-500">{user.email}</p>
                   </div>
                 </DropdownMenuLabel>
@@ -359,11 +497,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="flex items-center h-16 px-6 border-b border-gray-100">
             <Link href="/" className="flex items-center gap-3">
               <BrandLogo variant="icon" size="md" />
-              <span className="font-bold text-xl tracking-tight">{BRAND.name}</span>
+              <span className="font-bold text-xl tracking-tight">
+                {BRAND.name}
+              </span>
             </Link>
           </div>
-          
-          <SidebarContent 
+
+          <SidebarContent
             user={user}
             userNavItems={userNavItems}
             pathname={pathname}
@@ -394,7 +534,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center gap-2 hover:bg-gray-100 rounded-xl">
+                  <Button
+                    variant="ghost"
+                    className="flex items-center gap-2 hover:bg-gray-100 rounded-xl"
+                  >
                     <Avatar className="h-9 w-9 ring-2 ring-gold-100">
                       <AvatarFallback className="bg-gradient-to-br from-gold-400 to-gold-600 text-white text-sm">
                         {getInitials()}
@@ -402,7 +545,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     </Avatar>
                     <div className="hidden xl:block text-left">
                       <p className="text-sm font-medium">{user.firstName}</p>
-                      <p className="text-xs text-gray-500 capitalize">{user.role.toLowerCase()}</p>
+                      <p className="text-xs text-gray-500 capitalize">
+                        {user.role.toLowerCase()}
+                      </p>
                     </div>
                     <ChevronDown className="h-4 w-4 text-gray-400" />
                   </Button>
@@ -410,13 +555,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>
                     <div>
-                      <p className="font-medium">{user.firstName} {user.lastName}</p>
+                      <p className="font-medium">
+                        {user.firstName} {user.lastName}
+                      </p>
                       <p className="text-xs text-gray-500">{user.email}</p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href={`/dashboard/${user.role.toLowerCase()}/settings`}>
+                    <Link
+                      href={`/dashboard/${user.role.toLowerCase()}/settings`}
+                    >
                       <Settings className="h-4 w-4 mr-2" />
                       Settings
                     </Link>
@@ -438,9 +587,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </header>
 
           {/* Page content */}
-          <main className="p-6">
-            {children}
-          </main>
+          <main className="p-6">{children}</main>
         </div>
       </div>
 
