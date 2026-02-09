@@ -16,6 +16,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  FINISH_DATA,
+  JEWELLERY_TYPE_DATA,
+} from "@/lib/jewellery-constants";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
@@ -78,22 +88,7 @@ const allMaterials = [
   { metal: "PLATINUM", purity: "950", label: "Platinum 950" },
 ];
 
-const allJewelleryTypes = [
-  "RING",
-  "NECKLACE",
-  "PENDANT",
-  "EARRING",
-  "BRACELET",
-  "BANGLE",
-  "CHAIN",
-  "ANKLET",
-  "BROOCH",
-  "TIE_PIN",
-  "CUFFLINKS",
-  "NOSE_PIN",
-  "MAANG_TIKKA",
-  "OTHER",
-];
+const allJewelleryTypes = Object.keys(JEWELLERY_TYPE_DATA);
 
 const allBuildMethods = [
   { value: "METHOD_A", label: "Method A - Standard Gold/Silver" },
@@ -102,16 +97,7 @@ const allBuildMethods = [
   { value: "METHOD_D", label: "Method D - Italian Machines (Chain/Bangle)" },
 ];
 
-const allFinishes = [
-  "POLISHED",
-  "MATTE",
-  "BRUSHED",
-  "HAMMERED",
-  "SANDBLASTED",
-  "RHODIUM_PLATED",
-  "ANTIQUE",
-  "TWO_TONE",
-];
+const allFinishes = Object.keys(FINISH_DATA);
 
 // Gemstones grouped by category
 const allGemstones = [
@@ -381,28 +367,63 @@ export default function ShopInventoryPage() {
     field: string,
     value: number | string,
   ) => {
-    if (!materialsData) return;
+    setMaterialsData((prev) => {
+      if (!prev) return prev;
 
-    const materials = materialsData.materials.map((m) => {
-      const key = `${m.metal}_${m.purity}`;
-      if (key === materialKey) {
-        return { ...m, [field]: value };
-      }
-      return m;
-    });
-
-    // If material doesn't exist, add it
-    if (!materials.find((m) => `${m.metal}_${m.purity}` === materialKey)) {
-      const [metal, purity] = materialKey.split("_");
-      materials.push({
-        metal,
-        purity,
-        isAvailable: true,
-        [field]: value,
+      let found = false;
+      const materials = prev.materials.map((m) => {
+        const key = `${m.metal}_${m.purity}`;
+        if (key === materialKey) {
+          found = true;
+          return { ...m, [field]: value };
+        }
+        return m;
       });
-    }
 
-    setMaterialsData({ ...materialsData, materials });
+      // If material doesn't exist, add it
+      if (!found) {
+        const [metal, purity] = materialKey.split("_");
+        materials.push({
+          metal,
+          purity,
+          isAvailable: true,
+          [field]: value,
+        });
+      }
+
+      return { ...prev, materials };
+    });
+  };
+
+  const updateMaterialPricingBatch = (
+    materialKey: string,
+    updates: Record<string, number | string>,
+  ) => {
+    setMaterialsData((prev) => {
+      if (!prev) return prev;
+
+      let found = false;
+      const materials = prev.materials.map((m) => {
+        const k = `${m.metal}_${m.purity}`;
+        if (k === materialKey) {
+          found = true;
+          return { ...m, ...updates };
+        }
+        return m;
+      });
+
+      if (!found) {
+        const [metal, purity] = materialKey.split("_");
+        materials.push({
+          metal,
+          purity,
+          isAvailable: true,
+          ...updates,
+        });
+      }
+
+      return { ...prev, materials };
+    });
   };
 
   const toggleJewelleryType = (type: string) => {
@@ -716,17 +737,19 @@ export default function ShopInventoryPage() {
                                             "flat") === "percent"
                                         }
                                         onCheckedChange={(checked) => {
-                                          updateMaterialPricing(
-                                            key,
-                                            "chargeMode",
-                                            checked ? "percent" : "flat",
-                                          );
+                                          const newMode = checked
+                                            ? "percent"
+                                            : "flat";
+                                          const updates: Record<
+                                            string,
+                                            number | string
+                                          > = { chargeMode: newMode };
+
                                           if (checked && liveRate) {
-                                            // Calculate percent from existing flat rate or default 10%
                                             const currentFlat =
                                               materialData?.makingChargePerGram ||
                                               defaultMaking;
-                                            const pct =
+                                            updates.makingChargePercent =
                                               currentFlat && liveRate
                                                 ? Math.round(
                                                     (currentFlat / liveRate) *
@@ -734,26 +757,21 @@ export default function ShopInventoryPage() {
                                                       100,
                                                   ) / 100
                                                 : 10;
-                                            updateMaterialPricing(
-                                              key,
-                                              "makingChargePercent",
-                                              pct,
-                                            );
                                           } else if (!checked && liveRate) {
-                                            // Calculate flat from existing percent
                                             const pct =
                                               materialData?.makingChargePercent ||
                                               10;
-                                            const flat = Math.round(
-                                              (liveRate * pct) / 100,
-                                            );
-                                            updateMaterialPricing(
-                                              key,
-                                              "makingChargePerGram",
-                                              flat,
-                                            );
+                                            updates.makingChargePerGram =
+                                              Math.round(
+                                                (liveRate * pct) / 100,
+                                              );
                                           }
-                                        }}
+
+                                          updateMaterialPricingBatch(
+                                            key,
+                                            updates,
+                                          );
+                                        }}}
                                       />
                                       <span
                                         className={`text-xs flex items-center gap-0.5 ${(materialData?.chargeMode || "flat") === "percent" ? "font-semibold" : "text-muted-foreground"}`}
@@ -1061,28 +1079,63 @@ export default function ShopInventoryPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {allJewelleryTypes.map((type) => {
-                      const isSelected =
-                        capabilitiesData?.jewelleryTypes?.includes(type);
-                      return (
-                        <div
-                          key={type}
-                          className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${
-                            isSelected
-                              ? "border-primary bg-primary/5"
-                              : "hover:border-gray-300"
-                          }`}
-                          onClick={() => toggleJewelleryType(type)}
-                        >
-                          <Checkbox checked={isSelected} />
-                          <Label className="cursor-pointer">
-                            {type.replace(/_/g, " ")}
-                          </Label>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <TooltipProvider delayDuration={200}>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {allJewelleryTypes.map((type) => {
+                        const isSelected =
+                          capabilitiesData?.jewelleryTypes?.includes(type);
+                        const info = JEWELLERY_TYPE_DATA[type];
+                        return (
+                          <Tooltip key={type}>
+                            <TooltipTrigger asChild>
+                              <div
+                                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                                  isSelected
+                                    ? "border-primary bg-primary/5"
+                                    : "hover:border-gray-300"
+                                }`}
+                                onClick={() => toggleJewelleryType(type)}
+                              >
+                                <Checkbox checked={isSelected} />
+                                {info?.image && (
+                                  <img
+                                    src={info.image}
+                                    alt={info.label}
+                                    className="h-8 w-8 rounded object-cover"
+                                  />
+                                )}
+                                <Label className="cursor-pointer text-sm">
+                                  {info?.label || type.replace(/_/g, " ")}
+                                </Label>
+                              </div>
+                            </TooltipTrigger>
+                            {info && (
+                              <TooltipContent
+                                side="bottom"
+                                className="p-0 overflow-hidden max-w-[220px]"
+                              >
+                                <div>
+                                  <img
+                                    src={info.image}
+                                    alt={info.label}
+                                    className="w-full h-32 object-cover"
+                                  />
+                                  <div className="p-2">
+                                    <p className="font-medium text-sm">
+                                      {info.label}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      {info.description}
+                                    </p>
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        );
+                      })}
+                    </div>
+                  </TooltipProvider>
 
                   <div className="flex justify-end">
                     <Button onClick={saveCapabilities} disabled={isSaving}>
@@ -1183,28 +1236,68 @@ export default function ShopInventoryPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {allFinishes.map((finish) => {
-                      const isSelected =
-                        capabilitiesData?.finishes?.includes(finish);
-                      return (
-                        <div
-                          key={finish}
-                          className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${
-                            isSelected
-                              ? "border-primary bg-primary/5"
-                              : "hover:border-gray-300"
-                          }`}
-                          onClick={() => toggleFinish(finish)}
-                        >
-                          <Checkbox checked={isSelected} />
-                          <Label className="cursor-pointer">
-                            {finish.replace(/_/g, " ")}
-                          </Label>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <TooltipProvider delayDuration={200}>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {allFinishes.map((finish) => {
+                        const isSelected =
+                          capabilitiesData?.finishes?.includes(finish);
+                        const info = FINISH_DATA[finish];
+                        return (
+                          <Tooltip key={finish}>
+                            <TooltipTrigger asChild>
+                              <div
+                                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                                  isSelected
+                                    ? "border-primary bg-primary/5"
+                                    : "hover:border-gray-300"
+                                }`}
+                                onClick={() => toggleFinish(finish)}
+                              >
+                                <Checkbox checked={isSelected} />
+                                {info?.image && (
+                                  <img
+                                    src={info.image}
+                                    alt={info.label}
+                                    className="h-8 w-8 rounded object-cover"
+                                  />
+                                )}
+                                <div className="min-w-0">
+                                  <Label className="cursor-pointer text-sm block">
+                                    {info?.label || finish.replace(/_/g, " ")}
+                                  </Label>
+                                  <p className="text-[10px] text-muted-foreground truncate">
+                                    {info?.description}
+                                  </p>
+                                </div>
+                              </div>
+                            </TooltipTrigger>
+                            {info && (
+                              <TooltipContent
+                                side="bottom"
+                                className="p-0 overflow-hidden max-w-[220px]"
+                              >
+                                <div>
+                                  <img
+                                    src={info.image}
+                                    alt={info.label}
+                                    className="w-full h-32 object-cover"
+                                  />
+                                  <div className="p-2">
+                                    <p className="font-medium text-sm">
+                                      {info.label}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      {info.description}
+                                    </p>
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        );
+                      })}
+                    </div>
+                  </TooltipProvider>
 
                   <div className="flex justify-end">
                     <Button onClick={saveCapabilities} disabled={isSaving}>
