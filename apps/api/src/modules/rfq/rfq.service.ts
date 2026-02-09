@@ -165,11 +165,11 @@ export class RfqService {
     // Calculate price estimate and rating for each shop
     const shopsWithPrices = shops.map((shop) => {
       // Get shop's rate for the requested material or fall back to system rate
-      const shopRate = shop.metalRates.find(
-        (r) => r.metalType === targetMetal,
-      ) || shop.metalRates.find(
-        (r) => r.metalType === "GOLD_24K" || r.metalType === "GOLD_22K",
-      );
+      const shopRate =
+        shop.metalRates.find((r) => r.metalType === targetMetal) ||
+        shop.metalRates.find(
+          (r) => r.metalType === "GOLD_24K" || r.metalType === "GOLD_22K",
+        );
       const ratePerGram = shopRate?.ratePerGramNpr || defaultRatePerGram;
 
       // Estimate price based on target weight

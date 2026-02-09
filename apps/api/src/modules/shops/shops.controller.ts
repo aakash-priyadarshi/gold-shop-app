@@ -253,7 +253,9 @@ export class ShopsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SHOPKEEPER)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Get shop gemstone pricing (overrides + system defaults)" })
+  @ApiOperation({
+    summary: "Get shop gemstone pricing (overrides + system defaults)",
+  })
   async getMyShopGemstonePricing(@CurrentUser("shopId") shopId: string) {
     return this.shopsService.getShopGemstonePricing(shopId);
   }
@@ -277,7 +279,11 @@ export class ShopsController {
       }>;
     },
   ) {
-    return this.shopsService.updateShopGemstonePricing(shopId, userId, dto.rates);
+    return this.shopsService.updateShopGemstonePricing(
+      shopId,
+      userId,
+      dto.rates,
+    );
   }
 
   // ═══════════════════════════════════════════════════════════════

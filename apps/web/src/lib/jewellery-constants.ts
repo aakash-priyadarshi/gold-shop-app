@@ -79,27 +79,27 @@ export const JEWELLERY_TYPE_DATA: Record<string, JewelleryTypeInfo> = {
   TIE_PIN: {
     value: "TIE_PIN",
     label: "Tie Pin",
-    image: `${CDN}/1769445057895-wcn56633.png`,
+    image: `${CDN}/1770654788358-98tpi91v.png`,
     description: "Men's accessory to hold the tie in place. Usually 3–8g.",
   },
   CUFFLINKS: {
     value: "CUFFLINKS",
     label: "Cufflinks",
-    image: `${CDN}/1769445057895-wcn56633.png`,
+    image: `${CDN}/1770654794011-mbmfttye.png`,
     description:
       "Decorative fasteners for shirt cuffs. Weight per pair, typically 5–15g.",
   },
   NOSE_PIN: {
     value: "NOSE_PIN",
     label: "Nose Pin",
-    image: `${CDN}/1769445057895-wcn56633.png`,
+    image: `${CDN}/1770654801812-rx6d93j5.png`,
     description:
       "Small stud or ring worn on the nose. Very lightweight, 0.3–2g.",
   },
   MAANG_TIKKA: {
     value: "MAANG_TIKKA",
     label: "Maang Tikka",
-    image: `${CDN}/1769445057895-wcn56633.png`,
+    image: `${CDN}/1770654756626-gmaz323x.png`,
     description:
       "Traditional forehead jewellery worn at the hair parting. 3–10g.",
   },
