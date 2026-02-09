@@ -733,10 +733,7 @@ export default function AdminSettingsPage() {
                         step="1"
                         value={platformConfig.silver_min_orders ?? 30}
                         onChange={(e) =>
-                          updateConfigValue(
-                            "silver_min_orders",
-                            e.target.value,
-                          )
+                          updateConfigValue("silver_min_orders", e.target.value)
                         }
                         disabled={loadingConfig}
                         className="w-24"
@@ -749,9 +746,7 @@ export default function AdminSettingsPage() {
                         min="0"
                         max="100"
                         step="0.1"
-                        value={
-                          platformConfig.silver_max_cancellation_rate ?? 5
-                        }
+                        value={platformConfig.silver_max_cancellation_rate ?? 5}
                         onChange={(e) =>
                           updateConfigValue(
                             "silver_max_cancellation_rate",
@@ -771,10 +766,7 @@ export default function AdminSettingsPage() {
                         step="0.1"
                         value={platformConfig.silver_min_rating ?? 4.0}
                         onChange={(e) =>
-                          updateConfigValue(
-                            "silver_min_rating",
-                            e.target.value,
-                          )
+                          updateConfigValue("silver_min_rating", e.target.value)
                         }
                         disabled={loadingConfig}
                         className="w-24"
@@ -786,9 +778,7 @@ export default function AdminSettingsPage() {
                         type="number"
                         min="0"
                         step="1"
-                        value={
-                          platformConfig.silver_min_tenure_months ?? 3
-                        }
+                        value={platformConfig.silver_min_tenure_months ?? 3}
                         onChange={(e) =>
                           updateConfigValue(
                             "silver_min_tenure_months",
@@ -833,9 +823,7 @@ export default function AdminSettingsPage() {
                         min="0"
                         max="100"
                         step="0.1"
-                        value={
-                          platformConfig.gold_max_cancellation_rate ?? 3
-                        }
+                        value={platformConfig.gold_max_cancellation_rate ?? 3}
                         onChange={(e) =>
                           updateConfigValue(
                             "gold_max_cancellation_rate",
@@ -887,9 +875,7 @@ export default function AdminSettingsPage() {
                         min="0"
                         max="100"
                         step="1"
-                        value={
-                          platformConfig.gold_min_positive_feedback ?? 80
-                        }
+                        value={platformConfig.gold_min_positive_feedback ?? 80}
                         onChange={(e) =>
                           updateConfigValue(
                             "gold_min_positive_feedback",
@@ -909,9 +895,7 @@ export default function AdminSettingsPage() {
                         min="0"
                         max="100"
                         step="1"
-                        value={
-                          platformConfig.gold_min_on_time_dispatch ?? 90
-                        }
+                        value={platformConfig.gold_min_on_time_dispatch ?? 90}
                         onChange={(e) =>
                           updateConfigValue(
                             "gold_min_on_time_dispatch",
@@ -962,9 +946,7 @@ export default function AdminSettingsPage() {
                         min="0"
                         max="100"
                         step="0.1"
-                        value={
-                          platformConfig.elite_max_cancellation_rate ?? 2
-                        }
+                        value={platformConfig.elite_max_cancellation_rate ?? 2}
                         onChange={(e) =>
                           updateConfigValue(
                             "elite_max_cancellation_rate",
@@ -1016,9 +998,7 @@ export default function AdminSettingsPage() {
                         min="0"
                         max="100"
                         step="1"
-                        value={
-                          platformConfig.elite_min_positive_feedback ?? 90
-                        }
+                        value={platformConfig.elite_min_positive_feedback ?? 90}
                         onChange={(e) =>
                           updateConfigValue(
                             "elite_min_positive_feedback",
@@ -1038,9 +1018,7 @@ export default function AdminSettingsPage() {
                         min="0"
                         max="100"
                         step="1"
-                        value={
-                          platformConfig.elite_min_on_time_dispatch ?? 95
-                        }
+                        value={platformConfig.elite_min_on_time_dispatch ?? 95}
                         onChange={(e) =>
                           updateConfigValue(
                             "elite_min_on_time_dispatch",
