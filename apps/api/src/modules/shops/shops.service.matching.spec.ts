@@ -660,6 +660,66 @@ describe("ShopsService - Seller Matching", () => {
       );
       expect(materialFilter).toBeUndefined();
     });
+
+    it("should expand base metal 'GOLD' to match any gold variant", async () => {
+      mockPrismaShop.findMany.mockResolvedValue([]);
+
+      await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_B",
+        metalType: "GOLD",
+        estimatedWeight: 2,
+        customerCountry: "IN",
+      });
+
+      const whereArg = mockPrismaShop.findMany.mock.calls[0][0].where;
+      const materialFilter = whereArg.AND.find((clause: any) =>
+        clause.OR?.some((cond: any) => cond.supportedMaterials),
+      );
+      expect(materialFilter).toBeDefined();
+      // Should have variants like GOLD_24K, GOLD_22K, GOLD_18K, GOLD_14K, GOLD_10K + empty array
+      const materialOptions = materialFilter.OR;
+      expect(materialOptions.length).toBeGreaterThan(2);
+      expect(
+        materialOptions.some(
+          (o: any) => o.supportedMaterials?.has === "GOLD_18K",
+        ),
+      ).toBe(true);
+      expect(
+        materialOptions.some(
+          (o: any) => o.supportedMaterials?.has === "GOLD_24K",
+        ),
+      ).toBe(true);
+    });
+
+    it("should expand base metal 'SILVER' to match any silver variant", async () => {
+      mockPrismaShop.findMany.mockResolvedValue([]);
+
+      await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_B",
+        metalType: "SILVER",
+        estimatedWeight: 2,
+        customerCountry: "IN",
+      });
+
+      const whereArg = mockPrismaShop.findMany.mock.calls[0][0].where;
+      const materialFilter = whereArg.AND.find((clause: any) =>
+        clause.OR?.some((cond: any) => cond.supportedMaterials),
+      );
+      expect(materialFilter).toBeDefined();
+      const materialOptions = materialFilter.OR;
+      expect(
+        materialOptions.some(
+          (o: any) => o.supportedMaterials?.has === "SILVER_999",
+        ),
+      ).toBe(true);
+      expect(
+        materialOptions.some(
+          (o: any) => o.supportedMaterials?.has === "SILVER_925",
+        ),
+      ).toBe(true);
+    });
   });
 
   // ─── Rating Filter ───────────────────────────────

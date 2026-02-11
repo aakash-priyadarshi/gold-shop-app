@@ -1,46 +1,46 @@
-import { IsString, IsOptional, IsEnum, IsBoolean } from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { CurrencyCode } from '@prisma/client';
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import { CurrencyCode } from "@prisma/client";
+import { IsBoolean, IsEnum, IsOptional, IsString } from "class-validator";
 
 export class UpdateProfileDto {
-  @ApiPropertyOptional({ example: 'John' })
+  @ApiPropertyOptional({ example: "John" })
   @IsOptional()
   @IsString()
   firstName?: string;
 
-  @ApiPropertyOptional({ example: 'Doe' })
+  @ApiPropertyOptional({ example: "Doe" })
   @IsOptional()
   @IsString()
   lastName?: string;
 
-  @ApiPropertyOptional({ example: 'John Doe' })
+  @ApiPropertyOptional({ example: "John Doe" })
   @IsOptional()
   @IsString()
   name?: string; // Combined name field (will be split into firstName/lastName)
 
-  @ApiPropertyOptional({ example: '+9779812345678' })
+  @ApiPropertyOptional({ example: "+9779812345678" })
   @IsOptional()
   @IsString()
   phone?: string;
 
-  @ApiPropertyOptional({ example: 'NP' })
+  @ApiPropertyOptional({ example: "NP" })
   @IsOptional()
   @IsString()
   country?: string;
 
-  @ApiPropertyOptional({ example: 'Bagmati' })
+  @ApiPropertyOptional({ example: "Bagmati" })
   @IsOptional()
   @IsString()
   state?: string;
 
-  @ApiPropertyOptional({ example: 'Kathmandu' })
+  @ApiPropertyOptional({ example: "Kathmandu" })
   @IsOptional()
   @IsString()
   city?: string;
 
-  @ApiPropertyOptional({ enum: ['en', 'ne', 'hi'] })
+  @ApiPropertyOptional({ enum: ["en", "ne", "hi"] })
   @IsOptional()
-  @IsEnum(['en', 'ne', 'hi'])
+  @IsEnum(["en", "ne", "hi"])
   preferredLanguage?: string;
 
   @ApiPropertyOptional({ enum: CurrencyCode })
