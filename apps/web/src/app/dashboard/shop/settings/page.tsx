@@ -54,6 +54,10 @@ import {
   XCircle,
 } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+  getStatesForCountry,
+  getCitiesForCountry,
+} from "@gold-shop/shared";
 
 interface ShopData {
   id: string;
@@ -445,6 +449,20 @@ export default function ShopSettingsPage() {
             </div>
           </div>
 
+          {/* Alert for missing address */}
+          {(!shopData.address || !shopData.city || !shopData.state) && (
+            <div className="flex items-start gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-800">
+              <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium">Complete your shop address</p>
+                <p className="text-sm mt-1">
+                  Your shop address (country, state, city) is required for customers to find you in seller matching.
+                  Go to the <strong>Location</strong> tab to set your address.
+                </p>
+              </div>
+            </div>
+          )}
+
           <Tabs defaultValue="profile" className="space-y-4">
             <TabsList className="flex-wrap h-auto">
               <TabsTrigger value="profile">Profile</TabsTrigger>
@@ -612,28 +630,68 @@ export default function ShopSettingsPage() {
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="state">State/Province</Label>
-                      <Input
-                        id="state"
-                        value={shopData.state || ""}
-                        onChange={(e) =>
-                          updateShopData({ state: e.target.value })
-                        }
-                        placeholder={countryPlaceholders.state}
-                      />
+                      <Label htmlFor="state">State/Province *</Label>
+                      {getStatesForCountry(shopData.country || "NP").length > 0 ? (
+                        <Select
+                          value={shopData.state || ""}
+                          onValueChange={(value) =>
+                            updateShopData({ state: value, city: "" })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select state" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getStatesForCountry(shopData.country || "NP").map((s) => (
+                              <SelectItem key={s.code} value={s.code}>
+                                {s.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          id="state"
+                          value={shopData.state || ""}
+                          onChange={(e) =>
+                            updateShopData({ state: e.target.value })
+                          }
+                          placeholder={countryPlaceholders.state}
+                        />
+                      )}
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="city">City *</Label>
-                      <Input
-                        id="city"
-                        value={shopData.city || ""}
-                        onChange={(e) =>
-                          updateShopData({ city: e.target.value })
-                        }
-                        placeholder={countryPlaceholders.city}
-                      />
+                      {getCitiesForCountry(shopData.country || "NP", shopData.state || undefined).length > 0 ? (
+                        <Select
+                          value={shopData.city || ""}
+                          onValueChange={(value) =>
+                            updateShopData({ city: value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select city" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getCitiesForCountry(shopData.country || "NP", shopData.state || undefined).map((c) => (
+                              <SelectItem key={c.name} value={c.name}>
+                                {c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          id="city"
+                          value={shopData.city || ""}
+                          onChange={(e) =>
+                            updateShopData({ city: e.target.value })
+                          }
+                          placeholder={countryPlaceholders.city}
+                        />
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="pincode">

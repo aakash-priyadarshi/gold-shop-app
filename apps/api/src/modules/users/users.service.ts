@@ -18,6 +18,8 @@ interface UpdateProfileData {
   name?: string;
   phone?: string;
   country?: string;
+  state?: string;
+  city?: string;
   preferredLanguage?: string;
   preferredCurrency?: CurrencyCode;
   emailNotifications?: boolean;
@@ -42,6 +44,8 @@ export class UsersService {
         preferredLanguage: true,
         preferredCurrency: true,
         preferredCountry: true,
+        preferredState: true,
+        preferredCity: true,
         createdAt: true,
         shops: {
           select: {
@@ -109,7 +113,9 @@ export class UsersService {
       updateData.preferredLanguage = data.preferredLanguage;
     if (data.preferredCurrency !== undefined)
       updateData.preferredCurrency = data.preferredCurrency;
-    if (data.country !== undefined) updateData.preferredCountry = data.country; // Map 'country' from DTO to 'preferredCountry' in schema
+    if (data.country !== undefined) updateData.preferredCountry = data.country;
+    if (data.state !== undefined) updateData.preferredState = data.state;
+    if (data.city !== undefined) updateData.preferredCity = data.city;
 
     return this.prisma.user.update({
       where: { id: userId },
@@ -122,8 +128,10 @@ export class UsersService {
         lastName: true,
         preferredLanguage: true,
         preferredCurrency: true,
-        preferredCountry: true, // New field
-      } as any, // Type cast needed until Prisma client is regenerated
+        preferredCountry: true,
+        preferredState: true,
+        preferredCity: true,
+      } as any,
     });
   }
 
@@ -219,6 +227,8 @@ export class UsersService {
       language: user.preferredLanguage || "en",
       currency: (user as any).preferredCurrency || DEFAULT_CURRENCY,
       country: (user as any).preferredCountry || "US",
+      state: (user as any).preferredState || null,
+      city: (user as any).preferredCity || null,
       theme: (user as any).themeMode || "system",
     };
   }
@@ -232,6 +242,8 @@ export class UsersService {
       preferredLanguage?: string;
       preferredCurrency?: CurrencyCode;
       preferredCountry?: string;
+      preferredState?: string;
+      preferredCity?: string;
       themeMode?: string;
     },
   ) {
@@ -254,6 +266,10 @@ export class UsersService {
           ({ preferredCurrency: data.preferredCurrency } as any)),
         ...(data.preferredCountry &&
           ({ preferredCountry: data.preferredCountry } as any)),
+        ...(data.preferredState !== undefined &&
+          ({ preferredState: data.preferredState || null } as any)),
+        ...(data.preferredCity !== undefined &&
+          ({ preferredCity: data.preferredCity || null } as any)),
         ...(data.themeMode && ({ themeMode: data.themeMode } as any)),
       },
     });
@@ -262,6 +278,8 @@ export class UsersService {
       language: updated.preferredLanguage || "en",
       currency: (updated as any).preferredCurrency || DEFAULT_CURRENCY,
       country: (updated as any).preferredCountry || "US",
+      state: (updated as any).preferredState || null,
+      city: (updated as any).preferredCity || null,
       theme: (updated as any).themeMode || "system",
     };
   }

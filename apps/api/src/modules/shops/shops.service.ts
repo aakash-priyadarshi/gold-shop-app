@@ -1342,7 +1342,7 @@ export class ShopsService {
       estimatedWeight,
       customerCity,
       customerState,
-      customerCountry = "India",
+      customerCountry = "IN",
       minRating,
       maxPrice,
       sortBy = "location",
@@ -1633,6 +1633,23 @@ export class ShopsService {
           filtered.length > 0
             ? Math.max(...filtered.map((s) => s.estimatedPrice))
             : 0,
+      },
+      // Diagnostics to help understand why no sellers matched
+      diagnostics: {
+        totalShops,
+        activeShops,
+        verifiedShops,
+        activeAndVerified,
+        matchingBeforeCountryFilter: withoutMaterialFilter,
+        customerCountry,
+        includeInternational,
+        filtersApplied: {
+          jewelleryType,
+          buildMethod,
+          metalType: metalType || null,
+          minRating: minRating || null,
+          maxPrice: maxPrice || null,
+        },
       },
     };
   }

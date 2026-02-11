@@ -51,6 +51,10 @@ import {
   XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  getStatesForCountry,
+  getCitiesForCountry,
+} from "@gold-shop/shared";
 
 interface DeliveryAddress {
   id?: string;
@@ -75,6 +79,8 @@ interface UserProfile {
   preferredLanguage: string;
   preferredCurrency: string;
   preferredCountry?: string;
+  preferredState?: string;
+  preferredCity?: string;
   deliveryAddresses?: DeliveryAddress[];
 }
 
@@ -108,6 +114,8 @@ export default function CustomerSettingsPage() {
     preferredLanguage: "en",
     preferredCurrency: "USD",
     preferredCountry: "US",
+    preferredState: "",
+    preferredCity: "",
     deliveryAddresses: [],
   });
 
@@ -213,6 +221,8 @@ export default function CustomerSettingsPage() {
         preferredLanguage: response.data.preferredLanguage || "en",
         preferredCurrency: response.data.preferredCurrency || currentCurrency,
         preferredCountry: response.data.preferredCountry || currentCountry,
+        preferredState: response.data.preferredState || "",
+        preferredCity: response.data.preferredCity || "",
         deliveryAddresses: response.data.deliveryAddresses || [],
       });
       // Store original phone for comparison
@@ -234,7 +244,9 @@ export default function CustomerSettingsPage() {
         lastName: profile.lastName,
         phone: profile.phone || null,
         preferredCurrency: profile.preferredCurrency,
-        country: profile.preferredCountry, // Backend uses 'country', not 'preferredCountry'
+        country: profile.preferredCountry,
+        state: profile.preferredState || null,
+        city: profile.preferredCity || null,
       });
 
       // Update global preferences store
@@ -609,6 +621,78 @@ export default function CustomerSettingsPage() {
                   </Select>
                   <p className="text-xs text-muted-foreground">
                     Prices will be displayed in this currency
+                  </p>
+                </div>
+              </div>
+
+              {/* State & City preferences */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="pref-state">Preferred State</Label>
+                  {getStatesForCountry(profile.preferredCountry || "US").length > 0 ? (
+                    <Select
+                      value={profile.preferredState || ""}
+                      onValueChange={(value) =>
+                        setProfile({ ...profile, preferredState: value, preferredCity: "" })
+                      }
+                    >
+                      <SelectTrigger id="pref-state" className="w-full">
+                        <SelectValue placeholder="Select state" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getStatesForCountry(profile.preferredCountry || "US").map((s) => (
+                          <SelectItem key={s.code} value={s.code}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      id="pref-state"
+                      value={profile.preferredState || ""}
+                      onChange={(e) =>
+                        setProfile({ ...profile, preferredState: e.target.value })
+                      }
+                      placeholder="Enter state/province"
+                    />
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Used for matching with nearby sellers
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pref-city">Preferred City</Label>
+                  {getCitiesForCountry(profile.preferredCountry || "US", profile.preferredState || undefined).length > 0 ? (
+                    <Select
+                      value={profile.preferredCity || ""}
+                      onValueChange={(value) =>
+                        setProfile({ ...profile, preferredCity: value })
+                      }
+                    >
+                      <SelectTrigger id="pref-city" className="w-full">
+                        <SelectValue placeholder="Select city" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getCitiesForCountry(profile.preferredCountry || "US", profile.preferredState || undefined).map((c) => (
+                          <SelectItem key={c.name} value={c.name}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      id="pref-city"
+                      value={profile.preferredCity || ""}
+                      onChange={(e) =>
+                        setProfile({ ...profile, preferredCity: e.target.value })
+                      }
+                      placeholder="Enter city"
+                    />
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Helps find the best sellers near you
                   </p>
                 </div>
               </div>
