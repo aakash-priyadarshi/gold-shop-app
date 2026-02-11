@@ -937,6 +937,9 @@ export class ShopsService {
         supportedMethods: true,
         supportedFinishes: true,
         supportedGemstones: true,
+        supportedAlloys: true,
+        supportedBaseMetals: true,
+        supportedPlatingTypes: true,
       },
     });
 
@@ -985,6 +988,35 @@ export class ShopsService {
       "CITRINE",
     ];
 
+    // Standard alloys (Method B)
+    const allAlloys = [
+      { code: "GOLD_18K", name: "18K Gold Alloy" },
+      { code: "GOLD_14K", name: "14K Gold Alloy" },
+      { code: "GOLD_10K", name: "10K Gold Alloy" },
+      { code: "STERLING_SILVER_925", name: "Sterling Silver 925" },
+    ];
+
+    // Base metals (Method C core / Method D base)
+    const allBaseMetals = [
+      { code: "BRASS", name: "Brass" },
+      { code: "BRONZE", name: "Bronze" },
+      { code: "COPPER", name: "Copper" },
+      { code: "STAINLESS_STEEL_316L", name: "Stainless Steel 316L" },
+      { code: "TITANIUM", name: "Titanium" },
+      { code: "TUNGSTEN_CARBIDE", name: "Tungsten Carbide" },
+      { code: "COBALT_CHROME", name: "Cobalt Chrome" },
+    ];
+
+    // Plating/finish types (Method C finish)
+    const allPlatingTypes = [
+      { code: "GOLD_PLATING", name: "Gold Plating" },
+      { code: "VERMEIL", name: "Vermeil (Gold on Sterling Silver)" },
+      { code: "PVD_COATING", name: "PVD Coating" },
+      { code: "RHODIUM_PLATING", name: "Rhodium Plating" },
+      { code: "OXIDISED_FINISH", name: "Oxidised Finish" },
+      { code: "ENAMEL_COATING", name: "Enamel Coating" },
+    ];
+
     return {
       jewelleryTypes: allJewelleryTypes.map((type) => ({
         code: type,
@@ -1002,6 +1034,18 @@ export class ShopsService {
         name: type.replace(/_/g, " "),
         isSupported: (shop.supportedGemstones || []).includes(type),
       })),
+      alloys: allAlloys.map((a) => ({
+        ...a,
+        isSupported: (shop.supportedAlloys || []).includes(a.code),
+      })),
+      baseMetals: allBaseMetals.map((b) => ({
+        ...b,
+        isSupported: (shop.supportedBaseMetals || []).includes(b.code),
+      })),
+      platingTypes: allPlatingTypes.map((p) => ({
+        ...p,
+        isSupported: (shop.supportedPlatingTypes || []).includes(p.code),
+      })),
     };
   }
 
@@ -1016,6 +1060,9 @@ export class ShopsService {
       buildMethods?: string[];
       finishes?: string[];
       gemstones?: string[];
+      alloys?: string[];
+      baseMetals?: string[];
+      platingTypes?: string[];
     },
   ) {
     if (!shopId) {
@@ -1046,6 +1093,18 @@ export class ShopsService {
 
     if (dto.gemstones) {
       updateData.supportedGemstones = dto.gemstones;
+    }
+
+    if (dto.alloys) {
+      updateData.supportedAlloys = dto.alloys;
+    }
+
+    if (dto.baseMetals) {
+      updateData.supportedBaseMetals = dto.baseMetals;
+    }
+
+    if (dto.platingTypes) {
+      updateData.supportedPlatingTypes = dto.platingTypes;
     }
 
     await this.prisma.shop.update({
@@ -1446,14 +1505,18 @@ export class ShopsService {
   }
 
   /**
-   * Find matching sellers for an RFQ with dynamic pricing
-   * Sellers are ranked by: same city first, then by rating/reviews
-   * By default, only shows sellers from the same country unless includeInternational is true
+   * Find matching sellers for an RFQ with dynamic pricing.
+   * Uses SOFT MATCHING: sellers from customer's location always show,
+   * with feature-based scoring to rank them (material, method, alloy, etc.).
+   * Sellers matching everything rank highest; missing features lower rank.
    */
   async findMatchingSellers(params: {
     jewelleryType: string;
     buildMethod: string;
     metalType?: string;
+    alloyType?: string;
+    baseMetal?: string;
+    platingType?: string;
     surfaceFinish?: string;
     estimatedWeight: number;
     customerCity?: string;
@@ -1465,12 +1528,15 @@ export class ShopsService {
     sortBy?: "price" | "rating" | "location" | "popularity";
     page?: number;
     pageSize?: number;
-    includeInternational?: boolean; // Default false - only same country sellers
+    includeInternational?: boolean;
   }) {
     const {
       jewelleryType,
       buildMethod,
       metalType,
+      alloyType,
+      baseMetal,
+      platingType,
       surfaceFinish,
       estimatedWeight,
       customerCity,
@@ -1484,203 +1550,162 @@ export class ShopsService {
       includeInternational = false,
     } = params;
 
-    // Debug: Log incoming params
     console.log("[findMatchingSellers] Params:", {
-      jewelleryType,
-      buildMethod,
-      metalType,
-      customerCity,
-      customerState,
-      customerCountry,
+      jewelleryType, buildMethod, metalType, alloyType, baseMetal, platingType,
+      customerCity, customerState, customerCountry,
     });
 
-    // First, let's see how many shops exist total
+    // ── Material family expansion map ──
+    const MATERIAL_FAMILIES: Record<string, string[]> = {
+      GOLD: ["GOLD_24K", "GOLD_22K", "GOLD_18K", "GOLD_14K", "GOLD_10K"],
+      SILVER: ["SILVER_999", "SILVER_925"],
+      PLATINUM: ["PLATINUM_950", "PLATINUM_PT950", "PLATINUM_PT900"],
+      PALLADIUM: ["PALLADIUM_PD950", "PALLADIUM_PD500"],
+    };
+
+    // ── Step 1: Fetch ALL active & verified shops (no feature filtering) ──
+    const where: any = {
+      isActive: true,
+      isVerified: true,
+    };
+
+    // Country filter: only same country unless includeInternational
+    if (!includeInternational && customerCountry) {
+      where.country = { equals: customerCountry, mode: "insensitive" };
+    }
+
     const totalShops = await this.prisma.shop.count();
-    const activeShops = await this.prisma.shop.count({
-      where: { isActive: true },
-    });
-    const verifiedShops = await this.prisma.shop.count({
-      where: { isVerified: true },
-    });
     const activeAndVerified = await this.prisma.shop.count({
       where: { isActive: true, isVerified: true },
     });
 
-    console.log("[findMatchingSellers] Shop counts:", {
-      totalShops,
-      activeShops,
-      verifiedShops,
-      activeAndVerified,
-    });
-
-    // Build base query for shops that can fulfill this order
-    // We use OR conditions to include shops with empty arrays (treat as "supports all")
-    const where: any = {
-      isActive: true,
-      isVerified: true,
-      OR: [
-        // Shop explicitly supports this jewellery type
-        { supportedJewelleryTypes: { has: jewelleryType } },
-        // OR shop has empty array (legacy/unset = supports all)
-        { supportedJewelleryTypes: { equals: [] } },
-      ],
-      AND: [
-        {
-          OR: [
-            // Shop explicitly supports this build method
-            { supportedMethods: { has: buildMethod } },
-            // OR shop has empty array (legacy/unset = supports all)
-            { supportedMethods: { equals: [] } },
-          ],
-        },
-      ],
-    };
-
-    // If metal type specified, check if shop supports it (or has empty array)
-    // When metalType is a base metal (e.g. "GOLD", "SILVER"), expand to match any variant
-    if (metalType) {
-      const MATERIAL_FAMILIES: Record<string, string[]> = {
-        GOLD: ["GOLD_24K", "GOLD_22K", "GOLD_18K", "GOLD_14K", "GOLD_10K"],
-        SILVER: ["SILVER_999", "SILVER_925"],
-        PLATINUM: ["PLATINUM_950", "PLATINUM_PT950", "PLATINUM_PT900"],
-        PALLADIUM: ["PALLADIUM_PD950", "PALLADIUM_PD500"],
-      };
-
-      const familyVariants = MATERIAL_FAMILIES[metalType];
-
-      if (familyVariants) {
-        // Base metal like "GOLD" — match any variant (GOLD_24K, GOLD_22K, etc.)
-        where.AND.push({
-          OR: [
-            ...familyVariants.map((variant) => ({
-              supportedMaterials: { has: variant },
-            })),
-            { supportedMaterials: { equals: [] } },
-          ],
-        });
-      } else {
-        // Specific purity like "GOLD_18K" — exact match
-        where.AND.push({
-          OR: [
-            { supportedMaterials: { has: metalType } },
-            { supportedMaterials: { equals: [] } },
-          ],
-        });
-      }
-    }
-
-    // By default, only show same-country sellers unless includeInternational is true
-    if (!includeInternational && customerCountry) {
-      where.AND.push({
-        country: {
-          equals: customerCountry,
-          mode: "insensitive",
-        },
-      });
-    }
-
-    // Debug: Log the where clause and check matching count before material filter
-    const withoutMaterialFilter = await this.prisma.shop.count({
-      where: {
-        isActive: true,
-        isVerified: true,
-        OR: [
-          { supportedJewelleryTypes: { has: jewelleryType } },
-          { supportedJewelleryTypes: { equals: [] } },
-        ],
-        AND: [
-          {
-            OR: [
-              { supportedMethods: { has: buildMethod } },
-              { supportedMethods: { equals: [] } },
-            ],
-          },
-        ],
-      },
-    });
-    console.log(
-      "[findMatchingSellers] Shops matching jewelleryType+buildMethod:",
-      withoutMaterialFilter,
-    );
-    console.log(
-      "[findMatchingSellers] Final where clause:",
-      JSON.stringify(where, null, 2),
-    );
-
-    // Fetch all matching shops with their pricing and ratings
     const shops = (await this.prisma.shop.findMany({
       where,
       include: {
         metalRates: true,
         finishPricing: true,
-        ratings: {
-          select: { overall: true },
-        },
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        _count: {
-          select: {
-            ratings: true,
-          },
-        },
+        ratings: { select: { overall: true } },
+        user: { select: { id: true, firstName: true, lastName: true } },
+        _count: { select: { ratings: true } },
         badges: {
           where: { isActive: true },
           select: { badgeType: true, awardedAt: true },
         },
         performance: {
           select: {
-            totalOrders: true,
-            successfulOrders: true,
-            avgRating: true,
-            onTimeDispatchRate: true,
+            totalOrders: true, successfulOrders: true,
+            avgRating: true, onTimeDispatchRate: true,
           },
         },
       },
     })) as any[];
 
-    console.log("[findMatchingSellers] Found shops:", shops.length);
+    console.log("[findMatchingSellers] Fetched shops (active+verified+country):", shops.length);
 
-    // Calculate price for each shop and enrich data
+    // ── Step 2: Score each shop on feature matching ──
     const enrichedShops = shops.map((shop) => {
-      // Calculate average rating
+      // --- Feature scoring (each check: 0 or weight) ---
+      const unsupportedFeatures: string[] = [];
+      let featureScore = 0;
+      const maxFeatureScore = 5; // total possible points
+
+      // 2a. Jewellery type match (1 point)
+      const jewelleryTypeOk =
+        shop.supportedJewelleryTypes.length === 0 ||
+        shop.supportedJewelleryTypes.includes(jewelleryType);
+      if (jewelleryTypeOk) {
+        featureScore += 1;
+      } else {
+        unsupportedFeatures.push(`jewelleryType:${jewelleryType}`);
+      }
+
+      // 2b. Build method match (1 point)
+      const buildMethodOk =
+        shop.supportedMethods.length === 0 ||
+        shop.supportedMethods.includes(buildMethod);
+      if (buildMethodOk) {
+        featureScore += 1;
+      } else {
+        unsupportedFeatures.push(`buildMethod:${buildMethod}`);
+      }
+
+      // 2c. Material match (1 point) — expand base metals to family
+      let materialOk = true;
+      if (metalType) {
+        const familyVariants = MATERIAL_FAMILIES[metalType];
+        if (familyVariants) {
+          materialOk =
+            shop.supportedMaterials.length === 0 ||
+            familyVariants.some((v: string) => shop.supportedMaterials.includes(v));
+        } else {
+          materialOk =
+            shop.supportedMaterials.length === 0 ||
+            shop.supportedMaterials.includes(metalType);
+        }
+      }
+      if (materialOk) {
+        featureScore += 1;
+      } else {
+        unsupportedFeatures.push(`material:${metalType}`);
+      }
+
+      // 2d. Alloy match for Method B (1 point)
+      let alloyOk = true;
+      if (alloyType && buildMethod === "METHOD_B") {
+        alloyOk =
+          (shop.supportedAlloys || []).length === 0 ||
+          (shop.supportedAlloys || []).includes(alloyType);
+        if (!alloyOk) {
+          unsupportedFeatures.push(`alloy:${alloyType}`);
+        }
+      }
+      if (alloyOk) featureScore += 0.5;
+
+      // 2e. Base metal match for Method C/D (0.5 point)
+      let baseMetalOk = true;
+      if (baseMetal && (buildMethod === "METHOD_C" || buildMethod === "METHOD_D")) {
+        baseMetalOk =
+          (shop.supportedBaseMetals || []).length === 0 ||
+          (shop.supportedBaseMetals || []).includes(baseMetal);
+        if (!baseMetalOk) {
+          unsupportedFeatures.push(`baseMetal:${baseMetal}`);
+        }
+      }
+      if (baseMetalOk) featureScore += 0.5;
+
+      // 2f. Plating type match for Method C (0.5 point)
+      let platingOk = true;
+      if (platingType && buildMethod === "METHOD_C") {
+        platingOk =
+          (shop.supportedPlatingTypes || []).length === 0 ||
+          (shop.supportedPlatingTypes || []).includes(platingType);
+        if (!platingOk) {
+          unsupportedFeatures.push(`platingType:${platingType}`);
+        }
+      }
+      if (platingOk) featureScore += 0.5;
+
+      const isFullMatch = unsupportedFeatures.length === 0;
+
+      // --- Price calculation ---
       const avgRating =
         shop.ratings.length > 0
-          ? shop.ratings.reduce((sum: number, r: any) => sum + r.overall, 0) /
-            shop.ratings.length
+          ? shop.ratings.reduce((sum: number, r: any) => sum + r.overall, 0) / shop.ratings.length
           : 0;
 
-      // Calculate estimated price for this shop
-      // Use shop's custom rate if available, otherwise use a default
-      const shopMetalRate = shop.metalRates.find(
-        (r: any) => r.metalType === metalType,
-      );
-      const baseRatePerGram = shopMetalRate?.ratePerGramNpr || 8500; // Default gold rate
+      const shopMetalRate = shop.metalRates.find((r: any) => r.metalType === metalType);
+      const baseRatePerGram = shopMetalRate?.ratePerGramNpr || 8500;
       const materialCost = baseRatePerGram * estimatedWeight;
-      const makingCharge =
-        materialCost * ((shop.makingChargePercent || 10) / 100);
+      const makingCharge = materialCost * ((shop.makingChargePercent || 10) / 100);
       const estimatedPrice = materialCost + makingCharge;
 
-      // Calculate location score (0-3: same city = 3, same state = 2, same country = 1, other = 0)
+      // --- Location score ---
       let locationScore = 0;
-      if (
-        customerCity &&
-        shop.city?.toLowerCase() === customerCity.toLowerCase()
-      ) {
+      if (customerCity && shop.city?.toLowerCase() === customerCity.toLowerCase()) {
         locationScore = 3;
-      } else if (
-        customerState &&
-        shop.state?.toLowerCase() === customerState.toLowerCase()
-      ) {
+      } else if (customerState && shop.state?.toLowerCase() === customerState.toLowerCase()) {
         locationScore = 2;
-      } else if (
-        customerCountry &&
-        shop.country?.toLowerCase() === customerCountry.toLowerCase()
-      ) {
+      } else if (customerCountry && shop.country?.toLowerCase() === customerCountry.toLowerCase()) {
         locationScore = 1;
       }
 
@@ -1697,7 +1722,6 @@ export class ShopsService {
         isVerified: shop.isVerified,
         makingChargePercent: shop.makingChargePercent || 10,
         codEnabled: shop.codEnabled,
-        // Seller tier & badges
         sellerTier: shop.sellerTier || "STANDARD",
         badges: shop.badges?.map((b: any) => b.badgeType) || [],
         sellerPerformance: shop.performance
@@ -1708,15 +1732,12 @@ export class ShopsService {
               onTimeDispatchRate: shop.performance.onTimeDispatchRate,
             }
           : null,
-        // Pricing
         estimatedPrice: Math.round(estimatedPrice),
         materialCost: Math.round(materialCost),
         makingCharge: Math.round(makingCharge),
         hasCustomRate: !!shopMetalRate,
-        // Ratings
         averageRating: Math.round(avgRating * 10) / 10,
         reviewCount: shop._count.ratings,
-        // Location matching
         locationScore,
         locationMatch:
           locationScore === 3
@@ -1726,74 +1747,80 @@ export class ShopsService {
               : locationScore === 1
                 ? "same_country"
                 : "other",
-        // Capabilities
         supportedJewelleryTypes: shop.supportedJewelleryTypes,
         supportedMethods: shop.supportedMethods,
         supportedFinishes: shop.supportedFinishes,
+        // Soft matching info
+        featureScore: Math.round(featureScore * 10) / 10,
+        maxFeatureScore,
+        isFullMatch,
+        unsupportedFeatures,
+        matchLabel: isFullMatch
+          ? "Full Match"
+          : unsupportedFeatures.length <= 2
+            ? "Partial Match"
+            : "Ask Seller",
       };
     });
 
-    // Apply filters
+    // ── Step 3: Apply hard filters (rating, price) ──
     let filtered = enrichedShops;
-
     if (minRating !== undefined) {
       filtered = filtered.filter((s) => s.averageRating >= minRating);
     }
-
     if (maxPrice !== undefined) {
       filtered = filtered.filter((s) => s.estimatedPrice <= maxPrice);
     }
 
-    // Secondary sort function within each group
-    const secondarySort = (
-      list: typeof filtered,
-      by: typeof sortBy,
-    ): typeof filtered => {
+    // ── Step 4: Sort by combined score ──
+    // Primary: featureScore (desc) + locationScore (desc)
+    // Then secondary sort within
+    const combinedSort = (list: typeof filtered): typeof filtered => {
       const copy = [...list];
-      switch (by) {
-        case "price":
-          copy.sort((a, b) => a.estimatedPrice - b.estimatedPrice);
-          break;
-        case "rating":
-          copy.sort((a, b) => b.averageRating - a.averageRating);
-          break;
-        case "popularity":
-          copy.sort((a, b) => b.reviewCount - a.reviewCount);
-          break;
-        case "location":
-        default:
-          // Within the same location tier, sort by rating
-          copy.sort((a, b) => b.averageRating - a.averageRating);
-          break;
-      }
+      copy.sort((a, b) => {
+        // 1. Full match first, partial second, ask-seller last
+        const matchOrder = (b.isFullMatch ? 10 : 0) - (a.isFullMatch ? 10 : 0);
+        if (matchOrder !== 0) return matchOrder;
+
+        // 2. Feature score (higher = better)
+        const featureDiff = b.featureScore - a.featureScore;
+        if (Math.abs(featureDiff) > 0.1) return featureDiff;
+
+        // 3. Location score (higher = closer)
+        const locDiff = b.locationScore - a.locationScore;
+        if (locDiff !== 0) return locDiff;
+
+        // 4. Secondary sort
+        switch (sortBy) {
+          case "price":
+            return a.estimatedPrice - b.estimatedPrice;
+          case "rating":
+            return b.averageRating - a.averageRating;
+          case "popularity":
+            return b.reviewCount - a.reviewCount;
+          default:
+            return b.averageRating - a.averageRating;
+        }
+      });
       return copy;
     };
 
-    // Group sellers by location tier
-    const sameCitySellers = secondarySort(
-      filtered.filter((s) => s.locationScore === 3),
-      sortBy,
+    const sortedAll = combinedSort(filtered);
+
+    // Group by match quality for frontend sections
+    const fullMatchSellers = sortedAll.filter((s) => s.isFullMatch);
+    const partialMatchSellers = sortedAll.filter(
+      (s) => !s.isFullMatch && s.unsupportedFeatures.length <= 2,
     );
-    const sameStateSellers = secondarySort(
-      filtered.filter((s) => s.locationScore === 2),
-      sortBy,
-    );
-    const sameCountrySellers = secondarySort(
-      filtered.filter((s) => s.locationScore === 1),
-      sortBy,
-    );
-    const otherSellers = secondarySort(
-      filtered.filter((s) => s.locationScore === 0),
-      sortBy,
+    const askSellerList = sortedAll.filter(
+      (s) => !s.isFullMatch && s.unsupportedFeatures.length > 2,
     );
 
-    // Build flat sorted list: city first, then state, then country, then other
-    const sortedAll = [
-      ...sameCitySellers,
-      ...sameStateSellers,
-      ...sameCountrySellers,
-      ...otherSellers,
-    ];
+    // Also group by location for backwards compatibility
+    const sameCitySellers = sortedAll.filter((s) => s.locationScore === 3);
+    const sameStateSellers = sortedAll.filter((s) => s.locationScore === 2);
+    const sameCountrySellers = sortedAll.filter((s) => s.locationScore === 1);
+    const otherSellers = sortedAll.filter((s) => s.locationScore === 0);
 
     // Paginate
     const total = sortedAll.length;
@@ -1802,7 +1829,6 @@ export class ShopsService {
 
     return {
       sellers: paginated,
-      // Grouped seller counts and IDs for frontend grouping
       groups: {
         nearYou: {
           label: customerCity ? `In ${customerCity}` : "Near You",
@@ -1825,6 +1851,23 @@ export class ShopsService {
           sellerIds: otherSellers.map((s) => s.id),
         },
       },
+      matchGroups: {
+        fullMatch: {
+          label: "Full Match",
+          count: fullMatchSellers.length,
+          sellerIds: fullMatchSellers.map((s) => s.id),
+        },
+        partialMatch: {
+          label: "Partial Match — some features may not be listed",
+          count: partialMatchSellers.length,
+          sellerIds: partialMatchSellers.map((s) => s.id),
+        },
+        askSeller: {
+          label: "Ask Seller — contact to confirm capabilities",
+          count: askSellerList.length,
+          sellerIds: askSellerList.map((s) => s.id),
+        },
+      },
       meta: {
         page,
         pageSize,
@@ -1833,33 +1876,26 @@ export class ShopsService {
       },
       stats: {
         totalMatching: total,
+        fullMatchCount: fullMatchSellers.length,
+        partialMatchCount: partialMatchSellers.length,
+        askSellerCount: askSellerList.length,
         sameCityCount: sameCitySellers.length,
         sameStateCount: sameStateSellers.length,
         sameCountryCount: sameCountrySellers.length,
         internationalCount: otherSellers.length,
         avgPrice:
           filtered.length > 0
-            ? Math.round(
-                filtered.reduce((sum, s) => sum + s.estimatedPrice, 0) /
-                  filtered.length,
-              )
+            ? Math.round(filtered.reduce((sum, s) => sum + s.estimatedPrice, 0) / filtered.length)
             : 0,
         minPrice:
-          filtered.length > 0
-            ? Math.min(...filtered.map((s) => s.estimatedPrice))
-            : 0,
+          filtered.length > 0 ? Math.min(...filtered.map((s) => s.estimatedPrice)) : 0,
         maxPrice:
-          filtered.length > 0
-            ? Math.max(...filtered.map((s) => s.estimatedPrice))
-            : 0,
+          filtered.length > 0 ? Math.max(...filtered.map((s) => s.estimatedPrice)) : 0,
       },
-      // Diagnostics to help understand why no sellers matched
       diagnostics: {
         totalShops,
-        activeShops,
-        verifiedShops,
         activeAndVerified,
-        matchingBeforeCountryFilter: withoutMaterialFilter,
+        fetchedForScoring: shops.length,
         customerCountry,
         customerState: customerState || null,
         customerCity: customerCity || null,
@@ -1868,6 +1904,9 @@ export class ShopsService {
           jewelleryType,
           buildMethod,
           metalType: metalType || null,
+          alloyType: alloyType || null,
+          baseMetal: baseMetal || null,
+          platingType: platingType || null,
           minRating: minRating || null,
           maxPrice: maxPrice || null,
         },

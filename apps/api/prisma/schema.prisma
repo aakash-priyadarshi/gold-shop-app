@@ -182,6 +182,9 @@ model Shop {
   supportedMaterials      String[]
   supportedGemstones      String[]
   supportedFinishes       String[]
+  supportedAlloys         String[]              // e.g. ["GOLD_18K", "GOLD_14K", "STERLING_SILVER_925"]
+  supportedBaseMetals     String[]              // e.g. ["BRASS", "COPPER", "STAINLESS_STEEL_316L"]
+  supportedPlatingTypes   String[]              // e.g. ["GOLD_PLATING", "RHODIUM_PLATING", "PVD_COATING"]
   minOrderValueNpr        Float                 @default(0)
   maxOrderValueNpr        Float?
   maxWeightGrams          Float?
