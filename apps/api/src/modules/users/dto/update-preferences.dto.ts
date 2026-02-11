@@ -27,6 +27,16 @@ export class UpdatePreferencesDto {
   @IsEnum(['NP', 'IN', 'AE', 'UK', 'EU', 'US'])
   preferredCountry?: string;
 
+  @ApiPropertyOptional({ description: 'Preferred state/province code' })
+  @IsOptional()
+  @IsString()
+  preferredState?: string;
+
+  @ApiPropertyOptional({ description: 'Preferred city name' })
+  @IsOptional()
+  @IsString()
+  preferredCity?: string;
+
   @ApiPropertyOptional({ 
     enum: ['light', 'dark', 'system'],
     description: 'Theme mode preference'

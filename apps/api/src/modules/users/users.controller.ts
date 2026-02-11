@@ -148,6 +148,8 @@ export class UsersController {
       preferredLanguage: dto.preferredLanguage,
       preferredCurrency: dto.preferredCurrency,
       preferredCountry: dto.preferredCountry,
+      preferredState: dto.preferredState,
+      preferredCity: dto.preferredCity,
       themeMode: dto.themeMode,
     });
   }

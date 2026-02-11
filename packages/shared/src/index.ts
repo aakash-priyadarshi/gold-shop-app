@@ -10,3 +10,4 @@ export * from './types/composition';
 // Utilities
 export * from './utils/weight-conversion';
 export * from './utils/market-config';
+export * from './location-data';

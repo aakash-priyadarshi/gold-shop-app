@@ -44,7 +44,7 @@ import {
   usePreferencesStore,
   type CurrencyCode,
 } from "@/store/preferences";
-import { fromGrams, toGrams } from "@gold-shop/shared";
+import { fromGrams, toGrams, getStatesForCountry, getCitiesForCountry } from "@gold-shop/shared";
 import {
   AlertCircle,
   AlertTriangle,
@@ -60,7 +60,6 @@ import {
   Info,
   Loader2,
   MapPin,
-  MessageCircle,
   Phone,
   RotateCcw,
   Send,
@@ -706,6 +705,23 @@ export default function CreateRfqPage() {
     maxPrice: number;
   }
 
+  interface SellerDiagnostics {
+    totalShops: number;
+    activeShops: number;
+    verifiedShops: number;
+    activeAndVerified: number;
+    matchingBeforeCountryFilter: number;
+    customerCountry: string;
+    includeInternational: boolean;
+    filtersApplied: {
+      jewelleryType: string;
+      buildMethod: string;
+      metalType: string | null;
+      minRating: number | null;
+      maxPrice: number | null;
+    };
+  }
+
   // Delivery address type
   interface DeliveryAddress {
     id: string;
@@ -726,6 +742,7 @@ export default function CreateRfqPage() {
   const [sellerStats, setSellerStats] = useState<SellerMatchingStats | null>(
     null,
   );
+  const [sellerDiagnostics, setSellerDiagnostics] = useState<SellerDiagnostics | null>(null);
   const [loadingSellers, setLoadingSellers] = useState(false);
   const [sellerSortBy, setSellerSortBy] = useState<
     "location" | "price" | "rating" | "popularity"
@@ -1583,9 +1600,11 @@ export default function CreateRfqPage() {
         const data = await response.json();
         setMatchingSellers(data.sellers || []);
         setSellerStats(data.stats || null);
+        setSellerDiagnostics(data.diagnostics || null);
       } else {
         console.error("Failed to fetch matching sellers");
         setMatchingSellers([]);
+        setSellerDiagnostics(null);
       }
     } catch (err) {
       console.error("Error fetching matching sellers:", err);
@@ -4672,108 +4691,181 @@ export default function CreateRfqPage() {
                     {/* Advanced Filters Panel */}
                     {showAdvancedFilters && (
                       <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
+                        {/* Include International Sellers Toggle */}
+                        <div className="mb-4 pb-3 border-b">
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={includeInternational}
+                              onChange={(e) => {
+                                setIncludeInternational(e.target.checked);
+                                if (!e.target.checked) {
+                                  setFilterCountry(undefined);
+                                }
+                              }}
+                              className="w-4 h-4 rounded border-gray-300 text-amber-500 focus:ring-amber-500"
+                            />
+                            <div>
+                              <span className="text-sm font-medium text-gray-700">
+                                🌍 Include international sellers
+                              </span>
+                              <p className="text-xs text-gray-500">
+                                Show sellers from other countries. International
+                                orders can be picked up from Orivraa routing
+                                centres.
+                              </p>
+                            </div>
+                          </label>
+                        </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                          {/* Country Filter */}
+                          {/* Country Filter - locked unless international is on */}
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Country
+                              {!includeInternational && (
+                                <span className="text-xs text-gray-400 ml-1">(locked)</span>
+                              )}
                             </label>
                             <Select
-                              value={filterCountry || "all"}
+                              value={includeInternational ? (filterCountry || "all") : (country || "IN")}
                               onValueChange={(val) =>
-                                setFilterCountry(
-                                  val === "all" ? undefined : val,
-                                )
+                                setFilterCountry(val === "all" ? undefined : val)
                               }
+                              disabled={!includeInternational}
                             >
-                              <SelectTrigger className="bg-white">
+                              <SelectTrigger className={`bg-white ${!includeInternational ? "opacity-60" : ""}`}>
                                 <SelectValue placeholder="All countries" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="all">
-                                  All countries
-                                </SelectItem>
-                                {(
-                                  Object.entries(COUNTRIES) as [
-                                    string,
-                                    { name: string },
-                                  ][]
-                                ).map(([code, c]) => (
-                                  <SelectItem key={code} value={c.name}>
-                                    {c.name}
-                                  </SelectItem>
-                                ))}
+                                <SelectItem value="all">All countries</SelectItem>
+                                {(Object.entries(COUNTRIES) as [string, { name: string }][]).map(
+                                  ([code, c]) => (
+                                    <SelectItem key={code} value={code}>
+                                      {c.name}
+                                    </SelectItem>
+                                  ),
+                                )}
                               </SelectContent>
                             </Select>
                           </div>
 
-                          {/* State Filter */}
+                          {/* State Filter - dropdown */}
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               State / Region
                             </label>
-                            <Input
-                              placeholder="e.g., Bihar, Maharashtra"
-                              value={filterState || ""}
-                              onChange={(e) =>
-                                setFilterState(e.target.value || undefined)
+                            {(() => {
+                              const effectiveFilterCountry = includeInternational
+                                ? (filterCountry || country || "IN")
+                                : (country || "IN");
+                              const states = getStatesForCountry(effectiveFilterCountry);
+                              if (states.length > 0) {
+                                return (
+                                  <Select
+                                    value={filterState || "all"}
+                                    onValueChange={(val) => {
+                                      setFilterState(val === "all" ? undefined : val);
+                                      setFilterCity(undefined);
+                                    }}
+                                  >
+                                    <SelectTrigger className="bg-white">
+                                      <SelectValue placeholder="All states" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="all">All states</SelectItem>
+                                      {states.map((s) => (
+                                        <SelectItem key={s.code} value={s.code}>
+                                          {s.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                );
                               }
-                              className="bg-white"
-                            />
+                              return (
+                                <Input
+                                  placeholder="e.g., Bihar"
+                                  value={filterState || ""}
+                                  onChange={(e) => setFilterState(e.target.value || undefined)}
+                                  className="bg-white"
+                                />
+                              );
+                            })()}
                           </div>
 
-                          {/* City Filter */}
+                          {/* City Filter - dropdown */}
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               City
                             </label>
-                            <Input
-                              placeholder="e.g., Patna, Mumbai"
-                              value={filterCity || ""}
-                              onChange={(e) =>
-                                setFilterCity(e.target.value || undefined)
+                            {(() => {
+                              const effectiveFilterCountry = includeInternational
+                                ? (filterCountry || country || "IN")
+                                : (country || "IN");
+                              const cities = getCitiesForCountry(
+                                effectiveFilterCountry,
+                                filterState || undefined,
+                              );
+                              if (cities.length > 0) {
+                                return (
+                                  <Select
+                                    value={filterCity || "all"}
+                                    onValueChange={(val) =>
+                                      setFilterCity(val === "all" ? undefined : val)
+                                    }
+                                  >
+                                    <SelectTrigger className="bg-white">
+                                      <SelectValue placeholder="All cities" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="all">All cities</SelectItem>
+                                      {cities.map((c) => (
+                                        <SelectItem key={c.name} value={c.name}>
+                                          {c.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                );
                               }
-                              className="bg-white"
-                            />
+                              return (
+                                <Input
+                                  placeholder="e.g., Patna"
+                                  value={filterCity || ""}
+                                  onChange={(e) => setFilterCity(e.target.value || undefined)}
+                                  className="bg-white"
+                                />
+                              );
+                            })()}
                           </div>
 
-                          {/* Rating & Price Filters */}
-                          <div className="space-y-3">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Min Rating
-                              </label>
-                              <Select
-                                value={sellerMinRating?.toString() || "any"}
-                                onValueChange={(val) =>
-                                  setSellerMinRating(
-                                    val === "any" ? undefined : Number(val),
-                                  )
-                                }
-                              >
-                                <SelectTrigger className="bg-white">
-                                  <SelectValue placeholder="Any rating" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="any">
-                                    Any rating
-                                  </SelectItem>
-                                  <SelectItem value="4">⭐ 4+ stars</SelectItem>
-                                  <SelectItem value="3">⭐ 3+ stars</SelectItem>
-                                  <SelectItem value="2">⭐ 2+ stars</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
+                          {/* Rating Filter */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Min Rating
+                            </label>
+                            <Select
+                              value={sellerMinRating?.toString() || "any"}
+                              onValueChange={(val) =>
+                                setSellerMinRating(val === "any" ? undefined : Number(val))
+                              }
+                            >
+                              <SelectTrigger className="bg-white">
+                                <SelectValue placeholder="Any rating" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="any">Any rating</SelectItem>
+                                <SelectItem value="4">⭐ 4+ stars</SelectItem>
+                                <SelectItem value="3">⭐ 3+ stars</SelectItem>
+                                <SelectItem value="2">⭐ 2+ stars</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
 
                         {/* Clear Filters Button */}
-                        {(filterCountry ||
-                          filterState ||
-                          filterCity ||
-                          sellerMinRating ||
-                          sellerMaxPrice ||
-                          includeInternational) && (
+                        {(filterCountry || filterState || filterCity || sellerMinRating || sellerMaxPrice || includeInternational) && (
                           <div className="mt-4 pt-3 border-t">
                             <button
                               onClick={() => {
@@ -4791,30 +4883,6 @@ export default function CreateRfqPage() {
                             </button>
                           </div>
                         )}
-
-                        {/* Include International Sellers Toggle */}
-                        <div className="mt-4 pt-3 border-t">
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={includeInternational}
-                              onChange={(e) =>
-                                setIncludeInternational(e.target.checked)
-                              }
-                              className="w-4 h-4 rounded border-gray-300 text-amber-500 focus:ring-amber-500"
-                            />
-                            <div>
-                              <span className="text-sm font-medium text-gray-700">
-                                🌍 Include international sellers
-                              </span>
-                              <p className="text-xs text-gray-500">
-                                Show sellers from other countries. International
-                                orders can be picked up from Orivraa routing
-                                centres.
-                              </p>
-                            </div>
-                          </label>
-                        </div>
                       </div>
                     )}
 
@@ -4832,12 +4900,60 @@ export default function CreateRfqPage() {
                         <h3 className="font-medium text-gray-700 mb-1">
                           No matching sellers found
                         </h3>
-                        <p className="text-sm text-gray-500">
-                          We couldn&apos;t find sellers matching your
-                          requirements. <br />
-                          Your request has been saved and you&apos;ll be
-                          notified when sellers respond.
-                        </p>
+                        <div className="text-sm text-gray-500 space-y-2 max-w-md mx-auto">
+                          {sellerDiagnostics && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3 text-left">
+                              <p className="font-medium text-amber-800 mb-1 text-xs">🔍 Diagnostics</p>
+                              <ul className="text-xs text-amber-700 space-y-0.5">
+                                <li>Total shops: {sellerDiagnostics.totalShops} | Active & verified: {sellerDiagnostics.activeAndVerified}</li>
+                                {sellerDiagnostics.matchingBeforeCountryFilter > 0 && sellerDiagnostics.activeAndVerified > 0 && (
+                                  <li>Shops matching type/method (before country filter): {sellerDiagnostics.matchingBeforeCountryFilter}</li>
+                                )}
+                                {sellerDiagnostics.activeAndVerified === 0 && (
+                                  <li className="text-red-600 font-medium">No shops are both active and verified yet</li>
+                                )}
+                                {sellerDiagnostics.matchingBeforeCountryFilter > 0 && sellerDiagnostics.activeAndVerified > 0 && (
+                                  <li className="text-red-600 font-medium">Country filter excluded all remaining shops</li>
+                                )}
+                              </ul>
+                            </div>
+                          )}
+                          <p>Possible reasons:</p>
+                          <ul className="text-left list-disc pl-6 space-y-1">
+                            {sellerDiagnostics && sellerDiagnostics.activeAndVerified === 0 ? (
+                              <li className="text-red-600">No shops are currently active and verified — sellers need to activate and verify their shop</li>
+                            ) : (
+                              <>
+                                <li>
+                                  No verified sellers in <strong>{country ? COUNTRIES[country as keyof typeof COUNTRIES]?.name || country : "your region"}</strong> support this jewellery type
+                                </li>
+                                {filterState && (
+                                  <li>No sellers found in the selected state — try &quot;All states&quot;</li>
+                                )}
+                                {filterCity && (
+                                  <li>No sellers found in the selected city — try &quot;All cities&quot;</li>
+                                )}
+                                {sellerMinRating && (
+                                  <li>Rating filter is too strict — try lowering it</li>
+                                )}
+                                <li>Sellers may not have enabled <strong>{formData.jewelleryType}</strong> or <strong>{formData.buildMethod}</strong> in their inventory</li>
+                              </>
+                            )}
+                          </ul>
+                          <div className="flex flex-col items-center gap-2 mt-4">
+                            {!includeInternational && (
+                              <button
+                                onClick={() => setIncludeInternational(true)}
+                                className="text-amber-600 hover:text-amber-700 font-medium text-sm"
+                              >
+                                🌍 Try including international sellers
+                              </button>
+                            )}
+                            <p className="text-xs text-gray-400">
+                              Your request has been saved — you&apos;ll be notified when sellers respond.
+                            </p>
+                          </div>
+                        </div>
                         <Link
                           href={`/rfq/${submittedRfqId}`}
                           className="inline-flex items-center gap-2 mt-4 text-gold-600 hover:text-gold-700 font-medium"
@@ -4853,8 +4969,7 @@ export default function CreateRfqPage() {
                           const totalMakingPercent =
                             seller.makingChargePercent + platformCommission;
                           const totalMakingCharge = Math.round(
-                            seller.materialCost *
-                              (totalMakingPercent / 100),
+                            seller.materialCost * (totalMakingPercent / 100),
                           );
                           const totalPrice =
                             seller.materialCost + totalMakingCharge;
@@ -4864,146 +4979,153 @@ export default function CreateRfqPage() {
                             seller.country.toLowerCase() !==
                               country.toLowerCase();
                           return (
-                          <div
-                            key={seller.id}
-                            className={`border rounded-lg p-4 hover:shadow-md transition-shadow ${
-                              seller.locationMatch === "same_city"
-                                ? "border-green-200 bg-green-50/50"
-                                : isInternational
-                                  ? "border-orange-200 bg-orange-50/30"
-                                  : ""
-                            }`}
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <h4 className="font-semibold text-gray-900">
-                                    {seller.shopName}
-                                  </h4>
-                                  {seller.isVerified && (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <ShieldCheck className="h-4 w-4 text-blue-500" />
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        Verified Seller
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  )}
-                                  {seller.sellerTier &&
-                                    seller.sellerTier !== "STANDARD" && (
-                                      <SellerTierBadge
-                                        tier={seller.sellerTier}
-                                        compact
-                                      />
+                            <div
+                              key={seller.id}
+                              className={`border rounded-lg p-4 hover:shadow-md transition-shadow ${
+                                seller.locationMatch === "same_city"
+                                  ? "border-green-200 bg-green-50/50"
+                                  : isInternational
+                                    ? "border-orange-200 bg-orange-50/30"
+                                    : ""
+                              }`}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <h4 className="font-semibold text-gray-900">
+                                      {seller.shopName}
+                                    </h4>
+                                    {seller.isVerified && (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <ShieldCheck className="h-4 w-4 text-blue-500" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          Verified Seller
+                                        </TooltipContent>
+                                      </Tooltip>
                                     )}
-                                  {seller.locationMatch === "same_city" && (
-                                    <Badge className="bg-green-100 text-green-700 text-xs">
-                                      Same City
-                                    </Badge>
-                                  )}
-                                  {seller.locationMatch === "same_state" && (
-                                    <Badge className="bg-blue-100 text-blue-700 text-xs">
-                                      Same State
-                                    </Badge>
-                                  )}
-                                  {isInternational && (
-                                    <Badge className="bg-orange-100 text-orange-700 text-xs">
-                                      🌍 International
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-4 text-sm text-gray-500 mb-2">
-                                  <span className="flex items-center gap-1">
-                                    <MapPin className="h-3.5 w-3.5" />
-                                    {[seller.city, seller.state, seller.country]
-                                      .filter(Boolean)
-                                      .join(", ") || "Location not specified"}
-                                  </span>
-                                  {seller.averageRating > 0 && (
+                                    {seller.sellerTier &&
+                                      seller.sellerTier !== "STANDARD" && (
+                                        <SellerTierBadge
+                                          tier={seller.sellerTier}
+                                          compact
+                                        />
+                                      )}
+                                    {seller.locationMatch === "same_city" && (
+                                      <Badge className="bg-green-100 text-green-700 text-xs">
+                                        Same City
+                                      </Badge>
+                                    )}
+                                    {seller.locationMatch === "same_state" && (
+                                      <Badge className="bg-blue-100 text-blue-700 text-xs">
+                                        Same State
+                                      </Badge>
+                                    )}
+                                    {isInternational && (
+                                      <Badge className="bg-orange-100 text-orange-700 text-xs">
+                                        🌍 International
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-4 text-sm text-gray-500 mb-2">
                                     <span className="flex items-center gap-1">
-                                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                                      {seller.averageRating.toFixed(1)} (
-                                      {seller.reviewCount} reviews)
+                                      <MapPin className="h-3.5 w-3.5" />
+                                      {[
+                                        seller.city,
+                                        seller.state,
+                                        seller.country,
+                                      ]
+                                        .filter(Boolean)
+                                        .join(", ") || "Location not specified"}
                                     </span>
-                                  )}
-                                </div>
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                  {seller.codEnabled && !isInternational && (
+                                    {seller.averageRating > 0 && (
+                                      <span className="flex items-center gap-1">
+                                        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                                        {seller.averageRating.toFixed(1)} (
+                                        {seller.reviewCount} reviews)
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-wrap gap-2 mt-2">
+                                    {seller.codEnabled && !isInternational && (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs"
+                                      >
+                                        COD Available
+                                      </Badge>
+                                    )}
                                     <Badge
                                       variant="outline"
                                       className="text-xs"
                                     >
-                                      COD Available
+                                      Making Charge: {totalMakingPercent}%
                                     </Badge>
-                                  )}
-                                  <Badge variant="outline" className="text-xs">
-                                    Making Charge: {totalMakingPercent}%
-                                  </Badge>
-                                  {seller.hasCustomRate && (
-                                    <Badge
-                                      variant="outline"
-                                      className="text-xs text-green-600 border-green-200"
-                                    >
-                                      Custom Pricing
-                                    </Badge>
-                                  )}
-                                </div>
-
-                                {/* International delivery notice */}
-                                {isInternational && (
-                                  <div className="mt-3 p-2.5 bg-orange-50 border border-orange-200 rounded-lg">
-                                    <p className="text-xs text-orange-800 flex items-start gap-1.5">
-                                      <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                                      <span>
-                                        <strong>International Order:</strong>{" "}
-                                        This item will not be delivered directly
-                                        to you. You can pick it up from an
-                                        Orivraa routing centre in your city.
-                                        Location details will be shared once the
-                                        order is received by Orivraa.
-                                      </span>
-                                    </p>
+                                    {seller.hasCustomRate && (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs text-green-600 border-green-200"
+                                      >
+                                        Custom Pricing
+                                      </Badge>
+                                    )}
                                   </div>
-                                )}
-                              </div>
-                              <div className="text-right ml-4">
-                                <div className="text-lg font-bold text-gold-600">
-                                  {currencyInfo?.symbol || "Rs."}
-                                  {totalPrice.toLocaleString()}
+
+                                  {/* International delivery notice */}
+                                  {isInternational && (
+                                    <div className="mt-3 p-2.5 bg-orange-50 border border-orange-200 rounded-lg">
+                                      <p className="text-xs text-orange-800 flex items-start gap-1.5">
+                                        <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                                        <span>
+                                          <strong>International Order:</strong>{" "}
+                                          This item will not be delivered
+                                          directly to you. You can pick it up
+                                          from an Orivraa routing centre in your
+                                          city. Location details will be shared
+                                          once the order is received by Orivraa.
+                                        </span>
+                                      </p>
+                                    </div>
+                                  )}
                                 </div>
-                                <div className="text-xs text-gray-500">
-                                  Material: {currencyInfo?.symbol || "Rs."}
-                                  {seller.materialCost.toLocaleString()}
-                                  <br />
-                                  Making ({totalMakingPercent}%):{" "}
-                                  {currencyInfo?.symbol || "Rs."}
-                                  {totalMakingCharge.toLocaleString()}
-                                </div>
-                                <MarketComparison
-                                  ourPrice={totalPrice}
-                                  currencySymbol={currencyInfo?.symbol || "Rs."}
-                                  makingChargePercent={totalMakingPercent}
-                                />
-                                <div className="mt-3">
-                                  <button
-                                    onClick={() => {
-                                      setSelectedSeller(seller);
-                                      setOrderBudget(
-                                        String(totalPrice),
-                                      );
-                                      setOrderMessage("");
-                                      setShowOrderModal(true);
-                                    }}
-                                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-amber-950 font-semibold text-sm rounded-lg hover:from-amber-400 hover:via-yellow-300 hover:to-amber-400 shadow-sm hover:shadow transition-all"
-                                  >
-                                    <ShoppingBag className="h-4 w-4" />
-                                    Order from this seller
-                                  </button>
+                                <div className="text-right ml-4">
+                                  <div className="text-lg font-bold text-gold-600">
+                                    {currencyInfo?.symbol || "Rs."}
+                                    {totalPrice.toLocaleString()}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    Material: {currencyInfo?.symbol || "Rs."}
+                                    {seller.materialCost.toLocaleString()}
+                                    <br />
+                                    Making ({totalMakingPercent}%):{" "}
+                                    {currencyInfo?.symbol || "Rs."}
+                                    {totalMakingCharge.toLocaleString()}
+                                  </div>
+                                  <MarketComparison
+                                    ourPrice={totalPrice}
+                                    currencySymbol={
+                                      currencyInfo?.symbol || "Rs."
+                                    }
+                                    makingChargePercent={totalMakingPercent}
+                                  />
+                                  <div className="mt-3">
+                                    <button
+                                      onClick={() => {
+                                        setSelectedSeller(seller);
+                                        setOrderBudget(String(totalPrice));
+                                        setOrderMessage("");
+                                        setShowOrderModal(true);
+                                      }}
+                                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-amber-950 font-semibold text-sm rounded-lg hover:from-amber-400 hover:via-yellow-300 hover:to-amber-400 shadow-sm hover:shadow transition-all"
+                                    >
+                                      <ShoppingBag className="h-4 w-4" />
+                                      Order from this seller
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
                           );
                         })}
                       </div>
@@ -5186,9 +5308,7 @@ export default function CreateRfqPage() {
                     const data = await response.json();
                     setShowOrderModal(false);
                     // Navigate to customer's RFQ tracking page
-                    router.push(
-                      `/dashboard/customer/rfqs/${submittedRfqId}`,
-                    );
+                    router.push(`/dashboard/customer/rfqs/${submittedRfqId}`);
                   } else {
                     const errorData = await response.json().catch(() => null);
                     setError(
@@ -5219,7 +5339,6 @@ export default function CreateRfqPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
     </TooltipProvider>
   );
 }
