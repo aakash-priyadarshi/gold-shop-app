@@ -323,13 +323,17 @@ export const usePreferencesStore = create<PreferencesState>()(
       }),
       // On rehydrate, check if we need to do geo detection
       onRehydrateStorage: () => (state) => {
-        // After rehydration from localStorage, check if this is a fresh start
-        // (i.e., no persisted country yet - still on default 'US')
         if (typeof window !== "undefined") {
-          // If the localStorage didn't have anything, detect location
           const stored = localStorage.getItem("gold-shop-preferences");
+          const userChoseCountry = localStorage.getItem("orivraa_user_country_choice");
+
           if (!stored) {
             // First visit - detect country from geo API
+            initializeFromGeo();
+          } else if (!userChoseCountry && state?.country === "US") {
+            // Country is still default "US" and user never explicitly chose it.
+            // Re-run geo-detection in case it failed on the first visit.
+            console.log("[preferences] Country still default US — re-detecting...");
             initializeFromGeo();
           }
         }
