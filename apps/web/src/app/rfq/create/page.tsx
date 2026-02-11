@@ -44,7 +44,12 @@ import {
   usePreferencesStore,
   type CurrencyCode,
 } from "@/store/preferences";
-import { fromGrams, toGrams, getStatesForCountry, getCitiesForCountry } from "@gold-shop/shared";
+import {
+  fromGrams,
+  getCitiesForCountry,
+  getStatesForCountry,
+  toGrams,
+} from "@gold-shop/shared";
 import {
   AlertCircle,
   AlertTriangle,
@@ -722,6 +727,19 @@ export default function CreateRfqPage() {
     };
   }
 
+  interface SellerGroupInfo {
+    label: string;
+    count: number;
+    sellerIds: string[];
+  }
+
+  interface SellerGroups {
+    nearYou: SellerGroupInfo;
+    sameState: SellerGroupInfo;
+    sameCountry: SellerGroupInfo;
+    international: SellerGroupInfo;
+  }
+
   // Delivery address type
   interface DeliveryAddress {
     id: string;
@@ -742,7 +760,9 @@ export default function CreateRfqPage() {
   const [sellerStats, setSellerStats] = useState<SellerMatchingStats | null>(
     null,
   );
-  const [sellerDiagnostics, setSellerDiagnostics] = useState<SellerDiagnostics | null>(null);
+  const [sellerDiagnostics, setSellerDiagnostics] =
+    useState<SellerDiagnostics | null>(null);
+  const [sellerGroups, setSellerGroups] = useState<SellerGroups | null>(null);
   const [loadingSellers, setLoadingSellers] = useState(false);
   const [sellerSortBy, setSellerSortBy] = useState<
     "location" | "price" | "rating" | "popularity"
@@ -1601,10 +1621,12 @@ export default function CreateRfqPage() {
         setMatchingSellers(data.sellers || []);
         setSellerStats(data.stats || null);
         setSellerDiagnostics(data.diagnostics || null);
+        setSellerGroups(data.groups || null);
       } else {
         console.error("Failed to fetch matching sellers");
         setMatchingSellers([]);
         setSellerDiagnostics(null);
+        setSellerGroups(null);
       }
     } catch (err) {
       console.error("Error fetching matching sellers:", err);
@@ -4636,6 +4658,11 @@ export default function CreateRfqPage() {
                               {sellerStats.sameCityCount} in your city
                             </div>
                           )}
+                          {sellerStats.sameStateCount > 0 && (
+                            <div className="text-blue-600">
+                              {sellerStats.sameStateCount} in your state
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -4724,28 +4751,43 @@ export default function CreateRfqPage() {
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Country
                               {!includeInternational && (
-                                <span className="text-xs text-gray-400 ml-1">(locked)</span>
+                                <span className="text-xs text-gray-400 ml-1">
+                                  (locked)
+                                </span>
                               )}
                             </label>
                             <Select
-                              value={includeInternational ? (filterCountry || "all") : (country || "IN")}
+                              value={
+                                includeInternational
+                                  ? filterCountry || "all"
+                                  : country || "IN"
+                              }
                               onValueChange={(val) =>
-                                setFilterCountry(val === "all" ? undefined : val)
+                                setFilterCountry(
+                                  val === "all" ? undefined : val,
+                                )
                               }
                               disabled={!includeInternational}
                             >
-                              <SelectTrigger className={`bg-white ${!includeInternational ? "opacity-60" : ""}`}>
+                              <SelectTrigger
+                                className={`bg-white ${!includeInternational ? "opacity-60" : ""}`}
+                              >
                                 <SelectValue placeholder="All countries" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="all">All countries</SelectItem>
-                                {(Object.entries(COUNTRIES) as [string, { name: string }][]).map(
-                                  ([code, c]) => (
-                                    <SelectItem key={code} value={code}>
-                                      {c.name}
-                                    </SelectItem>
-                                  ),
-                                )}
+                                <SelectItem value="all">
+                                  All countries
+                                </SelectItem>
+                                {(
+                                  Object.entries(COUNTRIES) as [
+                                    string,
+                                    { name: string },
+                                  ][]
+                                ).map(([code, c]) => (
+                                  <SelectItem key={code} value={code}>
+                                    {c.name}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </div>
@@ -4756,16 +4798,21 @@ export default function CreateRfqPage() {
                               State / Region
                             </label>
                             {(() => {
-                              const effectiveFilterCountry = includeInternational
-                                ? (filterCountry || country || "IN")
-                                : (country || "IN");
-                              const states = getStatesForCountry(effectiveFilterCountry);
+                              const effectiveFilterCountry =
+                                includeInternational
+                                  ? filterCountry || country || "IN"
+                                  : country || "IN";
+                              const states = getStatesForCountry(
+                                effectiveFilterCountry,
+                              );
                               if (states.length > 0) {
                                 return (
                                   <Select
                                     value={filterState || "all"}
                                     onValueChange={(val) => {
-                                      setFilterState(val === "all" ? undefined : val);
+                                      setFilterState(
+                                        val === "all" ? undefined : val,
+                                      );
                                       setFilterCity(undefined);
                                     }}
                                   >
@@ -4773,7 +4820,9 @@ export default function CreateRfqPage() {
                                       <SelectValue placeholder="All states" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="all">All states</SelectItem>
+                                      <SelectItem value="all">
+                                        All states
+                                      </SelectItem>
                                       {states.map((s) => (
                                         <SelectItem key={s.code} value={s.code}>
                                           {s.name}
@@ -4787,7 +4836,9 @@ export default function CreateRfqPage() {
                                 <Input
                                   placeholder="e.g., Bihar"
                                   value={filterState || ""}
-                                  onChange={(e) => setFilterState(e.target.value || undefined)}
+                                  onChange={(e) =>
+                                    setFilterState(e.target.value || undefined)
+                                  }
                                   className="bg-white"
                                 />
                               );
@@ -4800,9 +4851,10 @@ export default function CreateRfqPage() {
                               City
                             </label>
                             {(() => {
-                              const effectiveFilterCountry = includeInternational
-                                ? (filterCountry || country || "IN")
-                                : (country || "IN");
+                              const effectiveFilterCountry =
+                                includeInternational
+                                  ? filterCountry || country || "IN"
+                                  : country || "IN";
                               const cities = getCitiesForCountry(
                                 effectiveFilterCountry,
                                 filterState || undefined,
@@ -4812,14 +4864,18 @@ export default function CreateRfqPage() {
                                   <Select
                                     value={filterCity || "all"}
                                     onValueChange={(val) =>
-                                      setFilterCity(val === "all" ? undefined : val)
+                                      setFilterCity(
+                                        val === "all" ? undefined : val,
+                                      )
                                     }
                                   >
                                     <SelectTrigger className="bg-white">
                                       <SelectValue placeholder="All cities" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="all">All cities</SelectItem>
+                                      <SelectItem value="all">
+                                        All cities
+                                      </SelectItem>
                                       {cities.map((c) => (
                                         <SelectItem key={c.name} value={c.name}>
                                           {c.name}
@@ -4833,7 +4889,9 @@ export default function CreateRfqPage() {
                                 <Input
                                   placeholder="e.g., Patna"
                                   value={filterCity || ""}
-                                  onChange={(e) => setFilterCity(e.target.value || undefined)}
+                                  onChange={(e) =>
+                                    setFilterCity(e.target.value || undefined)
+                                  }
                                   className="bg-white"
                                 />
                               );
@@ -4848,7 +4906,9 @@ export default function CreateRfqPage() {
                             <Select
                               value={sellerMinRating?.toString() || "any"}
                               onValueChange={(val) =>
-                                setSellerMinRating(val === "any" ? undefined : Number(val))
+                                setSellerMinRating(
+                                  val === "any" ? undefined : Number(val),
+                                )
                               }
                             >
                               <SelectTrigger className="bg-white">
@@ -4865,7 +4925,12 @@ export default function CreateRfqPage() {
                         </div>
 
                         {/* Clear Filters Button */}
-                        {(filterCountry || filterState || filterCity || sellerMinRating || sellerMaxPrice || includeInternational) && (
+                        {(filterCountry ||
+                          filterState ||
+                          filterCity ||
+                          sellerMinRating ||
+                          sellerMaxPrice ||
+                          includeInternational) && (
                           <div className="mt-4 pt-3 border-t">
                             <button
                               onClick={() => {
@@ -4903,40 +4968,87 @@ export default function CreateRfqPage() {
                         <div className="text-sm text-gray-500 space-y-2 max-w-md mx-auto">
                           {sellerDiagnostics && (
                             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3 text-left">
-                              <p className="font-medium text-amber-800 mb-1 text-xs">🔍 Diagnostics</p>
+                              <p className="font-medium text-amber-800 mb-1 text-xs">
+                                🔍 Diagnostics
+                              </p>
                               <ul className="text-xs text-amber-700 space-y-0.5">
-                                <li>Total shops: {sellerDiagnostics.totalShops} | Active & verified: {sellerDiagnostics.activeAndVerified}</li>
-                                {sellerDiagnostics.matchingBeforeCountryFilter > 0 && sellerDiagnostics.activeAndVerified > 0 && (
-                                  <li>Shops matching type/method (before country filter): {sellerDiagnostics.matchingBeforeCountryFilter}</li>
-                                )}
+                                <li>
+                                  Total shops: {sellerDiagnostics.totalShops} |
+                                  Active & verified:{" "}
+                                  {sellerDiagnostics.activeAndVerified}
+                                </li>
+                                {sellerDiagnostics.matchingBeforeCountryFilter >
+                                  0 &&
+                                  sellerDiagnostics.activeAndVerified > 0 && (
+                                    <li>
+                                      Shops matching type/method (before country
+                                      filter):{" "}
+                                      {
+                                        sellerDiagnostics.matchingBeforeCountryFilter
+                                      }
+                                    </li>
+                                  )}
                                 {sellerDiagnostics.activeAndVerified === 0 && (
-                                  <li className="text-red-600 font-medium">No shops are both active and verified yet</li>
+                                  <li className="text-red-600 font-medium">
+                                    No shops are both active and verified yet
+                                  </li>
                                 )}
-                                {sellerDiagnostics.matchingBeforeCountryFilter > 0 && sellerDiagnostics.activeAndVerified > 0 && (
-                                  <li className="text-red-600 font-medium">Country filter excluded all remaining shops</li>
-                                )}
+                                {sellerDiagnostics.matchingBeforeCountryFilter >
+                                  0 &&
+                                  sellerDiagnostics.activeAndVerified > 0 && (
+                                    <li className="text-red-600 font-medium">
+                                      Country filter excluded all remaining
+                                      shops
+                                    </li>
+                                  )}
                               </ul>
                             </div>
                           )}
                           <p>Possible reasons:</p>
                           <ul className="text-left list-disc pl-6 space-y-1">
-                            {sellerDiagnostics && sellerDiagnostics.activeAndVerified === 0 ? (
-                              <li className="text-red-600">No shops are currently active and verified — sellers need to activate and verify their shop</li>
+                            {sellerDiagnostics &&
+                            sellerDiagnostics.activeAndVerified === 0 ? (
+                              <li className="text-red-600">
+                                No shops are currently active and verified —
+                                sellers need to activate and verify their shop
+                              </li>
                             ) : (
                               <>
                                 <li>
-                                  No verified sellers in <strong>{country ? COUNTRIES[country as keyof typeof COUNTRIES]?.name || country : "your region"}</strong> support this jewellery type
+                                  No verified sellers in{" "}
+                                  <strong>
+                                    {country
+                                      ? COUNTRIES[
+                                          country as keyof typeof COUNTRIES
+                                        ]?.name || country
+                                      : "your region"}
+                                  </strong>{" "}
+                                  support this jewellery type
                                 </li>
                                 {filterState && (
-                                  <li>No sellers found in the selected state — try &quot;All states&quot;</li>
+                                  <li>
+                                    No sellers found in the selected state — try
+                                    &quot;All states&quot;
+                                  </li>
                                 )}
                                 {filterCity && (
-                                  <li>No sellers found in the selected city — try &quot;All cities&quot;</li>
+                                  <li>
+                                    No sellers found in the selected city — try
+                                    &quot;All cities&quot;
+                                  </li>
                                 )}
                                 {sellerMinRating && (
-                                  <li>Rating filter is too strict — try lowering it</li>
+                                  <li>
+                                    Rating filter is too strict — try lowering
+                                    it
+                                  </li>
                                 )}
-                                <li>Sellers may not have enabled <strong>{formData.jewelleryType}</strong> or <strong>{formData.buildMethod}</strong> in their inventory</li>
+                                <li>
+                                  Sellers may not have enabled{" "}
+                                  <strong>{formData.jewelleryType}</strong> or{" "}
+                                  <strong>{formData.buildMethod}</strong> in
+                                  their inventory
+                                </li>
                               </>
                             )}
                           </ul>
@@ -4950,7 +5062,8 @@ export default function CreateRfqPage() {
                               </button>
                             )}
                             <p className="text-xs text-gray-400">
-                              Your request has been saved — you&apos;ll be notified when sellers respond.
+                              Your request has been saved — you&apos;ll be
+                              notified when sellers respond.
                             </p>
                           </div>
                         </div>
@@ -4965,6 +5078,20 @@ export default function CreateRfqPage() {
                     ) : (
                       <div className="space-y-4">
                         {matchingSellers.map((seller, index) => {
+                          // Insert group header when location tier changes
+                          const prevSeller = index > 0 ? matchingSellers[index - 1] : null;
+                          const showGroupHeader = !prevSeller || prevSeller.locationMatch !== seller.locationMatch;
+                          
+                          const groupHeaderInfo: Record<string, { icon: string; label: string; color: string; bgColor: string; borderColor: string }> = {
+                            same_city: { icon: '📍', label: sellerGroups?.nearYou?.label || 'Near You', color: 'text-green-700', bgColor: 'bg-green-50', borderColor: 'border-green-200' },
+                            same_state: { icon: '🏛️', label: sellerGroups?.sameState?.label || 'Same State', color: 'text-blue-700', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
+                            same_country: { icon: '🇮🇳', label: sellerGroups?.sameCountry?.label || 'Same Country', color: 'text-amber-700', bgColor: 'bg-amber-50', borderColor: 'border-amber-200' },
+                            other: { icon: '🌍', label: sellerGroups?.international?.label || 'International', color: 'text-purple-700', bgColor: 'bg-purple-50', borderColor: 'border-purple-200' },
+                          };
+                          
+                          const groupInfo = groupHeaderInfo[seller.locationMatch] || groupHeaderInfo.same_country;
+                          const groupCount = matchingSellers.filter(s => s.locationMatch === seller.locationMatch).length;
+                          
                           const platformCommission = 5;
                           const totalMakingPercent =
                             seller.makingChargePercent + platformCommission;
@@ -4979,16 +5106,27 @@ export default function CreateRfqPage() {
                             seller.country.toLowerCase() !==
                               country.toLowerCase();
                           return (
-                            <div
-                              key={seller.id}
-                              className={`border rounded-lg p-4 hover:shadow-md transition-shadow ${
-                                seller.locationMatch === "same_city"
-                                  ? "border-green-200 bg-green-50/50"
-                                  : isInternational
-                                    ? "border-orange-200 bg-orange-50/30"
-                                    : ""
-                              }`}
-                            >
+                            <div key={seller.id}>
+                              {showGroupHeader && (
+                                <div className={`flex items-center gap-2 px-3 py-2 ${groupInfo.bgColor} ${groupInfo.borderColor} border rounded-lg ${index > 0 ? 'mt-4' : ''} mb-3`}>
+                                  <span className="text-lg">{groupInfo.icon}</span>
+                                  <h3 className={`font-semibold text-sm ${groupInfo.color}`}>
+                                    {groupInfo.label}
+                                  </h3>
+                                  <span className="ml-auto text-xs text-gray-500 bg-white px-2 py-0.5 rounded-full border">
+                                    {groupCount} seller{groupCount !== 1 ? 's' : ''}
+                                  </span>
+                                </div>
+                              )}
+                              <div
+                                className={`border rounded-lg p-4 hover:shadow-md transition-shadow ${
+                                  seller.locationMatch === "same_city"
+                                    ? "border-green-200 bg-green-50/50"
+                                    : isInternational
+                                      ? "border-orange-200 bg-orange-50/30"
+                                      : ""
+                                }`}
+                              >
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
@@ -5126,6 +5264,7 @@ export default function CreateRfqPage() {
                                 </div>
                               </div>
                             </div>
+                            </div>
                           );
                         })}
                       </div>
@@ -5152,6 +5291,8 @@ export default function CreateRfqPage() {
                             setSubmittedRfqId(null);
                             setMatchingSellers([]);
                             setSellerStats(null);
+                            setSellerGroups(null);
+                            setSellerDiagnostics(null);
                           }}
                         >
                           <Sparkles className="mr-2 h-4 w-4" />

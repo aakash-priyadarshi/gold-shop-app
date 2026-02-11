@@ -1578,36 +1578,93 @@ export class ShopsService {
       filtered = filtered.filter((s) => s.estimatedPrice <= maxPrice);
     }
 
-    // Sort based on sortBy parameter
-    switch (sortBy) {
-      case "price":
-        filtered.sort((a, b) => a.estimatedPrice - b.estimatedPrice);
-        break;
-      case "rating":
-        filtered.sort((a, b) => b.averageRating - a.averageRating);
-        break;
-      case "popularity":
-        filtered.sort((a, b) => b.reviewCount - a.reviewCount);
-        break;
-      case "location":
-      default:
-        // Sort by location score (descending), then by rating (descending)
-        filtered.sort((a, b) => {
-          if (b.locationScore !== a.locationScore) {
-            return b.locationScore - a.locationScore;
-          }
-          return b.averageRating - a.averageRating;
-        });
-        break;
-    }
+    // Secondary sort function within each group
+    const secondarySort = (
+      list: typeof filtered,
+      by: typeof sortBy,
+    ): typeof filtered => {
+      const copy = [...list];
+      switch (by) {
+        case "price":
+          copy.sort((a, b) => a.estimatedPrice - b.estimatedPrice);
+          break;
+        case "rating":
+          copy.sort((a, b) => b.averageRating - a.averageRating);
+          break;
+        case "popularity":
+          copy.sort((a, b) => b.reviewCount - a.reviewCount);
+          break;
+        case "location":
+        default:
+          // Within the same location tier, sort by rating
+          copy.sort((a, b) => b.averageRating - a.averageRating);
+          break;
+      }
+      return copy;
+    };
+
+    // Group sellers by location tier
+    const sameCitySellers = secondarySort(
+      filtered.filter((s) => s.locationScore === 3),
+      sortBy,
+    );
+    const sameStateSellers = secondarySort(
+      filtered.filter((s) => s.locationScore === 2),
+      sortBy,
+    );
+    const sameCountrySellers = secondarySort(
+      filtered.filter((s) => s.locationScore === 1),
+      sortBy,
+    );
+    const otherSellers = secondarySort(
+      filtered.filter((s) => s.locationScore === 0),
+      sortBy,
+    );
+
+    // Build flat sorted list: city first, then state, then country, then other
+    const sortedAll = [
+      ...sameCitySellers,
+      ...sameStateSellers,
+      ...sameCountrySellers,
+      ...otherSellers,
+    ];
 
     // Paginate
-    const total = filtered.length;
+    const total = sortedAll.length;
     const skip = (page - 1) * pageSize;
-    const paginated = filtered.slice(skip, skip + pageSize);
+    const paginated = sortedAll.slice(skip, skip + pageSize);
 
     return {
       sellers: paginated,
+      // Grouped seller counts and IDs for frontend grouping
+      groups: {
+        nearYou: {
+          label: customerCity
+            ? `In ${customerCity}`
+            : "Near You",
+          count: sameCitySellers.length,
+          sellerIds: sameCitySellers.map((s) => s.id),
+        },
+        sameState: {
+          label: customerState
+            ? `In ${customerState}`
+            : "Same State",
+          count: sameStateSellers.length,
+          sellerIds: sameStateSellers.map((s) => s.id),
+        },
+        sameCountry: {
+          label: customerCountry
+            ? `In ${customerCountry}`
+            : "Same Country",
+          count: sameCountrySellers.length,
+          sellerIds: sameCountrySellers.map((s) => s.id),
+        },
+        international: {
+          label: "International",
+          count: otherSellers.length,
+          sellerIds: otherSellers.map((s) => s.id),
+        },
+      },
       meta: {
         page,
         pageSize,
@@ -1616,8 +1673,10 @@ export class ShopsService {
       },
       stats: {
         totalMatching: total,
-        sameCityCount: filtered.filter((s) => s.locationScore === 3).length,
-        sameStateCount: filtered.filter((s) => s.locationScore === 2).length,
+        sameCityCount: sameCitySellers.length,
+        sameStateCount: sameStateSellers.length,
+        sameCountryCount: sameCountrySellers.length,
+        internationalCount: otherSellers.length,
         avgPrice:
           filtered.length > 0
             ? Math.round(
@@ -1642,6 +1701,8 @@ export class ShopsService {
         activeAndVerified,
         matchingBeforeCountryFilter: withoutMaterialFilter,
         customerCountry,
+        customerState: customerState || null,
+        customerCity: customerCity || null,
         includeInternational,
         filtersApplied: {
           jewelleryType,
