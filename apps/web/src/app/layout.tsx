@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/providers';
 import { Toaster } from '@/components/ui/toaster';
+import { GeoMismatchBanner } from '@/components/layout/GeoMismatchBanner';
 import { BRAND } from '@/config/brand';
 
 const inter = Inter({ 
@@ -71,6 +72,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className={inter.variable}>
       <body className={`${inter.className} antialiased`}>
         <Providers>
+          <GeoMismatchBanner />
           {children}
           <Toaster />
         </Providers>
