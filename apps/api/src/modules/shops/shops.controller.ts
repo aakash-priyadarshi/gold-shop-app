@@ -50,6 +50,23 @@ export class ShopsController {
     });
   }
 
+  // Debug endpoint to check why matching isn't finding sellers
+  @Get("matching-debug")
+  @ApiOperation({ summary: "Debug matching: show all shops and why each matches or not" })
+  async debugMatching(
+    @Query("jewelleryType") jewelleryType: string,
+    @Query("buildMethod") buildMethod: string,
+    @Query("metalType") metalType?: string,
+    @Query("customerCountry") customerCountry?: string,
+  ) {
+    return this.shopsService.debugMatching({
+      jewelleryType: jewelleryType || "RING",
+      buildMethod: buildMethod || "METHOD_A",
+      metalType,
+      customerCountry,
+    });
+  }
+
   // Public endpoint for finding matching sellers for an RFQ
   @Get("matching")
   @ApiOperation({ summary: "Find matching sellers for an RFQ with pricing" })
