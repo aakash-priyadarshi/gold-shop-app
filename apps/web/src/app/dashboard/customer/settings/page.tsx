@@ -35,6 +35,7 @@ import {
   CurrencyCode,
   usePreferencesStore,
 } from "@/store/preferences";
+import { getCitiesForCountry, getStatesForCountry } from "@gold-shop/shared";
 import {
   CheckCircle,
   Globe,
@@ -51,10 +52,6 @@ import {
   XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  getStatesForCountry,
-  getCitiesForCountry,
-} from "@gold-shop/shared";
 
 interface DeliveryAddress {
   id?: string;
@@ -629,18 +626,25 @@ export default function CustomerSettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="pref-state">Preferred State</Label>
-                  {getStatesForCountry(profile.preferredCountry || "US").length > 0 ? (
+                  {getStatesForCountry(profile.preferredCountry || "US")
+                    .length > 0 ? (
                     <Select
                       value={profile.preferredState || ""}
                       onValueChange={(value) =>
-                        setProfile({ ...profile, preferredState: value, preferredCity: "" })
+                        setProfile({
+                          ...profile,
+                          preferredState: value,
+                          preferredCity: "",
+                        })
                       }
                     >
                       <SelectTrigger id="pref-state" className="w-full">
                         <SelectValue placeholder="Select state" />
                       </SelectTrigger>
                       <SelectContent>
-                        {getStatesForCountry(profile.preferredCountry || "US").map((s) => (
+                        {getStatesForCountry(
+                          profile.preferredCountry || "US",
+                        ).map((s) => (
                           <SelectItem key={s.code} value={s.code}>
                             {s.name}
                           </SelectItem>
@@ -652,7 +656,10 @@ export default function CustomerSettingsPage() {
                       id="pref-state"
                       value={profile.preferredState || ""}
                       onChange={(e) =>
-                        setProfile({ ...profile, preferredState: e.target.value })
+                        setProfile({
+                          ...profile,
+                          preferredState: e.target.value,
+                        })
                       }
                       placeholder="Enter state/province"
                     />
@@ -663,7 +670,10 @@ export default function CustomerSettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="pref-city">Preferred City</Label>
-                  {getCitiesForCountry(profile.preferredCountry || "US", profile.preferredState || undefined).length > 0 ? (
+                  {getCitiesForCountry(
+                    profile.preferredCountry || "US",
+                    profile.preferredState || undefined,
+                  ).length > 0 ? (
                     <Select
                       value={profile.preferredCity || ""}
                       onValueChange={(value) =>
@@ -674,7 +684,10 @@ export default function CustomerSettingsPage() {
                         <SelectValue placeholder="Select city" />
                       </SelectTrigger>
                       <SelectContent>
-                        {getCitiesForCountry(profile.preferredCountry || "US", profile.preferredState || undefined).map((c) => (
+                        {getCitiesForCountry(
+                          profile.preferredCountry || "US",
+                          profile.preferredState || undefined,
+                        ).map((c) => (
                           <SelectItem key={c.name} value={c.name}>
                             {c.name}
                           </SelectItem>
@@ -686,7 +699,10 @@ export default function CustomerSettingsPage() {
                       id="pref-city"
                       value={profile.preferredCity || ""}
                       onChange={(e) =>
-                        setProfile({ ...profile, preferredCity: e.target.value })
+                        setProfile({
+                          ...profile,
+                          preferredCity: e.target.value,
+                        })
                       }
                       placeholder="Enter city"
                     />

@@ -29,6 +29,7 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { authApi, sellerPerformanceApi, shopsApi } from "@/lib/api";
+import { getCitiesForCountry, getStatesForCountry } from "@gold-shop/shared";
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -54,10 +55,6 @@ import {
   XCircle,
 } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import {
-  getStatesForCountry,
-  getCitiesForCountry,
-} from "@gold-shop/shared";
 
 interface ShopData {
   id: string;
@@ -456,8 +453,9 @@ export default function ShopSettingsPage() {
               <div>
                 <p className="font-medium">Complete your shop address</p>
                 <p className="text-sm mt-1">
-                  Your shop address (country, state, city) is required for customers to find you in seller matching.
-                  Go to the <strong>Location</strong> tab to set your address.
+                  Your shop address (country, state, city) is required for
+                  customers to find you in seller matching. Go to the{" "}
+                  <strong>Location</strong> tab to set your address.
                 </p>
               </div>
             </div>
@@ -631,7 +629,8 @@ export default function ShopSettingsPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="state">State/Province *</Label>
-                      {getStatesForCountry(shopData.country || "NP").length > 0 ? (
+                      {getStatesForCountry(shopData.country || "NP").length >
+                      0 ? (
                         <Select
                           value={shopData.state || ""}
                           onValueChange={(value) =>
@@ -642,11 +641,13 @@ export default function ShopSettingsPage() {
                             <SelectValue placeholder="Select state" />
                           </SelectTrigger>
                           <SelectContent>
-                            {getStatesForCountry(shopData.country || "NP").map((s) => (
-                              <SelectItem key={s.code} value={s.code}>
-                                {s.name}
-                              </SelectItem>
-                            ))}
+                            {getStatesForCountry(shopData.country || "NP").map(
+                              (s) => (
+                                <SelectItem key={s.code} value={s.code}>
+                                  {s.name}
+                                </SelectItem>
+                              ),
+                            )}
                           </SelectContent>
                         </Select>
                       ) : (
@@ -664,7 +665,10 @@ export default function ShopSettingsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="city">City *</Label>
-                      {getCitiesForCountry(shopData.country || "NP", shopData.state || undefined).length > 0 ? (
+                      {getCitiesForCountry(
+                        shopData.country || "NP",
+                        shopData.state || undefined,
+                      ).length > 0 ? (
                         <Select
                           value={shopData.city || ""}
                           onValueChange={(value) =>
@@ -675,7 +679,10 @@ export default function ShopSettingsPage() {
                             <SelectValue placeholder="Select city" />
                           </SelectTrigger>
                           <SelectContent>
-                            {getCitiesForCountry(shopData.country || "NP", shopData.state || undefined).map((c) => (
+                            {getCitiesForCountry(
+                              shopData.country || "NP",
+                              shopData.state || undefined,
+                            ).map((c) => (
                               <SelectItem key={c.name} value={c.name}>
                                 {c.name}
                               </SelectItem>
