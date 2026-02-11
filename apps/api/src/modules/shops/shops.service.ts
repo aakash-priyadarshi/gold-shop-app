@@ -1363,10 +1363,22 @@ export class ShopsService {
         const buildMethodOk =
           shop.supportedMethods.length === 0 ||
           shop.supportedMethods.includes(buildMethod);
+        const MATERIAL_FAMILIES: Record<string, string[]> = {
+          GOLD: ["GOLD_24K", "GOLD_22K", "GOLD_18K", "GOLD_14K", "GOLD_10K"],
+          SILVER: ["SILVER_999", "SILVER_925"],
+          PLATINUM: ["PLATINUM_950", "PLATINUM_PT950", "PLATINUM_PT900"],
+          PALLADIUM: ["PALLADIUM_PD950", "PALLADIUM_PD500"],
+        };
+        const familyVariants = metalType
+          ? MATERIAL_FAMILIES[metalType]
+          : undefined;
         const materialOk =
           !metalType ||
           shop.supportedMaterials.length === 0 ||
-          shop.supportedMaterials.includes(metalType);
+          shop.supportedMaterials.includes(metalType) ||
+          (familyVariants
+            ? familyVariants.some((v) => shop.supportedMaterials.includes(v))
+            : false);
         const countryOk =
           !customerCountry ||
           shop.country?.toLowerCase() === customerCountry.toLowerCase();
@@ -1525,13 +1537,36 @@ export class ShopsService {
     };
 
     // If metal type specified, check if shop supports it (or has empty array)
+    // When metalType is a base metal (e.g. "GOLD", "SILVER"), expand to match any variant
     if (metalType) {
-      where.AND.push({
-        OR: [
-          { supportedMaterials: { has: metalType } },
-          { supportedMaterials: { equals: [] } },
-        ],
-      });
+      const MATERIAL_FAMILIES: Record<string, string[]> = {
+        GOLD: ["GOLD_24K", "GOLD_22K", "GOLD_18K", "GOLD_14K", "GOLD_10K"],
+        SILVER: ["SILVER_999", "SILVER_925"],
+        PLATINUM: ["PLATINUM_950", "PLATINUM_PT950", "PLATINUM_PT900"],
+        PALLADIUM: ["PALLADIUM_PD950", "PALLADIUM_PD500"],
+      };
+
+      const familyVariants = MATERIAL_FAMILIES[metalType];
+
+      if (familyVariants) {
+        // Base metal like "GOLD" — match any variant (GOLD_24K, GOLD_22K, etc.)
+        where.AND.push({
+          OR: [
+            ...familyVariants.map((variant) => ({
+              supportedMaterials: { has: variant },
+            })),
+            { supportedMaterials: { equals: [] } },
+          ],
+        });
+      } else {
+        // Specific purity like "GOLD_18K" — exact match
+        where.AND.push({
+          OR: [
+            { supportedMaterials: { has: metalType } },
+            { supportedMaterials: { equals: [] } },
+          ],
+        });
+      }
     }
 
     // By default, only show same-country sellers unless includeInternational is true

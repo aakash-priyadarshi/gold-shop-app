@@ -543,9 +543,7 @@ export default function CreateRfqPage() {
   // Get country from global preferences store (persisted across navigation)
   // IMPORTANT: Country determines TAX jurisdiction (VAT/GST rates)
   const country = usePreferencesStore((state) => state.country);
-  const detectedCountry = usePreferencesStore(
-    (state) => state.detectedCountry,
-  );
+  const detectedCountry = usePreferencesStore((state) => state.detectedCountry);
   const countryInfo = COUNTRIES[country];
 
   // Get weight unit from market context (country-specific default)
@@ -1563,10 +1561,20 @@ export default function CreateRfqPage() {
   // Track when international sellers were auto-included (0 local sellers)
   const [autoInternational, setAutoInternational] = useState(false);
 
+  // Debug state for seller matching — helps diagnose production issues
+  const [sellerFetchDebug, setSellerFetchDebug] = useState<{
+    url: string;
+    status: number | null;
+    error: string | null;
+    sellersReturned: number;
+    timestamp: string;
+  } | null>(null);
+
   // Function to fetch matching sellers for Step 4
   const fetchMatchingSellers = useCallback(async () => {
     setLoadingSellers(true);
     setAutoInternational(false);
+    setSellerFetchDebug(null);
     try {
       const weight = getWeightFromTemplate();
 
@@ -1610,10 +1618,7 @@ export default function CreateRfqPage() {
       // Priority 3: Fall back to geo-detected country (most accurate)
       // Priority 4: Fall back to user's stored country preference
       const effectiveCountry =
-        filterCountry ||
-        selectedAddress?.country ||
-        detectedCountry ||
-        country;
+        filterCountry || selectedAddress?.country || detectedCountry || country;
       const effectiveState = filterState || selectedAddress?.state;
       const effectiveCity = filterCity || selectedAddress?.city;
 
@@ -1634,6 +1639,15 @@ export default function CreateRfqPage() {
 
       const response = await fetch(url);
 
+      // Capture debug info
+      setSellerFetchDebug({
+        url,
+        status: response.status,
+        error: response.ok ? null : `HTTP ${response.status} ${response.statusText}`,
+        sellersReturned: 0,
+        timestamp: new Date().toLocaleTimeString(),
+      });
+
       if (response.ok) {
         const data = await response.json();
         console.log("[fetchMatchingSellers] Response:", {
@@ -1641,6 +1655,11 @@ export default function CreateRfqPage() {
           groups: data.groups,
           diagnostics: data.diagnostics,
         });
+
+        // Update debug with actual count
+        setSellerFetchDebug((prev) =>
+          prev ? { ...prev, sellersReturned: data.sellers?.length || 0 } : prev,
+        );
 
         // AUTO-FALLBACK: If 0 sellers found locally and international wasn't requested,
         // automatically retry with international sellers included
@@ -1688,6 +1707,17 @@ export default function CreateRfqPage() {
       }
     } catch (err) {
       console.error("Error fetching matching sellers:", err);
+      setSellerFetchDebug((prev) =>
+        prev
+          ? { ...prev, error: err instanceof Error ? err.message : String(err) }
+          : {
+              url: "unknown",
+              status: null,
+              error: err instanceof Error ? err.message : String(err),
+              sellersReturned: 0,
+              timestamp: new Date().toLocaleTimeString(),
+            },
+      );
       setMatchingSellers([]);
     } finally {
       setLoadingSellers(false);
@@ -5026,6 +5056,35 @@ export default function CreateRfqPage() {
                             above to control this.
                           </p>
                         </div>
+                      </div>
+                    )}
+
+                    {/* Debug panel — visible diagnostics for fetch issues */}
+                    {sellerFetchDebug && (
+                      <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono">
+                        <p className="font-semibold text-gray-600 mb-1">
+                          🔧 Fetch Debug ({sellerFetchDebug.timestamp})
+                        </p>
+                        <p className="text-gray-500 break-all">
+                          URL: {sellerFetchDebug.url}
+                        </p>
+                        <p
+                          className={
+                            sellerFetchDebug.error
+                              ? "text-red-600"
+                              : "text-green-600"
+                          }
+                        >
+                          Status: {sellerFetchDebug.status || "N/A"} |
+                          Sellers: {sellerFetchDebug.sellersReturned}
+                          {sellerFetchDebug.error &&
+                            ` | Error: ${sellerFetchDebug.error}`}
+                        </p>
+                        <p className="text-gray-400 mt-1">
+                          Country: {country} | Detected: {detectedCountry || "none"} |
+                          International: {includeInternational ? "ON" : "OFF"} |
+                          Filter: {filterCountry || "none"}
+                        </p>
                       </div>
                     )}
 
