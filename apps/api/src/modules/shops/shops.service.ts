@@ -1347,7 +1347,12 @@ export class ShopsService {
     });
 
     return {
-      requestedFilters: { jewelleryType, buildMethod, metalType, customerCountry },
+      requestedFilters: {
+        jewelleryType,
+        buildMethod,
+        metalType,
+        customerCountry,
+      },
       totalShops: allShops.length,
       shops: allShops.map((shop) => {
         const isActiveOk = shop.isActive === true;
@@ -1367,7 +1372,12 @@ export class ShopsService {
           shop.country?.toLowerCase() === customerCountry.toLowerCase();
 
         const wouldMatch =
-          isActiveOk && isVerifiedOk && jewelleryTypeOk && buildMethodOk && materialOk && countryOk;
+          isActiveOk &&
+          isVerifiedOk &&
+          jewelleryTypeOk &&
+          buildMethodOk &&
+          materialOk &&
+          countryOk;
 
         return {
           shopName: shop.shopName,
@@ -1380,21 +1390,23 @@ export class ShopsService {
               shopSupports: shop.supportedJewelleryTypes,
               requested: jewelleryType,
               pass: jewelleryTypeOk,
-              reason: shop.supportedJewelleryTypes.length === 0
-                ? "empty array = supports all"
-                : jewelleryTypeOk
-                  ? "explicitly supported"
-                  : `NOT in shop's list`,
+              reason:
+                shop.supportedJewelleryTypes.length === 0
+                  ? "empty array = supports all"
+                  : jewelleryTypeOk
+                    ? "explicitly supported"
+                    : `NOT in shop's list`,
             },
             buildMethod: {
               shopSupports: shop.supportedMethods,
               requested: buildMethod,
               pass: buildMethodOk,
-              reason: shop.supportedMethods.length === 0
-                ? "empty array = supports all"
-                : buildMethodOk
-                  ? "explicitly supported"
-                  : `NOT in shop's list`,
+              reason:
+                shop.supportedMethods.length === 0
+                  ? "empty array = supports all"
+                  : buildMethodOk
+                    ? "explicitly supported"
+                    : `NOT in shop's list`,
             },
             material: {
               shopSupports: shop.supportedMaterials,

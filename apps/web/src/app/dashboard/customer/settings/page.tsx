@@ -188,7 +188,7 @@ export default function CustomerSettingsPage() {
     city: "",
     state: "",
     postalCode: "",
-    country: "NP",
+    country: currentCountry || "NP",
     isDefault: false,
   });
 

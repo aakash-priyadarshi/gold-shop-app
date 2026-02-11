@@ -1557,9 +1557,13 @@ export default function CreateRfqPage() {
     return deliveryAddresses.find((a) => a.id === selectedAddressId) || null;
   }, [deliveryAddresses, selectedAddressId]);
 
+  // Track when international sellers were auto-included (0 local sellers)
+  const [autoInternational, setAutoInternational] = useState(false);
+
   // Function to fetch matching sellers for Step 4
   const fetchMatchingSellers = useCallback(async () => {
     setLoadingSellers(true);
+    setAutoInternational(false);
     try {
       const weight = getWeightFromTemplate();
 
@@ -1612,18 +1616,51 @@ export default function CreateRfqPage() {
       // Include international sellers only if toggled on
       if (includeInternational) params.append("includeInternational", "true");
 
-      const response = await fetch(
-        `${API_URL}/shops/matching?${params.toString()}`,
-      );
+      const url = `${API_URL}/shops/matching?${params.toString()}`;
+      console.log("[fetchMatchingSellers] Calling:", url);
+      console.log("[fetchMatchingSellers] effectiveCountry:", effectiveCountry, "| includeInternational:", includeInternational);
+
+      const response = await fetch(url);
 
       if (response.ok) {
         const data = await response.json();
+        console.log("[fetchMatchingSellers] Response:", {
+          sellersCount: data.sellers?.length,
+          groups: data.groups,
+          diagnostics: data.diagnostics,
+        });
+
+        // AUTO-FALLBACK: If 0 sellers found locally and international wasn't requested,
+        // automatically retry with international sellers included
+        if (
+          (!data.sellers || data.sellers.length === 0) &&
+          !includeInternational
+        ) {
+          console.log("[fetchMatchingSellers] 0 local sellers — auto-retrying with international...");
+          const intlParams = new URLSearchParams(params);
+          intlParams.set("includeInternational", "true");
+          const intlUrl = `${API_URL}/shops/matching?${intlParams.toString()}`;
+          const intlResponse = await fetch(intlUrl);
+          if (intlResponse.ok) {
+            const intlData = await intlResponse.json();
+            console.log("[fetchMatchingSellers] International fallback:", intlData.sellers?.length, "sellers");
+            if (intlData.sellers && intlData.sellers.length > 0) {
+              setAutoInternational(true);
+              setMatchingSellers(intlData.sellers);
+              setSellerStats(intlData.stats || null);
+              setSellerDiagnostics(intlData.diagnostics || null);
+              setSellerGroups(intlData.groups || null);
+              return; // skip the normal set below
+            }
+          }
+        }
+
         setMatchingSellers(data.sellers || []);
         setSellerStats(data.stats || null);
         setSellerDiagnostics(data.diagnostics || null);
         setSellerGroups(data.groups || null);
       } else {
-        console.error("Failed to fetch matching sellers");
+        console.error("Failed to fetch matching sellers, status:", response.status);
         setMatchingSellers([]);
         setSellerDiagnostics(null);
         setSellerGroups(null);
@@ -4948,6 +4985,22 @@ export default function CreateRfqPage() {
                             </button>
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {/* Auto-international fallback banner */}
+                    {autoInternational && matchingSellers.length > 0 && (
+                      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2">
+                        <span className="text-lg">🌍</span>
+                        <div>
+                          <p className="text-sm font-medium text-blue-800">
+                            No sellers found in your country — showing international sellers
+                          </p>
+                          <p className="text-xs text-blue-600 mt-0.5">
+                            {matchingSellers.length} international seller{matchingSellers.length !== 1 ? "s" : ""} available.
+                            Toggle &quot;Include international sellers&quot; above to control this.
+                          </p>
+                        </div>
                       </div>
                     )}
 

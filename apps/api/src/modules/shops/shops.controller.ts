@@ -52,7 +52,9 @@ export class ShopsController {
 
   // Debug endpoint to check why matching isn't finding sellers
   @Get("matching-debug")
-  @ApiOperation({ summary: "Debug matching: show all shops and why each matches or not" })
+  @ApiOperation({
+    summary: "Debug matching: show all shops and why each matches or not",
+  })
   async debugMatching(
     @Query("jewelleryType") jewelleryType: string,
     @Query("buildMethod") buildMethod: string,
