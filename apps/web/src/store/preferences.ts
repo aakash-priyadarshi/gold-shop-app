@@ -119,12 +119,18 @@ interface PreferencesState {
   isSyncing: boolean;
   lastSyncedAt: number | null;
 
+  // Geo-detection state (runs every visit, never overrides user choice)
+  detectedCountry: CountryCode | null; // What Cloudflare/geo says the user's country is
+  geoMismatchDismissed: boolean; // Whether user dismissed the mismatch banner this session
+
   // Actions (user-triggered - sets choice flag)
   setLanguage: (language: Language) => void;
   setCurrency: (currency: CurrencyCode) => void;
   setCountry: (country: CountryCode) => void;
   setTheme: (theme: ThemeMode) => void;
   setAuthenticated: (isAuthenticated: boolean) => void;
+  dismissGeoMismatch: () => void;
+  acceptDetectedCountry: () => void;
 
   // Internal sync actions (system-triggered - does NOT set choice flag)
   syncCurrencyFromGeo: (currency: CurrencyCode) => void;
@@ -152,6 +158,8 @@ export const usePreferencesStore = create<PreferencesState>()(
       isAuthenticated: false,
       isSyncing: false,
       lastSyncedAt: null,
+      detectedCountry: null,
+      geoMismatchDismissed: false,
 
       // Set language and sync to server if authenticated
       setLanguage: async (language) => {
@@ -193,6 +201,32 @@ export const usePreferencesStore = create<PreferencesState>()(
         const { isAuthenticated, syncToServer } = get();
         if (isAuthenticated) {
           await syncToServer();
+        }
+      },
+
+      // Dismiss the geo-mismatch banner for this session
+      dismissGeoMismatch: () => {
+        set({ geoMismatchDismissed: true });
+      },
+
+      // Accept the detected country and switch settings to it
+      acceptDetectedCountry: async () => {
+        const { detectedCountry, isAuthenticated, syncToServer } = get();
+        if (detectedCountry && COUNTRIES[detectedCountry]) {
+          const defaultCurrency =
+            COUNTRIES[detectedCountry]?.defaultCurrency || "USD";
+          set({
+            country: detectedCountry,
+            currency: defaultCurrency,
+            geoMismatchDismissed: true,
+          });
+          if (typeof window !== "undefined") {
+            localStorage.setItem("orivraa_user_country_choice", "true");
+            localStorage.setItem("orivraa_user_currency_choice", "true");
+          }
+          if (isAuthenticated) {
+            await syncToServer();
+          }
         }
       },
 
@@ -321,21 +355,12 @@ export const usePreferencesStore = create<PreferencesState>()(
         country: state.country,
         theme: state.theme,
       }),
-      // On rehydrate, check if we need to do geo detection
-      onRehydrateStorage: () => (state) => {
+      // On rehydrate, always run geo-detection to populate detectedCountry
+      onRehydrateStorage: () => () => {
         if (typeof window !== "undefined") {
-          const stored = localStorage.getItem("gold-shop-preferences");
-          const userChoseCountry = localStorage.getItem("orivraa_user_country_choice");
-
-          if (!stored) {
-            // First visit - detect country from geo API
-            initializeFromGeo();
-          } else if (!userChoseCountry && state?.country === "US") {
-            // Country is still default "US" and user never explicitly chose it.
-            // Re-run geo-detection in case it failed on the first visit.
-            console.log("[preferences] Country still default US — re-detecting...");
-            initializeFromGeo();
-          }
+          // Always detect geo on every visit — this populates detectedCountry
+          // but will only auto-set country/currency if user never chose explicitly
+          initializeFromGeo();
         }
       },
     },
@@ -350,44 +375,70 @@ function getCookie(name: string): string | null {
 }
 
 // Initialize country/currency from geo detection (first visit only)
+/**
+ * Detect geo-location on every visit.
+ * - Always populates `detectedCountry` for the mismatch banner.
+ * - Only auto-sets `country`/`currency` if user never explicitly chose one.
+ * - Resets `geoMismatchDismissed` each visit so the banner re-appears if relevant.
+ */
 async function initializeFromGeo() {
   try {
-    // Priority 1: Read from middleware-set cookie (fastest)
+    let detected: CountryCode | null = null;
+
+    // Priority 1: Read from middleware-set cookie (fastest, set by Cloudflare)
     const cookieCountry = getCookie(
       "orivraa_geo_country",
     ) as CountryCode | null;
 
     if (cookieCountry && COUNTRIES[cookieCountry]) {
-      const countryInfo = COUNTRIES[cookieCountry];
-      usePreferencesStore.setState({
-        country: cookieCountry,
-        currency: countryInfo.defaultCurrency,
-      });
-      console.log("[preferences] Country from cookie:", cookieCountry);
-      return;
+      detected = cookieCountry;
+      console.log("[geo] Detected country from cookie:", detected);
+    } else {
+      // Priority 2: Call API endpoint
+      try {
+        const response = await fetch("/api/geo");
+        const data = await response.json();
+        const apiCountry = data.detectedCountry as CountryCode | undefined;
+        if (apiCountry && COUNTRIES[apiCountry]) {
+          detected = apiCountry;
+          console.log("[geo] Detected country from API:", detected, "source:", data.source);
+        }
+      } catch {
+        console.warn("[geo] Geo API failed, keeping previous state");
+      }
     }
 
-    // Priority 2: Call API endpoint (fallback)
-    const response = await fetch("/api/geo");
-    const data = await response.json();
-    const detectedCountry = data.detectedCountry as CountryCode | undefined;
+    if (!detected) return;
 
-    if (detectedCountry && COUNTRIES[detectedCountry]) {
-      const countryInfo = COUNTRIES[detectedCountry];
+    // Always store what geo detection found + reset dismiss for new session
+    usePreferencesStore.setState({
+      detectedCountry: detected,
+      geoMismatchDismissed: false,
+    });
+
+    // Only auto-set country/currency if user has never explicitly chosen
+    const userChoseCountry = localStorage.getItem("orivraa_user_country_choice");
+    if (!userChoseCountry) {
+      const countryInfo = COUNTRIES[detected];
       usePreferencesStore.setState({
-        country: detectedCountry,
+        country: detected,
         currency: countryInfo.defaultCurrency,
       });
-      console.log(
-        "[preferences] Country from API:",
-        detectedCountry,
-        "source:",
-        data.source,
-      );
+      console.log("[geo] Auto-set country (no user choice):", detected);
+    } else {
+      const currentCountry = usePreferencesStore.getState().country;
+      if (currentCountry !== detected) {
+        console.log(
+          "[geo] Country mismatch — detected:",
+          detected,
+          "settings:",
+          currentCountry,
+          "(banner will show)",
+        );
+      }
     }
   } catch (error) {
-    console.error("Failed to detect location:", error);
-    // Keep defaults
+    console.error("[geo] Failed to detect location:", error);
   }
 }
 

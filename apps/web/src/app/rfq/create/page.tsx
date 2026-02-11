@@ -1618,7 +1618,12 @@ export default function CreateRfqPage() {
 
       const url = `${API_URL}/shops/matching?${params.toString()}`;
       console.log("[fetchMatchingSellers] Calling:", url);
-      console.log("[fetchMatchingSellers] effectiveCountry:", effectiveCountry, "| includeInternational:", includeInternational);
+      console.log(
+        "[fetchMatchingSellers] effectiveCountry:",
+        effectiveCountry,
+        "| includeInternational:",
+        includeInternational,
+      );
 
       const response = await fetch(url);
 
@@ -1636,14 +1641,20 @@ export default function CreateRfqPage() {
           (!data.sellers || data.sellers.length === 0) &&
           !includeInternational
         ) {
-          console.log("[fetchMatchingSellers] 0 local sellers — auto-retrying with international...");
+          console.log(
+            "[fetchMatchingSellers] 0 local sellers — auto-retrying with international...",
+          );
           const intlParams = new URLSearchParams(params);
           intlParams.set("includeInternational", "true");
           const intlUrl = `${API_URL}/shops/matching?${intlParams.toString()}`;
           const intlResponse = await fetch(intlUrl);
           if (intlResponse.ok) {
             const intlData = await intlResponse.json();
-            console.log("[fetchMatchingSellers] International fallback:", intlData.sellers?.length, "sellers");
+            console.log(
+              "[fetchMatchingSellers] International fallback:",
+              intlData.sellers?.length,
+              "sellers",
+            );
             if (intlData.sellers && intlData.sellers.length > 0) {
               setAutoInternational(true);
               setMatchingSellers(intlData.sellers);
@@ -1660,7 +1671,10 @@ export default function CreateRfqPage() {
         setSellerDiagnostics(data.diagnostics || null);
         setSellerGroups(data.groups || null);
       } else {
-        console.error("Failed to fetch matching sellers, status:", response.status);
+        console.error(
+          "Failed to fetch matching sellers, status:",
+          response.status,
+        );
         setMatchingSellers([]);
         setSellerDiagnostics(null);
         setSellerGroups(null);
@@ -4994,11 +5008,14 @@ export default function CreateRfqPage() {
                         <span className="text-lg">🌍</span>
                         <div>
                           <p className="text-sm font-medium text-blue-800">
-                            No sellers found in your country — showing international sellers
+                            No sellers found in your country — showing
+                            international sellers
                           </p>
                           <p className="text-xs text-blue-600 mt-0.5">
-                            {matchingSellers.length} international seller{matchingSellers.length !== 1 ? "s" : ""} available.
-                            Toggle &quot;Include international sellers&quot; above to control this.
+                            {matchingSellers.length} international seller
+                            {matchingSellers.length !== 1 ? "s" : ""} available.
+                            Toggle &quot;Include international sellers&quot;
+                            above to control this.
                           </p>
                         </div>
                       </div>
