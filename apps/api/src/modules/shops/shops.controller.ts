@@ -76,6 +76,9 @@ export class ShopsController {
     @Query("jewelleryType") jewelleryType: string,
     @Query("buildMethod") buildMethod: string,
     @Query("metalType") metalType?: string,
+    @Query("alloyType") alloyType?: string,
+    @Query("baseMetal") baseMetal?: string,
+    @Query("platingType") platingType?: string,
     @Query("surfaceFinish") surfaceFinish?: string,
     @Query("estimatedWeight") estimatedWeight?: string,
     @Query("customerCity") customerCity?: string,
@@ -92,6 +95,9 @@ export class ShopsController {
       jewelleryType,
       buildMethod,
       metalType,
+      alloyType,
+      baseMetal,
+      platingType,
       surfaceFinish,
       estimatedWeight: estimatedWeight ? parseFloat(estimatedWeight) : 5,
       customerCity,
@@ -265,6 +271,9 @@ export class ShopsController {
       buildMethods?: string[];
       finishes?: string[];
       gemstones?: string[];
+      alloys?: string[];
+      baseMetals?: string[];
+      platingTypes?: string[];
     },
   ) {
     return this.shopsService.updateShopCapabilities(shopId, userId, dto);

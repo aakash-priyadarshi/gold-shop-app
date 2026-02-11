@@ -1579,17 +1579,27 @@ export default function CreateRfqPage() {
       const weight = getWeightFromTemplate();
 
       // Get metal type based on build method
-      let metalType = formData.metalType;
+      let metalType: string | undefined = formData.metalType;
+      let alloyType: string | undefined;
+      let coreBaseMetal: string | undefined;
+      let platingType: string | undefined;
+
       if (
         formData.buildMethod === "METHOD_B" &&
         formData.alloyConfig?.baseMetal
       ) {
         metalType = formData.alloyConfig.baseMetal;
+        // Derive alloy type from karat (e.g., GOLD + 18K → GOLD_18K)
+        if (formData.alloyConfig.karat && formData.alloyConfig.baseMetal) {
+          alloyType = `${formData.alloyConfig.baseMetal}_${formData.alloyConfig.karat}`;
+        }
       } else if (
         formData.buildMethod === "METHOD_C" &&
         formData.methodCConfig?.baseMetal
       ) {
-        metalType = formData.methodCConfig.baseMetal;
+        coreBaseMetal = formData.methodCConfig.baseMetal;
+        platingType = formData.methodCConfig.platingType;
+        metalType = undefined; // Method C doesn't use precious metalType
       } else if (
         formData.buildMethod === "METHOD_D" &&
         formData.methodDConfig?.purity
@@ -1606,6 +1616,9 @@ export default function CreateRfqPage() {
       });
 
       if (metalType) params.append("metalType", metalType);
+      if (alloyType) params.append("alloyType", alloyType);
+      if (coreBaseMetal) params.append("baseMetal", coreBaseMetal);
+      if (platingType) params.append("platingType", platingType);
       if (formData.surfaceFinish)
         params.append("surfaceFinish", formData.surfaceFinish);
       if (sellerMinRating !== undefined)

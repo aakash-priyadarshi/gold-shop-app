@@ -1,16 +1,20 @@
 /**
- * Seller Matching Tests
+ * Seller Matching Tests — Soft Matching / Feature Scoring
  *
  * Comprehensive test suite for the seller matching system.
+ * The matching system uses SOFT matching: all active & verified shops in the
+ * customer's country are fetched, then each shop is scored on feature support.
+ *
  * Tests cover:
- * 1. WHERE clause building (jewelleryType, buildMethod, material OR-empty logic)
- * 2. Country filtering (same-country vs international)
- * 3. Location scoring (city/state/country/other tiers)
- * 4. Grouping (nearYou/sameState/sameCountry/international)
- * 5. Pricing enrichment (metal rates, making charges, defaults)
- * 6. Edge cases (no shops, all-empty arrays, case-insensitive country)
- * 7. Pagination
- * 8. Diagnostics output
+ * 1. Basic matching & country filtering (WHERE clause)
+ * 2. Feature scoring (jewelleryType, buildMethod, material, alloy, baseMetal, plating)
+ * 3. Match labels (Full Match / Partial Match / Ask Seller)
+ * 4. Location scoring (city/state/country/other tiers)
+ * 5. Grouping (location groups + match quality groups)
+ * 6. Pricing enrichment (metal rates, making charges, defaults)
+ * 7. Material family expansion (GOLD → GOLD_24K, GOLD_22K, etc.)
+ * 8. Alloy / Base Metal / Plating scoring for Methods B, C, D
+ * 9. Edge cases, pagination, diagnostics
  */
 
 import { Test, TestingModule } from "@nestjs/testing";
@@ -45,6 +49,9 @@ function makeShop(overrides: Partial<any> = {}) {
     supportedMethods: overrides.supportedMethods || ["METHOD_A"],
     supportedMaterials: overrides.supportedMaterials || [],
     supportedFinishes: overrides.supportedFinishes || [],
+    supportedAlloys: overrides.supportedAlloys || [],
+    supportedBaseMetals: overrides.supportedBaseMetals || [],
+    supportedPlatingTypes: overrides.supportedPlatingTypes || [],
     metalRates: overrides.metalRates || [],
     finishPricing: [],
     ratings: overrides.ratings || [],
@@ -110,13 +117,10 @@ describe("ShopsService - Seller Matching", () => {
 
     service = module.get<ShopsService>(ShopsService);
 
-    // Default mock: shop counts
+    // Default mock: 2 count calls (totalShops + activeAndVerified)
     mockPrismaShop.count
-      .mockResolvedValueOnce(4) // totalShops
-      .mockResolvedValueOnce(4) // activeShops
-      .mockResolvedValueOnce(4) // verifiedShops
-      .mockResolvedValueOnce(4) // activeAndVerified
-      .mockResolvedValueOnce(4); // withoutMaterialFilter
+      .mockResolvedValueOnce(4) // totalShops (no args)
+      .mockResolvedValueOnce(4); // activeAndVerified
   });
 
   // ─── Basic Matching ──────────────────────────────
@@ -178,17 +182,42 @@ describe("ShopsService - Seller Matching", () => {
       });
 
       expect(result.sellers).toHaveLength(1);
+      // Empty arrays = supports all → full match
+      expect(result.sellers[0].isFullMatch).toBe(true);
+      expect(result.sellers[0].matchLabel).toBe("Full Match");
+    });
+
+    it("should still return sellers that don't support the jewellery type (soft matching)", async () => {
+      const shop = makeShop({
+        id: "shop-ring-only",
+        country: "IN",
+        supportedJewelleryTypes: ["RING"], // only rings
+        supportedMethods: ["METHOD_A"],
+      });
+
+      mockPrismaShop.findMany.mockResolvedValue([shop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "NECKLACE", // customer wants necklace
+        buildMethod: "METHOD_A",
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      // Soft matching: still returned, but not a full match
+      expect(result.sellers).toHaveLength(1);
+      expect(result.sellers[0].isFullMatch).toBe(false);
+      expect(result.sellers[0].unsupportedFeatures).toContain("jewelleryType:NECKLACE");
     });
   });
 
   // ─── Country Filtering ───────────────────────────
 
   describe("Country Filtering", () => {
-    it("should exclude shops from different countries when includeInternational=false", async () => {
-      // The WHERE clause will filter by country, so Prisma returns only matching shops
+    it("should filter by country in WHERE clause when includeInternational=false", async () => {
       mockPrismaShop.findMany.mockResolvedValue([]);
 
-      const result = await service.findMatchingSellers({
+      await service.findMatchingSellers({
         jewelleryType: "RING",
         buildMethod: "METHOD_A",
         estimatedWeight: 5,
@@ -196,13 +225,12 @@ describe("ShopsService - Seller Matching", () => {
         includeInternational: false,
       });
 
-      expect(result.sellers).toHaveLength(0);
-
-      // Verify the where clause passed to findMany includes country filter
       const whereArg = mockPrismaShop.findMany.mock.calls[0][0].where;
-      const countryFilter = whereArg.AND.find((clause: any) => clause.country);
-      expect(countryFilter).toBeDefined();
-      expect(countryFilter.country.equals).toBe("IN");
+      expect(whereArg.isActive).toBe(true);
+      expect(whereArg.isVerified).toBe(true);
+      expect(whereArg.country).toBeDefined();
+      expect(whereArg.country.equals).toBe("IN");
+      expect(whereArg.country.mode).toBe("insensitive");
     });
 
     it("should include shops from all countries when includeInternational=true", async () => {
@@ -231,8 +259,7 @@ describe("ShopsService - Seller Matching", () => {
 
       // Verify the where clause does NOT include country filter
       const whereArg = mockPrismaShop.findMany.mock.calls[0][0].where;
-      const countryFilter = whereArg.AND.find((clause: any) => clause.country);
-      expect(countryFilter).toBeUndefined();
+      expect(whereArg.country).toBeUndefined();
     });
 
     it("should default customerCountry to IN when not specified", async () => {
@@ -246,8 +273,8 @@ describe("ShopsService - Seller Matching", () => {
       });
 
       const whereArg = mockPrismaShop.findMany.mock.calls[0][0].where;
-      const countryFilter = whereArg.AND.find((clause: any) => clause.country);
-      expect(countryFilter.country.equals).toBe("IN");
+      expect(whereArg.country).toBeDefined();
+      expect(whereArg.country.equals).toBe("IN");
     });
 
     it("should use case-insensitive country matching", async () => {
@@ -261,8 +288,500 @@ describe("ShopsService - Seller Matching", () => {
       });
 
       const whereArg = mockPrismaShop.findMany.mock.calls[0][0].where;
-      const countryFilter = whereArg.AND.find((clause: any) => clause.country);
-      expect(countryFilter.country.mode).toBe("insensitive");
+      expect(whereArg.country.mode).toBe("insensitive");
+    });
+
+    it("should NOT have jewelleryType or buildMethod in WHERE (soft matching)", async () => {
+      mockPrismaShop.findMany.mockResolvedValue([]);
+
+      await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_A",
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      const whereArg = mockPrismaShop.findMany.mock.calls[0][0].where;
+      // Soft matching: only isActive, isVerified, and country in WHERE
+      expect(whereArg.isActive).toBe(true);
+      expect(whereArg.isVerified).toBe(true);
+      expect(whereArg.country).toBeDefined();
+      // No AND array, no jewelleryType/buildMethod/material filters
+      expect(whereArg.AND).toBeUndefined();
+      expect(whereArg.supportedJewelleryTypes).toBeUndefined();
+      expect(whereArg.supportedMethods).toBeUndefined();
+      expect(whereArg.supportedMaterials).toBeUndefined();
+    });
+  });
+
+  // ─── Feature Scoring ─────────────────────────────
+
+  describe("Feature Scoring", () => {
+    it("should give full score when all features match", async () => {
+      const shop = makeShop({
+        country: "IN",
+        supportedJewelleryTypes: ["RING"],
+        supportedMethods: ["METHOD_A"],
+        supportedMaterials: ["GOLD_22K"],
+      });
+
+      mockPrismaShop.findMany.mockResolvedValue([shop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_A",
+        metalType: "GOLD_22K",
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      const seller = result.sellers[0];
+      expect(seller.isFullMatch).toBe(true);
+      expect(seller.matchLabel).toBe("Full Match");
+      expect(seller.unsupportedFeatures).toHaveLength(0);
+      // jewelleryType(1) + buildMethod(1) + material(1) + alloy(0.5) + baseMetal(0.5) + plating(0.5) = 4.5
+      // alloy/baseMetal/plating are not requested → default OK → they get points
+      expect(seller.featureScore).toBeGreaterThanOrEqual(4);
+    });
+
+    it("should deduct score for unsupported jewellery type", async () => {
+      const shop = makeShop({
+        country: "IN",
+        supportedJewelleryTypes: ["NECKLACE"], // doesn't support RING
+        supportedMethods: ["METHOD_A"],
+      });
+
+      mockPrismaShop.findMany.mockResolvedValue([shop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_A",
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      const seller = result.sellers[0];
+      expect(seller.isFullMatch).toBe(false);
+      expect(seller.unsupportedFeatures).toContain("jewelleryType:RING");
+    });
+
+    it("should deduct score for unsupported build method", async () => {
+      const shop = makeShop({
+        country: "IN",
+        supportedJewelleryTypes: ["RING"],
+        supportedMethods: ["METHOD_A"], // doesn't support METHOD_B
+      });
+
+      mockPrismaShop.findMany.mockResolvedValue([shop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_B",
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      const seller = result.sellers[0];
+      expect(seller.isFullMatch).toBe(false);
+      expect(seller.unsupportedFeatures).toContain("buildMethod:METHOD_B");
+    });
+
+    it("should deduct score for unsupported material", async () => {
+      const shop = makeShop({
+        country: "IN",
+        supportedMaterials: ["SILVER_999"], // doesn't support GOLD_22K
+      });
+
+      mockPrismaShop.findMany.mockResolvedValue([shop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_A",
+        metalType: "GOLD_22K",
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      const seller = result.sellers[0];
+      expect(seller.isFullMatch).toBe(false);
+      expect(seller.unsupportedFeatures).toContain("material:GOLD_22K");
+    });
+
+    it("should label as 'Partial Match' when 1-2 features unsupported", async () => {
+      const shop = makeShop({
+        country: "IN",
+        supportedJewelleryTypes: ["NECKLACE"], // miss 1: jewelleryType
+        supportedMethods: ["METHOD_A"],
+      });
+
+      mockPrismaShop.findMany.mockResolvedValue([shop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_A",
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      expect(result.sellers[0].matchLabel).toBe("Partial Match");
+    });
+
+    it("should label as 'Ask Seller' when >2 features unsupported", async () => {
+      const shop = makeShop({
+        country: "IN",
+        supportedJewelleryTypes: ["NECKLACE"], // miss: jewelleryType
+        supportedMethods: ["METHOD_B"],         // miss: buildMethod
+        supportedMaterials: ["PLATINUM_950"],    // miss: material
+      });
+
+      mockPrismaShop.findMany.mockResolvedValue([shop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_A",
+        metalType: "GOLD_22K",
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      expect(result.sellers[0].matchLabel).toBe("Ask Seller");
+      expect(result.sellers[0].unsupportedFeatures.length).toBeGreaterThan(2);
+    });
+
+    it("should rank full match sellers above partial match", async () => {
+      const fullMatchShop = makeShop({
+        id: "full",
+        country: "IN",
+        supportedJewelleryTypes: ["RING"],
+        supportedMethods: ["METHOD_A"],
+      });
+      const partialMatchShop = makeShop({
+        id: "partial",
+        country: "IN",
+        supportedJewelleryTypes: ["NECKLACE"], // misses jewelleryType
+        supportedMethods: ["METHOD_A"],
+      });
+
+      mockPrismaShop.findMany.mockResolvedValue([partialMatchShop, fullMatchShop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_A",
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      // Full match should come first regardless of input order
+      expect(result.sellers[0].id).toBe("full");
+      expect(result.sellers[0].isFullMatch).toBe(true);
+      expect(result.sellers[1].id).toBe("partial");
+      expect(result.sellers[1].isFullMatch).toBe(false);
+    });
+
+    it("should treat empty supportedMaterials as supports-all (full score)", async () => {
+      const shop = makeShop({
+        country: "IN",
+        supportedMaterials: [], // empty = supports all
+      });
+
+      mockPrismaShop.findMany.mockResolvedValue([shop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_A",
+        metalType: "GOLD_22K",
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      // Material should be OK (empty = supports all)
+      expect(result.sellers[0].unsupportedFeatures).not.toContain("material:GOLD_22K");
+    });
+  });
+
+  // ─── Alloy / Base Metal / Plating Scoring ────────
+
+  describe("Alloy / Base Metal / Plating Scoring", () => {
+    it("should score alloy match for Method B", async () => {
+      const shop = makeShop({
+        country: "IN",
+        supportedMethods: ["METHOD_B"],
+        supportedAlloys: ["GOLD_18K", "GOLD_14K"],
+      });
+
+      mockPrismaShop.findMany.mockResolvedValue([shop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_B",
+        alloyType: "GOLD_18K",
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      expect(result.sellers[0].unsupportedFeatures).not.toContain("alloy:GOLD_18K");
+    });
+
+    it("should flag unsupported alloy for Method B", async () => {
+      const shop = makeShop({
+        country: "IN",
+        supportedMethods: ["METHOD_B"],
+        supportedAlloys: ["GOLD_14K"], // only 14K
+      });
+
+      mockPrismaShop.findMany.mockResolvedValue([shop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_B",
+        alloyType: "GOLD_18K", // customer wants 18K
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      expect(result.sellers[0].unsupportedFeatures).toContain("alloy:GOLD_18K");
+    });
+
+    it("should score base metal match for Method C", async () => {
+      const shop = makeShop({
+        country: "IN",
+        supportedMethods: ["METHOD_C"],
+        supportedBaseMetals: ["BRASS", "COPPER"],
+      });
+
+      mockPrismaShop.findMany.mockResolvedValue([shop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_C",
+        baseMetal: "BRASS",
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      expect(result.sellers[0].unsupportedFeatures).not.toContain("baseMetal:BRASS");
+    });
+
+    it("should flag unsupported base metal for Method C", async () => {
+      const shop = makeShop({
+        country: "IN",
+        supportedMethods: ["METHOD_C"],
+        supportedBaseMetals: ["COPPER"], // no BRASS
+      });
+
+      mockPrismaShop.findMany.mockResolvedValue([shop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_C",
+        baseMetal: "BRASS",
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      expect(result.sellers[0].unsupportedFeatures).toContain("baseMetal:BRASS");
+    });
+
+    it("should score plating type match for Method C", async () => {
+      const shop = makeShop({
+        country: "IN",
+        supportedMethods: ["METHOD_C"],
+        supportedPlatingTypes: ["GOLD_PLATING", "RHODIUM_PLATING"],
+      });
+
+      mockPrismaShop.findMany.mockResolvedValue([shop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_C",
+        platingType: "GOLD_PLATING",
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      expect(result.sellers[0].unsupportedFeatures).not.toContain("platingType:GOLD_PLATING");
+    });
+
+    it("should flag unsupported plating for Method C", async () => {
+      const shop = makeShop({
+        country: "IN",
+        supportedMethods: ["METHOD_C"],
+        supportedPlatingTypes: ["RHODIUM_PLATING"], // no GOLD_PLATING
+      });
+
+      mockPrismaShop.findMany.mockResolvedValue([shop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_C",
+        platingType: "GOLD_PLATING",
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      expect(result.sellers[0].unsupportedFeatures).toContain("platingType:GOLD_PLATING");
+    });
+
+    it("should treat empty supportedAlloys as supports-all", async () => {
+      const shop = makeShop({
+        country: "IN",
+        supportedMethods: ["METHOD_B"],
+        supportedAlloys: [], // empty = supports all
+      });
+
+      mockPrismaShop.findMany.mockResolvedValue([shop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_B",
+        alloyType: "GOLD_18K",
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      expect(result.sellers[0].unsupportedFeatures).not.toContain("alloy:GOLD_18K");
+    });
+  });
+
+  // ─── Material Family Expansion ───────────────────
+
+  describe("Material Family Expansion", () => {
+    it("should match GOLD base metal to any gold purity variant", async () => {
+      const shop = makeShop({
+        country: "IN",
+        supportedMaterials: ["GOLD_18K"], // has 18K
+      });
+
+      mockPrismaShop.findMany.mockResolvedValue([shop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_B",
+        metalType: "GOLD", // base metal
+        estimatedWeight: 2,
+        customerCountry: "IN",
+      });
+
+      // Should match because GOLD expands to include GOLD_18K
+      expect(result.sellers[0].unsupportedFeatures).not.toContain("material:GOLD");
+    });
+
+    it("should NOT match GOLD base metal when shop only has SILVER", async () => {
+      const shop = makeShop({
+        country: "IN",
+        supportedMaterials: ["SILVER_999"], // no gold variants
+      });
+
+      mockPrismaShop.findMany.mockResolvedValue([shop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_B",
+        metalType: "GOLD",
+        estimatedWeight: 2,
+        customerCountry: "IN",
+      });
+
+      expect(result.sellers[0].unsupportedFeatures).toContain("material:GOLD");
+    });
+
+    it("should match SILVER base metal to silver variants", async () => {
+      const shop = makeShop({
+        country: "IN",
+        supportedMaterials: ["SILVER_925"],
+      });
+
+      mockPrismaShop.findMany.mockResolvedValue([shop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_B",
+        metalType: "SILVER",
+        estimatedWeight: 2,
+        customerCountry: "IN",
+      });
+
+      expect(result.sellers[0].unsupportedFeatures).not.toContain("material:SILVER");
+    });
+
+    it("should match specific purity directly", async () => {
+      const shop = makeShop({
+        country: "IN",
+        supportedMaterials: ["GOLD_22K"],
+      });
+
+      mockPrismaShop.findMany.mockResolvedValue([shop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_A",
+        metalType: "GOLD_22K",
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      expect(result.sellers[0].unsupportedFeatures).not.toContain("material:GOLD_22K");
+    });
+  });
+
+  // ─── Match Groups ────────────────────────────────
+
+  describe("Match Groups", () => {
+    it("should populate matchGroups with correct counts", async () => {
+      const shops = [
+        makeShop({
+          id: "full1",
+          country: "IN",
+          supportedJewelleryTypes: ["RING"],
+          supportedMethods: ["METHOD_A"],
+        }),
+        makeShop({
+          id: "partial1",
+          country: "IN",
+          supportedJewelleryTypes: ["NECKLACE"], // partial: misses jewelleryType
+          supportedMethods: ["METHOD_A"],
+        }),
+        makeShop({
+          id: "ask1",
+          country: "IN",
+          supportedJewelleryTypes: ["NECKLACE"],   // miss
+          supportedMethods: ["METHOD_B"],           // miss
+          supportedMaterials: ["PLATINUM_950"],      // miss
+        }),
+      ];
+
+      mockPrismaShop.findMany.mockResolvedValue(shops);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_A",
+        metalType: "GOLD_22K",
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      expect(result.matchGroups.fullMatch.count).toBe(1);
+      expect(result.matchGroups.fullMatch.sellerIds).toContain("full1");
+      expect(result.matchGroups.partialMatch.count).toBe(1);
+      expect(result.matchGroups.partialMatch.sellerIds).toContain("partial1");
+      expect(result.matchGroups.askSeller.count).toBe(1);
+      expect(result.matchGroups.askSeller.sellerIds).toContain("ask1");
+    });
+
+    it("should include stats for match quality counts", async () => {
+      const shop = makeShop({ country: "IN" });
+      mockPrismaShop.findMany.mockResolvedValue([shop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_A",
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      expect(result.stats.fullMatchCount).toBeDefined();
+      expect(result.stats.partialMatchCount).toBeDefined();
+      expect(result.stats.askSellerCount).toBeDefined();
     });
   });
 
@@ -383,7 +902,7 @@ describe("ShopsService - Seller Matching", () => {
   // ─── Grouping & Sorting ──────────────────────────
 
   describe("Grouping & Sorting", () => {
-    it("should group sellers into correct tiers", async () => {
+    it("should group sellers into correct location tiers", async () => {
       const shops = [
         makeShop({ id: "s1", country: "IN", state: "Bihar", city: "Patna" }),
         makeShop({ id: "s2", country: "IN", state: "Bihar", city: "Gaya" }),
@@ -419,9 +938,13 @@ describe("ShopsService - Seller Matching", () => {
       expect(result.groups.international.count).toBe(1); // Kathmandu (NP)
     });
 
-    it("should order sellers: city > state > country > international", async () => {
+    it("should order sellers: full match first, then by location score", async () => {
       const shops = [
-        makeShop({ id: "intl", country: "NP", shopName: "Nepal Shop" }),
+        makeShop({
+          id: "intl",
+          country: "NP",
+          shopName: "Nepal Shop",
+        }),
         makeShop({
           id: "city",
           country: "IN",
@@ -456,6 +979,7 @@ describe("ShopsService - Seller Matching", () => {
         includeInternational: true,
       });
 
+      // All are full matches, so sorted by location: city(3) > state(2) > country(1) > intl(0)
       expect(result.sellers[0].id).toBe("city");
       expect(result.sellers[1].id).toBe("state");
       expect(result.sellers[2].id).toBe("country");
@@ -554,14 +1078,16 @@ describe("ShopsService - Seller Matching", () => {
 
       expect(result.diagnostics).toBeDefined();
       expect(result.diagnostics.totalShops).toBe(4);
+      expect(result.diagnostics.activeAndVerified).toBe(4);
       expect(result.diagnostics.customerCountry).toBe("US");
       expect(result.diagnostics.includeInternational).toBe(false);
       expect(result.diagnostics.filtersApplied.jewelleryType).toBe("RING");
       expect(result.diagnostics.filtersApplied.buildMethod).toBe("METHOD_A");
     });
 
-    it("should report matchingBeforeCountryFilter count", async () => {
-      mockPrismaShop.findMany.mockResolvedValue([]);
+    it("should report fetchedForScoring count", async () => {
+      const shops = [makeShop({ country: "US" }), makeShop({ id: "s2", country: "US" })];
+      mockPrismaShop.findMany.mockResolvedValue(shops);
 
       const result = await service.findMatchingSellers({
         jewelleryType: "RING",
@@ -570,8 +1096,21 @@ describe("ShopsService - Seller Matching", () => {
         customerCountry: "US",
       });
 
-      // The 5th count mock returns 4 (withoutMaterialFilter)
-      expect(result.diagnostics.matchingBeforeCountryFilter).toBe(4);
+      expect(result.diagnostics.fetchedForScoring).toBe(2);
+    });
+
+    it("should include alloy/baseMetal/plating in filtersApplied", async () => {
+      mockPrismaShop.findMany.mockResolvedValue([]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_B",
+        alloyType: "GOLD_18K",
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      expect(result.diagnostics.filtersApplied.alloyType).toBe("GOLD_18K");
     });
   });
 
@@ -619,106 +1158,6 @@ describe("ShopsService - Seller Matching", () => {
       expect(result.sellers).toHaveLength(2);
       expect(result.sellers[0].id).toBe("shop-2");
       expect(result.sellers[1].id).toBe("shop-3");
-    });
-  });
-
-  // ─── Material Filtering ──────────────────────────
-
-  describe("Material Filtering", () => {
-    it("should add material filter to WHERE clause when metalType is specified", async () => {
-      mockPrismaShop.findMany.mockResolvedValue([]);
-
-      await service.findMatchingSellers({
-        jewelleryType: "RING",
-        buildMethod: "METHOD_A",
-        metalType: "GOLD_22K",
-        estimatedWeight: 5,
-        customerCountry: "IN",
-      });
-
-      const whereArg = mockPrismaShop.findMany.mock.calls[0][0].where;
-      const materialFilter = whereArg.AND.find((clause: any) =>
-        clause.OR?.some((cond: any) => cond.supportedMaterials),
-      );
-      expect(materialFilter).toBeDefined();
-    });
-
-    it("should NOT add material filter when metalType is not specified", async () => {
-      mockPrismaShop.findMany.mockResolvedValue([]);
-
-      await service.findMatchingSellers({
-        jewelleryType: "RING",
-        buildMethod: "METHOD_A",
-        // no metalType
-        estimatedWeight: 5,
-        customerCountry: "IN",
-      });
-
-      const whereArg = mockPrismaShop.findMany.mock.calls[0][0].where;
-      const materialFilter = whereArg.AND.find((clause: any) =>
-        clause.OR?.some((cond: any) => cond.supportedMaterials),
-      );
-      expect(materialFilter).toBeUndefined();
-    });
-
-    it("should expand base metal 'GOLD' to match any gold variant", async () => {
-      mockPrismaShop.findMany.mockResolvedValue([]);
-
-      await service.findMatchingSellers({
-        jewelleryType: "RING",
-        buildMethod: "METHOD_B",
-        metalType: "GOLD",
-        estimatedWeight: 2,
-        customerCountry: "IN",
-      });
-
-      const whereArg = mockPrismaShop.findMany.mock.calls[0][0].where;
-      const materialFilter = whereArg.AND.find((clause: any) =>
-        clause.OR?.some((cond: any) => cond.supportedMaterials),
-      );
-      expect(materialFilter).toBeDefined();
-      // Should have variants like GOLD_24K, GOLD_22K, GOLD_18K, GOLD_14K, GOLD_10K + empty array
-      const materialOptions = materialFilter.OR;
-      expect(materialOptions.length).toBeGreaterThan(2);
-      expect(
-        materialOptions.some(
-          (o: any) => o.supportedMaterials?.has === "GOLD_18K",
-        ),
-      ).toBe(true);
-      expect(
-        materialOptions.some(
-          (o: any) => o.supportedMaterials?.has === "GOLD_24K",
-        ),
-      ).toBe(true);
-    });
-
-    it("should expand base metal 'SILVER' to match any silver variant", async () => {
-      mockPrismaShop.findMany.mockResolvedValue([]);
-
-      await service.findMatchingSellers({
-        jewelleryType: "RING",
-        buildMethod: "METHOD_B",
-        metalType: "SILVER",
-        estimatedWeight: 2,
-        customerCountry: "IN",
-      });
-
-      const whereArg = mockPrismaShop.findMany.mock.calls[0][0].where;
-      const materialFilter = whereArg.AND.find((clause: any) =>
-        clause.OR?.some((cond: any) => cond.supportedMaterials),
-      );
-      expect(materialFilter).toBeDefined();
-      const materialOptions = materialFilter.OR;
-      expect(
-        materialOptions.some(
-          (o: any) => o.supportedMaterials?.has === "SILVER_999",
-        ),
-      ).toBe(true);
-      expect(
-        materialOptions.some(
-          (o: any) => o.supportedMaterials?.has === "SILVER_925",
-        ),
-      ).toBe(true);
     });
   });
 
@@ -798,10 +1237,7 @@ describe("ShopsService - Seller Matching", () => {
       mockPrismaShop.count.mockReset();
       mockPrismaShop.count
         .mockResolvedValueOnce(0) // totalShops
-        .mockResolvedValueOnce(0) // activeShops
-        .mockResolvedValueOnce(0) // verifiedShops
-        .mockResolvedValueOnce(0) // activeAndVerified
-        .mockResolvedValueOnce(0); // withoutMaterialFilter
+        .mockResolvedValueOnce(0); // activeAndVerified
       mockPrismaShop.findMany.mockResolvedValue([]);
 
       const result = await service.findMatchingSellers({
@@ -871,6 +1307,27 @@ describe("ShopsService - Seller Matching", () => {
       expect(result.stats.minPrice).toBe(55000);
       expect(result.stats.maxPrice).toBe(69000);
       expect(result.stats.avgPrice).toBe(62000); // (55000+69000)/2
+    });
+
+    it("should handle shops missing supportedAlloys field gracefully", async () => {
+      // Simulates shops from before the schema migration
+      const shop = makeShop({ country: "IN" });
+      delete shop.supportedAlloys;
+      delete shop.supportedBaseMetals;
+      delete shop.supportedPlatingTypes;
+
+      mockPrismaShop.findMany.mockResolvedValue([shop]);
+
+      const result = await service.findMatchingSellers({
+        jewelleryType: "RING",
+        buildMethod: "METHOD_B",
+        alloyType: "GOLD_18K",
+        estimatedWeight: 5,
+        customerCountry: "IN",
+      });
+
+      // Should not crash — undefined arrays treated as empty (supports all)
+      expect(result.sellers).toHaveLength(1);
     });
   });
 });
