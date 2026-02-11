@@ -944,7 +944,7 @@ export class ShopsService {
       throw new NotFoundException("Shop not found");
     }
 
-    // All available jewellery types
+    // All available jewellery types (must match RFQ form JEWELLERY_TYPES)
     const allJewelleryTypes = [
       "RING",
       "NECKLACE",
@@ -954,6 +954,9 @@ export class ShopsService {
       "PENDANT",
       "CHAIN",
       "ANKLET",
+      "BROOCH",
+      "TIE_PIN",
+      "CUFFLINKS",
       "NOSE_PIN",
       "MANGALSUTRA",
       "MAANG_TIKKA",
@@ -1313,6 +1316,112 @@ export class ShopsService {
   }
 
   /**
+   * Debug endpoint: show all shops and why each would or wouldn't match
+   */
+  async debugMatching(params: {
+    jewelleryType: string;
+    buildMethod: string;
+    metalType?: string;
+    customerCountry?: string;
+  }) {
+    const { jewelleryType, buildMethod, metalType, customerCountry } = params;
+
+    // Get ALL shops (no filters)
+    const allShops = await this.prisma.shop.findMany({
+      select: {
+        id: true,
+        shopName: true,
+        isActive: true,
+        isVerified: true,
+        country: true,
+        state: true,
+        city: true,
+        supportedJewelleryTypes: true,
+        supportedMethods: true,
+        supportedMaterials: true,
+        makingChargePercent: true,
+        metalRates: {
+          select: { metalType: true, ratePerGramNpr: true },
+        },
+      },
+    });
+
+    return {
+      requestedFilters: { jewelleryType, buildMethod, metalType, customerCountry },
+      totalShops: allShops.length,
+      shops: allShops.map((shop) => {
+        const isActiveOk = shop.isActive === true;
+        const isVerifiedOk = shop.isVerified === true;
+        const jewelleryTypeOk =
+          shop.supportedJewelleryTypes.length === 0 ||
+          shop.supportedJewelleryTypes.includes(jewelleryType);
+        const buildMethodOk =
+          shop.supportedMethods.length === 0 ||
+          shop.supportedMethods.includes(buildMethod);
+        const materialOk =
+          !metalType ||
+          shop.supportedMaterials.length === 0 ||
+          shop.supportedMaterials.includes(metalType);
+        const countryOk =
+          !customerCountry ||
+          shop.country?.toLowerCase() === customerCountry.toLowerCase();
+
+        const wouldMatch =
+          isActiveOk && isVerifiedOk && jewelleryTypeOk && buildMethodOk && materialOk && countryOk;
+
+        return {
+          shopName: shop.shopName,
+          id: shop.id,
+          wouldMatch,
+          checks: {
+            isActive: { value: shop.isActive, pass: isActiveOk },
+            isVerified: { value: shop.isVerified, pass: isVerifiedOk },
+            jewelleryType: {
+              shopSupports: shop.supportedJewelleryTypes,
+              requested: jewelleryType,
+              pass: jewelleryTypeOk,
+              reason: shop.supportedJewelleryTypes.length === 0
+                ? "empty array = supports all"
+                : jewelleryTypeOk
+                  ? "explicitly supported"
+                  : `NOT in shop's list`,
+            },
+            buildMethod: {
+              shopSupports: shop.supportedMethods,
+              requested: buildMethod,
+              pass: buildMethodOk,
+              reason: shop.supportedMethods.length === 0
+                ? "empty array = supports all"
+                : buildMethodOk
+                  ? "explicitly supported"
+                  : `NOT in shop's list`,
+            },
+            material: {
+              shopSupports: shop.supportedMaterials,
+              requested: metalType || "(none)",
+              pass: materialOk,
+            },
+            country: {
+              shopCountry: shop.country,
+              customerCountry: customerCountry || "(any)",
+              pass: countryOk,
+            },
+          },
+          pricing: {
+            makingChargePercent: shop.makingChargePercent,
+            metalRates: shop.metalRates,
+          },
+          location: {
+            country: shop.country,
+            state: shop.state,
+            city: shop.city,
+          },
+        };
+      }),
+    };
+  }
+
+  /**
    * Find matching sellers for an RFQ with dynamic pricing
    * Sellers are ranked by: same city first, then by rating/reviews
    * By default, only shows sellers from the same country unless includeInternational is true
@@ -1428,8 +1537,18 @@ export class ShopsService {
       where: {
         isActive: true,
         isVerified: true,
-        supportedJewelleryTypes: { has: jewelleryType },
-        supportedMethods: { has: buildMethod },
+        OR: [
+          { supportedJewelleryTypes: { has: jewelleryType } },
+          { supportedJewelleryTypes: { equals: [] } },
+        ],
+        AND: [
+          {
+            OR: [
+              { supportedMethods: { has: buildMethod } },
+              { supportedMethods: { equals: [] } },
+            ],
+          },
+        ],
       },
     });
     console.log(
