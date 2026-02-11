@@ -414,16 +414,20 @@ export class RfqService {
 
     // Notify the seller
     if (shop.user) {
-      await this.notificationsService.notify({
+      await this.notificationsService.create({
         userId: shop.user.id,
         type: "RFQ_RECEIVED",
         channels: ["EMAIL", "PUSH"],
-        data: {
-          rfqId: rfqId,
+        titleKey: "rfq.received.title",
+        titleParams: { jewelleryType: rfq.jewelleryType },
+        bodyKey: "rfq.received.body",
+        bodyParams: {
           jewelleryType: rfq.jewelleryType,
           buildMethod: rfq.buildMethod,
           budgetRange: `${dto.budgetMinNpr || rfq.budgetMinNpr} - ${dto.budgetMaxNpr || rfq.budgetMaxNpr}`,
         },
+        referenceType: "RFQ",
+        referenceId: rfqId,
       });
     }
 

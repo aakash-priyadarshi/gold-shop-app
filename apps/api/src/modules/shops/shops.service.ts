@@ -1639,23 +1639,17 @@ export class ShopsService {
       // Grouped seller counts and IDs for frontend grouping
       groups: {
         nearYou: {
-          label: customerCity
-            ? `In ${customerCity}`
-            : "Near You",
+          label: customerCity ? `In ${customerCity}` : "Near You",
           count: sameCitySellers.length,
           sellerIds: sameCitySellers.map((s) => s.id),
         },
         sameState: {
-          label: customerState
-            ? `In ${customerState}`
-            : "Same State",
+          label: customerState ? `In ${customerState}` : "Same State",
           count: sameStateSellers.length,
           sellerIds: sameStateSellers.map((s) => s.id),
         },
         sameCountry: {
-          label: customerCountry
-            ? `In ${customerCountry}`
-            : "Same Country",
+          label: customerCountry ? `In ${customerCountry}` : "Same Country",
           count: sameCountrySellers.length,
           sellerIds: sameCountrySellers.map((s) => s.id),
         },
