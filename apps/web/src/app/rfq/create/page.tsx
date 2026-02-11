@@ -5079,19 +5079,64 @@ export default function CreateRfqPage() {
                       <div className="space-y-4">
                         {matchingSellers.map((seller, index) => {
                           // Insert group header when location tier changes
-                          const prevSeller = index > 0 ? matchingSellers[index - 1] : null;
-                          const showGroupHeader = !prevSeller || prevSeller.locationMatch !== seller.locationMatch;
-                          
-                          const groupHeaderInfo: Record<string, { icon: string; label: string; color: string; bgColor: string; borderColor: string }> = {
-                            same_city: { icon: '📍', label: sellerGroups?.nearYou?.label || 'Near You', color: 'text-green-700', bgColor: 'bg-green-50', borderColor: 'border-green-200' },
-                            same_state: { icon: '🏛️', label: sellerGroups?.sameState?.label || 'Same State', color: 'text-blue-700', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
-                            same_country: { icon: '🇮🇳', label: sellerGroups?.sameCountry?.label || 'Same Country', color: 'text-amber-700', bgColor: 'bg-amber-50', borderColor: 'border-amber-200' },
-                            other: { icon: '🌍', label: sellerGroups?.international?.label || 'International', color: 'text-purple-700', bgColor: 'bg-purple-50', borderColor: 'border-purple-200' },
+                          const prevSeller =
+                            index > 0 ? matchingSellers[index - 1] : null;
+                          const showGroupHeader =
+                            !prevSeller ||
+                            prevSeller.locationMatch !== seller.locationMatch;
+
+                          const groupHeaderInfo: Record<
+                            string,
+                            {
+                              icon: string;
+                              label: string;
+                              color: string;
+                              bgColor: string;
+                              borderColor: string;
+                            }
+                          > = {
+                            same_city: {
+                              icon: "📍",
+                              label: sellerGroups?.nearYou?.label || "Near You",
+                              color: "text-green-700",
+                              bgColor: "bg-green-50",
+                              borderColor: "border-green-200",
+                            },
+                            same_state: {
+                              icon: "🏛️",
+                              label:
+                                sellerGroups?.sameState?.label || "Same State",
+                              color: "text-blue-700",
+                              bgColor: "bg-blue-50",
+                              borderColor: "border-blue-200",
+                            },
+                            same_country: {
+                              icon: "🇮🇳",
+                              label:
+                                sellerGroups?.sameCountry?.label ||
+                                "Same Country",
+                              color: "text-amber-700",
+                              bgColor: "bg-amber-50",
+                              borderColor: "border-amber-200",
+                            },
+                            other: {
+                              icon: "🌍",
+                              label:
+                                sellerGroups?.international?.label ||
+                                "International",
+                              color: "text-purple-700",
+                              bgColor: "bg-purple-50",
+                              borderColor: "border-purple-200",
+                            },
                           };
-                          
-                          const groupInfo = groupHeaderInfo[seller.locationMatch] || groupHeaderInfo.same_country;
-                          const groupCount = matchingSellers.filter(s => s.locationMatch === seller.locationMatch).length;
-                          
+
+                          const groupInfo =
+                            groupHeaderInfo[seller.locationMatch] ||
+                            groupHeaderInfo.same_country;
+                          const groupCount = matchingSellers.filter(
+                            (s) => s.locationMatch === seller.locationMatch,
+                          ).length;
+
                           const platformCommission = 5;
                           const totalMakingPercent =
                             seller.makingChargePercent + platformCommission;
@@ -5108,13 +5153,20 @@ export default function CreateRfqPage() {
                           return (
                             <div key={seller.id}>
                               {showGroupHeader && (
-                                <div className={`flex items-center gap-2 px-3 py-2 ${groupInfo.bgColor} ${groupInfo.borderColor} border rounded-lg ${index > 0 ? 'mt-4' : ''} mb-3`}>
-                                  <span className="text-lg">{groupInfo.icon}</span>
-                                  <h3 className={`font-semibold text-sm ${groupInfo.color}`}>
+                                <div
+                                  className={`flex items-center gap-2 px-3 py-2 ${groupInfo.bgColor} ${groupInfo.borderColor} border rounded-lg ${index > 0 ? "mt-4" : ""} mb-3`}
+                                >
+                                  <span className="text-lg">
+                                    {groupInfo.icon}
+                                  </span>
+                                  <h3
+                                    className={`font-semibold text-sm ${groupInfo.color}`}
+                                  >
                                     {groupInfo.label}
                                   </h3>
                                   <span className="ml-auto text-xs text-gray-500 bg-white px-2 py-0.5 rounded-full border">
-                                    {groupCount} seller{groupCount !== 1 ? 's' : ''}
+                                    {groupCount} seller
+                                    {groupCount !== 1 ? "s" : ""}
                                   </span>
                                 </div>
                               )}
@@ -5127,143 +5179,149 @@ export default function CreateRfqPage() {
                                       : ""
                                 }`}
                               >
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <h4 className="font-semibold text-gray-900">
-                                      {seller.shopName}
-                                    </h4>
-                                    {seller.isVerified && (
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <ShieldCheck className="h-4 w-4 text-blue-500" />
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          Verified Seller
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    )}
-                                    {seller.sellerTier &&
-                                      seller.sellerTier !== "STANDARD" && (
-                                        <SellerTierBadge
-                                          tier={seller.sellerTier}
-                                          compact
-                                        />
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <h4 className="font-semibold text-gray-900">
+                                        {seller.shopName}
+                                      </h4>
+                                      {seller.isVerified && (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <ShieldCheck className="h-4 w-4 text-blue-500" />
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            Verified Seller
+                                          </TooltipContent>
+                                        </Tooltip>
                                       )}
-                                    {seller.locationMatch === "same_city" && (
-                                      <Badge className="bg-green-100 text-green-700 text-xs">
-                                        Same City
-                                      </Badge>
-                                    )}
-                                    {seller.locationMatch === "same_state" && (
-                                      <Badge className="bg-blue-100 text-blue-700 text-xs">
-                                        Same State
-                                      </Badge>
-                                    )}
-                                    {isInternational && (
-                                      <Badge className="bg-orange-100 text-orange-700 text-xs">
-                                        🌍 International
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-4 text-sm text-gray-500 mb-2">
-                                    <span className="flex items-center gap-1">
-                                      <MapPin className="h-3.5 w-3.5" />
-                                      {[
-                                        seller.city,
-                                        seller.state,
-                                        seller.country,
-                                      ]
-                                        .filter(Boolean)
-                                        .join(", ") || "Location not specified"}
-                                    </span>
-                                    {seller.averageRating > 0 && (
+                                      {seller.sellerTier &&
+                                        seller.sellerTier !== "STANDARD" && (
+                                          <SellerTierBadge
+                                            tier={seller.sellerTier}
+                                            compact
+                                          />
+                                        )}
+                                      {seller.locationMatch === "same_city" && (
+                                        <Badge className="bg-green-100 text-green-700 text-xs">
+                                          Same City
+                                        </Badge>
+                                      )}
+                                      {seller.locationMatch ===
+                                        "same_state" && (
+                                        <Badge className="bg-blue-100 text-blue-700 text-xs">
+                                          Same State
+                                        </Badge>
+                                      )}
+                                      {isInternational && (
+                                        <Badge className="bg-orange-100 text-orange-700 text-xs">
+                                          🌍 International
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-4 text-sm text-gray-500 mb-2">
                                       <span className="flex items-center gap-1">
-                                        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                                        {seller.averageRating.toFixed(1)} (
-                                        {seller.reviewCount} reviews)
+                                        <MapPin className="h-3.5 w-3.5" />
+                                        {[
+                                          seller.city,
+                                          seller.state,
+                                          seller.country,
+                                        ]
+                                          .filter(Boolean)
+                                          .join(", ") ||
+                                          "Location not specified"}
                                       </span>
-                                    )}
-                                  </div>
-                                  <div className="flex flex-wrap gap-2 mt-2">
-                                    {seller.codEnabled && !isInternational && (
+                                      {seller.averageRating > 0 && (
+                                        <span className="flex items-center gap-1">
+                                          <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                                          {seller.averageRating.toFixed(1)} (
+                                          {seller.reviewCount} reviews)
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                      {seller.codEnabled &&
+                                        !isInternational && (
+                                          <Badge
+                                            variant="outline"
+                                            className="text-xs"
+                                          >
+                                            COD Available
+                                          </Badge>
+                                        )}
                                       <Badge
                                         variant="outline"
                                         className="text-xs"
                                       >
-                                        COD Available
+                                        Making Charge: {totalMakingPercent}%
                                       </Badge>
-                                    )}
-                                    <Badge
-                                      variant="outline"
-                                      className="text-xs"
-                                    >
-                                      Making Charge: {totalMakingPercent}%
-                                    </Badge>
-                                    {seller.hasCustomRate && (
-                                      <Badge
-                                        variant="outline"
-                                        className="text-xs text-green-600 border-green-200"
-                                      >
-                                        Custom Pricing
-                                      </Badge>
-                                    )}
-                                  </div>
-
-                                  {/* International delivery notice */}
-                                  {isInternational && (
-                                    <div className="mt-3 p-2.5 bg-orange-50 border border-orange-200 rounded-lg">
-                                      <p className="text-xs text-orange-800 flex items-start gap-1.5">
-                                        <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                                        <span>
-                                          <strong>International Order:</strong>{" "}
-                                          This item will not be delivered
-                                          directly to you. You can pick it up
-                                          from an Orivraa routing centre in your
-                                          city. Location details will be shared
-                                          once the order is received by Orivraa.
-                                        </span>
-                                      </p>
+                                      {seller.hasCustomRate && (
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs text-green-600 border-green-200"
+                                        >
+                                          Custom Pricing
+                                        </Badge>
+                                      )}
                                     </div>
-                                  )}
-                                </div>
-                                <div className="text-right ml-4">
-                                  <div className="text-lg font-bold text-gold-600">
-                                    {currencyInfo?.symbol || "Rs."}
-                                    {totalPrice.toLocaleString()}
+
+                                    {/* International delivery notice */}
+                                    {isInternational && (
+                                      <div className="mt-3 p-2.5 bg-orange-50 border border-orange-200 rounded-lg">
+                                        <p className="text-xs text-orange-800 flex items-start gap-1.5">
+                                          <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                                          <span>
+                                            <strong>
+                                              International Order:
+                                            </strong>{" "}
+                                            This item will not be delivered
+                                            directly to you. You can pick it up
+                                            from an Orivraa routing centre in
+                                            your city. Location details will be
+                                            shared once the order is received by
+                                            Orivraa.
+                                          </span>
+                                        </p>
+                                      </div>
+                                    )}
                                   </div>
-                                  <div className="text-xs text-gray-500">
-                                    Material: {currencyInfo?.symbol || "Rs."}
-                                    {seller.materialCost.toLocaleString()}
-                                    <br />
-                                    Making ({totalMakingPercent}%):{" "}
-                                    {currencyInfo?.symbol || "Rs."}
-                                    {totalMakingCharge.toLocaleString()}
-                                  </div>
-                                  <MarketComparison
-                                    ourPrice={totalPrice}
-                                    currencySymbol={
-                                      currencyInfo?.symbol || "Rs."
-                                    }
-                                    makingChargePercent={totalMakingPercent}
-                                  />
-                                  <div className="mt-3">
-                                    <button
-                                      onClick={() => {
-                                        setSelectedSeller(seller);
-                                        setOrderBudget(String(totalPrice));
-                                        setOrderMessage("");
-                                        setShowOrderModal(true);
-                                      }}
-                                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-amber-950 font-semibold text-sm rounded-lg hover:from-amber-400 hover:via-yellow-300 hover:to-amber-400 shadow-sm hover:shadow transition-all"
-                                    >
-                                      <ShoppingBag className="h-4 w-4" />
-                                      Order from this seller
-                                    </button>
+                                  <div className="text-right ml-4">
+                                    <div className="text-lg font-bold text-gold-600">
+                                      {currencyInfo?.symbol || "Rs."}
+                                      {totalPrice.toLocaleString()}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      Material: {currencyInfo?.symbol || "Rs."}
+                                      {seller.materialCost.toLocaleString()}
+                                      <br />
+                                      Making ({totalMakingPercent}%):{" "}
+                                      {currencyInfo?.symbol || "Rs."}
+                                      {totalMakingCharge.toLocaleString()}
+                                    </div>
+                                    <MarketComparison
+                                      ourPrice={totalPrice}
+                                      currencySymbol={
+                                        currencyInfo?.symbol || "Rs."
+                                      }
+                                      makingChargePercent={totalMakingPercent}
+                                    />
+                                    <div className="mt-3">
+                                      <button
+                                        onClick={() => {
+                                          setSelectedSeller(seller);
+                                          setOrderBudget(String(totalPrice));
+                                          setOrderMessage("");
+                                          setShowOrderModal(true);
+                                        }}
+                                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-amber-950 font-semibold text-sm rounded-lg hover:from-amber-400 hover:via-yellow-300 hover:to-amber-400 shadow-sm hover:shadow transition-all"
+                                      >
+                                        <ShoppingBag className="h-4 w-4" />
+                                        Order from this seller
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
                             </div>
                           );
                         })}
