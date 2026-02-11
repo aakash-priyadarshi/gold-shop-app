@@ -401,7 +401,12 @@ async function initializeFromGeo() {
         const apiCountry = data.detectedCountry as CountryCode | undefined;
         if (apiCountry && COUNTRIES[apiCountry]) {
           detected = apiCountry;
-          console.log("[geo] Detected country from API:", detected, "source:", data.source);
+          console.log(
+            "[geo] Detected country from API:",
+            detected,
+            "source:",
+            data.source,
+          );
         }
       } catch {
         console.warn("[geo] Geo API failed, keeping previous state");
@@ -417,7 +422,9 @@ async function initializeFromGeo() {
     });
 
     // Only auto-set country/currency if user has never explicitly chosen
-    const userChoseCountry = localStorage.getItem("orivraa_user_country_choice");
+    const userChoseCountry = localStorage.getItem(
+      "orivraa_user_country_choice",
+    );
     if (!userChoseCountry) {
       const countryInfo = COUNTRIES[detected];
       usePreferencesStore.setState({

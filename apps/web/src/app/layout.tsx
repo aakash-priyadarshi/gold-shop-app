@@ -1,15 +1,15 @@
-import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
-import './globals.css';
-import { Providers } from '@/components/providers';
-import { Toaster } from '@/components/ui/toaster';
-import { GeoMismatchBanner } from '@/components/layout/GeoMismatchBanner';
-import { BRAND } from '@/config/brand';
+import { GeoMismatchBanner } from "@/components/layout/GeoMismatchBanner";
+import { Providers } from "@/components/providers";
+import { Toaster } from "@/components/ui/toaster";
+import { BRAND } from "@/config/brand";
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
 
-const inter = Inter({ 
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-inter',
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
@@ -23,14 +23,14 @@ export const metadata: Metadata = {
   creator: BRAND.name,
   publisher: BRAND.name,
   openGraph: {
-    type: 'website',
-    locale: 'en_US',
+    type: "website",
+    locale: "en_US",
     siteName: BRAND.name,
     title: BRAND.seo.title,
     description: BRAND.seo.defaultDescription,
     images: [
       {
-        url: '/brand/orivraa-og.png',
+        url: "/brand/orivraa-og.png",
         width: 1200,
         height: 630,
         alt: BRAND.name,
@@ -38,28 +38,28 @@ export const metadata: Metadata = {
     ],
   },
   twitter: {
-    card: 'summary_large_image',
+    card: "summary_large_image",
     title: BRAND.seo.title,
     description: BRAND.seo.defaultDescription,
-    images: ['/brand/orivraa-og.png'],
+    images: ["/brand/orivraa-og.png"],
   },
   icons: {
     icon: [
-      { url: '/favicon.ico' },
-      { url: '/brand/orivraa-icon.svg', type: 'image/svg+xml' },
+      { url: "/favicon.ico" },
+      { url: "/brand/orivraa-icon.svg", type: "image/svg+xml" },
     ],
-    apple: '/brand/apple-touch-icon.png',
+    apple: "/brand/apple-touch-icon.png",
   },
-  manifest: '/manifest.json',
+  manifest: "/manifest.json",
 };
 
 export const viewport: Viewport = {
-  width: 'device-width',
+  width: "device-width",
   initialScale: 1,
   maximumScale: 5,
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0f172a' },
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
   ],
 };
 

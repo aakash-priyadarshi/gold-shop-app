@@ -14,12 +14,12 @@
  */
 
 import { Test, TestingModule } from "@nestjs/testing";
-import { ShopsService } from "./shops.service";
+import { RedisService } from "../../common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
-import { RedisService } from "../../common";
 import { PlatformConfigService } from "../platform-config/platform-config.service";
 import { ContentModerationService } from "./content-moderation.service";
+import { ShopsService } from "./shops.service";
 
 // ═══════════════════════════════════════════
 // MOCK SHOP DATA
@@ -82,7 +82,10 @@ const mockPrisma: Record<string, any> = {
 const mockAuditService = { log: jest.fn() };
 const mockRedisService = { get: jest.fn(), set: jest.fn(), del: jest.fn() };
 const mockConfigService = { getConfig: jest.fn() };
-const mockModerationService = { moderateText: jest.fn(), moderateImage: jest.fn() };
+const mockModerationService = {
+  moderateText: jest.fn(),
+  moderateImage: jest.fn(),
+};
 
 // ═══════════════════════════════════════════
 // TEST SUITE
@@ -162,7 +165,7 @@ describe("ShopsService - Seller Matching", () => {
         shopName: "Universal Shop",
         country: "IN",
         supportedJewelleryTypes: [], // empty = supports all
-        supportedMethods: [],       // empty = supports all
+        supportedMethods: [], // empty = supports all
       });
 
       mockPrismaShop.findMany.mockResolvedValue([shop]);
@@ -197,9 +200,7 @@ describe("ShopsService - Seller Matching", () => {
 
       // Verify the where clause passed to findMany includes country filter
       const whereArg = mockPrismaShop.findMany.mock.calls[0][0].where;
-      const countryFilter = whereArg.AND.find(
-        (clause: any) => clause.country,
-      );
+      const countryFilter = whereArg.AND.find((clause: any) => clause.country);
       expect(countryFilter).toBeDefined();
       expect(countryFilter.country.equals).toBe("IN");
     });
@@ -230,9 +231,7 @@ describe("ShopsService - Seller Matching", () => {
 
       // Verify the where clause does NOT include country filter
       const whereArg = mockPrismaShop.findMany.mock.calls[0][0].where;
-      const countryFilter = whereArg.AND.find(
-        (clause: any) => clause.country,
-      );
+      const countryFilter = whereArg.AND.find((clause: any) => clause.country);
       expect(countryFilter).toBeUndefined();
     });
 
@@ -247,9 +246,7 @@ describe("ShopsService - Seller Matching", () => {
       });
 
       const whereArg = mockPrismaShop.findMany.mock.calls[0][0].where;
-      const countryFilter = whereArg.AND.find(
-        (clause: any) => clause.country,
-      );
+      const countryFilter = whereArg.AND.find((clause: any) => clause.country);
       expect(countryFilter.country.equals).toBe("IN");
     });
 
@@ -264,9 +261,7 @@ describe("ShopsService - Seller Matching", () => {
       });
 
       const whereArg = mockPrismaShop.findMany.mock.calls[0][0].where;
-      const countryFilter = whereArg.AND.find(
-        (clause: any) => clause.country,
-      );
+      const countryFilter = whereArg.AND.find((clause: any) => clause.country);
       expect(countryFilter.country.mode).toBe("insensitive");
     });
   });
@@ -341,7 +336,11 @@ describe("ShopsService - Seller Matching", () => {
     });
 
     it("should score 0 for international sellers", async () => {
-      const shop = makeShop({ country: "NP", state: "Bagmati", city: "Kathmandu" });
+      const shop = makeShop({
+        country: "NP",
+        state: "Bagmati",
+        city: "Kathmandu",
+      });
 
       mockPrismaShop.findMany.mockResolvedValue([shop]);
 
@@ -362,8 +361,8 @@ describe("ShopsService - Seller Matching", () => {
     it("should handle case-insensitive city/state comparison", async () => {
       const shop = makeShop({
         country: "IN",
-        state: "bihar",     // lowercase
-        city: "PATNA",      // uppercase
+        state: "bihar", // lowercase
+        city: "PATNA", // uppercase
       });
 
       mockPrismaShop.findMany.mockResolvedValue([shop]);
@@ -373,8 +372,8 @@ describe("ShopsService - Seller Matching", () => {
         buildMethod: "METHOD_A",
         estimatedWeight: 5,
         customerCountry: "IN",
-        customerState: "Bihar",  // mixed case
-        customerCity: "patna",   // lowercase
+        customerState: "Bihar", // mixed case
+        customerCity: "patna", // lowercase
       });
 
       expect(result.sellers[0].locationScore).toBe(3); // same city match
@@ -388,8 +387,18 @@ describe("ShopsService - Seller Matching", () => {
       const shops = [
         makeShop({ id: "s1", country: "IN", state: "Bihar", city: "Patna" }),
         makeShop({ id: "s2", country: "IN", state: "Bihar", city: "Gaya" }),
-        makeShop({ id: "s3", country: "IN", state: "Maharashtra", city: "Mumbai" }),
-        makeShop({ id: "s4", country: "NP", state: "Bagmati", city: "Kathmandu" }),
+        makeShop({
+          id: "s3",
+          country: "IN",
+          state: "Maharashtra",
+          city: "Mumbai",
+        }),
+        makeShop({
+          id: "s4",
+          country: "NP",
+          state: "Bagmati",
+          city: "Kathmandu",
+        }),
       ];
 
       mockPrismaShop.findMany.mockResolvedValue(shops);
@@ -404,8 +413,8 @@ describe("ShopsService - Seller Matching", () => {
         includeInternational: true,
       });
 
-      expect(result.groups.nearYou.count).toBe(1);    // Patna
-      expect(result.groups.sameState.count).toBe(1);   // Gaya (Bihar)
+      expect(result.groups.nearYou.count).toBe(1); // Patna
+      expect(result.groups.sameState.count).toBe(1); // Gaya (Bihar)
       expect(result.groups.sameCountry.count).toBe(1); // Mumbai (IN)
       expect(result.groups.international.count).toBe(1); // Kathmandu (NP)
     });
@@ -413,9 +422,26 @@ describe("ShopsService - Seller Matching", () => {
     it("should order sellers: city > state > country > international", async () => {
       const shops = [
         makeShop({ id: "intl", country: "NP", shopName: "Nepal Shop" }),
-        makeShop({ id: "city", country: "IN", state: "Bihar", city: "Patna", shopName: "City Shop" }),
-        makeShop({ id: "country", country: "IN", state: "Maharashtra", shopName: "Country Shop" }),
-        makeShop({ id: "state", country: "IN", state: "Bihar", city: "Gaya", shopName: "State Shop" }),
+        makeShop({
+          id: "city",
+          country: "IN",
+          state: "Bihar",
+          city: "Patna",
+          shopName: "City Shop",
+        }),
+        makeShop({
+          id: "country",
+          country: "IN",
+          state: "Maharashtra",
+          shopName: "Country Shop",
+        }),
+        makeShop({
+          id: "state",
+          country: "IN",
+          state: "Bihar",
+          city: "Gaya",
+          shopName: "State Shop",
+        }),
       ];
 
       mockPrismaShop.findMany.mockResolvedValue(shops);

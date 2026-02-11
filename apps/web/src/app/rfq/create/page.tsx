@@ -543,6 +543,9 @@ export default function CreateRfqPage() {
   // Get country from global preferences store (persisted across navigation)
   // IMPORTANT: Country determines TAX jurisdiction (VAT/GST rates)
   const country = usePreferencesStore((state) => state.country);
+  const detectedCountry = usePreferencesStore(
+    (state) => state.detectedCountry,
+  );
   const countryInfo = COUNTRIES[country];
 
   // Get weight unit from market context (country-specific default)
@@ -1604,9 +1607,13 @@ export default function CreateRfqPage() {
 
       // Priority 1: Use advanced filter values if set
       // Priority 2: Use selected delivery address location
-      // Priority 3: Fall back to user's preferred country
+      // Priority 3: Fall back to geo-detected country (most accurate)
+      // Priority 4: Fall back to user's stored country preference
       const effectiveCountry =
-        filterCountry || selectedAddress?.country || country;
+        filterCountry ||
+        selectedAddress?.country ||
+        detectedCountry ||
+        country;
       const effectiveState = filterState || selectedAddress?.state;
       const effectiveCity = filterCity || selectedAddress?.city;
 
@@ -1698,6 +1705,7 @@ export default function CreateRfqPage() {
     sellerMinRating,
     sellerMaxPrice,
     country,
+    detectedCountry,
     selectedAddress,
     filterCountry,
     filterState,

@@ -28,6 +28,16 @@ export class UpdateProfileDto {
   @IsString()
   country?: string;
 
+  @ApiPropertyOptional({ example: 'Bagmati' })
+  @IsOptional()
+  @IsString()
+  state?: string;
+
+  @ApiPropertyOptional({ example: 'Kathmandu' })
+  @IsOptional()
+  @IsString()
+  city?: string;
+
   @ApiPropertyOptional({ enum: ['en', 'ne', 'hi'] })
   @IsOptional()
   @IsEnum(['en', 'ne', 'hi'])

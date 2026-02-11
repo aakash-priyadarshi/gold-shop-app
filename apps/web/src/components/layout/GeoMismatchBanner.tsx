@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { X, MapPin, ArrowRight } from "lucide-react";
 import {
-  usePreferencesStore,
   COUNTRIES,
+  usePreferencesStore,
   type CountryCode,
 } from "@/store/preferences";
+import { ArrowRight, MapPin, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 /**
  * GeoMismatchBanner
@@ -55,9 +55,8 @@ export function GeoMismatchBanner() {
         <div className="flex items-center gap-2 text-sm">
           <MapPin className="h-4 w-4 text-amber-600 flex-shrink-0" />
           <span className="text-amber-900">
-            It seems you&apos;re in{" "}
-            <strong>{detectedInfo.name}</strong>, but your settings are set to{" "}
-            <strong>{currentInfo.name}</strong>.
+            It seems you&apos;re in <strong>{detectedInfo.name}</strong>, but
+            your settings are set to <strong>{currentInfo.name}</strong>.
           </span>
         </div>
 
