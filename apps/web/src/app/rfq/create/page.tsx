@@ -5391,6 +5391,12 @@ export default function CreateRfqPage() {
                                             COD Available
                                           </Badge>
                                         )}
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs"
+                                      >
+                                        Making Charge: {seller.makingChargePercent}%
+                                      </Badge>
                                       {seller.hasCustomRate && (
                                         <Badge
                                           variant="outline"
