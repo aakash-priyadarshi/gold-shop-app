@@ -40,6 +40,9 @@ export const CURRENCIES: Record<
 
 // Country metadata (for TAX jurisdiction)
 // Using SVG flag image paths from /public/flags/
+// NOTE: taxRate/taxDisplay are UI-only defaults for initial render.
+// Actual tax rates are fetched from admin-configured backend (TaxRuleConfig DB table)
+// via useTaxRules hook / fetchTaxRules(). These defaults are overridden at runtime.
 export const COUNTRIES: Record<
   CountryCode,
   {

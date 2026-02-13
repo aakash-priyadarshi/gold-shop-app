@@ -12,8 +12,8 @@
 
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
 import { getApiUrl } from "@/lib/api";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export interface TaxRule {
   id: string;
@@ -79,7 +79,9 @@ export async function fetchTaxRules(
     return cached.data;
   }
   try {
-    const res = await fetch(`${getApiUrl()}/pricing/tax-rules?region=${region}`);
+    const res = await fetch(
+      `${getApiUrl()}/pricing/tax-rules?region=${region}`,
+    );
     if (!res.ok) return null;
     const data: TaxRulesResponse = await res.json();
     cache[region] = { data, ts: Date.now() };
@@ -103,6 +105,23 @@ export function lookupTaxRate(
   const allRule = active.find((r) => r.category === "ALL");
   if (allRule) return { rate: allRule.rate, name: allRule.taxName };
   return { rate: 0, name: "Tax" };
+}
+
+/**
+ * Synchronous cache reader: returns the cached tax rate for a country
+ * if available (no network call). Returns null if cache is cold.
+ * Use this in synchronous computations where you can't await.
+ */
+export function getCachedTaxRate(
+  countryCode: string,
+  category: TaxCategory = "ALL",
+): { rate: number; name: string } | null {
+  const region = countryCode.toUpperCase();
+  const cached = cache[region];
+  if (cached && Date.now() - cached.ts < CACHE_TTL) {
+    return lookupTaxRate(cached.data.rules, category);
+  }
+  return null;
 }
 
 export function useTaxRules(countryCode: string | undefined) {

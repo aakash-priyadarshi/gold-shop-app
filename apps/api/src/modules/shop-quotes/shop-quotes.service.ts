@@ -1,23 +1,25 @@
 import {
-  Injectable,
   BadRequestException,
-  NotFoundException,
   ForbiddenException,
+  Injectable,
   Logger,
-} from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { RedisService } from '../../common/redis';
-import { AuditService } from '../audit/audit.service';
+  NotFoundException,
+} from "@nestjs/common";
+import { BuildMethod, JewelleryType, ShopQuoteStatus } from "@prisma/client";
+import { RedisService } from "../../common/redis";
+import { PrismaService } from "../../prisma/prisma.service";
+import { AuditService } from "../audit/audit.service";
+import { MarketRegion } from "../market-rates/types";
+import { TaxRulesService } from "../pricing/services/tax-rules.service";
 import {
   CreateShopQuoteDto,
-  UpdateShopQuoteDto,
-  UpdateQuoteStatusDto,
   RecordPaymentDto,
-} from './dto';
-import { ShopQuoteStatus, JewelleryType, BuildMethod } from '@prisma/client';
+  UpdateQuoteStatusDto,
+  UpdateShopQuoteDto,
+} from "./dto";
 
 // Redis key prefix for walk-in customer lookup
-const WALKIN_CUSTOMER_CACHE_PREFIX = 'walkin:phone:';
+const WALKIN_CUSTOMER_CACHE_PREFIX = "walkin:phone:";
 const WALKIN_CUSTOMER_CACHE_TTL = 86400; // 24 hours
 
 @Injectable()
@@ -28,7 +30,24 @@ export class ShopQuotesService {
     private prisma: PrismaService,
     private redisService: RedisService,
     private auditService: AuditService,
+    private taxRulesService: TaxRulesService,
   ) {}
+
+  /**
+   * Get the dynamic tax rate for a given region from admin-configured rules.
+   * Falls back to 0.13 (Nepal default) if lookup fails.
+   */
+  private async getTaxRate(region: string = "NP"): Promise<number> {
+    try {
+      const result = await this.taxRulesService.calculateTaxes(
+        region as MarketRegion,
+        { ALL: 1 }, // dummy amount to get effective rate
+      );
+      return result.effectiveRate;
+    } catch {
+      return 0.13; // Fallback default
+    }
+  }
 
   /**
    * Generate a unique quote number
@@ -43,7 +62,11 @@ export class ShopQuotesService {
    * Lookup customer by phone number
    * First checks Redis cache, then falls back to database
    */
-  async lookupCustomerByPhone(phoneCountryCode: string, phone: string, shopId: string) {
+  async lookupCustomerByPhone(
+    phoneCountryCode: string,
+    phone: string,
+    shopId: string,
+  ) {
     const fullPhone = `${phoneCountryCode}${phone}`;
     const cacheKey = `${WALKIN_CUSTOMER_CACHE_PREFIX}${fullPhone}`;
 
@@ -56,7 +79,7 @@ export class ShopQuotesService {
         return {
           found: true,
           customer: parsed,
-          source: 'cache',
+          source: "cache",
         };
       } catch (e) {
         this.logger.warn(`Failed to parse cached customer: ${e.message}`);
@@ -68,7 +91,7 @@ export class ShopQuotesService {
       where: { phone: fullPhone },
       include: {
         shopQuotes: {
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
           take: 5,
           select: {
             id: true,
@@ -95,12 +118,16 @@ export class ShopQuotesService {
         country: customer.country,
         recentOrders: customer.shopQuotes,
       };
-      await this.redisService.set(cacheKey, JSON.stringify(customerData), WALKIN_CUSTOMER_CACHE_TTL);
+      await this.redisService.set(
+        cacheKey,
+        JSON.stringify(customerData),
+        WALKIN_CUSTOMER_CACHE_TTL,
+      );
 
       return {
         found: true,
         customer: customerData,
-        source: 'database',
+        source: "database",
       };
     }
 
@@ -142,7 +169,7 @@ export class ShopQuotesService {
           email: customerData.email,
           address: customerData.address,
           city: customerData.city,
-          country: customerData.country || 'India',
+          country: customerData.country || "India",
         },
       });
     } else {
@@ -155,7 +182,7 @@ export class ShopQuotesService {
           email: customerData.email,
           address: customerData.address,
           city: customerData.city,
-          country: customerData.country || 'India',
+          country: customerData.country || "India",
           createdByShopId: shopId,
         },
       });
@@ -178,11 +205,13 @@ export class ShopQuotesService {
     });
 
     if (!shop) {
-      throw new ForbiddenException('Shop not found or you do not own this shop');
+      throw new ForbiddenException(
+        "Shop not found or you do not own this shop",
+      );
     }
 
     if (!shop.isVerified) {
-      throw new BadRequestException('Shop must be verified to create quotes');
+      throw new BadRequestException("Shop must be verified to create quotes");
     }
 
     // Get or create walk-in customer
@@ -198,16 +227,18 @@ export class ShopQuotesService {
 
     // Calculate total price if pricing provided
     let totalPriceNpr: number | null = null;
+    let taxNprValue = 0;
     if (dto.metalCostNpr !== undefined) {
       totalPriceNpr =
         (dto.metalCostNpr || 0) +
         (dto.makingChargeNpr || 0) +
         (dto.gemstoneCostNpr || 0) +
         (dto.finishCostNpr || 0);
-      
-      // Add 13% tax (Nepal VAT)
-      const taxNpr = totalPriceNpr * 0.13;
-      totalPriceNpr += taxNpr;
+
+      // Use admin-configured tax rate
+      const taxRate = await this.getTaxRate("NP");
+      taxNprValue = totalPriceNpr * taxRate;
+      totalPriceNpr += taxNprValue;
     }
 
     // Create the quote
@@ -227,7 +258,7 @@ export class ShopQuotesService {
         makingChargeNpr: dto.makingChargeNpr,
         gemstoneCostNpr: dto.gemstoneCostNpr || 0,
         finishCostNpr: dto.finishCostNpr || 0,
-        taxNpr: totalPriceNpr ? totalPriceNpr * 0.13 / 1.13 : 0,
+        taxNpr: taxNprValue,
         totalPriceNpr,
         estimatedDays: dto.estimatedDays,
         shopNotes: dto.shopNotes,
@@ -249,9 +280,9 @@ export class ShopQuotesService {
     // Log audit
     await this.auditService.log({
       userId: shopkeeperId,
-      actorType: 'USER',
-      action: 'CREATE',
-      resourceType: 'SHOP_QUOTE',
+      actorType: "USER",
+      action: "CREATE",
+      resourceType: "SHOP_QUOTE",
       resourceId: quote.id,
       newValue: {
         quoteNumber: quote.quoteNumber,
@@ -263,21 +294,27 @@ export class ShopQuotesService {
 
     return {
       ...quote,
-      message: 'Quote created successfully',
+      message: "Quote created successfully",
     };
   }
 
   /**
    * Get all quotes for a shop
    */
-  async findAllForShop(shopId: string, userId: string, status?: ShopQuoteStatus) {
+  async findAllForShop(
+    shopId: string,
+    userId: string,
+    status?: ShopQuoteStatus,
+  ) {
     // Verify shop belongs to user
     const shop = await this.prisma.shop.findFirst({
       where: { id: shopId, userId },
     });
 
     if (!shop) {
-      throw new ForbiddenException('Shop not found or you do not own this shop');
+      throw new ForbiddenException(
+        "Shop not found or you do not own this shop",
+      );
     }
 
     const where: any = { shopId };
@@ -287,7 +324,7 @@ export class ShopQuotesService {
 
     return this.prisma.shopQuote.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       include: {
         walkInCustomer: {
           select: {
@@ -321,12 +358,12 @@ export class ShopQuotesService {
     });
 
     if (!quote) {
-      throw new NotFoundException('Quote not found');
+      throw new NotFoundException("Quote not found");
     }
 
     // Verify ownership
     if (quote.shop.userId !== userId) {
-      throw new ForbiddenException('Not authorized to view this quote');
+      throw new ForbiddenException("Not authorized to view this quote");
     }
 
     return quote;
@@ -335,32 +372,48 @@ export class ShopQuotesService {
   /**
    * Update quote details (pricing, notes, etc.)
    */
-  async update(quoteId: string, shopId: string, userId: string, dto: UpdateShopQuoteDto) {
+  async update(
+    quoteId: string,
+    shopId: string,
+    userId: string,
+    dto: UpdateShopQuoteDto,
+  ) {
     const quote = await this.findOne(quoteId, shopId, userId);
 
-    if (quote.status === ShopQuoteStatus.COMPLETED || quote.status === ShopQuoteStatus.CANCELLED) {
-      throw new BadRequestException('Cannot update a completed or cancelled quote');
+    if (
+      quote.status === ShopQuoteStatus.COMPLETED ||
+      quote.status === ShopQuoteStatus.CANCELLED
+    ) {
+      throw new BadRequestException(
+        "Cannot update a completed or cancelled quote",
+      );
     }
 
     // Recalculate total if pricing changed
     let totalPriceNpr = quote.totalPriceNpr;
     let taxNpr = quote.taxNpr;
-    
-    if (dto.metalCostNpr !== undefined || dto.makingChargeNpr !== undefined || 
-        dto.gemstoneCostNpr !== undefined || dto.finishCostNpr !== undefined) {
+
+    if (
+      dto.metalCostNpr !== undefined ||
+      dto.makingChargeNpr !== undefined ||
+      dto.gemstoneCostNpr !== undefined ||
+      dto.finishCostNpr !== undefined
+    ) {
       const metalCost = dto.metalCostNpr ?? quote.metalCostNpr ?? 0;
       const makingCharge = dto.makingChargeNpr ?? quote.makingChargeNpr ?? 0;
       const gemstoneCost = dto.gemstoneCostNpr ?? quote.gemstoneCostNpr ?? 0;
       const finishCost = dto.finishCostNpr ?? quote.finishCostNpr ?? 0;
-      
+
       const subtotal = metalCost + makingCharge + gemstoneCost + finishCost;
-      taxNpr = subtotal * 0.13;
+      const dynamicTaxRate = await this.getTaxRate("NP");
+      taxNpr = subtotal * dynamicTaxRate;
       totalPriceNpr = subtotal + taxNpr;
     }
 
-    const balanceDueNpr = totalPriceNpr !== null 
-      ? totalPriceNpr - (quote.advancePaidNpr || 0) 
-      : null;
+    const balanceDueNpr =
+      totalPriceNpr !== null
+        ? totalPriceNpr - (quote.advancePaidNpr || 0)
+        : null;
 
     const updated = await this.prisma.shopQuote.update({
       where: { id: quoteId },
@@ -374,7 +427,8 @@ export class ShopQuotesService {
         balanceDueNpr,
         estimatedDays: dto.estimatedDays ?? quote.estimatedDays,
         shopNotes: dto.shopNotes ?? quote.shopNotes,
-        specialInstructions: dto.specialInstructions ?? quote.specialInstructions,
+        specialInstructions:
+          dto.specialInstructions ?? quote.specialInstructions,
       },
       include: {
         walkInCustomer: true,
@@ -383,9 +437,9 @@ export class ShopQuotesService {
 
     await this.auditService.log({
       userId,
-      actorType: 'USER',
-      action: 'UPDATE',
-      resourceType: 'SHOP_QUOTE',
+      actorType: "USER",
+      action: "UPDATE",
+      resourceType: "SHOP_QUOTE",
       resourceId: quoteId,
       previousValue: {
         totalPriceNpr: quote.totalPriceNpr,
@@ -403,14 +457,31 @@ export class ShopQuotesService {
   /**
    * Update quote status
    */
-  async updateStatus(quoteId: string, shopId: string, userId: string, dto: UpdateQuoteStatusDto) {
+  async updateStatus(
+    quoteId: string,
+    shopId: string,
+    userId: string,
+    dto: UpdateQuoteStatusDto,
+  ) {
     const quote = await this.findOne(quoteId, shopId, userId);
 
     const validTransitions: Record<ShopQuoteStatus, ShopQuoteStatus[]> = {
-      [ShopQuoteStatus.QUOTED]: [ShopQuoteStatus.CONFIRMED, ShopQuoteStatus.CANCELLED],
-      [ShopQuoteStatus.CONFIRMED]: [ShopQuoteStatus.IN_PROGRESS, ShopQuoteStatus.CANCELLED],
-      [ShopQuoteStatus.IN_PROGRESS]: [ShopQuoteStatus.READY, ShopQuoteStatus.CANCELLED],
-      [ShopQuoteStatus.READY]: [ShopQuoteStatus.COMPLETED, ShopQuoteStatus.CANCELLED],
+      [ShopQuoteStatus.QUOTED]: [
+        ShopQuoteStatus.CONFIRMED,
+        ShopQuoteStatus.CANCELLED,
+      ],
+      [ShopQuoteStatus.CONFIRMED]: [
+        ShopQuoteStatus.IN_PROGRESS,
+        ShopQuoteStatus.CANCELLED,
+      ],
+      [ShopQuoteStatus.IN_PROGRESS]: [
+        ShopQuoteStatus.READY,
+        ShopQuoteStatus.CANCELLED,
+      ],
+      [ShopQuoteStatus.READY]: [
+        ShopQuoteStatus.COMPLETED,
+        ShopQuoteStatus.CANCELLED,
+      ],
       [ShopQuoteStatus.COMPLETED]: [],
       [ShopQuoteStatus.CANCELLED]: [],
     };
@@ -423,12 +494,14 @@ export class ShopQuotesService {
     }
 
     if (newStatus === ShopQuoteStatus.CANCELLED && !dto.cancelReason) {
-      throw new BadRequestException('Cancel reason is required');
+      throw new BadRequestException("Cancel reason is required");
     }
 
     // For CONFIRMED, pricing must be set
     if (newStatus === ShopQuoteStatus.CONFIRMED && !quote.totalPriceNpr) {
-      throw new BadRequestException('Price must be set before confirming the quote');
+      throw new BadRequestException(
+        "Price must be set before confirming the quote",
+      );
     }
 
     const updateData: any = {
@@ -449,7 +522,9 @@ export class ShopQuotesService {
       case ShopQuoteStatus.COMPLETED:
         updateData.completedAt = new Date();
         if (quote.balanceDueNpr && quote.balanceDueNpr > 0) {
-          throw new BadRequestException('Balance must be paid before completing');
+          throw new BadRequestException(
+            "Balance must be paid before completing",
+          );
         }
         updateData.paidInFullAt = new Date();
         break;
@@ -469,9 +544,9 @@ export class ShopQuotesService {
 
     await this.auditService.log({
       userId,
-      actorType: 'USER',
-      action: 'STATUS_UPDATE',
-      resourceType: 'SHOP_QUOTE',
+      actorType: "USER",
+      action: "STATUS_UPDATE",
+      resourceType: "SHOP_QUOTE",
       resourceId: quoteId,
       previousValue: { status: quote.status },
       newValue: { status: newStatus, cancelReason: dto.cancelReason },
@@ -483,22 +558,29 @@ export class ShopQuotesService {
   /**
    * Record a payment on the quote
    */
-  async recordPayment(quoteId: string, shopId: string, userId: string, dto: RecordPaymentDto) {
+  async recordPayment(
+    quoteId: string,
+    shopId: string,
+    userId: string,
+    dto: RecordPaymentDto,
+  ) {
     const quote = await this.findOne(quoteId, shopId, userId);
 
     if (quote.status === ShopQuoteStatus.CANCELLED) {
-      throw new BadRequestException('Cannot record payment on cancelled quote');
+      throw new BadRequestException("Cannot record payment on cancelled quote");
     }
 
     if (!quote.totalPriceNpr) {
-      throw new BadRequestException('Quote price must be set before recording payment');
+      throw new BadRequestException(
+        "Quote price must be set before recording payment",
+      );
     }
 
     const newAdvancePaid = (quote.advancePaidNpr || 0) + dto.amountNpr;
     const newBalanceDue = (quote.totalPriceNpr || 0) - newAdvancePaid;
 
     if (newBalanceDue < 0) {
-      throw new BadRequestException('Payment exceeds remaining balance');
+      throw new BadRequestException("Payment exceeds remaining balance");
     }
 
     const updated = await this.prisma.shopQuote.update({
@@ -515,9 +597,9 @@ export class ShopQuotesService {
 
     await this.auditService.log({
       userId,
-      actorType: 'USER',
-      action: 'PAYMENT_RECORDED',
-      resourceType: 'SHOP_QUOTE',
+      actorType: "USER",
+      action: "PAYMENT_RECORDED",
+      resourceType: "SHOP_QUOTE",
       resourceId: quoteId,
       newValue: {
         amount: dto.amountNpr,
@@ -530,7 +612,10 @@ export class ShopQuotesService {
     return {
       ...updated,
       paymentRecorded: dto.amountNpr,
-      message: newBalanceDue === 0 ? 'Quote fully paid' : `Payment recorded. Balance due: ${newBalanceDue}`,
+      message:
+        newBalanceDue === 0
+          ? "Quote fully paid"
+          : `Payment recorded. Balance due: ${newBalanceDue}`,
     };
   }
 
@@ -544,7 +629,9 @@ export class ShopQuotesService {
     });
 
     if (!shop) {
-      throw new ForbiddenException('Shop not found or you do not own this shop');
+      throw new ForbiddenException(
+        "Shop not found or you do not own this shop",
+      );
     }
 
     const [
@@ -558,17 +645,27 @@ export class ShopQuotesService {
       uniqueCustomers,
     ] = await Promise.all([
       this.prisma.shopQuote.count({ where: { shopId } }),
-      this.prisma.shopQuote.count({ where: { shopId, status: ShopQuoteStatus.QUOTED } }),
-      this.prisma.shopQuote.count({ where: { shopId, status: ShopQuoteStatus.CONFIRMED } }),
-      this.prisma.shopQuote.count({ where: { shopId, status: ShopQuoteStatus.IN_PROGRESS } }),
-      this.prisma.shopQuote.count({ where: { shopId, status: ShopQuoteStatus.COMPLETED } }),
-      this.prisma.shopQuote.count({ where: { shopId, status: ShopQuoteStatus.CANCELLED } }),
+      this.prisma.shopQuote.count({
+        where: { shopId, status: ShopQuoteStatus.QUOTED },
+      }),
+      this.prisma.shopQuote.count({
+        where: { shopId, status: ShopQuoteStatus.CONFIRMED },
+      }),
+      this.prisma.shopQuote.count({
+        where: { shopId, status: ShopQuoteStatus.IN_PROGRESS },
+      }),
+      this.prisma.shopQuote.count({
+        where: { shopId, status: ShopQuoteStatus.COMPLETED },
+      }),
+      this.prisma.shopQuote.count({
+        where: { shopId, status: ShopQuoteStatus.CANCELLED },
+      }),
       this.prisma.shopQuote.aggregate({
         where: { shopId, status: ShopQuoteStatus.COMPLETED },
         _sum: { totalPriceNpr: true },
       }),
       this.prisma.shopQuote.groupBy({
-        by: ['walkInCustomerId'],
+        by: ["walkInCustomerId"],
         where: { shopId },
       }),
     ]);
@@ -597,7 +694,9 @@ export class ShopQuotesService {
     });
 
     if (!shop) {
-      throw new ForbiddenException('Shop not found or you do not own this shop');
+      throw new ForbiddenException(
+        "Shop not found or you do not own this shop",
+      );
     }
 
     const customer = await this.prisma.walkInCustomer.findUnique({
@@ -605,7 +704,7 @@ export class ShopQuotesService {
       include: {
         shopQuotes: {
           where: { shopId },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
           include: {
             shop: {
               select: { id: true, shopName: true },
@@ -616,7 +715,7 @@ export class ShopQuotesService {
     });
 
     if (!customer) {
-      throw new NotFoundException('Customer not found');
+      throw new NotFoundException("Customer not found");
     }
 
     return customer;

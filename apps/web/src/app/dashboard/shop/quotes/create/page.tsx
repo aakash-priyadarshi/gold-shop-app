@@ -27,6 +27,7 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { useMarket, type WeightUnit } from "@/hooks/useMarket";
+import { fetchTaxRules, lookupTaxRate } from "@/hooks/useTaxRules";
 import { getApiUrl, shopQuotesApi } from "@/lib/api";
 import { getImageUrl } from "@/lib/image-upload";
 import { CURRENCIES, usePreferencesStore } from "@/store/preferences";
@@ -42,7 +43,7 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // Pricing components
 
@@ -158,6 +159,21 @@ export default function CreateShopQuotePage() {
   const currency = usePreferencesStore((state) => state.currency);
   const currencyInfo = CURRENCIES[currency];
   const country = usePreferencesStore((state) => state.country);
+
+  // Dynamic tax rate from admin-configured rules
+  const [taxRate, setTaxRate] = useState(0.13);
+  const [taxLabel, setTaxLabel] = useState("Tax (13% VAT)");
+
+  useEffect(() => {
+    const region = country || "NP";
+    fetchTaxRules(region).then((result) => {
+      if (result?.rules) {
+        const { rate, name } = lookupTaxRate(result.rules);
+        setTaxRate(rate);
+        setTaxLabel(`${name} (${(rate * 100).toFixed(1)}%)`);
+      }
+    });
+  }, [country]);
 
   // Get weight unit from market context
   const { selectedWeightUnit, config: marketConfig } = useMarket();
@@ -300,7 +316,7 @@ export default function CreateShopQuotePage() {
     const gemstone = parseFloat(formData.gemstoneCostNpr) || 0;
     const finish = parseFloat(formData.finishCostNpr) || 0;
     const subtotal = metal + making + gemstone + finish;
-    const tax = subtotal * 0.13; // 13% VAT
+    const tax = subtotal * taxRate;
     return { subtotal, tax, total: subtotal + tax };
   };
 
@@ -916,7 +932,7 @@ export default function CreateShopQuotePage() {
                     <span>NPR {subtotal.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Tax (13% VAT)</span>
+                    <span>{taxLabel}</span>
                     <span>NPR {tax.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg border-t pt-2">

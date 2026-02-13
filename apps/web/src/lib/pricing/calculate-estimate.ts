@@ -336,7 +336,10 @@ export interface EstimateBreakdown {
 // TAX RATES BY COUNTRY
 // ═══════════════════════════════════════════
 
-// Legacy tax rates kept for fallback
+// Legacy tax rates kept for fallback ONLY when tax engine fails.
+// Actual tax rates come from admin-configured backend (TaxRuleConfig DB table).
+// These should NOT be used as primary source — see useTaxRules hook for frontend,
+// or TaxRulesService for backend.
 const LEGACY_TAX_RATES: Record<string, { rate: number; name: string }> = {
   NP: { rate: 0.13, name: "VAT 13%" },
   IN: { rate: 0.03, name: "GST 3%" },

@@ -37,6 +37,7 @@ import { Separator } from "@/components/ui/separator";
 import { useCart, type DeliveryAddress } from "@/contexts/CartContext";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { fetchTaxRules, lookupTaxRate } from "@/hooks/useTaxRules";
 import { ordersApi, paymentsApi } from "@/lib/api";
 import { CURRENCIES, usePreferencesStore } from "@/store/preferences";
 import {
@@ -264,8 +265,23 @@ function CheckoutPageContent() {
     }).format(priceNpr);
   };
 
+  // Dynamic tax rate from admin-configured rules
+  const [taxRate, setTaxRate] = useState(0.13);
+  const [taxLabel, setTaxLabel] = useState("Tax (13%)");
+
+  useEffect(() => {
+    const country = selectedAddress?.country || userCountry || "NP";
+    fetchTaxRules(country).then((result) => {
+      if (result?.rules) {
+        const { rate, name } = lookupTaxRate(result.rules);
+        setTaxRate(rate);
+        setTaxLabel(`${name} (${(rate * 100).toFixed(1)}%)`);
+      }
+    });
+  }, [selectedAddress?.country, userCountry]);
+
   // Calculate totals
-  const tax = subtotal * 0.13; // 13% VAT in Nepal
+  const tax = subtotal * taxRate;
   const shipping = 0; // Free shipping for now
   const total = subtotal + tax + shipping;
 
@@ -814,7 +830,7 @@ function CheckoutPageContent() {
                     <span>{formatPrice(subtotal)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Tax (13%)</span>
+                    <span className="text-gray-500">{taxLabel}</span>
                     <span>{formatPrice(tax)}</span>
                   </div>
                   <div className="flex justify-between">

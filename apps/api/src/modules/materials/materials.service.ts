@@ -6,6 +6,8 @@ import {
   PlatingOption,
 } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
+import { MarketRegion } from "../market-rates/types";
+import { TaxRulesService } from "../pricing/services/tax-rules.service";
 
 // Expanded Material definitions matching the spec
 const PRECIOUS_METALS = [
@@ -186,7 +188,10 @@ const SETTING_STYLES = [
 
 @Injectable()
 export class MaterialsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private taxRulesService: TaxRulesService,
+  ) {}
 
   // Get all precious metals
   getPreciousMetals() {
@@ -519,7 +524,21 @@ export class MaterialsService {
 
     // Calculate total
     const subtotal = metalCost + makingCharge + platingCost + gemstoneCost;
-    const tax = subtotal * 0.13; // 13% VAT in Nepal
+
+    // Use admin-configured tax rate from DB
+    let taxRate = 0.13; // Default fallback
+    let taxPercent = 13;
+    try {
+      const taxResult = await this.taxRulesService.calculateTaxes(
+        "NP" as MarketRegion,
+        { ALL: subtotal },
+      );
+      taxRate = taxResult.effectiveRate;
+      taxPercent = Math.round(taxRate * 100);
+    } catch {
+      // Fallback to default if tax service fails
+    }
+    const tax = subtotal * taxRate;
     const total = subtotal + tax;
 
     return {
@@ -535,7 +554,7 @@ export class MaterialsService {
       rates: {
         metalRatePerGram: ratePerGram,
         makingChargePercent,
-        taxPercent: 13,
+        taxPercent,
       },
       estimate: {
         min: Math.round(total * 0.9), // -10% for lower estimates
