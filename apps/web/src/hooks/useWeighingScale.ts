@@ -1,12 +1,12 @@
 /**
  * useWeighingScale — Web Serial API hook for digital jeweler scales
- * 
+ *
  * Connects to USB/Serial weighing scales (Shimadzu, CAS, A&D, etc.)
  * via Web Serial API for live weight reading in browser.
- * 
+ *
  * Most jeweler scales output ASCII via RS232/USB serial:
  *   "ST,GS,  2.200 g\r\n" or "  2.200 g\r\n"
- * 
+ *
  * Supports:
  *   - Auto-detection of common serial protocols
  *   - Tare (zero) functionality
@@ -55,12 +55,48 @@ export interface UseWeighingScaleReturn extends ScaleState {
 
 // Common scale protocols
 export const SCALE_PRESETS: Record<string, ScaleConfig> = {
-  default: { baudRate: 9600, dataBits: 8, stopBits: 1, parity: "none", flowControl: "none" },
-  shimadzu: { baudRate: 2400, dataBits: 7, stopBits: 2, parity: "even", flowControl: "none" },
-  cas: { baudRate: 9600, dataBits: 8, stopBits: 1, parity: "none", flowControl: "none" },
-  and: { baudRate: 2400, dataBits: 7, stopBits: 1, parity: "even", flowControl: "none" },
-  mettler: { baudRate: 9600, dataBits: 8, stopBits: 1, parity: "none", flowControl: "none" },
-  ohaus: { baudRate: 9600, dataBits: 8, stopBits: 1, parity: "none", flowControl: "none" },
+  default: {
+    baudRate: 9600,
+    dataBits: 8,
+    stopBits: 1,
+    parity: "none",
+    flowControl: "none",
+  },
+  shimadzu: {
+    baudRate: 2400,
+    dataBits: 7,
+    stopBits: 2,
+    parity: "even",
+    flowControl: "none",
+  },
+  cas: {
+    baudRate: 9600,
+    dataBits: 8,
+    stopBits: 1,
+    parity: "none",
+    flowControl: "none",
+  },
+  and: {
+    baudRate: 2400,
+    dataBits: 7,
+    stopBits: 1,
+    parity: "even",
+    flowControl: "none",
+  },
+  mettler: {
+    baudRate: 9600,
+    dataBits: 8,
+    stopBits: 1,
+    parity: "none",
+    flowControl: "none",
+  },
+  ohaus: {
+    baudRate: 9600,
+    dataBits: 8,
+    stopBits: 1,
+    parity: "none",
+    flowControl: "none",
+  },
 };
 
 // Weight conversion factors to grams
@@ -73,7 +109,9 @@ const WEIGHT_TO_GRAMS: Record<WeightUnit, number> = {
 };
 
 // Parse weight from common scale output formats
-function parseScaleOutput(raw: string): { weight: number; unit: WeightUnit; stable: boolean } | null {
+function parseScaleOutput(
+  raw: string,
+): { weight: number; unit: WeightUnit; stable: boolean } | null {
   const cleaned = raw.trim();
   if (!cleaned || cleaned.length < 2) return null;
 
@@ -87,7 +125,7 @@ function parseScaleOutput(raw: string): { weight: number; unit: WeightUnit; stab
   // "ST,NT,  2.200 g"
   // "2.200g"
   // "     2.200  g  "
-  
+
   const patterns = [
     /([+-]?\s*[\d.]+)\s*(g|oz|dwt|tola|kg|ct)\b/i,
     /([+-]?\s*[\d.]+)\s*$/,
@@ -98,7 +136,7 @@ function parseScaleOutput(raw: string): { weight: number; unit: WeightUnit; stab
     if (match) {
       const weight = parseFloat(match[1].replace(/\s/g, ""));
       if (isNaN(weight)) continue;
-      
+
       let unit: WeightUnit = "g";
       if (match[2]) {
         const u = match[2].toLowerCase();
@@ -107,7 +145,7 @@ function parseScaleOutput(raw: string): { weight: number; unit: WeightUnit; stab
         else if (u === "tola") unit = "tola";
         else if (u === "kg") unit = "kg";
       }
-      
+
       return { weight, unit, stable };
     }
   }
@@ -115,7 +153,9 @@ function parseScaleOutput(raw: string): { weight: number; unit: WeightUnit; stab
   return null;
 }
 
-export function useWeighingScale(config?: Partial<ScaleConfig>): UseWeighingScaleReturn {
+export function useWeighingScale(
+  config?: Partial<ScaleConfig>,
+): UseWeighingScaleReturn {
   const [state, setState] = useState<ScaleState>({
     connected: false,
     connecting: false,
@@ -129,7 +169,7 @@ export function useWeighingScale(config?: Partial<ScaleConfig>): UseWeighingScal
   const [displayUnit, setDisplayUnit] = useState<WeightUnit>("g");
   const [tareOffset, setTareOffset] = useState(0);
 
-  const portRef = useRef<SerialPort | null>(null);
+  const portRef = useRef<any>(null);
   const readerRef = useRef<ReadableStreamDefaultReader<string> | null>(null);
   const bufferRef = useRef("");
   const activeRef = useRef(false);
@@ -141,7 +181,10 @@ export function useWeighingScale(config?: Partial<ScaleConfig>): UseWeighingScal
 
   const connect = useCallback(async () => {
     if (!("serial" in navigator)) {
-      setState((s) => ({ ...s, error: "Web Serial API not supported. Use Chrome or Edge." }));
+      setState((s) => ({
+        ...s,
+        error: "Web Serial API not supported. Use Chrome or Edge.",
+      }));
       return;
     }
 
@@ -180,7 +223,11 @@ export function useWeighingScale(config?: Partial<ScaleConfig>): UseWeighingScal
       readLoop(port);
     } catch (err: any) {
       if (err.name === "NotFoundError") {
-        setState((s) => ({ ...s, connecting: false, error: "No port selected" }));
+        setState((s) => ({
+          ...s,
+          connecting: false,
+          error: "No port selected",
+        }));
       } else {
         setState((s) => ({
           ...s,
@@ -191,7 +238,7 @@ export function useWeighingScale(config?: Partial<ScaleConfig>): UseWeighingScal
     }
   }, [scaleConfig]);
 
-  const readLoop = async (port: SerialPort) => {
+  const readLoop = async (port: any) => {
     const decoder = new TextDecoderStream();
     const readableStreamClosed = port.readable!.pipeTo(decoder.writable);
     const reader = decoder.readable.getReader();
@@ -211,11 +258,12 @@ export function useWeighingScale(config?: Partial<ScaleConfig>): UseWeighingScal
 
         for (const line of lines) {
           if (!line.trim()) continue;
-          
+
           const parsed = parseScaleOutput(line);
           if (parsed) {
             // Convert to display unit and apply tare
-            const weightInGrams = parsed.weight * WEIGHT_TO_GRAMS[parsed.unit] - tareOffset;
+            const weightInGrams =
+              parsed.weight * WEIGHT_TO_GRAMS[parsed.unit] - tareOffset;
             const displayWeight = weightInGrams / WEIGHT_TO_GRAMS[displayUnit];
 
             const reading: ScaleReading = {
@@ -237,7 +285,9 @@ export function useWeighingScale(config?: Partial<ScaleConfig>): UseWeighingScal
       }
     } finally {
       reader.releaseLock();
-      try { await readableStreamClosed; } catch {}
+      try {
+        await readableStreamClosed;
+      } catch {}
     }
   };
 
@@ -245,12 +295,16 @@ export function useWeighingScale(config?: Partial<ScaleConfig>): UseWeighingScal
     activeRef.current = false;
 
     if (readerRef.current) {
-      try { await readerRef.current.cancel(); } catch {}
+      try {
+        await readerRef.current.cancel();
+      } catch {}
       readerRef.current = null;
     }
 
     if (portRef.current) {
-      try { await portRef.current.close(); } catch {}
+      try {
+        await portRef.current.close();
+      } catch {}
       portRef.current = null;
     }
 
@@ -268,7 +322,8 @@ export function useWeighingScale(config?: Partial<ScaleConfig>): UseWeighingScal
 
   const tare = useCallback(() => {
     if (state.lastReading) {
-      const currentInGrams = state.lastReading.weight * WEIGHT_TO_GRAMS[state.lastReading.unit];
+      const currentInGrams =
+        state.lastReading.weight * WEIGHT_TO_GRAMS[state.lastReading.unit];
       setTareOffset((prev) => prev + currentInGrams);
     }
   }, [state.lastReading]);
@@ -340,7 +395,9 @@ export function useSimulatedScale(): UseWeighingScaleReturn {
 
   const tare = useCallback(() => {
     if (lastReading) {
-      setTareOffset((p) => p + lastReading.weight * WEIGHT_TO_GRAMS[lastReading.unit]);
+      setTareOffset(
+        (p) => p + lastReading.weight * WEIGHT_TO_GRAMS[lastReading.unit],
+      );
     }
   }, [lastReading]);
 

@@ -4,15 +4,7 @@ import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -34,7 +26,6 @@ import {
   MapPin,
   MessageSquare,
   Phone,
-  Plus,
   Send,
   ShoppingCart,
   StickyNote,
@@ -47,8 +38,16 @@ import { useEffect, useState } from "react";
 
 const NOTE_CATEGORIES = [
   { value: "GENERAL", label: "General", color: "bg-gray-100 text-gray-700" },
-  { value: "PREFERENCE", label: "Preference", color: "bg-blue-100 text-blue-700" },
-  { value: "FOLLOW_UP", label: "Follow Up", color: "bg-yellow-100 text-yellow-700" },
+  {
+    value: "PREFERENCE",
+    label: "Preference",
+    color: "bg-blue-100 text-blue-700",
+  },
+  {
+    value: "FOLLOW_UP",
+    label: "Follow Up",
+    color: "bg-yellow-100 text-yellow-700",
+  },
   { value: "COMPLAINT", label: "Complaint", color: "bg-red-100 text-red-700" },
   { value: "VIP", label: "VIP", color: "bg-purple-100 text-purple-700" },
 ];
@@ -78,8 +77,12 @@ export default function CustomerProfilePage() {
     try {
       const [profileRes, ordersRes, statsRes, notesRes] = await Promise.all([
         customerCrmApi.getCustomerProfile(customerId),
-        customerCrmApi.getCustomerOrders(customerId).catch(() => ({ data: { orders: [] } })),
-        customerCrmApi.getCustomerStats(customerId).catch(() => ({ data: null })),
+        customerCrmApi
+          .getCustomerOrders(customerId)
+          .catch(() => ({ data: { orders: [] } })),
+        customerCrmApi
+          .getCustomerStats(customerId)
+          .catch(() => ({ data: null })),
         customerCrmApi.getCustomerNotes(customerId).catch(() => ({ data: [] })),
       ]);
       setProfile(profileRes.data);
@@ -97,7 +100,7 @@ export default function CustomerProfilePage() {
     if (!newNote.trim()) return;
     setAddingNote(true);
     try {
-      const res = await customerCrmApi.addNote(customerId, {
+      const res = await customerCrmApi.addCustomerNote(customerId, {
         note: newNote,
         category: noteCategory,
       });
@@ -130,7 +133,11 @@ export default function CustomerProfilePage() {
           <div className="flex flex-col items-center justify-center h-[60vh]">
             <User className="h-12 w-12 text-muted-foreground opacity-30 mb-4" />
             <p className="text-muted-foreground">Customer not found</p>
-            <Button variant="outline" className="mt-4" onClick={() => router.back()}>
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={() => router.back()}
+            >
               <ArrowLeft className="h-4 w-4 mr-2" /> Go Back
             </Button>
           </div>
@@ -219,7 +226,9 @@ export default function CustomerProfilePage() {
               {stats && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Purchase Summary</CardTitle>
+                    <CardTitle className="text-base">
+                      Purchase Summary
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -241,7 +250,10 @@ export default function CustomerProfilePage() {
                         Avg Order Value
                       </span>
                       <span className="font-medium">
-                        NPR {Math.round(stats.averageOrderValue || 0).toLocaleString()}
+                        NPR{" "}
+                        {Math.round(
+                          stats.averageOrderValue || 0,
+                        ).toLocaleString()}
                       </span>
                     </div>
                     {stats.activeRfqs > 0 && (
@@ -308,10 +320,16 @@ export default function CustomerProfilePage() {
             <div className="lg:col-span-2">
               <Tabs defaultValue="orders">
                 <TabsList className="w-full grid grid-cols-3">
-                  <TabsTrigger value="orders" className="flex items-center gap-1">
+                  <TabsTrigger
+                    value="orders"
+                    className="flex items-center gap-1"
+                  >
                     <ShoppingCart className="h-4 w-4" /> Orders
                   </TabsTrigger>
-                  <TabsTrigger value="notes" className="flex items-center gap-1">
+                  <TabsTrigger
+                    value="notes"
+                    className="flex items-center gap-1"
+                  >
                     <StickyNote className="h-4 w-4" /> Notes
                     {notes.length > 0 && (
                       <Badge variant="secondary" className="ml-1 text-xs">
@@ -319,7 +337,10 @@ export default function CustomerProfilePage() {
                       </Badge>
                     )}
                   </TabsTrigger>
-                  <TabsTrigger value="stats" className="flex items-center gap-1">
+                  <TabsTrigger
+                    value="stats"
+                    className="flex items-center gap-1"
+                  >
                     <TrendingUp className="h-4 w-4" /> Analytics
                   </TabsTrigger>
                 </TabsList>
@@ -352,12 +373,10 @@ export default function CustomerProfilePage() {
                             </div>
                             <div className="text-right">
                               <p className="font-bold text-amber-600">
-                                {order.currency} {order.totalAmount?.toLocaleString()}
+                                {order.currency}{" "}
+                                {order.totalAmount?.toLocaleString()}
                               </p>
-                              <Badge
-                                variant="outline"
-                                className="text-xs"
-                              >
+                              <Badge variant="outline" className="text-xs">
                                 {order.status}
                               </Badge>
                             </div>
@@ -432,7 +451,7 @@ export default function CustomerProfilePage() {
                   ) : (
                     notes.map((note: any) => {
                       const catInfo = NOTE_CATEGORIES.find(
-                        (c) => c.value === note.category
+                        (c) => c.value === note.category,
                       );
                       return (
                         <Card key={note.id}>
@@ -454,7 +473,7 @@ export default function CustomerProfilePage() {
                                 {new Date(note.createdAt).toLocaleDateString()}{" "}
                                 {new Date(note.createdAt).toLocaleTimeString(
                                   [],
-                                  { hour: "2-digit", minute: "2-digit" }
+                                  { hour: "2-digit", minute: "2-digit" },
                                 )}
                               </span>
                             </div>
@@ -500,7 +519,7 @@ export default function CustomerProfilePage() {
                           <p className="text-2xl font-bold">
                             NPR{" "}
                             {Math.round(
-                              stats.averageOrderValue || 0
+                              stats.averageOrderValue || 0,
                             ).toLocaleString()}
                           </p>
                           <p className="text-sm text-muted-foreground">

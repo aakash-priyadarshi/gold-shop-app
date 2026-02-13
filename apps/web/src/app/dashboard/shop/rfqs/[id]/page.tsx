@@ -32,16 +32,14 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
-import { offersApi, rfqApi, designsApi } from "@/lib/api";
+import { designsApi, offersApi, rfqApi } from "@/lib/api";
 import {
-  JEWELLERY_TYPE_IMAGES,
-  BUILD_METHODS,
-  SURFACE_FINISH_IMAGES,
-  WEIGHT_GUIDANCE,
   ALLOY_FAMILY_COLORS,
-  getJewelleryTypeLabel,
   getBuildMethodInfo,
+  getJewelleryTypeLabel,
   getSurfaceFinishInfo,
+  JEWELLERY_TYPE_IMAGES,
+  WEIGHT_GUIDANCE,
 } from "@/lib/constants/jewellery";
 import {
   ArrowLeft,
@@ -56,7 +54,6 @@ import {
   Info,
   Loader2,
   MessageSquare,
-  Package,
   Palette,
   Reply,
   Ruler,
@@ -70,7 +67,6 @@ import {
   XCircle,
   ZoomIn,
 } from "lucide-react";
-import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -450,14 +446,25 @@ export default function ShopRfqDetailPage() {
         purity: rfq.composition?.baseAlloy?.purity || "24K",
         surfaceFinish: rfq.surfaceFinish || "HIGH_POLISH",
         metalColor: "YELLOW_GOLD",
-        prompt: rfq.specialInstructions || `Beautiful ${rfq.jewelleryType?.toLowerCase()} design`,
+        prompt:
+          rfq.specialInstructions ||
+          `Beautiful ${rfq.jewelleryType?.toLowerCase()} design`,
       });
       if (response.data?.imageUrl) {
         setAiDesignUrl(response.data.imageUrl);
-        toast({ title: "AI Design Generated", description: "A design preview has been created based on this RFQ's specifications." });
+        toast({
+          title: "AI Design Generated",
+          description:
+            "A design preview has been created based on this RFQ's specifications.",
+        });
       }
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Design Generation Failed", description: error.response?.data?.message || "Could not generate design" });
+      toast({
+        variant: "destructive",
+        title: "Design Generation Failed",
+        description:
+          error.response?.data?.message || "Could not generate design",
+      });
     } finally {
       setAiGenerating(false);
     }
@@ -465,7 +472,9 @@ export default function ShopRfqDetailPage() {
 
   // Build method info helper
   const buildMethodInfo = rfq ? getBuildMethodInfo(rfq.buildMethod) : null;
-  const surfaceFinishInfo = rfq?.surfaceFinish ? getSurfaceFinishInfo(rfq.surfaceFinish) : null;
+  const surfaceFinishInfo = rfq?.surfaceFinish
+    ? getSurfaceFinishInfo(rfq.surfaceFinish)
+    : null;
   const weightGuide = rfq ? WEIGHT_GUIDANCE[rfq.jewelleryType] : null;
 
   // Check if shop has already submitted an offer
@@ -600,8 +609,12 @@ export default function ShopRfqDetailPage() {
                       </div>
                     )}
                     <div className="flex-1">
-                      <Label className="text-muted-foreground text-xs">Jewellery Type</Label>
-                      <p className="font-semibold text-lg">{getJewelleryTypeLabel(rfq.jewelleryType)}</p>
+                      <Label className="text-muted-foreground text-xs">
+                        Jewellery Type
+                      </Label>
+                      <p className="font-semibold text-lg">
+                        {getJewelleryTypeLabel(rfq.jewelleryType)}
+                      </p>
                       {weightGuide && (
                         <div className="flex items-center gap-1 mt-1">
                           <Scale className="h-3 w-3 text-muted-foreground" />
@@ -625,30 +638,50 @@ export default function ShopRfqDetailPage() {
                             <Info className="h-3 w-3 text-muted-foreground cursor-help" />
                           </TooltipTrigger>
                           <TooltipContent side="right" className="max-w-xs">
-                            <p className="text-xs">How the jewellery is constructed — affects durability, weight, and price.</p>
+                            <p className="text-xs">
+                              How the jewellery is constructed — affects
+                              durability, weight, and price.
+                            </p>
                           </TooltipContent>
                         </Tooltip>
                       </Label>
                       {buildMethodInfo ? (
                         <div className="mt-2 border rounded-lg p-3 bg-gradient-to-r from-gray-50 to-white">
                           <div className="flex items-center gap-2 mb-2">
-                            <span className="text-xl">{buildMethodInfo.icon}</span>
+                            <span className="text-xl">
+                              {buildMethodInfo.icon}
+                            </span>
                             <div>
-                              <p className="font-semibold text-sm">{buildMethodInfo.label}</p>
-                              <p className="text-xs text-muted-foreground">{buildMethodInfo.description}</p>
+                              <p className="font-semibold text-sm">
+                                {buildMethodInfo.label}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {buildMethodInfo.description}
+                              </p>
                             </div>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-                            {Object.entries(buildMethodInfo.tooltip).map(([key, val]) => (
-                              <div key={key} className="text-xs bg-gray-50 rounded p-2">
-                                <span className="font-medium capitalize text-gray-700">{key}: </span>
-                                <span className="text-muted-foreground">{val}</span>
-                              </div>
-                            ))}
+                            {Object.entries(buildMethodInfo.tooltip).map(
+                              ([key, val]) => (
+                                <div
+                                  key={key}
+                                  className="text-xs bg-gray-50 rounded p-2"
+                                >
+                                  <span className="font-medium capitalize text-gray-700">
+                                    {key}:{" "}
+                                  </span>
+                                  <span className="text-muted-foreground">
+                                    {val}
+                                  </span>
+                                </div>
+                              ),
+                            )}
                           </div>
                         </div>
                       ) : (
-                        <p className="font-medium mt-1">{rfq.buildMethod?.replace(/_/g, " ")}</p>
+                        <p className="font-medium mt-1">
+                          {rfq.buildMethod?.replace(/_/g, " ")}
+                        </p>
                       )}
                     </div>
                   </TooltipProvider>
@@ -664,24 +697,36 @@ export default function ShopRfqDetailPage() {
                         </Label>
                         <div className="flex items-center gap-2 mt-1">
                           <p className="font-medium">
-                            {rfq.composition.baseAlloy.metal} {rfq.composition.baseAlloy.purity}
+                            {rfq.composition.baseAlloy.metal}{" "}
+                            {rfq.composition.baseAlloy.purity}
                           </p>
                           {/* Alloy color chip */}
-                          {rfq.composition.baseAlloy.metal?.toUpperCase().includes("GOLD") && (
+                          {rfq.composition.baseAlloy.metal
+                            ?.toUpperCase()
+                            .includes("GOLD") && (
                             <div className="flex gap-1">
-                              {Object.entries(ALLOY_FAMILY_COLORS).filter(([key]) => 
-                                key.includes("YELLOW") || rfq.composition?.baseAlloy?.metal?.toUpperCase().includes(key.split("_")[0])
-                              ).slice(0, 1).map(([key, val]) => (
-                                <Tooltip key={key}>
-                                  <TooltipTrigger asChild>
-                                    <div
-                                      className="h-5 w-5 rounded-full border-2 border-white shadow-sm cursor-help"
-                                      style={{ backgroundColor: val.hex }}
-                                    />
-                                  </TooltipTrigger>
-                                  <TooltipContent><p className="text-xs">{val.label}</p></TooltipContent>
-                                </Tooltip>
-                              ))}
+                              {Object.entries(ALLOY_FAMILY_COLORS)
+                                .filter(
+                                  ([key]) =>
+                                    key.includes("YELLOW") ||
+                                    rfq.composition?.baseAlloy?.metal
+                                      ?.toUpperCase()
+                                      .includes(key.split("_")[0]),
+                                )
+                                .slice(0, 1)
+                                .map(([key, val]) => (
+                                  <Tooltip key={key}>
+                                    <TooltipTrigger asChild>
+                                      <div
+                                        className="h-5 w-5 rounded-full border-2 border-white shadow-sm cursor-help"
+                                        style={{ backgroundColor: val.hex }}
+                                      />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="text-xs">{val.label}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ))}
                             </div>
                           )}
                         </div>
@@ -689,18 +734,25 @@ export default function ShopRfqDetailPage() {
                     )}
                     {rfq.composition?.outerLayer && (
                       <div>
-                        <Label className="text-muted-foreground text-xs">Outer Layer</Label>
+                        <Label className="text-muted-foreground text-xs">
+                          Outer Layer
+                        </Label>
                         <p className="font-medium mt-1">
-                          {rfq.composition.outerLayer.metal} {rfq.composition.outerLayer.purity}
+                          {rfq.composition.outerLayer.metal}{" "}
+                          {rfq.composition.outerLayer.purity}
                         </p>
                       </div>
                     )}
                     {rfq.targetTotalWeightG && (
                       <div>
-                        <Label className="text-muted-foreground text-xs">Target Weight</Label>
+                        <Label className="text-muted-foreground text-xs">
+                          Target Weight
+                        </Label>
                         <div className="flex items-center gap-1 mt-1">
                           <Scale className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{rfq.targetTotalWeightG}g</span>
+                          <span className="font-medium">
+                            {rfq.targetTotalWeightG}g
+                          </span>
                           {rfq.targetGoldWeightG && (
                             <span className="text-xs text-muted-foreground ml-1">
                               (Gold: {rfq.targetGoldWeightG}g)
@@ -710,23 +762,33 @@ export default function ShopRfqDetailPage() {
                       </div>
                     )}
                     <div>
-                      <Label className="text-muted-foreground text-xs">Budget Range</Label>
+                      <Label className="text-muted-foreground text-xs">
+                        Budget Range
+                      </Label>
                       {rfq.budgetMaxNpr ? (
                         <div className="flex items-center gap-1 mt-1">
                           <DollarSign className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium">
-                            {rfq.budgetMinNpr ? `${formatCurrency(rfq.budgetMinNpr)} - ` : ""}
+                            {rfq.budgetMinNpr
+                              ? `${formatCurrency(rfq.budgetMinNpr)} - `
+                              : ""}
                             {formatCurrency(rfq.budgetMaxNpr)}
                           </span>
                         </div>
                       ) : (
-                        <p className="text-muted-foreground text-sm mt-1">Not specified</p>
+                        <p className="text-muted-foreground text-sm mt-1">
+                          Not specified
+                        </p>
                       )}
                     </div>
                     {rfq.preferredDeliveryDays && (
                       <div>
-                        <Label className="text-muted-foreground text-xs">Preferred Delivery</Label>
-                        <p className="font-medium mt-1">{rfq.preferredDeliveryDays} days</p>
+                        <Label className="text-muted-foreground text-xs">
+                          Preferred Delivery
+                        </Label>
+                        <p className="font-medium mt-1">
+                          {rfq.preferredDeliveryDays} days
+                        </p>
                       </div>
                     )}
                   </div>
@@ -750,9 +812,13 @@ export default function ShopRfqDetailPage() {
                             </div>
                           )}
                           <div>
-                            <p className="font-medium">{rfq.surfaceFinish.replace(/_/g, " ")}</p>
+                            <p className="font-medium">
+                              {rfq.surfaceFinish.replace(/_/g, " ")}
+                            </p>
                             {surfaceFinishInfo && (
-                              <p className="text-xs text-muted-foreground">{surfaceFinishInfo.description}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {surfaceFinishInfo.description}
+                              </p>
                             )}
                           </div>
                         </div>
@@ -764,7 +830,9 @@ export default function ShopRfqDetailPage() {
                     <>
                       <Separator />
                       <div>
-                        <Label className="text-muted-foreground text-xs">Special Instructions</Label>
+                        <Label className="text-muted-foreground text-xs">
+                          Special Instructions
+                        </Label>
                         <p className="mt-1 text-sm bg-amber-50 border border-amber-200 rounded-md p-3">
                           {rfq.specialInstructions}
                         </p>
@@ -788,24 +856,53 @@ export default function ShopRfqDetailPage() {
                               className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 p-3 rounded-lg"
                             >
                               <div className="flex items-center justify-between mb-1">
-                                <span className="font-semibold text-sm">{gem.stoneType}</span>
-                                <Badge variant="outline" className="text-xs">{gem.count}x</Badge>
+                                <span className="font-semibold text-sm">
+                                  {gem.stoneType}
+                                </span>
+                                <Badge variant="outline" className="text-xs">
+                                  {gem.count}x
+                                </Badge>
                               </div>
                               <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
                                 {gem.shape && (
-                                  <span>Shape: <span className="text-foreground">{gem.shape}</span></span>
+                                  <span>
+                                    Shape:{" "}
+                                    <span className="text-foreground">
+                                      {gem.shape}
+                                    </span>
+                                  </span>
                                 )}
                                 {gem.caratWeight && (
-                                  <span>Carat: <span className="text-foreground">{gem.caratWeight}ct</span></span>
+                                  <span>
+                                    Carat:{" "}
+                                    <span className="text-foreground">
+                                      {gem.caratWeight}ct
+                                    </span>
+                                  </span>
                                 )}
                                 {gem.sizeMm && (
-                                  <span>Size: <span className="text-foreground">{gem.sizeMm}mm</span></span>
+                                  <span>
+                                    Size:{" "}
+                                    <span className="text-foreground">
+                                      {gem.sizeMm}mm
+                                    </span>
+                                  </span>
                                 )}
                                 {gem.color && (
-                                  <span>Color: <span className="text-foreground">{gem.color}</span></span>
+                                  <span>
+                                    Color:{" "}
+                                    <span className="text-foreground">
+                                      {gem.color}
+                                    </span>
+                                  </span>
                                 )}
                                 {gem.clarity && (
-                                  <span>Clarity: <span className="text-foreground">{gem.clarity}</span></span>
+                                  <span>
+                                    Clarity:{" "}
+                                    <span className="text-foreground">
+                                      {gem.clarity}
+                                    </span>
+                                  </span>
                                 )}
                               </div>
                             </div>
@@ -829,7 +926,10 @@ export default function ShopRfqDetailPage() {
                             <div
                               key={idx}
                               className="relative aspect-square rounded-lg overflow-hidden border bg-gray-50 group cursor-pointer"
-                              onClick={() => { setImagePreviewUrl(url); setImagePreviewOpen(true); }}
+                              onClick={() => {
+                                setImagePreviewUrl(url);
+                                setImagePreviewOpen(true);
+                              }}
                             >
                               <img
                                 src={url}
@@ -851,7 +951,8 @@ export default function ShopRfqDetailPage() {
                           ))}
                         </div>
                         <p className="text-xs text-muted-foreground mt-2">
-                          Click any image to enlarge. Customer-provided reference images for the desired design.
+                          Click any image to enlarge. Customer-provided
+                          reference images for the desired design.
                         </p>
                       </div>
                     </>
@@ -869,9 +970,16 @@ export default function ShopRfqDetailPage() {
                         <div className="mt-2">
                           <div
                             className="relative aspect-square max-w-[200px] rounded-lg overflow-hidden border-2 border-amber-300 bg-gray-50 cursor-pointer group"
-                            onClick={() => { setImagePreviewUrl(aiDesignUrl); setImagePreviewOpen(true); }}
+                            onClick={() => {
+                              setImagePreviewUrl(aiDesignUrl);
+                              setImagePreviewOpen(true);
+                            }}
                           >
-                            <img src={aiDesignUrl} alt="AI Design" className="w-full h-full object-cover" />
+                            <img
+                              src={aiDesignUrl}
+                              alt="AI Design"
+                              className="w-full h-full object-cover"
+                            />
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                               <ZoomIn className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
@@ -1440,7 +1548,10 @@ export default function ShopRfqDetailPage() {
                   {aiDesignUrl && (
                     <div
                       className="mt-3 relative aspect-square rounded-lg overflow-hidden border cursor-pointer group"
-                      onClick={() => { setImagePreviewUrl(aiDesignUrl); setImagePreviewOpen(true); }}
+                      onClick={() => {
+                        setImagePreviewUrl(aiDesignUrl);
+                        setImagePreviewOpen(true);
+                      }}
                     >
                       <img
                         src={aiDesignUrl}

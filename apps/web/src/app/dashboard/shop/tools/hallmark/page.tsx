@@ -4,16 +4,9 @@ import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import {
   CheckCircle,
@@ -93,7 +86,7 @@ export default function HallmarkTrackerPage() {
 
   const toggleVerified = (id: string) => {
     const updated = entries.map((e) =>
-      e.id === id ? { ...e, verified: !e.verified } : e
+      e.id === id ? { ...e, verified: !e.verified } : e,
     );
     setEntries(updated);
     saveEntries(updated);
@@ -110,7 +103,7 @@ export default function HallmarkTrackerPage() {
     (e) =>
       e.huid.toLowerCase().includes(search.toLowerCase()) ||
       e.customerName.toLowerCase().includes(search.toLowerCase()) ||
-      e.itemDesc.toLowerCase().includes(search.toLowerCase())
+      e.itemDesc.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -259,7 +252,10 @@ export default function HallmarkTrackerPage() {
           ) : (
             <div className="space-y-2">
               {filtered.map((entry) => (
-                <Card key={entry.id} className="hover:shadow-sm transition-shadow">
+                <Card
+                  key={entry.id}
+                  className="hover:shadow-sm transition-shadow"
+                >
                   <CardContent className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-4">
                       <button
@@ -285,7 +281,8 @@ export default function HallmarkTrackerPage() {
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {entry.itemDesc} — {entry.weight}g — {entry.customerName}
+                          {entry.itemDesc} — {entry.weight}g —{" "}
+                          {entry.customerName}
                         </p>
                       </div>
                     </div>

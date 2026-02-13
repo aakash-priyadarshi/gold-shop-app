@@ -4,30 +4,14 @@ import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import {
   CheckCircle,
   Clock,
-  Loader2,
   Phone,
   Plus,
   Search,
@@ -68,11 +52,31 @@ const REPAIR_TYPES = [
 ];
 
 const STATUS_CONFIG = {
-  RECEIVED: { label: "Received", color: "bg-blue-100 text-blue-700", icon: Clock },
-  IN_PROGRESS: { label: "In Progress", color: "bg-yellow-100 text-yellow-700", icon: Settings },
-  READY: { label: "Ready", color: "bg-green-100 text-green-700", icon: CheckCircle },
-  DELIVERED: { label: "Delivered", color: "bg-gray-100 text-gray-700", icon: CheckCircle },
-  CANCELLED: { label: "Cancelled", color: "bg-red-100 text-red-700", icon: Trash2 },
+  RECEIVED: {
+    label: "Received",
+    color: "bg-blue-100 text-blue-700",
+    icon: Clock,
+  },
+  IN_PROGRESS: {
+    label: "In Progress",
+    color: "bg-yellow-100 text-yellow-700",
+    icon: Settings,
+  },
+  READY: {
+    label: "Ready",
+    color: "bg-green-100 text-green-700",
+    icon: CheckCircle,
+  },
+  DELIVERED: {
+    label: "Delivered",
+    color: "bg-gray-100 text-gray-700",
+    icon: CheckCircle,
+  },
+  CANCELLED: {
+    label: "Cancelled",
+    color: "bg-red-100 text-red-700",
+    icon: Trash2,
+  },
 };
 
 const STORAGE_KEY = "goldshop_repair_jobs";
@@ -88,7 +92,9 @@ function saveJobs(jobs: RepairJob[]) {
 
 function generateTicket() {
   const d = new Date();
-  const num = Math.floor(Math.random() * 9999).toString().padStart(4, "0");
+  const num = Math.floor(Math.random() * 9999)
+    .toString()
+    .padStart(4, "0");
   return `RPR-${d.getFullYear()}${(d.getMonth() + 1).toString().padStart(2, "0")}${d.getDate().toString().padStart(2, "0")}-${num}`;
 }
 
@@ -109,7 +115,10 @@ export default function RepairTrackingPage() {
 
   const addJob = () => {
     if (!customerName || !itemDescription) {
-      toast({ variant: "destructive", title: "Customer name and item description are required" });
+      toast({
+        variant: "destructive",
+        title: "Customer name and item description are required",
+      });
       return;
     }
     const job: RepairJob = {
@@ -151,7 +160,10 @@ export default function RepairTrackingPage() {
         return {
           ...j,
           status: newStatus,
-          completedDate: newStatus === "READY" || newStatus === "DELIVERED" ? new Date().toISOString() : j.completedDate,
+          completedDate:
+            newStatus === "READY" || newStatus === "DELIVERED"
+              ? new Date().toISOString()
+              : j.completedDate,
         };
       }
       return j;
@@ -177,7 +189,9 @@ export default function RepairTrackingPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const activeCount = jobs.filter((j) => j.status === "RECEIVED" || j.status === "IN_PROGRESS").length;
+  const activeCount = jobs.filter(
+    (j) => j.status === "RECEIVED" || j.status === "IN_PROGRESS",
+  ).length;
   const readyCount = jobs.filter((j) => j.status === "READY").length;
 
   return (
@@ -194,7 +208,10 @@ export default function RepairTrackingPage() {
                 Manage jewellery repair and alteration jobs
               </p>
             </div>
-            <Button onClick={() => setShowForm(true)} className="bg-amber-500 hover:bg-amber-600">
+            <Button
+              onClick={() => setShowForm(true)}
+              className="bg-amber-500 hover:bg-amber-600"
+            >
               <Plus className="h-4 w-4 mr-2" /> New Repair Job
             </Button>
           </div>
@@ -209,14 +226,20 @@ export default function RepairTrackingPage() {
             </Card>
             <Card>
               <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-blue-600">{activeCount}</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {activeCount}
+                </p>
                 <p className="text-xs text-muted-foreground">Active</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-green-600">{readyCount}</p>
-                <p className="text-xs text-muted-foreground">Ready for Pickup</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {readyCount}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Ready for Pickup
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -239,38 +262,85 @@ export default function RepairTrackingPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Customer Name *</Label>
-                    <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Name" />
+                    <Input
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Name"
+                    />
                   </div>
                   <div>
                     <Label>Phone</Label>
-                    <Input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Phone" />
+                    <Input
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      placeholder="Phone"
+                    />
                   </div>
                   <div>
                     <Label>Item Description *</Label>
-                    <Input value={itemDescription} onChange={(e) => setItemDescription(e.target.value)} placeholder="e.g. Gold ring with diamond" />
+                    <Input
+                      value={itemDescription}
+                      onChange={(e) => setItemDescription(e.target.value)}
+                      placeholder="e.g. Gold ring with diamond"
+                    />
                   </div>
                   <div>
                     <Label>Repair Type</Label>
-                    <select value={repairType} onChange={(e) => setRepairType(e.target.value)} className="w-full h-10 px-3 border rounded-md bg-background">
-                      {REPAIR_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    <select
+                      value={repairType}
+                      onChange={(e) => setRepairType(e.target.value)}
+                      className="w-full h-10 px-3 border rounded-md bg-background"
+                    >
+                      {REPAIR_TYPES.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div>
                     <Label>Estimated Cost (NPR)</Label>
-                    <Input type="number" value={estimatedCost} onChange={(e) => setEstimatedCost(e.target.value)} placeholder="0" />
+                    <Input
+                      type="number"
+                      value={estimatedCost}
+                      onChange={(e) => setEstimatedCost(e.target.value)}
+                      placeholder="0"
+                    />
                   </div>
                   <div>
                     <Label>Expected Completion</Label>
-                    <Input type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} />
+                    <Input
+                      type="date"
+                      value={expectedDate}
+                      onChange={(e) => setExpectedDate(e.target.value)}
+                    />
                   </div>
                 </div>
                 <div>
                   <Label>Notes</Label>
-                  <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Special instructions..." rows={2} />
+                  <Textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Special instructions..."
+                    rows={2}
+                  />
                 </div>
                 <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={() => { setShowForm(false); resetForm(); }}>Cancel</Button>
-                  <Button onClick={addJob} className="bg-amber-500 hover:bg-amber-600">Create Ticket</Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowForm(false);
+                      resetForm();
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={addJob}
+                    className="bg-amber-500 hover:bg-amber-600"
+                  >
+                    Create Ticket
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -280,12 +350,23 @@ export default function RepairTrackingPage() {
           <div className="flex gap-4">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search ticket, customer, item..." className="pl-10" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search ticket, customer, item..."
+                className="pl-10"
+              />
             </div>
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="h-10 px-3 border rounded-md bg-background text-sm">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="h-10 px-3 border rounded-md bg-background text-sm"
+            >
               <option value="ALL">All Status</option>
               {Object.entries(STATUS_CONFIG).map(([key, val]) => (
-                <option key={key} value={key}>{val.label}</option>
+                <option key={key} value={key}>
+                  {val.label}
+                </option>
               ))}
             </select>
           </div>
@@ -303,12 +384,17 @@ export default function RepairTrackingPage() {
               {filtered.map((job) => {
                 const cfg = STATUS_CONFIG[job.status];
                 return (
-                  <Card key={job.id} className="hover:shadow-sm transition-shadow">
+                  <Card
+                    key={job.id}
+                    className="hover:shadow-sm transition-shadow"
+                  >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-1">
-                            <span className="font-mono font-bold">{job.ticketNumber}</span>
+                            <span className="font-mono font-bold">
+                              {job.ticketNumber}
+                            </span>
                             <Badge className={cfg.color}>{cfg.label}</Badge>
                             <Badge variant="outline">{job.repairType}</Badge>
                           </div>
@@ -317,43 +403,80 @@ export default function RepairTrackingPage() {
                             <span>{job.customerName}</span>
                             {job.customerPhone && (
                               <span className="flex items-center gap-1">
-                                <Phone className="h-3 w-3" /> {job.customerPhone}
+                                <Phone className="h-3 w-3" />{" "}
+                                {job.customerPhone}
                               </span>
                             )}
                             {job.estimatedCost && (
-                              <span>Est: NPR {parseInt(job.estimatedCost).toLocaleString()}</span>
+                              <span>
+                                Est: NPR{" "}
+                                {parseInt(job.estimatedCost).toLocaleString()}
+                              </span>
                             )}
                           </div>
                           {job.notes && (
-                            <p className="text-xs text-muted-foreground mt-1 italic">{job.notes}</p>
+                            <p className="text-xs text-muted-foreground mt-1 italic">
+                              {job.notes}
+                            </p>
                           )}
                         </div>
                         <div className="flex items-center gap-2">
                           {/* Status progression buttons */}
                           {job.status === "RECEIVED" && (
-                            <Button size="sm" variant="outline" onClick={() => updateStatus(job.id, "IN_PROGRESS")}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                updateStatus(job.id, "IN_PROGRESS")
+                              }
+                            >
                               Start Work
                             </Button>
                           )}
                           {job.status === "IN_PROGRESS" && (
-                            <Button size="sm" className="bg-green-500 hover:bg-green-600" onClick={() => updateStatus(job.id, "READY")}>
+                            <Button
+                              size="sm"
+                              className="bg-green-500 hover:bg-green-600"
+                              onClick={() => updateStatus(job.id, "READY")}
+                            >
                               Mark Ready
                             </Button>
                           )}
                           {job.status === "READY" && (
-                            <Button size="sm" variant="outline" onClick={() => updateStatus(job.id, "DELIVERED")}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateStatus(job.id, "DELIVERED")}
+                            >
                               Delivered
                             </Button>
                           )}
-                          <Button variant="ghost" size="sm" onClick={() => deleteJob(job.id)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteJob(job.id)}
+                          >
                             <Trash2 className="h-4 w-4 text-red-400" />
                           </Button>
                         </div>
                       </div>
                       <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                        <span>Received: {new Date(job.receivedDate).toLocaleDateString()}</span>
-                        {job.expectedDate && <span>Expected: {new Date(job.expectedDate).toLocaleDateString()}</span>}
-                        {job.completedDate && <span>Completed: {new Date(job.completedDate).toLocaleDateString()}</span>}
+                        <span>
+                          Received:{" "}
+                          {new Date(job.receivedDate).toLocaleDateString()}
+                        </span>
+                        {job.expectedDate && (
+                          <span>
+                            Expected:{" "}
+                            {new Date(job.expectedDate).toLocaleDateString()}
+                          </span>
+                        )}
+                        {job.completedDate && (
+                          <span>
+                            Completed:{" "}
+                            {new Date(job.completedDate).toLocaleDateString()}
+                          </span>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

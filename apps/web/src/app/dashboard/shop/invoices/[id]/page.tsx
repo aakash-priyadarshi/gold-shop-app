@@ -36,7 +36,6 @@ import {
   ArrowLeft,
   Ban,
   CheckCircle,
-  Clock,
   CreditCard,
   DollarSign,
   FileText,
@@ -138,12 +137,19 @@ export default function InvoiceDetailPage() {
     setIsSubmitting(true);
     try {
       await invoicesApi.updatePaymentStatus(invoiceId, { amount });
-      toast({ title: "Payment Recorded", description: `${invoice?.currency} ${amount.toLocaleString()} recorded` });
+      toast({
+        title: "Payment Recorded",
+        description: `${invoice?.currency} ${amount.toLocaleString()} recorded`,
+      });
       setPaymentDialogOpen(false);
       setPaymentAmount("");
       loadInvoice();
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Failed", description: error.response?.data?.message || "Error" });
+      toast({
+        variant: "destructive",
+        title: "Failed",
+        description: error.response?.data?.message || "Error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -157,7 +163,11 @@ export default function InvoiceDetailPage() {
       setVoidDialogOpen(false);
       loadInvoice();
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Failed", description: error.response?.data?.message || "Error" });
+      toast({
+        variant: "destructive",
+        title: "Failed",
+        description: error.response?.data?.message || "Error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -218,9 +228,13 @@ export default function InvoiceDetailPage() {
                 <ArrowLeft className="h-4 w-4 mr-2" /> Back
               </Button>
               <div>
-                <h1 className="text-2xl font-bold">Invoice {invoice.invoiceNumber}</h1>
+                <h1 className="text-2xl font-bold">
+                  Invoice {invoice.invoiceNumber}
+                </h1>
                 <div className="flex items-center gap-2 mt-1">
-                  <Badge className={statusColors[invoice.status] || "bg-gray-100"}>
+                  <Badge
+                    className={statusColors[invoice.status] || "bg-gray-100"}
+                  >
                     {invoice.status.replace(/_/g, " ")}
                   </Badge>
                   {invoice.paidAt && (
@@ -271,7 +285,9 @@ export default function InvoiceDetailPage() {
                   </CardDescription>
                 </div>
                 <div className="text-right text-sm text-muted-foreground">
-                  {invoice.issuedAt && <p>Issued: {formatDate(invoice.issuedAt)}</p>}
+                  {invoice.issuedAt && (
+                    <p>Issued: {formatDate(invoice.issuedAt)}</p>
+                  )}
                   {invoice.dueDate && <p>Due: {formatDate(invoice.dueDate)}</p>}
                 </div>
               </div>
@@ -281,9 +297,17 @@ export default function InvoiceDetailPage() {
               <div className="bg-gray-50 rounded-lg p-4">
                 <Label className="text-xs text-muted-foreground">Bill To</Label>
                 <p className="font-semibold text-lg">{invoice.customerName}</p>
-                {invoice.customerPhone && <p className="text-sm">{invoice.customerPhone}</p>}
-                {invoice.customerEmail && <p className="text-sm">{invoice.customerEmail}</p>}
-                {invoice.customerAddress && <p className="text-sm text-muted-foreground">{invoice.customerAddress}</p>}
+                {invoice.customerPhone && (
+                  <p className="text-sm">{invoice.customerPhone}</p>
+                )}
+                {invoice.customerEmail && (
+                  <p className="text-sm">{invoice.customerEmail}</p>
+                )}
+                {invoice.customerAddress && (
+                  <p className="text-sm text-muted-foreground">
+                    {invoice.customerAddress}
+                  </p>
+                )}
               </div>
 
               {/* Line Items Table */}
@@ -303,14 +327,18 @@ export default function InvoiceDetailPage() {
                         <div>
                           <p className="font-medium">{item.label}</p>
                           {item.details && (
-                            <p className="text-xs text-muted-foreground">{item.details}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {item.details}
+                            </p>
                           )}
                           <Badge variant="outline" className="text-xs mt-1">
                             {item.category}
                           </Badge>
                         </div>
                       </TableCell>
-                      <TableCell className="text-center">{item.quantity}</TableCell>
+                      <TableCell className="text-center">
+                        {item.quantity}
+                      </TableCell>
                       <TableCell className="text-right">
                         {formatCurrency(item.unitPrice)}
                       </TableCell>
@@ -331,7 +359,10 @@ export default function InvoiceDetailPage() {
                   </div>
                   {invoice.taxAmount > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span>{invoice.taxLabel || `Tax (${(invoice.taxRate * 100).toFixed(1)}%)`}</span>
+                      <span>
+                        {invoice.taxLabel ||
+                          `Tax (${(invoice.taxRate * 100).toFixed(1)}%)`}
+                      </span>
                       <span>{formatCurrency(invoice.taxAmount)}</span>
                     </div>
                   )}
@@ -352,10 +383,22 @@ export default function InvoiceDetailPage() {
                     <span>{formatCurrency(invoice.paidAmount)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg">
-                    <span className={invoice.balanceDue > 0 ? "text-red-600" : "text-green-600"}>
+                    <span
+                      className={
+                        invoice.balanceDue > 0
+                          ? "text-red-600"
+                          : "text-green-600"
+                      }
+                    >
                       Balance Due
                     </span>
-                    <span className={invoice.balanceDue > 0 ? "text-red-600" : "text-green-600"}>
+                    <span
+                      className={
+                        invoice.balanceDue > 0
+                          ? "text-red-600"
+                          : "text-green-600"
+                      }
+                    >
                       {formatCurrency(invoice.balanceDue)}
                     </span>
                   </div>
@@ -369,13 +412,17 @@ export default function InvoiceDetailPage() {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     {invoice.notes && (
                       <div>
-                        <Label className="text-xs text-muted-foreground">Notes</Label>
+                        <Label className="text-xs text-muted-foreground">
+                          Notes
+                        </Label>
                         <p className="mt-1">{invoice.notes}</p>
                       </div>
                     )}
                     {invoice.terms && (
                       <div>
-                        <Label className="text-xs text-muted-foreground">Terms</Label>
+                        <Label className="text-xs text-muted-foreground">
+                          Terms
+                        </Label>
                         <p className="mt-1">{invoice.terms}</p>
                       </div>
                     )}
@@ -402,7 +449,9 @@ export default function InvoiceDetailPage() {
               <div className="bg-gray-50 rounded-lg p-3 text-sm">
                 <div className="flex justify-between">
                   <span>Total Due</span>
-                  <span className="font-bold">{formatCurrency(invoice.balanceDue)}</span>
+                  <span className="font-bold">
+                    {formatCurrency(invoice.balanceDue)}
+                  </span>
                 </div>
               </div>
               <div>
@@ -416,7 +465,10 @@ export default function InvoiceDetailPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setPaymentDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setPaymentDialogOpen(false)}
+              >
                 Cancel
               </Button>
               <Button
@@ -424,7 +476,11 @@ export default function InvoiceDetailPage() {
                 disabled={isSubmitting}
                 className="bg-green-600 hover:bg-green-700"
               >
-                {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <DollarSign className="h-4 w-4 mr-2" />}
+                {isSubmitting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <DollarSign className="h-4 w-4 mr-2" />
+                )}
                 Record Payment
               </Button>
             </DialogFooter>
@@ -440,11 +496,15 @@ export default function InvoiceDetailPage() {
                 Void Invoice
               </DialogTitle>
               <DialogDescription>
-                This will void invoice {invoice.invoiceNumber}. This action cannot be undone.
+                This will void invoice {invoice.invoiceNumber}. This action
+                cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setVoidDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setVoidDialogOpen(false)}
+              >
                 Cancel
               </Button>
               <Button
@@ -452,7 +512,11 @@ export default function InvoiceDetailPage() {
                 onClick={handleVoid}
                 disabled={isSubmitting}
               >
-                {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Ban className="h-4 w-4 mr-2" />}
+                {isSubmitting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Ban className="h-4 w-4 mr-2" />
+                )}
                 Void Invoice
               </Button>
             </DialogFooter>
