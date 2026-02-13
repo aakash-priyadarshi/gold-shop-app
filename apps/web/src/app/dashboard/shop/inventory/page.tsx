@@ -1111,15 +1111,21 @@ export default function ShopInventoryPage() {
                                         }
                                       />
                                       <p className="text-xs text-muted-foreground">
-                                        {materialData?.makingChargePerGram && liveRate ? (
+                                        {materialData?.makingChargePerGram &&
+                                        liveRate ? (
                                           <>
                                             Total: {currencySymbol}{" "}
-                                            {liveRate.toLocaleString()}/g (metal) +{" "}
-                                            {currencySymbol}{" "}
-                                            {materialData.makingChargePerGram.toLocaleString()}/g (making) ={" "}
+                                            {liveRate.toLocaleString()}/g
+                                            (metal) + {currencySymbol}{" "}
+                                            {materialData.makingChargePerGram.toLocaleString()}
+                                            /g (making) ={" "}
                                             <span className="font-semibold text-foreground">
                                               {currencySymbol}{" "}
-                                              {(liveRate + materialData.makingChargePerGram).toLocaleString()}/g
+                                              {(
+                                                liveRate +
+                                                materialData.makingChargePerGram
+                                              ).toLocaleString()}
+                                              /g
                                             </span>
                                           </>
                                         ) : (
