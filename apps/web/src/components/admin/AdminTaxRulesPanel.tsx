@@ -89,9 +89,7 @@ export function AdminTaxRulesPanel() {
   const loadRules = async () => {
     setLoading(true);
     try {
-      const res = await api.get(
-        `/pricing/tax-rules?region=${selectedCountry}`,
-      );
+      const res = await api.get(`/pricing/tax-rules?region=${selectedCountry}`);
       const data: TaxRulesResponse = res.data;
       setRules(data.rules || []);
       setSource(data.source || "DEFAULT");
@@ -99,8 +97,7 @@ export function AdminTaxRulesPanel() {
       console.error("Failed to load tax rules:", err);
       toast({
         title: "Error",
-        description:
-          err?.response?.data?.message || "Failed to load tax rules",
+        description: err?.response?.data?.message || "Failed to load tax rules",
         variant: "destructive",
       });
     } finally {
@@ -160,8 +157,7 @@ export function AdminTaxRulesPanel() {
       console.error("Failed to save tax rule:", err);
       toast({
         title: "Save Failed",
-        description:
-          err?.response?.data?.message || "Could not save tax rule",
+        description: err?.response?.data?.message || "Could not save tax rule",
         variant: "destructive",
       });
     } finally {

@@ -6,6 +6,7 @@
  */
 
 import { GemstoneEntry as NewGemstoneEntry } from "@/components/pricing/GemstoneEditor";
+import { fetchTaxRules, getCachedTaxRate } from "@/hooks/useTaxRules";
 import { getApiUrl } from "@/lib/api";
 import { usePreferencesStore } from "@/store/preferences";
 import { useCallback, useEffect, useState } from "react";
@@ -300,7 +301,13 @@ function getBasePrice(metalType: string): number {
 }
 
 function getTaxRate(country: string): number {
-  const rates: Record<string, number> = {
+  // Use admin-configured rates from backend cache if available
+  const cached = getCachedTaxRate(country);
+  if (cached) return cached.rate;
+  // Warm the cache for next call (fire-and-forget)
+  fetchTaxRules(country);
+  // Fallback defaults while cache warms up
+  const defaults: Record<string, number> = {
     NP: 0.13,
     IN: 0.03,
     AE: 0.05,
@@ -308,7 +315,13 @@ function getTaxRate(country: string): number {
     EU: 0.19,
     US: 0.08,
   };
-  return rates[country] || 0.1;
+  return defaults[country] || 0.1;
+}
+
+function getTaxName(country: string): string {
+  const cached = getCachedTaxRate(country);
+  if (cached) return cached.name;
+  return country === "IN" ? "GST" : "VAT";
 }
 
 // ═══════════════════════════════════════════
@@ -468,9 +481,7 @@ function calculateLocalEstimate(
     finishCost,
     subtotal,
     tax,
-    taxBreakdown: [
-      { name: country === "IN" ? "GST" : "VAT", rate: taxRate, amount: tax },
-    ],
+    taxBreakdown: [{ name: getTaxName(country), rate: taxRate, amount: tax }],
     platformFee,
     total,
     breakdown: {

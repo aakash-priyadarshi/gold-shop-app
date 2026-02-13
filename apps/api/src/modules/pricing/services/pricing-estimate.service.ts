@@ -29,6 +29,7 @@ import { FinishPricingService } from "./finish-pricing.service";
 import { GemstonesPricingService } from "./gemstones-pricing.service";
 import { MaterialPricingService } from "./material-pricing.service";
 import { PricingFxService } from "./pricing-fx.service";
+import { TaxRulesService } from "./tax-rules.service";
 
 // Default making charge percentage — should match platform config default
 const DEFAULT_MAKING_CHARGE_PCT = 10;
@@ -45,6 +46,7 @@ export class PricingEstimateService {
     private readonly gemstonePricingService: GemstonesPricingService,
     private readonly marketRatesService: MarketRatesService,
     private readonly fxRatesService: FxRatesService,
+    private readonly taxRulesService: TaxRulesService,
   ) {}
 
   /**
@@ -120,14 +122,28 @@ export class PricingEstimateService {
       currency: marketCurrency,
     });
 
-    // Calculate taxes based on country
-    const taxRate = TAX_RATES[country] ?? 0;
+    // Calculate taxes based on country using admin-configured rates
+    let taxRate = TAX_RATES[country] ?? 0;
+    let taxDescription =
+      TAX_NAMES[country] || `Tax (${(taxRate * 100).toFixed(0)}%)`;
+    try {
+      const taxResult = await this.taxRulesService.calculateTaxes(
+        country as any,
+        { MAKING_CHARGE: makingCharge },
+      );
+      taxRate = taxResult.effectiveRate;
+      taxDescription = taxResult.breakdown[0]?.taxName
+        ? `${taxResult.breakdown[0].taxName} (${(taxRate * 100).toFixed(0)}%)`
+        : taxDescription;
+    } catch {
+      // Fallback to deprecated TAX_RATES if service fails
+    }
     const taxableAmount = makingCharge; // Tax on making charge only
     const taxes = taxableAmount * taxRate;
 
     lineItems.push({
       category: "TAX",
-      description: TAX_NAMES[country] || `Tax (${(taxRate * 100).toFixed(0)}%)`,
+      description: taxDescription,
       amount: parseFloat(taxes.toFixed(2)),
       currency: marketCurrency,
     });
