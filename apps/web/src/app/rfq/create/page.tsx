@@ -37,6 +37,11 @@ import {
   WEIGHT_UNIT_SYMBOLS,
   type WeightUnit,
 } from "@/hooks/useMarket";
+import {
+  fetchTaxRules,
+  lookupTaxRate,
+  type TaxRule,
+} from "@/hooks/useTaxRules";
 import { getImageUrl } from "@/lib/image-upload";
 import {
   COUNTRIES,
@@ -802,6 +807,38 @@ export default function CreateRfqPage() {
   const [orderMessage, setOrderMessage] = useState("");
   const [sendingOrder, setSendingOrder] = useState(false);
 
+  // Dynamic tax rules fetched from backend (keyed by country code)
+  const [taxRulesMap, setTaxRulesMap] = useState<Record<string, TaxRule[]>>({});
+
+  // Fetch tax rules for customer's country (and seller countries when available)
+  useEffect(() => {
+    if (!country) return;
+    const countryCodes = new Set<string>([country.toUpperCase()]);
+    // Also fetch for any unique seller countries in results
+    if (matchingSellers) {
+      for (const s of matchingSellers) {
+        if (s.country) countryCodes.add(s.country.toUpperCase());
+      }
+    }
+    let cancelled = false;
+    Promise.all(
+      Array.from(countryCodes).map(async (cc) => {
+        const data = await fetchTaxRules(cc);
+        return [cc, data?.rules || []] as [string, TaxRule[]];
+      }),
+    ).then((results) => {
+      if (cancelled) return;
+      const map: Record<string, TaxRule[]> = {};
+      for (const [cc, rules] of results) {
+        map[cc] = rules;
+      }
+      setTaxRulesMap((prev) => ({ ...prev, ...map }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [country, matchingSellers]);
+
   // Congratulatory messages with username placeholder
   const CONGRATULATORY_MESSAGES = [
     "🎉 Congratulations {name}! Your custom jewellery request has been submitted successfully!",
@@ -1561,20 +1598,10 @@ export default function CreateRfqPage() {
   // Track when international sellers were auto-included (0 local sellers)
   const [autoInternational, setAutoInternational] = useState(false);
 
-  // Debug state for seller matching — helps diagnose production issues
-  const [sellerFetchDebug, setSellerFetchDebug] = useState<{
-    url: string;
-    status: number | null;
-    error: string | null;
-    sellersReturned: number;
-    timestamp: string;
-  } | null>(null);
-
   // Function to fetch matching sellers for Step 4
   const fetchMatchingSellers = useCallback(async () => {
     setLoadingSellers(true);
     setAutoInternational(false);
-    setSellerFetchDebug(null);
     try {
       const weight = getWeightFromTemplate();
 
@@ -1652,15 +1679,6 @@ export default function CreateRfqPage() {
 
       const response = await fetch(url);
 
-      // Capture debug info
-      setSellerFetchDebug({
-        url,
-        status: response.status,
-        error: response.ok ? null : `HTTP ${response.status} ${response.statusText}`,
-        sellersReturned: 0,
-        timestamp: new Date().toLocaleTimeString(),
-      });
-
       if (response.ok) {
         const data = await response.json();
         console.log("[fetchMatchingSellers] Response:", {
@@ -1668,11 +1686,6 @@ export default function CreateRfqPage() {
           groups: data.groups,
           diagnostics: data.diagnostics,
         });
-
-        // Update debug with actual count
-        setSellerFetchDebug((prev) =>
-          prev ? { ...prev, sellersReturned: data.sellers?.length || 0 } : prev,
-        );
 
         // AUTO-FALLBACK: If 0 sellers found locally and international wasn't requested,
         // automatically retry with international sellers included
@@ -1720,17 +1733,6 @@ export default function CreateRfqPage() {
       }
     } catch (err) {
       console.error("Error fetching matching sellers:", err);
-      setSellerFetchDebug((prev) =>
-        prev
-          ? { ...prev, error: err instanceof Error ? err.message : String(err) }
-          : {
-              url: "unknown",
-              status: null,
-              error: err instanceof Error ? err.message : String(err),
-              sellersReturned: 0,
-              timestamp: new Date().toLocaleTimeString(),
-            },
-      );
       setMatchingSellers([]);
     } finally {
       setLoadingSellers(false);
@@ -5072,35 +5074,6 @@ export default function CreateRfqPage() {
                       </div>
                     )}
 
-                    {/* Debug panel — visible diagnostics for fetch issues */}
-                    {sellerFetchDebug && (
-                      <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono">
-                        <p className="font-semibold text-gray-600 mb-1">
-                          🔧 Fetch Debug ({sellerFetchDebug.timestamp})
-                        </p>
-                        <p className="text-gray-500 break-all">
-                          URL: {sellerFetchDebug.url}
-                        </p>
-                        <p
-                          className={
-                            sellerFetchDebug.error
-                              ? "text-red-600"
-                              : "text-green-600"
-                          }
-                        >
-                          Status: {sellerFetchDebug.status || "N/A"} |
-                          Sellers: {sellerFetchDebug.sellersReturned}
-                          {sellerFetchDebug.error &&
-                            ` | Error: ${sellerFetchDebug.error}`}
-                        </p>
-                        <p className="text-gray-400 mt-1">
-                          Country: {country} | Detected: {detectedCountry || "none"} |
-                          International: {includeInternational ? "ON" : "OFF"} |
-                          Filter: {filterCountry || "none"}
-                        </p>
-                      </div>
-                    )}
-
                     {/* Seller List */}
                     {loadingSellers ? (
                       <div className="flex items-center justify-center py-12">
@@ -5293,13 +5266,32 @@ export default function CreateRfqPage() {
                           const totalMakingCharge = Math.round(
                             seller.materialCost * (totalMakingPercent / 100),
                           );
-                          const totalPrice =
+                          const subtotal =
                             seller.materialCost + totalMakingCharge;
                           const isInternational =
                             seller.country &&
                             country &&
                             seller.country.toLowerCase() !==
                               country.toLowerCase();
+
+                          // Tax calculation: domestic → seller's country tax, international → customer's local tax
+                          const taxCountryCode =
+                            (isInternational
+                              ? country?.toUpperCase()
+                              : seller.country?.toUpperCase()) || "";
+                          const countryRules =
+                            taxRulesMap[taxCountryCode] || [];
+                          // For RFQ: use PRECIOUS_METAL rate (gold items), fallback to ALL
+                          const taxLookup = lookupTaxRate(
+                            countryRules,
+                            "PRECIOUS_METAL",
+                          );
+                          const taxRate = taxLookup.rate;
+                          const taxLabel = isInternational
+                            ? `Local ${taxLookup.name}`
+                            : taxLookup.name;
+                          const taxAmount = Math.round(subtotal * taxRate);
+                          const totalPrice = subtotal + taxAmount;
                           return (
                             <div key={seller.id}>
                               {showGroupHeader && (
@@ -5447,7 +5439,20 @@ export default function CreateRfqPage() {
                                       Making ({totalMakingPercent}%):{" "}
                                       {currencyInfo?.symbol || "Rs."}
                                       {totalMakingCharge.toLocaleString()}
+                                      {taxRate > 0 && (
+                                        <>
+                                          <br />
+                                          {taxLabel}:{" "}
+                                          {currencyInfo?.symbol || "Rs."}
+                                          {taxAmount.toLocaleString()}
+                                        </>
+                                      )}
                                     </div>
+                                    {isInternational && (
+                                      <p className="text-[10px] text-orange-600 mt-1 font-medium">
+                                        + Import duty will be applied
+                                      </p>
+                                    )}
                                     <MarketComparison
                                       ourPrice={totalPrice}
                                       currencySymbol={
@@ -5558,6 +5563,87 @@ export default function CreateRfqPage() {
 
                     {/* Budget input */}
                     <div>
+                      {/* Live Price Summary */}
+                      {(() => {
+                        const platformCommission = 5;
+                        const totalMakingPercent =
+                          selectedSeller.makingChargePercent +
+                          platformCommission;
+                        const totalMakingCharge = Math.round(
+                          selectedSeller.materialCost *
+                            (totalMakingPercent / 100),
+                        );
+                        const subtotal =
+                          selectedSeller.materialCost + totalMakingCharge;
+                        const isIntl =
+                          selectedSeller.country &&
+                          country &&
+                          selectedSeller.country.toLowerCase() !==
+                            country.toLowerCase();
+                        const taxCountryCode =
+                          (isIntl
+                            ? country?.toUpperCase()
+                            : selectedSeller.country?.toUpperCase()) || "";
+                        const modalRules = taxRulesMap[taxCountryCode] || [];
+                        const modalTaxLookup = lookupTaxRate(
+                          modalRules,
+                          "PRECIOUS_METAL",
+                        );
+                        const taxRate = modalTaxLookup.rate;
+                        const taxLabel = isIntl
+                          ? `Local ${modalTaxLookup.name}`
+                          : modalTaxLookup.name;
+                        const taxAmount = Math.round(subtotal * taxRate);
+                        const grandTotal = subtotal + taxAmount;
+                        const sym = currencyInfo?.symbol || "Rs.";
+                        return (
+                          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg mb-3">
+                            <p className="text-sm font-semibold text-amber-900 mb-2">
+                              Order Price Summary
+                            </p>
+                            <div className="space-y-1 text-sm text-amber-800">
+                              <div className="flex justify-between">
+                                <span>Material Cost</span>
+                                <span>
+                                  {sym}
+                                  {selectedSeller.materialCost.toLocaleString()}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>
+                                  Making Charge ({totalMakingPercent}%)
+                                </span>
+                                <span>
+                                  {sym}
+                                  {totalMakingCharge.toLocaleString()}
+                                </span>
+                              </div>
+                              {taxRate > 0 && (
+                                <div className="flex justify-between">
+                                  <span>{taxLabel}</span>
+                                  <span>
+                                    {sym}
+                                    {taxAmount.toLocaleString()}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex justify-between pt-1 border-t border-amber-300 font-bold text-amber-950">
+                                <span>Total</span>
+                                <span>
+                                  {sym}
+                                  {grandTotal.toLocaleString()}
+                                </span>
+                              </div>
+                              {isIntl && (
+                                <p className="text-xs text-orange-600 font-medium pt-1">
+                                  + Import duty will be applied at delivery
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Your Budget ({currencyInfo?.symbol || "Rs."})
                       </label>
@@ -5569,22 +5655,8 @@ export default function CreateRfqPage() {
                         className="text-lg font-semibold"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        Seller&apos;s estimated price:{" "}
-                        {currencyInfo?.symbol || "Rs."}
-                        {(() => {
-                          const platformCommission = 5;
-                          const totalMakingPercent =
-                            selectedSeller.makingChargePercent +
-                            platformCommission;
-                          const totalMakingCharge = Math.round(
-                            selectedSeller.materialCost *
-                              (totalMakingPercent / 100),
-                          );
-                          return (
-                            selectedSeller.materialCost + totalMakingCharge
-                          ).toLocaleString();
-                        })()}
-                        . The seller may counter with a different price.
+                        Pre-filled with the total price above. The seller may
+                        counter with a different price.
                       </p>
                     </div>
 

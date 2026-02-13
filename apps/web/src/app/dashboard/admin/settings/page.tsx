@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminTaxRulesPanel } from "@/components/admin/AdminTaxRulesPanel";
 import { AdminGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
@@ -1613,6 +1614,23 @@ export default function AdminSettingsPage() {
                     midnight.
                   </p>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Tax Rules */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Tax Rules
+                </CardTitle>
+                <CardDescription>
+                  Manage country-specific tax rates and categories. Changes
+                  apply to all pricing on RFQ, shop, and custom orders.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AdminTaxRulesPanel />
               </CardContent>
             </Card>
           </div>
