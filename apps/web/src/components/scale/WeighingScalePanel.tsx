@@ -30,9 +30,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  useWeighingScale,
-  useSimulatedScale,
   SCALE_PRESETS,
+  useSimulatedScale,
+  useWeighingScale,
   type WeightUnit,
 } from "@/hooks/useWeighingScale";
 import {
@@ -152,12 +152,21 @@ export function WeighingScalePanel({
                 }}
                 disabled={connecting || !supported}
               >
-                {connecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Cable className="h-3 w-3 mr-1" />}
+                {connecting ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Cable className="h-3 w-3 mr-1" />
+                )}
                 Connect
               </Button>
             </div>
           ) : (
-            <Button size="sm" variant="ghost" className="text-xs h-7" onClick={disconnect}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs h-7"
+              onClick={disconnect}
+            >
               <Unplug className="h-3 w-3 mr-1" />
               Disconnect
             </Button>
@@ -173,10 +182,17 @@ export function WeighingScalePanel({
               }`}
             >
               {formatWeight(lastReading)} {displayUnit}
-              {lastReading?.stable && <Check className="inline h-4 w-4 ml-1 text-green-600" />}
+              {lastReading?.stable && (
+                <Check className="inline h-4 w-4 ml-1 text-green-600" />
+              )}
             </div>
             <div className="flex flex-col gap-1">
-              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={tare}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                onClick={tare}
+              >
                 <RotateCcw className="h-3 w-3 mr-1" />
                 Tare
               </Button>
@@ -271,7 +287,8 @@ export function WeighingScalePanel({
 
         {!supported && !useSimulated && (
           <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
-            Web Serial API not supported in this browser. Use Chrome or Edge, or try Demo Mode.
+            Web Serial API not supported in this browser. Use Chrome or Edge, or
+            try Demo Mode.
           </p>
         )}
 
@@ -304,7 +321,10 @@ export function WeighingScalePanel({
 
             {/* Controls */}
             <div className="flex items-center gap-2">
-              <Select value={displayUnit} onValueChange={(v) => handleUnitChange(v as WeightUnit)}>
+              <Select
+                value={displayUnit}
+                onValueChange={(v) => handleUnitChange(v as WeightUnit)}
+              >
                 <SelectTrigger className="w-24">
                   <SelectValue />
                 </SelectTrigger>

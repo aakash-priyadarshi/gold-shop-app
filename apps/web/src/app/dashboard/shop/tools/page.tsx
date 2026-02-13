@@ -2,13 +2,7 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   ArrowLeftRight,
   Calculator,
@@ -23,7 +17,8 @@ import Link from "next/link";
 const tools = [
   {
     title: "Old Gold Exchange",
-    description: "Calculate exchange value when trading old gold for new jewellery",
+    description:
+      "Calculate exchange value when trading old gold for new jewellery",
     href: "/dashboard/shop/tools/old-gold",
     icon: ArrowLeftRight,
     color: "text-amber-500 bg-amber-50",
@@ -85,7 +80,9 @@ export default function ToolsPage() {
               <Link key={tool.href} href={tool.href}>
                 <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
                   <CardContent className="p-6 flex flex-col items-center text-center">
-                    <div className={`h-14 w-14 rounded-2xl flex items-center justify-center mb-4 ${tool.color}`}>
+                    <div
+                      className={`h-14 w-14 rounded-2xl flex items-center justify-center mb-4 ${tool.color}`}
+                    >
                       <tool.icon className="h-7 w-7" />
                     </div>
                     <h3 className="font-semibold mb-1">{tool.title}</h3>

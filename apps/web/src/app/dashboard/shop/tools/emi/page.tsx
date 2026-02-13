@@ -2,25 +2,11 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import {
-  Calculator,
-  Calendar,
-  CreditCard,
-  IndianRupee,
-  Percent,
-} from "lucide-react";
+import { Calendar, CreditCard } from "lucide-react";
 import { useState } from "react";
 
 export default function EMICalculatorPage() {
@@ -29,7 +15,8 @@ export default function EMICalculatorPage() {
   const [interestRate, setInterestRate] = useState("12"); // Annual %
   const [tenure, setTenure] = useState("6"); // months
 
-  const principal = (parseFloat(totalAmount) || 0) - (parseFloat(downPayment) || 0);
+  const principal =
+    (parseFloat(totalAmount) || 0) - (parseFloat(downPayment) || 0);
   const rate = (parseFloat(interestRate) || 0) / 12 / 100; // Monthly interest
   const months = parseInt(tenure) || 1;
 
@@ -51,7 +38,13 @@ export default function EMICalculatorPage() {
   }
 
   // Generate schedule
-  const schedule: { month: number; emi: number; principal: number; interest: number; balance: number }[] = [];
+  const schedule: {
+    month: number;
+    emi: number;
+    principal: number;
+    interest: number;
+    balance: number;
+  }[] = [];
   let balance = principal;
   for (let i = 1; i <= months && balance > 0; i++) {
     const interestPart = balance * rate;
@@ -106,9 +99,7 @@ export default function EMICalculatorPage() {
                   />
                 </div>
                 <div>
-                  <Label>
-                    Annual Interest Rate (%)
-                  </Label>
+                  <Label>Annual Interest Rate (%)</Label>
                   <Input
                     type="number"
                     value={interestRate}
@@ -124,10 +115,14 @@ export default function EMICalculatorPage() {
                     {[3, 6, 9, 12, 18, 24].map((m) => (
                       <Button
                         key={m}
-                        variant={tenure === m.toString() ? "default" : "outline"}
+                        variant={
+                          tenure === m.toString() ? "default" : "outline"
+                        }
                         size="sm"
                         onClick={() => setTenure(m.toString())}
-                        className={tenure === m.toString() ? "bg-amber-500" : ""}
+                        className={
+                          tenure === m.toString() ? "bg-amber-500" : ""
+                        }
                       >
                         {m}
                       </Button>
@@ -149,7 +144,9 @@ export default function EMICalculatorPage() {
             <div className="space-y-4">
               <Card className="bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200">
                 <CardContent className="p-6 text-center">
-                  <p className="text-sm text-muted-foreground mb-1">Monthly EMI</p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Monthly EMI
+                  </p>
                   <p className="text-4xl font-bold text-amber-600">
                     NPR {Math.round(emi).toLocaleString()}
                   </p>
@@ -170,7 +167,9 @@ export default function EMICalculatorPage() {
                 </Card>
                 <Card>
                   <CardContent className="p-4 text-center">
-                    <p className="text-sm text-muted-foreground">Total Interest</p>
+                    <p className="text-sm text-muted-foreground">
+                      Total Interest
+                    </p>
                     <p className="text-xl font-bold text-red-500">
                       NPR {Math.round(totalInterest).toLocaleString()}
                     </p>
@@ -178,12 +177,19 @@ export default function EMICalculatorPage() {
                 </Card>
                 <Card className="col-span-2">
                   <CardContent className="p-4 text-center">
-                    <p className="text-sm text-muted-foreground">Total Payable</p>
+                    <p className="text-sm text-muted-foreground">
+                      Total Payable
+                    </p>
                     <p className="text-xl font-bold text-green-600">
-                      NPR {Math.round(totalPayable + (parseFloat(downPayment) || 0)).toLocaleString()}
+                      NPR{" "}
+                      {Math.round(
+                        totalPayable + (parseFloat(downPayment) || 0),
+                      ).toLocaleString()}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      (Down Payment: NPR {(parseFloat(downPayment) || 0).toLocaleString()} + EMIs: NPR {Math.round(totalPayable).toLocaleString()})
+                      (Down Payment: NPR{" "}
+                      {(parseFloat(downPayment) || 0).toLocaleString()} + EMIs:
+                      NPR {Math.round(totalPayable).toLocaleString()})
                     </p>
                   </CardContent>
                 </Card>
@@ -213,12 +219,23 @@ export default function EMICalculatorPage() {
                     </thead>
                     <tbody>
                       {schedule.map((row) => (
-                        <tr key={row.month} className="border-b hover:bg-gray-50">
+                        <tr
+                          key={row.month}
+                          className="border-b hover:bg-gray-50"
+                        >
                           <td className="p-2">{row.month}</td>
-                          <td className="text-right p-2">NPR {row.emi.toLocaleString()}</td>
-                          <td className="text-right p-2">{row.principal.toLocaleString()}</td>
-                          <td className="text-right p-2 text-red-500">{row.interest.toLocaleString()}</td>
-                          <td className="text-right p-2 font-medium">{row.balance.toLocaleString()}</td>
+                          <td className="text-right p-2">
+                            NPR {row.emi.toLocaleString()}
+                          </td>
+                          <td className="text-right p-2">
+                            {row.principal.toLocaleString()}
+                          </td>
+                          <td className="text-right p-2 text-red-500">
+                            {row.interest.toLocaleString()}
+                          </td>
+                          <td className="text-right p-2 font-medium">
+                            {row.balance.toLocaleString()}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

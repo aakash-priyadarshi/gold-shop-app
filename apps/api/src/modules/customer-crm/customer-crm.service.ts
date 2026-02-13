@@ -8,12 +8,7 @@ export class CustomerCrmService {
   /**
    * Search customers: registered Users + WalkInCustomers
    */
-  async searchCustomers(
-    shopId: string,
-    query?: string,
-    page = 1,
-    limit = 20,
-  ) {
+  async searchCustomers(shopId: string, query?: string, page = 1, limit = 20) {
     const skip = (page - 1) * limit;
 
     // Search registered customers who have ordered from this shop
@@ -45,7 +40,7 @@ export class CustomerCrmService {
             {
               OR: [
                 { customerOrders: { some: { shopId } } },
-                { rfqRequests: { some: { shopId } } },
+                { rfqRequests: { some: { targetedShops: { some: { shopId } } } } },
               ],
             },
           ],
@@ -63,11 +58,10 @@ export class CustomerCrmService {
           _count: {
             select: {
               customerOrders: { where: { shopId } },
-              rfqRequests: { where: { shopId } },
+              rfqRequests: { where: { targetedShops: { some: { shopId } } } },
             },
           },
           purchaseStats: {
-            where: {},
             orderBy: { totalSpent: "desc" },
             take: 1,
           },
@@ -83,7 +77,7 @@ export class CustomerCrmService {
             {
               OR: [
                 { customerOrders: { some: { shopId } } },
-                { rfqRequests: { some: { shopId } } },
+                { rfqRequests: { some: { targetedShops: { some: { shopId } } } } },
               ],
             },
           ],
@@ -181,7 +175,7 @@ export class CustomerCrmService {
         _count: {
           select: {
             customerOrders: { where: { shopId } },
-            rfqRequests: { where: { shopId } },
+            rfqRequests: { where: { targetedShops: { some: { shopId } } } },
           },
         },
       },
@@ -226,7 +220,13 @@ export class CustomerCrmService {
         currency: null,
         country: walkIn.country,
         city: walkIn.city,
-        addresses: [{ address: walkIn.address, city: walkIn.city, country: walkIn.country }],
+        addresses: [
+          {
+            address: walkIn.address,
+            city: walkIn.city,
+            country: walkIn.country,
+          },
+        ],
         purchaseStats: [],
         orderCount: 0,
         rfqCount: 0,
@@ -243,7 +243,12 @@ export class CustomerCrmService {
   /**
    * Get customer orders for this shop
    */
-  async getCustomerOrders(customerId: string, shopId: string, page = 1, limit = 20) {
+  async getCustomerOrders(
+    customerId: string,
+    shopId: string,
+    page = 1,
+    limit = 20,
+  ) {
     const skip = (page - 1) * limit;
 
     const [orders, total] = await Promise.all([
@@ -256,15 +261,9 @@ export class CustomerCrmService {
           id: true,
           orderNumber: true,
           status: true,
-          totalAmount: true,
-          currency: true,
+          totalNpr: true,
+          displayCurrency: true,
           createdAt: true,
-          rfqRequest: {
-            select: {
-              jewelleryType: true,
-              buildMethod: true,
-            },
-          },
         },
       }),
       this.prisma.order.count({ where: { customerId, shopId } }),
@@ -280,9 +279,9 @@ export class CustomerCrmService {
     // Get orders aggregated
     const orderStats = await this.prisma.order.aggregate({
       where: { customerId, shopId, status: { in: ["DELIVERED", "COMPLETED"] } },
-      _sum: { totalAmount: true },
+      _sum: { totalNpr: true },
       _count: true,
-      _avg: { totalAmount: true },
+      _avg: { totalNpr: true },
     });
 
     // Get first & last order dates
@@ -303,8 +302,8 @@ export class CustomerCrmService {
     const activeRfqs = await this.prisma.rfqRequest.count({
       where: {
         customerId,
-        shopId,
-        status: { in: ["PENDING", "QUOTED", "NEGOTIATING"] },
+        targetedShops: { some: { shopId } },
+        status: { in: ["SENT_TO_SHOPS", "OFFERS_RECEIVED", "OFFER_SELECTED"] },
       },
     });
 
@@ -315,8 +314,8 @@ export class CustomerCrmService {
 
     return {
       totalOrders: orderStats._count,
-      totalSpent: orderStats._sum.totalAmount || 0,
-      averageOrderValue: orderStats._avg.totalAmount || 0,
+      totalSpent: orderStats._sum?.totalNpr || 0,
+      averageOrderValue: orderStats._avg?.totalNpr || 0,
       firstOrderDate: firstOrder?.createdAt,
       lastOrderDate: lastOrder?.createdAt,
       activeRfqs,

@@ -1,6 +1,6 @@
 /**
  * Shared Jewellery Constants
- * 
+ *
  * Single source of truth for jewellery types, build methods, surface finishes,
  * and weight guidance used across customer RFQ, seller RFQ, walk-in quotes, etc.
  */
@@ -49,7 +49,10 @@ export const JEWELLERY_TYPE_IMAGES: Record<string, string> = {
 // SURFACE FINISHES
 // ═══════════════════════════════════════════
 
-export const SURFACE_FINISH_IMAGES: Record<string, { image: string; description: string }> = {
+export const SURFACE_FINISH_IMAGES: Record<
+  string,
+  { image: string; description: string }
+> = {
   HIGH_POLISH: {
     image: "https://images.orivraa.com/product/1769448671129-6anrd5rf.png",
     description: "Mirror-like shine, highly reflective surface",
@@ -118,7 +121,8 @@ export const BUILD_METHODS = [
     color: "amber",
     tooltip: {
       what: "Solid precious metal from core to surface. No plating or coating needed.",
-      durability: "Highest durability. Can be polished and repaired forever. Maintains value.",
+      durability:
+        "Highest durability. Can be polished and repaired forever. Maintains value.",
       bestFor: "Investment pieces, heirloom jewellery, daily wear items.",
       care: "Simple cleaning with mild soap. Can be professionally polished.",
       resale: "Highest resale value. Can be melted down and repurposed.",
@@ -148,7 +152,8 @@ export const BUILD_METHODS = [
     color: "green",
     tooltip: {
       what: "Non-precious base metal with a thin gold/silver coating.",
-      durability: "Plating wears off. Economy: 3-6 months. Standard: 1-2 years. Premium: 2-5 years.",
+      durability:
+        "Plating wears off. Economy: 3-6 months. Standard: 1-2 years. Premium: 2-5 years.",
       bestFor: "Fashion jewellery, trendy pieces, budget-conscious buyers.",
       care: "Avoid water, perfumes, lotions. Remove before sleeping.",
       warning: "⚠️ This is NOT solid gold.",
@@ -163,7 +168,8 @@ export const BUILD_METHODS = [
     color: "purple",
     tooltip: {
       what: "High-precision machinery creates intricate hollow or semi-hollow construction.",
-      durability: "Good for the weight. Hollow = lighter pieces for same visual size.",
+      durability:
+        "Good for the weight. Hollow = lighter pieces for same visual size.",
       bestFor: "Chains, hollow bangles, machine-cut patterns.",
       styles: "Hollow Chains, Laser-Cut, Machine-Stamped, Woven",
       advantage: "Up to 50% lighter than solid pieces of the same size.",
@@ -175,29 +181,66 @@ export const BUILD_METHODS = [
 // WEIGHT GUIDANCE
 // ═══════════════════════════════════════════
 
-export const WEIGHT_GUIDANCE: Record<string, { range: string; note: string }> = {
-  RING: { range: "1-7g", note: "Women's 1-3g, men's 4-7g. Heavy statement rings up to 15g." },
-  NECKLACE: { range: "5-30g", note: "Simple chains 5-10g, medium pendants 10-20g, heavy 30g+." },
-  BRACELET: { range: "5-20g", note: "Delicate 5-8g, tennis 10-15g, chunky 15-25g." },
-  EARRING: { range: "1-6g", note: "Per pair. Studs 0.5-2g, hoops 1-3g, statement 4-8g." },
-  PENDANT: { range: "1-10g", note: "Excludes chain. Small 1-3g, medium 3-6g, large 8-15g." },
-  BANGLE: { range: "8-30g", note: "Thin 8-12g, medium 15-20g, broad/heavy 25-40g." },
-  CHAIN: { range: "5-25g", note: '18" light 5-10g, 24" medium 15-25g.' },
-  ANKLET: { range: "2-8g", note: "Simple chains 2-4g, with charms 5-10g." },
-  BROOCH: { range: "5-20g", note: "Small 5-8g, medium 10-15g, elaborate 15-25g." },
-  TIE_PIN: { range: "3-8g", note: "Simple 3-5g, with gemstones 5-8g." },
-  CUFFLINKS: { range: "5-15g", note: "Per pair. Simple 5-8g, ornate 10-15g." },
-  NOSE_PIN: { range: "0.3-2g", note: "Studs 0.3-0.5g, hoops 0.5-1g, decorative up to 2g." },
-  MANGALSUTRA: { range: "10-30g", note: "Short 10-15g, medium 15-20g, traditional 25-40g." },
-  MAANG_TIKKA: { range: "3-10g", note: "Simple 3-5g, with stones 5-8g, bridal 8-15g." },
-  OTHER: { range: "Varies", note: "Weight depends on the specific item." },
-};
+export const WEIGHT_GUIDANCE: Record<string, { range: string; note: string }> =
+  {
+    RING: {
+      range: "1-7g",
+      note: "Women's 1-3g, men's 4-7g. Heavy statement rings up to 15g.",
+    },
+    NECKLACE: {
+      range: "5-30g",
+      note: "Simple chains 5-10g, medium pendants 10-20g, heavy 30g+.",
+    },
+    BRACELET: {
+      range: "5-20g",
+      note: "Delicate 5-8g, tennis 10-15g, chunky 15-25g.",
+    },
+    EARRING: {
+      range: "1-6g",
+      note: "Per pair. Studs 0.5-2g, hoops 1-3g, statement 4-8g.",
+    },
+    PENDANT: {
+      range: "1-10g",
+      note: "Excludes chain. Small 1-3g, medium 3-6g, large 8-15g.",
+    },
+    BANGLE: {
+      range: "8-30g",
+      note: "Thin 8-12g, medium 15-20g, broad/heavy 25-40g.",
+    },
+    CHAIN: { range: "5-25g", note: '18" light 5-10g, 24" medium 15-25g.' },
+    ANKLET: { range: "2-8g", note: "Simple chains 2-4g, with charms 5-10g." },
+    BROOCH: {
+      range: "5-20g",
+      note: "Small 5-8g, medium 10-15g, elaborate 15-25g.",
+    },
+    TIE_PIN: { range: "3-8g", note: "Simple 3-5g, with gemstones 5-8g." },
+    CUFFLINKS: {
+      range: "5-15g",
+      note: "Per pair. Simple 5-8g, ornate 10-15g.",
+    },
+    NOSE_PIN: {
+      range: "0.3-2g",
+      note: "Studs 0.3-0.5g, hoops 0.5-1g, decorative up to 2g.",
+    },
+    MANGALSUTRA: {
+      range: "10-30g",
+      note: "Short 10-15g, medium 15-20g, traditional 25-40g.",
+    },
+    MAANG_TIKKA: {
+      range: "3-10g",
+      note: "Simple 3-5g, with stones 5-8g, bridal 8-15g.",
+    },
+    OTHER: { range: "Varies", note: "Weight depends on the specific item." },
+  };
 
 // ═══════════════════════════════════════════
 // ALLOY FAMILY COLORS (for visual display)
 // ═══════════════════════════════════════════
 
-export const ALLOY_FAMILY_COLORS: Record<string, { hex: string; label: string }> = {
+export const ALLOY_FAMILY_COLORS: Record<
+  string,
+  { hex: string; label: string }
+> = {
   YELLOW_GOLD: { hex: "#FFD700", label: "Yellow Gold" },
   WHITE_GOLD: { hex: "#E8E8E8", label: "White Gold" },
   ROSE_GOLD: { hex: "#B76E79", label: "Rose Gold" },
@@ -209,7 +252,10 @@ export const ALLOY_FAMILY_COLORS: Record<string, { hex: string; label: string }>
 // ═══════════════════════════════════════════
 
 export function getJewelleryTypeLabel(value: string): string {
-  return JEWELLERY_TYPES.find((t) => t.value === value)?.label || value.replace(/_/g, " ");
+  return (
+    JEWELLERY_TYPES.find((t) => t.value === value)?.label ||
+    value.replace(/_/g, " ")
+  );
 }
 
 export function getBuildMethodInfo(value: string) {

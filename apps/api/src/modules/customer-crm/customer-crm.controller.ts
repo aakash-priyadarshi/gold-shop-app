@@ -11,8 +11,8 @@ import {
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
-import { AddCustomerNoteDto } from "./dto/customer-note.dto";
 import { CustomerCrmService } from "./customer-crm.service";
+import { AddCustomerNoteDto } from "./dto/customer-note.dto";
 
 @ApiTags("customer-crm")
 @Controller("users/customers")
@@ -87,7 +87,13 @@ export class CustomerCrmController {
   ) {
     const shopId = req.user?.shop?.id;
     if (!shopId) throw new NotFoundException("Shop not found");
-    return this.crmService.addNote(id, shopId, req.user.id, dto.note, dto.category);
+    return this.crmService.addNote(
+      id,
+      shopId,
+      req.user.id,
+      dto.note,
+      dto.category,
+    );
   }
 
   @Get(":id/notes")

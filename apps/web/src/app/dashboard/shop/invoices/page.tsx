@@ -4,13 +4,7 @@ import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -171,14 +165,18 @@ export default function InvoicesListPage() {
                     <FileText className="h-4 w-4 text-blue-500" />
                     <span className="text-sm text-muted-foreground">Total</span>
                   </div>
-                  <p className="text-2xl font-bold mt-1">{stats.counts.total}</p>
+                  <p className="text-2xl font-bold mt-1">
+                    {stats.counts.total}
+                  </p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-4">
                   <div className="flex items-center gap-2">
                     <TrendingUp className="h-4 w-4 text-green-500" />
-                    <span className="text-sm text-muted-foreground">Collected</span>
+                    <span className="text-sm text-muted-foreground">
+                      Collected
+                    </span>
                   </div>
                   <p className="text-2xl font-bold mt-1 text-green-600">
                     {formatCurrency(stats.revenue.totalCollected)}
@@ -189,7 +187,9 @@ export default function InvoicesListPage() {
                 <CardContent className="pt-4">
                   <div className="flex items-center gap-2">
                     <DollarSign className="h-4 w-4 text-amber-500" />
-                    <span className="text-sm text-muted-foreground">Outstanding</span>
+                    <span className="text-sm text-muted-foreground">
+                      Outstanding
+                    </span>
                   </div>
                   <p className="text-2xl font-bold mt-1 text-amber-600">
                     {formatCurrency(stats.revenue.totalOutstanding)}
@@ -287,18 +287,26 @@ export default function InvoicesListPage() {
                         </TableCell>
                         <TableCell
                           className={
-                            inv.balanceDue > 0 ? "text-red-600 font-medium" : "text-green-600"
+                            inv.balanceDue > 0
+                              ? "text-red-600 font-medium"
+                              : "text-green-600"
                           }
                         >
                           {formatCurrency(inv.balanceDue, inv.currency)}
                         </TableCell>
                         <TableCell>
-                          <Badge className={statusColors[inv.status] || "bg-gray-100"}>
+                          <Badge
+                            className={
+                              statusColors[inv.status] || "bg-gray-100"
+                            }
+                          >
                             {inv.status.replace(/_/g, " ")}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {inv.issuedAt ? formatDate(inv.issuedAt) : formatDate(inv.createdAt)}
+                          {inv.issuedAt
+                            ? formatDate(inv.issuedAt)
+                            : formatDate(inv.createdAt)}
                         </TableCell>
                         <TableCell>
                           <Link href={`/dashboard/shop/invoices/${inv.id}`}>

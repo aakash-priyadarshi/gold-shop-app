@@ -2,7 +2,6 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,7 +16,6 @@ import { Separator } from "@/components/ui/separator";
 import { materialsApi } from "@/lib/api";
 import {
   ArrowLeftRight,
-  Calculator,
   Coins,
   Loader2,
   RefreshCw,
@@ -64,7 +62,7 @@ export default function OldGoldExchangePage() {
       const rates = res.data?.metals || res.data?.rates || res.data;
       if (Array.isArray(rates)) {
         const gold = rates.find(
-          (r: any) => r.metalCode === "GOLD_24K" || r.name === "Gold 24K"
+          (r: any) => r.metalCode === "GOLD_24K" || r.name === "Gold 24K",
         );
         if (gold) setGoldRate24k(gold.pricePerGram || gold.price || 0);
       } else if (rates?.GOLD_24K) {
@@ -111,7 +109,8 @@ export default function OldGoldExchangePage() {
                 Old Gold Exchange Calculator
               </h1>
               <p className="text-muted-foreground">
-                Calculate exchange value when customers trade old gold for new jewellery
+                Calculate exchange value when customers trade old gold for new
+                jewellery
               </p>
             </div>
             <Button
@@ -120,7 +119,9 @@ export default function OldGoldExchangePage() {
               onClick={loadGoldRate}
               disabled={rateLoading}
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${rateLoading ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${rateLoading ? "animate-spin" : ""}`}
+              />
               Refresh Rate
             </Button>
           </div>
@@ -181,9 +182,7 @@ export default function OldGoldExchangePage() {
                   </select>
                 </div>
                 <div>
-                  <Label>
-                    Impurity Deduction ({impurityDeduct}%)
-                  </Label>
+                  <Label>Impurity Deduction ({impurityDeduct}%)</Label>
                   <Input
                     type="number"
                     value={impurityDeduct}
@@ -221,7 +220,12 @@ export default function OldGoldExchangePage() {
                   <Separator />
                   <div className="flex justify-between font-bold text-lg text-red-600">
                     <span>Old Gold Value</span>
-                    <span>NPR {oldGoldValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                    <span>
+                      NPR{" "}
+                      {oldGoldValue.toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </span>
                   </div>
                 </div>
               </CardContent>
@@ -279,16 +283,31 @@ export default function OldGoldExchangePage() {
                   </div>
                   <div className="flex justify-between">
                     <span>Gold cost</span>
-                    <span>NPR {newGoldCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                    <span>
+                      NPR{" "}
+                      {newGoldCost.toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span>Making charge</span>
-                    <span>NPR {makingCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                    <span>
+                      NPR{" "}
+                      {makingCost.toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </span>
                   </div>
                   <Separator />
                   <div className="flex justify-between font-bold text-lg text-green-600">
                     <span>New Item Cost</span>
-                    <span>NPR {newTotalCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                    <span>
+                      NPR{" "}
+                      {newTotalCost.toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </span>
                   </div>
                 </div>
               </CardContent>
@@ -299,23 +318,35 @@ export default function OldGoldExchangePage() {
           {(oldWeightG > 0 || newWeightG > 0) && (
             <Card className="border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50">
               <CardHeader>
-                <CardTitle className="text-center text-xl">Exchange Summary</CardTitle>
+                <CardTitle className="text-center text-xl">
+                  Exchange Summary
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
-                    <p className="text-sm text-muted-foreground">Old Gold Value</p>
+                    <p className="text-sm text-muted-foreground">
+                      Old Gold Value
+                    </p>
                     <p className="text-xl font-bold text-red-600">
-                      NPR {oldGoldValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      NPR{" "}
+                      {oldGoldValue.toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
                     </p>
                   </div>
                   <div className="flex items-center justify-center">
                     <ArrowLeftRight className="h-8 w-8 text-amber-500" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">New Item Cost</p>
+                    <p className="text-sm text-muted-foreground">
+                      New Item Cost
+                    </p>
                     <p className="text-xl font-bold text-green-600">
-                      NPR {newTotalCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      NPR{" "}
+                      {newTotalCost.toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
                     </p>
                   </div>
                 </div>
@@ -323,22 +354,34 @@ export default function OldGoldExchangePage() {
                 <div className="text-center">
                   {customerPays > 0 ? (
                     <div>
-                      <p className="text-sm text-muted-foreground">Customer Pays Extra</p>
+                      <p className="text-sm text-muted-foreground">
+                        Customer Pays Extra
+                      </p>
                       <p className="text-3xl font-bold text-amber-600">
-                        NPR {customerPays.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        NPR{" "}
+                        {customerPays.toLocaleString(undefined, {
+                          maximumFractionDigits: 0,
+                        })}
                       </p>
                     </div>
                   ) : shopPays > 0 ? (
                     <div>
-                      <p className="text-sm text-muted-foreground">Shop Refunds</p>
+                      <p className="text-sm text-muted-foreground">
+                        Shop Refunds
+                      </p>
                       <p className="text-3xl font-bold text-blue-600">
-                        NPR {shopPays.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        NPR{" "}
+                        {shopPays.toLocaleString(undefined, {
+                          maximumFractionDigits: 0,
+                        })}
                       </p>
                     </div>
                   ) : (
                     <div>
                       <p className="text-sm text-muted-foreground">Result</p>
-                      <p className="text-2xl font-bold text-green-600">Even Exchange</p>
+                      <p className="text-2xl font-bold text-green-600">
+                        Even Exchange
+                      </p>
                     </div>
                   )}
                 </div>

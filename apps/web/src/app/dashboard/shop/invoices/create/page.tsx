@@ -2,7 +2,6 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,13 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { invoicesApi } from "@/lib/api";
-import {
-  ArrowLeft,
-  Check,
-  Loader2,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { ArrowLeft, Check, Loader2, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -36,14 +29,7 @@ interface LineItem {
   details: string;
 }
 
-const CATEGORIES = [
-  "METAL",
-  "MAKING",
-  "GEMSTONE",
-  "FINISH",
-  "LABOUR",
-  "OTHER",
-];
+const CATEGORIES = ["METAL", "MAKING", "GEMSTONE", "FINISH", "LABOUR", "OTHER"];
 
 export default function CreateInvoicePage() {
   const router = useRouter();
@@ -57,7 +43,14 @@ export default function CreateInvoicePage() {
 
   // Line items
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { label: "", category: "METAL", quantity: 1, unitPrice: 0, amount: 0, details: "" },
+    {
+      label: "",
+      category: "METAL",
+      quantity: 1,
+      unitPrice: 0,
+      amount: 0,
+      details: "",
+    },
   ]);
 
   // Tax & discount
@@ -67,13 +60,22 @@ export default function CreateInvoicePage() {
 
   // Notes
   const [notes, setNotes] = useState("");
-  const [terms, setTerms] = useState("Payment due upon delivery. All sales are final.");
+  const [terms, setTerms] = useState(
+    "Payment due upon delivery. All sales are final.",
+  );
   const [dueDate, setDueDate] = useState("");
 
   const addLineItem = () => {
     setLineItems([
       ...lineItems,
-      { label: "", category: "OTHER", quantity: 1, unitPrice: 0, amount: 0, details: "" },
+      {
+        label: "",
+        category: "OTHER",
+        quantity: 1,
+        unitPrice: 0,
+        amount: 0,
+        details: "",
+      },
     ]);
   };
 
@@ -82,12 +84,17 @@ export default function CreateInvoicePage() {
     setLineItems(lineItems.filter((_, i) => i !== index));
   };
 
-  const updateLineItem = (index: number, field: keyof LineItem, value: string | number) => {
+  const updateLineItem = (
+    index: number,
+    field: keyof LineItem,
+    value: string | number,
+  ) => {
     const updated = [...lineItems];
     (updated[index] as any)[field] = value;
     // Auto-calculate amount
     if (field === "quantity" || field === "unitPrice") {
-      updated[index].amount = updated[index].quantity * updated[index].unitPrice;
+      updated[index].amount =
+        updated[index].quantity * updated[index].unitPrice;
     }
     setLineItems(updated);
   };
@@ -214,7 +221,9 @@ export default function CreateInvoicePage() {
                     {idx === 0 && <Label className="text-xs">Item</Label>}
                     <Input
                       value={item.label}
-                      onChange={(e) => updateLineItem(idx, "label", e.target.value)}
+                      onChange={(e) =>
+                        updateLineItem(idx, "label", e.target.value)
+                      }
                       placeholder="Item name"
                     />
                   </div>
@@ -222,7 +231,9 @@ export default function CreateInvoicePage() {
                     {idx === 0 && <Label className="text-xs">Category</Label>}
                     <select
                       value={item.category}
-                      onChange={(e) => updateLineItem(idx, "category", e.target.value)}
+                      onChange={(e) =>
+                        updateLineItem(idx, "category", e.target.value)
+                      }
                       className="w-full h-10 px-2 text-sm border rounded-md bg-background"
                     >
                       {CATEGORIES.map((cat) => (
@@ -237,7 +248,13 @@ export default function CreateInvoicePage() {
                     <Input
                       type="number"
                       value={item.quantity}
-                      onChange={(e) => updateLineItem(idx, "quantity", parseInt(e.target.value) || 0)}
+                      onChange={(e) =>
+                        updateLineItem(
+                          idx,
+                          "quantity",
+                          parseInt(e.target.value) || 0,
+                        )
+                      }
                       min={1}
                     />
                   </div>
@@ -246,7 +263,13 @@ export default function CreateInvoicePage() {
                     <Input
                       type="number"
                       value={item.unitPrice || ""}
-                      onChange={(e) => updateLineItem(idx, "unitPrice", parseFloat(e.target.value) || 0)}
+                      onChange={(e) =>
+                        updateLineItem(
+                          idx,
+                          "unitPrice",
+                          parseFloat(e.target.value) || 0,
+                        )
+                      }
                       placeholder="0"
                     />
                   </div>
@@ -262,7 +285,9 @@ export default function CreateInvoicePage() {
                   <div className="col-span-2 flex gap-1">
                     <Input
                       value={item.details}
-                      onChange={(e) => updateLineItem(idx, "details", e.target.value)}
+                      onChange={(e) =>
+                        updateLineItem(idx, "details", e.target.value)
+                      }
                       placeholder="Details"
                       className="text-xs"
                     />
@@ -289,7 +314,9 @@ export default function CreateInvoicePage() {
                 <div className="w-80 space-y-3">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
-                    <span className="font-medium">NPR {subtotal.toLocaleString()}</span>
+                    <span className="font-medium">
+                      NPR {subtotal.toLocaleString()}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Input
@@ -306,7 +333,9 @@ export default function CreateInvoicePage() {
                       onChange={(e) => setTaxRate(e.target.value)}
                       placeholder="Rate"
                     />
-                    <span className="flex-1 text-right text-sm">NPR {tax.toLocaleString()}</span>
+                    <span className="flex-1 text-right text-sm">
+                      NPR {tax.toLocaleString()}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-green-600">Discount</span>
@@ -324,7 +353,9 @@ export default function CreateInvoicePage() {
                   <Separator />
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total</span>
-                    <span className="text-amber-600">NPR {total.toLocaleString()}</span>
+                    <span className="text-amber-600">
+                      NPR {total.toLocaleString()}
+                    </span>
                   </div>
                 </div>
               </div>

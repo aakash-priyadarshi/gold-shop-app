@@ -2,6 +2,7 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { WeighingScalePanel } from "@/components/scale/WeighingScalePanel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { WeighingScalePanel } from "@/components/scale/WeighingScalePanel";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useImageUpload } from "@/hooks/useImageUpload";
@@ -31,13 +31,13 @@ import { useMarket, type WeightUnit } from "@/hooks/useMarket";
 import { fetchTaxRules, lookupTaxRate } from "@/hooks/useTaxRules";
 import { getApiUrl, shopQuotesApi } from "@/lib/api";
 import {
+  BUILD_METHODS,
   JEWELLERY_TYPES,
   JEWELLERY_TYPE_IMAGES,
-  BUILD_METHODS,
-  WEIGHT_GUIDANCE,
   SURFACE_FINISH_IMAGES,
-  getJewelleryTypeLabel,
+  WEIGHT_GUIDANCE,
   getBuildMethodInfo,
+  getJewelleryTypeLabel,
 } from "@/lib/constants/jewellery";
 import { getImageUrl } from "@/lib/image-upload";
 import { CURRENCIES, usePreferencesStore } from "@/store/preferences";
@@ -46,7 +46,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
-  Info,
   Loader2,
   Scale,
   Upload,
@@ -682,7 +681,9 @@ export default function CreateShopQuotePage() {
                           <span className="flex items-center gap-2">
                             {JEWELLERY_TYPE_IMAGES[formData.jewelleryType] && (
                               <img
-                                src={JEWELLERY_TYPE_IMAGES[formData.jewelleryType]}
+                                src={
+                                  JEWELLERY_TYPE_IMAGES[formData.jewelleryType]
+                                }
                                 alt=""
                                 className="h-5 w-5 rounded object-cover"
                               />
@@ -710,14 +711,17 @@ export default function CreateShopQuotePage() {
                     </SelectContent>
                   </Select>
                   {/* Weight Guidance */}
-                  {formData.jewelleryType && WEIGHT_GUIDANCE[formData.jewelleryType] && (
-                    <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">
-                      <Scale className="h-3 w-3" />
-                      <span>
-                        Typical weight: {WEIGHT_GUIDANCE[formData.jewelleryType].range} — {WEIGHT_GUIDANCE[formData.jewelleryType].note}
-                      </span>
-                    </div>
-                  )}
+                  {formData.jewelleryType &&
+                    WEIGHT_GUIDANCE[formData.jewelleryType] && (
+                      <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">
+                        <Scale className="h-3 w-3" />
+                        <span>
+                          Typical weight:{" "}
+                          {WEIGHT_GUIDANCE[formData.jewelleryType].range} —{" "}
+                          {WEIGHT_GUIDANCE[formData.jewelleryType].note}
+                        </span>
+                      </div>
+                    )}
                 </div>
 
                 {/* Build Method with Visual Cards */}
@@ -742,16 +746,36 @@ export default function CreateShopQuotePage() {
                       >
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-lg">{method.icon}</span>
-                          <span className="font-medium text-sm">{method.shortLabel}</span>
+                          <span className="font-medium text-sm">
+                            {method.shortLabel}
+                          </span>
                         </div>
-                        <p className="text-xs text-muted-foreground">{method.description}</p>
-                        {formData.buildMethod === method.value && method.tooltip && (
-                          <div className="mt-2 pt-2 border-t border-amber-200 space-y-1">
-                            <p className="text-xs"><span className="font-medium">What:</span> <span className="text-muted-foreground">{method.tooltip.what}</span></p>
-                            <p className="text-xs"><span className="font-medium">Durability:</span> <span className="text-muted-foreground">{method.tooltip.durability}</span></p>
-                            <p className="text-xs"><span className="font-medium">Best for:</span> <span className="text-muted-foreground">{method.tooltip.bestFor}</span></p>
-                          </div>
-                        )}
+                        <p className="text-xs text-muted-foreground">
+                          {method.description}
+                        </p>
+                        {formData.buildMethod === method.value &&
+                          method.tooltip && (
+                            <div className="mt-2 pt-2 border-t border-amber-200 space-y-1">
+                              <p className="text-xs">
+                                <span className="font-medium">What:</span>{" "}
+                                <span className="text-muted-foreground">
+                                  {method.tooltip.what}
+                                </span>
+                              </p>
+                              <p className="text-xs">
+                                <span className="font-medium">Durability:</span>{" "}
+                                <span className="text-muted-foreground">
+                                  {method.tooltip.durability}
+                                </span>
+                              </p>
+                              <p className="text-xs">
+                                <span className="font-medium">Best for:</span>{" "}
+                                <span className="text-muted-foreground">
+                                  {method.tooltip.bestFor}
+                                </span>
+                              </p>
+                            </div>
+                          )}
                       </button>
                     ))}
                   </div>
@@ -863,32 +887,37 @@ export default function CreateShopQuotePage() {
                 <div>
                   <Label>Surface Finish</Label>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
-                    {Object.entries(SURFACE_FINISH_IMAGES).slice(0, 8).map(([key, info]) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            composition: { ...prev.composition, surfaceFinish: key },
-                          }))
-                        }
-                        className={`relative p-2 rounded-lg border-2 transition-all text-center ${
-                          (formData.composition as any)?.surfaceFinish === key
-                            ? "border-amber-500 bg-amber-50"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                      >
-                        <img
-                          src={info.image}
-                          alt={key.replace(/_/g, " ")}
-                          className="w-full h-12 object-cover rounded mb-1"
-                        />
-                        <span className="text-xs font-medium block truncate">
-                          {key.replace(/_/g, " ")}
-                        </span>
-                      </button>
-                    ))}
+                    {Object.entries(SURFACE_FINISH_IMAGES)
+                      .slice(0, 8)
+                      .map(([key, info]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              composition: {
+                                ...prev.composition,
+                                surfaceFinish: key,
+                              },
+                            }))
+                          }
+                          className={`relative p-2 rounded-lg border-2 transition-all text-center ${
+                            (formData.composition as any)?.surfaceFinish === key
+                              ? "border-amber-500 bg-amber-50"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                        >
+                          <img
+                            src={info.image}
+                            alt={key.replace(/_/g, " ")}
+                            className="w-full h-12 object-cover rounded mb-1"
+                          />
+                          <span className="text-xs font-medium block truncate">
+                            {key.replace(/_/g, " ")}
+                          </span>
+                        </button>
+                      ))}
                   </div>
                 </div>
 
@@ -1111,7 +1140,8 @@ export default function CreateShopQuotePage() {
                 </p>
                 <p>
                   <strong>Method:</strong>{" "}
-                  {getBuildMethodInfo(formData.buildMethod)?.shortLabel || formData.buildMethod}
+                  {getBuildMethodInfo(formData.buildMethod)?.shortLabel ||
+                    formData.buildMethod}
                 </p>
                 {formData.targetTotalWeightG && (
                   <p>

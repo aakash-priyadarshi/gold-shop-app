@@ -4,13 +4,7 @@ import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { customerCrmApi } from "@/lib/api";
@@ -52,7 +46,7 @@ export default function CustomerDirectoryPage() {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const res = await customerCrmApi.search(search, page, 20);
+      const res = await customerCrmApi.search({ query: search, page, limit: 20 });
       setCustomers(res.data.customers);
       setTotalPages(res.data.totalPages);
       setTotal(res.data.total);
@@ -90,7 +84,10 @@ export default function CustomerDirectoryPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               placeholder="Search by name, phone, or email..."
               className="pl-10"
             />
@@ -135,7 +132,9 @@ export default function CustomerDirectoryPage() {
                                   : "text-blue-600 border-blue-200 bg-blue-50 text-xs"
                               }
                             >
-                              {customer.type === "REGISTERED" ? "Registered" : "Walk-in"}
+                              {customer.type === "REGISTERED"
+                                ? "Registered"
+                                : "Walk-in"}
                             </Badge>
                           </div>
                         </div>

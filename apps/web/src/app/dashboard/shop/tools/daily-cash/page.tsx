@@ -4,24 +4,15 @@ import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import {
   ArrowDown,
   ArrowUp,
   Banknote,
-  Calendar,
   DollarSign,
-  Download,
   Minus,
   Plus,
   Printer,
@@ -39,8 +30,22 @@ interface CashEntry {
   time: string;
 }
 
-const IN_CATEGORIES = ["Sale", "Old Gold Purchase", "Repair Payment", "EMI Collection", "Other Income"];
-const OUT_CATEGORIES = ["Supplier Payment", "Gold Purchase", "Salary", "Rent", "Utilities", "Repair Cost", "Other Expense"];
+const IN_CATEGORIES = [
+  "Sale",
+  "Old Gold Purchase",
+  "Repair Payment",
+  "EMI Collection",
+  "Other Income",
+];
+const OUT_CATEGORIES = [
+  "Supplier Payment",
+  "Gold Purchase",
+  "Salary",
+  "Rent",
+  "Utilities",
+  "Repair Cost",
+  "Other Expense",
+];
 
 const STORAGE_KEY_PREFIX = "goldshop_daily_cash_";
 
@@ -73,7 +78,10 @@ export default function DailyCashPage() {
   const changeDate = (newDate: string) => {
     setDate(newDate);
     setEntries(loadEntries(newDate));
-    const ob = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_PREFIX + newDate + "_opening") || "" : "";
+    const ob =
+      typeof window !== "undefined"
+        ? localStorage.getItem(STORAGE_KEY_PREFIX + newDate + "_opening") || ""
+        : "";
     setOpeningBalance(ob);
   };
 
@@ -94,7 +102,10 @@ export default function DailyCashPage() {
       amount: amt,
       description: description || category,
       category,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
     };
     const updated = [entry, ...entries];
     setEntries(updated);
@@ -109,8 +120,12 @@ export default function DailyCashPage() {
     saveEntries(date, updated);
   };
 
-  const totalIn = entries.filter((e) => e.type === "IN").reduce((s, e) => s + e.amount, 0);
-  const totalOut = entries.filter((e) => e.type === "OUT").reduce((s, e) => s + e.amount, 0);
+  const totalIn = entries
+    .filter((e) => e.type === "IN")
+    .reduce((s, e) => s + e.amount, 0);
+  const totalOut = entries
+    .filter((e) => e.type === "OUT")
+    .reduce((s, e) => s + e.amount, 0);
   const opening = parseFloat(openingBalance) || 0;
   const netCash = opening + totalIn - totalOut;
 
@@ -128,7 +143,9 @@ export default function DailyCashPage() {
                 <Wallet className="h-6 w-6 text-amber-500" />
                 Daily Cash Summary
               </h1>
-              <p className="text-muted-foreground">Track daily cash inflows and outflows</p>
+              <p className="text-muted-foreground">
+                Track daily cash inflows and outflows
+              </p>
             </div>
             <div className="flex gap-2">
               <Input
@@ -180,7 +197,9 @@ export default function DailyCashPage() {
               <CardContent className="p-4 text-center">
                 <DollarSign className="h-5 w-5 mx-auto text-amber-500 mb-1" />
                 <p className="text-sm text-muted-foreground">Closing Balance</p>
-                <p className={`text-xl font-bold ${netCash >= 0 ? "text-green-600" : "text-red-600"}`}>
+                <p
+                  className={`text-xl font-bold ${netCash >= 0 ? "text-green-600" : "text-red-600"}`}
+                >
                   NPR {netCash.toLocaleString()}
                 </p>
               </CardContent>
@@ -197,16 +216,28 @@ export default function DailyCashPage() {
                     <Button
                       size="sm"
                       variant={entryType === "IN" ? "default" : "outline"}
-                      className={entryType === "IN" ? "bg-green-500 hover:bg-green-600" : ""}
-                      onClick={() => { setEntryType("IN"); setCategory(IN_CATEGORIES[0]); }}
+                      className={
+                        entryType === "IN"
+                          ? "bg-green-500 hover:bg-green-600"
+                          : ""
+                      }
+                      onClick={() => {
+                        setEntryType("IN");
+                        setCategory(IN_CATEGORIES[0]);
+                      }}
                     >
                       <Plus className="h-3 w-3 mr-1" /> IN
                     </Button>
                     <Button
                       size="sm"
                       variant={entryType === "OUT" ? "default" : "outline"}
-                      className={entryType === "OUT" ? "bg-red-500 hover:bg-red-600" : ""}
-                      onClick={() => { setEntryType("OUT"); setCategory(OUT_CATEGORIES[0]); }}
+                      className={
+                        entryType === "OUT" ? "bg-red-500 hover:bg-red-600" : ""
+                      }
+                      onClick={() => {
+                        setEntryType("OUT");
+                        setCategory(OUT_CATEGORIES[0]);
+                      }}
                     >
                       <Minus className="h-3 w-3 mr-1" /> OUT
                     </Button>
@@ -219,9 +250,13 @@ export default function DailyCashPage() {
                     onChange={(e) => setCategory(e.target.value)}
                     className="w-full h-9 px-2 text-sm border rounded-md bg-background"
                   >
-                    {(entryType === "IN" ? IN_CATEGORIES : OUT_CATEGORIES).map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
+                    {(entryType === "IN" ? IN_CATEGORIES : OUT_CATEGORIES).map(
+                      (c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ),
+                    )}
                   </select>
                 </div>
                 <div className="w-32">
@@ -269,7 +304,13 @@ export default function DailyCashPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">
-                  Transactions — {new Date(date).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+                  Transactions —{" "}
+                  {new Date(date).toLocaleDateString(undefined, {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -278,7 +319,9 @@ export default function DailyCashPage() {
                     <div
                       key={entry.id}
                       className={`flex items-center justify-between p-3 rounded-lg border ${
-                        entry.type === "IN" ? "bg-green-50/50 border-green-100" : "bg-red-50/50 border-red-100"
+                        entry.type === "IN"
+                          ? "bg-green-50/50 border-green-100"
+                          : "bg-red-50/50 border-red-100"
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -288,18 +331,31 @@ export default function DailyCashPage() {
                           <ArrowUp className="h-4 w-4 text-red-500 flex-shrink-0" />
                         )}
                         <div>
-                          <p className="font-medium text-sm">{entry.description}</p>
+                          <p className="font-medium text-sm">
+                            {entry.description}
+                          </p>
                           <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">{entry.category}</Badge>
-                            <span className="text-xs text-muted-foreground">{entry.time}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {entry.category}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {entry.time}
+                            </span>
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className={`font-bold ${entry.type === "IN" ? "text-green-600" : "text-red-600"}`}>
-                          {entry.type === "IN" ? "+" : "-"}NPR {entry.amount.toLocaleString()}
+                        <span
+                          className={`font-bold ${entry.type === "IN" ? "text-green-600" : "text-red-600"}`}
+                        >
+                          {entry.type === "IN" ? "+" : "-"}NPR{" "}
+                          {entry.amount.toLocaleString()}
                         </span>
-                        <Button variant="ghost" size="sm" onClick={() => deleteEntry(entry.id)}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteEntry(entry.id)}
+                        >
                           <Trash2 className="h-3 w-3 text-red-400" />
                         </Button>
                       </div>
