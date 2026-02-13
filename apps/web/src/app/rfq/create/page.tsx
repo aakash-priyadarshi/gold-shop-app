@@ -5395,7 +5395,8 @@ export default function CreateRfqPage() {
                                         variant="outline"
                                         className="text-xs"
                                       >
-                                        Making Charge: {seller.makingChargePercent}%
+                                        Making Charge:{" "}
+                                        {seller.makingChargePercent}%
                                       </Badge>
                                       {seller.hasCustomRate && (
                                         <Badge

@@ -163,20 +163,24 @@ export class RfqService {
     }
 
     // Calculate price estimate and rating for each shop
+    // defaultRatePerGram = live market rate for the metal (not the shop's making charge)
     const shopsWithPrices = shops.map((shop) => {
-      // Get shop's rate for the requested material or fall back to system rate
+      // Shop's ratePerGramNpr is the MAKING CHARGE per gram (flat rate), not the metal price
       const shopRate =
         shop.metalRates.find((r) => r.metalType === targetMetal) ||
         shop.metalRates.find(
           (r) => r.metalType === "GOLD_24K" || r.metalType === "GOLD_22K",
         );
-      const ratePerGram = shopRate?.ratePerGramNpr || defaultRatePerGram;
 
       // Estimate price based on target weight
       const targetWeight =
         rfq.targetGoldWeightG || rfq.targetTotalWeightG || 10;
-      const metalCost = targetWeight * ratePerGram;
-      const makingCharge = metalCost * ((shop.makingChargePercent || 10) / 100);
+      // Material cost uses the MARKET rate (actual metal price)
+      const metalCost = targetWeight * defaultRatePerGram;
+      // Making charge: use shop's flat rate if set, otherwise calculate from percentage
+      const makingCharge = shopRate?.ratePerGramNpr
+        ? targetWeight * shopRate.ratePerGramNpr
+        : metalCost * ((shop.makingChargePercent || 10) / 100);
       const estimatedPrice = Math.round(metalCost + makingCharge);
 
       // Calculate average rating
@@ -209,7 +213,7 @@ export class RfqService {
         codEnabled: shop.codEnabled,
         averageRating,
         estimatedPrice,
-        metalRatePerGram: ratePerGram,
+        metalRatePerGram: defaultRatePerGram,
         locationPriority,
       };
     });
