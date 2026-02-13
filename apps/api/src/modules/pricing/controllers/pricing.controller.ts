@@ -493,36 +493,41 @@ export class PricingController {
     @Body() dto: UpdateTaxRuleDto,
   ): Promise<{ success: boolean; id: string }> {
     // Upsert the tax rule
-    const existing = await (this.prisma as any).taxRuleConfig?.findFirst({
-      where: {
-        marketRegion: dto.marketRegion,
-        taxName: dto.taxName,
-        category: dto.category,
-        stateCode: dto.stateCode || null,
-      },
-    });
-
-    if (existing) {
-      await (this.prisma as any).taxRuleConfig?.update({
-        where: { id: existing.id },
-        data: {
-          rate: dto.rate,
-        },
-      });
-      return { success: true, id: existing.id };
-    } else {
-      const created = await (this.prisma as any).taxRuleConfig?.create({
-        data: {
+    try {
+      const existing = await this.prisma['taxRuleConfig'].findFirst({
+        where: {
           marketRegion: dto.marketRegion,
           taxName: dto.taxName,
-          taxType: dto.taxName,
           category: dto.category,
-          rate: dto.rate,
-          stateCode: dto.stateCode,
-          isActive: true,
+          stateCode: dto.stateCode || null,
         },
       });
-      return { success: true, id: created?.id || "pending" };
+
+      if (existing) {
+        await this.prisma['taxRuleConfig'].update({
+          where: { id: existing.id },
+          data: {
+            rate: dto.rate,
+          },
+        });
+        return { success: true, id: existing.id };
+      } else {
+        const created = await this.prisma['taxRuleConfig'].create({
+          data: {
+            marketRegion: dto.marketRegion,
+            taxName: dto.taxName,
+            taxType: dto.taxName,
+            category: dto.category,
+            rate: dto.rate,
+            stateCode: dto.stateCode,
+            isActive: true,
+          },
+        });
+        return { success: true, id: created.id };
+      }
+    } catch (e) {
+      this.logger.error(`Failed to update tax rule: ${e}`);
+      throw new Error(`Failed to update tax rule: ${dto.taxName}`);
     }
   }
 
@@ -547,14 +552,13 @@ export class PricingController {
     // Try DB first
     let dbRules: any[] = [];
     try {
-      dbRules =
-        (await (this.prisma as any).taxRuleConfig?.findMany({
-          where: {
-            marketRegion: region,
-            isActive: true,
-          },
-          orderBy: { priority: "asc" },
-        })) || [];
+      dbRules = await this.prisma['taxRuleConfig'].findMany({
+        where: {
+          marketRegion: region,
+          isActive: true,
+        },
+        orderBy: { priority: 'asc' },
+      });
     } catch (e) {
       this.logger.warn(`Failed to fetch tax rules from DB: ${e}`);
     }
@@ -632,40 +636,45 @@ export class PricingController {
     };
 
     for (const rule of body.rules) {
-      const existing = await (this.prisma as any).taxRuleConfig?.findFirst({
-        where: {
-          marketRegion: body.region,
-          category: rule.category,
-          taxName: rule.taxName,
-        },
-      });
-
-      if (existing) {
-        await (this.prisma as any).taxRuleConfig?.update({
-          where: { id: existing.id },
-          data: {
-            rate: rule.rate,
-            taxType: rule.taxType || rule.taxName,
-            description: rule.description,
-            priority: rule.priority ?? 0,
-            isActive: rule.isActive ?? true,
-          },
-        });
-        results.updated++;
-      } else {
-        await (this.prisma as any).taxRuleConfig?.create({
-          data: {
+      try {
+        const existing = await this.prisma['taxRuleConfig'].findFirst({
+          where: {
             marketRegion: body.region,
-            taxName: rule.taxName,
-            taxType: rule.taxType || rule.taxName,
             category: rule.category,
-            rate: rule.rate,
-            description: rule.description,
-            priority: rule.priority ?? 0,
-            isActive: rule.isActive ?? true,
+            taxName: rule.taxName,
           },
         });
-        results.created++;
+
+        if (existing) {
+          await this.prisma['taxRuleConfig'].update({
+            where: { id: existing.id },
+            data: {
+              rate: rule.rate,
+              taxType: rule.taxType || rule.taxName,
+              description: rule.description || null,
+              priority: rule.priority ?? 0,
+              isActive: rule.isActive ?? true,
+            },
+          });
+          results.updated++;
+        } else {
+          await this.prisma['taxRuleConfig'].create({
+            data: {
+              marketRegion: body.region,
+              taxName: rule.taxName,
+              taxType: rule.taxType || rule.taxName,
+              category: rule.category,
+              rate: rule.rate,
+              description: rule.description || null,
+              priority: rule.priority ?? 0,
+              isActive: rule.isActive ?? true,
+            },
+          });
+          results.created++;
+        }
+      } catch (e) {
+        this.logger.error(`Failed to upsert tax rule ${rule.taxName}/${rule.category}: ${e}`);
+        throw new Error(`Failed to save tax rule: ${rule.taxName} for ${rule.category}`);
       }
     }
 

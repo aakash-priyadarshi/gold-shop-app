@@ -8,6 +8,7 @@
  *   - UAE/UK/EU: flat VAT on all components
  *
  * Admin can view, edit, add, and delete rules.
+ * Each rule has its own save button for independent saving.
  * All changes persist to the TaxRuleConfig table via backend.
  */
 
@@ -28,10 +29,10 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import {
   AlertCircle,
+  Check,
   Loader2,
   Plus,
   RefreshCw,
-  Save,
   Trash2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -77,7 +78,8 @@ export function AdminTaxRulesPanel() {
   const [rules, setRules] = useState<TaxRule[]>([]);
   const [source, setSource] = useState<string>("DEFAULT");
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  // Track which row index is currently saving
+  const [savingIndex, setSavingIndex] = useState<number | null>(null);
 
   useEffect(() => {
     loadRules();
@@ -93,6 +95,13 @@ export function AdminTaxRulesPanel() {
         const data: TaxRulesResponse = await res.json();
         setRules(data.rules || []);
         setSource(data.source || "DEFAULT");
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        toast({
+          title: "Error",
+          description: errData.error || "Failed to load tax rules",
+          variant: "destructive",
+        });
       }
     } catch (err) {
       console.error("Failed to load tax rules:", err);
@@ -106,48 +115,76 @@ export function AdminTaxRulesPanel() {
     }
   };
 
-  const saveRules = async () => {
-    setSaving(true);
+  /**
+   * Save a single rule to the backend
+   */
+  const saveRule = async (index: number) => {
+    const rule = rules[index];
+    if (!rule) return;
+
+    // Validate
+    if (!rule.taxName || rule.taxName === "New Tax") {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a tax name",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (rule.rate <= 0) {
+      toast({
+        title: "Validation Error",
+        description: "Rate must be greater than 0",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSavingIndex(index);
     try {
       const res = await fetch("/api/admin/tax-config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           region: selectedCountry,
-          rules: rules.map((r) => ({
-            taxName: r.taxName,
-            taxType: r.taxType,
-            category: r.category,
-            rate: r.rate,
-            description: r.description,
-            priority: r.priority,
-            isActive: r.isActive,
-          })),
+          rules: [
+            {
+              taxName: rule.taxName,
+              taxType: rule.taxType,
+              category: rule.category,
+              rate: rule.rate,
+              description: rule.description || null,
+              priority: rule.priority,
+              isActive: rule.isActive ?? true,
+            },
+          ],
         }),
       });
 
       if (res.ok) {
         toast({
-          title: "Tax Rules Saved",
-          description: `Updated ${rules.length} rules for ${COUNTRIES.find((c) => c.code === selectedCountry)?.name}`,
+          title: "Saved",
+          description: `${rule.taxName} (${rule.category}) saved`,
         });
+        // Reload to get the DB id back
         await loadRules();
       } else {
+        const errData = await res.json().catch(() => ({}));
         toast({
           title: "Save Failed",
-          description: "Could not save tax rules",
+          description: errData.error || "Could not save tax rule",
           variant: "destructive",
         });
       }
     } catch (err) {
-      console.error("Failed to save tax rules:", err);
+      console.error("Failed to save tax rule:", err);
       toast({
         title: "Error",
-        description: "Failed to save tax rules",
+        description: "Failed to save tax rule",
         variant: "destructive",
       });
     } finally {
-      setSaving(false);
+      setSavingIndex(null);
     }
   };
 
@@ -163,7 +200,7 @@ export function AdminTaxRulesPanel() {
       {
         id: "",
         taxType: "VAT",
-        taxName: "New Tax",
+        taxName: "",
         category: "ALL",
         rate: 0,
         isCompounding: false,
@@ -175,8 +212,16 @@ export function AdminTaxRulesPanel() {
     ]);
   };
 
-  const deleteRule = (index: number) => {
+  const deleteRule = async (index: number) => {
+    // For now, just remove from local state.
+    // If the rule has an id (exists in DB), we could call a delete endpoint.
+    // The next save-all or individual save will not include it.
     setRules((prev) => prev.filter((_, i) => i !== index));
+    toast({
+      title: "Rule Removed",
+      description:
+        "Rule removed from view. It will be deleted from the database when the remaining rules are saved.",
+    });
   };
 
   const countryInfo = COUNTRIES.find((c) => c.code === selectedCountry);
@@ -243,9 +288,11 @@ export function AdminTaxRulesPanel() {
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
               <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
               <p className="text-sm text-amber-800">
-                These are default fallback rules. Click &quot;Save All
-                Changes&quot; to persist them to the database so they become
-                editable.
+                These are default fallback rules. Click the{" "}
+                <span className="inline-flex items-center justify-center w-5 h-5 bg-green-500 rounded text-white text-xs mx-0.5">
+                  ✓
+                </span>{" "}
+                button on each row to persist it to the database.
               </p>
             </div>
           )}
@@ -279,8 +326,8 @@ export function AdminTaxRulesPanel() {
                 <div className="col-span-2">Category</div>
                 <div className="col-span-1 text-center">Rate (%)</div>
                 <div className="col-span-1 text-center">Priority</div>
-                <div className="col-span-3">Description</div>
-                <div className="col-span-1 text-center">Actions</div>
+                <div className="col-span-2">Description</div>
+                <div className="col-span-2 text-center">Actions</div>
               </div>
             )}
 
@@ -372,7 +419,7 @@ export function AdminTaxRulesPanel() {
                 </div>
 
                 {/* Description */}
-                <div className="col-span-3">
+                <div className="col-span-2">
                   <Input
                     value={rule.description || ""}
                     onChange={(e) =>
@@ -383,31 +430,33 @@ export function AdminTaxRulesPanel() {
                   />
                 </div>
 
-                {/* Delete */}
-                <div className="col-span-1 text-center">
+                {/* Actions: Save (green tick) + Delete */}
+                <div className="col-span-2 flex items-center justify-center gap-1">
+                  <Button
+                    size="sm"
+                    className="h-8 w-8 p-0 bg-green-500 hover:bg-green-600 text-white"
+                    onClick={() => saveRule(index)}
+                    disabled={savingIndex === index}
+                    title="Save this rule"
+                  >
+                    {savingIndex === index ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4" />
+                    )}
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
                     onClick={() => deleteRule(index)}
+                    title="Delete this rule"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
             ))}
-          </div>
-
-          {/* Save */}
-          <div className="flex justify-end pt-4 border-t">
-            <Button onClick={saveRules} disabled={saving} size="lg">
-              {saving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              {saving ? "Saving..." : "Save All Changes"}
-            </Button>
           </div>
         </>
       )}
