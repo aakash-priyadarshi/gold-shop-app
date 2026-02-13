@@ -31,6 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { invoicesApi } from "@/lib/api";
 import {
   ArrowLeft,
@@ -98,6 +99,7 @@ const statusColors: Record<string, string> = {
 export default function InvoiceDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { symbol: currencySymbol } = useShopCurrency();
   const invoiceId = params.id as string;
 
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
@@ -178,7 +180,7 @@ export default function InvoiceDetailPage() {
   };
 
   const formatCurrency = (amount: number) => {
-    return `${invoice?.currency || "NPR"} ${amount.toLocaleString()}`;
+    return `${invoice?.currency || currencySymbol} ${amount.toLocaleString()}`;
   };
 
   const formatDate = (dateStr: string) => {

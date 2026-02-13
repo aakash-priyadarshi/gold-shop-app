@@ -49,7 +49,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface NavItem {
   label: string;
@@ -262,6 +262,26 @@ function SidebarContent({
 }) {
   if (!user) return null;
 
+  const navRef = useRef<HTMLElement>(null);
+  const [canScrollDown, setCanScrollDown] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    const el = navRef.current;
+    if (!el) return;
+    const hasMore = el.scrollHeight - el.scrollTop - el.clientHeight > 8;
+    setCanScrollDown(hasMore);
+  }, []);
+
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    checkScroll();
+    el.addEventListener("scroll", checkScroll, { passive: true });
+    const ro = new ResizeObserver(checkScroll);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", checkScroll); ro.disconnect(); };
+  }, [checkScroll]);
+
   return (
     <div className="flex flex-col h-full">
       {/* User info */}
@@ -296,8 +316,9 @@ function SidebarContent({
         )}
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-thin">
+      {/* Navigation with scroll indicator */}
+      <div className="flex-1 relative overflow-hidden">
+        <nav ref={navRef} className="h-full p-3 space-y-1 overflow-y-auto scrollbar-thin">
         {userNavItems.map((item) => {
           const isActive = pathname === item.href;
           const badgeCount =
@@ -337,7 +358,23 @@ function SidebarContent({
             </Link>
           );
         })}
-      </nav>
+        </nav>
+
+        {/* Scroll-down indicator */}
+        {canScrollDown && (
+          <div className="absolute bottom-0 left-0 right-0 pointer-events-none">
+            <div className="h-10 bg-gradient-to-t from-white to-transparent" />
+            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 pointer-events-auto">
+              <button
+                onClick={() => navRef.current?.scrollBy({ top: 100, behavior: "smooth" })}
+                className="flex items-center gap-1 px-2 py-0.5 text-[10px] text-gray-400 hover:text-gray-600 bg-white/90 rounded-full shadow-sm border border-gray-100 transition-colors"
+              >
+                <ChevronDown className="h-3 w-3" /> more
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Bottom actions */}
       <div className="p-3 border-t border-gray-100 space-y-1">

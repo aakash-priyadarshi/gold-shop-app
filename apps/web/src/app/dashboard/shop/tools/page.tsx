@@ -54,7 +54,7 @@ const tools = [
   {
     title: "Weighing Scale",
     description: "Connect a digital weighing scale via USB/Serial",
-    href: "/dashboard/shop/quotes/create",
+    href: "/dashboard/shop/tools/weighing-scale",
     icon: Scale,
     color: "text-teal-500 bg-teal-50",
   },
