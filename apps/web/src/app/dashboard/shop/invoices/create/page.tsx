@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { invoicesApi } from "@/lib/api";
 import { ArrowLeft, Check, Loader2, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -33,6 +34,7 @@ const CATEGORIES = ["METAL", "MAKING", "GEMSTONE", "FINISH", "LABOUR", "OTHER"];
 
 export default function CreateInvoicePage() {
   const router = useRouter();
+  const { symbol: currencySymbol } = useShopCurrency();
   const [loading, setLoading] = useState(false);
 
   // Customer info
@@ -315,7 +317,7 @@ export default function CreateInvoicePage() {
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
                     <span className="font-medium">
-                      NPR {subtotal.toLocaleString()}
+                      {currencySymbol} {subtotal.toLocaleString()}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -334,7 +336,7 @@ export default function CreateInvoicePage() {
                       placeholder="Rate"
                     />
                     <span className="flex-1 text-right text-sm">
-                      NPR {tax.toLocaleString()}
+                      {currencySymbol} {tax.toLocaleString()}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -347,14 +349,14 @@ export default function CreateInvoicePage() {
                       placeholder="0"
                     />
                     <span className="flex-1 text-right text-sm text-green-600">
-                      -NPR {discount.toLocaleString()}
+                      -{currencySymbol} {discount.toLocaleString()}
                     </span>
                   </div>
                   <Separator />
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total</span>
                     <span className="text-amber-600">
-                      NPR {total.toLocaleString()}
+                      {currencySymbol} {total.toLocaleString()}
                     </span>
                   </div>
                 </div>

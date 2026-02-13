@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { customerCrmApi } from "@/lib/api";
 import {
   ArrowLeft,
@@ -62,6 +63,7 @@ export default function CustomerProfilePage() {
   const [stats, setStats] = useState<any>(null);
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { symbol: currencySymbol } = useShopCurrency();
 
   // New note form
   const [newNote, setNewNote] = useState("");
@@ -242,7 +244,7 @@ export default function CustomerProfilePage() {
                         Total Spent
                       </span>
                       <span className="font-bold text-amber-600">
-                        NPR {(stats.totalSpent || 0).toLocaleString()}
+                        {currencySymbol} {(stats.totalSpent || 0).toLocaleString()}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
@@ -250,7 +252,7 @@ export default function CustomerProfilePage() {
                         Avg Order Value
                       </span>
                       <span className="font-medium">
-                        NPR{" "}
+                        {currencySymbol}{" "}
                         {Math.round(
                           stats.averageOrderValue || 0,
                         ).toLocaleString()}
@@ -506,7 +508,7 @@ export default function CustomerProfilePage() {
                         <CardContent className="p-4 text-center">
                           <DollarSign className="h-8 w-8 mx-auto text-amber-500 mb-2" />
                           <p className="text-2xl font-bold text-amber-600">
-                            NPR {(stats.totalSpent || 0).toLocaleString()}
+                            {currencySymbol} {(stats.totalSpent || 0).toLocaleString()}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             Lifetime Value
@@ -517,7 +519,7 @@ export default function CustomerProfilePage() {
                         <CardContent className="p-4 text-center">
                           <TrendingUp className="h-8 w-8 mx-auto text-green-500 mb-2" />
                           <p className="text-2xl font-bold">
-                            NPR{" "}
+                            {currencySymbol}{" "}
                             {Math.round(
                               stats.averageOrderValue || 0,
                             ).toLocaleString()}

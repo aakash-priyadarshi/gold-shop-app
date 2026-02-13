@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import {
+  ArrowLeft,
   CheckCircle,
   Hash,
   Plus,
@@ -17,6 +18,7 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 interface HallmarkEntry {
@@ -44,6 +46,7 @@ function saveEntries(entries: HallmarkEntry[]) {
 }
 
 export default function HallmarkTrackerPage() {
+  const router = useRouter();
   const [entries, setEntries] = useState<HallmarkEntry[]>(loadEntries);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -111,14 +114,19 @@ export default function HallmarkTrackerPage() {
       <DashboardLayout>
         <div className="space-y-6 max-w-4xl mx-auto">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
-                <Shield className="h-6 w-6 text-amber-500" />
-                Hallmark Tracker
-              </h1>
-              <p className="text-muted-foreground">
-                Track BIS Hallmark & HUID entries for items sold
-              </p>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard/shop/tools")}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold flex items-center gap-2">
+                  <Shield className="h-6 w-6 text-amber-500" />
+                  Hallmark Tracker
+                </h1>
+                <p className="text-muted-foreground">
+                  Track BIS Hallmark & HUID entries for items sold
+                </p>
+              </div>
             </div>
             <Button
               onClick={() => setShowForm(!showForm)}

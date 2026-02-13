@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { customerCrmApi } from "@/lib/api";
 import {
   Loader2,
@@ -36,6 +37,7 @@ interface Customer {
 }
 
 export default function CustomerDirectoryPage() {
+  const { symbol: currencySymbol } = useShopCurrency();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -46,7 +48,11 @@ export default function CustomerDirectoryPage() {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const res = await customerCrmApi.search({ query: search, page, limit: 20 });
+      const res = await customerCrmApi.search({
+        query: search,
+        page,
+        limit: 20,
+      });
       setCustomers(res.data.customers);
       setTotalPages(res.data.totalPages);
       setTotal(res.data.total);
@@ -167,7 +173,7 @@ export default function CustomerDirectoryPage() {
                             <div>{customer.rfqCount} RFQs</div>
                             {customer.totalSpent > 0 && (
                               <div className="font-medium text-amber-600">
-                                NPR {customer.totalSpent.toLocaleString()}
+                                {currencySymbol} {customer.totalSpent.toLocaleString()}
                               </div>
                             )}
                           </>

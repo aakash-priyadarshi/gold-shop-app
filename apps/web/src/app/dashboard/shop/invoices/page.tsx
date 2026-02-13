@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { invoicesApi } from "@/lib/api";
 import {
   ArrowRight,
@@ -78,6 +79,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function InvoicesListPage() {
+  const { symbol: currencySymbol } = useShopCurrency();
   const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
   const [stats, setStats] = useState<InvoiceStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -124,8 +126,8 @@ export default function InvoicesListPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const formatCurrency = (amount: number, currency = "NPR") => {
-    return `${currency} ${amount.toLocaleString()}`;
+  const formatCurrency = (amount: number, currency?: string) => {
+    return `${currency || currencySymbol} ${amount.toLocaleString()}`;
   };
 
   const formatDate = (dateStr: string) => {

@@ -13,8 +13,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { materialsApi } from "@/lib/api";
 import {
+  ArrowLeft,
   ArrowLeftRight,
   Coins,
   Loader2,
@@ -22,6 +24,7 @@ import {
   Scale,
   TrendingUp,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 // Purity multipliers for gold
@@ -36,6 +39,8 @@ const GOLD_PURITIES: { label: string; karat: number; purity: number }[] = [
 ];
 
 export default function OldGoldExchangePage() {
+  const router = useRouter();
+  const { symbol: currencySymbol, country: shopCountry } = useShopCurrency();
   const [goldRate24k, setGoldRate24k] = useState<number>(0);
   const [rateLoading, setRateLoading] = useState(true);
 
@@ -57,7 +62,7 @@ export default function OldGoldExchangePage() {
   const loadGoldRate = async () => {
     setRateLoading(true);
     try {
-      const res = await materialsApi.getMarketRates({ country: "NP" });
+      const res = await materialsApi.getMarketRates({ country: shopCountry || "NP" });
       // Find gold 24k rate
       const rates = res.data?.metals || res.data?.rates || res.data;
       if (Array.isArray(rates)) {
@@ -103,15 +108,20 @@ export default function OldGoldExchangePage() {
       <DashboardLayout>
         <div className="space-y-6 max-w-4xl mx-auto">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
-                <ArrowLeftRight className="h-6 w-6 text-amber-500" />
-                Old Gold Exchange Calculator
-              </h1>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard/shop/tools")}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold flex items-center gap-2">
+                  <ArrowLeftRight className="h-6 w-6 text-amber-500" />
+                  Old Gold Exchange Calculator
+                </h1>
               <p className="text-muted-foreground">
                 Calculate exchange value when customers trade old gold for new
                 jewellery
               </p>
+              </div>
             </div>
             <Button
               variant="outline"
@@ -139,7 +149,7 @@ export default function OldGoldExchangePage() {
                     {rateLoading ? (
                       <Loader2 className="h-5 w-5 animate-spin inline" />
                     ) : (
-                      `NPR ${goldRate24k.toLocaleString()}/g`
+                      `${currencySymbol} ${goldRate24k.toLocaleString()}/g`
                     )}
                   </p>
                 </div>
@@ -221,7 +231,7 @@ export default function OldGoldExchangePage() {
                   <div className="flex justify-between font-bold text-lg text-red-600">
                     <span>Old Gold Value</span>
                     <span>
-                      NPR{" "}
+                      {currencySymbol}{" "}
                       {oldGoldValue.toLocaleString(undefined, {
                         maximumFractionDigits: 0,
                       })}
@@ -284,7 +294,7 @@ export default function OldGoldExchangePage() {
                   <div className="flex justify-between">
                     <span>Gold cost</span>
                     <span>
-                      NPR{" "}
+                      {currencySymbol}{" "}
                       {newGoldCost.toLocaleString(undefined, {
                         maximumFractionDigits: 0,
                       })}
@@ -293,7 +303,7 @@ export default function OldGoldExchangePage() {
                   <div className="flex justify-between text-muted-foreground">
                     <span>Making charge</span>
                     <span>
-                      NPR{" "}
+                      {currencySymbol}{" "}
                       {makingCost.toLocaleString(undefined, {
                         maximumFractionDigits: 0,
                       })}
@@ -303,7 +313,7 @@ export default function OldGoldExchangePage() {
                   <div className="flex justify-between font-bold text-lg text-green-600">
                     <span>New Item Cost</span>
                     <span>
-                      NPR{" "}
+                      {currencySymbol}{" "}
                       {newTotalCost.toLocaleString(undefined, {
                         maximumFractionDigits: 0,
                       })}
@@ -329,7 +339,7 @@ export default function OldGoldExchangePage() {
                       Old Gold Value
                     </p>
                     <p className="text-xl font-bold text-red-600">
-                      NPR{" "}
+                      {currencySymbol}{" "}
                       {oldGoldValue.toLocaleString(undefined, {
                         maximumFractionDigits: 0,
                       })}
@@ -343,7 +353,7 @@ export default function OldGoldExchangePage() {
                       New Item Cost
                     </p>
                     <p className="text-xl font-bold text-green-600">
-                      NPR{" "}
+                      {currencySymbol}{" "}
                       {newTotalCost.toLocaleString(undefined, {
                         maximumFractionDigits: 0,
                       })}
@@ -358,7 +368,7 @@ export default function OldGoldExchangePage() {
                         Customer Pays Extra
                       </p>
                       <p className="text-3xl font-bold text-amber-600">
-                        NPR{" "}
+                        {currencySymbol}{" "}
                         {customerPays.toLocaleString(undefined, {
                           maximumFractionDigits: 0,
                         })}
@@ -370,7 +380,7 @@ export default function OldGoldExchangePage() {
                         Shop Refunds
                       </p>
                       <p className="text-3xl font-bold text-blue-600">
-                        NPR{" "}
+                        {currencySymbol}{" "}
                         {shopPays.toLocaleString(undefined, {
                           maximumFractionDigits: 0,
                         })}

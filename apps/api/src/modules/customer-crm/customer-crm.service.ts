@@ -40,7 +40,11 @@ export class CustomerCrmService {
             {
               OR: [
                 { customerOrders: { some: { shopId } } },
-                { rfqRequests: { some: { targetedShops: { some: { shopId } } } } },
+                {
+                  rfqRequests: {
+                    some: { targetedShops: { some: { shopId } } },
+                  },
+                },
               ],
             },
           ],
@@ -77,7 +81,11 @@ export class CustomerCrmService {
             {
               OR: [
                 { customerOrders: { some: { shopId } } },
-                { rfqRequests: { some: { targetedShops: { some: { shopId } } } } },
+                {
+                  rfqRequests: {
+                    some: { targetedShops: { some: { shopId } } },
+                  },
+                },
               ],
             },
           ],

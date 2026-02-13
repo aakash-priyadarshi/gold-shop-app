@@ -8,8 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
 import {
   ArrowDown,
+  ArrowLeft,
   ArrowUp,
   Banknote,
   DollarSign,
@@ -19,6 +21,7 @@ import {
   Trash2,
   Wallet,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 interface CashEntry {
@@ -62,6 +65,8 @@ function saveEntries(date: string, entries: CashEntry[]) {
 }
 
 export default function DailyCashPage() {
+  const router = useRouter();
+  const { symbol: currencySymbol } = useShopCurrency();
   const [date, setDate] = useState(getTodayKey());
   const [entries, setEntries] = useState<CashEntry[]>(loadEntries(date));
   const [openingBalance, setOpeningBalance] = useState(() => {
@@ -138,14 +143,19 @@ export default function DailyCashPage() {
       <DashboardLayout>
         <div className="space-y-6 max-w-4xl mx-auto">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
-                <Wallet className="h-6 w-6 text-amber-500" />
-                Daily Cash Summary
-              </h1>
-              <p className="text-muted-foreground">
-                Track daily cash inflows and outflows
-              </p>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard/shop/tools")}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold flex items-center gap-2">
+                  <Wallet className="h-6 w-6 text-amber-500" />
+                  Daily Cash Summary
+                </h1>
+                <p className="text-muted-foreground">
+                  Track daily cash inflows and outflows
+                </p>
+              </div>
             </div>
             <div className="flex gap-2">
               <Input
@@ -180,7 +190,7 @@ export default function DailyCashPage() {
                 <ArrowDown className="h-5 w-5 mx-auto text-green-500 mb-1" />
                 <p className="text-sm text-muted-foreground">Cash In</p>
                 <p className="text-xl font-bold text-green-600">
-                  NPR {totalIn.toLocaleString()}
+                  {currencySymbol} {totalIn.toLocaleString()}
                 </p>
               </CardContent>
             </Card>
@@ -189,7 +199,7 @@ export default function DailyCashPage() {
                 <ArrowUp className="h-5 w-5 mx-auto text-red-500 mb-1" />
                 <p className="text-sm text-muted-foreground">Cash Out</p>
                 <p className="text-xl font-bold text-red-600">
-                  NPR {totalOut.toLocaleString()}
+                  {currencySymbol} {totalOut.toLocaleString()}
                 </p>
               </CardContent>
             </Card>
@@ -200,7 +210,7 @@ export default function DailyCashPage() {
                 <p
                   className={`text-xl font-bold ${netCash >= 0 ? "text-green-600" : "text-red-600"}`}
                 >
-                  NPR {netCash.toLocaleString()}
+                  {currencySymbol} {netCash.toLocaleString()}
                 </p>
               </CardContent>
             </Card>
@@ -348,7 +358,7 @@ export default function DailyCashPage() {
                         <span
                           className={`font-bold ${entry.type === "IN" ? "text-green-600" : "text-red-600"}`}
                         >
-                          {entry.type === "IN" ? "+" : "-"}NPR{" "}
+                          {entry.type === "IN" ? "+" : "-"}{currencySymbol}{" "}
                           {entry.amount.toLocaleString()}
                         </span>
                         <Button

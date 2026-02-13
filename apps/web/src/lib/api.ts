@@ -402,8 +402,10 @@ export const customerCrmApi = {
     api.get(`/users/customers/${customerId}/orders`),
   getCustomerStats: (customerId: string) =>
     api.get(`/users/customers/${customerId}/stats`),
-  addCustomerNote: (customerId: string, data: { note: string; category?: string }) =>
-    api.post(`/users/customers/${customerId}/notes`, data),
+  addCustomerNote: (
+    customerId: string,
+    data: { note: string; category?: string },
+  ) => api.post(`/users/customers/${customerId}/notes`, data),
   getCustomerNotes: (customerId: string) =>
     api.get(`/users/customers/${customerId}/notes`),
 };

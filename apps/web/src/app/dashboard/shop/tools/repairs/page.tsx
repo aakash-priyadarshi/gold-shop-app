@@ -9,7 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { useShopCurrency } from "@/hooks/useShopCurrency";
 import {
+  ArrowLeft,
   CheckCircle,
   Clock,
   Phone,
@@ -19,6 +21,7 @@ import {
   Trash2,
   Wrench,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 interface RepairJob {
@@ -99,6 +102,8 @@ function generateTicket() {
 }
 
 export default function RepairTrackingPage() {
+  const router = useRouter();
+  const { symbol: currencySymbol } = useShopCurrency();
   const [jobs, setJobs] = useState<RepairJob[]>(loadJobs);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
@@ -199,14 +204,19 @@ export default function RepairTrackingPage() {
       <DashboardLayout>
         <div className="space-y-6 max-w-5xl mx-auto">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
-                <Wrench className="h-6 w-6 text-amber-500" />
-                Repair Tracking
-              </h1>
-              <p className="text-muted-foreground">
-                Manage jewellery repair and alteration jobs
-              </p>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard/shop/tools")}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold flex items-center gap-2">
+                  <Wrench className="h-6 w-6 text-amber-500" />
+                  Repair Tracking
+                </h1>
+                <p className="text-muted-foreground">
+                  Manage jewellery repair and alteration jobs
+                </p>
+              </div>
             </div>
             <Button
               onClick={() => setShowForm(true)}
@@ -299,7 +309,7 @@ export default function RepairTrackingPage() {
                     </select>
                   </div>
                   <div>
-                    <Label>Estimated Cost (NPR)</Label>
+                    <Label>Estimated Cost ({currencySymbol})</Label>
                     <Input
                       type="number"
                       value={estimatedCost}
@@ -409,7 +419,7 @@ export default function RepairTrackingPage() {
                             )}
                             {job.estimatedCost && (
                               <span>
-                                Est: NPR{" "}
+                                Est: {currencySymbol}{" "}
                                 {parseInt(job.estimatedCost).toLocaleString()}
                               </span>
                             )}
