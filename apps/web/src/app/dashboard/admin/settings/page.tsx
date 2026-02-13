@@ -503,6 +503,23 @@ export default function AdminSettingsPage() {
                     </p>
                   </div>
                 </div>
+                {configDirty && (
+                  <div className="flex justify-end pt-4 border-t">
+                    <Button
+                      onClick={handleSavePlatformConfig}
+                      disabled={savingConfig}
+                      size="sm"
+                      className="gap-2"
+                    >
+                      {savingConfig ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      {savingConfig ? "Saving..." : "Save Commission"}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -627,6 +644,23 @@ export default function AdminSettingsPage() {
                     </p>
                   </div>
                 </div>
+                {configDirty && (
+                  <div className="flex justify-end pt-4 border-t">
+                    <Button
+                      onClick={handleSavePlatformConfig}
+                      disabled={savingConfig}
+                      size="sm"
+                      className="gap-2"
+                    >
+                      {savingConfig ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      {savingConfig ? "Saving..." : "Save Defaults"}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -698,6 +732,23 @@ export default function AdminSettingsPage() {
                     </div>
                   ))}
                 </div>
+                {configDirty && (
+                  <div className="flex justify-end pt-4 border-t">
+                    <Button
+                      onClick={handleSavePlatformConfig}
+                      disabled={savingConfig}
+                      size="sm"
+                      className="gap-2"
+                    >
+                      {savingConfig ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      {savingConfig ? "Saving..." : "Save Charge Caps"}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -1044,26 +1095,25 @@ export default function AdminSettingsPage() {
                   active shop is Standard tier. Making charge cap:{" "}
                   {platformConfig.making_charge_cap_standard ?? 15}%.
                 </div>
+                {configDirty && (
+                  <div className="flex justify-end pt-4 border-t">
+                    <Button
+                      onClick={handleSavePlatformConfig}
+                      disabled={savingConfig}
+                      size="sm"
+                      className="gap-2"
+                    >
+                      {savingConfig ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      {savingConfig ? "Saving..." : "Save Tier Criteria"}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
-
-            {/* Save Configuration Button */}
-            {configDirty && (
-              <div className="flex justify-end">
-                <Button
-                  onClick={handleSavePlatformConfig}
-                  disabled={savingConfig}
-                  className="gap-2"
-                >
-                  {savingConfig ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
-                  {savingConfig ? "Saving..." : "Save Platform Configuration"}
-                </Button>
-              </div>
-            )}
 
             {/* Security Settings */}
             <Card>
