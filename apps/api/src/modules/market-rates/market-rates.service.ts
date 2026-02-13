@@ -15,6 +15,7 @@
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Cron } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { HttpClientService } from '../../common/http-client';
@@ -101,6 +102,8 @@ export class MarketRatesService implements OnModuleInit {
     if (this.apiKey) {
       await this.clearFallbackCacheEntries();
     }
+    // Sync live rates to MarketRate table on startup
+    await this.syncRatesToMarketRateTable();
   }
 
   /**
@@ -720,6 +723,67 @@ export class MarketRatesService implements OnModuleInit {
       this.logger.log(`Cached market rates for ${region}/${currency}`);
     } catch (error) {
       this.logger.warn(`Failed to cache rates in DB: ${error}`);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // MARKET RATE TABLE SYNC (for backend services like seller matching)
+  // ═══════════════════════════════════════════════════════════════
+
+  /**
+   * Sync live rates to the MarketRate table so backend services
+   * (findMatchingSellers, getEligibleShops, etc.) use up-to-date prices.
+   * Runs daily at 6 AM and on startup.
+   */
+  @Cron('0 6 * * *') // Every day at 6:00 AM
+  async syncRatesToMarketRateTable(): Promise<void> {
+    this.logger.log('Syncing live market rates to MarketRate table...');
+
+    // Sync for both supported countries
+    const countriesToSync: Array<{ country: SupportedCountry; currency: SupportedCurrency }> = [
+      { country: 'IN', currency: 'INR' },
+      { country: 'NP', currency: 'NPR' },
+    ];
+
+    for (const { country, currency } of countriesToSync) {
+      try {
+        const liveRates = await this.getMarketRates(currency);
+        const metals = liveRates.metals;
+
+        // Upsert each metal rate into the MarketRate table
+        for (const [metalCode, ratePerGram] of Object.entries(metals)) {
+          if (!ratePerGram || ratePerGram <= 0) continue;
+
+          // Expire old rates for this metal+country
+          await this.prisma.marketRate.updateMany({
+            where: {
+              metalCode,
+              country,
+              validUntil: null,
+            },
+            data: { validUntil: new Date() },
+          });
+
+          // Create new rate
+          await this.prisma.marketRate.create({
+            data: {
+              metalCode,
+              country,
+              ratePerGram,
+              source: liveRates.source || 'metalpriceapi',
+              validFrom: new Date(),
+              validUntil: null,
+            },
+          });
+        }
+
+        this.logger.log(
+          `Synced ${Object.keys(metals).length} metal rates for ${country} (${currency}). ` +
+          `GOLD_24K=${metals.GOLD_24K}/g`,
+        );
+      } catch (error) {
+        this.logger.error(`Failed to sync rates for ${country}: ${error}`);
+      }
     }
   }
 }
