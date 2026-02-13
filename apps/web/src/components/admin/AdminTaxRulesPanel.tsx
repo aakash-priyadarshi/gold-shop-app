@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
+import { api } from "@/lib/api";
 import {
   AlertCircle,
   Check,
@@ -88,26 +89,18 @@ export function AdminTaxRulesPanel() {
   const loadRules = async () => {
     setLoading(true);
     try {
-      const res = await fetch(
-        `/api/settings/tax-config?country=${selectedCountry}`,
+      const res = await api.get(
+        `/pricing/tax-rules?region=${selectedCountry}`,
       );
-      if (res.ok) {
-        const data: TaxRulesResponse = await res.json();
-        setRules(data.rules || []);
-        setSource(data.source || "DEFAULT");
-      } else {
-        const errData = await res.json().catch(() => ({}));
-        toast({
-          title: "Error",
-          description: errData.error || "Failed to load tax rules",
-          variant: "destructive",
-        });
-      }
-    } catch (err) {
+      const data: TaxRulesResponse = res.data;
+      setRules(data.rules || []);
+      setSource(data.source || "DEFAULT");
+    } catch (err: any) {
       console.error("Failed to load tax rules:", err);
       toast({
         title: "Error",
-        description: "Failed to load tax rules",
+        description:
+          err?.response?.data?.message || "Failed to load tax rules",
         variant: "destructive",
       });
     } finally {
@@ -142,45 +135,33 @@ export function AdminTaxRulesPanel() {
 
     setSavingIndex(index);
     try {
-      const res = await fetch("/api/settings/tax-config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          region: selectedCountry,
-          rules: [
-            {
-              taxName: rule.taxName,
-              taxType: rule.taxType,
-              category: rule.category,
-              rate: rule.rate,
-              description: rule.description || null,
-              priority: rule.priority,
-              isActive: rule.isActive ?? true,
-            },
-          ],
-        }),
+      await api.post("/pricing/tax-rules/bulk", {
+        region: selectedCountry,
+        rules: [
+          {
+            taxName: rule.taxName,
+            taxType: rule.taxType,
+            category: rule.category,
+            rate: rule.rate,
+            description: rule.description || null,
+            priority: rule.priority,
+            isActive: rule.isActive ?? true,
+          },
+        ],
       });
 
-      if (res.ok) {
-        toast({
-          title: "Saved",
-          description: `${rule.taxName} (${rule.category}) saved`,
-        });
-        // Reload to get the DB id back
-        await loadRules();
-      } else {
-        const errData = await res.json().catch(() => ({}));
-        toast({
-          title: "Save Failed",
-          description: errData.error || "Could not save tax rule",
-          variant: "destructive",
-        });
-      }
-    } catch (err) {
+      toast({
+        title: "Saved",
+        description: `${rule.taxName} (${rule.category}) saved`,
+      });
+      // Reload to get the DB id back
+      await loadRules();
+    } catch (err: any) {
       console.error("Failed to save tax rule:", err);
       toast({
-        title: "Error",
-        description: "Failed to save tax rule",
+        title: "Save Failed",
+        description:
+          err?.response?.data?.message || "Could not save tax rule",
         variant: "destructive",
       });
     } finally {

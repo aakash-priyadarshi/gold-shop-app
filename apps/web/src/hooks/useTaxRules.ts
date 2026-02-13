@@ -13,6 +13,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { getApiUrl } from "@/lib/api";
 
 export interface TaxRule {
   id: string;
@@ -78,7 +79,7 @@ export async function fetchTaxRules(
     return cached.data;
   }
   try {
-    const res = await fetch(`/api/settings/tax-config?country=${region}`);
+    const res = await fetch(`${getApiUrl()}/pricing/tax-rules?region=${region}`);
     if (!res.ok) return null;
     const data: TaxRulesResponse = await res.json();
     cache[region] = { data, ts: Date.now() };
@@ -126,7 +127,7 @@ export function useTaxRules(countryCode: string | undefined) {
     setLoading(true);
     setError(null);
 
-    fetch(`/api/settings/tax-config?country=${region}`)
+    fetch(`${getApiUrl()}/pricing/tax-rules?region=${region}`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch tax rules");
         return res.json();
