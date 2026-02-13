@@ -84,7 +84,7 @@ const COUNTRY_DEFAULT_CURRENCY: Record<string, SupportedCurrency> = {
 };
 
 @ApiTags("Pricing")
-@Controller("api/pricing")
+@Controller("pricing")
 export class PricingController {
   private readonly logger = new Logger(PricingController.name);
 
