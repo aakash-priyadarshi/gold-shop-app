@@ -7,7 +7,7 @@ const API_BASE_URL =
   ) + "/api";
 
 /**
- * GET /api/admin/tax-config
+ * GET /api/settings/tax-config
  * Fetch tax rules for a country from the backend
  * Query params: country=NP|IN|AE|UK|EU|US
  */
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/admin/tax-config
+ * POST /api/settings/tax-config
  * Save tax rules for a country via the backend
  * Body: { region: string, rules: Array<{ taxName, taxType, category, rate, description?, priority? }> }
  */

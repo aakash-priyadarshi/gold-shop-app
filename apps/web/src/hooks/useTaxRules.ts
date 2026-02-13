@@ -78,7 +78,7 @@ export async function fetchTaxRules(
     return cached.data;
   }
   try {
-    const res = await fetch(`/api/admin/tax-config?country=${region}`);
+    const res = await fetch(`/api/settings/tax-config?country=${region}`);
     if (!res.ok) return null;
     const data: TaxRulesResponse = await res.json();
     cache[region] = { data, ts: Date.now() };
@@ -126,7 +126,7 @@ export function useTaxRules(countryCode: string | undefined) {
     setLoading(true);
     setError(null);
 
-    fetch(`/api/admin/tax-config?country=${region}`)
+    fetch(`/api/settings/tax-config?country=${region}`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch tax rules");
         return res.json();
