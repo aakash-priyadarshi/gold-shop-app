@@ -1614,6 +1614,25 @@ export class ShopsService {
       shops.length,
     );
 
+    // ── Fetch live market rate for the requested metal ──
+    // This is the actual metal price per gram (e.g., ₹16,177/g for 24K gold)
+    // Shop's ratePerGramNpr is the MAKING CHARGE per gram, not the metal price
+    const targetMetal = metalType || 'GOLD_24K';
+    const marketRate = await this.prisma.marketRate.findFirst({
+      where: { metalCode: targetMetal, country: customerCountry?.toUpperCase() || 'IN' },
+      orderBy: { validFrom: 'desc' },
+    });
+    // Fallback: try any country if seller's country rate not found
+    let marketRatePerGram = marketRate?.ratePerGram || 0;
+    if (!marketRatePerGram) {
+      const fallbackRate = await this.prisma.marketRate.findFirst({
+        where: { metalCode: targetMetal },
+        orderBy: { validFrom: 'desc' },
+      });
+      marketRatePerGram = fallbackRate?.ratePerGram || 8500;
+    }
+    console.log(`[findMatchingSellers] Market rate for ${targetMetal}: ${marketRatePerGram}/g`);
+
     // ── Step 2: Score each shop on feature matching ──
     const enrichedShops = shops.map((shop) => {
       // --- Feature scoring (each check: 0 or weight) ---
@@ -1705,6 +1724,8 @@ export class ShopsService {
       const isFullMatch = unsupportedFeatures.length === 0;
 
       // --- Price calculation ---
+      // materialCost = live market rate × weight (this is the metal value)
+      // makingCharge = shop's making charge (flat per-gram from ratePerGramNpr, or % of metal cost)
       const avgRating =
         shop.ratings.length > 0
           ? shop.ratings.reduce((sum: number, r: any) => sum + r.overall, 0) /
@@ -1714,10 +1735,13 @@ export class ShopsService {
       const shopMetalRate = shop.metalRates.find(
         (r: any) => r.metalType === metalType,
       );
-      const baseRatePerGram = shopMetalRate?.ratePerGramNpr || 8500;
-      const materialCost = baseRatePerGram * estimatedWeight;
-      const makingCharge =
-        materialCost * ((shop.makingChargePercent || 10) / 100);
+      // Material cost is based on MARKET rate, not shop's custom rate
+      const materialCost = marketRatePerGram * estimatedWeight;
+      // Shop's ratePerGramNpr is the making charge per gram (flat rate)
+      // If shop has a flat making charge set, use it; otherwise calculate from percentage
+      const makingCharge = shopMetalRate?.ratePerGramNpr
+        ? shopMetalRate.ratePerGramNpr * estimatedWeight
+        : materialCost * ((shop.makingChargePercent || 10) / 100);
       const estimatedPrice = materialCost + makingCharge;
 
       // --- Location score ---
