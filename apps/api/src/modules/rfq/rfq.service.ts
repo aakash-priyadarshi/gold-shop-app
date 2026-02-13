@@ -7,6 +7,7 @@ import {
 import { BuildMethod, JewelleryType, RfqStatus } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
+import { MarketRatesService } from "../market-rates/market-rates.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { ShopsService } from "../shops/shops.service";
 import { BroadcastRfqDto } from "./dto/broadcast-rfq.dto";
@@ -24,6 +25,7 @@ export class RfqService {
     private shopsService: ShopsService,
     private notificationsService: NotificationsService,
     private auditService: AuditService,
+    private marketRatesService: MarketRatesService,
   ) {}
 
   /**
@@ -146,21 +148,11 @@ export class RfqService {
       },
     });
 
-    // Get system default rate for the requested material (fallback to gold)
+    // Get LIVE market rate for the requested material using MarketRatesService
     const targetMetal = materialCode || "GOLD_24K";
-    const systemRate = await this.prisma.marketRate.findFirst({
-      where: { metalCode: targetMetal, country: "NP" },
-      orderBy: { validFrom: "desc" },
-    });
-    // Fallback: if specific metal not found, try GOLD_24K
-    let defaultRatePerGram = systemRate?.ratePerGram || 0;
-    if (!defaultRatePerGram) {
-      const goldFallback = await this.prisma.marketRate.findFirst({
-        where: { metalCode: "GOLD_24K", country: "NP" },
-        orderBy: { validFrom: "desc" },
-      });
-      defaultRatePerGram = goldFallback?.ratePerGram || 10000;
-    }
+    const liveRates = await this.marketRatesService.getMarketRates('NPR');
+    const metalKey = targetMetal as keyof typeof liveRates.metals;
+    const defaultRatePerGram = liveRates.metals[metalKey] || liveRates.metals.GOLD_24K || 10000;
 
     // Calculate price estimate and rating for each shop
     // defaultRatePerGram = live market rate for the metal (not the shop's making charge)
@@ -627,13 +619,8 @@ export class RfqService {
   private async estimatePriceRange(
     dto: CreateRfqDto,
   ): Promise<{ min: number; max: number }> {
-    // Get average market rates
-    const marketRates = await this.prisma.marketRate.findMany({
-      where: {
-        country: "NP", // Default to Nepal
-        validUntil: null,
-      },
-    });
+    // Get live market rates
+    const liveMarketRates = await this.marketRatesService.getMarketRates('NPR');
 
     // Basic estimation logic (simplified)
     let baseRate = 0;
@@ -641,16 +628,14 @@ export class RfqService {
 
     if (dto.buildMethod === "METHOD_A" || dto.buildMethod === "METHOD_B") {
       // For solid/alloy methods, use gold rate
-      const goldRate = marketRates.find((r) => r.metalCode === "GOLD_24K");
-      baseRate = goldRate?.ratePerGram || 10000; // Default fallback
+      baseRate = liveMarketRates.metals.GOLD_24K || 10000;
     } else if (dto.buildMethod === "METHOD_C") {
       // For plated items, use base metal rate + plating cost
       baseRate = 500; // Base metal average
     } else if (dto.buildMethod === "METHOD_D") {
       // Multi-metal: weighted calculation
-      const goldRate = marketRates.find((r) => r.metalCode === "GOLD_24K");
       const goldPercent = composition.modeConfig?.goldPercentByWeight || 50;
-      baseRate = ((goldRate?.ratePerGram || 10000) * goldPercent) / 100 + 200;
+      baseRate = ((liveMarketRates.metals.GOLD_24K || 10000) * goldPercent) / 100 + 200;
     }
 
     const weight = dto.targetTotalWeightG || 10; // Default 10g
