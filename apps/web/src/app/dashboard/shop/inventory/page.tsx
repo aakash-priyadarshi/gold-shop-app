@@ -1111,8 +1111,20 @@ export default function ShopInventoryPage() {
                                         }
                                       />
                                       <p className="text-xs text-muted-foreground">
-                                        Leave blank to use default (10% of metal
-                                        value)
+                                        {materialData?.makingChargePerGram && liveRate ? (
+                                          <>
+                                            Total: {currencySymbol}{" "}
+                                            {liveRate.toLocaleString()}/g (metal) +{" "}
+                                            {currencySymbol}{" "}
+                                            {materialData.makingChargePerGram.toLocaleString()}/g (making) ={" "}
+                                            <span className="font-semibold text-foreground">
+                                              {currencySymbol}{" "}
+                                              {(liveRate + materialData.makingChargePerGram).toLocaleString()}/g
+                                            </span>
+                                          </>
+                                        ) : (
+                                          "Leave blank to use default (10% of metal value)"
+                                        )}
                                       </p>
                                     </div>
                                   )}
