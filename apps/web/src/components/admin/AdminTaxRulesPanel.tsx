@@ -1,7 +1,14 @@
 /**
  * Admin Tax Rules Panel
  *
- * UI for managing country tax configurations
+ * UI for managing country-specific tax rules.
+ * Tax rates vary by country AND by product category:
+ *   - Nepal: 2% Luxury Tax on gold, 13% VAT on gemstones
+ *   - India: 3% GST on metal, 5% GST on making charges
+ *   - UAE/UK/EU: flat VAT on all components
+ *
+ * Admin can view, edit, add, and delete rules.
+ * All changes persist to the TaxRuleConfig table via backend.
  */
 
 "use client";
@@ -10,7 +17,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FlagImage } from "@/components/ui/phone-input";
 import {
   Select,
   SelectContent,
@@ -19,449 +25,388 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
-import { CountryTaxConfig, TaxRule, VatMode } from "@/lib/tax/types";
-import { AlertCircle, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import {
+  AlertCircle,
+  Loader2,
+  Plus,
+  RefreshCw,
+  Save,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useState } from "react";
+
+interface TaxRule {
+  id: string;
+  taxType: string;
+  taxName: string;
+  category: string;
+  rate: number;
+  isCompounding: boolean;
+  priority: number;
+  stateCode: string | null;
+  description: string | null;
+  isActive: boolean;
+}
+
+interface TaxRulesResponse {
+  region: string;
+  source: "DB" | "DEFAULT";
+  rules: TaxRule[];
+}
+
+const CATEGORIES = [
+  { value: "ALL", label: "All Components" },
+  { value: "PRECIOUS_METAL", label: "Precious Metal (Gold/Silver)" },
+  { value: "MAKING_CHARGE", label: "Making Charges" },
+  { value: "GEMSTONE", label: "Gemstones & Diamonds" },
+  { value: "FINISH", label: "Finish / Plating" },
+];
+
+const COUNTRIES = [
+  { code: "NP", name: "Nepal", flag: "🇳🇵" },
+  { code: "IN", name: "India", flag: "🇮🇳" },
+  { code: "AE", name: "UAE", flag: "🇦🇪" },
+  { code: "UK", name: "United Kingdom", flag: "🇬🇧" },
+  { code: "EU", name: "Europe", flag: "🇪🇺" },
+  { code: "US", name: "United States", flag: "🇺🇸" },
+];
 
 export function AdminTaxRulesPanel() {
   const [selectedCountry, setSelectedCountry] = useState<string>("NP");
-  const [config, setConfig] = useState<CountryTaxConfig | null>(null);
+  const [rules, setRules] = useState<TaxRule[]>([]);
+  const [source, setSource] = useState<string>("DEFAULT");
   const [loading, setLoading] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    loadConfig();
+    loadRules();
   }, [selectedCountry]);
 
-  const loadConfig = async () => {
+  const loadRules = async () => {
     setLoading(true);
     try {
       const res = await fetch(
         `/api/admin/tax-config?country=${selectedCountry}`,
       );
       if (res.ok) {
-        const data = await res.json();
-        setConfig(data);
+        const data: TaxRulesResponse = await res.json();
+        setRules(data.rules || []);
+        setSource(data.source || "DEFAULT");
       }
     } catch (err) {
-      console.error("Failed to load tax config:", err);
+      console.error("Failed to load tax rules:", err);
+      toast({
+        title: "Error",
+        description: "Failed to load tax rules",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const saveConfig = async () => {
-    if (!config) return;
-
-    setLoading(true);
-    setSaved(false);
+  const saveRules = async () => {
+    setSaving(true);
     try {
       const res = await fetch("/api/admin/tax-config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
+        body: JSON.stringify({
+          region: selectedCountry,
+          rules: rules.map((r) => ({
+            taxName: r.taxName,
+            taxType: r.taxType,
+            category: r.category,
+            rate: r.rate,
+            description: r.description,
+            priority: r.priority,
+            isActive: r.isActive,
+          })),
+        }),
       });
 
       if (res.ok) {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
+        toast({
+          title: "Tax Rules Saved",
+          description: `Updated ${rules.length} rules for ${COUNTRIES.find((c) => c.code === selectedCountry)?.name}`,
+        });
+        await loadRules();
+      } else {
+        toast({
+          title: "Save Failed",
+          description: "Could not save tax rules",
+          variant: "destructive",
+        });
       }
     } catch (err) {
-      console.error("Failed to save tax config:", err);
+      console.error("Failed to save tax rules:", err);
+      toast({
+        title: "Error",
+        description: "Failed to save tax rules",
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const updateRule = (ruleId: string, updates: Partial<TaxRule>) => {
-    if (!config) return;
-
-    setConfig({
-      ...config,
-      rules: config.rules.map((rule) =>
-        rule.id === ruleId ? { ...rule, ...updates } : rule,
-      ),
-    });
+  const updateRule = (index: number, updates: Partial<TaxRule>) => {
+    setRules((prev) =>
+      prev.map((rule, i) => (i === index ? { ...rule, ...updates } : rule)),
+    );
   };
 
   const addRule = () => {
-    if (!config) return;
-
-    const newRule: TaxRule = {
-      id: `RULE_${Date.now()}`,
-      name: "NEW_TAX",
-      displayName: "New Tax",
-      rate: 0.05,
-      priority: config.rules.length + 1,
-      applyWhen: { isJewellery: true },
-      base: "item_subtotal_excluding_tax",
-    };
-
-    setConfig({
-      ...config,
-      rules: [...config.rules, newRule],
-    });
+    setRules((prev) => [
+      ...prev,
+      {
+        id: "",
+        taxType: "VAT",
+        taxName: "New Tax",
+        category: "ALL",
+        rate: 0,
+        isCompounding: false,
+        priority: prev.length + 1,
+        stateCode: null,
+        description: "",
+        isActive: true,
+      },
+    ]);
   };
 
-  const deleteRule = (ruleId: string) => {
-    if (!config) return;
-
-    setConfig({
-      ...config,
-      rules: config.rules.filter((rule) => rule.id !== ruleId),
-    });
+  const deleteRule = (index: number) => {
+    setRules((prev) => prev.filter((_, i) => i !== index));
   };
 
-  if (loading && !config) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <RefreshCw className="h-5 w-5 animate-spin" />
-        <span className="ml-2">Loading tax configuration...</span>
-      </div>
-    );
-  }
+  const countryInfo = COUNTRIES.find((c) => c.code === selectedCountry);
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Tax Rules Configuration</h2>
+          <h2 className="text-lg font-bold">Tax Rules Configuration</h2>
           <p className="text-sm text-muted-foreground">
-            Manage country-specific tax rates and rules
+            Manage country-specific tax rates by product category. Changes apply
+            to all pricing calculations.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={loadConfig} variant="outline" disabled={loading}>
+          <Button
+            onClick={loadRules}
+            variant="outline"
+            size="sm"
+            disabled={loading}
+          >
             <RefreshCw
-              className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+              className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`}
             />
             Refresh
           </Button>
-          <Button onClick={saveConfig} disabled={loading}>
-            <Save className="h-4 w-4 mr-2" />
-            Save Changes
-          </Button>
-          {saved && (
-            <Badge variant="default" className="bg-green-500">
-              Saved!
-            </Badge>
-          )}
         </div>
       </div>
 
       {/* Country Selector */}
-      <div className="space-y-2">
-        <Label>Country</Label>
+      <div className="flex items-center gap-4">
+        <Label className="text-sm font-medium">Country</Label>
         <Select value={selectedCountry} onValueChange={setSelectedCountry}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-[220px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="NP">
-              <span className="flex items-center gap-2">
-                <FlagImage code="NP" size={16} /> Nepal (NP)
-              </span>
-            </SelectItem>
-            <SelectItem value="IN">
-              <span className="flex items-center gap-2">
-                <FlagImage code="IN" size={16} /> India (IN)
-              </span>
-            </SelectItem>
-            <SelectItem value="AE">
-              <span className="flex items-center gap-2">
-                <FlagImage code="AE" size={16} /> UAE (AE)
-              </span>
-            </SelectItem>
-            <SelectItem value="US">
-              <span className="flex items-center gap-2">
-                <FlagImage code="US" size={16} /> USA (US)
-              </span>
-            </SelectItem>
-            <SelectItem value="UK">
-              <span className="flex items-center gap-2">
-                <FlagImage code="UK" size={16} /> UK
-              </span>
-            </SelectItem>
+            {COUNTRIES.map((c) => (
+              <SelectItem key={c.code} value={c.code}>
+                <span className="flex items-center gap-2">
+                  {c.flag} {c.name} ({c.code})
+                </span>
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
+        <Badge variant={source === "DB" ? "default" : "secondary"}>
+          {source === "DB" ? "From Database" : "Default Rules"}
+        </Badge>
       </div>
 
-      {config && (
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <span className="ml-2 text-sm text-muted-foreground">
+            Loading tax rules...
+          </span>
+        </div>
+      ) : (
         <>
-          {/* Config Metadata */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <Label className="text-xs">Effective From</Label>
-                <Input
-                  type="date"
-                  value={config.effectiveFrom.split("T")[0]}
-                  onChange={(e) =>
-                    setConfig({ ...config, effectiveFrom: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <Label className="text-xs">Effective To (Optional)</Label>
-                <Input
-                  type="date"
-                  value={config.effectiveTo?.split("T")[0] || ""}
-                  onChange={(e) =>
-                    setConfig({
-                      ...config,
-                      effectiveTo: e.target.value || undefined,
-                    })
-                  }
-                />
-              </div>
-            </div>
-            {config.metadata?.description && (
-              <p className="text-xs text-muted-foreground">
-                {config.metadata.description}
+          {/* Info Banner */}
+          {source === "DEFAULT" && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-amber-800">
+                These are default fallback rules. Click &quot;Save All
+                Changes&quot; to persist them to the database so they become
+                editable.
               </p>
-            )}
-          </div>
+            </div>
+          )}
 
           <Separator />
 
-          {/* Tax Rules */}
-          <div className="space-y-4">
+          {/* Tax Rules Table */}
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Tax Rules</h3>
+              <h3 className="font-semibold text-sm">
+                Tax Rules for {countryInfo?.flag} {countryInfo?.name}
+              </h3>
               <Button onClick={addRule} variant="outline" size="sm">
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-4 w-4 mr-1" />
                 Add Rule
               </Button>
             </div>
 
-            {config.rules.length === 0 && (
+            {rules.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
-                No tax rules configured. Click "Add Rule" to create one.
+                No tax rules configured. Click &quot;Add Rule&quot; to create
+                one.
               </div>
             )}
 
-            {config.rules.map((rule, index) => (
-              <div key={rule.id} className="border rounded-lg p-4 space-y-4">
-                {/* Rule Header */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Badge variant="outline">Rule {index + 1}</Badge>
-                    <span className="ml-2 font-medium">{rule.displayName}</span>
-                  </div>
+            {/* Header row */}
+            {rules.length > 0 && (
+              <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-gray-50 rounded-lg text-xs font-medium text-gray-500 uppercase">
+                <div className="col-span-2">Tax Name</div>
+                <div className="col-span-2">Tax Type</div>
+                <div className="col-span-2">Category</div>
+                <div className="col-span-1 text-center">Rate (%)</div>
+                <div className="col-span-1 text-center">Priority</div>
+                <div className="col-span-3">Description</div>
+                <div className="col-span-1 text-center">Actions</div>
+              </div>
+            )}
+
+            {rules.map((rule, index) => (
+              <div
+                key={rule.id || `new-${index}`}
+                className="grid grid-cols-12 gap-2 items-center px-3 py-2 border rounded-lg"
+              >
+                {/* Tax Name */}
+                <div className="col-span-2">
+                  <Input
+                    value={rule.taxName}
+                    onChange={(e) =>
+                      updateRule(index, { taxName: e.target.value })
+                    }
+                    placeholder="e.g. Luxury Tax"
+                    className="text-sm h-8"
+                  />
+                </div>
+
+                {/* Tax Type */}
+                <div className="col-span-2">
+                  <Select
+                    value={rule.taxType}
+                    onValueChange={(v) => updateRule(index, { taxType: v })}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="VAT">VAT</SelectItem>
+                      <SelectItem value="GST">GST</SelectItem>
+                      <SelectItem value="LUXURY_TAX">Luxury Tax</SelectItem>
+                      <SelectItem value="SALES_TAX">Sales Tax</SelectItem>
+                      <SelectItem value="EXCISE">Excise</SelectItem>
+                      <SelectItem value="CUSTOMS">Customs</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Category */}
+                <div className="col-span-2">
+                  <Select
+                    value={rule.category}
+                    onValueChange={(v) => updateRule(index, { category: v })}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIES.map((c) => (
+                        <SelectItem key={c.value} value={c.value}>
+                          {c.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Rate */}
+                <div className="col-span-1">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={(rule.rate * 100).toFixed(2)}
+                    onChange={(e) =>
+                      updateRule(index, {
+                        rate: parseFloat(e.target.value) / 100,
+                      })
+                    }
+                    className="text-sm h-8 text-center"
+                  />
+                </div>
+
+                {/* Priority */}
+                <div className="col-span-1">
+                  <Input
+                    type="number"
+                    value={rule.priority}
+                    onChange={(e) =>
+                      updateRule(index, {
+                        priority: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    className="text-sm h-8 text-center"
+                  />
+                </div>
+
+                {/* Description */}
+                <div className="col-span-3">
+                  <Input
+                    value={rule.description || ""}
+                    onChange={(e) =>
+                      updateRule(index, { description: e.target.value })
+                    }
+                    placeholder="Optional description"
+                    className="text-sm h-8"
+                  />
+                </div>
+
+                {/* Delete */}
+                <div className="col-span-1 text-center">
                   <Button
-                    onClick={() => deleteRule(rule.id)}
                     variant="ghost"
                     size="sm"
-                    className="text-red-500 hover:text-red-700"
+                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                    onClick={() => deleteRule(index)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Rule ID */}
-                  <div>
-                    <Label className="text-xs">Rule ID</Label>
-                    <Input
-                      value={rule.id}
-                      onChange={(e) =>
-                        updateRule(rule.id, { id: e.target.value })
-                      }
-                      placeholder="e.g., NP_LUXURY_TAX"
-                    />
-                  </div>
-
-                  {/* Display Name */}
-                  <div>
-                    <Label className="text-xs">Display Name</Label>
-                    <Input
-                      value={rule.displayName}
-                      onChange={(e) =>
-                        updateRule(rule.id, { displayName: e.target.value })
-                      }
-                      placeholder="e.g., Luxury Tax"
-                    />
-                  </div>
-
-                  {/* Rate */}
-                  <div>
-                    <Label className="text-xs">Tax Rate (%)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={(rule.rate * 100).toFixed(2)}
-                      onChange={(e) =>
-                        updateRule(rule.id, {
-                          rate: parseFloat(e.target.value) / 100,
-                        })
-                      }
-                    />
-                  </div>
-
-                  {/* Priority */}
-                  <div>
-                    <Label className="text-xs">Priority (lower = first)</Label>
-                    <Input
-                      type="number"
-                      value={rule.priority || 999}
-                      onChange={(e) =>
-                        updateRule(rule.id, {
-                          priority: parseInt(e.target.value),
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-
-                {/* Conditions */}
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Apply When:</Label>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        checked={rule.applyWhen.isJewellery === true}
-                        onCheckedChange={(checked) =>
-                          updateRule(rule.id, {
-                            applyWhen: {
-                              ...rule.applyWhen,
-                              isJewellery: checked ? true : undefined,
-                            },
-                          })
-                        }
-                      />
-                      <Label className="text-xs">Is Jewellery</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        checked={rule.applyWhen.isGold === true}
-                        onCheckedChange={(checked) =>
-                          updateRule(rule.id, {
-                            applyWhen: {
-                              ...rule.applyWhen,
-                              isGold: checked ? true : undefined,
-                            },
-                          })
-                        }
-                      />
-                      <Label className="text-xs">Is Gold</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        checked={rule.applyWhen.hasGemstones === true}
-                        onCheckedChange={(checked) =>
-                          updateRule(rule.id, {
-                            applyWhen: {
-                              ...rule.applyWhen,
-                              hasGemstones: checked ? true : undefined,
-                            },
-                          })
-                        }
-                      />
-                      <Label className="text-xs">Has Gemstones</Label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* VAT Mode (for Nepal VAT rule) */}
-                {rule.name === "VAT" && selectedCountry === "NP" && (
-                  <div className="space-y-2 bg-amber-50 border border-amber-200 rounded p-3">
-                    <Label className="text-xs font-semibold flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      VAT Calculation Mode (Nepal)
-                    </Label>
-                    <Select
-                      value={rule.vatMode || "WHOLE_ITEM_IF_STUDDED"}
-                      onValueChange={(value: VatMode) =>
-                        updateRule(rule.id, { vatMode: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="WHOLE_ITEM_IF_STUDDED">
-                          Whole Item (Conservative - VAT on full item if stones
-                          present)
-                        </SelectItem>
-                        <SelectItem value="STONES_ONLY">
-                          Stones Only (VAT only on gemstone portion)
-                        </SelectItem>
-                        <SelectItem value="DISABLED">
-                          Disabled (No VAT)
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-amber-700">
-                      {rule.vatMode === "WHOLE_ITEM_IF_STUDDED"
-                        ? "VAT applies to entire item subtotal when gemstones are present"
-                        : rule.vatMode === "STONES_ONLY"
-                          ? "VAT applies only to the gemstone subtotal"
-                          : "VAT is disabled"}
-                    </p>
-                  </div>
-                )}
-
-                {/* Include in Base */}
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold">
-                    Include in Tax Base:
-                  </Label>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        checked={rule.includeInBase?.makingCharge !== false}
-                        onCheckedChange={(checked) =>
-                          updateRule(rule.id, {
-                            includeInBase: {
-                              ...rule.includeInBase,
-                              makingCharge: checked,
-                            },
-                          })
-                        }
-                      />
-                      <Label className="text-xs">Making Charge</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        checked={rule.includeInBase?.plating !== false}
-                        onCheckedChange={(checked) =>
-                          updateRule(rule.id, {
-                            includeInBase: {
-                              ...rule.includeInBase,
-                              plating: checked,
-                            },
-                          })
-                        }
-                      />
-                      <Label className="text-xs">Plating</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        checked={rule.includeInBase?.finish !== false}
-                        onCheckedChange={(checked) =>
-                          updateRule(rule.id, {
-                            includeInBase: {
-                              ...rule.includeInBase,
-                              finish: checked,
-                            },
-                          })
-                        }
-                      />
-                      <Label className="text-xs">Finish</Label>
-                    </div>
-                  </div>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Save Button */}
+          {/* Save */}
           <div className="flex justify-end pt-4 border-t">
-            <Button onClick={saveConfig} disabled={loading} size="lg">
-              <Save className="h-4 w-4 mr-2" />
-              {loading ? "Saving..." : "Save All Changes"}
+            <Button onClick={saveRules} disabled={saving} size="lg">
+              {saving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              {saving ? "Saving..." : "Save All Changes"}
             </Button>
           </div>
         </>

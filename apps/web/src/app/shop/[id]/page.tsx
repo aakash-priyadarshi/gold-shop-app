@@ -1,49 +1,36 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Card,
-  CardContent,
-} from '@/components/ui/card';
+import { Footer } from "@/components/layout/footer";
+import { Header } from "@/components/layout/header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCart } from "@/contexts/CartContext";
+import { toast } from "@/hooks/use-toast";
+import { getImageUrl } from "@/lib/image-upload";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
-import { 
   ArrowLeft,
-  Heart,
-  Share2,
-  ShoppingCart,
-  Star,
-  Gem,
-  Shield,
-  Truck,
-  Phone,
-  MapPin,
-  Loader2,
   ChevronLeft,
   ChevronRight,
-  Minus,
-  Plus,
+  Gem,
+  Heart,
   Info,
+  Loader2,
+  MapPin,
+  Minus,
+  Phone,
+  Plus,
+  Share2,
+  Shield,
+  ShoppingCart,
   Sparkles,
-  CircleDot,
-  Ruler,
-  Weight,
-  Palette,
-  Diamond,
-} from 'lucide-react';
-import { getImageUrl } from '@/lib/image-upload';
-import { useCart } from '@/contexts/CartContext';
-import { toast } from '@/hooks/use-toast';
+  Star,
+  Truck,
+} from "lucide-react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface GemstoneDetail {
   type: string;
@@ -90,8 +77,9 @@ interface InventoryItem {
   };
 }
 
-import { getApiUrl } from '@/lib/api';
-import { usePreferencesStore, CURRENCIES } from '@/store/preferences';
+import { useTaxRules } from "@/hooks/useTaxRules";
+import { getApiUrl } from "@/lib/api";
+import { CURRENCIES, usePreferencesStore } from "@/store/preferences";
 
 const API_URL = getApiUrl();
 
@@ -104,13 +92,17 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [mounted, setMounted] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
-  
+
   // Cart context
   const { addToCart } = useCart();
-  
-  // Get currency from global preferences store
+
+  // Get currency and country from global preferences store
   const currency = usePreferencesStore((state) => state.currency);
   const currencyInfo = CURRENCIES[currency];
+  const country = usePreferencesStore((state) => state.country);
+
+  // Fetch dynamic tax rules for customer's country
+  const { getTaxBreakdown, loading: taxLoading } = useTaxRules(country);
 
   useEffect(() => {
     setMounted(true);
@@ -130,7 +122,7 @@ export default function ProductDetailPage() {
         setItem(data);
       }
     } catch (error) {
-      console.error('Failed to fetch item:', error);
+      console.error("Failed to fetch item:", error);
     } finally {
       setLoading(false);
     }
@@ -138,44 +130,55 @@ export default function ProductDetailPage() {
 
   // Helper to extract metal info from composition
   const getMetalInfo = () => {
-    if (!item?.composition) return { metal: 'N/A', purity: '' };
-    const metal = item.composition?.baseAlloy?.metal || item.composition?.metal || '';
-    const purity = item.composition?.baseAlloy?.purity || item.composition?.purity || '';
+    if (!item?.composition) return { metal: "N/A", purity: "" };
+    const metal =
+      item.composition?.baseAlloy?.metal || item.composition?.metal || "";
+    const purity =
+      item.composition?.baseAlloy?.purity || item.composition?.purity || "";
     return { metal, purity };
   };
 
   // Helper to get build method description
   const getBuildMethodInfo = (method: string) => {
     const methods: Record<string, { label: string; description: string }> = {
-      'METHOD_A': { 
-        label: 'Solid Pure Metal', 
-        description: 'Handcrafted from solid gold/silver without any base metal. Highest purity with traditional craftsmanship.' 
+      METHOD_A: {
+        label: "Solid Pure Metal",
+        description:
+          "Handcrafted from solid gold/silver without any base metal. Highest purity with traditional craftsmanship.",
       },
-      'METHOD_B': { 
-        label: 'Gold/Silver Alloy', 
-        description: 'Mixed with other metals for enhanced durability. Standard jewellery making method used by most jewellers worldwide.' 
+      METHOD_B: {
+        label: "Gold/Silver Alloy",
+        description:
+          "Mixed with other metals for enhanced durability. Standard jewellery making method used by most jewellers worldwide.",
       },
-      'METHOD_C': { 
-        label: 'Plated/Coated', 
-        description: 'Base metal coated with gold/silver layer. An affordable option that maintains a similar luxurious appearance.' 
+      METHOD_C: {
+        label: "Plated/Coated",
+        description:
+          "Base metal coated with gold/silver layer. An affordable option that maintains a similar luxurious appearance.",
       },
-      'METHOD_D': { 
-        label: 'Machine Made', 
-        description: 'Factory manufactured with precision machinery. Ensures consistent quality and enables modern intricate designs.' 
+      METHOD_D: {
+        label: "Machine Made",
+        description:
+          "Factory manufactured with precision machinery. Ensures consistent quality and enables modern intricate designs.",
       },
     };
-    return methods[method] || { label: method?.replace('_', ' ') || 'Unknown', description: 'Standard manufacturing process.' };
+    return (
+      methods[method] || {
+        label: method?.replace("_", " ") || "Unknown",
+        description: "Standard manufacturing process.",
+      }
+    );
   };
 
   // Get metal color from composition
   const getMetalColor = () => {
-    const metal = getMetalInfo().metal?.toLowerCase() || '';
-    if (metal.includes('gold')) return 'Yellow';
-    if (metal.includes('white gold')) return 'White';
-    if (metal.includes('rose gold')) return 'Rose';
-    if (metal.includes('silver')) return 'Silver';
-    if (metal.includes('platinum')) return 'Silver';
-    return 'Yellow';
+    const metal = getMetalInfo().metal?.toLowerCase() || "";
+    if (metal.includes("gold")) return "Yellow";
+    if (metal.includes("white gold")) return "White";
+    if (metal.includes("rose gold")) return "Rose";
+    if (metal.includes("silver")) return "Silver";
+    if (metal.includes("platinum")) return "Silver";
+    return "Yellow";
   };
 
   // Calculate price per gram (for metal rate display)
@@ -187,7 +190,7 @@ export default function ProductDetailPage() {
   // Handle add to cart
   const handleAddToCart = async () => {
     if (!item) return;
-    
+
     setAddingToCart(true);
     try {
       await addToCart({
@@ -200,17 +203,17 @@ export default function ProductDetailPage() {
           price: item.totalPriceNpr,
           image: item.images?.[0],
           weight: item.totalWeightGrams,
-        }
+        },
       });
       toast({
-        title: 'Added to Cart',
+        title: "Added to Cart",
         description: `${item.nameEn} has been added to your cart.`,
       });
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to add item to cart. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to add item to cart. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setAddingToCart(false);
@@ -222,15 +225,15 @@ export default function ProductDetailPage() {
     // TODO: Convert from NPR to user's currency using exchange rates
     // For now, show in NPR with indication of user's currency preference
     if (!mounted) {
-      return new Intl.NumberFormat('ne-NP', {
-        style: 'currency',
-        currency: 'NPR',
+      return new Intl.NumberFormat("ne-NP", {
+        style: "currency",
+        currency: "NPR",
         minimumFractionDigits: 0,
       }).format(priceNpr);
     }
-    
-    return new Intl.NumberFormat(currencyInfo?.locale || 'en-US', {
-      style: 'currency',
+
+    return new Intl.NumberFormat(currencyInfo?.locale || "en-US", {
+      style: "currency",
       currency: currency,
       minimumFractionDigits: 0,
     }).format(priceNpr);
@@ -269,7 +272,7 @@ export default function ProductDetailPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      
+
       <main className="flex-1 bg-gray-50">
         {/* Breadcrumb */}
         <div className="bg-white border-b">
@@ -303,16 +306,18 @@ export default function ProductDetailPage() {
                     <Gem className="h-24 w-24 text-gray-300" />
                   </div>
                 )}
-                
+
                 {item.images && item.images.length > 1 && (
                   <>
                     <Button
                       size="icon"
                       variant="ghost"
                       className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white"
-                      onClick={() => setCurrentImageIndex(prev => 
-                        prev === 0 ? item.images.length - 1 : prev - 1
-                      )}
+                      onClick={() =>
+                        setCurrentImageIndex((prev) =>
+                          prev === 0 ? item.images.length - 1 : prev - 1,
+                        )
+                      }
                     >
                       <ChevronLeft className="h-5 w-5" />
                     </Button>
@@ -320,9 +325,11 @@ export default function ProductDetailPage() {
                       size="icon"
                       variant="ghost"
                       className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white"
-                      onClick={() => setCurrentImageIndex(prev => 
-                        prev === item.images.length - 1 ? 0 : prev + 1
-                      )}
+                      onClick={() =>
+                        setCurrentImageIndex((prev) =>
+                          prev === item.images.length - 1 ? 0 : prev + 1,
+                        )
+                      }
                     >
                       <ChevronRight className="h-5 w-5" />
                     </Button>
@@ -338,10 +345,16 @@ export default function ProductDetailPage() {
                       key={idx}
                       onClick={() => setCurrentImageIndex(idx)}
                       className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
-                        currentImageIndex === idx ? 'border-gold-500 ring-2 ring-gold-200' : 'border-gray-200 hover:border-gray-300'
+                        currentImageIndex === idx
+                          ? "border-gold-500 ring-2 ring-gold-200"
+                          : "border-gray-200 hover:border-gray-300"
                       }`}
                     >
-                      <img src={getImageUrl(img)} alt="" className="w-full h-full object-cover" />
+                      <img
+                        src={getImageUrl(img)}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
                     </button>
                   ))}
                 </div>
@@ -352,10 +365,17 @@ export default function ProductDetailPage() {
             <div className="space-y-6">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="outline">{getMetalInfo().metal} {getMetalInfo().purity && `(${getMetalInfo().purity})`}</Badge>
-                  <Badge variant="secondary">{item.jewelleryType?.replace('_', ' ') || 'Jewellery'}</Badge>
+                  <Badge variant="outline">
+                    {getMetalInfo().metal}{" "}
+                    {getMetalInfo().purity && `(${getMetalInfo().purity})`}
+                  </Badge>
+                  <Badge variant="secondary">
+                    {item.jewelleryType?.replace("_", " ") || "Jewellery"}
+                  </Badge>
                   {item.stockQuantity <= 2 && item.stockQuantity > 0 && (
-                    <Badge className="bg-orange-500">Only {item.stockQuantity} left</Badge>
+                    <Badge className="bg-orange-500">
+                      Only {item.stockQuantity} left
+                    </Badge>
                   )}
                 </div>
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -373,7 +393,9 @@ export default function ProductDetailPage() {
                     <Star
                       key={star}
                       className={`h-5 w-5 ${
-                        star <= 4 ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
+                        star <= 4
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "text-gray-300"
                       }`}
                     />
                   ))}
@@ -388,7 +410,8 @@ export default function ProductDetailPage() {
                   {formatPrice(item.totalPriceNpr)}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
-                  Weight: {item.totalWeightGrams}g | {getMetalInfo().metal} {getMetalInfo().purity}
+                  Weight: {item.totalWeightGrams}g | {getMetalInfo().metal}{" "}
+                  {getMetalInfo().purity}
                 </p>
               </div>
 
@@ -398,7 +421,11 @@ export default function ProductDetailPage() {
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
                       {item.shop.logoUrl ? (
-                        <img src={item.shop.logoUrl} alt="" className="w-full h-full rounded-full" />
+                        <img
+                          src={item.shop.logoUrl}
+                          alt=""
+                          className="w-full h-full rounded-full"
+                        />
                       ) : (
                         <Gem className="h-6 w-6 text-gray-400" />
                       )}
@@ -407,7 +434,9 @@ export default function ProductDetailPage() {
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold">{item.shop.shopName}</h3>
                         {item.shop.isVerified && (
-                          <Badge className="bg-green-500 text-xs">Verified</Badge>
+                          <Badge className="bg-green-500 text-xs">
+                            Verified
+                          </Badge>
                         )}
                       </div>
                       {item.shop.city && (
@@ -418,7 +447,9 @@ export default function ProductDetailPage() {
                       )}
                     </div>
                     <Link href={`/shops/${item.shop.id}`}>
-                      <Button variant="outline" size="sm">Visit Shop</Button>
+                      <Button variant="outline" size="sm">
+                        Visit Shop
+                      </Button>
                     </Link>
                   </div>
                 </CardContent>
@@ -436,11 +467,15 @@ export default function ProductDetailPage() {
                     >
                       <Minus className="h-4 w-4" />
                     </Button>
-                    <span className="w-12 text-center font-semibold">{quantity}</span>
+                    <span className="w-12 text-center font-semibold">
+                      {quantity}
+                    </span>
                     <Button
                       size="icon"
                       variant="outline"
-                      onClick={() => setQuantity(Math.min(item.stockQuantity, quantity + 1))}
+                      onClick={() =>
+                        setQuantity(Math.min(item.stockQuantity, quantity + 1))
+                      }
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
@@ -451,8 +486,8 @@ export default function ProductDetailPage() {
                 </div>
 
                 <div className="flex gap-3">
-                  <Button 
-                    className="flex-1 gold-gradient text-white" 
+                  <Button
+                    className="flex-1 gold-gradient text-white"
                     size="lg"
                     onClick={handleAddToCart}
                     disabled={addingToCart || item.stockQuantity === 0}
@@ -462,7 +497,7 @@ export default function ProductDetailPage() {
                     ) : (
                       <ShoppingCart className="h-5 w-5 mr-2" />
                     )}
-                    {item.stockQuantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+                    {item.stockQuantity === 0 ? "Out of Stock" : "Add to Cart"}
                   </Button>
                   <Button size="lg" variant="outline">
                     <Heart className="h-5 w-5" />
@@ -495,25 +530,25 @@ export default function ProductDetailPage() {
           <div className="mt-12">
             <Tabs defaultValue="details">
               <TabsList className="w-full justify-start border-b bg-transparent h-auto p-0 flex-wrap">
-                <TabsTrigger 
+                <TabsTrigger
                   value="details"
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-gold-500"
                 >
                   Product Details
                 </TabsTrigger>
-                <TabsTrigger 
+                <TabsTrigger
                   value="pricing"
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-gold-500"
                 >
                   Price Breakdown
                 </TabsTrigger>
-                <TabsTrigger 
+                <TabsTrigger
                   value="description"
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-gold-500"
                 >
                   Description
                 </TabsTrigger>
-                <TabsTrigger 
+                <TabsTrigger
                   value="reviews"
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-gold-500"
                 >
@@ -529,29 +564,43 @@ export default function ProductDetailPage() {
                     <CardContent className="p-6">
                       <div className="flex items-center gap-2 mb-4">
                         <div className="w-8 h-8 rounded-full bg-gold-100 flex items-center justify-center">
-                          <span className="text-gold-600 font-bold text-sm">1</span>
+                          <span className="text-gold-600 font-bold text-sm">
+                            1
+                          </span>
                         </div>
                         <h3 className="text-lg font-semibold">METAL DETAILS</h3>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900">{getMetalInfo().purity || 'N/A'}</p>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {getMetalInfo().purity || "N/A"}
+                          </p>
                           <p className="text-sm text-gray-500">Karatage</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900">{getMetalColor()}</p>
-                          <p className="text-sm text-gray-500">Material Colour</p>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {getMetalColor()}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Material Colour
+                          </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900">{item.totalWeightGrams}g</p>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {item.totalWeightGrams}g
+                          </p>
                           <p className="text-sm text-gray-500">Gross Weight</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900">{getMetalInfo().metal || 'Gold'}</p>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {getMetalInfo().metal || "Gold"}
+                          </p>
                           <p className="text-sm text-gray-500">Metal</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900">{item.size || 'Standard'}</p>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {item.size || "Standard"}
+                          </p>
                           <p className="text-sm text-gray-500">Size</p>
                         </div>
                       </div>
@@ -564,48 +613,79 @@ export default function ProductDetailPage() {
                       <CardContent className="p-6">
                         <div className="flex items-center gap-2 mb-4">
                           <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                            <span className="text-blue-600 font-bold text-sm">2</span>
+                            <span className="text-blue-600 font-bold text-sm">
+                              2
+                            </span>
                           </div>
                           <h3 className="text-lg font-semibold">
-                            {item.gemstones[0]?.type?.toUpperCase() || 'GEMSTONE'} DETAILS
+                            {item.gemstones[0]?.type?.toUpperCase() ||
+                              "GEMSTONE"}{" "}
+                            DETAILS
                           </h3>
                         </div>
                         {item.gemstones.map((gem, idx) => (
-                          <div key={idx} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-4">
+                          <div
+                            key={idx}
+                            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-4"
+                          >
                             {gem.clarity && (
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-gray-900">{gem.clarity}</p>
-                                <p className="text-sm text-gray-500">{gem.type} Clarity</p>
+                                <p className="text-2xl font-bold text-gray-900">
+                                  {gem.clarity}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  {gem.type} Clarity
+                                </p>
                               </div>
                             )}
                             {gem.color && (
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-gray-900">{gem.color}</p>
-                                <p className="text-sm text-gray-500">{gem.type} Color</p>
+                                <p className="text-2xl font-bold text-gray-900">
+                                  {gem.color}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  {gem.type} Color
+                                </p>
                               </div>
                             )}
                             {gem.count && (
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-gray-900">{String(gem.count).padStart(2, '0')}</p>
-                                <p className="text-sm text-gray-500">No Of {gem.type}s</p>
+                                <p className="text-2xl font-bold text-gray-900">
+                                  {String(gem.count).padStart(2, "0")}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  No Of {gem.type}s
+                                </p>
                               </div>
                             )}
                             {gem.setting && (
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-gray-900">{gem.setting}</p>
-                                <p className="text-sm text-gray-500">{gem.type} Setting</p>
+                                <p className="text-2xl font-bold text-gray-900">
+                                  {gem.setting}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  {gem.type} Setting
+                                </p>
                               </div>
                             )}
                             {gem.cut && (
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-gray-900">{gem.cut}</p>
-                                <p className="text-sm text-gray-500">{gem.type} Shape</p>
+                                <p className="text-2xl font-bold text-gray-900">
+                                  {gem.cut}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  {gem.type} Shape
+                                </p>
                               </div>
                             )}
                             {gem.caratWeight && (
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-gray-900">{gem.caratWeight} ct</p>
-                                <p className="text-sm text-gray-500">Carat Weight</p>
+                                <p className="text-2xl font-bold text-gray-900">
+                                  {gem.caratWeight} ct
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  Carat Weight
+                                </p>
                               </div>
                             )}
                           </div>
@@ -619,31 +699,47 @@ export default function ProductDetailPage() {
                     <CardContent className="p-6">
                       <div className="flex items-center gap-2 mb-4">
                         <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                          <span className="text-purple-600 font-bold text-sm">{item.gemstones?.length ? '3' : '2'}</span>
+                          <span className="text-purple-600 font-bold text-sm">
+                            {item.gemstones?.length ? "3" : "2"}
+                          </span>
                         </div>
-                        <h3 className="text-lg font-semibold">GENERAL DETAILS</h3>
+                        <h3 className="text-lg font-semibold">
+                          GENERAL DETAILS
+                        </h3>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                         <div className="text-center">
                           <p className="text-2xl font-bold text-gray-900 capitalize">
-                            {item.jewelleryType?.replace(/_/g, ' ').toLowerCase() || 'Jewellery'}
+                            {item.jewelleryType
+                              ?.replace(/_/g, " ")
+                              .toLowerCase() || "Jewellery"}
                           </p>
-                          <p className="text-sm text-gray-500">Jewellery Type</p>
+                          <p className="text-sm text-gray-500">
+                            Jewellery Type
+                          </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900">{item.shop.shopName}</p>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {item.shop.shopName}
+                          </p>
                           <p className="text-sm text-gray-500">Brand</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900">{item.collection || 'Classic'}</p>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {item.collection || "Classic"}
+                          </p>
                           <p className="text-sm text-gray-500">Collection</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900 capitalize">{item.gender || 'Unisex'}</p>
+                          <p className="text-2xl font-bold text-gray-900 capitalize">
+                            {item.gender || "Unisex"}
+                          </p>
                           <p className="text-sm text-gray-500">Gender</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900 capitalize">{item.occasion || 'All Occasions'}</p>
+                          <p className="text-2xl font-bold text-gray-900 capitalize">
+                            {item.occasion || "All Occasions"}
+                          </p>
                           <p className="text-sm text-gray-500">Occasion</p>
                         </div>
                       </div>
@@ -655,7 +751,9 @@ export default function ProductDetailPage() {
                     <CardContent className="p-6">
                       <div className="flex items-center gap-2 mb-4">
                         <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                          <span className="text-green-600 font-bold text-sm">{item.gemstones?.length ? '4' : '3'}</span>
+                          <span className="text-green-600 font-bold text-sm">
+                            {item.gemstones?.length ? "4" : "3"}
+                          </span>
                         </div>
                         <h3 className="text-lg font-semibold">CRAFTSMANSHIP</h3>
                       </div>
@@ -665,8 +763,12 @@ export default function ProductDetailPage() {
                             <Sparkles className="h-6 w-6 text-gold-600" />
                           </div>
                           <div>
-                            <p className="font-semibold text-lg">{getBuildMethodInfo(item.buildMethod).label}</p>
-                            <p className="text-gray-600 mt-1">{getBuildMethodInfo(item.buildMethod).description}</p>
+                            <p className="font-semibold text-lg">
+                              {getBuildMethodInfo(item.buildMethod).label}
+                            </p>
+                            <p className="text-gray-600 mt-1">
+                              {getBuildMethodInfo(item.buildMethod).description}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -682,11 +784,21 @@ export default function ProductDetailPage() {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b bg-gray-50">
-                          <th className="text-left p-4 text-sm font-medium text-gray-500">PRODUCT DETAILS</th>
-                          <th className="text-center p-4 text-sm font-medium text-gray-500">RATE</th>
-                          <th className="text-center p-4 text-sm font-medium text-gray-500">WEIGHT</th>
-                          <th className="text-center p-4 text-sm font-medium text-gray-500">DISCOUNT</th>
-                          <th className="text-right p-4 text-sm font-medium text-gray-500">VALUE</th>
+                          <th className="text-left p-4 text-sm font-medium text-gray-500">
+                            PRODUCT DETAILS
+                          </th>
+                          <th className="text-center p-4 text-sm font-medium text-gray-500">
+                            RATE
+                          </th>
+                          <th className="text-center p-4 text-sm font-medium text-gray-500">
+                            WEIGHT
+                          </th>
+                          <th className="text-center p-4 text-sm font-medium text-gray-500">
+                            DISCOUNT
+                          </th>
+                          <th className="text-right p-4 text-sm font-medium text-gray-500">
+                            VALUE
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -696,20 +808,30 @@ export default function ProductDetailPage() {
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-500" />
                               <div>
-                                <p className="font-medium">{getMetalColor()} {getMetalInfo().metal}</p>
-                                <p className="text-sm text-gray-500">{getMetalInfo().purity}</p>
+                                <p className="font-medium">
+                                  {getMetalColor()} {getMetalInfo().metal}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  {getMetalInfo().purity}
+                                </p>
                               </div>
                             </div>
                           </td>
                           <td className="text-center p-4">
                             {item.metalValueNpr && item.totalWeightGrams ? (
                               <span>{formatPrice(getPricePerGram())}/g</span>
-                            ) : '-'}
+                            ) : (
+                              "-"
+                            )}
                           </td>
-                          <td className="text-center p-4">{item.totalWeightGrams}g</td>
+                          <td className="text-center p-4">
+                            {item.totalWeightGrams}g
+                          </td>
                           <td className="text-center p-4">-</td>
                           <td className="text-right p-4 font-medium">
-                            {item.metalValueNpr ? formatPrice(item.metalValueNpr) : formatPrice(item.totalPriceNpr * 0.6)}
+                            {item.metalValueNpr
+                              ? formatPrice(item.metalValueNpr)
+                              : formatPrice(item.totalPriceNpr * 0.6)}
                           </td>
                         </tr>
 
@@ -719,16 +841,22 @@ export default function ProductDetailPage() {
                             <td className="p-4">
                               <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-200 to-gray-400" />
-                                <span className="font-medium">{item.gemstones[0]?.type || 'Stone'}</span>
+                                <span className="font-medium">
+                                  {item.gemstones[0]?.type || "Stone"}
+                                </span>
                               </div>
                             </td>
                             <td className="text-center p-4">-</td>
                             <td className="text-center p-4">
-                              {item.gemstones[0]?.caratWeight ? `${item.gemstones[0].caratWeight} ct` : '-'}
+                              {item.gemstones[0]?.caratWeight
+                                ? `${item.gemstones[0].caratWeight} ct`
+                                : "-"}
                             </td>
                             <td className="text-center p-4">-</td>
                             <td className="text-right p-4 font-medium">
-                              {item.gemstoneValueNpr ? formatPrice(item.gemstoneValueNpr) : '-'}
+                              {item.gemstoneValueNpr
+                                ? formatPrice(item.gemstoneValueNpr)
+                                : "-"}
                             </td>
                           </tr>
                         )}
@@ -740,7 +868,9 @@ export default function ProductDetailPage() {
                           <td className="text-center p-4">-</td>
                           <td className="text-center p-4">-</td>
                           <td className="text-right p-4 font-medium">
-                            {item.makingChargeNpr ? formatPrice(item.makingChargeNpr) : formatPrice(item.totalPriceNpr * 0.1)}
+                            {item.makingChargeNpr
+                              ? formatPrice(item.makingChargeNpr)
+                              : formatPrice(item.totalPriceNpr * 0.1)}
                           </td>
                         </tr>
 
@@ -749,11 +879,15 @@ export default function ProductDetailPage() {
                           <td className="p-4 font-medium">Sub Total</td>
                           <td className="text-center p-4">-</td>
                           <td className="text-center p-4 font-medium">
-                            {item.totalWeightGrams}g<br/>
-                            <span className="text-sm text-gray-500">Gross Wt.</span>
+                            {item.totalWeightGrams}g<br />
+                            <span className="text-sm text-gray-500">
+                              Gross Wt.
+                            </span>
                           </td>
                           <td className="text-center p-4">-</td>
-                          <td className="text-right p-4 font-bold">{formatPrice(item.totalPriceNpr)}</td>
+                          <td className="text-right p-4 font-bold">
+                            {formatPrice(item.totalPriceNpr)}
+                          </td>
                         </tr>
 
                         {/* Discount Row (placeholder) */}
@@ -761,35 +895,88 @@ export default function ProductDetailPage() {
                           <td className="p-4 font-medium">Discount</td>
                           <td className="text-center p-4">-</td>
                           <td className="text-center p-4">-</td>
-                          <td className="text-center p-4 text-red-500 font-medium">-{formatPrice(0)}</td>
+                          <td className="text-center p-4 text-red-500 font-medium">
+                            -{formatPrice(0)}
+                          </td>
                           <td className="text-right p-4">-</td>
                         </tr>
 
                         {/* Subtotal after Discount */}
                         <tr className="border-b">
-                          <td className="p-4 font-medium">Subtotal after Discount</td>
+                          <td className="p-4 font-medium">
+                            Subtotal after Discount
+                          </td>
                           <td className="text-center p-4">-</td>
                           <td className="text-center p-4">-</td>
                           <td className="text-center p-4">-</td>
-                          <td className="text-right p-4 font-medium">{formatPrice(item.totalPriceNpr)}</td>
-                        </tr>
-
-                        {/* Tax Row */}
-                        <tr className="border-b">
-                          <td className="p-4 font-medium">GST / VAT (3%)</td>
-                          <td className="text-center p-4">-</td>
-                          <td className="text-center p-4">-</td>
-                          <td className="text-center p-4">-</td>
-                          <td className="text-right p-4 font-medium">{formatPrice(item.totalPriceNpr * 0.03)}</td>
-                        </tr>
-                      </tbody>
-                      <tfoot>
-                        <tr className="bg-gray-900 text-white">
-                          <td colSpan={4} className="p-4 font-bold text-lg">Grand Total</td>
-                          <td className="text-right p-4 font-bold text-xl text-gold-400">
-                            {formatPrice(item.totalPriceNpr * 1.03)}
+                          <td className="text-right p-4 font-medium">
+                            {formatPrice(item.totalPriceNpr)}
                           </td>
                         </tr>
+
+                        {/* Tax Rows - dynamic per category */}
+                        {(() => {
+                          const breakdown = getTaxBreakdown({
+                            metal:
+                              item.metalValueNpr || item.totalPriceNpr * 0.6,
+                            making:
+                              item.makingChargeNpr || item.totalPriceNpr * 0.1,
+                            gemstone: item.gemstoneValueNpr || 0,
+                          });
+                          return (
+                            <>
+                              {breakdown.lineItems.map((li, idx) => (
+                                <tr key={idx} className="border-b">
+                                  <td className="p-4 font-medium">
+                                    {li.taxName} (
+                                    {(li.rate * 100).toFixed(
+                                      (li.rate * 100) % 1 === 0 ? 0 : 1,
+                                    )}
+                                    %)
+                                  </td>
+                                  <td className="text-center p-4">-</td>
+                                  <td className="text-center p-4">-</td>
+                                  <td className="text-center p-4">-</td>
+                                  <td className="text-right p-4 font-medium">
+                                    {formatPrice(li.taxAmount)}
+                                  </td>
+                                </tr>
+                              ))}
+                              {breakdown.lineItems.length === 0 && (
+                                <tr className="border-b">
+                                  <td className="p-4 font-medium">Tax</td>
+                                  <td className="text-center p-4">-</td>
+                                  <td className="text-center p-4">-</td>
+                                  <td className="text-center p-4">-</td>
+                                  <td className="text-right p-4 font-medium">
+                                    {formatPrice(0)}
+                                  </td>
+                                </tr>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </tbody>
+                      <tfoot>
+                        {(() => {
+                          const bd = getTaxBreakdown({
+                            metal:
+                              item.metalValueNpr || item.totalPriceNpr * 0.6,
+                            making:
+                              item.makingChargeNpr || item.totalPriceNpr * 0.1,
+                            gemstone: item.gemstoneValueNpr || 0,
+                          });
+                          return (
+                            <tr className="bg-gray-900 text-white">
+                              <td colSpan={4} className="p-4 font-bold text-lg">
+                                Grand Total
+                              </td>
+                              <td className="text-right p-4 font-bold text-xl text-gold-400">
+                                {formatPrice(bd.grandTotal)}
+                              </td>
+                            </tr>
+                          );
+                        })()}
                       </tfoot>
                     </table>
                   </CardContent>
@@ -802,11 +989,14 @@ export default function ProductDetailPage() {
                   <CardContent className="p-6">
                     <div className="flex items-center gap-2 mb-4">
                       <Info className="h-5 w-5 text-gray-500" />
-                      <h3 className="text-lg font-semibold">Product Description</h3>
+                      <h3 className="text-lg font-semibold">
+                        Product Description
+                      </h3>
                     </div>
                     <div className="prose max-w-none">
                       <p className="text-gray-600 leading-relaxed">
-                        {item.descriptionEn || `This beautiful ${item.jewelleryType?.replace(/_/g, ' ').toLowerCase() || 'piece'} is crafted with ${getMetalInfo().purity || ''} ${getMetalInfo().metal || 'precious metal'}, weighing ${item.totalWeightGrams}g. ${getBuildMethodInfo(item.buildMethod).description}`}
+                        {item.descriptionEn ||
+                          `This beautiful ${item.jewelleryType?.replace(/_/g, " ").toLowerCase() || "piece"} is crafted with ${getMetalInfo().purity || ""} ${getMetalInfo().metal || "precious metal"}, weighing ${item.totalWeightGrams}g. ${getBuildMethodInfo(item.buildMethod).description}`}
                       </p>
                       {item.descriptionNe && (
                         <p className="text-gray-600 leading-relaxed mt-4 border-t pt-4">
@@ -814,10 +1004,12 @@ export default function ProductDetailPage() {
                         </p>
                       )}
                     </div>
-                    
+
                     {/* Additional Info */}
                     <div className="mt-6 pt-6 border-t">
-                      <h4 className="font-semibold mb-3">Why Choose This Product?</h4>
+                      <h4 className="font-semibold mb-3">
+                        Why Choose This Product?
+                      </h4>
                       <ul className="space-y-2">
                         <li className="flex items-center gap-2 text-gray-600">
                           <Shield className="h-4 w-4 text-green-600" />
@@ -825,7 +1017,10 @@ export default function ProductDetailPage() {
                         </li>
                         <li className="flex items-center gap-2 text-gray-600">
                           <Sparkles className="h-4 w-4 text-gold-600" />
-                          <span>{getBuildMethodInfo(item.buildMethod).label} craftsmanship</span>
+                          <span>
+                            {getBuildMethodInfo(item.buildMethod).label}{" "}
+                            craftsmanship
+                          </span>
                         </li>
                         <li className="flex items-center gap-2 text-gray-600">
                           <Truck className="h-4 w-4 text-blue-600" />
@@ -845,7 +1040,9 @@ export default function ProductDetailPage() {
                 <div className="bg-white rounded-xl p-6 text-center">
                   <Star className="h-12 w-12 mx-auto text-gray-300 mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No reviews yet</h3>
-                  <p className="text-gray-500">Be the first to review this product</p>
+                  <p className="text-gray-500">
+                    Be the first to review this product
+                  </p>
                 </div>
               </TabsContent>
             </Tabs>

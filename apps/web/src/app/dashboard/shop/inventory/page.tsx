@@ -92,35 +92,109 @@ const allJewelleryTypes = Object.keys(JEWELLERY_TYPE_DATA);
 
 const allBuildMethods = [
   { value: "METHOD_A", label: "Method A - Solid Precious Metal (100% pure)" },
-  { value: "METHOD_B", label: "Method B - Standard Alloy (18K, 14K, Sterling)" },
-  { value: "METHOD_C", label: "Method C - Core Metal + Finish (base + plating)" },
+  {
+    value: "METHOD_B",
+    label: "Method B - Standard Alloy (18K, 14K, Sterling)",
+  },
+  {
+    value: "METHOD_C",
+    label: "Method C - Core Metal + Finish (base + plating)",
+  },
   { value: "METHOD_D", label: "Method D - Multi-Metal Construction" },
 ];
 
 const allAlloysData = [
-  { value: "GOLD_18K", label: "18K Gold Alloy (75% gold)", description: "Yellow, white, rose gold variants" },
-  { value: "GOLD_14K", label: "14K Gold Alloy (58.5% gold)", description: "More durable, budget-friendly" },
-  { value: "GOLD_10K", label: "10K Gold Alloy (41.7% gold)", description: "Most durable, most affordable" },
-  { value: "STERLING_SILVER_925", label: "Sterling Silver 925", description: "92.5% silver alloy" },
+  {
+    value: "GOLD_18K",
+    label: "18K Gold Alloy (75% gold)",
+    description: "Yellow, white, rose gold variants",
+  },
+  {
+    value: "GOLD_14K",
+    label: "14K Gold Alloy (58.5% gold)",
+    description: "More durable, budget-friendly",
+  },
+  {
+    value: "GOLD_10K",
+    label: "10K Gold Alloy (41.7% gold)",
+    description: "Most durable, most affordable",
+  },
+  {
+    value: "STERLING_SILVER_925",
+    label: "Sterling Silver 925",
+    description: "92.5% silver alloy",
+  },
 ];
 
 const allBaseMetalsData = [
-  { value: "BRASS", label: "Brass", description: "Copper-zinc alloy, gold-like appearance" },
-  { value: "BRONZE", label: "Bronze", description: "Copper-tin alloy, warm tone" },
-  { value: "COPPER", label: "Copper", description: "Pure copper, rose-colored" },
-  { value: "STAINLESS_STEEL_316L", label: "Stainless Steel 316L", description: "Surgical grade, hypoallergenic" },
-  { value: "TITANIUM", label: "Titanium", description: "Lightweight, extremely strong" },
-  { value: "TUNGSTEN_CARBIDE", label: "Tungsten Carbide", description: "Very hard, scratch-resistant" },
-  { value: "COBALT_CHROME", label: "Cobalt Chrome", description: "Bright white, hypoallergenic" },
+  {
+    value: "BRASS",
+    label: "Brass",
+    description: "Copper-zinc alloy, gold-like appearance",
+  },
+  {
+    value: "BRONZE",
+    label: "Bronze",
+    description: "Copper-tin alloy, warm tone",
+  },
+  {
+    value: "COPPER",
+    label: "Copper",
+    description: "Pure copper, rose-colored",
+  },
+  {
+    value: "STAINLESS_STEEL_316L",
+    label: "Stainless Steel 316L",
+    description: "Surgical grade, hypoallergenic",
+  },
+  {
+    value: "TITANIUM",
+    label: "Titanium",
+    description: "Lightweight, extremely strong",
+  },
+  {
+    value: "TUNGSTEN_CARBIDE",
+    label: "Tungsten Carbide",
+    description: "Very hard, scratch-resistant",
+  },
+  {
+    value: "COBALT_CHROME",
+    label: "Cobalt Chrome",
+    description: "Bright white, hypoallergenic",
+  },
 ];
 
 const allPlatingData = [
-  { value: "GOLD_PLATING", label: "Gold Plating", description: "Electroplated gold layer" },
-  { value: "VERMEIL", label: "Vermeil", description: "Gold plating over sterling silver (2.5μm+)" },
-  { value: "PVD_COATING", label: "PVD Coating", description: "Physical Vapor Deposition, very durable" },
-  { value: "RHODIUM_PLATING", label: "Rhodium Plating", description: "Bright white finish, anti-tarnish" },
-  { value: "OXIDISED_FINISH", label: "Oxidised Finish", description: "Darkened antique look" },
-  { value: "ENAMEL_COATING", label: "Enamel Coating", description: "Colored glass-like coating" },
+  {
+    value: "GOLD_PLATING",
+    label: "Gold Plating",
+    description: "Electroplated gold layer",
+  },
+  {
+    value: "VERMEIL",
+    label: "Vermeil",
+    description: "Gold plating over sterling silver (2.5μm+)",
+  },
+  {
+    value: "PVD_COATING",
+    label: "PVD Coating",
+    description: "Physical Vapor Deposition, very durable",
+  },
+  {
+    value: "RHODIUM_PLATING",
+    label: "Rhodium Plating",
+    description: "Bright white finish, anti-tarnish",
+  },
+  {
+    value: "OXIDISED_FINISH",
+    label: "Oxidised Finish",
+    description: "Darkened antique look",
+  },
+  {
+    value: "ENAMEL_COATING",
+    label: "Enamel Coating",
+    description: "Colored glass-like coating",
+  },
 ];
 
 const allFinishes = Object.keys(FINISH_DATA);
@@ -640,7 +714,10 @@ export default function ShopInventoryPage() {
     const current = new Set(capabilitiesData.baseMetals || []);
     if (current.has(metal)) current.delete(metal);
     else current.add(metal);
-    setCapabilitiesData({ ...capabilitiesData, baseMetals: Array.from(current) });
+    setCapabilitiesData({
+      ...capabilitiesData,
+      baseMetals: Array.from(current),
+    });
   };
 
   const togglePlatingType = (plating: string) => {
@@ -648,7 +725,10 @@ export default function ShopInventoryPage() {
     const current = new Set(capabilitiesData.platingTypes || []);
     if (current.has(plating)) current.delete(plating);
     else current.add(plating);
-    setCapabilitiesData({ ...capabilitiesData, platingTypes: Array.from(current) });
+    setCapabilitiesData({
+      ...capabilitiesData,
+      platingTypes: Array.from(current),
+    });
   };
 
   const toggleGemstone = (gemstoneId: string) => {
@@ -1493,25 +1573,34 @@ export default function ShopInventoryPage() {
                     Standard Alloys (Method B)
                   </CardTitle>
                   <CardDescription>
-                    Select the alloy compositions you can work with for Method B orders
+                    Select the alloy compositions you can work with for Method B
+                    orders
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-3">
                     {allAlloysData.map((alloy) => {
-                      const isSelected = capabilitiesData?.alloys?.includes(alloy.value);
+                      const isSelected = capabilitiesData?.alloys?.includes(
+                        alloy.value,
+                      );
                       return (
                         <div
                           key={alloy.value}
                           className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-all ${
-                            isSelected ? "border-primary bg-primary/5" : "hover:border-gray-300"
+                            isSelected
+                              ? "border-primary bg-primary/5"
+                              : "hover:border-gray-300"
                           }`}
                           onClick={() => toggleAlloy(alloy.value)}
                         >
                           <Checkbox checked={isSelected} className="mt-1" />
                           <div>
-                            <Label className="cursor-pointer font-medium">{alloy.label}</Label>
-                            <p className="text-sm text-muted-foreground mt-1">{alloy.description}</p>
+                            <Label className="cursor-pointer font-medium">
+                              {alloy.label}
+                            </Label>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {alloy.description}
+                            </p>
                           </div>
                         </div>
                       );
@@ -1519,7 +1608,11 @@ export default function ShopInventoryPage() {
                   </div>
                   <div className="flex justify-end">
                     <Button onClick={saveCapabilities} disabled={isSaving}>
-                      {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                      {isSaving ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-2" />
+                      )}
                       Save Alloys
                     </Button>
                   </div>
@@ -1536,25 +1629,34 @@ export default function ShopInventoryPage() {
                     Base Metals (Method C & D)
                   </CardTitle>
                   <CardDescription>
-                    Select the base/core metals you can work with for Method C and D orders
+                    Select the base/core metals you can work with for Method C
+                    and D orders
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-3">
                     {allBaseMetalsData.map((metal) => {
-                      const isSelected = capabilitiesData?.baseMetals?.includes(metal.value);
+                      const isSelected = capabilitiesData?.baseMetals?.includes(
+                        metal.value,
+                      );
                       return (
                         <div
                           key={metal.value}
                           className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-all ${
-                            isSelected ? "border-primary bg-primary/5" : "hover:border-gray-300"
+                            isSelected
+                              ? "border-primary bg-primary/5"
+                              : "hover:border-gray-300"
                           }`}
                           onClick={() => toggleBaseMetal(metal.value)}
                         >
                           <Checkbox checked={isSelected} className="mt-1" />
                           <div>
-                            <Label className="cursor-pointer font-medium">{metal.label}</Label>
-                            <p className="text-sm text-muted-foreground mt-1">{metal.description}</p>
+                            <Label className="cursor-pointer font-medium">
+                              {metal.label}
+                            </Label>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {metal.description}
+                            </p>
                           </div>
                         </div>
                       );
@@ -1562,7 +1664,11 @@ export default function ShopInventoryPage() {
                   </div>
                   <div className="flex justify-end">
                     <Button onClick={saveCapabilities} disabled={isSaving}>
-                      {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                      {isSaving ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-2" />
+                      )}
                       Save Base Metals
                     </Button>
                   </div>
@@ -1579,25 +1685,33 @@ export default function ShopInventoryPage() {
                     Plating & Coating Types (Method C)
                   </CardTitle>
                   <CardDescription>
-                    Select the plating/coating finishes you can apply for Method C orders
+                    Select the plating/coating finishes you can apply for Method
+                    C orders
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-3">
                     {allPlatingData.map((plating) => {
-                      const isSelected = capabilitiesData?.platingTypes?.includes(plating.value);
+                      const isSelected =
+                        capabilitiesData?.platingTypes?.includes(plating.value);
                       return (
                         <div
                           key={plating.value}
                           className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-all ${
-                            isSelected ? "border-primary bg-primary/5" : "hover:border-gray-300"
+                            isSelected
+                              ? "border-primary bg-primary/5"
+                              : "hover:border-gray-300"
                           }`}
                           onClick={() => togglePlatingType(plating.value)}
                         >
                           <Checkbox checked={isSelected} className="mt-1" />
                           <div>
-                            <Label className="cursor-pointer font-medium">{plating.label}</Label>
-                            <p className="text-sm text-muted-foreground mt-1">{plating.description}</p>
+                            <Label className="cursor-pointer font-medium">
+                              {plating.label}
+                            </Label>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {plating.description}
+                            </p>
                           </div>
                         </div>
                       );
@@ -1605,7 +1719,11 @@ export default function ShopInventoryPage() {
                   </div>
                   <div className="flex justify-end">
                     <Button onClick={saveCapabilities} disabled={isSaving}>
-                      {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                      {isSaving ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-2" />
+                      )}
                       Save Plating Types
                     </Button>
                   </div>

@@ -1551,8 +1551,15 @@ export class ShopsService {
     } = params;
 
     console.log("[findMatchingSellers] Params:", {
-      jewelleryType, buildMethod, metalType, alloyType, baseMetal, platingType,
-      customerCity, customerState, customerCountry,
+      jewelleryType,
+      buildMethod,
+      metalType,
+      alloyType,
+      baseMetal,
+      platingType,
+      customerCity,
+      customerState,
+      customerCountry,
     });
 
     // ── Material family expansion map ──
@@ -1593,14 +1600,19 @@ export class ShopsService {
         },
         performance: {
           select: {
-            totalOrders: true, successfulOrders: true,
-            avgRating: true, onTimeDispatchRate: true,
+            totalOrders: true,
+            successfulOrders: true,
+            avgRating: true,
+            onTimeDispatchRate: true,
           },
         },
       },
     })) as any[];
 
-    console.log("[findMatchingSellers] Fetched shops (active+verified+country):", shops.length);
+    console.log(
+      "[findMatchingSellers] Fetched shops (active+verified+country):",
+      shops.length,
+    );
 
     // ── Step 2: Score each shop on feature matching ──
     const enrichedShops = shops.map((shop) => {
@@ -1636,7 +1648,9 @@ export class ShopsService {
         if (familyVariants) {
           materialOk =
             shop.supportedMaterials.length === 0 ||
-            familyVariants.some((v: string) => shop.supportedMaterials.includes(v));
+            familyVariants.some((v: string) =>
+              shop.supportedMaterials.includes(v),
+            );
         } else {
           materialOk =
             shop.supportedMaterials.length === 0 ||
@@ -1663,7 +1677,10 @@ export class ShopsService {
 
       // 2e. Base metal match for Method C/D (0.5 point)
       let baseMetalOk = true;
-      if (baseMetal && (buildMethod === "METHOD_C" || buildMethod === "METHOD_D")) {
+      if (
+        baseMetal &&
+        (buildMethod === "METHOD_C" || buildMethod === "METHOD_D")
+      ) {
         baseMetalOk =
           (shop.supportedBaseMetals || []).length === 0 ||
           (shop.supportedBaseMetals || []).includes(baseMetal);
@@ -1690,27 +1707,41 @@ export class ShopsService {
       // --- Price calculation ---
       const avgRating =
         shop.ratings.length > 0
-          ? shop.ratings.reduce((sum: number, r: any) => sum + r.overall, 0) / shop.ratings.length
+          ? shop.ratings.reduce((sum: number, r: any) => sum + r.overall, 0) /
+            shop.ratings.length
           : 0;
 
-      const shopMetalRate = shop.metalRates.find((r: any) => r.metalType === metalType);
+      const shopMetalRate = shop.metalRates.find(
+        (r: any) => r.metalType === metalType,
+      );
       const baseRatePerGram = shopMetalRate?.ratePerGramNpr || 8500;
       const materialCost = baseRatePerGram * estimatedWeight;
-      const makingCharge = materialCost * ((shop.makingChargePercent || 10) / 100);
+      const makingCharge =
+        materialCost * ((shop.makingChargePercent || 10) / 100);
       const estimatedPrice = materialCost + makingCharge;
 
       // --- Location score ---
       let locationScore = 0;
-      if (customerCity && shop.city?.toLowerCase() === customerCity.toLowerCase()) {
+      if (
+        customerCity &&
+        shop.city?.toLowerCase() === customerCity.toLowerCase()
+      ) {
         locationScore = 3;
-      } else if (customerState && shop.state?.toLowerCase() === customerState.toLowerCase()) {
+      } else if (
+        customerState &&
+        shop.state?.toLowerCase() === customerState.toLowerCase()
+      ) {
         locationScore = 2;
-      } else if (customerCountry && shop.country?.toLowerCase() === customerCountry.toLowerCase()) {
+      } else if (
+        customerCountry &&
+        shop.country?.toLowerCase() === customerCountry.toLowerCase()
+      ) {
         locationScore = 1;
       }
 
       return {
         id: shop.id,
+        userId: shop.user?.id || null,
         shopName: shop.shopName,
         shopNameNe: shop.shopNameNe,
         city: shop.city,
@@ -1763,8 +1794,27 @@ export class ShopsService {
       };
     });
 
+    // ── Step 2.5: Deduplicate by userId (same seller may have multiple shops) ──
+    // Keep the shop with the highest feature score per user
+    const seenUserIds = new Map<string, number>();
+    const deduped = enrichedShops.filter((s, idx) => {
+      const uid = s.userId;
+      if (!uid) return true; // no user info, keep
+      const prev = seenUserIds.get(uid);
+      if (prev === undefined) {
+        seenUserIds.set(uid, idx);
+        return true;
+      }
+      // Keep the one with higher feature score
+      if (s.featureScore > enrichedShops[prev].featureScore) {
+        seenUserIds.set(uid, idx);
+        return true;
+      }
+      return false;
+    });
+
     // ── Step 3: Apply hard filters (rating, price) ──
-    let filtered = enrichedShops;
+    let filtered = deduped;
     if (minRating !== undefined) {
       filtered = filtered.filter((s) => s.averageRating >= minRating);
     }
@@ -1885,12 +1935,19 @@ export class ShopsService {
         internationalCount: otherSellers.length,
         avgPrice:
           filtered.length > 0
-            ? Math.round(filtered.reduce((sum, s) => sum + s.estimatedPrice, 0) / filtered.length)
+            ? Math.round(
+                filtered.reduce((sum, s) => sum + s.estimatedPrice, 0) /
+                  filtered.length,
+              )
             : 0,
         minPrice:
-          filtered.length > 0 ? Math.min(...filtered.map((s) => s.estimatedPrice)) : 0,
+          filtered.length > 0
+            ? Math.min(...filtered.map((s) => s.estimatedPrice))
+            : 0,
         maxPrice:
-          filtered.length > 0 ? Math.max(...filtered.map((s) => s.estimatedPrice)) : 0,
+          filtered.length > 0
+            ? Math.max(...filtered.map((s) => s.estimatedPrice))
+            : 0,
       },
       diagnostics: {
         totalShops,

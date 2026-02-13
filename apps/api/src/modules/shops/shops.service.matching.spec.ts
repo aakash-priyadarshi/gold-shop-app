@@ -207,7 +207,9 @@ describe("ShopsService - Seller Matching", () => {
       // Soft matching: still returned, but not a full match
       expect(result.sellers).toHaveLength(1);
       expect(result.sellers[0].isFullMatch).toBe(false);
-      expect(result.sellers[0].unsupportedFeatures).toContain("jewelleryType:NECKLACE");
+      expect(result.sellers[0].unsupportedFeatures).toContain(
+        "jewelleryType:NECKLACE",
+      );
     });
   });
 
@@ -430,8 +432,8 @@ describe("ShopsService - Seller Matching", () => {
       const shop = makeShop({
         country: "IN",
         supportedJewelleryTypes: ["NECKLACE"], // miss: jewelleryType
-        supportedMethods: ["METHOD_B"],         // miss: buildMethod
-        supportedMaterials: ["PLATINUM_950"],    // miss: material
+        supportedMethods: ["METHOD_B"], // miss: buildMethod
+        supportedMaterials: ["PLATINUM_950"], // miss: material
       });
 
       mockPrismaShop.findMany.mockResolvedValue([shop]);
@@ -462,7 +464,10 @@ describe("ShopsService - Seller Matching", () => {
         supportedMethods: ["METHOD_A"],
       });
 
-      mockPrismaShop.findMany.mockResolvedValue([partialMatchShop, fullMatchShop]);
+      mockPrismaShop.findMany.mockResolvedValue([
+        partialMatchShop,
+        fullMatchShop,
+      ]);
 
       const result = await service.findMatchingSellers({
         jewelleryType: "RING",
@@ -495,7 +500,9 @@ describe("ShopsService - Seller Matching", () => {
       });
 
       // Material should be OK (empty = supports all)
-      expect(result.sellers[0].unsupportedFeatures).not.toContain("material:GOLD_22K");
+      expect(result.sellers[0].unsupportedFeatures).not.toContain(
+        "material:GOLD_22K",
+      );
     });
   });
 
@@ -519,7 +526,9 @@ describe("ShopsService - Seller Matching", () => {
         customerCountry: "IN",
       });
 
-      expect(result.sellers[0].unsupportedFeatures).not.toContain("alloy:GOLD_18K");
+      expect(result.sellers[0].unsupportedFeatures).not.toContain(
+        "alloy:GOLD_18K",
+      );
     });
 
     it("should flag unsupported alloy for Method B", async () => {
@@ -559,7 +568,9 @@ describe("ShopsService - Seller Matching", () => {
         customerCountry: "IN",
       });
 
-      expect(result.sellers[0].unsupportedFeatures).not.toContain("baseMetal:BRASS");
+      expect(result.sellers[0].unsupportedFeatures).not.toContain(
+        "baseMetal:BRASS",
+      );
     });
 
     it("should flag unsupported base metal for Method C", async () => {
@@ -579,7 +590,9 @@ describe("ShopsService - Seller Matching", () => {
         customerCountry: "IN",
       });
 
-      expect(result.sellers[0].unsupportedFeatures).toContain("baseMetal:BRASS");
+      expect(result.sellers[0].unsupportedFeatures).toContain(
+        "baseMetal:BRASS",
+      );
     });
 
     it("should score plating type match for Method C", async () => {
@@ -599,7 +612,9 @@ describe("ShopsService - Seller Matching", () => {
         customerCountry: "IN",
       });
 
-      expect(result.sellers[0].unsupportedFeatures).not.toContain("platingType:GOLD_PLATING");
+      expect(result.sellers[0].unsupportedFeatures).not.toContain(
+        "platingType:GOLD_PLATING",
+      );
     });
 
     it("should flag unsupported plating for Method C", async () => {
@@ -619,7 +634,9 @@ describe("ShopsService - Seller Matching", () => {
         customerCountry: "IN",
       });
 
-      expect(result.sellers[0].unsupportedFeatures).toContain("platingType:GOLD_PLATING");
+      expect(result.sellers[0].unsupportedFeatures).toContain(
+        "platingType:GOLD_PLATING",
+      );
     });
 
     it("should treat empty supportedAlloys as supports-all", async () => {
@@ -639,7 +656,9 @@ describe("ShopsService - Seller Matching", () => {
         customerCountry: "IN",
       });
 
-      expect(result.sellers[0].unsupportedFeatures).not.toContain("alloy:GOLD_18K");
+      expect(result.sellers[0].unsupportedFeatures).not.toContain(
+        "alloy:GOLD_18K",
+      );
     });
   });
 
@@ -663,7 +682,9 @@ describe("ShopsService - Seller Matching", () => {
       });
 
       // Should match because GOLD expands to include GOLD_18K
-      expect(result.sellers[0].unsupportedFeatures).not.toContain("material:GOLD");
+      expect(result.sellers[0].unsupportedFeatures).not.toContain(
+        "material:GOLD",
+      );
     });
 
     it("should NOT match GOLD base metal when shop only has SILVER", async () => {
@@ -701,7 +722,9 @@ describe("ShopsService - Seller Matching", () => {
         customerCountry: "IN",
       });
 
-      expect(result.sellers[0].unsupportedFeatures).not.toContain("material:SILVER");
+      expect(result.sellers[0].unsupportedFeatures).not.toContain(
+        "material:SILVER",
+      );
     });
 
     it("should match specific purity directly", async () => {
@@ -720,7 +743,9 @@ describe("ShopsService - Seller Matching", () => {
         customerCountry: "IN",
       });
 
-      expect(result.sellers[0].unsupportedFeatures).not.toContain("material:GOLD_22K");
+      expect(result.sellers[0].unsupportedFeatures).not.toContain(
+        "material:GOLD_22K",
+      );
     });
   });
 
@@ -744,9 +769,9 @@ describe("ShopsService - Seller Matching", () => {
         makeShop({
           id: "ask1",
           country: "IN",
-          supportedJewelleryTypes: ["NECKLACE"],   // miss
-          supportedMethods: ["METHOD_B"],           // miss
-          supportedMaterials: ["PLATINUM_950"],      // miss
+          supportedJewelleryTypes: ["NECKLACE"], // miss
+          supportedMethods: ["METHOD_B"], // miss
+          supportedMaterials: ["PLATINUM_950"], // miss
         }),
       ];
 
@@ -1086,7 +1111,10 @@ describe("ShopsService - Seller Matching", () => {
     });
 
     it("should report fetchedForScoring count", async () => {
-      const shops = [makeShop({ country: "US" }), makeShop({ id: "s2", country: "US" })];
+      const shops = [
+        makeShop({ country: "US" }),
+        makeShop({ id: "s2", country: "US" }),
+      ];
       mockPrismaShop.findMany.mockResolvedValue(shops);
 
       const result = await service.findMatchingSellers({
