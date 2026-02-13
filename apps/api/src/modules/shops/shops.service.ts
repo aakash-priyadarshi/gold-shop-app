@@ -10,6 +10,7 @@ import { UserRole } from "@prisma/client";
 import { RedisService } from "../../common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
+import { MarketRatesService } from "../market-rates/market-rates.service";
 import { PlatformConfigService } from "../platform-config/platform-config.service";
 import { ContentModerationService } from "./content-moderation.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
@@ -27,6 +28,7 @@ export class ShopsService {
     private redisService: RedisService,
     private configService: PlatformConfigService,
     private moderationService: ContentModerationService,
+    private marketRatesService: MarketRatesService,
   ) {}
 
   /**
@@ -1614,24 +1616,17 @@ export class ShopsService {
       shops.length,
     );
 
-    // ── Fetch live market rate for the requested metal ──
-    // This is the actual metal price per gram (e.g., ₹16,177/g for 24K gold)
-    // Shop's ratePerGramNpr is the MAKING CHARGE per gram, not the metal price
+    // ── Fetch LIVE market rate for the requested metal ──
+    // Use MarketRatesService for real-time prices (not stale DB table)
     const targetMetal = metalType || 'GOLD_24K';
-    const marketRate = await this.prisma.marketRate.findFirst({
-      where: { metalCode: targetMetal, country: customerCountry?.toUpperCase() || 'IN' },
-      orderBy: { validFrom: 'desc' },
-    });
-    // Fallback: try any country if seller's country rate not found
-    let marketRatePerGram = marketRate?.ratePerGram || 0;
-    if (!marketRatePerGram) {
-      const fallbackRate = await this.prisma.marketRate.findFirst({
-        where: { metalCode: targetMetal },
-        orderBy: { validFrom: 'desc' },
-      });
-      marketRatePerGram = fallbackRate?.ratePerGram || 8500;
-    }
-    console.log(`[findMatchingSellers] Market rate for ${targetMetal}: ${marketRatePerGram}/g`);
+    const countryCurrencyMap: Record<string, string> = {
+      IN: 'INR', NP: 'NPR', AE: 'AED', US: 'USD', GB: 'GBP', UK: 'GBP',
+    };
+    const rateCurrency = countryCurrencyMap[(customerCountry || 'IN').toUpperCase()] || 'INR';
+    const liveRates = await this.marketRatesService.getMarketRates(rateCurrency as any);
+    const metalKey = targetMetal as keyof typeof liveRates.metals;
+    const marketRatePerGram = liveRates.metals[metalKey] || liveRates.metals.GOLD_24K || 8500;
+    console.log(`[findMatchingSellers] Live market rate for ${targetMetal} (${rateCurrency}): ${marketRatePerGram}/g`);
 
     // ── Step 2: Score each shop on feature matching ──
     const enrichedShops = shops.map((shop) => {
