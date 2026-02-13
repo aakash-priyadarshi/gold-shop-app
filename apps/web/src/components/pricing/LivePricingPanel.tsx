@@ -186,6 +186,16 @@ export function LivePricingPanel({
 
         {/* Footer */}
         <div className="text-xs text-muted-foreground border-t pt-2 space-y-1">
+          {/* Average pricing disclaimer */}
+          <div className="bg-blue-50 border border-blue-100 rounded p-2 text-blue-700 flex items-start gap-1.5">
+            <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+            <span>
+              Prices shown are <strong>average market estimates</strong> and may
+              differ from the actual quote provided by the shop you select.
+              Final pricing depends on the seller&apos;s making charges,
+              availability, and craftsmanship.
+            </span>
+          </div>
           {/* Last fetched timestamp - only show relative time after mount to prevent hydration mismatch */}
           {marketRates?.updatedAt && (
             <p className="flex items-center gap-1">
@@ -201,9 +211,6 @@ export function LivePricingPanel({
           <p className="flex items-center gap-1">
             <TrendingUp className="h-3 w-3" />
             Estimate updates as you change options
-          </p>
-          <p className="mt-1 italic">
-            Final quote depends on seller, making charge, and availability
           </p>
         </div>
       </div>
