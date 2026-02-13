@@ -1616,22 +1616,24 @@ export class ShopsService {
 
     // ── Fetch market rate for the requested metal from MarketRate table ──
     // MarketRate table is synced daily with live rates by MarketRatesService
-    const targetMetal = metalType || 'GOLD_24K';
-    const rateCountry = (customerCountry || 'IN').toUpperCase();
+    const targetMetal = metalType || "GOLD_24K";
+    const rateCountry = (customerCountry || "IN").toUpperCase();
     const marketRate = await this.prisma.marketRate.findFirst({
       where: { metalCode: targetMetal, country: rateCountry, validUntil: null },
-      orderBy: { validFrom: 'desc' },
+      orderBy: { validFrom: "desc" },
     });
     let marketRatePerGram = marketRate?.ratePerGram || 0;
     if (!marketRatePerGram) {
       // Fallback: try any country or GOLD_24K
       const fallbackRate = await this.prisma.marketRate.findFirst({
         where: { metalCode: targetMetal, validUntil: null },
-        orderBy: { validFrom: 'desc' },
+        orderBy: { validFrom: "desc" },
       });
       marketRatePerGram = fallbackRate?.ratePerGram || 8500;
     }
-    console.log(`[findMatchingSellers] Market rate for ${targetMetal} (${rateCountry}): ${marketRatePerGram}/g`);
+    console.log(
+      `[findMatchingSellers] Market rate for ${targetMetal} (${rateCountry}): ${marketRatePerGram}/g`,
+    );
 
     // ── Step 2: Score each shop on feature matching ──
     const enrichedShops = shops.map((shop) => {

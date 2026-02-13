@@ -1,10 +1,10 @@
 /**
  * Market Rates Service
- * 
+ *
  * Fetches and calculates precious metal prices using:
  * - MetalpriceAPI for USD spot prices (gold, silver, platinum, palladium)
  * - FxRatesService for USD→currency exchange rates
- * 
+ *
  * Features:
  * - Region-based pricing with multipliers (NP, IN, AE, UK, EU, US)
  * - Multi-currency support (NPR, INR, AED, GBP, EUR, USD)
@@ -13,44 +13,36 @@
  * - Never hard-fails - always returns something
  */
 
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Cron } from '@nestjs/schedule';
-import { Prisma } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
-import { HttpClientService } from '../../common/http-client';
+import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { Cron } from "@nestjs/schedule";
+import { Prisma } from "@prisma/client";
+import { HttpClientService } from "../../common/http-client";
+import { PrismaService } from "../../prisma/prisma.service";
 import {
-  MarketRatesResponse,
-  SpotPricesUsd,
-  MetalRates,
-  MarketRegion,
-  SupportedCountry,
-  SupportedCurrency,
-  MetalpriceApiResponse,
-  MarketRatesDebug,
-  RegionAdjustments,
-} from './types';
+  ExtendedFxSnapshot,
+  FX_SANITY_THRESHOLDS,
+  FxRate,
+  FxRatesService,
+} from "../fx-rates";
 import {
-  REGION_ADJUSTMENTS,
-  CURRENCY_TO_DEFAULT_REGION,
-  REGION_TO_DEFAULT_CURRENCY,
-  REGION_TO_COUNTRY,
   COUNTRY_CURRENCIES,
   PURITY_MULTIPLIERS,
   TROY_OUNCE_TO_GRAMS,
-  getRegionFromCurrency,
-  getRegionAdjustments,
   getLegacyCountry,
-} from './country-adjustments';
+  getRegionAdjustments,
+  getRegionFromCurrency,
+} from "./country-adjustments";
 import {
-  FxRatesService,
-  FxSnapshot,
-  FX_SANITY_THRESHOLDS,
-  CurrencyCode,
-  ExtendedFxSnapshot,
-  FxRate,
-  FxSource,
-} from '../fx-rates';
+  MarketRatesDebug,
+  MarketRatesResponse,
+  MarketRegion,
+  MetalRates,
+  MetalpriceApiResponse,
+  SpotPricesUsd,
+  SupportedCountry,
+  SupportedCurrency,
+} from "./types";
 
 // Cache key type
 type CacheKey = `${MarketRegion}:${SupportedCurrency}`;
@@ -64,7 +56,10 @@ export class MarketRatesService implements OnModuleInit {
   private readonly staleCacheTtlHours: number;
 
   // In-memory cache for quick access
-  private cache: Map<CacheKey, { data: MarketRatesResponse; expiresAt: Date; fetchedAt: Date }> = new Map();
+  private cache: Map<
+    CacheKey,
+    { data: MarketRatesResponse; expiresAt: Date; fetchedAt: Date }
+  > = new Map();
 
   // Fallback spot prices (USD per troy ounce) - realistic Jan 2026 levels
   private readonly FALLBACK_SPOT_PRICES: SpotPricesUsd;
@@ -75,22 +70,41 @@ export class MarketRatesService implements OnModuleInit {
     private readonly fxRatesService: FxRatesService,
     private readonly httpClient: HttpClientService,
   ) {
-    this.apiKey = this.configService.get<string>('METALPRICEAPI_KEY') || '';
-    this.baseUrl = this.configService.get<string>('METALPRICEAPI_BASE_URL') || 'https://api.metalpriceapi.com/v1';
-    this.cacheTtlHours = parseInt(this.configService.get<string>('MARKET_RATES_CACHE_TTL_HOURS') || '24', 10);
-    this.staleCacheTtlHours = parseInt(this.configService.get<string>('MARKET_RATES_STALE_CACHE_TTL_HOURS') || '168', 10); // 7 days
+    this.apiKey = this.configService.get<string>("METALPRICEAPI_KEY") || "";
+    this.baseUrl =
+      this.configService.get<string>("METALPRICEAPI_BASE_URL") ||
+      "https://api.metalpriceapi.com/v1";
+    this.cacheTtlHours = parseInt(
+      this.configService.get<string>("MARKET_RATES_CACHE_TTL_HOURS") || "24",
+      10,
+    );
+    this.staleCacheTtlHours = parseInt(
+      this.configService.get<string>("MARKET_RATES_STALE_CACHE_TTL_HOURS") ||
+        "168",
+      10,
+    ); // 7 days
 
     // Load fallback values from env or use defaults
     this.FALLBACK_SPOT_PRICES = {
-      XAU: parseFloat(this.configService.get<string>('FALLBACK_GOLD_USD_OZ') || '2650.0'),
-      XAG: parseFloat(this.configService.get<string>('FALLBACK_SILVER_USD_OZ') || '30.0'),
-      XPT: parseFloat(this.configService.get<string>('FALLBACK_PLATINUM_USD_OZ') || '980.0'),
-      XPD: parseFloat(this.configService.get<string>('FALLBACK_PALLADIUM_USD_OZ') || '950.0'),
+      XAU: parseFloat(
+        this.configService.get<string>("FALLBACK_GOLD_USD_OZ") || "2650.0",
+      ),
+      XAG: parseFloat(
+        this.configService.get<string>("FALLBACK_SILVER_USD_OZ") || "30.0",
+      ),
+      XPT: parseFloat(
+        this.configService.get<string>("FALLBACK_PLATINUM_USD_OZ") || "980.0",
+      ),
+      XPD: parseFloat(
+        this.configService.get<string>("FALLBACK_PALLADIUM_USD_OZ") || "950.0",
+      ),
       timestamp: new Date().toISOString(),
     };
 
     if (!this.apiKey) {
-      this.logger.warn('METALPRICEAPI_KEY not configured - will use fallback rates');
+      this.logger.warn(
+        "METALPRICEAPI_KEY not configured - will use fallback rates",
+      );
     }
   }
 
@@ -114,26 +128,33 @@ export class MarketRatesService implements OnModuleInit {
     try {
       // Get all cached entries
       const allSnapshots = await this.prisma.marketRateSnapshot.findMany();
-      
+
       let clearedCount = 0;
       for (const snapshot of allSnapshots) {
         const payload = snapshot.payloadJson as unknown as MarketRatesResponse;
-        
+
         // Check if this entry was sourced from fallback
-        if (payload?.source === 'fallback' || payload?.debug?.spotSource === 'fallback') {
+        if (
+          payload?.source === "fallback" ||
+          payload?.debug?.spotSource === "fallback"
+        ) {
           await this.prisma.marketRateSnapshot.delete({
             where: { id: snapshot.id },
           });
           clearedCount++;
-          this.logger.debug(`Cleared fallback cache for ${snapshot.region}/${snapshot.currency}`);
+          this.logger.debug(
+            `Cleared fallback cache for ${snapshot.region}/${snapshot.currency}`,
+          );
         }
       }
-      
+
       // Also clear in-memory cache
       this.cache.clear();
-      
+
       if (clearedCount > 0) {
-        this.logger.log(`Cleared ${clearedCount} fallback cache entries - API key is now configured`);
+        this.logger.log(
+          `Cleared ${clearedCount} fallback cache entries - API key is now configured`,
+        );
       }
     } catch (error) {
       this.logger.warn(`Failed to clear fallback cache entries: ${error}`);
@@ -146,13 +167,13 @@ export class MarketRatesService implements OnModuleInit {
 
   /**
    * Get market rates for a currency and optional region
-   * 
+   *
    * @param currency - Currency code for pricing (required)
    * @param region - Optional region override (defaults based on currency)
    * @returns MarketRatesResponse - always succeeds, never throws
    */
   async getMarketRates(
-    currency: SupportedCurrency = 'NPR',
+    currency: SupportedCurrency = "NPR",
     region?: MarketRegion,
   ): Promise<MarketRatesResponse> {
     // Determine region from currency if not specified
@@ -164,47 +185,53 @@ export class MarketRatesService implements OnModuleInit {
     // 1. Check fresh in-memory cache
     const memCached = this.getFromMemoryCache(cacheKey);
     if (memCached && memCached.isFresh) {
-      return { ...memCached.data, cache: 'hit' };
+      return { ...memCached.data, cache: "hit" };
     }
 
     // 2. Check fresh DB cache
     const dbCached = await this.getFromDbCache(targetRegion, currency);
     if (dbCached && this.isFresh(dbCached.updatedAt)) {
       this.setMemoryCache(cacheKey, dbCached);
-      return { ...dbCached, cache: 'hit' };
+      return { ...dbCached, cache: "hit" };
     }
 
     // 3. Try to fetch fresh data
     try {
       const freshData = await this.fetchFreshRates(targetRegion, currency);
-      
+
       // Store in both caches
       this.setMemoryCache(cacheKey, freshData);
       await this.storeInDbCache(targetRegion, currency, freshData);
-      
-      return { ...freshData, cache: 'miss' };
+
+      return { ...freshData, cache: "miss" };
     } catch (error) {
       this.logger.error(`Failed to fetch fresh market rates: ${error}`);
-      
+
       // 4. Return stale cache with warning if available
       if (memCached) {
         this.logger.warn(`Returning stale memory cache for ${cacheKey}`);
-        return { 
-          ...memCached.data, 
-          cache: 'stale',
-          warnings: [...(memCached.data.warnings || []), 'Using stale cached rates (API unavailable)'],
+        return {
+          ...memCached.data,
+          cache: "stale",
+          warnings: [
+            ...(memCached.data.warnings || []),
+            "Using stale cached rates (API unavailable)",
+          ],
         };
       }
-      
+
       if (dbCached) {
         this.logger.warn(`Returning stale DB cache for ${cacheKey}`);
-        return { 
-          ...dbCached, 
-          cache: 'stale',
-          warnings: [...(dbCached.warnings || []), 'Using stale cached rates (API unavailable)'],
+        return {
+          ...dbCached,
+          cache: "stale",
+          warnings: [
+            ...(dbCached.warnings || []),
+            "Using stale cached rates (API unavailable)",
+          ],
         };
       }
-      
+
       // 5. Ultimate fallback - computed from hardcoded values
       this.logger.warn(`Using fallback rates for ${cacheKey}`);
       return this.buildFallbackResponse(targetRegion, currency);
@@ -215,11 +242,11 @@ export class MarketRatesService implements OnModuleInit {
    * Legacy method - get rates by country (backward compat)
    */
   async getMarketRatesByCountry(
-    country: SupportedCountry = 'NP',
+    country: SupportedCountry = "NP",
     currency?: SupportedCurrency,
   ): Promise<MarketRatesResponse> {
     const targetCurrency = currency || COUNTRY_CURRENCIES[country];
-    const region = country === 'NP' ? 'NP' : 'IN';
+    const region = country === "NP" ? "NP" : "IN";
     return this.getMarketRates(targetCurrency, region);
   }
 
@@ -227,20 +254,20 @@ export class MarketRatesService implements OnModuleInit {
    * Force refresh market rates (admin use)
    */
   async forceRefresh(
-    currency: SupportedCurrency = 'NPR',
+    currency: SupportedCurrency = "NPR",
     region?: MarketRegion,
   ): Promise<MarketRatesResponse> {
     const targetRegion = region || getRegionFromCurrency(currency);
     const cacheKey: CacheKey = `${targetRegion}:${currency}`;
-    
+
     this.logger.log(`Force refreshing market rates for ${cacheKey}`);
-    
+
     // Clear memory cache for this key
     this.cache.delete(cacheKey);
-    
+
     // Force refresh FX rates too
     await this.fxRatesService.forceRefresh();
-    
+
     // Delete DB cache for this region/currency
     try {
       await this.prisma.marketRateSnapshot.deleteMany({
@@ -252,7 +279,7 @@ export class MarketRatesService implements OnModuleInit {
     } catch (error) {
       this.logger.warn(`Failed to clear DB cache: ${error}`);
     }
-    
+
     // Fetch fresh
     return this.getMarketRates(currency, targetRegion);
   }
@@ -286,8 +313,8 @@ export class MarketRatesService implements OnModuleInit {
     message?: string;
   }> {
     const [inRates, npRates] = await Promise.all([
-      this.getMarketRates('INR', 'IN'),
-      this.getMarketRates('NPR', 'NP'),
+      this.getMarketRates("INR", "IN"),
+      this.getMarketRates("NPR", "NP"),
     ]);
 
     const inrGold24K = inRates.metals.GOLD_24K;
@@ -295,7 +322,9 @@ export class MarketRatesService implements OnModuleInit {
     const actualRatio = nprGold24K / inrGold24K;
 
     const { GOLD_PRICE_RATIO_MIN, GOLD_PRICE_RATIO_MAX } = FX_SANITY_THRESHOLDS;
-    const isValid = actualRatio >= GOLD_PRICE_RATIO_MIN && actualRatio <= GOLD_PRICE_RATIO_MAX;
+    const isValid =
+      actualRatio >= GOLD_PRICE_RATIO_MIN &&
+      actualRatio <= GOLD_PRICE_RATIO_MAX;
 
     return {
       isValid,
@@ -304,8 +333,8 @@ export class MarketRatesService implements OnModuleInit {
       actualRatio: parseFloat(actualRatio.toFixed(3)),
       expectedRatioMin: GOLD_PRICE_RATIO_MIN,
       expectedRatioMax: GOLD_PRICE_RATIO_MAX,
-      message: isValid 
-        ? 'Cross-currency prices are within expected range'
+      message: isValid
+        ? "Cross-currency prices are within expected range"
         : `NPR/INR ratio ${actualRatio.toFixed(3)} is outside expected range [${GOLD_PRICE_RATIO_MIN}, ${GOLD_PRICE_RATIO_MAX}].`,
     };
   }
@@ -328,10 +357,10 @@ export class MarketRatesService implements OnModuleInit {
     const fxSnapshot = await this.fxRatesService.getExtendedFxSnapshot();
 
     const [india, nepal, uae, usa] = await Promise.all([
-      this.getMarketRates('INR', 'IN'),
-      this.getMarketRates('NPR', 'NP'),
-      this.getMarketRates('AED', 'AE'),
-      this.getMarketRates('USD', 'US'),
+      this.getMarketRates("INR", "IN"),
+      this.getMarketRates("NPR", "NP"),
+      this.getMarketRates("AED", "AE"),
+      this.getMarketRates("USD", "US"),
     ]);
 
     const validation = await this.validateCrossCurrencyPrices();
@@ -370,7 +399,7 @@ export class MarketRatesService implements OnModuleInit {
     const { spotPrices, spotSource } = spotResult;
     const adjustments = getRegionAdjustments(region);
     const fxRateData = this.getFxRateForCurrency(currency, fxResult);
-    
+
     const metals = this.calculateMetalRates(
       spotPrices,
       fxRateData.rate,
@@ -380,7 +409,11 @@ export class MarketRatesService implements OnModuleInit {
     // Build debug info
     const debug: MarketRatesDebug = {
       spotSource,
-      fxSource: fxRateData.source as 'frankfurter' | 'exchangerate_host' | 'fallback' | 'db_cache',
+      fxSource: fxRateData.source as
+        | "frankfurter"
+        | "exchangerate_host"
+        | "fallback"
+        | "db_cache",
       spotUsed: {
         goldUsdOz: spotPrices.XAU,
         silverUsdOz: spotPrices.XAG,
@@ -401,16 +434,17 @@ export class MarketRatesService implements OnModuleInit {
       region,
       currency,
       country: getLegacyCountry(region),
-      unit: 'per_gram',
+      unit: "per_gram",
       updatedAt: spotPrices.timestamp,
-      source: spotSource === 'metalpriceapi' ? 'metalpriceapi' : 'fallback',
-      cache: 'miss',
+      source: spotSource === "metalpriceapi" ? "metalpriceapi" : "fallback",
+      cache: "miss",
       fx: fxRateData,
       fxSnapshot: fxResult,
       adjustments,
       metals,
       debug,
-      warnings: spotSource === 'fallback' ? ['Using fallback metal prices'] : undefined,
+      warnings:
+        spotSource === "fallback" ? ["Using fallback metal prices"] : undefined,
     };
   }
 
@@ -419,11 +453,11 @@ export class MarketRatesService implements OnModuleInit {
    */
   private async fetchSpotPricesUsdPerOunce(): Promise<{
     spotPrices: SpotPricesUsd;
-    spotSource: 'metalpriceapi' | 'fallback';
+    spotSource: "metalpriceapi" | "fallback";
   }> {
     if (!this.apiKey) {
-      this.logger.warn('No API key - using fallback spot prices');
-      return { spotPrices: this.FALLBACK_SPOT_PRICES, spotSource: 'fallback' };
+      this.logger.warn("No API key - using fallback spot prices");
+      return { spotPrices: this.FALLBACK_SPOT_PRICES, spotSource: "fallback" };
     }
 
     try {
@@ -433,7 +467,7 @@ export class MarketRatesService implements OnModuleInit {
       );
 
       if (!response.data.success) {
-        throw new Error('MetalpriceAPI returned unsuccessful response');
+        throw new Error("MetalpriceAPI returned unsuccessful response");
       }
 
       const { rates, timestamp } = response.data;
@@ -448,11 +482,13 @@ export class MarketRatesService implements OnModuleInit {
         timestamp: new Date(timestamp * 1000).toISOString(),
       };
 
-      this.logger.log(`Fetched spot: Gold=$${spotPrices.XAU.toFixed(2)}/oz, Silver=$${spotPrices.XAG.toFixed(2)}/oz`);
-      return { spotPrices, spotSource: 'metalpriceapi' };
+      this.logger.log(
+        `Fetched spot: Gold=$${spotPrices.XAU.toFixed(2)}/oz, Silver=$${spotPrices.XAG.toFixed(2)}/oz`,
+      );
+      return { spotPrices, spotSource: "metalpriceapi" };
     } catch (error) {
       this.logger.error(`MetalpriceAPI error: ${error}`);
-      return { spotPrices: this.FALLBACK_SPOT_PRICES, spotSource: 'fallback' };
+      return { spotPrices: this.FALLBACK_SPOT_PRICES, spotSource: "fallback" };
     }
   }
 
@@ -484,10 +520,26 @@ export class MarketRatesService implements OnModuleInit {
     fxRate: number,
     regionMultiplier: number,
   ): MetalRates {
-    const goldPure = this.convertToLocalPerGram(spotPrices.XAU, fxRate, regionMultiplier);
-    const silverPure = this.convertToLocalPerGram(spotPrices.XAG, fxRate, regionMultiplier);
-    const platinumPure = this.convertToLocalPerGram(spotPrices.XPT, fxRate, regionMultiplier);
-    const palladiumPure = this.convertToLocalPerGram(spotPrices.XPD, fxRate, regionMultiplier);
+    const goldPure = this.convertToLocalPerGram(
+      spotPrices.XAU,
+      fxRate,
+      regionMultiplier,
+    );
+    const silverPure = this.convertToLocalPerGram(
+      spotPrices.XAG,
+      fxRate,
+      regionMultiplier,
+    );
+    const platinumPure = this.convertToLocalPerGram(
+      spotPrices.XPT,
+      fxRate,
+      regionMultiplier,
+    );
+    const palladiumPure = this.convertToLocalPerGram(
+      spotPrices.XPD,
+      fxRate,
+      regionMultiplier,
+    );
 
     return {
       GOLD_24K: parseFloat((goldPure * PURITY_MULTIPLIERS.gold.K24).toFixed(2)),
@@ -495,11 +547,21 @@ export class MarketRatesService implements OnModuleInit {
       GOLD_18K: parseFloat((goldPure * PURITY_MULTIPLIERS.gold.K18).toFixed(2)),
       GOLD_14K: parseFloat((goldPure * PURITY_MULTIPLIERS.gold.K14).toFixed(2)),
       GOLD_10K: parseFloat((goldPure * PURITY_MULTIPLIERS.gold.K10).toFixed(2)),
-      SILVER_999: parseFloat((silverPure * PURITY_MULTIPLIERS.silver.S999).toFixed(2)),
-      SILVER_925: parseFloat((silverPure * PURITY_MULTIPLIERS.silver.S925).toFixed(2)),
-      PLATINUM_PT950: parseFloat((platinumPure * PURITY_MULTIPLIERS.platinum.PT950).toFixed(2)),
-      PLATINUM_PT900: parseFloat((platinumPure * PURITY_MULTIPLIERS.platinum.PT900).toFixed(2)),
-      PALLADIUM_PD950: parseFloat((palladiumPure * PURITY_MULTIPLIERS.palladium.PD950).toFixed(2)),
+      SILVER_999: parseFloat(
+        (silverPure * PURITY_MULTIPLIERS.silver.S999).toFixed(2),
+      ),
+      SILVER_925: parseFloat(
+        (silverPure * PURITY_MULTIPLIERS.silver.S925).toFixed(2),
+      ),
+      PLATINUM_PT950: parseFloat(
+        (platinumPure * PURITY_MULTIPLIERS.platinum.PT950).toFixed(2),
+      ),
+      PLATINUM_PT900: parseFloat(
+        (platinumPure * PURITY_MULTIPLIERS.platinum.PT900).toFixed(2),
+      ),
+      PALLADIUM_PD950: parseFloat(
+        (palladiumPure * PURITY_MULTIPLIERS.palladium.PD950).toFixed(2),
+      ),
     };
   }
 
@@ -511,19 +573,19 @@ export class MarketRatesService implements OnModuleInit {
     extSnapshot: ExtendedFxSnapshot,
   ): FxRate {
     const now = new Date().toISOString();
-    
+
     switch (currency) {
-      case 'USD':
-        return { pair: 'USD_USD', rate: 1, source: 'derived', updatedAt: now };
-      case 'INR':
+      case "USD":
+        return { pair: "USD_USD", rate: 1, source: "derived", updatedAt: now };
+      case "INR":
         return extSnapshot.USD_INR;
-      case 'NPR':
+      case "NPR":
         return extSnapshot.USD_NPR;
-      case 'AED':
+      case "AED":
         return extSnapshot.USD_AED;
-      case 'GBP':
+      case "GBP":
         return extSnapshot.USD_GBP;
-      case 'EUR':
+      case "EUR":
         return extSnapshot.USD_EUR;
       default:
         return extSnapshot.USD_NPR;
@@ -533,7 +595,9 @@ export class MarketRatesService implements OnModuleInit {
   /**
    * Build FX used debug object
    */
-  private buildFxUsedDebug(fxSnapshot: ExtendedFxSnapshot): MarketRatesDebug['fxUsed'] {
+  private buildFxUsedDebug(
+    fxSnapshot: ExtendedFxSnapshot,
+  ): MarketRatesDebug["fxUsed"] {
     return {
       USD_NPR: fxSnapshot.USD_NPR.rate,
       USD_INR: fxSnapshot.USD_INR.rate,
@@ -563,12 +627,42 @@ export class MarketRatesService implements OnModuleInit {
     } catch {
       const now = new Date().toISOString();
       fxSnapshot = {
-        USD_INR: { pair: 'USD_INR', rate: 90, source: 'fallback', updatedAt: now },
-        USD_NPR: { pair: 'USD_NPR', rate: 144, source: 'fallback', updatedAt: now },
-        INR_NPR: { pair: 'INR_NPR', rate: 1.60, source: 'fallback', updatedAt: now },
-        USD_AED: { pair: 'USD_AED', rate: 3.67, source: 'fallback', updatedAt: now },
-        USD_GBP: { pair: 'USD_GBP', rate: 0.79, source: 'fallback', updatedAt: now },
-        USD_EUR: { pair: 'USD_EUR', rate: 0.92, source: 'fallback', updatedAt: now },
+        USD_INR: {
+          pair: "USD_INR",
+          rate: 90,
+          source: "fallback",
+          updatedAt: now,
+        },
+        USD_NPR: {
+          pair: "USD_NPR",
+          rate: 144,
+          source: "fallback",
+          updatedAt: now,
+        },
+        INR_NPR: {
+          pair: "INR_NPR",
+          rate: 1.6,
+          source: "fallback",
+          updatedAt: now,
+        },
+        USD_AED: {
+          pair: "USD_AED",
+          rate: 3.67,
+          source: "fallback",
+          updatedAt: now,
+        },
+        USD_GBP: {
+          pair: "USD_GBP",
+          rate: 0.79,
+          source: "fallback",
+          updatedAt: now,
+        },
+        USD_EUR: {
+          pair: "USD_EUR",
+          rate: 0.92,
+          source: "fallback",
+          updatedAt: now,
+        },
       };
     }
 
@@ -580,8 +674,8 @@ export class MarketRatesService implements OnModuleInit {
     );
 
     const debug: MarketRatesDebug = {
-      spotSource: 'fallback',
-      fxSource: 'fallback',
+      spotSource: "fallback",
+      fxSource: "fallback",
       spotUsed: {
         goldUsdOz: this.FALLBACK_SPOT_PRICES.XAU,
         silverUsdOz: this.FALLBACK_SPOT_PRICES.XAG,
@@ -598,16 +692,16 @@ export class MarketRatesService implements OnModuleInit {
       region,
       currency,
       country: getLegacyCountry(region),
-      unit: 'per_gram',
+      unit: "per_gram",
       updatedAt: new Date().toISOString(),
-      source: 'fallback',
-      cache: 'miss',
+      source: "fallback",
+      cache: "miss",
       fx: fxRateData,
       fxSnapshot,
       adjustments,
       metals,
       debug,
-      warnings: ['Using fallback metal prices', 'External APIs unavailable'],
+      warnings: ["Using fallback metal prices", "External APIs unavailable"],
     };
   }
 
@@ -619,7 +713,8 @@ export class MarketRatesService implements OnModuleInit {
    * Check if a timestamp is within the fresh cache period
    */
   private isFresh(timestamp: string | Date): boolean {
-    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+    const date =
+      typeof timestamp === "string" ? new Date(timestamp) : timestamp;
     const age = Date.now() - date.getTime();
     return age < this.cacheTtlHours * 60 * 60 * 1000;
   }
@@ -628,13 +723,21 @@ export class MarketRatesService implements OnModuleInit {
    * Get from memory cache
    * Skips fallback-sourced entries when API key is available
    */
-  private getFromMemoryCache(key: CacheKey): { data: MarketRatesResponse; isFresh: boolean } | null {
+  private getFromMemoryCache(
+    key: CacheKey,
+  ): { data: MarketRatesResponse; isFresh: boolean } | null {
     const cached = this.cache.get(key);
     if (!cached) return null;
 
     // If API key is configured but cached data is from fallback, skip it
-    if (this.apiKey && (cached.data?.source === 'fallback' || cached.data?.debug?.spotSource === 'fallback')) {
-      this.logger.debug(`Skipping fallback-sourced memory cache for ${key} - API key available`);
+    if (
+      this.apiKey &&
+      (cached.data?.source === "fallback" ||
+        cached.data?.debug?.spotSource === "fallback")
+    ) {
+      this.logger.debug(
+        `Skipping fallback-sourced memory cache for ${key} - API key available`,
+      );
       return null;
     }
 
@@ -671,20 +774,26 @@ export class MarketRatesService implements OnModuleInit {
           currency: currency,
         },
         orderBy: {
-          updatedAt: 'desc',
+          updatedAt: "desc",
         },
       });
 
       if (snapshot) {
         const payload = snapshot.payloadJson as unknown as MarketRatesResponse;
-        
+
         // If API key is configured but cached data is from fallback, skip it
         // This forces a fresh fetch with live API data
-        if (this.apiKey && (payload?.source === 'fallback' || payload?.debug?.spotSource === 'fallback')) {
-          this.logger.debug(`Skipping fallback-sourced cache for ${region}/${currency} - API key available`);
+        if (
+          this.apiKey &&
+          (payload?.source === "fallback" ||
+            payload?.debug?.spotSource === "fallback")
+        ) {
+          this.logger.debug(
+            `Skipping fallback-sourced cache for ${region}/${currency} - API key available`,
+          );
           return null;
         }
-        
+
         return payload;
       }
     } catch (error) {
@@ -735,14 +844,17 @@ export class MarketRatesService implements OnModuleInit {
    * (findMatchingSellers, getEligibleShops, etc.) use up-to-date prices.
    * Runs daily at 6 AM and on startup.
    */
-  @Cron('0 6 * * *') // Every day at 6:00 AM
+  @Cron("0 6 * * *") // Every day at 6:00 AM
   async syncRatesToMarketRateTable(): Promise<void> {
-    this.logger.log('Syncing live market rates to MarketRate table...');
+    this.logger.log("Syncing live market rates to MarketRate table...");
 
     // Sync for both supported countries
-    const countriesToSync: Array<{ country: SupportedCountry; currency: SupportedCurrency }> = [
-      { country: 'IN', currency: 'INR' },
-      { country: 'NP', currency: 'NPR' },
+    const countriesToSync: Array<{
+      country: SupportedCountry;
+      currency: SupportedCurrency;
+    }> = [
+      { country: "IN", currency: "INR" },
+      { country: "NP", currency: "NPR" },
     ];
 
     for (const { country, currency } of countriesToSync) {
@@ -770,7 +882,7 @@ export class MarketRatesService implements OnModuleInit {
               metalCode,
               country,
               ratePerGram,
-              source: liveRates.source || 'metalpriceapi',
+              source: liveRates.source || "metalpriceapi",
               validFrom: new Date(),
               validUntil: null,
             },
@@ -779,7 +891,7 @@ export class MarketRatesService implements OnModuleInit {
 
         this.logger.log(
           `Synced ${Object.keys(metals).length} metal rates for ${country} (${currency}). ` +
-          `GOLD_24K=${metals.GOLD_24K}/g`,
+            `GOLD_24K=${metals.GOLD_24K}/g`,
         );
       } catch (error) {
         this.logger.error(`Failed to sync rates for ${country}: ${error}`);
