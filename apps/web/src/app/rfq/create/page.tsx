@@ -5274,11 +5274,9 @@ export default function CreateRfqPage() {
                             seller.country.toLowerCase() !==
                               country.toLowerCase();
 
-                          // Tax calculation: domestic → seller's country tax, international → customer's local tax
+                          // Tax calculation: always use seller's country tax (tax is applied at origin)
                           const taxCountryCode =
-                            (isInternational
-                              ? country?.toUpperCase()
-                              : seller.country?.toUpperCase()) || "";
+                            seller.country?.toUpperCase() || "";
                           const countryRules =
                             taxRulesMap[taxCountryCode] || [];
                           // For RFQ: use PRECIOUS_METAL rate (gold items), fallback to ALL
@@ -5288,7 +5286,7 @@ export default function CreateRfqPage() {
                           );
                           const taxRate = taxLookup.rate;
                           const taxLabel = isInternational
-                            ? `Local ${taxLookup.name}`
+                            ? `${seller.country?.toUpperCase()} ${taxLookup.name}`
                             : taxLookup.name;
                           const taxAmount = Math.round(subtotal * taxRate);
                           const totalPrice = subtotal + taxAmount;
@@ -5395,8 +5393,7 @@ export default function CreateRfqPage() {
                                         variant="outline"
                                         className="text-xs"
                                       >
-                                        Making Charge:{" "}
-                                        {totalMakingPercent}%
+                                        Making Charge: {totalMakingPercent}%
                                       </Badge>
                                       {seller.hasCustomRate && (
                                         <Badge
