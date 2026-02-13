@@ -89,7 +89,7 @@ export function AdminTaxRulesPanel() {
     setLoading(true);
     try {
       const res = await fetch(
-        `/api/admin/tax-config?country=${selectedCountry}`,
+        `/api/settings/tax-config?country=${selectedCountry}`,
       );
       if (res.ok) {
         const data: TaxRulesResponse = await res.json();
@@ -142,7 +142,7 @@ export function AdminTaxRulesPanel() {
 
     setSavingIndex(index);
     try {
-      const res = await fetch("/api/admin/tax-config", {
+      const res = await fetch("/api/settings/tax-config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
