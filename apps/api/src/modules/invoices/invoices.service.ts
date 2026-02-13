@@ -1,0 +1,196 @@
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
+import { CreateInvoiceDto, UpdatePaymentDto } from './dto/invoice.dto';
+
+@Injectable()
+export class InvoicesService {
+  constructor(private prisma: PrismaService) {}
+
+  /**
+   * Generate a unique invoice number: INV-YYYYMMDD-XXXX
+   */
+  private async generateInvoiceNumber(): Promise<string> {
+    const today = new Date();
+    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+    const prefix = `INV-${dateStr}`;
+
+    // Find the latest invoice for today
+    const latest = await this.prisma.invoice.findFirst({
+      where: { invoiceNumber: { startsWith: prefix } },
+      orderBy: { invoiceNumber: 'desc' },
+    });
+
+    let seq = 1;
+    if (latest) {
+      const parts = latest.invoiceNumber.split('-');
+      seq = parseInt(parts[2] || '0', 10) + 1;
+    }
+
+    return `${prefix}-${String(seq).padStart(4, '0')}`;
+  }
+
+  async create(shopId: string, dto: CreateInvoiceDto) {
+    const invoiceNumber = await this.generateInvoiceNumber();
+
+    // Calculate totals from line items
+    const lineItems = dto.lineItems || [];
+    const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
+    const taxRate = dto.taxRate || 0;
+    const taxAmount = subtotal * taxRate;
+    const discountAmount = dto.discountAmount || 0;
+    const totalAmount = subtotal + taxAmount - discountAmount;
+
+    const invoice = await this.prisma.invoice.create({
+      data: {
+        invoiceNumber,
+        shopId,
+        orderId: dto.orderId || null,
+        shopQuoteId: dto.shopQuoteId || null,
+        customerName: dto.customerName,
+        customerPhone: dto.customerPhone || null,
+        customerEmail: dto.customerEmail || null,
+        customerAddress: dto.customerAddress || null,
+        lineItems: lineItems as any,
+        subtotal,
+        taxAmount,
+        taxRate,
+        taxLabel: dto.taxLabel || null,
+        discountAmount,
+        totalAmount,
+        paidAmount: 0,
+        balanceDue: totalAmount,
+        currency: dto.currency || 'NPR',
+        dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+        notes: dto.notes || null,
+        terms: dto.terms || null,
+        status: 'ISSUED',
+        issuedAt: new Date(),
+      },
+    });
+
+    return invoice;
+  }
+
+  async findAll(shopId: string, params?: {
+    status?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const { status, search, page = 1, limit = 20 } = params || {};
+
+    const where: any = { shopId };
+    if (status) where.status = status;
+    if (search) {
+      where.OR = [
+        { invoiceNumber: { contains: search, mode: 'insensitive' } },
+        { customerName: { contains: search, mode: 'insensitive' } },
+        { customerPhone: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [invoices, total] = await Promise.all([
+      this.prisma.invoice.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.invoice.count({ where }),
+    ]);
+
+    return { invoices, total, page, limit, totalPages: Math.ceil(total / limit) };
+  }
+
+  async findById(id: string, shopId: string) {
+    const invoice = await this.prisma.invoice.findUnique({ where: { id } });
+    if (!invoice) throw new NotFoundException('Invoice not found');
+    if (invoice.shopId !== shopId) throw new ForbiddenException('Not your invoice');
+    return invoice;
+  }
+
+  async findByOrder(orderId: string, shopId: string) {
+    const invoices = await this.prisma.invoice.findMany({
+      where: { orderId, shopId },
+      orderBy: { createdAt: 'desc' },
+    });
+    return invoices;
+  }
+
+  async recordPayment(id: string, shopId: string, dto: UpdatePaymentDto) {
+    const invoice = await this.findById(id, shopId);
+
+    if (invoice.status === 'VOID' || invoice.status === 'CANCELLED') {
+      throw new BadRequestException('Cannot record payment on a voided/cancelled invoice');
+    }
+
+    const newPaidAmount = invoice.paidAmount + dto.amount;
+    const newBalanceDue = invoice.totalAmount - newPaidAmount;
+
+    let newStatus = invoice.status;
+    let newPaymentStatus = invoice.paymentStatus;
+    let paidAt: Date | null = null;
+
+    if (newBalanceDue <= 0) {
+      newStatus = 'PAID';
+      newPaymentStatus = 'PAID';
+      paidAt = new Date();
+    } else if (newPaidAmount > 0) {
+      newStatus = 'PARTIALLY_PAID';
+      newPaymentStatus = 'PARTIALLY_PAID';
+    }
+
+    return this.prisma.invoice.update({
+      where: { id },
+      data: {
+        paidAmount: Math.min(newPaidAmount, invoice.totalAmount),
+        balanceDue: Math.max(newBalanceDue, 0),
+        status: newStatus,
+        paymentStatus: newPaymentStatus,
+        paidAt,
+      },
+    });
+  }
+
+  async voidInvoice(id: string, shopId: string) {
+    const invoice = await this.findById(id, shopId);
+
+    if (invoice.status === 'PAID') {
+      throw new BadRequestException('Cannot void a fully paid invoice');
+    }
+
+    return this.prisma.invoice.update({
+      where: { id },
+      data: {
+        status: 'VOID',
+        voidedAt: new Date(),
+      },
+    });
+  }
+
+  async getStats(shopId: string) {
+    const [total, issued, paid, partiallyPaid, overdue, voided] = await Promise.all([
+      this.prisma.invoice.count({ where: { shopId } }),
+      this.prisma.invoice.count({ where: { shopId, status: 'ISSUED' } }),
+      this.prisma.invoice.count({ where: { shopId, status: 'PAID' } }),
+      this.prisma.invoice.count({ where: { shopId, status: 'PARTIALLY_PAID' } }),
+      this.prisma.invoice.count({ where: { shopId, status: 'OVERDUE' } }),
+      this.prisma.invoice.count({ where: { shopId, status: 'VOID' } }),
+    ]);
+
+    // Revenue totals
+    const revenue = await this.prisma.invoice.aggregate({
+      where: { shopId, status: { in: ['PAID', 'PARTIALLY_PAID', 'ISSUED'] } },
+      _sum: { totalAmount: true, paidAmount: true, balanceDue: true },
+    });
+
+    return {
+      counts: { total, issued, paid, partiallyPaid, overdue, voided },
+      revenue: {
+        totalInvoiced: revenue._sum.totalAmount || 0,
+        totalCollected: revenue._sum.paidAmount || 0,
+        totalOutstanding: revenue._sum.balanceDue || 0,
+      },
+    };
+  }
+}

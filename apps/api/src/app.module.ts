@@ -21,6 +21,8 @@ import { MaterialsModule } from "./modules/materials/materials.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { OffersModule } from "./modules/offers/offers.module";
 import { OrdersModule } from "./modules/orders/orders.module";
+import { InvoicesModule } from "./modules/invoices/invoices.module";
+import { CustomerCrmModule } from "./modules/customer-crm/customer-crm.module";
 import { PaymentsModule } from "./modules/payments/payments.module";
 import { PlatformConfigModule } from "./modules/platform-config/platform-config.module";
 import { PricingModule } from "./modules/pricing/pricing.module";
@@ -75,6 +77,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     RfqModule,
     OffersModule,
     OrdersModule,
+    InvoicesModule,
     PaymentsModule,
     NotificationsModule,
     MaterialsModule,
@@ -90,6 +93,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     DesignsModule,
     PlatformConfigModule,
     SellerPerformanceModule,
+    CustomerCrmModule,
   ],
 })
 export class AppModule {}

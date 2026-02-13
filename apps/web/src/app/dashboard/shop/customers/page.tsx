@@ -1,0 +1,217 @@
+"use client";
+
+import { ShopGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { toast } from "@/hooks/use-toast";
+import { customerCrmApi } from "@/lib/api";
+import {
+  Loader2,
+  Mail,
+  Phone,
+  Search,
+  ShoppingCart,
+  User,
+  Users,
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+
+interface Customer {
+  id: string;
+  type: "REGISTERED" | "WALK_IN";
+  name: string;
+  email: string | null;
+  phone: string | null;
+  country: string | null;
+  orderCount: number;
+  rfqCount: number;
+  totalSpent: number;
+  quoteCount?: number;
+  lastActive: string;
+  createdAt: string;
+}
+
+export default function CustomerDirectoryPage() {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  const fetchCustomers = async () => {
+    setLoading(true);
+    try {
+      const res = await customerCrmApi.search(search, page, 20);
+      setCustomers(res.data.customers);
+      setTotalPages(res.data.totalPages);
+      setTotal(res.data.total);
+    } catch {
+      toast({ variant: "destructive", title: "Failed to load customers" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(fetchCustomers, 400);
+    return () => clearTimeout(timer);
+  }, [search, page]);
+
+  return (
+    <ShopGuard>
+      <DashboardLayout>
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <Users className="h-6 w-6 text-amber-500" />
+                Customer Directory
+              </h1>
+              <p className="text-muted-foreground">
+                {total} total customers across registered and walk-in
+              </p>
+            </div>
+          </div>
+
+          {/* Search */}
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              placeholder="Search by name, phone, or email..."
+              className="pl-10"
+            />
+          </div>
+
+          {/* Customer Grid */}
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+            </div>
+          ) : customers.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center py-12 text-center">
+                <Users className="h-12 w-12 text-muted-foreground opacity-30 mb-4" />
+                <p className="text-muted-foreground">No customers found</p>
+                <p className="text-sm text-muted-foreground">
+                  Customers appear here after they place orders or RFQ requests
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {customers.map((customer) => (
+                <Link
+                  key={customer.id}
+                  href={`/dashboard/shop/customers/${customer.id}`}
+                >
+                  <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
+                            <User className="h-5 w-5 text-amber-600" />
+                          </div>
+                          <div>
+                            <p className="font-semibold">{customer.name}</p>
+                            <Badge
+                              variant="outline"
+                              className={
+                                customer.type === "REGISTERED"
+                                  ? "text-green-600 border-green-200 bg-green-50 text-xs"
+                                  : "text-blue-600 border-blue-200 bg-blue-50 text-xs"
+                              }
+                            >
+                              {customer.type === "REGISTERED" ? "Registered" : "Walk-in"}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Contact info */}
+                      <div className="space-y-1 text-sm text-muted-foreground">
+                        {customer.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-3 w-3" />
+                            <span>{customer.phone}</span>
+                          </div>
+                        )}
+                        {customer.email && (
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-3 w-3" />
+                            <span className="truncate">{customer.email}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Stats */}
+                      <div className="flex items-center gap-4 pt-2 border-t text-xs text-muted-foreground">
+                        {customer.type === "REGISTERED" ? (
+                          <>
+                            <div className="flex items-center gap-1">
+                              <ShoppingCart className="h-3 w-3" />
+                              {customer.orderCount} orders
+                            </div>
+                            <div>{customer.rfqCount} RFQs</div>
+                            {customer.totalSpent > 0 && (
+                              <div className="font-medium text-amber-600">
+                                NPR {customer.totalSpent.toLocaleString()}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div>{customer.quoteCount || 0} quotes</div>
+                        )}
+                        <div className="ml-auto">
+                          {new Date(customer.lastActive).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setPage(page - 1)}
+              >
+                Previous
+              </Button>
+              <span className="flex items-center px-3 text-sm text-muted-foreground">
+                Page {page} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages}
+                onClick={() => setPage(page + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </div>
+      </DashboardLayout>
+    </ShopGuard>
+  );
+}

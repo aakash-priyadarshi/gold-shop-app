@@ -375,4 +375,49 @@ export const sellerPerformanceApi = {
   recalculateAll: () => api.post("/seller-performance/recalculate-all"),
 };
 
+// Designs API (AI Image Generation)
+export const designsApi = {
+  create: (data: any) => api.post("/designs", data),
+  getAll: (params?: any) => api.get("/designs", { params }),
+  getById: (id: string) => api.get(`/designs/${id}`),
+  getMy: () => api.get("/designs/my"),
+  getFeatured: () => api.get("/designs/featured"),
+  getSimilar: (params: any) => api.get("/designs/similar", { params }),
+  like: (id: string) => api.post(`/designs/${id}/like`),
+  unlike: (id: string) => api.delete(`/designs/${id}/like`),
+  buildFromDesign: (id: string) => api.post(`/designs/${id}/build`),
+  updateVisibility: (id: string, data: { visibility: string }) =>
+    api.patch(`/designs/${id}/visibility`, data),
+  delete: (id: string) => api.delete(`/designs/${id}`),
+};
+
+// Customer CRM API
+export const customerCrmApi = {
+  // Customer directory
+  search: (params: { query?: string; page?: number; limit?: number }) =>
+    api.get("/users/customers/search", { params }),
+  getCustomerProfile: (customerId: string) =>
+    api.get(`/users/customers/${customerId}/profile`),
+  getCustomerOrders: (customerId: string) =>
+    api.get(`/users/customers/${customerId}/orders`),
+  getCustomerStats: (customerId: string) =>
+    api.get(`/users/customers/${customerId}/stats`),
+  addCustomerNote: (customerId: string, data: { note: string }) =>
+    api.post(`/users/customers/${customerId}/notes`, data),
+  getCustomerNotes: (customerId: string) =>
+    api.get(`/users/customers/${customerId}/notes`),
+};
+
+// Invoices / Billing API
+export const invoicesApi = {
+  create: (data: any) => api.post("/invoices", data),
+  getAll: (params?: any) => api.get("/invoices", { params }),
+  getById: (id: string) => api.get(`/invoices/${id}`),
+  getByOrder: (orderId: string) => api.get(`/invoices/order/${orderId}`),
+  updatePaymentStatus: (id: string, data: any) =>
+    api.patch(`/invoices/${id}/payment`, data),
+  void: (id: string) => api.post(`/invoices/${id}/void`),
+  getStats: () => api.get("/invoices/stats"),
+};
+
 export default api;

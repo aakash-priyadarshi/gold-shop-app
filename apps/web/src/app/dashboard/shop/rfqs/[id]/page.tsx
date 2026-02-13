@@ -23,10 +23,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
-import { offersApi, rfqApi } from "@/lib/api";
+import { offersApi, rfqApi, designsApi } from "@/lib/api";
+import {
+  JEWELLERY_TYPE_IMAGES,
+  BUILD_METHODS,
+  SURFACE_FINISH_IMAGES,
+  WEIGHT_GUIDANCE,
+  ALLOY_FAMILY_COLORS,
+  getJewelleryTypeLabel,
+  getBuildMethodInfo,
+  getSurfaceFinishInfo,
+} from "@/lib/constants/jewellery";
 import {
   ArrowLeft,
   ArrowRight,
@@ -34,21 +50,29 @@ import {
   CheckCircle,
   Clock,
   DollarSign,
+  Eye,
   FileQuestion,
   ImageIcon,
+  Info,
   Loader2,
   MessageSquare,
+  Package,
+  Palette,
   Reply,
+  Ruler,
   Scale,
   Send,
   Sparkles,
   ThumbsDown,
   ThumbsUp,
   User,
+  Wand2,
   XCircle,
+  ZoomIn,
 } from "lucide-react";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface RfqDetails {
   id: string;
@@ -145,6 +169,12 @@ export default function ShopRfqDetailPage() {
   const [estimatedDays, setEstimatedDays] = useState("");
   const [shopNotes, setShopNotes] = useState("");
   const [declineReason, setDeclineReason] = useState("");
+
+  // Image preview & AI design state
+  const [imagePreviewOpen, setImagePreviewOpen] = useState(false);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState("");
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiDesignUrl, setAiDesignUrl] = useState<string | null>(null);
 
   // Dialog states for customer counter-offer responses
   const [acceptDialogOpen, setAcceptDialogOpen] = useState(false);
@@ -408,6 +438,36 @@ export default function ShopRfqDetailPage() {
     }).format(amount);
   };
 
+  // Generate AI design for this RFQ
+  const handleGenerateAiDesign = useCallback(async () => {
+    if (!rfq) return;
+    setAiGenerating(true);
+    try {
+      const response = await designsApi.create({
+        jewelryType: rfq.jewelleryType,
+        buildMethod: rfq.buildMethod,
+        metalType: rfq.composition?.baseAlloy?.metal || "Gold",
+        purity: rfq.composition?.baseAlloy?.purity || "24K",
+        surfaceFinish: rfq.surfaceFinish || "HIGH_POLISH",
+        metalColor: "YELLOW_GOLD",
+        prompt: rfq.specialInstructions || `Beautiful ${rfq.jewelleryType?.toLowerCase()} design`,
+      });
+      if (response.data?.imageUrl) {
+        setAiDesignUrl(response.data.imageUrl);
+        toast({ title: "AI Design Generated", description: "A design preview has been created based on this RFQ's specifications." });
+      }
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Design Generation Failed", description: error.response?.data?.message || "Could not generate design" });
+    } finally {
+      setAiGenerating(false);
+    }
+  }, [rfq]);
+
+  // Build method info helper
+  const buildMethodInfo = rfq ? getBuildMethodInfo(rfq.buildMethod) : null;
+  const surfaceFinishInfo = rfq?.surfaceFinish ? getSurfaceFinishInfo(rfq.surfaceFinish) : null;
+  const weightGuide = rfq ? WEIGHT_GUIDANCE[rfq.jewelleryType] : null;
+
   // Check if shop has already submitted an offer
   const myOffer = rfq?.offers?.find(
     (o) => o.shopId === user?.shop?.id && o.offerType !== "CUSTOMER_COUNTER",
@@ -528,129 +588,226 @@ export default function ShopRfqDetailPage() {
                   <CardTitle>Request Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-muted-foreground">
-                        Jewellery Type
-                      </Label>
-                      <p className="font-medium">
-                        {rfq.jewelleryType?.replace(/_/g, " ")}
-                      </p>
+                  {/* Jewellery Type with Image */}
+                  <div className="flex items-start gap-4">
+                    {JEWELLERY_TYPE_IMAGES[rfq.jewelleryType] && (
+                      <div className="relative h-20 w-20 rounded-lg overflow-hidden border bg-gray-50 flex-shrink-0">
+                        <img
+                          src={JEWELLERY_TYPE_IMAGES[rfq.jewelleryType]}
+                          alt={getJewelleryTypeLabel(rfq.jewelleryType)}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <Label className="text-muted-foreground text-xs">Jewellery Type</Label>
+                      <p className="font-semibold text-lg">{getJewelleryTypeLabel(rfq.jewelleryType)}</p>
+                      {weightGuide && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <Scale className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">
+                            Typical: {weightGuide.range} — {weightGuide.note}
+                          </span>
+                        </div>
+                      )}
                     </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Build Method Card with Tooltip */}
+                  <TooltipProvider>
                     <div>
-                      <Label className="text-muted-foreground">
+                      <Label className="text-muted-foreground text-xs flex items-center gap-1">
                         Build Method
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-xs">
+                            <p className="text-xs">How the jewellery is constructed — affects durability, weight, and price.</p>
+                          </TooltipContent>
+                        </Tooltip>
                       </Label>
-                      <p className="font-medium">
-                        {rfq.buildMethod?.replace(/_/g, " ")}
-                      </p>
+                      {buildMethodInfo ? (
+                        <div className="mt-2 border rounded-lg p-3 bg-gradient-to-r from-gray-50 to-white">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-xl">{buildMethodInfo.icon}</span>
+                            <div>
+                              <p className="font-semibold text-sm">{buildMethodInfo.label}</p>
+                              <p className="text-xs text-muted-foreground">{buildMethodInfo.description}</p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                            {Object.entries(buildMethodInfo.tooltip).map(([key, val]) => (
+                              <div key={key} className="text-xs bg-gray-50 rounded p-2">
+                                <span className="font-medium capitalize text-gray-700">{key}: </span>
+                                <span className="text-muted-foreground">{val}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="font-medium mt-1">{rfq.buildMethod?.replace(/_/g, " ")}</p>
+                      )}
                     </div>
+                  </TooltipProvider>
+
+                  <Separator />
+
+                  {/* Composition with Alloy Color Chips */}
+                  <div className="grid grid-cols-2 gap-4">
                     {rfq.composition?.baseAlloy && (
                       <div>
-                        <Label className="text-muted-foreground">
-                          Base Metal
+                        <Label className="text-muted-foreground text-xs flex items-center gap-1">
+                          <Palette className="h-3 w-3" /> Base Metal
                         </Label>
-                        <p className="font-medium">
-                          {rfq.composition.baseAlloy.metal}{" "}
-                          {rfq.composition.baseAlloy.purity}
-                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="font-medium">
+                            {rfq.composition.baseAlloy.metal} {rfq.composition.baseAlloy.purity}
+                          </p>
+                          {/* Alloy color chip */}
+                          {rfq.composition.baseAlloy.metal?.toUpperCase().includes("GOLD") && (
+                            <div className="flex gap-1">
+                              {Object.entries(ALLOY_FAMILY_COLORS).filter(([key]) => 
+                                key.includes("YELLOW") || rfq.composition?.baseAlloy?.metal?.toUpperCase().includes(key.split("_")[0])
+                              ).slice(0, 1).map(([key, val]) => (
+                                <Tooltip key={key}>
+                                  <TooltipTrigger asChild>
+                                    <div
+                                      className="h-5 w-5 rounded-full border-2 border-white shadow-sm cursor-help"
+                                      style={{ backgroundColor: val.hex }}
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent><p className="text-xs">{val.label}</p></TooltipContent>
+                                </Tooltip>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                     {rfq.composition?.outerLayer && (
                       <div>
-                        <Label className="text-muted-foreground">
-                          Outer Layer
-                        </Label>
-                        <p className="font-medium">
-                          {rfq.composition.outerLayer.metal}{" "}
-                          {rfq.composition.outerLayer.purity}
+                        <Label className="text-muted-foreground text-xs">Outer Layer</Label>
+                        <p className="font-medium mt-1">
+                          {rfq.composition.outerLayer.metal} {rfq.composition.outerLayer.purity}
                         </p>
                       </div>
                     )}
                     {rfq.targetTotalWeightG && (
                       <div>
-                        <Label className="text-muted-foreground">
-                          Target Weight
-                        </Label>
-                        <div className="flex items-center gap-1">
+                        <Label className="text-muted-foreground text-xs">Target Weight</Label>
+                        <div className="flex items-center gap-1 mt-1">
                           <Scale className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">
-                            {rfq.targetTotalWeightG}g
-                          </span>
+                          <span className="font-medium">{rfq.targetTotalWeightG}g</span>
+                          {rfq.targetGoldWeightG && (
+                            <span className="text-xs text-muted-foreground ml-1">
+                              (Gold: {rfq.targetGoldWeightG}g)
+                            </span>
+                          )}
                         </div>
                       </div>
                     )}
                     <div>
-                      <Label className="text-muted-foreground">
-                        Budget Range
-                      </Label>
+                      <Label className="text-muted-foreground text-xs">Budget Range</Label>
                       {rfq.budgetMaxNpr ? (
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 mt-1">
                           <DollarSign className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium">
-                            {rfq.budgetMinNpr
-                              ? `Rs. ${rfq.budgetMinNpr.toLocaleString()} - `
-                              : ""}
-                            Rs. {rfq.budgetMaxNpr.toLocaleString()}
+                            {rfq.budgetMinNpr ? `${formatCurrency(rfq.budgetMinNpr)} - ` : ""}
+                            {formatCurrency(rfq.budgetMaxNpr)}
                           </span>
                         </div>
                       ) : (
-                        <p className="text-muted-foreground">Not specified</p>
+                        <p className="text-muted-foreground text-sm mt-1">Not specified</p>
                       )}
                     </div>
-                    {rfq.surfaceFinish && (
-                      <div>
-                        <Label className="text-muted-foreground">
-                          Surface Finish
-                        </Label>
-                        <p className="font-medium">{rfq.surfaceFinish}</p>
-                      </div>
-                    )}
                     {rfq.preferredDeliveryDays && (
                       <div>
-                        <Label className="text-muted-foreground">
-                          Preferred Delivery
-                        </Label>
-                        <p className="font-medium">
-                          {rfq.preferredDeliveryDays} days
-                        </p>
+                        <Label className="text-muted-foreground text-xs">Preferred Delivery</Label>
+                        <p className="font-medium mt-1">{rfq.preferredDeliveryDays} days</p>
                       </div>
                     )}
                   </div>
+
+                  {/* Surface Finish with Preview Image */}
+                  {rfq.surfaceFinish && (
+                    <>
+                      <Separator />
+                      <div>
+                        <Label className="text-muted-foreground text-xs flex items-center gap-1">
+                          <Ruler className="h-3 w-3" /> Surface Finish
+                        </Label>
+                        <div className="flex items-center gap-3 mt-2">
+                          {surfaceFinishInfo && (
+                            <div className="relative h-14 w-14 rounded-lg overflow-hidden border bg-gray-50 flex-shrink-0">
+                              <img
+                                src={surfaceFinishInfo.image}
+                                alt={rfq.surfaceFinish}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-medium">{rfq.surfaceFinish.replace(/_/g, " ")}</p>
+                            {surfaceFinishInfo && (
+                              <p className="text-xs text-muted-foreground">{surfaceFinishInfo.description}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   {rfq.specialInstructions && (
                     <>
                       <Separator />
                       <div>
-                        <Label className="text-muted-foreground">
-                          Special Instructions
-                        </Label>
-                        <p className="mt-1">{rfq.specialInstructions}</p>
+                        <Label className="text-muted-foreground text-xs">Special Instructions</Label>
+                        <p className="mt-1 text-sm bg-amber-50 border border-amber-200 rounded-md p-3">
+                          {rfq.specialInstructions}
+                        </p>
                       </div>
                     </>
                   )}
 
+                  {/* Enhanced Gemstone Grid */}
                   {rfq.gemstones && rfq.gemstones.length > 0 && (
                     <>
                       <Separator />
                       <div>
-                        <Label className="text-muted-foreground flex items-center gap-2">
-                          <Sparkles className="h-4 w-4" />
-                          Gemstones
+                        <Label className="text-muted-foreground flex items-center gap-2 text-xs">
+                          <Sparkles className="h-3 w-3" />
+                          Gemstones ({rfq.gemstones.length})
                         </Label>
-                        <div className="mt-2 space-y-2">
+                        <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {rfq.gemstones.map((gem, idx) => (
                             <div
                               key={gem.id || idx}
-                              className="flex justify-between text-sm bg-gray-50 p-2 rounded"
+                              className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 p-3 rounded-lg"
                             >
-                              <span>
-                                {gem.stoneType} ({gem.shape})
-                              </span>
-                              <span className="text-muted-foreground">
-                                {gem.count}x{" "}
-                                {gem.caratWeight && `${gem.caratWeight}ct`}
-                              </span>
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-semibold text-sm">{gem.stoneType}</span>
+                                <Badge variant="outline" className="text-xs">{gem.count}x</Badge>
+                              </div>
+                              <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
+                                {gem.shape && (
+                                  <span>Shape: <span className="text-foreground">{gem.shape}</span></span>
+                                )}
+                                {gem.caratWeight && (
+                                  <span>Carat: <span className="text-foreground">{gem.caratWeight}ct</span></span>
+                                )}
+                                {gem.sizeMm && (
+                                  <span>Size: <span className="text-foreground">{gem.sizeMm}mm</span></span>
+                                )}
+                                {gem.color && (
+                                  <span>Color: <span className="text-foreground">{gem.color}</span></span>
+                                )}
+                                {gem.clarity && (
+                                  <span>Clarity: <span className="text-foreground">{gem.clarity}</span></span>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -658,26 +815,30 @@ export default function ShopRfqDetailPage() {
                     </>
                   )}
 
-                  {/* Reference Images / AI Design Preview */}
+                  {/* Reference Images with Preview */}
                   {rfq.referenceImages && rfq.referenceImages.length > 0 && (
                     <>
                       <Separator />
                       <div>
-                        <Label className="text-muted-foreground flex items-center gap-2">
-                          <ImageIcon className="h-4 w-4" />
+                        <Label className="text-muted-foreground flex items-center gap-2 text-xs">
+                          <ImageIcon className="h-3 w-3" />
                           Reference Images
                         </Label>
                         <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
                           {rfq.referenceImages.map((url, idx) => (
                             <div
                               key={idx}
-                              className="relative aspect-square rounded-lg overflow-hidden border bg-gray-50"
+                              className="relative aspect-square rounded-lg overflow-hidden border bg-gray-50 group cursor-pointer"
+                              onClick={() => { setImagePreviewUrl(url); setImagePreviewOpen(true); }}
                             >
                               <img
                                 src={url}
                                 alt={`Reference ${idx + 1}`}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-cover transition-transform group-hover:scale-105"
                               />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                <ZoomIn className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
                               {idx === 0 && (
                                 <div className="absolute top-1 right-1">
                                   <Badge className="bg-amber-500 text-white text-xs">
@@ -690,9 +851,38 @@ export default function ShopRfqDetailPage() {
                           ))}
                         </div>
                         <p className="text-xs text-muted-foreground mt-2">
-                          Customer-provided reference images for the desired
-                          design.
+                          Click any image to enlarge. Customer-provided reference images for the desired design.
                         </p>
+                      </div>
+                    </>
+                  )}
+
+                  {/* AI Generated Design Preview */}
+                  {aiDesignUrl && (
+                    <>
+                      <Separator />
+                      <div>
+                        <Label className="text-muted-foreground flex items-center gap-2 text-xs">
+                          <Wand2 className="h-3 w-3" />
+                          Your AI-Generated Design Preview
+                        </Label>
+                        <div className="mt-2">
+                          <div
+                            className="relative aspect-square max-w-[200px] rounded-lg overflow-hidden border-2 border-amber-300 bg-gray-50 cursor-pointer group"
+                            onClick={() => { setImagePreviewUrl(aiDesignUrl); setImagePreviewOpen(true); }}
+                          >
+                            <img src={aiDesignUrl} alt="AI Design" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                              <ZoomIn className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                            <div className="absolute top-1 left-1">
+                              <Badge className="bg-purple-600 text-white text-xs">
+                                <Wand2 className="h-2 w-2 mr-1" />
+                                AI Generated
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </>
                   )}
@@ -1211,6 +1401,59 @@ export default function ShopRfqDetailPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* AI Design Generation */}
+              <Card className="border-purple-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <Wand2 className="h-4 w-4 text-purple-600" />
+                    AI Design Preview
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Generate a design preview based on this RFQ's specifications
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    onClick={handleGenerateAiDesign}
+                    disabled={aiGenerating}
+                    className="w-full bg-purple-600 hover:bg-purple-700"
+                    size="sm"
+                  >
+                    {aiGenerating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Generating...
+                      </>
+                    ) : aiDesignUrl ? (
+                      <>
+                        <Wand2 className="h-4 w-4 mr-2" />
+                        Regenerate Design
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="h-4 w-4 mr-2" />
+                        Generate AI Design
+                      </>
+                    )}
+                  </Button>
+                  {aiDesignUrl && (
+                    <div
+                      className="mt-3 relative aspect-square rounded-lg overflow-hidden border cursor-pointer group"
+                      onClick={() => { setImagePreviewUrl(aiDesignUrl); setImagePreviewOpen(true); }}
+                    >
+                      <img
+                        src={aiDesignUrl}
+                        alt="AI Generated Design"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                        <Eye className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
@@ -1327,7 +1570,7 @@ export default function ShopRfqDetailPage() {
                 Send Counter-Offer
               </DialogTitle>
               <DialogDescription>
-                Propose a revised quote in response to the customer's
+                Propose a revised quote in response to the customer&apos;s
                 counter-offer.
               </DialogDescription>
             </DialogHeader>
@@ -1447,6 +1690,25 @@ export default function ShopRfqDetailPage() {
                 )}
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Image Preview Dialog */}
+        <Dialog open={imagePreviewOpen} onOpenChange={setImagePreviewOpen}>
+          <DialogContent className="max-w-3xl p-2">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Image Preview</DialogTitle>
+              <DialogDescription>Full-size image preview</DialogDescription>
+            </DialogHeader>
+            {imagePreviewUrl && (
+              <div className="relative w-full max-h-[80vh] flex items-center justify-center">
+                <img
+                  src={imagePreviewUrl}
+                  alt="Preview"
+                  className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                />
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </DashboardLayout>

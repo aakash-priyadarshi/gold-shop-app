@@ -25,6 +25,7 @@ import { useAuth, UserRole } from "@/hooks/useAuth";
 import { adminApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
+  Calculator,
   ChevronDown,
   ClipboardList,
   CreditCard,
@@ -35,6 +36,7 @@ import {
   LogOut,
   Menu,
   Package,
+  Receipt,
   Search,
   Settings,
   Shield,
@@ -43,6 +45,7 @@ import {
   TrendingUp,
   UserCircle,
   Users,
+  Wrench,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -143,6 +146,30 @@ const navItems: NavItem[] = [
     label: "RFQ Requests",
     href: "/dashboard/shop/rfqs",
     icon: ClipboardList,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Walk-in Quotes",
+    href: "/dashboard/shop/quotes",
+    icon: Calculator,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Invoices",
+    href: "/dashboard/shop/invoices",
+    icon: Receipt,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Customers",
+    href: "/dashboard/shop/customers",
+    icon: Users,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Tools",
+    href: "/dashboard/shop/tools",
+    icon: Wrench,
     roles: ["SHOPKEEPER"],
   },
   {
