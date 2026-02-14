@@ -280,3 +280,19 @@ export class LookupCustomerDto {
   @Matches(/^\d{7,15}$/, { message: "Phone number must be 7-15 digits" })
   phone: string;
 }
+
+export class SearchCustomersDto {
+  @ApiProperty({ example: "+91", description: "Phone country code" })
+  @IsString()
+  @IsNotEmpty()
+  phoneCountryCode: string;
+
+  @ApiProperty({
+    example: "987",
+    description: "Partial phone number (minimum 3 digits)",
+  })
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^\d{3,15}$/, { message: "Enter at least 3 digits to search" })
+  phone: string;
+}

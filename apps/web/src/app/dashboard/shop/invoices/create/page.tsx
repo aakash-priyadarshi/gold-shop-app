@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { invoicesApi, shopQuotesApi } from "@/lib/api";
+import { JEWELLERY_TYPES } from "@/lib/constants/jewellery";
 import {
   ArrowLeft,
   Check,
@@ -24,6 +25,7 @@ import {
   FileDown,
   Globe,
   Loader2,
+  Percent,
   Phone,
   Plus,
   Search,
@@ -32,41 +34,65 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-// ── Tax rates by country (same source as pricing engine) ──
-const TAX_OPTIONS: Record<string, { rate: number; label: string }[]> = {
-  NP: [
-    { rate: 0.13, label: "VAT 13%" },
-    { rate: 0, label: "No Tax" },
-  ],
-  IN: [
-    { rate: 0.03, label: "GST 3% (Jewellery)" },
-    { rate: 0.05, label: "GST 5%" },
-    { rate: 0.18, label: "GST 18%" },
-    { rate: 0, label: "No Tax" },
-  ],
-  AE: [
-    { rate: 0.05, label: "VAT 5%" },
-    { rate: 0, label: "No Tax" },
-  ],
-  US: [
-    { rate: 0, label: "No Federal Tax" },
-    { rate: 0.08, label: "State Tax ~8%" },
-  ],
-  GB: [
-    { rate: 0.2, label: "VAT 20%" },
-    { rate: 0, label: "Zero-rated" },
-  ],
-  EU: [
-    { rate: 0.19, label: "VAT 19%" },
-    { rate: 0.21, label: "VAT 21%" },
-    { rate: 0, label: "No Tax" },
-  ],
-  AU: [
-    { rate: 0.1, label: "GST 10%" },
-    { rate: 0, label: "No Tax" },
-  ],
+// ── Per-category tax rates by country (mirrors backend DEFAULT_TAX_RATES) ──
+const CATEGORY_TAX_RATES: Record<
+  string,
+  {
+    taxType: string;
+    taxName: string;
+    rates: {
+      PRECIOUS_METAL: number;
+      MAKING_CHARGE: number;
+      GEMSTONE: number;
+      FINISH: number;
+    };
+    defaultRate: number;
+  }
+> = {
+  IN: {
+    taxType: "GST",
+    taxName: "GST",
+    rates: { PRECIOUS_METAL: 0.03, MAKING_CHARGE: 0.18, GEMSTONE: 0.03, FINISH: 0.18 },
+    defaultRate: 0.03,
+  },
+  NP: {
+    taxType: "LUXURY_TAX",
+    taxName: "Luxury Tax / VAT",
+    rates: { PRECIOUS_METAL: 0.02, MAKING_CHARGE: 0.02, GEMSTONE: 0.13, FINISH: 0.02 },
+    defaultRate: 0.02,
+  },
+  AE: {
+    taxType: "VAT",
+    taxName: "VAT",
+    rates: { PRECIOUS_METAL: 0.05, MAKING_CHARGE: 0.05, GEMSTONE: 0.05, FINISH: 0.05 },
+    defaultRate: 0.05,
+  },
+  US: {
+    taxType: "SALES_TAX",
+    taxName: "Sales Tax",
+    rates: { PRECIOUS_METAL: 0.0, MAKING_CHARGE: 0.0, GEMSTONE: 0.0, FINISH: 0.0 },
+    defaultRate: 0.0,
+  },
+  GB: {
+    taxType: "VAT",
+    taxName: "VAT",
+    rates: { PRECIOUS_METAL: 0.2, MAKING_CHARGE: 0.2, GEMSTONE: 0.2, FINISH: 0.2 },
+    defaultRate: 0.2,
+  },
+  EU: {
+    taxType: "VAT",
+    taxName: "VAT",
+    rates: { PRECIOUS_METAL: 0.19, MAKING_CHARGE: 0.19, GEMSTONE: 0.19, FINISH: 0.19 },
+    defaultRate: 0.19,
+  },
+  AU: {
+    taxType: "GST",
+    taxName: "GST",
+    rates: { PRECIOUS_METAL: 0.1, MAKING_CHARGE: 0.1, GEMSTONE: 0.1, FINISH: 0.1 },
+    defaultRate: 0.1,
+  },
 };
 
 const COUNTRIES = [
@@ -91,54 +117,28 @@ const METAL_TYPES = [
 ];
 
 const GEMSTONE_TYPES = [
-  "Diamond",
-  "Ruby",
-  "Emerald",
-  "Sapphire",
-  "Pearl",
-  "Opal",
-  "Topaz",
-  "Amethyst",
-  "Garnet",
-  "Tourmaline",
-  "Other",
+  "Diamond", "Ruby", "Emerald", "Sapphire", "Pearl", "Opal",
+  "Topaz", "Amethyst", "Garnet", "Tourmaline", "Other",
 ];
 
 const GEMSTONE_CUTS = [
-  "Round Brilliant",
-  "Princess",
-  "Oval",
-  "Cushion",
-  "Emerald",
-  "Pear",
-  "Marquise",
-  "Radiant",
-  "Heart",
-  "Asscher",
-  "Cabochon",
-  "Other",
+  "Round Brilliant", "Princess", "Oval", "Cushion", "Emerald",
+  "Pear", "Marquise", "Radiant", "Heart", "Asscher", "Cabochon", "Other",
 ];
 
 const GEMSTONE_CLARITIES = [
-  "FL",
-  "IF",
-  "VVS1",
-  "VVS2",
-  "VS1",
-  "VS2",
-  "SI1",
-  "SI2",
-  "I1",
-  "I2",
-  "I3",
-  "N/A",
+  "FL", "IF", "VVS1", "VVS2", "VS1", "VS2", "SI1", "SI2", "I1", "I2", "I3", "N/A",
 ];
 
-const CATEGORIES = ["METAL", "MAKING", "GEMSTONE", "FINISH", "LABOUR", "OTHER"];
+// Jewellery categories from shared constants
+const INVOICE_CATEGORIES = JEWELLERY_TYPES.map((jt) => ({
+  value: jt.value,
+  label: jt.label,
+}));
 
 interface RichLineItem {
   label: string;
-  category: string;
+  category: string; // JEWELLERY_TYPE value (RING, NECKLACE, etc.)
   quantity: number;
   unitPrice: number;
   amount: number;
@@ -152,7 +152,7 @@ interface RichLineItem {
   gemstoneClarity: string;
   gemstoneCaratWeight: string;
   gemstoneColor: string;
-  // Cost breakdown
+  // Cost breakdown (used for per-category tax)
   metalCost: string;
   gemstoneCost: string;
   makingCost: string;
@@ -160,7 +160,7 @@ interface RichLineItem {
 
 const emptyLineItem = (): RichLineItem => ({
   label: "",
-  category: "METAL",
+  category: "RING",
   quantity: 1,
   unitPrice: 0,
   amount: 0,
@@ -177,17 +177,15 @@ const emptyLineItem = (): RichLineItem => ({
   makingCost: "",
 });
 
-interface CustomerLookupResult {
-  found: boolean;
-  customer?: {
-    name: string;
-    phone: string;
-    phoneCountryCode: string;
-    email?: string;
-    address: string;
-    city: string;
-    country: string;
-  };
+interface CustomerSuggestion {
+  id: string;
+  name: string;
+  phone: string;
+  phoneCountryCode: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  country?: string;
 }
 
 export default function CreateInvoicePage() {
@@ -196,22 +194,9 @@ export default function CreateInvoicePage() {
 
   const [loading, setLoading] = useState(false);
 
-  // ── Country & Tax ──
+  // ── Country (tax is auto-computed per category) ──
   const [invoiceCountry, setInvoiceCountry] = useState(shopCountry);
-  const countryTaxOptions = TAX_OPTIONS[invoiceCountry] || TAX_OPTIONS["IN"];
-  const [selectedTaxIdx, setSelectedTaxIdx] = useState(0);
-  const [customTax, setCustomTax] = useState(false);
-  const [taxRate, setTaxRate] = useState(countryTaxOptions[0]?.rate ?? 0);
-  const [taxLabel, setTaxLabel] = useState(countryTaxOptions[0]?.label ?? "");
-
-  // When country changes, reset tax to first option for that country
-  useEffect(() => {
-    const opts = TAX_OPTIONS[invoiceCountry] || TAX_OPTIONS["IN"];
-    setSelectedTaxIdx(0);
-    setCustomTax(false);
-    setTaxRate(opts[0]?.rate ?? 0);
-    setTaxLabel(opts[0]?.label ?? "");
-  }, [invoiceCountry]);
+  const countryTax = CATEGORY_TAX_RATES[invoiceCountry] || CATEGORY_TAX_RATES["IN"];
 
   // ── Customer ──
   const [customerName, setCustomerName] = useState("");
@@ -220,38 +205,42 @@ export default function CreateInvoicePage() {
   );
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
-  const [customerAddress, setCustomerAddress] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
   const [customerCity, setCustomerCity] = useState("");
+  const [pincode, setPincode] = useState("");
   const [customerCountry, setCustomerCountry] = useState(
     COUNTRIES.find((c) => c.code === shopCountry)?.name || "India",
   );
 
-  // ── Customer lookup (same debounce pattern as walk-in quotes) ──
-  const [isLookingUp, setIsLookingUp] = useState(false);
-  const [lookupResult, setLookupResult] = useState<CustomerLookupResult | null>(null);
-  const [showReturningAlert, setShowReturningAlert] = useState(false);
+  // ── Customer live search (partial phone → up to 5 suggestions) ──
+  const [isSearching, setIsSearching] = useState(false);
+  const [customerSuggestions, setCustomerSuggestions] = useState<CustomerSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const phoneDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
 
-  const lookupCustomer = useCallback(
+  const searchCustomers = useCallback(
     async (pcc: string, phone: string) => {
-      if (phone.length < 7) {
-        setLookupResult(null);
-        setShowReturningAlert(false);
+      if (phone.length < 3) {
+        setCustomerSuggestions([]);
+        setShowSuggestions(false);
         return;
       }
-      setIsLookingUp(true);
+      setIsSearching(true);
       try {
-        const response = await shopQuotesApi.lookupCustomer({
+        const response = await shopQuotesApi.searchCustomers({
           phoneCountryCode: pcc,
           phone,
         });
-        const result = response.data as CustomerLookupResult;
-        setLookupResult(result);
-        if (result.found && result.customer) setShowReturningAlert(true);
+        const result = response.data as { customers: CustomerSuggestion[]; count: number };
+        setCustomerSuggestions(result.customers || []);
+        setShowSuggestions((result.customers || []).length > 0);
       } catch {
-        setLookupResult(null);
+        setCustomerSuggestions([]);
+        setShowSuggestions(false);
       } finally {
-        setIsLookingUp(false);
+        setIsSearching(false);
       }
     },
     [],
@@ -261,27 +250,40 @@ export default function CreateInvoicePage() {
     setCustomerPhone(phone);
     if (phoneDebounceRef.current) clearTimeout(phoneDebounceRef.current);
     phoneDebounceRef.current = setTimeout(() => {
-      lookupCustomer(phoneCountryCode, phone);
-    }, 500);
+      searchCustomers(phoneCountryCode, phone);
+    }, 400);
   };
 
-  const handleAutoFillCustomer = () => {
-    if (lookupResult?.customer) {
-      const c = lookupResult.customer;
-      setCustomerName(c.name);
-      setPhoneCountryCode(c.phoneCountryCode);
-      setCustomerPhone(c.phone.replace(c.phoneCountryCode, ""));
-      setCustomerEmail(c.email || "");
-      setCustomerAddress(c.address || "");
-      setCustomerCity(c.city || "");
-      setCustomerCountry(c.country || "");
-      setShowReturningAlert(false);
-      toast({
-        title: "Customer details auto-filled",
-        description: `Welcome back, ${c.name}!`,
-      });
+  const handleSelectCustomer = (customer: CustomerSuggestion) => {
+    setCustomerName(customer.name);
+    setPhoneCountryCode(customer.phoneCountryCode);
+    setCustomerPhone(customer.phone.replace(customer.phoneCountryCode, ""));
+    setCustomerEmail(customer.email || "");
+    // Parse stored address — try to split if it was previously formatted
+    if (customer.address) {
+      const parts = customer.address.split(", ");
+      setAddressLine1(parts[0] || "");
+      setAddressLine2(parts[1] || "");
     }
+    setCustomerCity(customer.city || "");
+    setCustomerCountry(customer.country || "");
+    setShowSuggestions(false);
+    toast({
+      title: "Customer details filled",
+      description: `Welcome back, ${customer.name}!`,
+    });
   };
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // ── Line items ──
   const [lineItems, setLineItems] = useState<RichLineItem[]>([emptyLineItem()]);
@@ -367,13 +369,14 @@ export default function CreateInvoicePage() {
 
     // Build line items from quote details
     const items: RichLineItem[] = [];
-
-    // Metal item
-    const metalLabel =
-      quote.jewelleryType || quote.metalType || "Jewellery Item";
+    const metalLabel = quote.jewelleryType || quote.metalType || "Jewellery Item";
     const metalItem = emptyLineItem();
     metalItem.label = metalLabel;
-    metalItem.category = "METAL";
+    // Map jewellery type to category
+    const matchingCat = INVOICE_CATEGORIES.find(
+      (c) => c.value === quote.jewelleryType || c.label === quote.jewelleryType,
+    );
+    metalItem.category = matchingCat?.value || "OTHER";
     metalItem.metalType = quote.metalType || quote.alloyConfig?.baseMetal || "";
     metalItem.metalWeightG = quote.targetTotalWeightG || "";
     metalItem.metalCost = String(quote.metalCostOverride || quote.estimatedTotal?.metalCost || "");
@@ -398,19 +401,78 @@ export default function CreateInvoicePage() {
     });
   };
 
-  // ── Discount & notes ──
-  const [discountAmount, setDiscountAmount] = useState("");
+  // ── Making charge & Discount (near subtotal) ──
+  const [makingChargeMode, setMakingChargeMode] = useState<"percent" | "fixed">("percent");
+  const [makingChargeValue, setMakingChargeValue] = useState("");
+  const [discountMode, setDiscountMode] = useState<"percent" | "fixed">("fixed");
+  const [discountValue, setDiscountValue] = useState("");
+
+  // ── Notes & terms ──
   const [notes, setNotes] = useState("");
   const [terms, setTerms] = useState(
     "Payment due upon delivery. All sales are final.",
   );
   const [dueDate, setDueDate] = useState("");
 
-  // ── Totals ──
+  // ── Totals (per-category tax) ──
   const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
-  const tax = subtotal * taxRate;
-  const discount = parseFloat(discountAmount) || 0;
-  const total = subtotal + tax - discount;
+
+  // Making charge computation
+  const makingChargeAmount = useMemo(() => {
+    const val = parseFloat(makingChargeValue) || 0;
+    if (makingChargeMode === "percent") return subtotal * (val / 100);
+    return val;
+  }, [subtotal, makingChargeMode, makingChargeValue]);
+
+  // Per-category tax breakdown
+  const taxBreakdown = useMemo(() => {
+    const rates = countryTax.rates;
+    let metalTax = 0;
+    let gemstoneTax = 0;
+    let makingTax = 0;
+
+    // Tax on each line item's cost components
+    for (const item of lineItems) {
+      const mc = parseFloat(item.metalCost) || 0;
+      const gc = parseFloat(item.gemstoneCost) || 0;
+      const mk = parseFloat(item.makingCost) || 0;
+
+      metalTax += mc * item.quantity * rates.PRECIOUS_METAL;
+      gemstoneTax += gc * item.quantity * rates.GEMSTONE;
+      makingTax += mk * item.quantity * rates.MAKING_CHARGE;
+    }
+
+    // Tax on global making charge
+    makingTax += makingChargeAmount * rates.MAKING_CHARGE;
+
+    // For items without breakdown (only unitPrice set), use default rate
+    for (const item of lineItems) {
+      const mc = parseFloat(item.metalCost) || 0;
+      const gc = parseFloat(item.gemstoneCost) || 0;
+      const mk = parseFloat(item.makingCost) || 0;
+      if (mc === 0 && gc === 0 && mk === 0 && item.amount > 0) {
+        metalTax += item.amount * countryTax.defaultRate;
+      }
+    }
+
+    const totalTax = metalTax + gemstoneTax + makingTax;
+
+    return {
+      metalTax,
+      gemstoneTax,
+      makingTax,
+      totalTax,
+    };
+  }, [lineItems, countryTax, makingChargeAmount]);
+
+  // Discount computation
+  const discountAmount = useMemo(() => {
+    const val = parseFloat(discountValue) || 0;
+    if (discountMode === "percent") return (subtotal + makingChargeAmount) * (val / 100);
+    return val;
+  }, [subtotal, makingChargeAmount, discountMode, discountValue]);
+
+  const total = subtotal + makingChargeAmount + taxBreakdown.totalTax - discountAmount;
 
   // ── Submit ──
   const handleSubmit = async () => {
@@ -425,7 +487,7 @@ export default function CreateInvoicePage() {
 
     setLoading(true);
     try {
-      // Build flat line items for API (with enriched details)
+      // Build flat line items for API
       const apiLineItems = lineItems
         .filter((li) => li.label && li.amount > 0)
         .map((li) => ({
@@ -449,7 +511,13 @@ export default function CreateInvoicePage() {
           makingCost: li.makingCost ? parseFloat(li.makingCost) : undefined,
         }));
 
-      const fullAddress = [customerAddress, customerCity, customerCountry]
+      // Format structured address for billing
+      const fullAddress = [
+        addressLine1,
+        addressLine2,
+        [customerCity, pincode].filter(Boolean).join(" - "),
+        customerCountry,
+      ]
         .filter(Boolean)
         .join(", ");
 
@@ -461,9 +529,17 @@ export default function CreateInvoicePage() {
         customerEmail: customerEmail || undefined,
         customerAddress: fullAddress || undefined,
         lineItems: apiLineItems,
-        taxRate,
-        taxLabel: taxLabel || undefined,
-        discountAmount: discount || undefined,
+        taxRate: countryTax.defaultRate,
+        taxLabel: countryTax.taxName || undefined,
+        taxBreakdown: {
+          metalTax: taxBreakdown.metalTax,
+          gemstoneTax: taxBreakdown.gemstoneTax,
+          makingTax: taxBreakdown.makingTax,
+          totalTax: taxBreakdown.totalTax,
+          country: invoiceCountry,
+        },
+        makingCharge: makingChargeAmount || undefined,
+        discountAmount: discountAmount || undefined,
         dueDate: dueDate || undefined,
         notes: notes || undefined,
         terms: terms || undefined,
@@ -572,13 +648,16 @@ export default function CreateInvoicePage() {
             </Card>
           )}
 
-          {/* Country & Tax Selection */}
+          {/* Country Selection (tax is automatic per category) */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Globe className="h-4 w-4 text-blue-500" />
                 Country &amp; Tax
               </CardTitle>
+              <CardDescription>
+                Tax is auto-calculated per category based on the country
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -597,76 +676,31 @@ export default function CreateInvoicePage() {
                   </select>
                 </div>
                 <div>
-                  <Label>Tax</Label>
-                  {!customTax ? (
-                    <div className="flex gap-2">
-                      <select
-                        value={selectedTaxIdx}
-                        onChange={(e) => {
-                          const idx = parseInt(e.target.value);
-                          setSelectedTaxIdx(idx);
-                          const opt = countryTaxOptions[idx];
-                          if (opt) {
-                            setTaxRate(opt.rate);
-                            setTaxLabel(opt.label);
-                          }
-                        }}
-                        className="flex-1 h-10 px-3 text-sm border rounded-md bg-background"
-                      >
-                        {countryTaxOptions.map((opt, idx) => (
-                          <option key={idx} value={idx}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-10 text-xs"
-                        onClick={() => setCustomTax(true)}
-                      >
-                        Custom
-                      </Button>
+                  <Label>Tax Rates ({countryTax.taxName})</Label>
+                  <div className="grid grid-cols-2 gap-2 mt-1">
+                    <div className="flex items-center justify-between px-3 py-1.5 bg-amber-50 border border-amber-200 rounded text-xs">
+                      <span className="text-amber-700">Metal</span>
+                      <span className="font-medium">{(countryTax.rates.PRECIOUS_METAL * 100).toFixed(1)}%</span>
                     </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <Input
-                        className="w-24"
-                        type="number"
-                        step="0.01"
-                        value={taxRate}
-                        onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
-                        placeholder="Rate"
-                      />
-                      <Input
-                        className="flex-1"
-                        value={taxLabel}
-                        onChange={(e) => setTaxLabel(e.target.value)}
-                        placeholder="Tax label"
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-10 text-xs"
-                        onClick={() => {
-                          setCustomTax(false);
-                          const opt = countryTaxOptions[selectedTaxIdx];
-                          if (opt) {
-                            setTaxRate(opt.rate);
-                            setTaxLabel(opt.label);
-                          }
-                        }}
-                      >
-                        Preset
-                      </Button>
+                    <div className="flex items-center justify-between px-3 py-1.5 bg-purple-50 border border-purple-200 rounded text-xs">
+                      <span className="text-purple-700">Gemstone</span>
+                      <span className="font-medium">{(countryTax.rates.GEMSTONE * 100).toFixed(1)}%</span>
                     </div>
-                  )}
+                    <div className="flex items-center justify-between px-3 py-1.5 bg-blue-50 border border-blue-200 rounded text-xs">
+                      <span className="text-blue-700">Making</span>
+                      <span className="font-medium">{(countryTax.rates.MAKING_CHARGE * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="flex items-center justify-between px-3 py-1.5 bg-green-50 border border-green-200 rounded text-xs">
+                      <span className="text-green-700">Finish</span>
+                      <span className="font-medium">{(countryTax.rates.FINISH * 100).toFixed(1)}%</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Customer Details with Phone Lookup */}
+          {/* Customer Details with Live Search */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
@@ -674,44 +708,11 @@ export default function CreateInvoicePage() {
                 Customer Details
               </CardTitle>
               <CardDescription>
-                Enter phone number to auto-fill returning customers
+                Start typing phone number to search existing customers
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Returning customer alert */}
-              {showReturningAlert && lookupResult?.customer && (
-                <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-green-800">
-                      Returning customer found: {lookupResult.customer.name}
-                    </p>
-                    <p className="text-xs text-green-600">
-                      {lookupResult.customer.phone} •{" "}
-                      {lookupResult.customer.city},{" "}
-                      {lookupResult.customer.country}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="default"
-                      className="bg-green-600 hover:bg-green-700 text-xs"
-                      onClick={handleAutoFillCustomer}
-                    >
-                      Auto-fill
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setShowReturningAlert(false)}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Phone row */}
+              {/* Phone row with live suggestions */}
               <div className="grid grid-cols-12 gap-3">
                 <div className="col-span-3">
                   <Label>Country Code</Label>
@@ -719,8 +720,8 @@ export default function CreateInvoicePage() {
                     value={phoneCountryCode}
                     onChange={(e) => {
                       setPhoneCountryCode(e.target.value);
-                      if (customerPhone.length >= 7)
-                        lookupCustomer(e.target.value, customerPhone);
+                      if (customerPhone.length >= 3)
+                        searchCustomers(e.target.value, customerPhone);
                     }}
                     className="w-full h-10 px-2 text-sm border rounded-md bg-background"
                   >
@@ -731,18 +732,42 @@ export default function CreateInvoicePage() {
                     ))}
                   </select>
                 </div>
-                <div className="col-span-5">
+                <div className="col-span-5 relative" ref={suggestionsRef}>
                   <Label>Phone Number</Label>
                   <div className="relative">
                     <Input
                       value={customerPhone}
                       onChange={(e) => handlePhoneChange(e.target.value)}
-                      placeholder="9876543210"
+                      onFocus={() => {
+                        if (customerSuggestions.length > 0) setShowSuggestions(true);
+                      }}
+                      placeholder="Start typing to search..."
                     />
-                    {isLookingUp && (
+                    {isSearching && (
                       <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-muted-foreground" />
                     )}
                   </div>
+                  {/* Live suggestions dropdown */}
+                  {showSuggestions && customerSuggestions.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {customerSuggestions.map((cust) => (
+                        <div
+                          key={cust.id}
+                          className="flex items-center justify-between px-3 py-2.5 hover:bg-amber-50 cursor-pointer border-b last:border-b-0 transition-colors"
+                          onClick={() => handleSelectCustomer(cust)}
+                        >
+                          <div>
+                            <p className="text-sm font-medium">{cust.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {cust.phone}
+                              {cust.city && ` • ${cust.city}`}
+                            </p>
+                          </div>
+                          <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="col-span-4">
                   <Label>Customer Name *</Label>
@@ -754,7 +779,7 @@ export default function CreateInvoicePage() {
                 </div>
               </div>
 
-              {/* Email + Address */}
+              {/* Email & Country */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Email</Label>
@@ -766,6 +791,36 @@ export default function CreateInvoicePage() {
                   />
                 </div>
                 <div>
+                  <Label>Country</Label>
+                  <Input
+                    value={customerCountry}
+                    onChange={(e) => setCustomerCountry(e.target.value)}
+                    placeholder="Country"
+                  />
+                </div>
+              </div>
+
+              {/* Structured Address */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Address Line 1</Label>
+                  <Input
+                    value={addressLine1}
+                    onChange={(e) => setAddressLine1(e.target.value)}
+                    placeholder="House/Building number, locality"
+                  />
+                </div>
+                <div>
+                  <Label>Address Line 2 (Street)</Label>
+                  <Input
+                    value={addressLine2}
+                    onChange={(e) => setAddressLine2(e.target.value)}
+                    placeholder="Street name, area"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <Label>City</Label>
                   <Input
                     value={customerCity}
@@ -773,15 +828,14 @@ export default function CreateInvoicePage() {
                     placeholder="City"
                   />
                 </div>
-              </div>
-              <div>
-                <Label>Address</Label>
-                <Textarea
-                  value={customerAddress}
-                  onChange={(e) => setCustomerAddress(e.target.value)}
-                  placeholder="Full address (multi-line)"
-                  rows={2}
-                />
+                <div>
+                  <Label>Pincode / ZIP</Label>
+                  <Input
+                    value={pincode}
+                    onChange={(e) => setPincode(e.target.value)}
+                    placeholder="Pincode"
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -791,7 +845,7 @@ export default function CreateInvoicePage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Line Items</CardTitle>
               <CardDescription>
-                Add items with metal &amp; gemstone details. Click on an item to expand details.
+                Add jewellery items with metal &amp; gemstone cost breakdowns. Tax is applied per category automatically.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -830,9 +884,9 @@ export default function CreateInvoicePage() {
                         }
                         className="w-full h-10 px-2 text-sm border rounded-md bg-background"
                       >
-                        {CATEGORIES.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {cat}
+                        {INVOICE_CATEGORIES.map((cat) => (
+                          <option key={cat.value} value={cat.value}>
+                            {cat.label}
                           </option>
                         ))}
                       </select>
@@ -925,11 +979,7 @@ export default function CreateInvoicePage() {
                             <select
                               value={item.metalType}
                               onChange={(e) =>
-                                updateLineItem(
-                                  idx,
-                                  "metalType",
-                                  e.target.value,
-                                )
+                                updateLineItem(idx, "metalType", e.target.value)
                               }
                               className="w-full h-9 px-2 text-xs border rounded-md bg-background"
                             >
@@ -948,11 +998,7 @@ export default function CreateInvoicePage() {
                               step="0.01"
                               value={item.metalWeightG}
                               onChange={(e) =>
-                                updateLineItem(
-                                  idx,
-                                  "metalWeightG",
-                                  e.target.value,
-                                )
+                                updateLineItem(idx, "metalWeightG", e.target.value)
                               }
                               placeholder="0.00"
                               className="h-9 text-xs"
@@ -966,11 +1012,7 @@ export default function CreateInvoicePage() {
                               type="number"
                               value={item.metalCost}
                               onChange={(e) =>
-                                updateLineItem(
-                                  idx,
-                                  "metalCost",
-                                  e.target.value,
-                                )
+                                updateLineItem(idx, "metalCost", e.target.value)
                               }
                               placeholder="0"
                               className="h-9 text-xs"
@@ -990,11 +1032,7 @@ export default function CreateInvoicePage() {
                             <select
                               value={item.gemstoneType}
                               onChange={(e) =>
-                                updateLineItem(
-                                  idx,
-                                  "gemstoneType",
-                                  e.target.value,
-                                )
+                                updateLineItem(idx, "gemstoneType", e.target.value)
                               }
                               className="w-full h-9 px-2 text-xs border rounded-md bg-background"
                             >
@@ -1011,11 +1049,7 @@ export default function CreateInvoicePage() {
                             <select
                               value={item.gemstoneCut}
                               onChange={(e) =>
-                                updateLineItem(
-                                  idx,
-                                  "gemstoneCut",
-                                  e.target.value,
-                                )
+                                updateLineItem(idx, "gemstoneCut", e.target.value)
                               }
                               className="w-full h-9 px-2 text-xs border rounded-md bg-background"
                             >
@@ -1032,11 +1066,7 @@ export default function CreateInvoicePage() {
                             <select
                               value={item.gemstoneClarity}
                               onChange={(e) =>
-                                updateLineItem(
-                                  idx,
-                                  "gemstoneClarity",
-                                  e.target.value,
-                                )
+                                updateLineItem(idx, "gemstoneClarity", e.target.value)
                               }
                               className="w-full h-9 px-2 text-xs border rounded-md bg-background"
                             >
@@ -1055,11 +1085,7 @@ export default function CreateInvoicePage() {
                               step="0.01"
                               value={item.gemstoneCaratWeight}
                               onChange={(e) =>
-                                updateLineItem(
-                                  idx,
-                                  "gemstoneCaratWeight",
-                                  e.target.value,
-                                )
+                                updateLineItem(idx, "gemstoneCaratWeight", e.target.value)
                               }
                               placeholder="0.00"
                               className="h-9 text-xs"
@@ -1070,11 +1096,7 @@ export default function CreateInvoicePage() {
                             <Input
                               value={item.gemstoneColor}
                               onChange={(e) =>
-                                updateLineItem(
-                                  idx,
-                                  "gemstoneColor",
-                                  e.target.value,
-                                )
+                                updateLineItem(idx, "gemstoneColor", e.target.value)
                               }
                               placeholder="e.g. D, E, F"
                               className="h-9 text-xs"
@@ -1088,11 +1110,7 @@ export default function CreateInvoicePage() {
                               type="number"
                               value={item.gemstoneCost}
                               onChange={(e) =>
-                                updateLineItem(
-                                  idx,
-                                  "gemstoneCost",
-                                  e.target.value,
-                                )
+                                updateLineItem(idx, "gemstoneCost", e.target.value)
                               }
                               placeholder="0"
                               className="h-9 text-xs"
@@ -1111,11 +1129,7 @@ export default function CreateInvoicePage() {
                             type="number"
                             value={item.makingCost}
                             onChange={(e) =>
-                              updateLineItem(
-                                idx,
-                                "makingCost",
-                                e.target.value,
-                              )
+                              updateLineItem(idx, "makingCost", e.target.value)
                             }
                             placeholder="0"
                             className="h-9 text-xs"
@@ -1134,30 +1148,42 @@ export default function CreateInvoicePage() {
                         </div>
                       </div>
 
-                      {/* Cost breakdown summary */}
+                      {/* Cost breakdown summary with per-category tax preview */}
                       {(parseFloat(item.metalCost) > 0 ||
                         parseFloat(item.gemstoneCost) > 0 ||
                         parseFloat(item.makingCost) > 0) && (
-                        <div className="flex gap-4 text-xs text-muted-foreground pt-1 border-t">
-                          <span>
-                            Metal: {currencySymbol}{" "}
-                            {(parseFloat(item.metalCost) || 0).toLocaleString()}
-                          </span>
-                          <span>
-                            Gemstone: {currencySymbol}{" "}
-                            {(
-                              parseFloat(item.gemstoneCost) || 0
-                            ).toLocaleString()}
-                          </span>
-                          <span>
-                            Making: {currencySymbol}{" "}
-                            {(
-                              parseFloat(item.makingCost) || 0
-                            ).toLocaleString()}
-                          </span>
-                          <span className="font-medium text-foreground">
-                            = {currencySymbol} {item.unitPrice.toLocaleString()}
-                          </span>
+                        <div className="pt-1 border-t space-y-1">
+                          <div className="flex gap-4 text-xs text-muted-foreground">
+                            <span>
+                              Metal: {currencySymbol}{" "}
+                              {(parseFloat(item.metalCost) || 0).toLocaleString()}
+                            </span>
+                            <span>
+                              Gemstone: {currencySymbol}{" "}
+                              {(parseFloat(item.gemstoneCost) || 0).toLocaleString()}
+                            </span>
+                            <span>
+                              Making: {currencySymbol}{" "}
+                              {(parseFloat(item.makingCost) || 0).toLocaleString()}
+                            </span>
+                            <span className="font-medium text-foreground">
+                              = {currencySymbol} {item.unitPrice.toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="flex gap-4 text-xs text-blue-600">
+                            <span>
+                              Metal tax: {(countryTax.rates.PRECIOUS_METAL * 100).toFixed(1)}% = {currencySymbol}{" "}
+                              {((parseFloat(item.metalCost) || 0) * item.quantity * countryTax.rates.PRECIOUS_METAL).toLocaleString()}
+                            </span>
+                            <span>
+                              Gem tax: {(countryTax.rates.GEMSTONE * 100).toFixed(1)}% = {currencySymbol}{" "}
+                              {((parseFloat(item.gemstoneCost) || 0) * item.quantity * countryTax.rates.GEMSTONE).toLocaleString()}
+                            </span>
+                            <span>
+                              Making tax: {(countryTax.rates.MAKING_CHARGE * 100).toFixed(1)}% = {currencySymbol}{" "}
+                              {((parseFloat(item.makingCost) || 0) * item.quantity * countryTax.rates.MAKING_CHARGE).toLocaleString()}
+                            </span>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1171,49 +1197,122 @@ export default function CreateInvoicePage() {
 
               <Separator />
 
-              {/* Totals */}
+              {/* Totals with Making Charge + Per-category Tax + Discount */}
               <div className="flex justify-end">
-                <div className="w-80 space-y-3">
+                <div className="w-96 space-y-3">
+                  {/* Subtotal */}
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
                     <span className="font-medium">
                       {currencySymbol} {subtotal.toLocaleString()}
                     </span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      {taxLabel || "Tax"}{" "}
-                      <span className="text-xs">
-                        ({(taxRate * 100).toFixed(1)}%)
-                      </span>
-                    </span>
-                    <span>
-                      {currencySymbol} {tax.toLocaleString()}
-                    </span>
-                  </div>
-                  {discount > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
-                      <span>Discount</span>
-                      <span>
-                        -{currencySymbol} {discount.toLocaleString()}
-                      </span>
-                    </div>
-                  )}
+
+                  {/* Making Charge toggle */}
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-green-600">Discount</span>
+                    <span className="text-sm text-blue-600 w-28">Making Charge</span>
+                    <button
+                      onClick={() =>
+                        setMakingChargeMode((m) => (m === "percent" ? "fixed" : "percent"))
+                      }
+                      className={`flex items-center gap-0.5 px-2 py-1 text-xs rounded border transition-colors ${
+                        makingChargeMode === "percent"
+                          ? "bg-blue-50 border-blue-300 text-blue-700"
+                          : "bg-gray-50 border-gray-300 text-gray-700"
+                      }`}
+                      title="Toggle % or fixed amount"
+                    >
+                      {makingChargeMode === "percent" ? (
+                        <Percent className="h-3 w-3" />
+                      ) : (
+                        <span>{currencySymbol}</span>
+                      )}
+                    </button>
                     <Input
-                      className="w-28 text-xs"
+                      className="w-24 text-xs"
                       type="number"
-                      value={discountAmount}
-                      onChange={(e) => setDiscountAmount(e.target.value)}
+                      value={makingChargeValue}
+                      onChange={(e) => setMakingChargeValue(e.target.value)}
                       placeholder="0"
                     />
+                    {makingChargeAmount > 0 && (
+                      <span className="text-sm ml-auto">
+                        +{currencySymbol} {makingChargeAmount.toLocaleString()}
+                      </span>
+                    )}
                   </div>
+
+                  {/* Tax breakdown */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>
+                        {countryTax.taxName} on Metal ({(countryTax.rates.PRECIOUS_METAL * 100).toFixed(1)}%)
+                      </span>
+                      <span>{currencySymbol} {taxBreakdown.metalTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    {taxBreakdown.gemstoneTax > 0 && (
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>
+                          {countryTax.taxName} on Gemstone ({(countryTax.rates.GEMSTONE * 100).toFixed(1)}%)
+                        </span>
+                        <span>{currencySymbol} {taxBreakdown.gemstoneTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                    )}
+                    {taxBreakdown.makingTax > 0 && (
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>
+                          {countryTax.taxName} on Making ({(countryTax.rates.MAKING_CHARGE * 100).toFixed(1)}%)
+                        </span>
+                        <span>{currencySymbol} {taxBreakdown.makingTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm">
+                      <span>Total Tax</span>
+                      <span>
+                        {currencySymbol} {taxBreakdown.totalTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Discount toggle */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-green-600 w-28">Discount</span>
+                    <button
+                      onClick={() =>
+                        setDiscountMode((m) => (m === "percent" ? "fixed" : "percent"))
+                      }
+                      className={`flex items-center gap-0.5 px-2 py-1 text-xs rounded border transition-colors ${
+                        discountMode === "percent"
+                          ? "bg-green-50 border-green-300 text-green-700"
+                          : "bg-gray-50 border-gray-300 text-gray-700"
+                      }`}
+                      title="Toggle % or fixed amount"
+                    >
+                      {discountMode === "percent" ? (
+                        <Percent className="h-3 w-3" />
+                      ) : (
+                        <span>{currencySymbol}</span>
+                      )}
+                    </button>
+                    <Input
+                      className="w-24 text-xs"
+                      type="number"
+                      value={discountValue}
+                      onChange={(e) => setDiscountValue(e.target.value)}
+                      placeholder="0"
+                    />
+                    {discountAmount > 0 && (
+                      <span className="text-sm text-green-600 ml-auto">
+                        -{currencySymbol} {discountAmount.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+
                   <Separator />
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total</span>
                     <span className="text-amber-600">
-                      {currencySymbol} {total.toLocaleString()}
+                      {currencySymbol} {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>

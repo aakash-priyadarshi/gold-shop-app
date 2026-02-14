@@ -16,6 +16,7 @@ import {
   UpdateQuoteStatusDto,
   RecordPaymentDto,
   LookupCustomerDto,
+  SearchCustomersDto,
 } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -41,6 +42,23 @@ export class ShopQuotesController {
     @Body() dto: LookupCustomerDto,
   ) {
     return this.shopQuotesService.lookupCustomerByPhone(
+      dto.phoneCountryCode,
+      dto.phone,
+      shopId,
+    );
+  }
+
+  @Post('search-customers')
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiOperation({
+    summary: 'Search walk-in customers by partial phone number',
+    description: 'Returns up to 5 matching customers for live suggestions as the seller types.',
+  })
+  async searchCustomers(
+    @CurrentUser('shopId') shopId: string,
+    @Body() dto: SearchCustomersDto,
+  ) {
+    return this.shopQuotesService.searchCustomersByPhone(
       dto.phoneCountryCode,
       dto.phone,
       shopId,

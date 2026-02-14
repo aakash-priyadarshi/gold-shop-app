@@ -139,6 +139,42 @@ export class ShopQuotesService {
   }
 
   /**
+   * Search customers by partial phone number
+   * Returns up to 5 matching customers for live suggestions
+   */
+  async searchCustomersByPhone(
+    phoneCountryCode: string,
+    partialPhone: string,
+    shopId: string,
+  ) {
+    const fullPartial = `${phoneCountryCode}${partialPhone}`;
+
+    const customers = await this.prisma.walkInCustomer.findMany({
+      where: {
+        phone: { startsWith: fullPartial },
+        createdByShopId: shopId,
+      },
+      take: 5,
+      orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        phoneCountryCode: true,
+        email: true,
+        address: true,
+        city: true,
+        country: true,
+      },
+    });
+
+    return {
+      customers,
+      count: customers.length,
+    };
+  }
+
+  /**
    * Create or get existing walk-in customer
    */
   private async getOrCreateCustomer(
