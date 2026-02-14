@@ -155,7 +155,7 @@ export class ShopQuotesService {
         createdByShopId: shopId,
       },
       take: 5,
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { updatedAt: "desc" },
       select: {
         id: true,
         name: true,

@@ -36,14 +36,17 @@ import { invoicesApi } from "@/lib/api";
 import {
   ArrowLeft,
   Ban,
+  Banknote,
   CheckCircle,
   CreditCard,
   DollarSign,
   FileText,
   Loader2,
+  PartyPopper,
   Printer,
+  X,
 } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 interface LineItem {
@@ -99,15 +102,19 @@ const statusColors: Record<string, string> = {
 export default function InvoiceDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { symbol: currencySymbol } = useShopCurrency();
   const invoiceId = params.id as string;
+  const justCreated = searchParams.get("created") === "true";
 
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "other">("cash");
   const [voidDialogOpen, setVoidDialogOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCreatedBanner, setShowCreatedBanner] = useState(justCreated);
 
   const loadInvoice = useCallback(async () => {
     setIsLoading(true);
@@ -138,9 +145,12 @@ export default function InvoiceDetailPage() {
 
     setIsSubmitting(true);
     try {
-      await invoicesApi.updatePaymentStatus(invoiceId, { amount });
+      await invoicesApi.updatePaymentStatus(invoiceId, {
+        amount,
+        method: paymentMethod,
+      });
       toast({
-        title: "Payment Recorded",
+        title: paymentMethod === "cash" ? "Cash Payment Recorded" : "Payment Recorded",
         description: `${invoice?.currency} ${amount.toLocaleString()} recorded`,
       });
       setPaymentDialogOpen(false);
@@ -223,6 +233,46 @@ export default function InvoiceDetailPage() {
     <ShopGuard>
       <DashboardLayout>
         <div className="space-y-6 max-w-4xl mx-auto">
+          {/* Success banner after creation */}
+          {showCreatedBanner && invoice.status !== "PAID" && (
+            <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg print:hidden">
+              <div className="flex items-center gap-3">
+                <PartyPopper className="h-5 w-5 text-green-600" />
+                <div>
+                  <p className="font-semibold text-green-800">Invoice Created Successfully!</p>
+                  <p className="text-sm text-green-600">What would you like to do next?</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePrint}
+                >
+                  <Printer className="h-4 w-4 mr-2" /> Print
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700"
+                  onClick={() => {
+                    setPaymentMethod("cash");
+                    setPaymentAmount(String(invoice.balanceDue));
+                    setPaymentDialogOpen(true);
+                  }}
+                >
+                  <Banknote className="h-4 w-4 mr-2" /> Pay Cash
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowCreatedBanner(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="flex items-center justify-between print:hidden">
             <div className="flex items-center gap-4">
@@ -256,8 +306,21 @@ export default function InvoiceDetailPage() {
                 <>
                   <Button
                     size="sm"
+                    variant="outline"
+                    className="border-green-300 text-green-700 hover:bg-green-50"
+                    onClick={() => {
+                      setPaymentMethod("cash");
+                      setPaymentAmount(String(invoice.balanceDue));
+                      setPaymentDialogOpen(true);
+                    }}
+                  >
+                    <Banknote className="h-4 w-4 mr-2" /> Pay Cash
+                  </Button>
+                  <Button
+                    size="sm"
                     className="bg-green-600 hover:bg-green-700"
                     onClick={() => {
+                      setPaymentMethod("other");
                       setPaymentAmount(String(invoice.balanceDue));
                       setPaymentDialogOpen(true);
                     }}
@@ -440,8 +503,12 @@ export default function InvoiceDetailPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-green-600" />
-                Record Payment
+                {paymentMethod === "cash" ? (
+                  <Banknote className="h-5 w-5 text-green-600" />
+                ) : (
+                  <CreditCard className="h-5 w-5 text-green-600" />
+                )}
+                {paymentMethod === "cash" ? "Record Cash Payment" : "Record Payment"}
               </DialogTitle>
               <DialogDescription>
                 Record a payment for invoice {invoice.invoiceNumber}
@@ -456,6 +523,34 @@ export default function InvoiceDetailPage() {
                   </span>
                 </div>
               </div>
+              {/* Payment method toggle */}
+              <div>
+                <Label className="text-xs mb-1.5 block">Payment Method</Label>
+                <div className="inline-flex h-9 rounded-full border bg-muted p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("cash")}
+                    className={`px-4 text-sm font-medium rounded-full transition-all flex items-center gap-1.5 ${
+                      paymentMethod === "cash"
+                        ? "bg-green-600 text-white shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Banknote className="h-3.5 w-3.5" /> Cash
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("other")}
+                    className={`px-4 text-sm font-medium rounded-full transition-all flex items-center gap-1.5 ${
+                      paymentMethod === "other"
+                        ? "bg-green-600 text-white shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <CreditCard className="h-3.5 w-3.5" /> Other
+                  </button>
+                </div>
+              </div>
               <div>
                 <Label>Payment Amount ({invoice.currency})</Label>
                 <Input
@@ -464,6 +559,27 @@ export default function InvoiceDetailPage() {
                   onChange={(e) => setPaymentAmount(e.target.value)}
                   placeholder="0"
                 />
+              </div>
+              {/* Quick fill buttons */}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => setPaymentAmount(String(invoice.balanceDue))}
+                >
+                  Full Amount
+                </Button>
+                {invoice.balanceDue > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => setPaymentAmount(String(Math.round(invoice.balanceDue / 2)))}
+                  >
+                    Half
+                  </Button>
+                )}
               </div>
             </div>
             <DialogFooter>

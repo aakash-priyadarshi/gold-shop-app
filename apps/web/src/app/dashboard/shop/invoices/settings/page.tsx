@@ -12,15 +12,14 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { invoicesApi } from "@/lib/api";
 import {
-  ArrowLeft,
   ArrowDown,
+  ArrowLeft,
   ArrowUp,
   Building2,
   FileText,
@@ -151,7 +150,12 @@ export default function InvoiceSettingsPage() {
         toast({ title: "Logo uploaded successfully" });
       }
     },
-    onError: (err) => toast({ variant: "destructive", title: "Upload failed", description: err }),
+    onError: (err) =>
+      toast({
+        variant: "destructive",
+        title: "Upload failed",
+        description: err,
+      }),
   });
 
   useEffect(() => {
@@ -223,11 +227,17 @@ export default function InvoiceSettingsPage() {
     setSettings((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleLogoFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoFileSelect = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      toast({ variant: "destructive", title: "File too large", description: "Max 5MB" });
+      toast({
+        variant: "destructive",
+        title: "File too large",
+        description: "Max 5MB",
+      });
       return;
     }
     await uploadLogo(file);
@@ -253,57 +263,109 @@ export default function InvoiceSettingsPage() {
 
   // Build preview items
   if (settings.shopLogoUrl) {
-    addPreviewItem("logoPosition", "showLogo", "logo", (
+    addPreviewItem(
+      "logoPosition",
+      "showLogo",
+      "logo",
       <div className="flex justify-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={settings.shopLogoUrl} alt="Logo" className="h-12 w-12 object-contain" />
-      </div>
-    ));
+        <img
+          src={settings.shopLogoUrl}
+          alt="Logo"
+          className="h-12 w-12 object-contain"
+        />
+      </div>,
+    );
   }
   if (settings.shopNameOnBill) {
-    addPreviewItem("shopNamePosition", null, "name", (
-      <p className="font-bold text-lg text-center">{settings.shopNameOnBill}</p>
-    ));
+    addPreviewItem(
+      "shopNamePosition",
+      null,
+      "name",
+      <p className="font-bold text-lg text-center">
+        {settings.shopNameOnBill}
+      </p>,
+    );
   }
   if (settings.tagline) {
-    addPreviewItem("taglinePosition", null, "tagline", (
-      <p className="text-xs text-muted-foreground italic text-center">{settings.tagline}</p>
-    ));
+    addPreviewItem(
+      "taglinePosition",
+      null,
+      "tagline",
+      <p className="text-xs text-muted-foreground italic text-center">
+        {settings.tagline}
+      </p>,
+    );
   }
   if (settings.shopAddress) {
-    addPreviewItem("addressPosition", "showAddress", "address", (
-      <p className="text-xs text-muted-foreground text-center">{settings.shopAddress}</p>
-    ));
+    addPreviewItem(
+      "addressPosition",
+      "showAddress",
+      "address",
+      <p className="text-xs text-muted-foreground text-center">
+        {settings.shopAddress}
+      </p>,
+    );
   }
   if (settings.shopPhone) {
-    addPreviewItem("phonePosition", "showPhone", "phone", (
-      <p className="text-xs text-muted-foreground text-center">Tel: {settings.shopPhone}</p>
-    ));
+    addPreviewItem(
+      "phonePosition",
+      "showPhone",
+      "phone",
+      <p className="text-xs text-muted-foreground text-center">
+        Tel: {settings.shopPhone}
+      </p>,
+    );
   }
   if (settings.shopEmail) {
-    addPreviewItem("emailPosition", "showEmail", "email", (
-      <p className="text-xs text-muted-foreground text-center">{settings.shopEmail}</p>
-    ));
+    addPreviewItem(
+      "emailPosition",
+      "showEmail",
+      "email",
+      <p className="text-xs text-muted-foreground text-center">
+        {settings.shopEmail}
+      </p>,
+    );
   }
   if (settings.gstin) {
-    addPreviewItem("gstinPosition", "showGstin", "gstin", (
-      <p className="text-xs text-muted-foreground text-center">GSTIN: {settings.gstin}</p>
-    ));
+    addPreviewItem(
+      "gstinPosition",
+      "showGstin",
+      "gstin",
+      <p className="text-xs text-muted-foreground text-center">
+        GSTIN: {settings.gstin}
+      </p>,
+    );
   }
   if (settings.licenseNumber) {
-    addPreviewItem("licensePosition", "showLicense", "license", (
-      <p className="text-xs text-muted-foreground text-center">License: {settings.licenseNumber}</p>
-    ));
+    addPreviewItem(
+      "licensePosition",
+      "showLicense",
+      "license",
+      <p className="text-xs text-muted-foreground text-center">
+        License: {settings.licenseNumber}
+      </p>,
+    );
   }
   if (settings.footerNote) {
-    addPreviewItem("footerPosition", "showFooter", "footer", (
-      <p className="text-xs text-muted-foreground text-center">{settings.footerNote}</p>
-    ));
+    addPreviewItem(
+      "footerPosition",
+      "showFooter",
+      "footer",
+      <p className="text-xs text-muted-foreground text-center">
+        {settings.footerNote}
+      </p>,
+    );
   }
   if (settings.termsText) {
-    addPreviewItem("termsPosition", "showTerms", "terms", (
-      <p className="text-[10px] text-muted-foreground text-center">Terms: {settings.termsText}</p>
-    ));
+    addPreviewItem(
+      "termsPosition",
+      "showTerms",
+      "terms",
+      <p className="text-[10px] text-muted-foreground text-center">
+        Terms: {settings.termsText}
+      </p>,
+    );
   }
 
   if (isLoading) {
@@ -552,24 +614,70 @@ export default function InvoiceSettingsPage() {
                 Layout &amp; Visibility
               </CardTitle>
               <CardDescription>
-                Choose where each field appears (top or bottom of the bill) and toggle visibility
+                Choose where each field appears (top or bottom of the bill) and
+                toggle visibility
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Per-field controls */}
-              {([
-                { label: "Shop Name", posKey: "shopNamePosition" as const, showKey: null },
-                { label: "Shop Logo", posKey: "logoPosition" as const, showKey: "showLogo" as const },
-                { label: "Tagline", posKey: "taglinePosition" as const, showKey: null },
-                { label: "Address", posKey: "addressPosition" as const, showKey: "showAddress" as const },
-                { label: "Phone", posKey: "phonePosition" as const, showKey: "showPhone" as const },
-                { label: "Email", posKey: "emailPosition" as const, showKey: "showEmail" as const },
-                { label: "GSTIN / VAT / PAN", posKey: "gstinPosition" as const, showKey: "showGstin" as const },
-                { label: "Hallmark License", posKey: "licensePosition" as const, showKey: "showLicense" as const },
-                { label: "Footer Note", posKey: "footerPosition" as const, showKey: "showFooter" as const },
-                { label: "Terms & Conditions", posKey: "termsPosition" as const, showKey: "showTerms" as const },
-              ] as const).map(({ label, posKey, showKey }) => (
-                <div key={posKey} className="flex items-center justify-between py-2 border-b last:border-0">
+              {(
+                [
+                  {
+                    label: "Shop Name",
+                    posKey: "shopNamePosition" as const,
+                    showKey: null,
+                  },
+                  {
+                    label: "Shop Logo",
+                    posKey: "logoPosition" as const,
+                    showKey: "showLogo" as const,
+                  },
+                  {
+                    label: "Tagline",
+                    posKey: "taglinePosition" as const,
+                    showKey: null,
+                  },
+                  {
+                    label: "Address",
+                    posKey: "addressPosition" as const,
+                    showKey: "showAddress" as const,
+                  },
+                  {
+                    label: "Phone",
+                    posKey: "phonePosition" as const,
+                    showKey: "showPhone" as const,
+                  },
+                  {
+                    label: "Email",
+                    posKey: "emailPosition" as const,
+                    showKey: "showEmail" as const,
+                  },
+                  {
+                    label: "GSTIN / VAT / PAN",
+                    posKey: "gstinPosition" as const,
+                    showKey: "showGstin" as const,
+                  },
+                  {
+                    label: "Hallmark License",
+                    posKey: "licensePosition" as const,
+                    showKey: "showLicense" as const,
+                  },
+                  {
+                    label: "Footer Note",
+                    posKey: "footerPosition" as const,
+                    showKey: "showFooter" as const,
+                  },
+                  {
+                    label: "Terms & Conditions",
+                    posKey: "termsPosition" as const,
+                    showKey: "showTerms" as const,
+                  },
+                ] as const
+              ).map(({ label, posKey, showKey }) => (
+                <div
+                  key={posKey}
+                  className="flex items-center justify-between py-2 border-b last:border-0"
+                >
                   <span className="text-sm font-medium">{label}</span>
                   <div className="flex items-center gap-3">
                     <PositionToggle
@@ -579,7 +687,9 @@ export default function InvoiceSettingsPage() {
                     {showKey && (
                       <Switch
                         checked={settings[showKey] as boolean}
-                        onCheckedChange={(checked) => updateField(showKey, checked)}
+                        onCheckedChange={(checked) =>
+                          updateField(showKey, checked)
+                        }
                       />
                     )}
                   </div>
