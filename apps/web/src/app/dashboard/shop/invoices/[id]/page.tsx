@@ -150,7 +150,10 @@ export default function InvoiceDetailPage() {
         method: paymentMethod,
       });
       toast({
-        title: paymentMethod === "cash" ? "Cash Payment Recorded" : "Payment Recorded",
+        title:
+          paymentMethod === "cash"
+            ? "Cash Payment Recorded"
+            : "Payment Recorded",
         description: `${invoice?.currency} ${amount.toLocaleString()} recorded`,
       });
       setPaymentDialogOpen(false);
@@ -239,16 +242,16 @@ export default function InvoiceDetailPage() {
               <div className="flex items-center gap-3">
                 <PartyPopper className="h-5 w-5 text-green-600" />
                 <div>
-                  <p className="font-semibold text-green-800">Invoice Created Successfully!</p>
-                  <p className="text-sm text-green-600">What would you like to do next?</p>
+                  <p className="font-semibold text-green-800">
+                    Invoice Created Successfully!
+                  </p>
+                  <p className="text-sm text-green-600">
+                    What would you like to do next?
+                  </p>
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePrint}
-                >
+                <Button variant="outline" size="sm" onClick={handlePrint}>
                   <Printer className="h-4 w-4 mr-2" /> Print
                 </Button>
                 <Button
@@ -508,7 +511,9 @@ export default function InvoiceDetailPage() {
                 ) : (
                   <CreditCard className="h-5 w-5 text-green-600" />
                 )}
-                {paymentMethod === "cash" ? "Record Cash Payment" : "Record Payment"}
+                {paymentMethod === "cash"
+                  ? "Record Cash Payment"
+                  : "Record Payment"}
               </DialogTitle>
               <DialogDescription>
                 Record a payment for invoice {invoice.invoiceNumber}
@@ -575,7 +580,11 @@ export default function InvoiceDetailPage() {
                     variant="outline"
                     size="sm"
                     className="text-xs"
-                    onClick={() => setPaymentAmount(String(Math.round(invoice.balanceDue / 2)))}
+                    onClick={() =>
+                      setPaymentAmount(
+                        String(Math.round(invoice.balanceDue / 2)),
+                      )
+                    }
                   >
                     Half
                   </Button>
