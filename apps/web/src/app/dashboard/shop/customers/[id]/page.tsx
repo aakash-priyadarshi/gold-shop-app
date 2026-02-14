@@ -244,7 +244,8 @@ export default function CustomerProfilePage() {
                         Total Spent
                       </span>
                       <span className="font-bold text-amber-600">
-                        {currencySymbol} {(stats.totalSpent || 0).toLocaleString()}
+                        {currencySymbol}{" "}
+                        {(stats.totalSpent || 0).toLocaleString()}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
@@ -508,7 +509,8 @@ export default function CustomerProfilePage() {
                         <CardContent className="p-4 text-center">
                           <DollarSign className="h-8 w-8 mx-auto text-amber-500 mb-2" />
                           <p className="text-2xl font-bold text-amber-600">
-                            {currencySymbol} {(stats.totalSpent || 0).toLocaleString()}
+                            {currencySymbol}{" "}
+                            {(stats.totalSpent || 0).toLocaleString()}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             Lifetime Value

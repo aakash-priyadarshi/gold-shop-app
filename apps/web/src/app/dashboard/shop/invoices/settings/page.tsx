@@ -16,9 +16,12 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { useImageUpload } from "@/hooks/useImageUpload";
 import { invoicesApi } from "@/lib/api";
 import {
   ArrowLeft,
+  ArrowDown,
+  ArrowUp,
   Building2,
   FileText,
   ImageIcon,
@@ -27,9 +30,13 @@ import {
   Phone,
   Save,
   Settings2,
+  Upload,
+  X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+type Position = "TOP" | "BOTTOM";
 
 interface InvoiceSettingsData {
   shopNameOnBill: string;
@@ -42,7 +49,18 @@ interface InvoiceSettingsData {
   licenseNumber: string;
   footerNote: string;
   termsText: string;
-  headerPosition: "TOP" | "BOTTOM";
+  // Per-field positions
+  shopNamePosition: Position;
+  logoPosition: Position;
+  taglinePosition: Position;
+  addressPosition: Position;
+  phonePosition: Position;
+  emailPosition: Position;
+  gstinPosition: Position;
+  licensePosition: Position;
+  footerPosition: Position;
+  termsPosition: Position;
+  // Visibility
   showLogo: boolean;
   showAddress: boolean;
   showPhone: boolean;
@@ -64,7 +82,16 @@ const defaultSettings: InvoiceSettingsData = {
   licenseNumber: "",
   footerNote: "Thank you for your business!",
   termsText: "All items are subject to hallmarking verification.",
-  headerPosition: "TOP",
+  shopNamePosition: "TOP",
+  logoPosition: "TOP",
+  taglinePosition: "TOP",
+  addressPosition: "TOP",
+  phonePosition: "TOP",
+  emailPosition: "TOP",
+  gstinPosition: "TOP",
+  licensePosition: "TOP",
+  footerPosition: "BOTTOM",
+  termsPosition: "BOTTOM",
   showLogo: true,
   showAddress: true,
   showPhone: true,
@@ -75,11 +102,57 @@ const defaultSettings: InvoiceSettingsData = {
   showTerms: true,
 };
 
+function PositionToggle({
+  value,
+  onChange,
+}: {
+  value: Position;
+  onChange: (v: Position) => void;
+}) {
+  return (
+    <div className="flex gap-1">
+      <button
+        type="button"
+        onClick={() => onChange("TOP")}
+        className={`px-2 py-0.5 text-[10px] rounded font-medium transition-colors ${value === "TOP" ? "bg-amber-500 text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+      >
+        <ArrowUp className="h-3 w-3 inline mr-0.5" />
+        Top
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange("BOTTOM")}
+        className={`px-2 py-0.5 text-[10px] rounded font-medium transition-colors ${value === "BOTTOM" ? "bg-amber-500 text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+      >
+        <ArrowDown className="h-3 w-3 inline mr-0.5" />
+        Bottom
+      </button>
+    </div>
+  );
+}
+
 export default function InvoiceSettingsPage() {
   const router = useRouter();
-  const [settings, setSettings] = useState<InvoiceSettingsData>(defaultSettings);
+  const [settings, setSettings] =
+    useState<InvoiceSettingsData>(defaultSettings);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const {
+    uploading: isUploadingLogo,
+    progress: uploadProgress,
+    upload: uploadLogo,
+  } = useImageUpload({
+    type: "profile",
+    onSuccess: (result) => {
+      if (result.url) {
+        updateField("shopLogoUrl", result.url);
+        toast({ title: "Logo uploaded successfully" });
+      }
+    },
+    onError: (err) => toast({ variant: "destructive", title: "Upload failed", description: err }),
+  });
 
   useEffect(() => {
     loadSettings();
@@ -100,7 +173,16 @@ export default function InvoiceSettingsPage() {
           licenseNumber: res.data.licenseNumber || "",
           footerNote: res.data.footerNote || "",
           termsText: res.data.termsText || "",
-          headerPosition: res.data.headerPosition || "TOP",
+          shopNamePosition: res.data.shopNamePosition || "TOP",
+          logoPosition: res.data.logoPosition || "TOP",
+          taglinePosition: res.data.taglinePosition || "TOP",
+          addressPosition: res.data.addressPosition || "TOP",
+          phonePosition: res.data.phonePosition || "TOP",
+          emailPosition: res.data.emailPosition || "TOP",
+          gstinPosition: res.data.gstinPosition || "TOP",
+          licensePosition: res.data.licensePosition || "TOP",
+          footerPosition: res.data.footerPosition || "BOTTOM",
+          termsPosition: res.data.termsPosition || "BOTTOM",
           showLogo: res.data.showLogo ?? true,
           showAddress: res.data.showAddress ?? true,
           showPhone: res.data.showPhone ?? true,
@@ -122,9 +204,16 @@ export default function InvoiceSettingsPage() {
     setIsSaving(true);
     try {
       await invoicesApi.updateSettings(settings);
-      toast({ title: "Settings saved", description: "Invoice settings updated successfully" });
+      toast({
+        title: "Settings saved",
+        description: "Invoice settings updated successfully",
+      });
     } catch {
-      toast({ variant: "destructive", title: "Error", description: "Failed to save settings" });
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save settings",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -133,6 +222,89 @@ export default function InvoiceSettingsPage() {
   const updateField = (field: keyof InvoiceSettingsData, value: any) => {
     setSettings((prev) => ({ ...prev, [field]: value }));
   };
+
+  const handleLogoFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ variant: "destructive", title: "File too large", description: "Max 5MB" });
+      return;
+    }
+    await uploadLogo(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // Collect which items go TOP vs BOTTOM for preview
+  const topItems: { key: string; content: React.ReactNode }[] = [];
+  const bottomItems: { key: string; content: React.ReactNode }[] = [];
+
+  const addPreviewItem = (
+    posKey: keyof InvoiceSettingsData,
+    showKey: keyof InvoiceSettingsData | null,
+    key: string,
+    content: React.ReactNode,
+  ) => {
+    if (showKey && !settings[showKey]) return;
+    const pos = settings[posKey] as Position;
+    const item = { key, content };
+    if (pos === "TOP") topItems.push(item);
+    else bottomItems.push(item);
+  };
+
+  // Build preview items
+  if (settings.shopLogoUrl) {
+    addPreviewItem("logoPosition", "showLogo", "logo", (
+      <div className="flex justify-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={settings.shopLogoUrl} alt="Logo" className="h-12 w-12 object-contain" />
+      </div>
+    ));
+  }
+  if (settings.shopNameOnBill) {
+    addPreviewItem("shopNamePosition", null, "name", (
+      <p className="font-bold text-lg text-center">{settings.shopNameOnBill}</p>
+    ));
+  }
+  if (settings.tagline) {
+    addPreviewItem("taglinePosition", null, "tagline", (
+      <p className="text-xs text-muted-foreground italic text-center">{settings.tagline}</p>
+    ));
+  }
+  if (settings.shopAddress) {
+    addPreviewItem("addressPosition", "showAddress", "address", (
+      <p className="text-xs text-muted-foreground text-center">{settings.shopAddress}</p>
+    ));
+  }
+  if (settings.shopPhone) {
+    addPreviewItem("phonePosition", "showPhone", "phone", (
+      <p className="text-xs text-muted-foreground text-center">Tel: {settings.shopPhone}</p>
+    ));
+  }
+  if (settings.shopEmail) {
+    addPreviewItem("emailPosition", "showEmail", "email", (
+      <p className="text-xs text-muted-foreground text-center">{settings.shopEmail}</p>
+    ));
+  }
+  if (settings.gstin) {
+    addPreviewItem("gstinPosition", "showGstin", "gstin", (
+      <p className="text-xs text-muted-foreground text-center">GSTIN: {settings.gstin}</p>
+    ));
+  }
+  if (settings.licenseNumber) {
+    addPreviewItem("licensePosition", "showLicense", "license", (
+      <p className="text-xs text-muted-foreground text-center">License: {settings.licenseNumber}</p>
+    ));
+  }
+  if (settings.footerNote) {
+    addPreviewItem("footerPosition", "showFooter", "footer", (
+      <p className="text-xs text-muted-foreground text-center">{settings.footerNote}</p>
+    ));
+  }
+  if (settings.termsText) {
+    addPreviewItem("termsPosition", "showTerms", "terms", (
+      <p className="text-[10px] text-muted-foreground text-center">Terms: {settings.termsText}</p>
+    ));
+  }
 
   if (isLoading) {
     return (
@@ -200,7 +372,9 @@ export default function InvoiceSettingsPage() {
                 <Label>Shop Name on Bill</Label>
                 <Input
                   value={settings.shopNameOnBill}
-                  onChange={(e) => updateField("shopNameOnBill", e.target.value)}
+                  onChange={(e) =>
+                    updateField("shopNameOnBill", e.target.value)
+                  }
                   placeholder="Your jewellery shop name"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
@@ -208,30 +382,60 @@ export default function InvoiceSettingsPage() {
                 </p>
               </div>
               <div>
-                <Label>Shop Logo URL</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={settings.shopLogoUrl}
-                    onChange={(e) => updateField("shopLogoUrl", e.target.value)}
-                    placeholder="https://example.com/logo.png"
-                  />
-                  {settings.shopLogoUrl && (
-                    <div className="w-10 h-10 rounded border flex items-center justify-center overflow-hidden flex-shrink-0">
+                <Label>Shop Logo</Label>
+                <div className="flex items-center gap-3 mt-1">
+                  {settings.shopLogoUrl ? (
+                    <div className="relative w-16 h-16 rounded-lg border overflow-hidden flex-shrink-0 bg-white">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={settings.shopLogoUrl}
                         alt="Logo"
                         className="w-full h-full object-contain"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
                       />
+                      <button
+                        onClick={() => updateField("shopLogoUrl", "")}
+                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-16 h-16 rounded-lg border-2 border-dashed flex items-center justify-center text-muted-foreground flex-shrink-0">
+                      <ImageIcon className="h-6 w-6" />
                     </div>
                   )}
+                  <div className="flex-1 space-y-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={handleLogoFileSelect}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploadingLogo}
+                    >
+                      {isUploadingLogo ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Uploading {uploadProgress}%
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload Logo
+                        </>
+                      )}
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      PNG, JPG or WebP. Max 5MB. Recommended 200×200px.
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Paste a URL to your shop logo (PNG or JPG, recommended 200x200px)
-                </p>
               </div>
               <div>
                 <Label>Tagline</Label>
@@ -297,7 +501,9 @@ export default function InvoiceSettingsPage() {
                   <Label>BIS / Hallmark License</Label>
                   <Input
                     value={settings.licenseNumber}
-                    onChange={(e) => updateField("licenseNumber", e.target.value)}
+                    onChange={(e) =>
+                      updateField("licenseNumber", e.target.value)
+                    }
                     placeholder="e.g. R-XXXXX/XXXX"
                   />
                 </div>
@@ -338,7 +544,7 @@ export default function InvoiceSettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Layout Options */}
+          {/* Layout Options — per-field position + visibility */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -346,68 +552,39 @@ export default function InvoiceSettingsPage() {
                 Layout &amp; Visibility
               </CardTitle>
               <CardDescription>
-                Control where details appear and which sections to show
+                Choose where each field appears (top or bottom of the bill) and toggle visibility
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Position toggle */}
-              <div>
-                <Label className="text-sm font-medium">Branding Position on Bill</Label>
-                <div className="flex gap-3 mt-2">
-                  <Button
-                    type="button"
-                    variant={settings.headerPosition === "TOP" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => updateField("headerPosition", "TOP")}
-                    className={settings.headerPosition === "TOP" ? "bg-amber-500 hover:bg-amber-600" : ""}
-                  >
-                    Top of Bill
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={settings.headerPosition === "BOTTOM" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => updateField("headerPosition", "BOTTOM")}
-                    className={settings.headerPosition === "BOTTOM" ? "bg-amber-500 hover:bg-amber-600" : ""}
-                  >
-                    Bottom of Bill
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Choose where your shop name, logo, and details appear
-                </p>
-              </div>
-
-              <Separator />
-
-              {/* Visibility switches */}
-              <div className="space-y-4">
-                <p className="text-sm font-medium">Show / Hide Sections</p>
-                {[
-                  { key: "showLogo" as const, label: "Shop Logo", icon: <ImageIcon className="h-4 w-4" /> },
-                  { key: "showAddress" as const, label: "Shop Address", icon: <Building2 className="h-4 w-4" /> },
-                  { key: "showPhone" as const, label: "Phone Number", icon: <Phone className="h-4 w-4" /> },
-                  { key: "showEmail" as const, label: "Email Address", icon: null },
-                  { key: "showGstin" as const, label: "GSTIN / VAT / PAN", icon: null },
-                  { key: "showLicense" as const, label: "BIS / Hallmark License", icon: null },
-                  { key: "showFooter" as const, label: "Footer Note", icon: null },
-                  { key: "showTerms" as const, label: "Terms & Conditions", icon: null },
-                ].map(({ key, label, icon }) => (
-                  <div
-                    key={key}
-                    className="flex items-center justify-between py-1"
-                  >
-                    <div className="flex items-center gap-2">
-                      {icon && <span className="text-muted-foreground">{icon}</span>}
-                      <span className="text-sm">{label}</span>
-                    </div>
-                    <Switch
-                      checked={settings[key]}
-                      onCheckedChange={(checked) => updateField(key, checked)}
+            <CardContent className="space-y-4">
+              {/* Per-field controls */}
+              {([
+                { label: "Shop Name", posKey: "shopNamePosition" as const, showKey: null },
+                { label: "Shop Logo", posKey: "logoPosition" as const, showKey: "showLogo" as const },
+                { label: "Tagline", posKey: "taglinePosition" as const, showKey: null },
+                { label: "Address", posKey: "addressPosition" as const, showKey: "showAddress" as const },
+                { label: "Phone", posKey: "phonePosition" as const, showKey: "showPhone" as const },
+                { label: "Email", posKey: "emailPosition" as const, showKey: "showEmail" as const },
+                { label: "GSTIN / VAT / PAN", posKey: "gstinPosition" as const, showKey: "showGstin" as const },
+                { label: "Hallmark License", posKey: "licensePosition" as const, showKey: "showLicense" as const },
+                { label: "Footer Note", posKey: "footerPosition" as const, showKey: "showFooter" as const },
+                { label: "Terms & Conditions", posKey: "termsPosition" as const, showKey: "showTerms" as const },
+              ] as const).map(({ label, posKey, showKey }) => (
+                <div key={posKey} className="flex items-center justify-between py-2 border-b last:border-0">
+                  <span className="text-sm font-medium">{label}</span>
+                  <div className="flex items-center gap-3">
+                    <PositionToggle
+                      value={settings[posKey] as Position}
+                      onChange={(v) => updateField(posKey, v)}
                     />
+                    {showKey && (
+                      <Switch
+                        checked={settings[showKey] as boolean}
+                        onCheckedChange={(checked) => updateField(showKey, checked)}
+                      />
+                    )}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </CardContent>
           </Card>
 
@@ -420,116 +597,29 @@ export default function InvoiceSettingsPage() {
             </CardHeader>
             <CardContent>
               <div className="bg-white rounded-lg p-6 border shadow-sm space-y-4 text-sm">
-                {/* Top branding */}
-                {settings.headerPosition === "TOP" && (
-                  <div className="text-center space-y-1 pb-3 border-b">
-                    {settings.showLogo && settings.shopLogoUrl && (
-                      <div className="flex justify-center mb-2">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={settings.shopLogoUrl}
-                          alt="Logo"
-                          className="h-12 w-12 object-contain"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = "none";
-                          }}
-                        />
-                      </div>
-                    )}
-                    {settings.shopNameOnBill && (
-                      <p className="font-bold text-lg">{settings.shopNameOnBill}</p>
-                    )}
-                    {settings.tagline && (
-                      <p className="text-xs text-muted-foreground italic">
-                        {settings.tagline}
-                      </p>
-                    )}
-                    {settings.showAddress && settings.shopAddress && (
-                      <p className="text-xs text-muted-foreground">
-                        {settings.shopAddress}
-                      </p>
-                    )}
-                    <div className="flex justify-center gap-3 text-xs text-muted-foreground">
-                      {settings.showPhone && settings.shopPhone && (
-                        <span>{settings.shopPhone}</span>
-                      )}
-                      {settings.showEmail && settings.shopEmail && (
-                        <span>{settings.shopEmail}</span>
-                      )}
-                    </div>
-                    {settings.showGstin && settings.gstin && (
-                      <p className="text-xs text-muted-foreground">
-                        GSTIN: {settings.gstin}
-                      </p>
-                    )}
-                    {settings.showLicense && settings.licenseNumber && (
-                      <p className="text-xs text-muted-foreground">
-                        License: {settings.licenseNumber}
-                      </p>
-                    )}
+                {/* Top section */}
+                {topItems.length > 0 && (
+                  <div className="space-y-1 pb-3 border-b">
+                    {topItems.map((item) => (
+                      <div key={item.key}>{item.content}</div>
+                    ))}
                   </div>
                 )}
 
                 {/* Invoice body placeholder */}
                 <div className="py-6 text-center text-muted-foreground border-y border-dashed">
-                  <p className="text-xs">— Invoice line items will appear here —</p>
+                  <p className="text-xs">
+                    — Invoice line items will appear here —
+                  </p>
                 </div>
 
-                {/* Bottom branding */}
-                {settings.headerPosition === "BOTTOM" && (
-                  <div className="text-center space-y-1 pt-3 border-t">
-                    {settings.showLogo && settings.shopLogoUrl && (
-                      <div className="flex justify-center mb-2">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={settings.shopLogoUrl}
-                          alt="Logo"
-                          className="h-12 w-12 object-contain"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = "none";
-                          }}
-                        />
-                      </div>
-                    )}
-                    {settings.shopNameOnBill && (
-                      <p className="font-bold text-lg">{settings.shopNameOnBill}</p>
-                    )}
-                    {settings.tagline && (
-                      <p className="text-xs text-muted-foreground italic">
-                        {settings.tagline}
-                      </p>
-                    )}
-                    {settings.showAddress && settings.shopAddress && (
-                      <p className="text-xs text-muted-foreground">
-                        {settings.shopAddress}
-                      </p>
-                    )}
-                    <div className="flex justify-center gap-3 text-xs text-muted-foreground">
-                      {settings.showPhone && settings.shopPhone && (
-                        <span>{settings.shopPhone}</span>
-                      )}
-                      {settings.showEmail && settings.shopEmail && (
-                        <span>{settings.shopEmail}</span>
-                      )}
-                    </div>
-                    {settings.showGstin && settings.gstin && (
-                      <p className="text-xs text-muted-foreground">
-                        GSTIN: {settings.gstin}
-                      </p>
-                    )}
+                {/* Bottom section */}
+                {bottomItems.length > 0 && (
+                  <div className="space-y-1 pt-3 border-t">
+                    {bottomItems.map((item) => (
+                      <div key={item.key}>{item.content}</div>
+                    ))}
                   </div>
-                )}
-
-                {/* Footer */}
-                {settings.showFooter && settings.footerNote && (
-                  <p className="text-center text-xs text-muted-foreground pt-2 border-t">
-                    {settings.footerNote}
-                  </p>
-                )}
-                {settings.showTerms && settings.termsText && (
-                  <p className="text-center text-[10px] text-muted-foreground">
-                    Terms: {settings.termsText}
-                  </p>
                 )}
               </div>
             </CardContent>

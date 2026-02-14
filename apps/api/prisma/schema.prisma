@@ -1814,8 +1814,19 @@ model InvoiceSettings {
   footerNote      String?          // Custom footer text (e.g. "Thank you for your business")
   termsText       String?          // Default terms & conditions
 
-  // Layout options
-  headerPosition  String   @default("TOP")    // TOP or BOTTOM – where branding block appears
+  // Per-field position: each field can be TOP or BOTTOM independently
+  shopNamePosition  String  @default("TOP")
+  logoPosition      String  @default("TOP")
+  taglinePosition   String  @default("TOP")
+  addressPosition   String  @default("TOP")
+  phonePosition     String  @default("TOP")
+  emailPosition     String  @default("TOP")
+  gstinPosition     String  @default("TOP")
+  licensePosition   String  @default("TOP")
+  footerPosition    String  @default("BOTTOM")
+  termsPosition     String  @default("BOTTOM")
+
+  // Visibility toggles
   showLogo        Boolean  @default(true)
   showAddress     Boolean  @default(true)
   showPhone       Boolean  @default(true)

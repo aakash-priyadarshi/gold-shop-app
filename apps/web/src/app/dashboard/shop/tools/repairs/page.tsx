@@ -205,7 +205,11 @@ export default function RepairTrackingPage() {
         <div className="space-y-6 max-w-5xl mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard/shop/tools")}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => router.push("/dashboard/shop/tools")}
+              >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>

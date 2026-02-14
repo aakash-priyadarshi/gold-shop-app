@@ -173,7 +173,8 @@ export default function CustomerDirectoryPage() {
                             <div>{customer.rfqCount} RFQs</div>
                             {customer.totalSpent > 0 && (
                               <div className="font-medium text-amber-600">
-                                {currencySymbol} {customer.totalSpent.toLocaleString()}
+                                {currencySymbol}{" "}
+                                {customer.totalSpent.toLocaleString()}
                               </div>
                             )}
                           </>

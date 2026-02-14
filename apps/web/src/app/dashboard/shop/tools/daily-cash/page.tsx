@@ -144,7 +144,11 @@ export default function DailyCashPage() {
         <div className="space-y-6 max-w-4xl mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard/shop/tools")}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => router.push("/dashboard/shop/tools")}
+              >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
@@ -358,8 +362,8 @@ export default function DailyCashPage() {
                         <span
                           className={`font-bold ${entry.type === "IN" ? "text-green-600" : "text-red-600"}`}
                         >
-                          {entry.type === "IN" ? "+" : "-"}{currencySymbol}{" "}
-                          {entry.amount.toLocaleString()}
+                          {entry.type === "IN" ? "+" : "-"}
+                          {currencySymbol} {entry.amount.toLocaleString()}
                         </span>
                         <Button
                           variant="ghost"
