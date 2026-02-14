@@ -40,7 +40,7 @@ const GOLD_PURITIES: { label: string; karat: number; purity: number }[] = [
 
 export default function OldGoldExchangePage() {
   const router = useRouter();
-  const { symbol: currencySymbol, country: shopCountry } = useShopCurrency();
+  const { symbol: currencySymbol, country: shopCountry, currencyCode } = useShopCurrency();
   const [goldRate24k, setGoldRate24k] = useState<number>(0);
   const [rateLoading, setRateLoading] = useState(true);
 
@@ -62,7 +62,7 @@ export default function OldGoldExchangePage() {
   const loadGoldRate = async () => {
     setRateLoading(true);
     try {
-      const res = await materialsApi.getMarketRates({ country: shopCountry || "NP" });
+      const res = await materialsApi.getMarketRates({ currency: currencyCode, country: shopCountry || "NP" });
       // Find gold 24k rate
       const rates = res.data?.metals || res.data?.rates || res.data;
       if (Array.isArray(rates)) {
@@ -74,8 +74,9 @@ export default function OldGoldExchangePage() {
         setGoldRate24k(rates.GOLD_24K);
       }
     } catch {
-      // Fallback rate
-      setGoldRate24k(11500); // Approximate NPR rate
+      // Dynamic fallback rate based on shop country
+      const fallbacks: Record<string, number> = { NP: 11500, IN: 7200, AE: 230, US: 85, GB: 68, EU: 78 };
+      setGoldRate24k(fallbacks[shopCountry] || 7200);
     } finally {
       setRateLoading(false);
     }

@@ -31,6 +31,7 @@ import {
   Loader2,
   Plus,
   Search,
+  Settings2,
   TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
@@ -150,12 +151,20 @@ export default function InvoicesListPage() {
                 Manage billing and track payments
               </p>
             </div>
-            <Link href="/dashboard/shop/invoices/create">
-              <Button className="bg-amber-500 hover:bg-amber-600">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Invoice
-              </Button>
-            </Link>
+            <div className="flex gap-2">
+              <Link href="/dashboard/shop/invoices/settings">
+                <Button variant="outline" size="sm">
+                  <Settings2 className="h-4 w-4 mr-2" />
+                  Bill Settings
+                </Button>
+              </Link>
+              <Link href="/dashboard/shop/invoices/create">
+                <Button className="bg-amber-500 hover:bg-amber-600">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Invoice
+                </Button>
+              </Link>
+            </div>
           </div>
 
           {/* Stats Cards */}
