@@ -86,7 +86,7 @@ export class ShopQuotesService {
       }
     }
 
-    // Fall back to database
+    // Fall back to database — search walk-in customers first
     const customer = await this.prisma.walkInCustomer.findUnique({
       where: { phone: fullPhone },
       include: {
@@ -117,6 +117,50 @@ export class ShopQuotesService {
         city: customer.city,
         country: customer.country,
         recentOrders: customer.shopQuotes,
+        isRegistered: false,
+      };
+      await this.redisService.set(
+        cacheKey,
+        JSON.stringify(customerData),
+        WALKIN_CUSTOMER_CACHE_TTL,
+      );
+
+      return {
+        found: true,
+        customer: customerData,
+        source: "database",
+      };
+    }
+
+    // Also search registered users (CUSTOMER role) by phone
+    const registeredUser = await this.prisma.user.findFirst({
+      where: {
+        phone: fullPhone,
+        role: "CUSTOMER",
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        preferredCity: true,
+        preferredCountry: true,
+      },
+    });
+
+    if (registeredUser) {
+      const customerData = {
+        id: registeredUser.id,
+        name: `${registeredUser.firstName} ${registeredUser.lastName}`.trim(),
+        phone: registeredUser.phone,
+        phoneCountryCode: phoneCountryCode,
+        email: registeredUser.email,
+        address: "",
+        city: registeredUser.preferredCity || "",
+        country: registeredUser.preferredCountry || "",
+        recentOrders: [],
+        isRegistered: true,
       };
       await this.redisService.set(
         cacheKey,
@@ -149,7 +193,8 @@ export class ShopQuotesService {
   ) {
     const fullPartial = `${phoneCountryCode}${partialPhone}`;
 
-    const customers = await this.prisma.walkInCustomer.findMany({
+    // Search walk-in customers
+    const walkInCustomers = await this.prisma.walkInCustomer.findMany({
       where: {
         phone: { startsWith: fullPartial },
         createdByShopId: shopId,
@@ -168,9 +213,47 @@ export class ShopQuotesService {
       },
     });
 
+    // Also search registered users (CUSTOMER role) by phone
+    const registeredUsers = await this.prisma.user.findMany({
+      where: {
+        phone: { startsWith: fullPartial },
+        role: "CUSTOMER",
+      },
+      take: 5,
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        preferredCity: true,
+        preferredCountry: true,
+      },
+    });
+
+    // Merge results, walk-in first, then registered (deduped by phone)
+    const seenPhones = new Set(walkInCustomers.map((c) => c.phone));
+    const merged = [
+      ...walkInCustomers.map((c) => ({ ...c, isRegistered: false })),
+      ...registeredUsers
+        .filter((u) => u.phone && !seenPhones.has(u.phone))
+        .map((u) => ({
+          id: u.id,
+          name: `${u.firstName} ${u.lastName}`.trim(),
+          phone: u.phone!,
+          phoneCountryCode: phoneCountryCode,
+          email: u.email,
+          address: "",
+          city: u.preferredCity || "",
+          country: u.preferredCountry || "",
+          isRegistered: true,
+        })),
+    ].slice(0, 5);
+
     return {
-      customers,
-      count: customers.length,
+      customers: merged,
+      count: merged.length,
     };
   }
 

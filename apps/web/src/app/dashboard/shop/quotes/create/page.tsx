@@ -94,6 +94,7 @@ interface CustomerLookupResult {
     address: string;
     city: string;
     country: string;
+    isRegistered?: boolean;
     recentOrders?: Array<{
       id: string;
       quoteNumber: string;
@@ -577,16 +578,19 @@ export default function CreateShopQuotePage() {
           )}
 
           {showReturningCustomerAlert && lookupResult?.customer && (
-            <Alert className="border-green-500 bg-green-50">
-              <UserCheck className="h-4 w-4 text-green-600" />
-              <AlertTitle className="text-green-800">
-                Returning Customer Found!
+            <Alert className={lookupResult.customer.isRegistered ? "border-blue-500 bg-blue-50" : "border-green-500 bg-green-50"}>
+              <UserCheck className={`h-4 w-4 ${lookupResult.customer.isRegistered ? "text-blue-600" : "text-green-600"}`} />
+              <AlertTitle className={lookupResult.customer.isRegistered ? "text-blue-800" : "text-green-800"}>
+                {lookupResult.customer.isRegistered ? "Registered Customer Found!" : "Returning Customer Found!"}
               </AlertTitle>
-              <AlertDescription className="text-green-700">
+              <AlertDescription className={lookupResult.customer.isRegistered ? "text-blue-700" : "text-green-700"}>
                 <div className="flex items-center justify-between">
                   <span>
-                    Is this <strong>{lookupResult.customer.name}</strong> from{" "}
-                    {lookupResult.customer.city}?
+                    Is this <strong>{lookupResult.customer.name}</strong>
+                    {lookupResult.customer.isRegistered && (
+                      <Badge variant="outline" className="ml-2 text-xs border-blue-400 text-blue-700">Registered Account</Badge>
+                    )}
+                    {lookupResult.customer.city ? ` from ${lookupResult.customer.city}` : ""}?
                   </span>
                   <div className="flex gap-2">
                     <Button size="sm" onClick={handleAutoFillCustomer}>
