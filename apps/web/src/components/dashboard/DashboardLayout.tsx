@@ -279,7 +279,10 @@ function SidebarContent({
     el.addEventListener("scroll", checkScroll, { passive: true });
     const ro = new ResizeObserver(checkScroll);
     ro.observe(el);
-    return () => { el.removeEventListener("scroll", checkScroll); ro.disconnect(); };
+    return () => {
+      el.removeEventListener("scroll", checkScroll);
+      ro.disconnect();
+    };
   }, [checkScroll]);
 
   return (
@@ -318,46 +321,49 @@ function SidebarContent({
 
       {/* Navigation with scroll indicator */}
       <div className="flex-1 relative overflow-hidden">
-        <nav ref={navRef} className="h-full p-3 space-y-1 overflow-y-auto scrollbar-thin">
-        {userNavItems.map((item) => {
-          const isActive = pathname === item.href;
-          const badgeCount =
-            item.badge === "dynamic" && item.badgeKey
-              ? badgeCounts[item.badgeKey]
-              : item.badge;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavClick}
-              className={cn(
-                "flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 touch-target",
-                isActive
-                  ? "bg-gradient-to-r from-gold-500 to-gold-600 text-white shadow-lg shadow-gold-500/25"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 active:scale-[0.98]",
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <item.icon
-                  className={cn("h-5 w-5", isActive && "text-white")}
-                />
-                <span>{item.label}</span>
-              </div>
-              {badgeCount && Number(badgeCount) > 0 && (
-                <span
-                  className={cn(
-                    "px-2 py-0.5 text-xs font-semibold rounded-full",
-                    isActive
-                      ? "bg-white/20 text-white"
-                      : "bg-red-100 text-red-700",
-                  )}
-                >
-                  {badgeCount}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+        <nav
+          ref={navRef}
+          className="h-full p-3 space-y-1 overflow-y-auto scrollbar-thin"
+        >
+          {userNavItems.map((item) => {
+            const isActive = pathname === item.href;
+            const badgeCount =
+              item.badge === "dynamic" && item.badgeKey
+                ? badgeCounts[item.badgeKey]
+                : item.badge;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onNavClick}
+                className={cn(
+                  "flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 touch-target",
+                  isActive
+                    ? "bg-gradient-to-r from-gold-500 to-gold-600 text-white shadow-lg shadow-gold-500/25"
+                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 active:scale-[0.98]",
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <item.icon
+                    className={cn("h-5 w-5", isActive && "text-white")}
+                  />
+                  <span>{item.label}</span>
+                </div>
+                {badgeCount && Number(badgeCount) > 0 && (
+                  <span
+                    className={cn(
+                      "px-2 py-0.5 text-xs font-semibold rounded-full",
+                      isActive
+                        ? "bg-white/20 text-white"
+                        : "bg-red-100 text-red-700",
+                    )}
+                  >
+                    {badgeCount}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Scroll-down indicator */}
@@ -366,7 +372,9 @@ function SidebarContent({
             <div className="h-10 bg-gradient-to-t from-white to-transparent" />
             <div className="absolute bottom-1 left-1/2 -translate-x-1/2 pointer-events-auto">
               <button
-                onClick={() => navRef.current?.scrollBy({ top: 100, behavior: "smooth" })}
+                onClick={() =>
+                  navRef.current?.scrollBy({ top: 100, behavior: "smooth" })
+                }
                 className="flex items-center gap-1 px-2 py-0.5 text-[10px] text-gray-400 hover:text-gray-600 bg-white/90 rounded-full shadow-sm border border-gray-100 transition-colors"
               >
                 <ChevronDown className="h-3 w-3" /> more

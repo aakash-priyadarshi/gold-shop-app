@@ -29,7 +29,10 @@ export default function WeighingScalePage() {
 
   const copyWeight = (weight: number) => {
     navigator.clipboard.writeText(weight.toFixed(3));
-    toast({ title: "Copied", description: `${weight.toFixed(3)}g copied to clipboard` });
+    toast({
+      title: "Copied",
+      description: `${weight.toFixed(3)}g copied to clipboard`,
+    });
   };
 
   return (

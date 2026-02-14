@@ -9,8 +9,8 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { CustomerCrmService } from "./customer-crm.service";
 import { AddCustomerNoteDto } from "./dto/customer-note.dto";
 
@@ -89,13 +89,7 @@ export class CustomerCrmController {
   ) {
     const shopId = user?.shopId;
     if (!shopId) throw new NotFoundException("Shop not found");
-    return this.crmService.addNote(
-      id,
-      shopId,
-      user.id,
-      dto.note,
-      dto.category,
-    );
+    return this.crmService.addNote(id, shopId, user.id, dto.note, dto.category);
   }
 
   @Get(":id/notes")

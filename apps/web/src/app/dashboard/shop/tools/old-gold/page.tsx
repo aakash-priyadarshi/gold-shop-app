@@ -40,7 +40,11 @@ const GOLD_PURITIES: { label: string; karat: number; purity: number }[] = [
 
 export default function OldGoldExchangePage() {
   const router = useRouter();
-  const { symbol: currencySymbol, country: shopCountry, currencyCode } = useShopCurrency();
+  const {
+    symbol: currencySymbol,
+    country: shopCountry,
+    currencyCode,
+  } = useShopCurrency();
   const [goldRate24k, setGoldRate24k] = useState<number>(0);
   const [rateLoading, setRateLoading] = useState(true);
 
@@ -62,7 +66,10 @@ export default function OldGoldExchangePage() {
   const loadGoldRate = async () => {
     setRateLoading(true);
     try {
-      const res = await materialsApi.getMarketRates({ currency: currencyCode, country: shopCountry || "NP" });
+      const res = await materialsApi.getMarketRates({
+        currency: currencyCode,
+        country: shopCountry || "NP",
+      });
       // Find gold 24k rate
       const rates = res.data?.metals || res.data?.rates || res.data;
       if (Array.isArray(rates)) {
@@ -75,7 +82,14 @@ export default function OldGoldExchangePage() {
       }
     } catch {
       // Dynamic fallback rate based on shop country
-      const fallbacks: Record<string, number> = { NP: 11500, IN: 7200, AE: 230, US: 85, GB: 68, EU: 78 };
+      const fallbacks: Record<string, number> = {
+        NP: 11500,
+        IN: 7200,
+        AE: 230,
+        US: 85,
+        GB: 68,
+        EU: 78,
+      };
       setGoldRate24k(fallbacks[shopCountry] || 7200);
     } finally {
       setRateLoading(false);
@@ -110,7 +124,11 @@ export default function OldGoldExchangePage() {
         <div className="space-y-6 max-w-4xl mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard/shop/tools")}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => router.push("/dashboard/shop/tools")}
+              >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
@@ -118,10 +136,10 @@ export default function OldGoldExchangePage() {
                   <ArrowLeftRight className="h-6 w-6 text-amber-500" />
                   Old Gold Exchange Calculator
                 </h1>
-              <p className="text-muted-foreground">
-                Calculate exchange value when customers trade old gold for new
-                jewellery
-              </p>
+                <p className="text-muted-foreground">
+                  Calculate exchange value when customers trade old gold for new
+                  jewellery
+                </p>
               </div>
             </div>
             <Button

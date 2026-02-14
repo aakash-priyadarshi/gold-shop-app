@@ -244,9 +244,7 @@ export class InvoicesService {
           shopId,
           shopNameOnBill: shop?.shopName || null,
           shopAddress: shop
-            ? [shop.address, shop.city, shop.state]
-                .filter(Boolean)
-                .join(", ")
+            ? [shop.address, shop.city, shop.state].filter(Boolean).join(", ")
             : null,
           shopPhone: shop?.contactPhone || null,
           shopEmail: shop?.contactEmail || null,
@@ -274,7 +272,18 @@ export class InvoicesService {
       "licenseNumber",
       "footerNote",
       "termsText",
-      "headerPosition",
+      // Per-field positions (TOP or BOTTOM)
+      "shopNamePosition",
+      "logoPosition",
+      "taglinePosition",
+      "addressPosition",
+      "phonePosition",
+      "emailPosition",
+      "gstinPosition",
+      "licensePosition",
+      "footerPosition",
+      "termsPosition",
+      // Visibility toggles
       "showLogo",
       "showAddress",
       "showPhone",
@@ -292,9 +301,23 @@ export class InvoicesService {
       }
     }
 
-    // Validate headerPosition
-    if (data.headerPosition && !["TOP", "BOTTOM"].includes(data.headerPosition)) {
-      throw new BadRequestException("headerPosition must be TOP or BOTTOM");
+    // Validate position fields
+    const positionFields = [
+      "shopNamePosition",
+      "logoPosition",
+      "taglinePosition",
+      "addressPosition",
+      "phonePosition",
+      "emailPosition",
+      "gstinPosition",
+      "licensePosition",
+      "footerPosition",
+      "termsPosition",
+    ];
+    for (const field of positionFields) {
+      if (data[field] && !["TOP", "BOTTOM"].includes(data[field])) {
+        throw new BadRequestException(`${field} must be TOP or BOTTOM`);
+      }
     }
 
     return this.prisma.invoiceSettings.upsert({

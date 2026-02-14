@@ -68,7 +68,11 @@ export default function EMICalculatorPage() {
       <DashboardLayout>
         <div className="space-y-6 max-w-4xl mx-auto">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard/shop/tools")}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push("/dashboard/shop/tools")}
+            >
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
@@ -180,7 +184,8 @@ export default function EMICalculatorPage() {
                       Total Interest
                     </p>
                     <p className="text-xl font-bold text-red-500">
-                      {currencySymbol} {Math.round(totalInterest).toLocaleString()}
+                      {currencySymbol}{" "}
+                      {Math.round(totalInterest).toLocaleString()}
                     </p>
                   </CardContent>
                 </Card>
@@ -198,7 +203,8 @@ export default function EMICalculatorPage() {
                     <p className="text-xs text-muted-foreground">
                       (Down Payment: {currencySymbol}{" "}
                       {(parseFloat(downPayment) || 0).toLocaleString()} + EMIs:
-                      {currencySymbol} {Math.round(totalPayable).toLocaleString()})
+                      {currencySymbol}{" "}
+                      {Math.round(totalPayable).toLocaleString()})
                     </p>
                   </CardContent>
                 </Card>

@@ -859,7 +859,10 @@ export class MarketRatesService implements OnModuleInit {
     ];
 
     // Also sync non-legacy regions (AE, UK, EU, US) using "IN" as legacy country fallback
-    const extraRegions: Array<{ region: MarketRegion; currency: SupportedCurrency }> = [
+    const extraRegions: Array<{
+      region: MarketRegion;
+      currency: SupportedCurrency;
+    }> = [
       { region: "AE", currency: "AED" },
       { region: "UK", currency: "GBP" },
       { region: "EU", currency: "EUR" },
