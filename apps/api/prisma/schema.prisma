@@ -107,16 +107,16 @@ model CustomerPurchaseStats {
 model CustomerNote {
   id         String   @id @default(uuid())
   customerId String   // User ID of the customer
-  shopId     String   // Which shop's staff added this note
-  authorId   String   // User ID of the shop staff who wrote it
+  shopId     String?  // Which shop's staff added this note (null for admin notes)
+  authorId   String   // User ID of the shop staff or admin who wrote it
   note       String
   category   String   @default("GENERAL") // GENERAL, PREFERENCE, FOLLOW_UP, COMPLAINT, VIP
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  customer User @relation("CustomerNotes", fields: [customerId], references: [id], onDelete: Cascade)
-  shop     Shop @relation("ShopCustomerNotes", fields: [shopId], references: [id], onDelete: Cascade)
-  author   User @relation("AuthoredNotes", fields: [authorId], references: [id], onDelete: Cascade)
+  customer User  @relation("CustomerNotes", fields: [customerId], references: [id], onDelete: Cascade)
+  shop     Shop? @relation("ShopCustomerNotes", fields: [shopId], references: [id], onDelete: Cascade)
+  author   User  @relation("AuthoredNotes", fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([customerId])
   @@index([shopId])

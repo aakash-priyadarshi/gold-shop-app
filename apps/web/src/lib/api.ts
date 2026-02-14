@@ -323,6 +323,22 @@ export const adminApi = {
     api.post("/designs/admin/description-service/clear-queue"),
   processAiDescriptionQueue: () =>
     api.post("/designs/admin/description-service/process-queue"),
+
+  // Customer CRM (admin-level, cross-shop)
+  getCustomers: (params: {
+    query?: string;
+    type?: string;
+    page?: number;
+    limit?: number;
+  }) => api.get("/admin/customers", { params }),
+  getCustomerProfile: (customerId: string) =>
+    api.get(`/admin/customers/${customerId}`),
+  addCustomerNote: (
+    customerId: string,
+    data: { note: string; category?: string },
+  ) => api.post(`/admin/customers/${customerId}/notes`, data),
+  getCustomerNotes: (customerId: string) =>
+    api.get(`/admin/customers/${customerId}/notes`),
 };
 
 // Materials API
