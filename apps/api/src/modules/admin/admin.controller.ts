@@ -629,4 +629,219 @@ export class AdminController {
       openReports,
     };
   }
+
+  // ═══════════════════════════════════════
+  // CUSTOMER CRM (Admin-level, cross-shop)
+  // ═══════════════════════════════════════
+
+  @Get('customers')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'List all customers (registered + walk-in) across all shops' })
+  async listCustomers(
+    @Query('query') query?: string,
+    @Query('type') type?: string, // 'all' | 'registered' | 'walkin'
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pageNum = parseInt(page || '1');
+    const limitNum = parseInt(limit || '25');
+    const skip = (pageNum - 1) * limitNum;
+
+    // Registered customers (CUSTOMER role users)
+    let registeredCustomers: any[] = [];
+    let registeredTotal = 0;
+    if (type !== 'walkin') {
+      const regWhere: any = { role: 'CUSTOMER' };
+      if (query) {
+        regWhere.OR = [
+          { firstName: { contains: query, mode: 'insensitive' } },
+          { lastName: { contains: query, mode: 'insensitive' } },
+          { email: { contains: query, mode: 'insensitive' } },
+          { phone: { contains: query, mode: 'insensitive' } },
+        ];
+      }
+      [registeredCustomers, registeredTotal] = await Promise.all([
+        this.prisma.user.findMany({
+          where: regWhere,
+          select: {
+            id: true, firstName: true, lastName: true, email: true, phone: true,
+            preferredCountry: true, preferredCity: true, createdAt: true, lastLoginAt: true,
+            _count: { select: { customerOrders: true, rfqRequests: true } },
+            purchaseStats: { orderBy: { totalSpent: 'desc' }, take: 1 },
+          },
+          orderBy: { createdAt: 'desc' },
+          skip: type === 'registered' ? skip : skip,
+          take: type === 'registered' ? limitNum : Math.ceil(limitNum / 2),
+        }),
+        this.prisma.user.count({ where: regWhere }),
+      ]);
+    }
+
+    // Walk-in customers
+    let walkInCustomers: any[] = [];
+    let walkInTotal = 0;
+    if (type !== 'registered') {
+      const wiWhere: any = {};
+      if (query) {
+        wiWhere.OR = [
+          { name: { contains: query, mode: 'insensitive' } },
+          { phone: { contains: query, mode: 'insensitive' } },
+          { email: { contains: query, mode: 'insensitive' } },
+        ];
+      }
+      [walkInCustomers, walkInTotal] = await Promise.all([
+        this.prisma.walkInCustomer.findMany({
+          where: wiWhere,
+          include: {
+            createdByShop: { select: { id: true, shopName: true, city: true } },
+            _count: { select: { shopQuotes: true } },
+          },
+          orderBy: { updatedAt: 'desc' },
+          skip: type === 'walkin' ? skip : Math.max(0, skip - registeredTotal),
+          take: type === 'walkin' ? limitNum : Math.max(0, limitNum - registeredCustomers.length),
+        }),
+        this.prisma.walkInCustomer.count({ where: wiWhere }),
+      ]);
+    }
+
+    const customers = [
+      ...registeredCustomers.map(c => ({
+        id: c.id, type: 'REGISTERED' as const,
+        name: `${c.firstName} ${c.lastName}`.trim(),
+        email: c.email, phone: c.phone,
+        country: c.preferredCountry, city: c.preferredCity,
+        shop: null,
+        orderCount: c._count.customerOrders, rfqCount: c._count.rfqRequests, quoteCount: 0,
+        totalSpent: c.purchaseStats[0]?.totalSpent || 0,
+        lastActive: c.lastLoginAt || c.createdAt,
+        createdAt: c.createdAt,
+      })),
+      ...walkInCustomers.map(w => ({
+        id: w.id, type: 'WALK_IN' as const,
+        name: w.name, email: w.email, phone: w.phone,
+        country: w.country, city: w.city,
+        shop: w.createdByShop ? { id: w.createdByShop.id, name: w.createdByShop.shopName, city: w.createdByShop.city } : null,
+        orderCount: 0, rfqCount: 0, quoteCount: w._count.shopQuotes,
+        totalSpent: 0,
+        lastActive: w.updatedAt,
+        createdAt: w.createdAt,
+      })),
+    ];
+
+    const totalAll = registeredTotal + walkInTotal;
+    return {
+      customers,
+      total: totalAll,
+      registeredTotal,
+      walkInTotal,
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(totalAll / limitNum),
+    };
+  }
+
+  @Get('customers/:id')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get customer profile (registered or walk-in)' })
+  async getCustomerProfile(@Param('id') id: string) {
+    // Try registered user first
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true, firstName: true, lastName: true, email: true, phone: true,
+        preferredCurrency: true, preferredCountry: true, preferredCity: true,
+        createdAt: true, lastLoginAt: true, status: true,
+        deliveryAddresses: true,
+        purchaseStats: true,
+        _count: { select: { customerOrders: true, rfqRequests: true } },
+        customerOrders: {
+          orderBy: { createdAt: 'desc' }, take: 10,
+          select: { id: true, orderNumber: true, status: true, totalNpr: true, createdAt: true,
+            shop: { select: { shopName: true } } },
+        },
+        rfqRequests: {
+          orderBy: { createdAt: 'desc' }, take: 5,
+          select: { id: true, jewelleryType: true, status: true, createdAt: true },
+        },
+      },
+    });
+
+    if (user) {
+      return {
+        type: 'REGISTERED', id: user.id,
+        name: `${user.firstName} ${user.lastName}`.trim(),
+        firstName: user.firstName, lastName: user.lastName,
+        email: user.email, phone: user.phone, status: user.status,
+        country: user.preferredCountry, city: user.preferredCity,
+        currency: user.preferredCurrency,
+        addresses: user.deliveryAddresses,
+        purchaseStats: user.purchaseStats,
+        orderCount: user._count.customerOrders,
+        rfqCount: user._count.rfqRequests,
+        recentOrders: user.customerOrders,
+        recentRfqs: user.rfqRequests,
+        lastActive: user.lastLoginAt, memberSince: user.createdAt,
+      };
+    }
+
+    // Try walk-in customer
+    const walkIn = await this.prisma.walkInCustomer.findUnique({
+      where: { id },
+      include: {
+        createdByShop: { select: { id: true, shopName: true, city: true } },
+        shopQuotes: {
+          orderBy: { createdAt: 'desc' }, take: 10,
+          select: { id: true, quoteNumber: true, jewelleryType: true, totalPriceNpr: true, status: true, createdAt: true },
+        },
+        _count: { select: { shopQuotes: true } },
+      },
+    });
+
+    if (walkIn) {
+      return {
+        type: 'WALK_IN', id: walkIn.id,
+        name: walkIn.name, email: walkIn.email, phone: walkIn.phone,
+        country: walkIn.country, city: walkIn.city,
+        address: walkIn.address,
+        shop: walkIn.createdByShop,
+        quoteCount: walkIn._count.shopQuotes,
+        recentQuotes: walkIn.shopQuotes,
+        notes: walkIn.notes,
+        lastActive: walkIn.updatedAt, memberSince: walkIn.createdAt,
+      };
+    }
+
+    return null;
+  }
+
+  @Post('customers/:id/notes')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Add a note to a customer' })
+  async addCustomerNote(
+    @Param('id') customerId: string,
+    @CurrentUser('id') adminId: string,
+    @Body() body: { note: string; category?: string },
+  ) {
+    // Admin notes have no shopId (null) — they are platform-level
+    return this.prisma.customerNote.create({
+      data: {
+        customerId,
+        authorId: adminId,
+        note: body.note,
+        category: body.category || 'GENERAL',
+      },
+      include: { author: { select: { firstName: true, lastName: true } } },
+    });
+  }
+
+  @Get('customers/:id/notes')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get all notes for a customer' })
+  async getCustomerNotes(@Param('id') customerId: string) {
+    return this.prisma.customerNote.findMany({
+      where: { customerId },
+      include: { author: { select: { firstName: true, lastName: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
 }

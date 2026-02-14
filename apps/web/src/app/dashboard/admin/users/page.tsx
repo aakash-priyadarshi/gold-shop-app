@@ -1,6 +1,7 @@
 "use client";
 
 import { AdminGuard } from "@/components/auth/RouteGuard";
+import { AdminCustomersCRM } from "@/components/admin/AdminCustomersCRM";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import {
   AlertDialog,
@@ -1017,6 +1018,19 @@ export default function AdminUsersPage() {
             </Dialog>
           </div>
 
+          <Tabs defaultValue="users" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="users" className="gap-2">
+                <Users className="h-4 w-4" />
+                Platform Users
+              </TabsTrigger>
+              <TabsTrigger value="customers" className="gap-2">
+                <User className="h-4 w-4" />
+                Customers CRM
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="users" className="space-y-6 mt-0">
           {/* Stats Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             <Card>
@@ -1271,6 +1285,12 @@ export default function AdminUsersPage() {
               )}
             </CardContent>
           </Card>
+            </TabsContent>
+
+            <TabsContent value="customers" className="mt-0">
+              <AdminCustomersCRM />
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* View User Details Dialog */}
