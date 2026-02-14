@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
@@ -19,8 +19,11 @@ export class SellerPerformanceController {
   @ApiOperation({
     summary: "Get seller performance dashboard for current shop",
   })
-  async getMyDashboard(@CurrentUser("shopId") shopId: string) {
-    return this.performanceService.getDashboard(shopId);
+  async getMyDashboard(
+    @CurrentUser("shopId") shopId: string,
+    @Query("targetTier") targetTier?: string,
+  ) {
+    return this.performanceService.getDashboard(shopId, targetTier);
   }
 
   @Get(":shopId")
@@ -28,8 +31,11 @@ export class SellerPerformanceController {
   @ApiOperation({
     summary: "Get seller performance for a specific shop (admin)",
   })
-  async getShopPerformance(@Param("shopId") shopId: string) {
-    return this.performanceService.getDashboard(shopId);
+  async getShopPerformance(
+    @Param("shopId") shopId: string,
+    @Query("targetTier") targetTier?: string,
+  ) {
+    return this.performanceService.getDashboard(shopId, targetTier);
   }
 
   @Post("recalculate/:shopId")

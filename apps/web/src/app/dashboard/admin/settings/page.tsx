@@ -752,6 +752,287 @@ export default function AdminSettingsPage() {
               </CardContent>
             </Card>
 
+            {/* System Default Material Prices */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  System Default Material Prices
+                </CardTitle>
+                <CardDescription>
+                  Default prices used in the RFQ calculator and seller matching
+                  when a shop hasn&apos;t set custom component prices. Sellers
+                  can override these on their Inventory page.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Base Metals (NPR per gram) */}
+                <div>
+                  <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <Database className="h-4 w-4 text-orange-500" />
+                    Base Metals
+                    <span className="text-xs font-normal text-muted-foreground">
+                      (NPR per gram)
+                    </span>
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[
+                      { code: "BRASS", label: "Brass", default: 1.5 },
+                      { code: "COPPER", label: "Copper", default: 2.0 },
+                      { code: "BRONZE", label: "Bronze", default: 1.8 },
+                      {
+                        code: "STAINLESS_STEEL_316L",
+                        label: "SS 316L",
+                        default: 3.5,
+                      },
+                      {
+                        code: "STAINLESS_STEEL_304",
+                        label: "SS 304",
+                        default: 3.0,
+                      },
+                      { code: "TITANIUM", label: "Titanium", default: 8.0 },
+                      {
+                        code: "NICKEL_SILVER",
+                        label: "Nickel Silver",
+                        default: 2.5,
+                      },
+                      { code: "PEWTER", label: "Pewter", default: 2.0 },
+                    ].map(({ code, label, default: def }) => (
+                      <div
+                        key={code}
+                        className="p-3 rounded-lg border bg-orange-50/50"
+                      >
+                        <p className="text-xs font-medium text-gray-700 mb-1">
+                          {label}
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            value={
+                              platformConfig[`default_base_metal_${code}`] ??
+                              def
+                            }
+                            onChange={(e) =>
+                              updateConfigValue(
+                                `default_base_metal_${code}`,
+                                e.target.value,
+                              )
+                            }
+                            disabled={loadingConfig}
+                            className="w-20 h-8 text-sm"
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            /g
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Plating (NPR per piece base rate) */}
+                <div>
+                  <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-blue-500" />
+                    Plating Types
+                    <span className="text-xs font-normal text-muted-foreground">
+                      (NPR base rate per piece)
+                    </span>
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {[
+                      {
+                        code: "GOLD_PLATED",
+                        label: "Gold Plated",
+                        default: 45,
+                      },
+                      {
+                        code: "GOLD_FILLED",
+                        label: "Gold Filled",
+                        default: 120,
+                      },
+                      { code: "VERMEIL", label: "Vermeil", default: 80 },
+                      {
+                        code: "ROSE_GOLD_PLATED",
+                        label: "Rose Gold",
+                        default: 50,
+                      },
+                      {
+                        code: "RHODIUM_PLATED",
+                        label: "Rhodium",
+                        default: 40,
+                      },
+                      {
+                        code: "PVD_GOLD",
+                        label: "PVD Gold",
+                        default: 75,
+                      },
+                      {
+                        code: "PVD_ROSE",
+                        label: "PVD Rose",
+                        default: 75,
+                      },
+                      {
+                        code: "PVD_BLACK",
+                        label: "PVD Black",
+                        default: 65,
+                      },
+                      {
+                        code: "SILVER_PLATED",
+                        label: "Silver Plated",
+                        default: 25,
+                      },
+                      {
+                        code: "RUTHENIUM_PLATED",
+                        label: "Ruthenium",
+                        default: 55,
+                      },
+                    ].map(({ code, label, default: def }) => (
+                      <div
+                        key={code}
+                        className="p-3 rounded-lg border bg-blue-50/50"
+                      >
+                        <p className="text-xs font-medium text-gray-700 mb-1">
+                          {label}
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={
+                              platformConfig[`default_plating_${code}`] ?? def
+                            }
+                            onChange={(e) =>
+                              updateConfigValue(
+                                `default_plating_${code}`,
+                                e.target.value,
+                              )
+                            }
+                            disabled={loadingConfig}
+                            className="w-20 h-8 text-sm"
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            /pc
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Surface Finishes (NPR per piece) */}
+                <div>
+                  <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-purple-500" />
+                    Surface Finishes
+                    <span className="text-xs font-normal text-muted-foreground">
+                      (NPR per piece)
+                    </span>
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[
+                      { code: "POLISHED", label: "Polished", default: 25 },
+                      {
+                        code: "HIGH_POLISH",
+                        label: "High Polish",
+                        default: 25,
+                      },
+                      { code: "MATTE", label: "Matte", default: 30 },
+                      { code: "SATIN", label: "Satin", default: 30 },
+                      { code: "BRUSHED", label: "Brushed", default: 35 },
+                      {
+                        code: "OXIDISED_FINISH",
+                        label: "Oxidised",
+                        default: 35,
+                      },
+                      { code: "ANTIQUE", label: "Antique", default: 40 },
+                      {
+                        code: "SANDBLASTED",
+                        label: "Sandblasted",
+                        default: 45,
+                      },
+                      {
+                        code: "BARK_TEXTURE",
+                        label: "Bark Texture",
+                        default: 45,
+                      },
+                      { code: "HAMMERED", label: "Hammered", default: 50 },
+                      {
+                        code: "FLORENTINE",
+                        label: "Florentine",
+                        default: 55,
+                      },
+                      { code: "TWO_TONE", label: "Two Tone", default: 60 },
+                      { code: "ENGRAVED", label: "Engraved", default: 65 },
+                      {
+                        code: "DIAMOND_CUT",
+                        label: "Diamond Cut",
+                        default: 70,
+                      },
+                      {
+                        code: "RHODIUM_PLATED",
+                        label: "Rhodium Plated",
+                        default: 80,
+                      },
+                    ].map(({ code, label, default: def }) => (
+                      <div
+                        key={code}
+                        className="p-3 rounded-lg border bg-purple-50/50"
+                      >
+                        <p className="text-xs font-medium text-gray-700 mb-1">
+                          {label}
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={
+                              platformConfig[`default_finish_${code}`] ?? def
+                            }
+                            onChange={(e) =>
+                              updateConfigValue(
+                                `default_finish_${code}`,
+                                e.target.value,
+                              )
+                            }
+                            disabled={loadingConfig}
+                            className="w-20 h-8 text-sm"
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            /pc
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {configDirty && (
+                  <div className="flex justify-end pt-4 border-t">
+                    <Button
+                      onClick={handleSavePlatformConfig}
+                      disabled={savingConfig}
+                      size="sm"
+                      className="gap-2"
+                    >
+                      {savingConfig ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      {savingConfig
+                        ? "Saving..."
+                        : "Save Material Defaults"}
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Seller Tier Criteria */}
             <Card>
               <CardHeader>

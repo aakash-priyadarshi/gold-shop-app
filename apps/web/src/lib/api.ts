@@ -377,7 +377,10 @@ export const platformConfigApi = {
 
 // Seller Performance API
 export const sellerPerformanceApi = {
-  getMyDashboard: () => api.get("/seller-performance/my-dashboard"),
+  getMyDashboard: (targetTier?: string) =>
+    api.get(
+      `/seller-performance/my-dashboard${targetTier ? `?targetTier=${targetTier}` : ""}`,
+    ),
   getShopPerformance: (shopId: string) =>
     api.get(`/seller-performance/${shopId}`),
   recalculate: (shopId: string) =>
