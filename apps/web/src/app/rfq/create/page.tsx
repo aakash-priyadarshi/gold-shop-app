@@ -688,6 +688,10 @@ export default function CreateRfqPage() {
     estimatedPrice: number;
     materialCost: number;
     makingCharge: number;
+    finishCost: number;
+    baseMetalCost: number;
+    platingCost: number;
+    componentCost: number;
     hasCustomRate: boolean;
     averageRating: number;
     reviewCount: number;
@@ -1986,6 +1990,13 @@ export default function CreateRfqPage() {
       },
       makingChargePercent: 12,
     };
+
+    // Add surface finish to estimate if selected
+    if (formData.surfaceFinish) {
+      request.surfaceFinish = {
+        finishType: formData.surfaceFinish,
+      };
+    }
 
     // Inject shop-specific component prices when a seller is selected
     if (shopPrices) {
@@ -5304,7 +5315,7 @@ export default function CreateRfqPage() {
                             seller.materialCost * (totalMakingPercent / 100),
                           );
                           const subtotal =
-                            seller.materialCost + totalMakingCharge;
+                            seller.materialCost + totalMakingCharge + (seller.componentCost || 0);
                           const isInternational =
                             seller.country &&
                             country &&
@@ -5474,6 +5485,14 @@ export default function CreateRfqPage() {
                                       Making ({totalMakingPercent}%):{" "}
                                       {currencyInfo?.symbol || "Rs."}
                                       {totalMakingCharge.toLocaleString()}
+                                      {(seller.componentCost || 0) > 0 && (
+                                        <>
+                                          <br />
+                                          Finish/Components:{" "}
+                                          {currencyInfo?.symbol || "Rs."}
+                                          {seller.componentCost.toLocaleString()}
+                                        </>
+                                      )}
                                       {taxRate > 0 && (
                                         <>
                                           <br />
@@ -5609,7 +5628,7 @@ export default function CreateRfqPage() {
                             (totalMakingPercent / 100),
                         );
                         const subtotal =
-                          selectedSeller.materialCost + totalMakingCharge;
+                          selectedSeller.materialCost + totalMakingCharge + (selectedSeller.componentCost || 0);
                         const isIntl =
                           selectedSeller.country &&
                           country &&
@@ -5653,6 +5672,15 @@ export default function CreateRfqPage() {
                                   {totalMakingCharge.toLocaleString()}
                                 </span>
                               </div>
+                              {(selectedSeller.componentCost || 0) > 0 && (
+                                <div className="flex justify-between">
+                                  <span>Finish / Components</span>
+                                  <span>
+                                    {sym}
+                                    {selectedSeller.componentCost.toLocaleString()}
+                                  </span>
+                                </div>
+                              )}
                               {taxRate > 0 && (
                                 <div className="flex justify-between">
                                   <span>{taxLabel}</span>

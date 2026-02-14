@@ -387,6 +387,36 @@ export const JEWELLERY_SURFACE_FACTORS: Record<string, number> = {
 };
 
 // ═══════════════════════════════════════════
+// SURFACE FINISH DEFAULT PRICES (NPR per piece)
+// ═══════════════════════════════════════════
+
+export const SURFACE_FINISH_DEFAULTS: Record<string, { label: string; ratePerPieceNpr: number }> = {
+  POLISHED:        { label: 'Polished',        ratePerPieceNpr: 25 },
+  MATTE:           { label: 'Matte',           ratePerPieceNpr: 30 },
+  BRUSHED:         { label: 'Brushed',         ratePerPieceNpr: 35 },
+  HAMMERED:        { label: 'Hammered',        ratePerPieceNpr: 50 },
+  SANDBLASTED:     { label: 'Sandblasted',     ratePerPieceNpr: 45 },
+  RHODIUM_PLATED:  { label: 'Rhodium Plated',  ratePerPieceNpr: 80 },
+  ANTIQUE:         { label: 'Antique',         ratePerPieceNpr: 40 },
+  TWO_TONE:        { label: 'Two Tone',        ratePerPieceNpr: 60 },
+  // Backend surface finish IDs (from materials service)
+  HIGH_POLISH:     { label: 'High Polish',     ratePerPieceNpr: 25 },
+  SATIN:           { label: 'Satin',           ratePerPieceNpr: 30 },
+  FLORENTINE:      { label: 'Florentine',      ratePerPieceNpr: 55 },
+  BARK_TEXTURE:    { label: 'Bark Texture',    ratePerPieceNpr: 45 },
+  DIAMOND_CUT:     { label: 'Diamond Cut',     ratePerPieceNpr: 70 },
+  ENGRAVED:        { label: 'Engraved',        ratePerPieceNpr: 65 },
+  OXIDISED_FINISH: { label: 'Oxidised',        ratePerPieceNpr: 35 },
+};
+
+/**
+ * Get the system default finish price (NPR per piece)
+ */
+export function getDefaultFinishPrice(finishType: string): number {
+  return SURFACE_FINISH_DEFAULTS[finishType]?.ratePerPieceNpr || 0;
+}
+
+// ═══════════════════════════════════════════
 // HELPER FUNCTIONS
 // ═══════════════════════════════════════════
 
