@@ -124,6 +124,16 @@ export default function AdminSettingsPage() {
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [savingConfig, setSavingConfig] = useState(false);
   const [configDirty, setConfigDirty] = useState(false);
+  const [activeTab, setActiveTab] = useState("general");
+
+  const SETTINGS_TABS = [
+    { id: "general", label: "General", icon: Settings },
+    { id: "pricing", label: "Pricing & Materials", icon: DollarSign },
+    { id: "tiers", label: "Seller Tiers", icon: TrendingUp },
+    { id: "operations", label: "Operations", icon: RefreshCw },
+    { id: "email", label: "Email & AI", icon: Mail },
+    { id: "tax", label: "Tax Rules", icon: Percent },
+  ];
 
   // Fetch platform config on mount
   useEffect(() => {
@@ -457,7 +467,75 @@ export default function AdminSettingsPage() {
             </p>
           </div>
 
-          <div className="grid gap-6">
+          {/* Mobile tab bar */}
+          <div className="flex overflow-x-auto gap-2 md:hidden -mx-2 px-2 pb-2">
+            {SETTINGS_TABS.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap border transition-colors ${
+                    activeTab === tab.id
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground border-border hover:bg-muted"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex gap-6">
+            {/* Desktop sidebar nav */}
+            <nav className="hidden md:block w-56 shrink-0">
+              <div className="sticky top-6 space-y-1">
+                {SETTINGS_TABS.map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                        activeTab === tab.id
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+
+                {/* Global save indicator */}
+                {configDirty && (
+                  <div className="mt-4 pt-4 border-t">
+                    <Button
+                      onClick={handleSavePlatformConfig}
+                      disabled={savingConfig}
+                      size="sm"
+                      className="w-full gap-2"
+                    >
+                      {savingConfig ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      {savingConfig ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </nav>
+
+            {/* Content area */}
+            <div className="flex-1 min-w-0">
+
+              {activeTab === "general" && (
+              <div className="grid gap-6">
             {/* Platform Fee */}
             <Card>
               <CardHeader>
@@ -663,7 +741,11 @@ export default function AdminSettingsPage() {
                 )}
               </CardContent>
             </Card>
+              </div>
+              )}
 
+              {activeTab === "pricing" && (
+              <div className="grid gap-6">
             {/* Making Charge Caps per Tier */}
             <Card>
               <CardHeader>
@@ -1024,15 +1106,17 @@ export default function AdminSettingsPage() {
                       ) : (
                         <Save className="h-4 w-4" />
                       )}
-                      {savingConfig
-                        ? "Saving..."
-                        : "Save Material Defaults"}
+                      {savingConfig ? "Saving..." : "Save Material Defaults"}
                     </Button>
                   </div>
                 )}
               </CardContent>
             </Card>
+              </div>
+              )}
 
+              {activeTab === "tiers" && (
+              <div className="grid gap-6">
             {/* Seller Tier Criteria */}
             <Card>
               <CardHeader>
@@ -1395,7 +1479,11 @@ export default function AdminSettingsPage() {
                 )}
               </CardContent>
             </Card>
+              </div>
+              )}
 
+              {activeTab === "operations" && (
+              <div className="grid gap-6">
             {/* Security Settings */}
             <Card>
               <CardHeader>
@@ -1584,7 +1672,11 @@ export default function AdminSettingsPage() {
                 </p>
               </CardContent>
             </Card>
+              </div>
+              )}
 
+              {activeTab === "email" && (
+              <div className="grid gap-6">
             {/* Email Settings */}
             <Card>
               <CardHeader>
@@ -1947,7 +2039,11 @@ export default function AdminSettingsPage() {
                 </div>
               </CardContent>
             </Card>
+              </div>
+              )}
 
+              {activeTab === "tax" && (
+              <div className="grid gap-6">
             {/* Tax Rules */}
             <Card>
               <CardHeader>
@@ -1964,6 +2060,10 @@ export default function AdminSettingsPage() {
                 <AdminTaxRulesPanel />
               </CardContent>
             </Card>
+              </div>
+              )}
+
+            </div>
           </div>
         </div>
       </DashboardLayout>
