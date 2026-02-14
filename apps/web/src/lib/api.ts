@@ -336,6 +336,10 @@ export const shopQuotesApi = {
   lookupCustomer: (data: { phoneCountryCode: string; phone: string }) =>
     api.post("/shop-quotes/lookup-customer", data),
 
+  // Customer search (partial phone, returns up to 5 suggestions)
+  searchCustomers: (data: { phoneCountryCode: string; phone: string }) =>
+    api.post("/shop-quotes/search-customers", data),
+
   // CRUD operations
   create: (data: any) => api.post("/shop-quotes", data),
   getAll: (params?: { status?: string }) => api.get("/shop-quotes", { params }),
