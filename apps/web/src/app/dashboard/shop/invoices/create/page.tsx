@@ -28,8 +28,8 @@ import {
   Loader2,
   Phone,
   Plus,
-  Scale,
   RefreshCw,
+  Scale,
   Trash2,
   User,
   X,
@@ -279,6 +279,7 @@ interface CustomerSuggestion {
   address?: string;
   city?: string;
   country?: string;
+  isRegistered?: boolean;
 }
 
 // ── Toggle Switch Component ──
@@ -953,7 +954,7 @@ export default function CreateInvoicePage() {
                 Customer Details
               </CardTitle>
               <CardDescription>
-                Start typing phone number to search existing customers
+                Start typing phone number to search existing &amp; registered customers
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1001,7 +1002,14 @@ export default function CreateInvoicePage() {
                           onClick={() => handleSelectCustomer(cust)}
                         >
                           <div>
-                            <p className="text-sm font-medium">{cust.name}</p>
+                            <p className="text-sm font-medium flex items-center gap-1.5">
+                              {cust.name}
+                              {cust.isRegistered && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                                  Registered
+                                </span>
+                              )}
+                            </p>
                             <p className="text-xs text-muted-foreground">
                               {cust.phone}
                               {cust.city && ` • ${cust.city}`}
