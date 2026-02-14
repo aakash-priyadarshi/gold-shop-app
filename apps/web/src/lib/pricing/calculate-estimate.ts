@@ -18,6 +18,7 @@ import {
   getBaseMetal,
   getPlatingOption,
   getPlatingTier,
+  getDefaultFinishPrice,
   JEWELLERY_SURFACE_FACTORS,
   type BaseMetalType,
   type PlatingTierC,
@@ -698,13 +699,19 @@ export function calculateEstimate(request: EstimateRequest): EstimateBreakdown {
   // SURFACE FINISH (all methods)
   // ─────────────────────────────────────────
   if (request.surfaceFinish?.finishType) {
-    // Use shop override price if available, else fall back to additionalCost
+    // Priority: 1) shop override  2) explicit additionalCost  3) system default
     const shopFinishPrice =
       request.shopPrices?.finishPrices?.[request.surfaceFinish.finishType];
     if (shopFinishPrice !== undefined && shopFinishPrice > 0) {
       finishCost = shopFinishPrice;
-    } else if (request.surfaceFinish.additionalCost) {
+    } else if (
+      request.surfaceFinish.additionalCost &&
+      request.surfaceFinish.additionalCost > 0
+    ) {
       finishCost = request.surfaceFinish.additionalCost;
+    } else {
+      // System default from constants
+      finishCost = getDefaultFinishPrice(request.surfaceFinish.finishType);
     }
     if (finishCost > 0) {
       lineItems.push({

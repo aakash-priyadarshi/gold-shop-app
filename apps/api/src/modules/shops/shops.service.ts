@@ -1591,6 +1591,10 @@ export class ShopsService {
       include: {
         metalRates: true,
         finishPricing: true,
+        priceOverrides: {
+          where: { isActive: true },
+          select: { overrideType: true, itemCode: true, overrideValue: true },
+        },
         ratings: { select: { overall: true } },
         user: { select: { id: true, firstName: true, lastName: true } },
         _count: { select: { ratings: true } },
@@ -1744,7 +1748,56 @@ export class ShopsService {
       const makingCharge = shopMetalRate?.ratePerGramNpr
         ? shopMetalRate.ratePerGramNpr * estimatedWeight
         : materialCost * ((shop.makingChargePercent || 10) / 100);
-      const estimatedPrice = materialCost + makingCharge;
+
+      // --- Component costs from shop price overrides ---
+      const overrides = (shop as any).priceOverrides || [];
+      const overrideMap: Record<string, Record<string, number>> = {};
+      for (const o of overrides) {
+        if (!overrideMap[o.overrideType]) overrideMap[o.overrideType] = {};
+        overrideMap[o.overrideType][o.itemCode] = o.overrideValue;
+      }
+
+      // System default finish prices (NPR per piece)
+      const SYSTEM_FINISH_DEFAULTS: Record<string, number> = {
+        POLISHED: 25, HIGH_POLISH: 25, MATTE: 30, SATIN: 30,
+        BRUSHED: 35, OXIDISED_FINISH: 35, ANTIQUE: 40,
+        SANDBLASTED: 45, BARK_TEXTURE: 45, HAMMERED: 50,
+        FLORENTINE: 55, TWO_TONE: 60, ENGRAVED: 65, DIAMOND_CUT: 70,
+        RHODIUM_PLATED: 80,
+      };
+
+      // Finish cost: shop override → system default
+      let finishCost = 0;
+      if (surfaceFinish) {
+        finishCost = overrideMap['FINISH']?.[surfaceFinish]
+          || SYSTEM_FINISH_DEFAULTS[surfaceFinish]
+          || 0;
+      }
+
+      // Base metal cost (Method C): shop override → system defaults
+      let baseMetalCost = 0;
+      if (baseMetal && buildMethod === 'METHOD_C') {
+        const SYSTEM_BM_RATES: Record<string, number> = {
+          BRASS: 1.5, COPPER: 2.0, BRONZE: 1.8, STAINLESS_STEEL_316L: 3.5,
+          STAINLESS_STEEL_304: 3.0, TITANIUM: 8.0, NICKEL_SILVER: 2.5, PEWTER: 2.0,
+        };
+        const bmRate = overrideMap['BASE_METAL']?.[baseMetal] || SYSTEM_BM_RATES[baseMetal] || 0;
+        baseMetalCost = bmRate * estimatedWeight;
+      }
+
+      // Plating cost (Method C): shop override → system defaults
+      let platingCost = 0;
+      if (platingType && buildMethod === 'METHOD_C') {
+        const SYSTEM_PLATING_RATES: Record<string, number> = {
+          GOLD_PLATED: 45, GOLD_FILLED: 120, VERMEIL: 80, ROSE_GOLD_PLATED: 50,
+          RHODIUM_PLATED: 40, PVD_GOLD: 75, PVD_ROSE: 75, PVD_BLACK: 65,
+          SILVER_PLATED: 25, RUTHENIUM_PLATED: 55,
+        };
+        platingCost = overrideMap['PLATING']?.[platingType] || SYSTEM_PLATING_RATES[platingType] || 0;
+      }
+
+      const componentCost = finishCost + baseMetalCost + platingCost;
+      const estimatedPrice = materialCost + makingCharge + componentCost;
 
       // --- Location score ---
       let locationScore = 0;
@@ -1792,6 +1845,10 @@ export class ShopsService {
         estimatedPrice: Math.round(estimatedPrice),
         materialCost: Math.round(materialCost),
         makingCharge: Math.round(makingCharge),
+        finishCost: Math.round(finishCost),
+        baseMetalCost: Math.round(baseMetalCost),
+        platingCost: Math.round(platingCost),
+        componentCost: Math.round(componentCost),
         hasCustomRate: !!shopMetalRate,
         averageRating: Math.round(avgRating * 10) / 10,
         reviewCount: shop._count.ratings,
