@@ -18,6 +18,7 @@ import {
   getBaseMetal,
   getPlatingOption,
   getPlatingTier,
+  JEWELLERY_SURFACE_FACTORS,
   type BaseMetalType,
   type PlatingTierC,
   type PlatingTypeC,
@@ -277,6 +278,13 @@ export interface EstimateRequest {
     metals: Record<string, number>;
     fx?: { rate: number };
   };
+
+  // Shop-specific price overrides (from inventory component pricing)
+  shopPrices?: {
+    baseMetalPrices?: Record<string, number>; // code → rate per gram
+    platingPrices?: Record<string, number>; // code → base rate per piece
+    finishPrices?: Record<string, number>; // code → price per piece
+  };
 }
 
 export interface LineItem {
@@ -503,9 +511,14 @@ export function calculateEstimate(request: EstimateRequest): EstimateBreakdown {
       const { baseMetal, weightGrams, platingType, platingTier } =
         request.methodC;
 
-      // Calculate base metal cost
+      // Calculate base metal cost — use shop override if available
       if (baseMetal && weightGrams > 0) {
-        baseMetalCost = calculateBaseMetalCost(baseMetal, weightGrams);
+        const shopBaseRate = request.shopPrices?.baseMetalPrices?.[baseMetal];
+        if (shopBaseRate !== undefined && shopBaseRate > 0) {
+          baseMetalCost = weightGrams * shopBaseRate;
+        } else {
+          baseMetalCost = calculateBaseMetalCost(baseMetal, weightGrams);
+        }
         const metalInfo = getBaseMetal(baseMetal);
         const actualRatePerGram =
           weightGrams > 0 ? baseMetalCost / weightGrams : 0;
@@ -519,14 +532,28 @@ export function calculateEstimate(request: EstimateRequest): EstimateBreakdown {
         }
       }
 
-      // Calculate plating cost (REQUIRED for Method C)
+      // Calculate plating cost (REQUIRED for Method C) — use shop override if available
       if (platingType && platingTier && weightGrams > 0) {
-        platingCost = calculatePlatingCost(
-          platingType,
-          platingTier,
-          request.jewelleryType,
-          weightGrams,
-        );
+        const shopPlatingRate = request.shopPrices?.platingPrices?.[platingType];
+        if (shopPlatingRate !== undefined && shopPlatingRate > 0) {
+          // Use shop rate as baseRateNpr but still apply tier & surface modifiers
+          const tierInfo = getPlatingTier(platingTier);
+          const surfaceFactor =
+            JEWELLERY_SURFACE_FACTORS[request.jewelleryType] || 1.5;
+          const weightFactor = 1 + Math.floor(weightGrams / 5) * 0.1;
+          platingCost =
+            shopPlatingRate *
+            (tierInfo?.multiplier || 1) *
+            surfaceFactor *
+            weightFactor;
+        } else {
+          platingCost = calculatePlatingCost(
+            platingType,
+            platingTier,
+            request.jewelleryType,
+            weightGrams,
+          );
+        }
 
         const platingInfo = getPlatingOption(platingType);
         const tierInfo = getPlatingTier(platingTier);
@@ -670,13 +697,22 @@ export function calculateEstimate(request: EstimateRequest): EstimateBreakdown {
   // ─────────────────────────────────────────
   // SURFACE FINISH (all methods)
   // ─────────────────────────────────────────
-  if (request.surfaceFinish?.additionalCost) {
-    finishCost = request.surfaceFinish.additionalCost;
-    lineItems.push({
-      label: `${request.surfaceFinish.finishType} finish`,
-      category: "FINISH",
-      amount: finishCost,
-    });
+  if (request.surfaceFinish?.finishType) {
+    // Use shop override price if available, else fall back to additionalCost
+    const shopFinishPrice =
+      request.shopPrices?.finishPrices?.[request.surfaceFinish.finishType];
+    if (shopFinishPrice !== undefined && shopFinishPrice > 0) {
+      finishCost = shopFinishPrice;
+    } else if (request.surfaceFinish.additionalCost) {
+      finishCost = request.surfaceFinish.additionalCost;
+    }
+    if (finishCost > 0) {
+      lineItems.push({
+        label: `${request.surfaceFinish.finishType.replace(/_/g, " ")} finish`,
+        category: "FINISH",
+        amount: finishCost,
+      });
+    }
   }
 
   // ─────────────────────────────────────────

@@ -264,6 +264,16 @@ export default function ShopInventoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshingRates, setIsRefreshingRates] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  // Component pricing overrides (base metals, plating, finishes)
+  const [baseMetalPrices, setBaseMetalPrices] = useState<
+    Record<string, number>
+  >({});
+  const [platingPrices, setPlatingPrices] = useState<Record<string, number>>(
+    {},
+  );
+  const [finishPrices, setFinishPrices] = useState<Record<string, number>>({});
+  const [isSavingComponentPricing, setIsSavingComponentPricing] =
+    useState(false);
 
   useEffect(() => {
     if (user?.shop?.id) {
@@ -274,7 +284,7 @@ export default function ShopInventoryPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [materialsRes, capabilitiesRes, ratesRes, gemPricingRes] =
+      const [materialsRes, capabilitiesRes, ratesRes, gemPricingRes, compPricingRes] =
         await Promise.all([
           shopsApi.getMaterials(),
           shopsApi.getCapabilities(),
@@ -283,7 +293,15 @@ export default function ShopInventoryPage() {
             country: shopCountry,
           }),
           shopsApi.getGemstonePricing().catch(() => ({ data: { rates: [] } })),
+          shopsApi.getComponentPricing().catch(() => ({
+            data: { baseMetalPrices: {}, platingPrices: {}, finishPrices: {} },
+          })),
         ]);
+      // Load component pricing overrides
+      const cp = compPricingRes.data || {};
+      setBaseMetalPrices(cp.baseMetalPrices || {});
+      setPlatingPrices(cp.platingPrices || {});
+      setFinishPrices(cp.finishPrices || {});
       // Load gemstone pricing
       const gemRates = gemPricingRes.data?.rates || [];
       setGemstonePricing(gemRates);
@@ -570,6 +588,32 @@ export default function ShopInventoryPage() {
       });
     } finally {
       setIsSavingGemstones(false);
+    }
+  };
+
+  const saveComponentPricing = async () => {
+    setIsSavingComponentPricing(true);
+    try {
+      await shopsApi.updateComponentPricing({
+        baseMetalPrices,
+        platingPrices,
+        finishPrices,
+      });
+      toast({
+        title: "Component Pricing Saved",
+        description:
+          "Your base metal, plating & finish prices have been updated. These prices will be used in the RFQ calculator.",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Save Failed",
+        description:
+          error.response?.data?.message ||
+          "Could not save component pricing",
+      });
+    } finally {
+      setIsSavingComponentPricing(false);
     }
   };
 
@@ -1647,8 +1691,9 @@ export default function ShopInventoryPage() {
                     Base Metals (Method C & D)
                   </CardTitle>
                   <CardDescription>
-                    Select the base/core metals you can work with for Method C
-                    and D orders
+                    Select the base/core metals you work with and set your
+                    per-gram rate. These prices are used in the RFQ live
+                    calculator for transparent cost breakdown.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -1660,34 +1705,76 @@ export default function ShopInventoryPage() {
                       return (
                         <div
                           key={metal.value}
-                          className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-all ${
+                          className={`p-4 rounded-lg border transition-all ${
                             isSelected
                               ? "border-primary bg-primary/5"
                               : "hover:border-gray-300"
                           }`}
-                          onClick={() => toggleBaseMetal(metal.value)}
                         >
-                          <Checkbox checked={isSelected} className="mt-1" />
-                          <div>
-                            <Label className="cursor-pointer font-medium">
-                              {metal.label}
-                            </Label>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {metal.description}
-                            </p>
+                          <div
+                            className="flex items-start gap-3 cursor-pointer"
+                            onClick={() => toggleBaseMetal(metal.value)}
+                          >
+                            <Checkbox checked={isSelected} className="mt-1" />
+                            <div className="flex-1">
+                              <Label className="cursor-pointer font-medium">
+                                {metal.label}
+                              </Label>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {metal.description}
+                              </p>
+                            </div>
                           </div>
+                          {isSelected && (
+                            <div className="mt-3 ml-7 flex items-center gap-2">
+                              <Label className="text-xs whitespace-nowrap">
+                                Rate per gram ({currencySymbol})
+                              </Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={baseMetalPrices[metal.value] ?? ""}
+                                onChange={(e) => {
+                                  const v = parseFloat(e.target.value);
+                                  setBaseMetalPrices((prev) => ({
+                                    ...prev,
+                                    [metal.value]: isNaN(v) ? 0 : v,
+                                  }));
+                                }}
+                                placeholder="0.00"
+                                className="h-8 w-32 text-xs"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              <span className="text-[10px] text-muted-foreground">
+                                per gram
+                              </span>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
                   </div>
-                  <div className="flex justify-end">
+                  <div className="flex justify-end gap-2">
                     <Button onClick={saveCapabilities} disabled={isSaving}>
                       {isSaving ? (
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       ) : (
                         <Save className="h-4 w-4 mr-2" />
                       )}
-                      Save Base Metals
+                      Save Selection
+                    </Button>
+                    <Button
+                      onClick={saveComponentPricing}
+                      disabled={isSavingComponentPricing}
+                      variant="default"
+                    >
+                      {isSavingComponentPricing ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <TrendingUp className="h-4 w-4 mr-2" />
+                      )}
+                      Save Prices
                     </Button>
                   </div>
                 </CardContent>
@@ -1703,8 +1790,9 @@ export default function ShopInventoryPage() {
                     Plating & Coating Types (Method C)
                   </CardTitle>
                   <CardDescription>
-                    Select the plating/coating finishes you can apply for Method
-                    C orders
+                    Select plating types and set your base rate per piece. The
+                    calculator adjusts this by tier and jewellery size
+                    automatically.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -1715,34 +1803,76 @@ export default function ShopInventoryPage() {
                       return (
                         <div
                           key={plating.value}
-                          className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-all ${
+                          className={`p-4 rounded-lg border transition-all ${
                             isSelected
                               ? "border-primary bg-primary/5"
                               : "hover:border-gray-300"
                           }`}
-                          onClick={() => togglePlatingType(plating.value)}
                         >
-                          <Checkbox checked={isSelected} className="mt-1" />
-                          <div>
-                            <Label className="cursor-pointer font-medium">
-                              {plating.label}
-                            </Label>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {plating.description}
-                            </p>
+                          <div
+                            className="flex items-start gap-3 cursor-pointer"
+                            onClick={() => togglePlatingType(plating.value)}
+                          >
+                            <Checkbox checked={isSelected} className="mt-1" />
+                            <div className="flex-1">
+                              <Label className="cursor-pointer font-medium">
+                                {plating.label}
+                              </Label>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {plating.description}
+                              </p>
+                            </div>
                           </div>
+                          {isSelected && (
+                            <div className="mt-3 ml-7 flex items-center gap-2">
+                              <Label className="text-xs whitespace-nowrap">
+                                Base rate ({currencySymbol})
+                              </Label>
+                              <Input
+                                type="number"
+                                step="1"
+                                min="0"
+                                value={platingPrices[plating.value] ?? ""}
+                                onChange={(e) => {
+                                  const v = parseFloat(e.target.value);
+                                  setPlatingPrices((prev) => ({
+                                    ...prev,
+                                    [plating.value]: isNaN(v) ? 0 : v,
+                                  }));
+                                }}
+                                placeholder="0"
+                                className="h-8 w-32 text-xs"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              <span className="text-[10px] text-muted-foreground">
+                                per piece (base)
+                              </span>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
                   </div>
-                  <div className="flex justify-end">
+                  <div className="flex justify-end gap-2">
                     <Button onClick={saveCapabilities} disabled={isSaving}>
                       {isSaving ? (
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       ) : (
                         <Save className="h-4 w-4 mr-2" />
                       )}
-                      Save Plating Types
+                      Save Selection
+                    </Button>
+                    <Button
+                      onClick={saveComponentPricing}
+                      disabled={isSavingComponentPricing}
+                      variant="default"
+                    >
+                      {isSavingComponentPricing ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <TrendingUp className="h-4 w-4 mr-2" />
+                      )}
+                      Save Prices
                     </Button>
                   </div>
                 </CardContent>
@@ -1830,12 +1960,13 @@ export default function ShopInventoryPage() {
                     Surface Finishes
                   </CardTitle>
                   <CardDescription>
-                    Select the finishes you can apply
+                    Select the finishes you can apply and set your price per
+                    piece for each. Prices feed into the RFQ calculator.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <TooltipProvider delayDuration={200}>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                       {allFinishes.map((finish) => {
                         const isSelected =
                           capabilitiesData?.finishes?.includes(finish);
@@ -1844,29 +1975,57 @@ export default function ShopInventoryPage() {
                           <Tooltip key={finish}>
                             <TooltipTrigger asChild>
                               <div
-                                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                                className={`p-3 rounded-lg border transition-all ${
                                   isSelected
                                     ? "border-primary bg-primary/5"
                                     : "hover:border-gray-300"
                                 }`}
-                                onClick={() => toggleFinish(finish)}
                               >
-                                <Checkbox checked={isSelected} />
-                                {info?.image && (
-                                  <img
-                                    src={info.image}
-                                    alt={info.label}
-                                    className="h-8 w-8 rounded object-cover"
-                                  />
-                                )}
-                                <div className="min-w-0">
-                                  <Label className="cursor-pointer text-sm block">
-                                    {info?.label || finish.replace(/_/g, " ")}
-                                  </Label>
-                                  <p className="text-[10px] text-muted-foreground truncate">
-                                    {info?.description}
-                                  </p>
+                                <div
+                                  className="flex items-center gap-3 cursor-pointer"
+                                  onClick={() => toggleFinish(finish)}
+                                >
+                                  <Checkbox checked={isSelected} />
+                                  {info?.image && (
+                                    <img
+                                      src={info.image}
+                                      alt={info.label}
+                                      className="h-8 w-8 rounded object-cover"
+                                    />
+                                  )}
+                                  <div className="min-w-0 flex-1">
+                                    <Label className="cursor-pointer text-sm block">
+                                      {info?.label ||
+                                        finish.replace(/_/g, " ")}
+                                    </Label>
+                                    <p className="text-[10px] text-muted-foreground truncate">
+                                      {info?.description}
+                                    </p>
+                                  </div>
                                 </div>
+                                {isSelected && (
+                                  <div className="mt-2 ml-6 flex items-center gap-1.5">
+                                    <Input
+                                      type="number"
+                                      step="1"
+                                      min="0"
+                                      value={finishPrices[finish] ?? ""}
+                                      onChange={(e) => {
+                                        const v = parseFloat(e.target.value);
+                                        setFinishPrices((prev) => ({
+                                          ...prev,
+                                          [finish]: isNaN(v) ? 0 : v,
+                                        }));
+                                      }}
+                                      placeholder="0"
+                                      className="h-7 w-24 text-xs"
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                    <span className="text-[10px] text-muted-foreground">
+                                      {currencySymbol}/pc
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             </TooltipTrigger>
                             {info && (
@@ -1897,14 +2056,26 @@ export default function ShopInventoryPage() {
                     </div>
                   </TooltipProvider>
 
-                  <div className="flex justify-end">
+                  <div className="flex justify-end gap-2">
                     <Button onClick={saveCapabilities} disabled={isSaving}>
                       {isSaving ? (
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       ) : (
                         <Save className="h-4 w-4 mr-2" />
                       )}
-                      Save Finishes
+                      Save Selection
+                    </Button>
+                    <Button
+                      onClick={saveComponentPricing}
+                      disabled={isSavingComponentPricing}
+                      variant="default"
+                    >
+                      {isSavingComponentPricing ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <TrendingUp className="h-4 w-4 mr-2" />
+                      )}
+                      Save Prices
                     </Button>
                   </div>
                 </CardContent>

@@ -316,6 +316,36 @@ export class ShopsController {
     );
   }
 
+  @Get("my-shop/component-pricing")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      "Get shop component pricing (base metals, plating, finishes overrides)",
+  })
+  async getMyShopComponentPricing(@CurrentUser("shopId") shopId: string) {
+    return this.shopsService.getShopComponentPricing(shopId);
+  }
+
+  @Put("my-shop/component-pricing")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Update shop component pricing" })
+  async updateMyShopComponentPricing(
+    @CurrentUser("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @Body()
+    dto: {
+      baseMetalPrices?: Record<string, number>;
+      platingPrices?: Record<string, number>;
+      finishPrices?: Record<string, number>;
+    },
+  ) {
+    return this.shopsService.updateShopComponentPricing(shopId, userId, dto);
+  }
+
   // ═══════════════════════════════════════════════════════════════
   // PUBLIC ENDPOINTS
   // ═══════════════════════════════════════════════════════════════
@@ -324,6 +354,14 @@ export class ShopsController {
   @ApiOperation({ summary: "Get shop by ID" })
   async findOne(@Param("id") id: string) {
     return this.shopsService.findById(id);
+  }
+
+  @Get(":id/component-pricing")
+  @ApiOperation({
+    summary: "Get shop component pricing (public — base metals, plating, finishes)",
+  })
+  async getShopComponentPricingPublic(@Param("id") id: string) {
+    return this.shopsService.getShopComponentPricing(id);
   }
 
   @Patch(":id")

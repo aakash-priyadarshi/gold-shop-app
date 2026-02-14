@@ -2215,4 +2215,109 @@ export class ShopsService {
       data: updateData,
     });
   }
+
+  // ═══════════════════════════════════════════════════════════════
+  // COMPONENT PRICING (base metals, plating, finishes)
+  // ═══════════════════════════════════════════════════════════════
+
+  /**
+   * Get shop component pricing overrides for base metals, plating, and finishes.
+   * Returns a structured object with prices keyed by item code.
+   */
+  async getShopComponentPricing(shopId: string) {
+    const overrides = await this.prisma.shopPriceOverride.findMany({
+      where: {
+        shopId,
+        overrideType: { in: ['BASE_METAL', 'PLATING', 'FINISH'] },
+        isActive: true,
+      },
+    });
+
+    const baseMetalPrices: Record<string, number> = {};
+    const platingPrices: Record<string, number> = {};
+    const finishPrices: Record<string, number> = {};
+
+    for (const o of overrides) {
+      if (o.overrideType === 'BASE_METAL') {
+        baseMetalPrices[o.itemCode] = o.overrideValue;
+      } else if (o.overrideType === 'PLATING') {
+        platingPrices[o.itemCode] = o.overrideValue;
+      } else if (o.overrideType === 'FINISH') {
+        finishPrices[o.itemCode] = o.overrideValue;
+      }
+    }
+
+    return { baseMetalPrices, platingPrices, finishPrices };
+  }
+
+  /**
+   * Upsert shop component pricing overrides.
+   */
+  async updateShopComponentPricing(
+    shopId: string,
+    userId: string,
+    dto: {
+      baseMetalPrices?: Record<string, number>;
+      platingPrices?: Record<string, number>;
+      finishPrices?: Record<string, number>;
+    },
+  ) {
+    const shop = await this.prisma.shop.findUnique({ where: { id: shopId } });
+    if (!shop || shop.userId !== userId) {
+      throw new ForbiddenException('Not authorized');
+    }
+
+    const upserts: Promise<any>[] = [];
+
+    const upsertPrice = (overrideType: string, itemCode: string, value: number) => {
+      upserts.push(
+        this.prisma.shopPriceOverride.upsert({
+          where: {
+            shopId_overrideType_itemCode: { shopId, overrideType, itemCode },
+          },
+          create: {
+            shopId,
+            overrideType,
+            itemCode,
+            overrideMode: 'FIXED',
+            overrideValue: value,
+            isActive: true,
+          },
+          update: {
+            overrideValue: value,
+            isActive: true,
+          },
+        }),
+      );
+    };
+
+    if (dto.baseMetalPrices) {
+      for (const [code, price] of Object.entries(dto.baseMetalPrices)) {
+        upsertPrice('BASE_METAL', code, price);
+      }
+    }
+    if (dto.platingPrices) {
+      for (const [code, price] of Object.entries(dto.platingPrices)) {
+        upsertPrice('PLATING', code, price);
+      }
+    }
+    if (dto.finishPrices) {
+      for (const [code, price] of Object.entries(dto.finishPrices)) {
+        upsertPrice('FINISH', code, price);
+      }
+    }
+
+    await Promise.all(upserts);
+
+    await this.auditService.log({
+      userId,
+      actorType: 'USER',
+      action: 'UPDATE',
+      resourceType: 'SHOP_COMPONENT_PRICING',
+      resourceId: shopId,
+      newValue: dto,
+    });
+
+    return { success: true, ...dto };
+  }
 }
