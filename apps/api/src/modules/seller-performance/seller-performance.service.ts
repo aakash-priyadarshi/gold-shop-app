@@ -440,7 +440,7 @@ export class SellerPerformanceService {
   /**
    * Get full performance dashboard data for a shop (including tier progress)
    */
-  async getDashboard(shopId: string): Promise<any> {
+  async getDashboard(shopId: string, overrideTargetTier?: string): Promise<any> {
     const [performance, shop, badges] = await Promise.all([
       this.getPerformance(shopId),
       this.prisma.shop.findUnique({
@@ -474,7 +474,13 @@ export class SellerPerformanceService {
             : null; // ELITE has no next tier
 
     // Load criteria for the next tier (or Elite if already Elite)
-    const targetTier = nextTier || "ELITE";
+    // Allow override via query param so frontend can show any tier's requirements
+    const TIER_ORDER = ['STANDARD', 'SILVER', 'GOLD', 'ELITE'];
+    const validOverride =
+      overrideTargetTier && TIER_ORDER.includes(overrideTargetTier.toUpperCase())
+        ? overrideTargetTier.toUpperCase()
+        : null;
+    const targetTier = validOverride || nextTier || 'ELITE';
     const prefix = targetTier.toLowerCase();
 
     const criteriaKeys = {
@@ -577,6 +583,7 @@ export class SellerPerformanceService {
       },
       badges,
       nextTier: nextTier, // null if already ELITE
+      viewingTier: targetTier, // which tier's requirements are shown
       tierProgress,
       overallProgress: {
         met: metCriteria,
