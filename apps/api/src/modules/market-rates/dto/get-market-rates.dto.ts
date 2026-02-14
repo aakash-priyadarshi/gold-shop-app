@@ -11,7 +11,7 @@ export class GetMarketRatesDto {
   @IsOptional()
   @IsString()
   @IsIn(['NPR', 'INR', 'AED', 'USD', 'GBP', 'EUR'])
-  currency?: 'NPR' | 'INR' | 'AED' | 'USD' | 'GBP' | 'EUR' = 'NPR';
+  currency?: 'NPR' | 'INR' | 'AED' | 'USD' | 'GBP' | 'EUR';
 
   @ApiProperty({
     description: 'Market region for tax/duty adjustments (optional, defaults based on currency)',

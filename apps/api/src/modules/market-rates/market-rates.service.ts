@@ -848,18 +848,27 @@ export class MarketRatesService implements OnModuleInit {
   async syncRatesToMarketRateTable(): Promise<void> {
     this.logger.log("Syncing live market rates to MarketRate table...");
 
-    // Sync for both supported countries
-    const countriesToSync: Array<{
+    // Sync for all supported regions
+    const regionsToSync: Array<{
       country: SupportedCountry;
       currency: SupportedCurrency;
+      region: MarketRegion;
     }> = [
-      { country: "IN", currency: "INR" },
-      { country: "NP", currency: "NPR" },
+      { country: "IN", currency: "INR", region: "IN" },
+      { country: "NP", currency: "NPR", region: "NP" },
     ];
 
-    for (const { country, currency } of countriesToSync) {
+    // Also sync non-legacy regions (AE, UK, EU, US) using "IN" as legacy country fallback
+    const extraRegions: Array<{ region: MarketRegion; currency: SupportedCurrency }> = [
+      { region: "AE", currency: "AED" },
+      { region: "UK", currency: "GBP" },
+      { region: "EU", currency: "EUR" },
+      { region: "US", currency: "USD" },
+    ];
+
+    for (const { country, currency, region } of regionsToSync) {
       try {
-        const liveRates = await this.getMarketRates(currency);
+        const liveRates = await this.getMarketRates(currency, region);
         const metals = liveRates.metals;
 
         // Upsert each metal rate into the MarketRate table
@@ -895,6 +904,45 @@ export class MarketRatesService implements OnModuleInit {
         );
       } catch (error) {
         this.logger.error(`Failed to sync rates for ${country}: ${error}`);
+      }
+    }
+
+    // Sync extra regions into MarketRate table using region code as "country"
+    for (const { region, currency } of extraRegions) {
+      try {
+        const liveRates = await this.getMarketRates(currency, region);
+        const metals = liveRates.metals;
+
+        for (const [metalCode, ratePerGram] of Object.entries(metals)) {
+          if (!ratePerGram || ratePerGram <= 0) continue;
+
+          await this.prisma.marketRate.updateMany({
+            where: {
+              metalCode,
+              country: region,
+              validUntil: null,
+            },
+            data: { validUntil: new Date() },
+          });
+
+          await this.prisma.marketRate.create({
+            data: {
+              metalCode,
+              country: region,
+              ratePerGram,
+              source: liveRates.source || "metalpriceapi",
+              validFrom: new Date(),
+              validUntil: null,
+            },
+          });
+        }
+
+        this.logger.log(
+          `Synced ${Object.keys(metals).length} metal rates for ${region} (${currency}). ` +
+            `GOLD_24K=${metals.GOLD_24K}/g`,
+        );
+      } catch (error) {
+        this.logger.error(`Failed to sync rates for ${region}: ${error}`);
       }
     }
   }

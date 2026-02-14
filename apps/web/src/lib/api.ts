@@ -420,6 +420,8 @@ export const invoicesApi = {
     api.patch(`/invoices/${id}/payment`, data),
   void: (id: string) => api.post(`/invoices/${id}/void`),
   getStats: () => api.get("/invoices/stats"),
+  getSettings: () => api.get("/invoices/settings"),
+  updateSettings: (data: any) => api.patch("/invoices/settings", data),
 };
 
 export default api;

@@ -252,6 +252,7 @@ model Shop {
   performance             SellerPerformance?
   badges                  SellerBadge[]
   invoices                Invoice[]
+  invoiceSettings         InvoiceSettings?
   customerNotes           CustomerNote[]       @relation("ShopCustomerNotes")
 
   @@index([userId])
@@ -1793,4 +1794,39 @@ model Invoice {
   @@index([orderId])
   @@index([status])
   @@index([invoiceNumber])
+}
+
+model InvoiceSettings {
+  id              String   @id @default(uuid())
+  shopId          String   @unique
+
+  // Branding
+  shopNameOnBill  String?          // Custom name to print on invoice (overrides shop.shopName)
+  shopLogoUrl     String?          // Logo/icon URL for the bill
+  tagline         String?          // e.g. "Trusted since 1990"
+
+  // Contact & legal
+  shopAddress     String?          // Address to show on bill
+  shopPhone       String?          // Phone to show on bill
+  shopEmail       String?          // Email to show on bill
+  gstin           String?          // GST / VAT / PAN number
+  licenseNumber   String?          // BIS / Hallmark license
+  footerNote      String?          // Custom footer text (e.g. "Thank you for your business")
+  termsText       String?          // Default terms & conditions
+
+  // Layout options
+  headerPosition  String   @default("TOP")    // TOP or BOTTOM – where branding block appears
+  showLogo        Boolean  @default(true)
+  showAddress     Boolean  @default(true)
+  showPhone       Boolean  @default(true)
+  showEmail       Boolean  @default(false)
+  showGstin       Boolean  @default(true)
+  showLicense     Boolean  @default(false)
+  showFooter      Boolean  @default(true)
+  showTerms       Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
 }

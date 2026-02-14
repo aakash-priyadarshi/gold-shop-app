@@ -213,4 +213,97 @@ export class InvoicesService {
       },
     };
   }
+
+  // ── Invoice Settings ──────────────────────────────────────────
+
+  async getSettings(shopId: string) {
+    // Return existing settings or create defaults
+    let settings = await this.prisma.invoiceSettings.findUnique({
+      where: { shopId },
+    });
+
+    if (!settings) {
+      // Auto-create with shop defaults
+      const shop = await this.prisma.shop.findUnique({
+        where: { id: shopId },
+        select: {
+          shopName: true,
+          address: true,
+          city: true,
+          state: true,
+          contactPhone: true,
+          contactEmail: true,
+          panNumber: true,
+          vatNumber: true,
+          bisLicenseNumber: true,
+        },
+      });
+
+      settings = await this.prisma.invoiceSettings.create({
+        data: {
+          shopId,
+          shopNameOnBill: shop?.shopName || null,
+          shopAddress: shop
+            ? [shop.address, shop.city, shop.state]
+                .filter(Boolean)
+                .join(", ")
+            : null,
+          shopPhone: shop?.contactPhone || null,
+          shopEmail: shop?.contactEmail || null,
+          gstin: shop?.vatNumber || shop?.panNumber || null,
+          licenseNumber: shop?.bisLicenseNumber || null,
+          footerNote: "Thank you for your business!",
+          termsText: "All items are subject to hallmarking verification.",
+        },
+      });
+    }
+
+    return settings;
+  }
+
+  async updateSettings(shopId: string, dto: any) {
+    // Whitelist allowed fields
+    const allowedFields = [
+      "shopNameOnBill",
+      "shopLogoUrl",
+      "tagline",
+      "shopAddress",
+      "shopPhone",
+      "shopEmail",
+      "gstin",
+      "licenseNumber",
+      "footerNote",
+      "termsText",
+      "headerPosition",
+      "showLogo",
+      "showAddress",
+      "showPhone",
+      "showEmail",
+      "showGstin",
+      "showLicense",
+      "showFooter",
+      "showTerms",
+    ];
+
+    const data: Record<string, any> = {};
+    for (const field of allowedFields) {
+      if (dto[field] !== undefined) {
+        data[field] = dto[field];
+      }
+    }
+
+    // Validate headerPosition
+    if (data.headerPosition && !["TOP", "BOTTOM"].includes(data.headerPosition)) {
+      throw new BadRequestException("headerPosition must be TOP or BOTTOM");
+    }
+
+    return this.prisma.invoiceSettings.upsert({
+      where: { shopId },
+      update: data,
+      create: {
+        shopId,
+        ...data,
+      },
+    });
+  }
 }
