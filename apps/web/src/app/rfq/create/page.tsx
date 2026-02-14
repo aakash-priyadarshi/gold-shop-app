@@ -111,7 +111,7 @@ import {
   MethodCSelector,
   type MethodCConfig,
 } from "@/components/pricing/MethodCSelector";
-import { getApiUrl } from "@/lib/api";
+import { getApiUrl, shopsApi } from "@/lib/api";
 import {
   calculateEstimate,
   CHAIN_STYLE_OPTIONS,
@@ -806,6 +806,37 @@ export default function CreateRfqPage() {
   const [orderBudget, setOrderBudget] = useState("");
   const [orderMessage, setOrderMessage] = useState("");
   const [sendingOrder, setSendingOrder] = useState(false);
+
+  // Shop-specific component pricing (loaded when a seller is selected)
+  const [shopPrices, setShopPrices] = useState<{
+    baseMetalPrices?: Record<string, number>;
+    platingPrices?: Record<string, number>;
+    finishPrices?: Record<string, number>;
+  } | null>(null);
+
+  // Fetch shop component pricing when a seller is selected
+  useEffect(() => {
+    if (!selectedSeller?.id) {
+      setShopPrices(null);
+      return;
+    }
+    shopsApi
+      .getComponentPricingPublic(selectedSeller.id)
+      .then((res: { data: { baseMetalPrices?: Record<string, number>; platingPrices?: Record<string, number>; finishPrices?: Record<string, number> } }) => {
+        const data = res.data;
+        if (
+          data &&
+          (Object.keys(data.baseMetalPrices || {}).length > 0 ||
+            Object.keys(data.platingPrices || {}).length > 0 ||
+            Object.keys(data.finishPrices || {}).length > 0)
+        ) {
+          setShopPrices(data);
+        }
+      })
+      .catch(() => {
+        /* ignore – fallback to system defaults */
+      });
+  }, [selectedSeller?.id]);
 
   // Dynamic tax rules fetched from backend (keyed by country code)
   const [taxRulesMap, setTaxRulesMap] = useState<Record<string, TaxRule[]>>({});
@@ -1956,6 +1987,11 @@ export default function CreateRfqPage() {
       makingChargePercent: 12,
     };
 
+    // Inject shop-specific component prices when a seller is selected
+    if (shopPrices) {
+      request.shopPrices = shopPrices;
+    }
+
     // Add method-specific details
     if (formData.buildMethod === "METHOD_A") {
       request.methodA = {
@@ -2015,6 +2051,7 @@ export default function CreateRfqPage() {
     currency,
     marketRates,
     displayWeightUnit,
+    shopPrices,
   ]);
 
   // Update price estimate when relevant fields change

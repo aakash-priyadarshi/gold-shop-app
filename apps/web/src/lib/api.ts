@@ -88,6 +88,8 @@ export const usersApi = {
 export const shopsApi = {
   getAll: (params?: any) => api.get("/shops", { params }),
   getById: (id: string) => api.get(`/shops/${id}`),
+  getComponentPricingPublic: (shopId: string) =>
+    api.get(`/shops/${shopId}/component-pricing`),
   getMyShop: () => api.get("/shops/my-shop"),
   create: (data: any) => api.post("/shops", data),
   update: (id: string, data: any) => api.patch(`/shops/${id}`, data),
@@ -109,6 +111,10 @@ export const shopsApi = {
   getGemstonePricing: () => api.get("/shops/my-shop/gemstone-pricing"),
   updateGemstonePricing: (data: any) =>
     api.put("/shops/my-shop/gemstone-pricing", data),
+  // Component pricing (base metals, plating, finishes)
+  getComponentPricing: () => api.get("/shops/my-shop/component-pricing"),
+  updateComponentPricing: (data: any) =>
+    api.put("/shops/my-shop/component-pricing", data),
   // Profile
   updateProfile: (data: {
     about?: string;
