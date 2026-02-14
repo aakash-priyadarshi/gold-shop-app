@@ -25,10 +25,9 @@ import {
   FileDown,
   Globe,
   Loader2,
-  Percent,
   Phone,
   Plus,
-  Search,
+  RefreshCw,
   Trash2,
   User,
   X,
@@ -96,13 +95,24 @@ const CATEGORY_TAX_RATES: Record<
 };
 
 const COUNTRIES = [
-  { code: "IN", name: "India", phone: "+91" },
-  { code: "NP", name: "Nepal", phone: "+977" },
-  { code: "AE", name: "UAE", phone: "+971" },
-  { code: "US", name: "United States", phone: "+1" },
-  { code: "GB", name: "United Kingdom", phone: "+44" },
-  { code: "EU", name: "Europe", phone: "+49" },
-  { code: "AU", name: "Australia", phone: "+61" },
+  { code: "IN", name: "India", phone: "+91", currency: "INR" },
+  { code: "NP", name: "Nepal", phone: "+977", currency: "NPR" },
+  { code: "AE", name: "UAE", phone: "+971", currency: "AED" },
+  { code: "US", name: "United States", phone: "+1", currency: "USD" },
+  { code: "GB", name: "United Kingdom", phone: "+44", currency: "GBP" },
+  { code: "EU", name: "Europe", phone: "+49", currency: "EUR" },
+  { code: "AU", name: "Australia", phone: "+61", currency: "AUD" },
+];
+
+// Currencies for converter (Frankfurter supported + NPR derived)
+const CONVERTIBLE_CURRENCIES = [
+  { code: "INR", symbol: "₹", name: "Indian Rupee" },
+  { code: "NPR", symbol: "रू", name: "Nepalese Rupee" },
+  { code: "USD", symbol: "$", name: "US Dollar" },
+  { code: "GBP", symbol: "£", name: "British Pound" },
+  { code: "EUR", symbol: "€", name: "Euro" },
+  { code: "AED", symbol: "د.إ", name: "UAE Dirham" },
+  { code: "AUD", symbol: "A$", name: "Australian Dollar" },
 ];
 
 const METAL_TYPES = [
@@ -120,12 +130,10 @@ const GEMSTONE_TYPES = [
   "Diamond", "Ruby", "Emerald", "Sapphire", "Pearl", "Opal",
   "Topaz", "Amethyst", "Garnet", "Tourmaline", "Other",
 ];
-
 const GEMSTONE_CUTS = [
   "Round Brilliant", "Princess", "Oval", "Cushion", "Emerald",
   "Pear", "Marquise", "Radiant", "Heart", "Asscher", "Cabochon", "Other",
 ];
-
 const GEMSTONE_CLARITIES = [
   "FL", "IF", "VVS1", "VVS2", "VS1", "VS2", "SI1", "SI2", "I1", "I2", "I3", "N/A",
 ];
@@ -136,25 +144,37 @@ const INVOICE_CATEGORIES = JEWELLERY_TYPES.map((jt) => ({
   label: jt.label,
 }));
 
+// ── Gemstone entry (multiple per line item) ──
+interface GemstoneEntry {
+  type: string;
+  cut: string;
+  clarity: string;
+  caratWeight: string;
+  color: string;
+  cost: string;
+}
+
+const emptyGemstone = (): GemstoneEntry => ({
+  type: "",
+  cut: "",
+  clarity: "",
+  caratWeight: "",
+  color: "",
+  cost: "",
+});
+
 interface RichLineItem {
   label: string;
-  category: string; // JEWELLERY_TYPE value (RING, NECKLACE, etc.)
+  category: string;
   quantity: number;
-  unitPrice: number;
-  amount: number;
   details: string;
   // Metal details
   metalType: string;
   metalWeightG: string;
-  // Gemstone details
-  gemstoneType: string;
-  gemstoneCut: string;
-  gemstoneClarity: string;
-  gemstoneCaratWeight: string;
-  gemstoneColor: string;
-  // Cost breakdown (used for per-category tax)
   metalCost: string;
-  gemstoneCost: string;
+  // Multiple gemstones
+  gemstones: GemstoneEntry[];
+  // Making
   makingCost: string;
 }
 
@@ -162,20 +182,26 @@ const emptyLineItem = (): RichLineItem => ({
   label: "",
   category: "RING",
   quantity: 1,
-  unitPrice: 0,
-  amount: 0,
   details: "",
   metalType: "",
   metalWeightG: "",
-  gemstoneType: "",
-  gemstoneCut: "",
-  gemstoneClarity: "",
-  gemstoneCaratWeight: "",
-  gemstoneColor: "",
   metalCost: "",
-  gemstoneCost: "",
+  gemstones: [],
   makingCost: "",
 });
+
+// Compute total for a line item
+function lineItemTotal(item: RichLineItem): number {
+  const mc = parseFloat(item.metalCost) || 0;
+  const gc = item.gemstones.reduce((s, g) => s + (parseFloat(g.cost) || 0), 0);
+  const mk = parseFloat(item.makingCost) || 0;
+  return (mc + gc + mk) * item.quantity;
+}
+
+// Gemstone cost total for a line item
+function gemstoneTotal(item: RichLineItem): number {
+  return item.gemstones.reduce((s, g) => s + (parseFloat(g.cost) || 0), 0);
+}
 
 interface CustomerSuggestion {
   id: string;
@@ -188,13 +214,54 @@ interface CustomerSuggestion {
   country?: string;
 }
 
+// ── Toggle Switch Component ──
+function ModeToggle({
+  value,
+  onChange,
+  leftLabel,
+  rightLabel,
+  activeColor,
+}: {
+  value: "left" | "right";
+  onChange: (v: "left" | "right") => void;
+  leftLabel: string;
+  rightLabel: string;
+  activeColor: string;
+}) {
+  return (
+    <div className="inline-flex h-8 rounded-full border bg-muted p-0.5 gap-0">
+      <button
+        type="button"
+        onClick={() => onChange("left")}
+        className={`px-3 text-xs font-medium rounded-full transition-all ${
+          value === "left"
+            ? `${activeColor} text-white shadow-sm`
+            : "text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        {leftLabel}
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange("right")}
+        className={`px-3 text-xs font-medium rounded-full transition-all ${
+          value === "right"
+            ? `${activeColor} text-white shadow-sm`
+            : "text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        {rightLabel}
+      </button>
+    </div>
+  );
+}
+
 export default function CreateInvoicePage() {
   const router = useRouter();
   const { symbol: currencySymbol, country: shopCountry } = useShopCurrency();
-
   const [loading, setLoading] = useState(false);
 
-  // ── Country (tax is auto-computed per category) ──
+  // ── Country ──
   const [invoiceCountry, setInvoiceCountry] = useState(shopCountry);
   const countryTax = CATEGORY_TAX_RATES[invoiceCountry] || CATEGORY_TAX_RATES["IN"];
 
@@ -213,38 +280,32 @@ export default function CreateInvoicePage() {
     COUNTRIES.find((c) => c.code === shopCountry)?.name || "India",
   );
 
-  // ── Customer live search (partial phone → up to 5 suggestions) ──
+  // ── Customer live search ──
   const [isSearching, setIsSearching] = useState(false);
   const [customerSuggestions, setCustomerSuggestions] = useState<CustomerSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const phoneDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
-  const searchCustomers = useCallback(
-    async (pcc: string, phone: string) => {
-      if (phone.length < 3) {
-        setCustomerSuggestions([]);
-        setShowSuggestions(false);
-        return;
-      }
-      setIsSearching(true);
-      try {
-        const response = await shopQuotesApi.searchCustomers({
-          phoneCountryCode: pcc,
-          phone,
-        });
-        const result = response.data as { customers: CustomerSuggestion[]; count: number };
-        setCustomerSuggestions(result.customers || []);
-        setShowSuggestions((result.customers || []).length > 0);
-      } catch {
-        setCustomerSuggestions([]);
-        setShowSuggestions(false);
-      } finally {
-        setIsSearching(false);
-      }
-    },
-    [],
-  );
+  const searchCustomers = useCallback(async (pcc: string, phone: string) => {
+    if (phone.length < 3) {
+      setCustomerSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const response = await shopQuotesApi.searchCustomers({ phoneCountryCode: pcc, phone });
+      const result = response.data as { customers: CustomerSuggestion[]; count: number };
+      setCustomerSuggestions(result.customers || []);
+      setShowSuggestions((result.customers || []).length > 0);
+    } catch {
+      setCustomerSuggestions([]);
+      setShowSuggestions(false);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
 
   const handlePhoneChange = (phone: string) => {
     setCustomerPhone(phone);
@@ -259,7 +320,6 @@ export default function CreateInvoicePage() {
     setPhoneCountryCode(customer.phoneCountryCode);
     setCustomerPhone(customer.phone.replace(customer.phoneCountryCode, ""));
     setCustomerEmail(customer.email || "");
-    // Parse stored address — try to split if it was previously formatted
     if (customer.address) {
       const parts = customer.address.split(", ");
       setAddressLine1(parts[0] || "");
@@ -268,13 +328,9 @@ export default function CreateInvoicePage() {
     setCustomerCity(customer.city || "");
     setCustomerCountry(customer.country || "");
     setShowSuggestions(false);
-    toast({
-      title: "Customer details filled",
-      description: `Welcome back, ${customer.name}!`,
-    });
+    toast({ title: "Customer details filled", description: `Welcome back, ${customer.name}!` });
   };
 
-  // Close suggestions when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node)) {
@@ -298,7 +354,7 @@ export default function CreateInvoicePage() {
     if (lineItems.length <= 1) return;
     setLineItems(lineItems.filter((_, i) => i !== index));
     setExpandedItems((prev) => {
-      const next = new Set<number>(Array.from(prev));
+      const next = new Set<number>();
       prev.forEach((i) => {
         if (i < index) next.add(i);
         else if (i > index) next.add(i - 1);
@@ -316,28 +372,29 @@ export default function CreateInvoicePage() {
     });
   };
 
-  const updateLineItem = (
-    index: number,
-    field: keyof RichLineItem,
-    value: string | number,
-  ) => {
+  const updateLineItem = (index: number, field: keyof RichLineItem, value: any) => {
     const updated = [...lineItems];
     (updated[index] as any)[field] = value;
-    // Auto-calculate amount from cost breakdown or qty * unitPrice
-    if (["metalCost", "gemstoneCost", "makingCost"].includes(field)) {
-      const mc = parseFloat(updated[index].metalCost) || 0;
-      const gc = parseFloat(updated[index].gemstoneCost) || 0;
-      const mk = parseFloat(updated[index].makingCost) || 0;
-      const sum = mc + gc + mk;
-      if (sum > 0) {
-        updated[index].unitPrice = sum;
-        updated[index].amount = sum * updated[index].quantity;
-      }
-    }
-    if (field === "quantity" || field === "unitPrice") {
-      updated[index].amount =
-        updated[index].quantity * updated[index].unitPrice;
-    }
+    setLineItems(updated);
+  };
+
+  // ── Gemstone helpers ──
+  const addGemstone = (itemIdx: number) => {
+    const updated = [...lineItems];
+    updated[itemIdx].gemstones = [...updated[itemIdx].gemstones, emptyGemstone()];
+    setLineItems(updated);
+  };
+
+  const removeGemstone = (itemIdx: number, gemIdx: number) => {
+    const updated = [...lineItems];
+    updated[itemIdx].gemstones = updated[itemIdx].gemstones.filter((_, i) => i !== gemIdx);
+    setLineItems(updated);
+  };
+
+  const updateGemstone = (itemIdx: number, gemIdx: number, field: keyof GemstoneEntry, value: string) => {
+    const updated = [...lineItems];
+    updated[itemIdx].gemstones = [...updated[itemIdx].gemstones];
+    updated[itemIdx].gemstones[gemIdx] = { ...updated[itemIdx].gemstones[gemIdx], [field]: value };
     setLineItems(updated);
   };
 
@@ -359,7 +416,6 @@ export default function CreateInvoicePage() {
   };
 
   const handleImportQuote = (quote: any) => {
-    // Pre-fill customer
     if (quote.customerName) setCustomerName(quote.customerName);
     if (quote.customerPhone) {
       setCustomerPhone(quote.customerPhone);
@@ -367,74 +423,106 @@ export default function CreateInvoicePage() {
     }
     if (quote.customerEmail) setCustomerEmail(quote.customerEmail);
 
-    // Build line items from quote details
-    const items: RichLineItem[] = [];
     const metalLabel = quote.jewelleryType || quote.metalType || "Jewellery Item";
-    const metalItem = emptyLineItem();
-    metalItem.label = metalLabel;
-    // Map jewellery type to category
+    const item = emptyLineItem();
+    item.label = metalLabel;
     const matchingCat = INVOICE_CATEGORIES.find(
       (c) => c.value === quote.jewelleryType || c.label === quote.jewelleryType,
     );
-    metalItem.category = matchingCat?.value || "OTHER";
-    metalItem.metalType = quote.metalType || quote.alloyConfig?.baseMetal || "";
-    metalItem.metalWeightG = quote.targetTotalWeightG || "";
-    metalItem.metalCost = String(quote.metalCostOverride || quote.estimatedTotal?.metalCost || "");
-    metalItem.makingCost = String(quote.makingChargeOverride || quote.estimatedTotal?.makingCharge || "");
-    metalItem.gemstoneCost = String(quote.gemstoneCostOverride || quote.estimatedTotal?.gemstoneCost || "");
+    item.category = matchingCat?.value || "OTHER";
+    item.metalType = quote.metalType || quote.alloyConfig?.baseMetal || "";
+    item.metalWeightG = quote.targetTotalWeightG || "";
+    item.metalCost = String(quote.metalCostOverride || quote.estimatedTotal?.metalCost || "");
+    item.makingCost = String(quote.makingChargeOverride || quote.estimatedTotal?.makingCharge || "");
 
-    const mc = parseFloat(metalItem.metalCost) || 0;
-    const gc = parseFloat(metalItem.gemstoneCost) || 0;
-    const mk = parseFloat(metalItem.makingCost) || 0;
-    metalItem.unitPrice = mc + gc + mk;
-    metalItem.amount = metalItem.unitPrice * metalItem.quantity;
-    metalItem.details = quote.specialInstructions || "";
-    items.push(metalItem);
+    const gcVal = quote.gemstoneCostOverride || quote.estimatedTotal?.gemstoneCost || 0;
+    if (gcVal) {
+      item.gemstones = [{ ...emptyGemstone(), cost: String(gcVal) }];
+    }
+    item.details = quote.specialInstructions || "";
 
-    setLineItems(items.length > 0 ? items : [emptyLineItem()]);
+    setLineItems([item]);
     setExpandedItems(new Set([0]));
     setShowQuoteImport(false);
-
-    toast({
-      title: "Quote imported",
-      description: `Imported "${metalLabel}" from walk-in quote`,
-    });
+    toast({ title: "Quote imported", description: `Imported "${metalLabel}" from walk-in quote` });
   };
 
-  // ── Making charge & Discount (near subtotal) ──
-  const [makingChargeMode, setMakingChargeMode] = useState<"percent" | "fixed">("percent");
+  // ── Making charge & Discount ──
+  const [makingChargeMode, setMakingChargeMode] = useState<"left" | "right">("left"); // left = %, right = fixed
   const [makingChargeValue, setMakingChargeValue] = useState("");
-  const [discountMode, setDiscountMode] = useState<"percent" | "fixed">("fixed");
+  const [discountMode, setDiscountMode] = useState<"left" | "right">("right"); // left = %, right = fixed
   const [discountValue, setDiscountValue] = useState("");
+
+  // ── Currency converter (Frankfurter API) ──
+  const [showConverter, setShowConverter] = useState(false);
+  const [convertToCurrency, setConvertToCurrency] = useState("USD");
+  const [fxRates, setFxRates] = useState<Record<string, number>>({});
+  const [fxLoading, setFxLoading] = useState(false);
+  const [fxError, setFxError] = useState("");
+
+  // Determine the shop's base currency code
+  const shopCurrencyCode = COUNTRIES.find((c) => c.code === shopCountry)?.currency || "NPR";
+
+  const fetchFxRates = useCallback(async () => {
+    setFxLoading(true);
+    setFxError("");
+    try {
+      // Frankfurter API — free, no key needed
+      // NPR is not supported by Frankfurter, so we fetch USD base and derive NPR from INR
+      const resp = await fetch("https://api.frankfurter.dev/v1/latest?base=USD");
+      if (!resp.ok) throw new Error("Frankfurter API error");
+      const data = await resp.json();
+      const rates: Record<string, number> = { USD: 1, ...data.rates };
+      // Derive NPR from INR (fixed ratio ~1.6)
+      if (rates.INR && !rates.NPR) {
+        rates.NPR = rates.INR * 1.6;
+      }
+      setFxRates(rates);
+    } catch {
+      setFxError("Failed to load exchange rates");
+    } finally {
+      setFxLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showConverter && Object.keys(fxRates).length === 0) {
+      fetchFxRates();
+    }
+  }, [showConverter, fxRates, fetchFxRates]);
+
+  // Convert amount from shop currency to target
+  const convertAmount = useCallback(
+    (amount: number, toCurrency: string): number => {
+      if (!fxRates[shopCurrencyCode] || !fxRates[toCurrency]) return amount;
+      const amountInUsd = amount / fxRates[shopCurrencyCode];
+      return amountInUsd * fxRates[toCurrency];
+    },
+    [fxRates, shopCurrencyCode],
+  );
 
   // ── Notes & terms ──
   const [notes, setNotes] = useState("");
-  const [terms, setTerms] = useState(
-    "Payment due upon delivery. All sales are final.",
-  );
+  const [terms, setTerms] = useState("Payment due upon delivery. All sales are final.");
   const [dueDate, setDueDate] = useState("");
 
-  // ── Totals (per-category tax) ──
-  const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
+  // ── Totals ──
+  const subtotal = lineItems.reduce((sum, item) => sum + lineItemTotal(item), 0);
 
-  // Making charge computation
   const makingChargeAmount = useMemo(() => {
     const val = parseFloat(makingChargeValue) || 0;
-    if (makingChargeMode === "percent") return subtotal * (val / 100);
-    return val;
+    return makingChargeMode === "left" ? subtotal * (val / 100) : val;
   }, [subtotal, makingChargeMode, makingChargeValue]);
 
-  // Per-category tax breakdown
   const taxBreakdown = useMemo(() => {
     const rates = countryTax.rates;
     let metalTax = 0;
     let gemstoneTax = 0;
     let makingTax = 0;
 
-    // Tax on each line item's cost components
     for (const item of lineItems) {
       const mc = parseFloat(item.metalCost) || 0;
-      const gc = parseFloat(item.gemstoneCost) || 0;
+      const gc = gemstoneTotal(item);
       const mk = parseFloat(item.makingCost) || 0;
 
       metalTax += mc * item.quantity * rates.PRECIOUS_METAL;
@@ -442,37 +530,36 @@ export default function CreateInvoicePage() {
       makingTax += mk * item.quantity * rates.MAKING_CHARGE;
     }
 
-    // Tax on global making charge
     makingTax += makingChargeAmount * rates.MAKING_CHARGE;
 
-    // For items without breakdown (only unitPrice set), use default rate
+    // Items without breakdown → default rate
     for (const item of lineItems) {
       const mc = parseFloat(item.metalCost) || 0;
-      const gc = parseFloat(item.gemstoneCost) || 0;
+      const gc = gemstoneTotal(item);
       const mk = parseFloat(item.makingCost) || 0;
-      if (mc === 0 && gc === 0 && mk === 0 && item.amount > 0) {
-        metalTax += item.amount * countryTax.defaultRate;
+      const tot = lineItemTotal(item);
+      if (mc === 0 && gc === 0 && mk === 0 && tot > 0) {
+        metalTax += tot * countryTax.defaultRate;
       }
     }
 
-    const totalTax = metalTax + gemstoneTax + makingTax;
-
-    return {
-      metalTax,
-      gemstoneTax,
-      makingTax,
-      totalTax,
-    };
+    return { metalTax, gemstoneTax, makingTax, totalTax: metalTax + gemstoneTax + makingTax };
   }, [lineItems, countryTax, makingChargeAmount]);
 
-  // Discount computation
   const discountAmount = useMemo(() => {
     const val = parseFloat(discountValue) || 0;
-    if (discountMode === "percent") return (subtotal + makingChargeAmount) * (val / 100);
-    return val;
+    return discountMode === "left" ? (subtotal + makingChargeAmount) * (val / 100) : val;
   }, [subtotal, makingChargeAmount, discountMode, discountValue]);
 
   const total = subtotal + makingChargeAmount + taxBreakdown.totalTax - discountAmount;
+
+  // Converted total
+  const convertedTotal = useMemo(() => {
+    if (!showConverter || !fxRates[convertToCurrency]) return null;
+    return convertAmount(total, convertToCurrency);
+  }, [showConverter, fxRates, convertToCurrency, total, convertAmount]);
+
+  const convertedSymbol = CONVERTIBLE_CURRENCIES.find((c) => c.code === convertToCurrency)?.symbol || convertToCurrency;
 
   // ── Submit ──
   const handleSubmit = async () => {
@@ -480,38 +567,46 @@ export default function CreateInvoicePage() {
       toast({ variant: "destructive", title: "Missing customer name" });
       return;
     }
-    if (lineItems.every((li) => !li.label || li.amount <= 0)) {
+    if (lineItems.every((li) => !li.label || lineItemTotal(li) <= 0)) {
       toast({ variant: "destructive", title: "Add at least one valid line item" });
       return;
     }
 
     setLoading(true);
     try {
-      // Build flat line items for API
       const apiLineItems = lineItems
-        .filter((li) => li.label && li.amount > 0)
+        .filter((li) => li.label && lineItemTotal(li) > 0)
         .map((li) => ({
           label: li.label,
           category: li.category,
           quantity: li.quantity,
-          unitPrice: li.unitPrice,
-          amount: li.amount,
+          unitPrice: lineItemTotal(li) / li.quantity,
+          amount: lineItemTotal(li),
           details: li.details,
           metalType: li.metalType || undefined,
           metalWeightG: li.metalWeightG ? parseFloat(li.metalWeightG) : undefined,
-          gemstoneType: li.gemstoneType || undefined,
-          gemstoneCut: li.gemstoneCut || undefined,
-          gemstoneClarity: li.gemstoneClarity || undefined,
-          gemstoneCaratWeight: li.gemstoneCaratWeight
-            ? parseFloat(li.gemstoneCaratWeight)
-            : undefined,
-          gemstoneColor: li.gemstoneColor || undefined,
+          // First gemstone for backward compat
+          gemstoneType: li.gemstones[0]?.type || undefined,
+          gemstoneCut: li.gemstones[0]?.cut || undefined,
+          gemstoneClarity: li.gemstones[0]?.clarity || undefined,
+          gemstoneCaratWeight: li.gemstones[0]?.caratWeight ? parseFloat(li.gemstones[0].caratWeight) : undefined,
+          gemstoneColor: li.gemstones[0]?.color || undefined,
           metalCost: li.metalCost ? parseFloat(li.metalCost) : undefined,
-          gemstoneCost: li.gemstoneCost ? parseFloat(li.gemstoneCost) : undefined,
+          gemstoneCost: gemstoneTotal(li) || undefined,
           makingCost: li.makingCost ? parseFloat(li.makingCost) : undefined,
+          // Full gemstone list as extra data
+          gemstones: li.gemstones.length > 0
+            ? li.gemstones.map((g) => ({
+                type: g.type,
+                cut: g.cut,
+                clarity: g.clarity,
+                caratWeight: g.caratWeight ? parseFloat(g.caratWeight) : undefined,
+                color: g.color,
+                cost: g.cost ? parseFloat(g.cost) : undefined,
+              }))
+            : undefined,
         }));
 
-      // Format structured address for billing
       const fullAddress = [
         addressLine1,
         addressLine2,
@@ -523,9 +618,7 @@ export default function CreateInvoicePage() {
 
       const response = await invoicesApi.create({
         customerName,
-        customerPhone: customerPhone
-          ? `${phoneCountryCode}${customerPhone}`
-          : undefined,
+        customerPhone: customerPhone ? `${phoneCountryCode}${customerPhone}` : undefined,
         customerEmail: customerEmail || undefined,
         customerAddress: fullAddress || undefined,
         lineItems: apiLineItems,
@@ -549,7 +642,8 @@ export default function CreateInvoicePage() {
         title: "Invoice Created",
         description: `Invoice ${response.data.invoiceNumber} has been created`,
       });
-      router.push(`/dashboard/shop/invoices/${response.data.id}`);
+      // Redirect to invoice detail page (has Print & Pay)
+      router.push(`/dashboard/shop/invoices/${response.data.id}?created=true`);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -594,31 +688,20 @@ export default function CreateInvoicePage() {
             <Card className="border-blue-200 bg-blue-50/50">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">
-                    Import from Walk-in Quote
-                  </CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowQuoteImport(false)}
-                  >
+                  <CardTitle className="text-base">Import from Walk-in Quote</CardTitle>
+                  <Button variant="ghost" size="sm" onClick={() => setShowQuoteImport(false)}>
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-                <CardDescription>
-                  Select an approved quote to pre-fill invoice details
-                </CardDescription>
+                <CardDescription>Select an approved quote to pre-fill invoice details</CardDescription>
               </CardHeader>
               <CardContent>
                 {quotesLoading ? (
                   <div className="flex items-center justify-center py-6">
-                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                    Loading quotes...
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />Loading quotes...
                   </div>
                 ) : shopQuotes.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4 text-center">
-                    No approved quotes found
-                  </p>
+                  <p className="text-sm text-muted-foreground py-4 text-center">No approved quotes found</p>
                 ) : (
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {shopQuotes.map((quote: any) => (
@@ -629,17 +712,13 @@ export default function CreateInvoicePage() {
                       >
                         <div>
                           <p className="font-medium text-sm">
-                            {quote.jewelleryType || "Jewellery"} —{" "}
-                            {quote.customerName || "Unknown"}
+                            {quote.jewelleryType || "Jewellery"} — {quote.customerName || "Unknown"}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {quote.metalType} • {quote.targetTotalWeightG}g •{" "}
-                            {new Date(quote.createdAt).toLocaleDateString()}
+                            {quote.metalType} • {quote.targetTotalWeightG}g • {new Date(quote.createdAt).toLocaleDateString()}
                           </p>
                         </div>
-                        <Button variant="ghost" size="sm">
-                          <FileDown className="h-4 w-4" />
-                        </Button>
+                        <Button variant="ghost" size="sm"><FileDown className="h-4 w-4" /></Button>
                       </div>
                     ))}
                   </div>
@@ -648,16 +727,14 @@ export default function CreateInvoicePage() {
             </Card>
           )}
 
-          {/* Country Selection (tax is automatic per category) */}
+          {/* Country & Tax */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Globe className="h-4 w-4 text-blue-500" />
                 Country &amp; Tax
               </CardTitle>
-              <CardDescription>
-                Tax is auto-calculated per category based on the country
-              </CardDescription>
+              <CardDescription>Tax is auto-calculated per category based on country</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -669,9 +746,7 @@ export default function CreateInvoicePage() {
                     className="w-full h-10 px-3 text-sm border rounded-md bg-background"
                   >
                     {COUNTRIES.map((c) => (
-                      <option key={c.code} value={c.code}>
-                        {c.name}
-                      </option>
+                      <option key={c.code} value={c.code}>{c.name}</option>
                     ))}
                   </select>
                 </div>
@@ -700,19 +775,16 @@ export default function CreateInvoicePage() {
             </CardContent>
           </Card>
 
-          {/* Customer Details with Live Search */}
+          {/* Customer Details */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <User className="h-4 w-4 text-green-500" />
                 Customer Details
               </CardTitle>
-              <CardDescription>
-                Start typing phone number to search existing customers
-              </CardDescription>
+              <CardDescription>Start typing phone number to search existing customers</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Phone row with live suggestions */}
               <div className="grid grid-cols-12 gap-3">
                 <div className="col-span-3">
                   <Label>Country Code</Label>
@@ -720,15 +792,12 @@ export default function CreateInvoicePage() {
                     value={phoneCountryCode}
                     onChange={(e) => {
                       setPhoneCountryCode(e.target.value);
-                      if (customerPhone.length >= 3)
-                        searchCustomers(e.target.value, customerPhone);
+                      if (customerPhone.length >= 3) searchCustomers(e.target.value, customerPhone);
                     }}
                     className="w-full h-10 px-2 text-sm border rounded-md bg-background"
                   >
                     {COUNTRIES.map((c) => (
-                      <option key={c.code} value={c.phone}>
-                        {c.phone} ({c.code})
-                      </option>
+                      <option key={c.code} value={c.phone}>{c.phone} ({c.code})</option>
                     ))}
                   </select>
                 </div>
@@ -738,16 +807,11 @@ export default function CreateInvoicePage() {
                     <Input
                       value={customerPhone}
                       onChange={(e) => handlePhoneChange(e.target.value)}
-                      onFocus={() => {
-                        if (customerSuggestions.length > 0) setShowSuggestions(true);
-                      }}
+                      onFocus={() => { if (customerSuggestions.length > 0) setShowSuggestions(true); }}
                       placeholder="Start typing to search..."
                     />
-                    {isSearching && (
-                      <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-muted-foreground" />
-                    )}
+                    {isSearching && <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-muted-foreground" />}
                   </div>
-                  {/* Live suggestions dropdown */}
                   {showSuggestions && customerSuggestions.length > 0 && (
                     <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
                       {customerSuggestions.map((cust) => (
@@ -758,10 +822,7 @@ export default function CreateInvoicePage() {
                         >
                           <div>
                             <p className="text-sm font-medium">{cust.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {cust.phone}
-                              {cust.city && ` • ${cust.city}`}
-                            </p>
+                            <p className="text-xs text-muted-foreground">{cust.phone}{cust.city && ` • ${cust.city}`}</p>
                           </div>
                           <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                         </div>
@@ -771,70 +832,38 @@ export default function CreateInvoicePage() {
                 </div>
                 <div className="col-span-4">
                   <Label>Customer Name *</Label>
-                  <Input
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Full name"
-                  />
+                  <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Full name" />
                 </div>
               </div>
 
-              {/* Email & Country */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Email</Label>
-                  <Input
-                    type="email"
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                    placeholder="customer@email.com"
-                  />
+                  <Input type="email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} placeholder="customer@email.com" />
                 </div>
                 <div>
                   <Label>Country</Label>
-                  <Input
-                    value={customerCountry}
-                    onChange={(e) => setCustomerCountry(e.target.value)}
-                    placeholder="Country"
-                  />
+                  <Input value={customerCountry} onChange={(e) => setCustomerCountry(e.target.value)} placeholder="Country" />
                 </div>
               </div>
-
-              {/* Structured Address */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Address Line 1</Label>
-                  <Input
-                    value={addressLine1}
-                    onChange={(e) => setAddressLine1(e.target.value)}
-                    placeholder="House/Building number, locality"
-                  />
+                  <Input value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} placeholder="House/Building number, locality" />
                 </div>
                 <div>
                   <Label>Address Line 2 (Street)</Label>
-                  <Input
-                    value={addressLine2}
-                    onChange={(e) => setAddressLine2(e.target.value)}
-                    placeholder="Street name, area"
-                  />
+                  <Input value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)} placeholder="Street name, area" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>City</Label>
-                  <Input
-                    value={customerCity}
-                    onChange={(e) => setCustomerCity(e.target.value)}
-                    placeholder="City"
-                  />
+                  <Input value={customerCity} onChange={(e) => setCustomerCity(e.target.value)} placeholder="City" />
                 </div>
                 <div>
                   <Label>Pincode / ZIP</Label>
-                  <Input
-                    value={pincode}
-                    onChange={(e) => setPincode(e.target.value)}
-                    placeholder="Pincode"
-                  />
+                  <Input value={pincode} onChange={(e) => setPincode(e.target.value)} placeholder="Pincode" />
                 </div>
               </div>
             </CardContent>
@@ -845,351 +874,285 @@ export default function CreateInvoicePage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Line Items</CardTitle>
               <CardDescription>
-                Add jewellery items with metal &amp; gemstone cost breakdowns. Tax is applied per category automatically.
+                Add jewellery items with metal &amp; gemstone cost breakdowns. Tax applies per category automatically.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {lineItems.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="border rounded-lg overflow-hidden"
-                >
-                  {/* Compact row */}
-                  <div className="grid grid-cols-12 gap-2 items-center p-3 bg-muted/30">
-                    <div className="col-span-3">
-                      {idx === 0 && (
-                        <Label className="text-xs text-muted-foreground">
-                          Item
-                        </Label>
-                      )}
-                      <Input
-                        value={item.label}
-                        onChange={(e) =>
-                          updateLineItem(idx, "label", e.target.value)
-                        }
-                        placeholder="Item name"
-                        className="text-sm"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      {idx === 0 && (
-                        <Label className="text-xs text-muted-foreground">
-                          Category
-                        </Label>
-                      )}
+              {lineItems.map((item, idx) => {
+                const itemAmount = lineItemTotal(item);
+                return (
+                  <div key={idx} className="border rounded-lg overflow-hidden">
+                    {/* Compact row: Item name + Category + Amount + controls */}
+                    <div
+                      className="flex items-center gap-3 p-3 bg-muted/30 cursor-pointer"
+                      onClick={() => toggleExpanded(idx)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <Input
+                          value={item.label}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            updateLineItem(idx, "label", e.target.value);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          placeholder="Item name (e.g. Gold Necklace)"
+                          className="text-sm"
+                        />
+                      </div>
                       <select
                         value={item.category}
-                        onChange={(e) =>
-                          updateLineItem(idx, "category", e.target.value)
-                        }
-                        className="w-full h-10 px-2 text-sm border rounded-md bg-background"
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          updateLineItem(idx, "category", e.target.value);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-32 h-10 px-2 text-sm border rounded-md bg-background"
                       >
                         {INVOICE_CATEGORIES.map((cat) => (
-                          <option key={cat.value} value={cat.value}>
-                            {cat.label}
-                          </option>
+                          <option key={cat.value} value={cat.value}>{cat.label}</option>
                         ))}
                       </select>
-                    </div>
-                    <div className="col-span-1">
-                      {idx === 0 && (
-                        <Label className="text-xs text-muted-foreground">
-                          Qty
-                        </Label>
-                      )}
-                      <Input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) =>
-                          updateLineItem(
-                            idx,
-                            "quantity",
-                            parseInt(e.target.value) || 0,
-                          )
-                        }
-                        min={1}
-                        className="text-sm"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      {idx === 0 && (
-                        <Label className="text-xs text-muted-foreground">
-                          Unit Price
-                        </Label>
-                      )}
-                      <Input
-                        type="number"
-                        value={item.unitPrice || ""}
-                        onChange={(e) =>
-                          updateLineItem(
-                            idx,
-                            "unitPrice",
-                            parseFloat(e.target.value) || 0,
-                          )
-                        }
-                        placeholder="0"
-                        className="text-sm"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      {idx === 0 && (
-                        <Label className="text-xs text-muted-foreground">
-                          Amount
-                        </Label>
-                      )}
-                      <div className="h-10 px-3 flex items-center text-sm font-medium bg-gray-50 border rounded-md">
-                        {currencySymbol} {item.amount.toLocaleString()}
+                      <div className="w-40 h-10 px-3 flex items-center justify-end text-sm font-semibold bg-gray-50 border rounded-md">
+                        {currencySymbol} {itemAmount.toLocaleString()}
                       </div>
-                    </div>
-                    <div className="col-span-2 flex gap-1 items-end">
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => toggleExpanded(idx)}
+                        onClick={(e) => { e.stopPropagation(); toggleExpanded(idx); }}
                         className="flex-shrink-0"
-                        title="Toggle details"
                       >
-                        <ChevronDown
-                          className={`h-4 w-4 transition-transform ${expandedItems.has(idx) ? "rotate-180" : ""}`}
-                        />
+                        <ChevronDown className={`h-4 w-4 transition-transform ${expandedItems.has(idx) ? "rotate-180" : ""}`} />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => removeLineItem(idx)}
+                        onClick={(e) => { e.stopPropagation(); removeLineItem(idx); }}
                         disabled={lineItems.length <= 1}
                         className="flex-shrink-0"
                       >
                         <Trash2 className="h-4 w-4 text-red-400" />
                       </Button>
                     </div>
-                  </div>
 
-                  {/* Expanded details */}
-                  {expandedItems.has(idx) && (
-                    <div className="p-3 pt-2 border-t bg-white space-y-3">
-                      {/* Metal details */}
-                      <div>
-                        <p className="text-xs font-semibold text-amber-700 mb-2">
-                          Metal Details
-                        </p>
-                        <div className="grid grid-cols-3 gap-3">
+                    {/* Expanded details */}
+                    {expandedItems.has(idx) && (
+                      <div className="p-3 pt-2 border-t bg-white space-y-3">
+                        {/* Quantity */}
+                        <div className="grid grid-cols-4 gap-3">
                           <div>
-                            <Label className="text-xs">Metal Type</Label>
-                            <select
-                              value={item.metalType}
-                              onChange={(e) =>
-                                updateLineItem(idx, "metalType", e.target.value)
-                              }
-                              className="w-full h-9 px-2 text-xs border rounded-md bg-background"
-                            >
-                              <option value="">— Select —</option>
-                              {METAL_TYPES.map((m) => (
-                                <option key={m.value} value={m.value}>
-                                  {m.label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <Label className="text-xs">Weight (g)</Label>
+                            <Label className="text-xs">Quantity</Label>
                             <Input
                               type="number"
-                              step="0.01"
-                              value={item.metalWeightG}
-                              onChange={(e) =>
-                                updateLineItem(idx, "metalWeightG", e.target.value)
-                              }
-                              placeholder="0.00"
+                              value={item.quantity}
+                              onChange={(e) => updateLineItem(idx, "quantity", parseInt(e.target.value) || 1)}
+                              min={1}
                               className="h-9 text-xs"
                             />
                           </div>
-                          <div>
-                            <Label className="text-xs">
-                              Metal Cost ({currencySymbol})
-                            </Label>
+                          <div className="col-span-3">
+                            <Label className="text-xs">Notes / Details</Label>
                             <Input
-                              type="number"
-                              value={item.metalCost}
-                              onChange={(e) =>
-                                updateLineItem(idx, "metalCost", e.target.value)
-                              }
-                              placeholder="0"
+                              value={item.details}
+                              onChange={(e) => updateLineItem(idx, "details", e.target.value)}
+                              placeholder="Additional notes"
                               className="h-9 text-xs"
                             />
                           </div>
                         </div>
-                      </div>
 
-                      {/* Gemstone details */}
-                      <div>
-                        <p className="text-xs font-semibold text-purple-700 mb-2">
-                          Gemstone Details
-                        </p>
-                        <div className="grid grid-cols-3 gap-3">
-                          <div>
-                            <Label className="text-xs">Gemstone</Label>
-                            <select
-                              value={item.gemstoneType}
-                              onChange={(e) =>
-                                updateLineItem(idx, "gemstoneType", e.target.value)
-                              }
-                              className="w-full h-9 px-2 text-xs border rounded-md bg-background"
-                            >
-                              <option value="">— None —</option>
-                              {GEMSTONE_TYPES.map((g) => (
-                                <option key={g} value={g}>
-                                  {g}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <Label className="text-xs">Cut</Label>
-                            <select
-                              value={item.gemstoneCut}
-                              onChange={(e) =>
-                                updateLineItem(idx, "gemstoneCut", e.target.value)
-                              }
-                              className="w-full h-9 px-2 text-xs border rounded-md bg-background"
-                            >
-                              <option value="">—</option>
-                              {GEMSTONE_CUTS.map((c) => (
-                                <option key={c} value={c}>
-                                  {c}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <Label className="text-xs">Clarity</Label>
-                            <select
-                              value={item.gemstoneClarity}
-                              onChange={(e) =>
-                                updateLineItem(idx, "gemstoneClarity", e.target.value)
-                              }
-                              className="w-full h-9 px-2 text-xs border rounded-md bg-background"
-                            >
-                              <option value="">—</option>
-                              {GEMSTONE_CLARITIES.map((c) => (
-                                <option key={c} value={c}>
-                                  {c}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <Label className="text-xs">Carat Weight</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={item.gemstoneCaratWeight}
-                              onChange={(e) =>
-                                updateLineItem(idx, "gemstoneCaratWeight", e.target.value)
-                              }
-                              placeholder="0.00"
-                              className="h-9 text-xs"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Color</Label>
-                            <Input
-                              value={item.gemstoneColor}
-                              onChange={(e) =>
-                                updateLineItem(idx, "gemstoneColor", e.target.value)
-                              }
-                              placeholder="e.g. D, E, F"
-                              className="h-9 text-xs"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">
-                              Gemstone Cost ({currencySymbol})
-                            </Label>
-                            <Input
-                              type="number"
-                              value={item.gemstoneCost}
-                              onChange={(e) =>
-                                updateLineItem(idx, "gemstoneCost", e.target.value)
-                              }
-                              placeholder="0"
-                              className="h-9 text-xs"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Making cost & notes */}
-                      <div className="grid grid-cols-3 gap-3">
+                        {/* Metal details */}
                         <div>
-                          <Label className="text-xs">
-                            Making Charge ({currencySymbol})
-                          </Label>
-                          <Input
-                            type="number"
-                            value={item.makingCost}
-                            onChange={(e) =>
-                              updateLineItem(idx, "makingCost", e.target.value)
-                            }
-                            placeholder="0"
-                            className="h-9 text-xs"
-                          />
+                          <p className="text-xs font-semibold text-amber-700 mb-2">Metal Details</p>
+                          <div className="grid grid-cols-3 gap-3">
+                            <div>
+                              <Label className="text-xs">Metal Type</Label>
+                              <select
+                                value={item.metalType}
+                                onChange={(e) => updateLineItem(idx, "metalType", e.target.value)}
+                                className="w-full h-9 px-2 text-xs border rounded-md bg-background"
+                              >
+                                <option value="">— Select —</option>
+                                {METAL_TYPES.map((m) => (
+                                  <option key={m.value} value={m.value}>{m.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Weight (g)</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={item.metalWeightG}
+                                onChange={(e) => updateLineItem(idx, "metalWeightG", e.target.value)}
+                                placeholder="0.00"
+                                className="h-9 text-xs"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Metal Cost ({currencySymbol})</Label>
+                              <Input
+                                type="number"
+                                value={item.metalCost}
+                                onChange={(e) => updateLineItem(idx, "metalCost", e.target.value)}
+                                placeholder="0"
+                                className="h-9 text-xs"
+                              />
+                            </div>
+                          </div>
                         </div>
-                        <div className="col-span-2">
-                          <Label className="text-xs">Notes / Details</Label>
-                          <Input
-                            value={item.details}
-                            onChange={(e) =>
-                              updateLineItem(idx, "details", e.target.value)
-                            }
-                            placeholder="Additional notes for this item"
-                            className="h-9 text-xs"
-                          />
-                        </div>
-                      </div>
 
-                      {/* Cost breakdown summary with per-category tax preview */}
-                      {(parseFloat(item.metalCost) > 0 ||
-                        parseFloat(item.gemstoneCost) > 0 ||
-                        parseFloat(item.makingCost) > 0) && (
-                        <div className="pt-1 border-t space-y-1">
-                          <div className="flex gap-4 text-xs text-muted-foreground">
-                            <span>
-                              Metal: {currencySymbol}{" "}
-                              {(parseFloat(item.metalCost) || 0).toLocaleString()}
-                            </span>
-                            <span>
-                              Gemstone: {currencySymbol}{" "}
-                              {(parseFloat(item.gemstoneCost) || 0).toLocaleString()}
-                            </span>
-                            <span>
-                              Making: {currencySymbol}{" "}
-                              {(parseFloat(item.makingCost) || 0).toLocaleString()}
-                            </span>
-                            <span className="font-medium text-foreground">
-                              = {currencySymbol} {item.unitPrice.toLocaleString()}
-                            </span>
+                        {/* Gemstones (multiple) */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs font-semibold text-purple-700">
+                              Gemstones {item.gemstones.length > 0 && `(${item.gemstones.length})`}
+                            </p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => addGemstone(idx)}
+                            >
+                              <Plus className="h-3 w-3 mr-1" /> Add Gemstone
+                            </Button>
                           </div>
-                          <div className="flex gap-4 text-xs text-blue-600">
-                            <span>
-                              Metal tax: {(countryTax.rates.PRECIOUS_METAL * 100).toFixed(1)}% = {currencySymbol}{" "}
-                              {((parseFloat(item.metalCost) || 0) * item.quantity * countryTax.rates.PRECIOUS_METAL).toLocaleString()}
-                            </span>
-                            <span>
-                              Gem tax: {(countryTax.rates.GEMSTONE * 100).toFixed(1)}% = {currencySymbol}{" "}
-                              {((parseFloat(item.gemstoneCost) || 0) * item.quantity * countryTax.rates.GEMSTONE).toLocaleString()}
-                            </span>
-                            <span>
-                              Making tax: {(countryTax.rates.MAKING_CHARGE * 100).toFixed(1)}% = {currencySymbol}{" "}
-                              {((parseFloat(item.makingCost) || 0) * item.quantity * countryTax.rates.MAKING_CHARGE).toLocaleString()}
-                            </span>
+
+                          {item.gemstones.length === 0 && (
+                            <p className="text-xs text-muted-foreground italic py-2">
+                              No gemstones added. Click &ldquo;Add Gemstone&rdquo; to include one.
+                            </p>
+                          )}
+
+                          {item.gemstones.map((gem, gIdx) => (
+                            <div key={gIdx} className="border rounded p-2 mb-2 bg-purple-50/30">
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span className="text-xs font-medium text-purple-600">
+                                  Gemstone #{gIdx + 1}
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => removeGemstone(idx, gIdx)}
+                                >
+                                  <Trash2 className="h-3 w-3 text-red-400" />
+                                </Button>
+                              </div>
+                              <div className="grid grid-cols-3 gap-2">
+                                <div>
+                                  <Label className="text-xs">Type</Label>
+                                  <select
+                                    value={gem.type}
+                                    onChange={(e) => updateGemstone(idx, gIdx, "type", e.target.value)}
+                                    className="w-full h-8 px-2 text-xs border rounded-md bg-background"
+                                  >
+                                    <option value="">— Select —</option>
+                                    {GEMSTONE_TYPES.map((g) => (
+                                      <option key={g} value={g}>{g}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
+                                  <Label className="text-xs">Cut</Label>
+                                  <select
+                                    value={gem.cut}
+                                    onChange={(e) => updateGemstone(idx, gIdx, "cut", e.target.value)}
+                                    className="w-full h-8 px-2 text-xs border rounded-md bg-background"
+                                  >
+                                    <option value="">—</option>
+                                    {GEMSTONE_CUTS.map((c) => (
+                                      <option key={c} value={c}>{c}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
+                                  <Label className="text-xs">Clarity</Label>
+                                  <select
+                                    value={gem.clarity}
+                                    onChange={(e) => updateGemstone(idx, gIdx, "clarity", e.target.value)}
+                                    className="w-full h-8 px-2 text-xs border rounded-md bg-background"
+                                  >
+                                    <option value="">—</option>
+                                    {GEMSTONE_CLARITIES.map((c) => (
+                                      <option key={c} value={c}>{c}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
+                                  <Label className="text-xs">Carat</Label>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={gem.caratWeight}
+                                    onChange={(e) => updateGemstone(idx, gIdx, "caratWeight", e.target.value)}
+                                    placeholder="0.00"
+                                    className="h-8 text-xs"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs">Color</Label>
+                                  <Input
+                                    value={gem.color}
+                                    onChange={(e) => updateGemstone(idx, gIdx, "color", e.target.value)}
+                                    placeholder="e.g. D, E, F"
+                                    className="h-8 text-xs"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs">Cost ({currencySymbol})</Label>
+                                  <Input
+                                    type="number"
+                                    value={gem.cost}
+                                    onChange={(e) => updateGemstone(idx, gIdx, "cost", e.target.value)}
+                                    placeholder="0"
+                                    className="h-8 text-xs"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Making cost */}
+                        <div className="grid grid-cols-3 gap-3">
+                          <div>
+                            <Label className="text-xs">Making Charge ({currencySymbol})</Label>
+                            <Input
+                              type="number"
+                              value={item.makingCost}
+                              onChange={(e) => updateLineItem(idx, "makingCost", e.target.value)}
+                              placeholder="0"
+                              className="h-9 text-xs"
+                            />
                           </div>
                         </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
+
+                        {/* Cost summary */}
+                        {itemAmount > 0 && (
+                          <div className="pt-1 border-t space-y-1">
+                            <div className="flex gap-4 text-xs text-muted-foreground flex-wrap">
+                              <span>Metal: {currencySymbol} {(parseFloat(item.metalCost) || 0).toLocaleString()}</span>
+                              <span>Gemstones: {currencySymbol} {gemstoneTotal(item).toLocaleString()}</span>
+                              <span>Making: {currencySymbol} {(parseFloat(item.makingCost) || 0).toLocaleString()}</span>
+                              {item.quantity > 1 && <span>× {item.quantity}</span>}
+                              <span className="font-medium text-foreground">= {currencySymbol} {itemAmount.toLocaleString()}</span>
+                            </div>
+                            <div className="flex gap-4 text-xs text-blue-600 flex-wrap">
+                              <span>Metal tax: {(countryTax.rates.PRECIOUS_METAL * 100).toFixed(1)}% = {currencySymbol} {((parseFloat(item.metalCost) || 0) * item.quantity * countryTax.rates.PRECIOUS_METAL).toLocaleString()}</span>
+                              {gemstoneTotal(item) > 0 && (
+                                <span>Gem tax: {(countryTax.rates.GEMSTONE * 100).toFixed(1)}% = {currencySymbol} {(gemstoneTotal(item) * item.quantity * countryTax.rates.GEMSTONE).toLocaleString()}</span>
+                              )}
+                              {(parseFloat(item.makingCost) || 0) > 0 && (
+                                <span>Making tax: {(countryTax.rates.MAKING_CHARGE * 100).toFixed(1)}% = {currencySymbol} {((parseFloat(item.makingCost) || 0) * item.quantity * countryTax.rates.MAKING_CHARGE).toLocaleString()}</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
 
               <Button variant="outline" size="sm" onClick={addLineItem}>
                 <Plus className="h-4 w-4 mr-2" /> Add Line Item
@@ -1197,37 +1160,24 @@ export default function CreateInvoicePage() {
 
               <Separator />
 
-              {/* Totals with Making Charge + Per-category Tax + Discount */}
+              {/* Totals */}
               <div className="flex justify-end">
-                <div className="w-96 space-y-3">
-                  {/* Subtotal */}
+                <div className="w-[420px] space-y-3">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
-                    <span className="font-medium">
-                      {currencySymbol} {subtotal.toLocaleString()}
-                    </span>
+                    <span className="font-medium">{currencySymbol} {subtotal.toLocaleString()}</span>
                   </div>
 
-                  {/* Making Charge toggle */}
+                  {/* Making Charge — pill toggle */}
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-blue-600 w-28">Making Charge</span>
-                    <button
-                      onClick={() =>
-                        setMakingChargeMode((m) => (m === "percent" ? "fixed" : "percent"))
-                      }
-                      className={`flex items-center gap-0.5 px-2 py-1 text-xs rounded border transition-colors ${
-                        makingChargeMode === "percent"
-                          ? "bg-blue-50 border-blue-300 text-blue-700"
-                          : "bg-gray-50 border-gray-300 text-gray-700"
-                      }`}
-                      title="Toggle % or fixed amount"
-                    >
-                      {makingChargeMode === "percent" ? (
-                        <Percent className="h-3 w-3" />
-                      ) : (
-                        <span>{currencySymbol}</span>
-                      )}
-                    </button>
+                    <span className="text-sm text-blue-600 w-28 flex-shrink-0">Making Charge</span>
+                    <ModeToggle
+                      value={makingChargeMode}
+                      onChange={setMakingChargeMode}
+                      leftLabel="%"
+                      rightLabel={currencySymbol}
+                      activeColor="bg-blue-600"
+                    />
                     <Input
                       className="w-24 text-xs"
                       type="number"
@@ -1236,64 +1186,44 @@ export default function CreateInvoicePage() {
                       placeholder="0"
                     />
                     {makingChargeAmount > 0 && (
-                      <span className="text-sm ml-auto">
-                        +{currencySymbol} {makingChargeAmount.toLocaleString()}
-                      </span>
+                      <span className="text-sm ml-auto">+{currencySymbol} {makingChargeAmount.toLocaleString()}</span>
                     )}
                   </div>
 
                   {/* Tax breakdown */}
                   <div className="space-y-1">
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>
-                        {countryTax.taxName} on Metal ({(countryTax.rates.PRECIOUS_METAL * 100).toFixed(1)}%)
-                      </span>
+                      <span>{countryTax.taxName} on Metal ({(countryTax.rates.PRECIOUS_METAL * 100).toFixed(1)}%)</span>
                       <span>{currencySymbol} {taxBreakdown.metalTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                     {taxBreakdown.gemstoneTax > 0 && (
                       <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>
-                          {countryTax.taxName} on Gemstone ({(countryTax.rates.GEMSTONE * 100).toFixed(1)}%)
-                        </span>
+                        <span>{countryTax.taxName} on Gemstone ({(countryTax.rates.GEMSTONE * 100).toFixed(1)}%)</span>
                         <span>{currencySymbol} {taxBreakdown.gemstoneTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                     )}
                     {taxBreakdown.makingTax > 0 && (
                       <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>
-                          {countryTax.taxName} on Making ({(countryTax.rates.MAKING_CHARGE * 100).toFixed(1)}%)
-                        </span>
+                        <span>{countryTax.taxName} on Making ({(countryTax.rates.MAKING_CHARGE * 100).toFixed(1)}%)</span>
                         <span>{currencySymbol} {taxBreakdown.makingTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-sm">
                       <span>Total Tax</span>
-                      <span>
-                        {currencySymbol} {taxBreakdown.totalTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
+                      <span>{currencySymbol} {taxBreakdown.totalTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                   </div>
 
-                  {/* Discount toggle */}
+                  {/* Discount — pill toggle */}
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-green-600 w-28">Discount</span>
-                    <button
-                      onClick={() =>
-                        setDiscountMode((m) => (m === "percent" ? "fixed" : "percent"))
-                      }
-                      className={`flex items-center gap-0.5 px-2 py-1 text-xs rounded border transition-colors ${
-                        discountMode === "percent"
-                          ? "bg-green-50 border-green-300 text-green-700"
-                          : "bg-gray-50 border-gray-300 text-gray-700"
-                      }`}
-                      title="Toggle % or fixed amount"
-                    >
-                      {discountMode === "percent" ? (
-                        <Percent className="h-3 w-3" />
-                      ) : (
-                        <span>{currencySymbol}</span>
-                      )}
-                    </button>
+                    <span className="text-sm text-green-600 w-28 flex-shrink-0">Discount</span>
+                    <ModeToggle
+                      value={discountMode}
+                      onChange={setDiscountMode}
+                      leftLabel="%"
+                      rightLabel={currencySymbol}
+                      activeColor="bg-green-600"
+                    />
                     <Input
                       className="w-24 text-xs"
                       type="number"
@@ -1302,9 +1232,7 @@ export default function CreateInvoicePage() {
                       placeholder="0"
                     />
                     {discountAmount > 0 && (
-                      <span className="text-sm text-green-600 ml-auto">
-                        -{currencySymbol} {discountAmount.toLocaleString()}
-                      </span>
+                      <span className="text-sm text-green-600 ml-auto">-{currencySymbol} {discountAmount.toLocaleString()}</span>
                     )}
                   </div>
 
@@ -1314,6 +1242,64 @@ export default function CreateInvoicePage() {
                     <span className="text-amber-600">
                       {currencySymbol} {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
+                  </div>
+
+                  {/* Currency Converter */}
+                  <div className="pt-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={showConverter}
+                        onChange={(e) => setShowConverter(e.target.checked)}
+                        className="rounded border-gray-300"
+                      />
+                      <span className="text-xs text-muted-foreground">Show total in a different currency</span>
+                    </label>
+
+                    {showConverter && (
+                      <div className="mt-2 p-3 bg-gray-50 rounded-lg border space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs w-24 flex-shrink-0">Convert to</Label>
+                          <select
+                            value={convertToCurrency}
+                            onChange={(e) => setConvertToCurrency(e.target.value)}
+                            className="flex-1 h-8 px-2 text-xs border rounded-md bg-background"
+                          >
+                            {CONVERTIBLE_CURRENCIES.filter((c) => c.code !== shopCurrencyCode).map((c) => (
+                              <option key={c.code} value={c.code}>{c.symbol} {c.code} — {c.name}</option>
+                            ))}
+                          </select>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={fetchFxRates}
+                            disabled={fxLoading}
+                            title="Refresh rates"
+                          >
+                            <RefreshCw className={`h-3.5 w-3.5 ${fxLoading ? "animate-spin" : ""}`} />
+                          </Button>
+                        </div>
+                        {fxError && <p className="text-xs text-red-500">{fxError}</p>}
+                        {fxLoading ? (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Loader2 className="h-3 w-3 animate-spin" /> Loading rates...
+                          </div>
+                        ) : convertedTotal !== null ? (
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-muted-foreground">
+                              1 {shopCurrencyCode} ≈ {(convertAmount(1, convertToCurrency)).toFixed(4)} {convertToCurrency}
+                            </span>
+                            <span className="font-bold text-lg text-amber-600">
+                              {convertedSymbol} {convertedTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        ) : null}
+                        <p className="text-xs text-muted-foreground opacity-60">
+                          Rates from Frankfurter API (free) • For reference only
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1329,48 +1315,25 @@ export default function CreateInvoicePage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Due Date</Label>
-                  <Input
-                    type="date"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                  />
+                  <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
                 </div>
               </div>
               <div>
                 <Label>Notes</Label>
-                <Textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Additional notes for the customer..."
-                  rows={2}
-                />
+                <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Additional notes for the customer..." rows={2} />
               </div>
               <div>
                 <Label>Terms & Conditions</Label>
-                <Textarea
-                  value={terms}
-                  onChange={(e) => setTerms(e.target.value)}
-                  rows={2}
-                />
+                <Textarea value={terms} onChange={(e) => setTerms(e.target.value)} rows={2} />
               </div>
             </CardContent>
           </Card>
 
           {/* Submit */}
           <div className="flex justify-end gap-2 pb-8">
-            <Button variant="outline" onClick={() => router.back()}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="bg-amber-500 hover:bg-amber-600"
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Check className="h-4 w-4 mr-2" />
-              )}
+            <Button variant="outline" onClick={() => router.back()}>Cancel</Button>
+            <Button onClick={handleSubmit} disabled={loading} className="bg-amber-500 hover:bg-amber-600">
+              {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
               Create Invoice
             </Button>
           </div>
