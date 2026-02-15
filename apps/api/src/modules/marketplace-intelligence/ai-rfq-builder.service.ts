@@ -20,6 +20,9 @@ export class AiRfqBuilderService {
   private readonly apiKey: string;
   private readonly CACHE_PREFIX = "ai:rfq:";
   private readonly CACHE_TTL = 3600; // 1 hour for similar queries
+  private readonly GUEST_RATE_LIMIT_PREFIX = "ai:guest:";
+  private readonly GUEST_RATE_LIMIT = 5; // 5 requests per hour for guests
+  private readonly GUEST_RATE_TTL = 3600; // 1 hour window
 
   // Valid enum values from schema
   private readonly JEWELLERY_TYPES = [
@@ -55,6 +58,37 @@ export class AiRfqBuilderService {
     private redisService: RedisService,
   ) {
     this.apiKey = this.configService.get<string>("GEMINI_API_KEY") || "";
+  }
+
+  /**
+   * Check and enforce rate limit for guest (unauthenticated) users.
+   * Returns true if request is allowed, false if rate limited.
+   */
+  async checkGuestRateLimit(ip: string): Promise<boolean> {
+    const key = `${this.GUEST_RATE_LIMIT_PREFIX}${ip}`;
+    try {
+      const current = await this.redisService.get(key);
+      const count = current ? parseInt(current) : 0;
+
+      if (count >= this.GUEST_RATE_LIMIT) {
+        return false;
+      }
+
+      // Increment and set TTL on first request
+      if (count === 0) {
+        await this.redisService.set(key, "1", this.GUEST_RATE_TTL);
+      } else {
+        await this.redisService.set(
+          key,
+          String(count + 1),
+          this.GUEST_RATE_TTL,
+        );
+      }
+      return true;
+    } catch {
+      // If Redis is down, allow the request (fail open)
+      return true;
+    }
   }
 
   /**
@@ -156,16 +190,38 @@ Respond with a JSON object matching this exact structure:
   "specialInstructions": string summarizing any special requests,
   "gemstones": [{ "stoneType": "DIAMOND_NATURAL|RUBY|SAPPHIRE|EMERALD|...", "shape": "ROUND|OVAL|PRINCESS|...", "count": number, "settingStyle": "PRONG|BEZEL|PAVE|..." }] or [],
   "confidence": number 0-100 (how confident you are in this interpretation),
-  "reasoning": string explaining your choices,
-  "suggestions": string[] (helpful tips for the customer)
+  "reasoning": string explaining your choices AND any assumptions you made,
+  "suggestions": string[] (helpful tips OR clarifying questions the customer should answer),
+  "missingInfo": string[] (list of missing details that would improve the result, e.g. ["budget range", "preferred weight", "occasion"])
 }
 
-Important rules:
-- If the description is vague, make reasonable assumptions and explain them in "reasoning"
-- Budget conversions: 1 USD ≈ 133 NPR, 1 INR ≈ 1.6 NPR, 1 AED ≈ 36 NPR, 1 GBP ≈ 170 NPR
-- For "gold ring" without karat, default to 22K in NP/IN markets, 18K in western markets
-- For custom/handmade requests, use METHOD_A. For standard designs, use METHOD_B
-- Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale accordingly for other types`;
+CRITICAL RULES FOR HANDLING AMBIGUOUS/INCOMPLETE INPUTS:
+1. **Very short or vague descriptions** (e.g. "ring", "gold jewellery", "something nice"):
+   - Still provide a reasonable default result (don't refuse)
+   - Set confidence to 15-30
+   - In "reasoning", explain: "Your description was brief, so I used common defaults: ..."
+   - In "suggestions", ask clarifying questions: "What karat gold? (22K is standard in Nepal)", "Any budget range in mind?", "Is this for a specific occasion?"
+   - In "missingInfo", list what's missing: ["jewellery type details", "metal preference", "budget", "occasion"]
+
+2. **Gibberish or non-jewellery text** (e.g. "asdfghj", "hello world", "what is 2+2"):
+   - Set jewelleryType to "OTHER"
+   - Set confidence to 5-10
+   - In "reasoning": "I couldn't identify a jewellery request. Please describe what kind of jewellery you'd like."
+   - In "suggestions": ["Try: 'I want a gold ring for my wedding'", "Try: '22K gold necklace, budget 50-80K NPR'", "Describe the type, metal, and any gemstones you want"]
+   - In "missingInfo": ["jewellery description"]
+
+3. **Partially specified** (e.g. "gold ring" without karat/budget/weight):
+   - Fill in reasonable defaults for the missing parts
+   - Set confidence to 40-60
+   - In "reasoning", clearly state each assumption: "Assumed 22K gold (standard in [region])..."
+   - In "suggestions", mention what they can add for better accuracy
+
+4. **Well-specified descriptions**: confidence 70-95, provide optimization tips in suggestions
+
+Budget conversions: 1 USD ≈ 133 NPR, 1 INR ≈ 1.6 NPR, 1 AED ≈ 36 NPR, 1 GBP ≈ 170 NPR
+For "gold ring" without karat, default to 22K in NP/IN markets, 18K in western markets.
+For custom/handmade requests, use METHOD_A. For standard designs, use METHOD_B.
+Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale accordingly for other types.`;
   }
 
   private async getMarketContext(dto: AiRfqBuilderDto): Promise<string> {
@@ -233,14 +289,45 @@ Important rules:
       confidence: Math.max(0, Math.min(100, parsed.confidence || 50)),
       reasoning: parsed.reasoning || "Generated from your description",
       suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
+      missingInfo: Array.isArray(parsed.missingInfo) ? parsed.missingInfo : [],
     };
   }
 
   /**
-   * Fallback rule-based parser when Gemini is unavailable
+   * Fallback rule-based parser when Gemini is unavailable.
+   * Handles ambiguous/incomplete/gibberish inputs gracefully.
    */
   private fallbackParse(dto: AiRfqBuilderDto): AiRfqBuilderResponse {
-    const desc = dto.description.toLowerCase();
+    const desc = dto.description.toLowerCase().trim();
+    const missingInfo: string[] = [];
+
+    // Detect if input is gibberish or non-jewellery
+    const hasJewelleryKeyword =
+      /ring|necklace|bracelet|bangle|earring|pendant|chain|anklet|brooch|nose|mangalsutra|gold|silver|platinum|diamond|ruby|sapphire|emerald|pearl|jewel|ornament|wedding|engagement|bridal/i.test(
+        desc,
+      );
+    const isTooShort = desc.length < 5;
+    const isGibberish =
+      !hasJewelleryKeyword && !/[aeiou]{1,}/i.test(desc.replace(/\s/g, ""));
+
+    if (isGibberish || (isTooShort && !hasJewelleryKeyword)) {
+      return {
+        jewelleryType: "OTHER",
+        buildMethod: "METHOD_B",
+        composition: { primary: { material: "GOLD_22K", percentage: 100 } },
+        specialInstructions: dto.description,
+        gemstones: [],
+        confidence: 5,
+        reasoning:
+          "I couldn't identify a jewellery request from your description. Please describe what kind of jewellery you'd like to create.",
+        suggestions: [
+          "Try: 'I want a gold ring for my wedding'",
+          "Try: '22K gold necklace around 15 grams, budget 50-80K'",
+          "Describe the type, metal, weight, and any gemstones you want",
+        ],
+        missingInfo: ["jewellery description"],
+      };
+    }
 
     // Detect jewellery type
     let jewelleryType = "OTHER";
@@ -263,6 +350,9 @@ Important rules:
         break;
       }
     }
+    if (jewelleryType === "OTHER") {
+      missingInfo.push("specific jewellery type (ring, necklace, etc.)");
+    }
 
     // Detect metal
     let material = "GOLD_22K";
@@ -275,6 +365,9 @@ Important rules:
       material = "GOLD_14K";
     else if (desc.includes("24k") || desc.includes("24 karat"))
       material = "GOLD_24K";
+    else if (!desc.includes("gold")) {
+      missingInfo.push("metal type (gold, silver, platinum)");
+    }
 
     // Detect method
     let buildMethod = "METHOD_B";
@@ -326,6 +419,40 @@ Important rules:
         budgetMinNpr = Math.round(nums[0] * 0.8);
         budgetMaxNpr = Math.round(nums[0] * 1.2);
       }
+    } else {
+      missingInfo.push("budget range");
+    }
+
+    // Check for weight/occasion
+    if (!/\d+\s*(g|gram|gm)/i.test(desc)) {
+      missingInfo.push("preferred weight in grams");
+    }
+    if (
+      !/wedding|engagement|gift|daily|party|festival|puja|birthday|anniversary/i.test(
+        desc,
+      )
+    ) {
+      missingInfo.push("occasion (wedding, daily wear, gift, etc.)");
+    }
+
+    // Determine confidence based on completeness
+    const detectedCount = [
+      jewelleryType !== "OTHER",
+      material !== "GOLD_22K" || desc.includes("gold"),
+      budgetMinNpr !== undefined,
+      gemstones.length > 0,
+    ].filter(Boolean).length;
+    const confidence = Math.max(15, Math.min(55, detectedCount * 15));
+
+    const suggestions: string[] = [];
+    if (missingInfo.length > 0) {
+      suggestions.push(
+        `For better results, add: ${missingInfo.slice(0, 3).join(", ")}`,
+      );
+    }
+    suggestions.push("Review the detected fields and adjust if needed");
+    if (!budgetMinNpr) {
+      suggestions.push("Adding a budget range helps sellers give accurate quotes");
     }
 
     return {
@@ -338,14 +465,13 @@ Important rules:
       budgetMaxNpr,
       specialInstructions: dto.description,
       gemstones,
-      confidence: 30, // Low confidence for fallback
+      confidence,
       reasoning:
-        "Parsed using keyword matching (AI was unavailable). Please review and adjust the details.",
-      suggestions: [
-        "Review the detected jewellery type and correct if needed",
-        "Specify exact weight if you have a preference",
-        "Add reference images for better results",
-      ],
+        missingInfo.length > 0
+          ? `Parsed using keyword matching (AI was unavailable). I assumed ${material.replace("_", " ")} and ${buildMethod === "METHOD_A" ? "handcrafted" : "standard casting"} method. Missing details: ${missingInfo.join(", ")}.`
+          : `Parsed using keyword matching (AI was unavailable). Detected ${jewelleryType.toLowerCase()} in ${material.replace("_", " ")}.`,
+      suggestions,
+      missingInfo,
     };
   }
 

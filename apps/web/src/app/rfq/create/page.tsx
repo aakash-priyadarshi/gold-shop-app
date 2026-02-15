@@ -479,6 +479,9 @@ export default function CreateRfqPage() {
     confidence: number;
     reasoning: string;
     suggestions: string[];
+    missingInfo?: string[];
+    isGuest?: boolean;
+    guestLimitReached?: boolean;
   } | null>(null);
   const [aiError, setAiError] = useState("");
   const [showAiAssistant, setShowAiAssistant] = useState(true);
@@ -2126,42 +2129,60 @@ export default function CreateRfqPage() {
       });
       const data = res.data;
 
-      // Map AI response to form fields
-      if (data.jewelleryType) {
-        updateFormData("jewelleryType", data.jewelleryType);
+      // Check if guest rate limit was hit
+      if (data.guestLimitReached) {
+        setAiResult({
+          confidence: 0,
+          reasoning: data.reasoning,
+          suggestions: data.suggestions || [],
+          missingInfo: [],
+          isGuest: true,
+          guestLimitReached: true,
+        });
+        return;
       }
-      if (data.buildMethod) {
-        updateFormData("buildMethod", data.buildMethod);
-      }
-      if (data.composition?.metalType) {
-        updateFormData("metalType", data.composition.metalType);
-      }
-      if (data.weightCategory) {
-        updateFormData("weightCategory", data.weightCategory);
-      }
-      if (data.estimatedWeight) {
-        updateFormData("estimatedWeight", String(data.estimatedWeight));
-      }
-      if (data.surfaceFinish) {
-        updateFormData("surfaceFinish", data.surfaceFinish);
-      }
-      if (data.budgetMinNpr) {
-        updateFormData("budgetMin", String(data.budgetMinNpr));
-      }
-      if (data.budgetMaxNpr) {
-        updateFormData("budgetMax", String(data.budgetMaxNpr));
-      }
-      if (data.specialInstructions) {
-        updateFormData("description", data.specialInstructions);
-      }
-      if (data.gemstones && data.gemstones.length > 0) {
-        updateFormData("hasGemstones", true);
+
+      // Only fill form if confidence > 5 (not gibberish)
+      if (data.confidence > 5) {
+        if (data.jewelleryType) {
+          updateFormData("jewelleryType", data.jewelleryType);
+        }
+        if (data.buildMethod) {
+          updateFormData("buildMethod", data.buildMethod);
+        }
+        if (data.composition?.metalType) {
+          updateFormData("metalType", data.composition.metalType);
+        }
+        if (data.weightCategory) {
+          updateFormData("weightCategory", data.weightCategory);
+        }
+        if (data.estimatedWeight) {
+          updateFormData("estimatedWeight", String(data.estimatedWeight));
+        }
+        if (data.surfaceFinish) {
+          updateFormData("surfaceFinish", data.surfaceFinish);
+        }
+        if (data.budgetMinNpr) {
+          updateFormData("budgetMin", String(data.budgetMinNpr));
+        }
+        if (data.budgetMaxNpr) {
+          updateFormData("budgetMax", String(data.budgetMaxNpr));
+        }
+        if (data.specialInstructions) {
+          updateFormData("description", data.specialInstructions);
+        }
+        if (data.gemstones && data.gemstones.length > 0) {
+          updateFormData("hasGemstones", true);
+        }
       }
 
       setAiResult({
         confidence: data.confidence,
         reasoning: data.reasoning,
         suggestions: data.suggestions || [],
+        missingInfo: data.missingInfo || [],
+        isGuest: data.isGuest || false,
+        guestLimitReached: false,
       });
     } catch (err: any) {
       setAiError(
@@ -2729,37 +2750,113 @@ export default function CreateRfqPage() {
 
                         {aiResult && (
                           <div className="rounded-md bg-white p-3 text-sm space-y-2 border border-gold-100">
-                            <div className="flex items-center justify-between">
-                              <span className="text-green-700 font-medium flex items-center gap-1">
-                                <Check className="h-4 w-4" />
-                                Form filled
-                                {aiResult.confidence >= 70
-                                  ? " — high confidence"
-                                  : aiResult.confidence >= 40
-                                    ? " — review the fields below"
-                                    : " — low confidence, please verify"}
-                              </span>
-                              <Badge
-                                variant="outline"
-                                className={
-                                  aiResult.confidence >= 70
-                                    ? "border-green-300 text-green-700"
-                                    : aiResult.confidence >= 40
-                                      ? "border-yellow-300 text-yellow-700"
-                                      : "border-red-300 text-red-700"
-                                }
-                              >
-                                {aiResult.confidence}% match
-                              </Badge>
-                            </div>
-                            <p className="text-gray-600 text-xs">
-                              {aiResult.reasoning}
-                            </p>
-                            {aiResult.suggestions.length > 0 && (
-                              <div className="text-xs text-gray-500">
-                                <span className="font-medium">Tips: </span>
-                                {aiResult.suggestions.join(" • ")}
+                            {aiResult.guestLimitReached ? (
+                              /* Guest rate limit reached */
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-1 text-amber-700 font-medium">
+                                  <AlertCircle className="h-4 w-4" />
+                                  Guest limit reached
+                                </div>
+                                <p className="text-gray-600 text-xs">
+                                  {aiResult.reasoning}
+                                </p>
+                                <a
+                                  href="/auth/login?redirect=/rfq/create"
+                                  className="inline-flex items-center gap-1 text-xs bg-gold-600 text-white px-3 py-1.5 rounded-md hover:bg-gold-700 transition-colors"
+                                >
+                                  Sign in for unlimited AI access →
+                                </a>
                               </div>
+                            ) : aiResult.confidence <= 10 ? (
+                              /* Gibberish/non-jewellery input */
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-1 text-red-600 font-medium">
+                                  <AlertCircle className="h-4 w-4" />
+                                  Could not understand your request
+                                </div>
+                                <p className="text-gray-600 text-xs">
+                                  {aiResult.reasoning}
+                                </p>
+                                {aiResult.suggestions.length > 0 && (
+                                  <div className="text-xs text-gray-500 space-y-1">
+                                    <span className="font-medium">Try something like:</span>
+                                    <ul className="list-disc list-inside space-y-0.5 text-gray-600">
+                                      {aiResult.suggestions.map((s, i) => (
+                                        <li key={i}>{s}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              /* Normal result (possibly with missing info) */
+                              <>
+                                <div className="flex items-center justify-between">
+                                  <span className={`font-medium flex items-center gap-1 ${
+                                    aiResult.confidence >= 70
+                                      ? "text-green-700"
+                                      : aiResult.confidence >= 40
+                                        ? "text-yellow-700"
+                                        : "text-orange-600"
+                                  }`}>
+                                    <Check className="h-4 w-4" />
+                                    {aiResult.confidence >= 70
+                                      ? "Form filled — high confidence"
+                                      : aiResult.confidence >= 40
+                                        ? "Form filled — review the fields below"
+                                        : "Partial fill — please add more details"}
+                                  </span>
+                                  <Badge
+                                    variant="outline"
+                                    className={
+                                      aiResult.confidence >= 70
+                                        ? "border-green-300 text-green-700"
+                                        : aiResult.confidence >= 40
+                                          ? "border-yellow-300 text-yellow-700"
+                                          : "border-orange-300 text-orange-700"
+                                    }
+                                  >
+                                    {aiResult.confidence}% match
+                                  </Badge>
+                                </div>
+                                <p className="text-gray-600 text-xs">
+                                  {aiResult.reasoning}
+                                </p>
+
+                                {/* Missing info indicators */}
+                                {aiResult.missingInfo && aiResult.missingInfo.length > 0 && (
+                                  <div className="text-xs bg-amber-50 border border-amber-200 rounded p-2">
+                                    <span className="font-medium text-amber-800">
+                                      Add these for better matches:{" "}
+                                    </span>
+                                    <span className="text-amber-700">
+                                      {aiResult.missingInfo.join(" • ")}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {aiResult.suggestions.length > 0 && (
+                                  <div className="text-xs text-gray-500">
+                                    <span className="font-medium">Tips: </span>
+                                    {aiResult.suggestions.join(" • ")}
+                                  </div>
+                                )}
+
+                                {/* Guest prompt: encourage login for full features */}
+                                {aiResult.isGuest && (
+                                  <div className="text-xs bg-blue-50 border border-blue-200 rounded p-2 flex items-center justify-between">
+                                    <span className="text-blue-800">
+                                      ✨ Sign in to submit this to sellers and get real quotes
+                                    </span>
+                                    <a
+                                      href="/auth/login?redirect=/rfq/create"
+                                      className="text-blue-700 font-medium underline hover:text-blue-900 whitespace-nowrap ml-2"
+                                    >
+                                      Sign in →
+                                    </a>
+                                  </div>
+                                )}
+                              </>
                             )}
                           </div>
                         )}

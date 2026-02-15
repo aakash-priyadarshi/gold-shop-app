@@ -40,6 +40,7 @@ export class AiRfqBuilderResponse {
   confidence: number; // 0-100
   reasoning: string; // Why the AI chose these specs
   suggestions: string[]; // Additional tips
+  missingInfo?: string[]; // What's missing for better results
 }
 
 export class FeasibilityCheckDto {
