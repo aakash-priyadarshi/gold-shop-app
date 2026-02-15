@@ -1,73 +1,74 @@
 "use client";
 
-import { AdminGuard } from "@/components/auth/RouteGuard";
 import { AdminCustomersCRM } from "@/components/admin/AdminCustomersCRM";
+import { AdminSellerCRM } from "@/components/admin/AdminSellerCRM";
+import { AdminGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import api, { adminApi } from "@/lib/api";
 import {
-  AlertCircle,
-  Calendar,
-  CheckCircle,
-  Clock,
-  Eye,
-  Loader2,
-  Mail,
-  MapPin,
-  Pencil,
-  Phone,
-  Plus,
-  Search,
-  Shield,
-  Star,
-  Store,
-  Trash2,
-  User,
-  UserCheck,
-  Users,
-  UserX,
-  XCircle,
+    AlertCircle,
+    Calendar,
+    CheckCircle,
+    Clock,
+    Eye,
+    Loader2,
+    Mail,
+    MapPin,
+    Pencil,
+    Phone,
+    Plus,
+    Search,
+    Shield,
+    Star,
+    Store,
+    Trash2,
+    User,
+    UserCheck,
+    Users,
+    UserX,
+    XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -1028,6 +1029,10 @@ export default function AdminUsersPage() {
                 <User className="h-4 w-4" />
                 Customers CRM
               </TabsTrigger>
+              <TabsTrigger value="sellers" className="gap-2">
+                <Store className="h-4 w-4" />
+                Sellers CRM
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="users" className="space-y-6 mt-0">
@@ -1289,6 +1294,10 @@ export default function AdminUsersPage() {
 
             <TabsContent value="customers" className="mt-0">
               <AdminCustomersCRM />
+            </TabsContent>
+
+            <TabsContent value="sellers" className="mt-0">
+              <AdminSellerCRM />
             </TabsContent>
           </Tabs>
         </div>

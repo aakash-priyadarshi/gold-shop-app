@@ -25,6 +25,7 @@ import { useAuth, UserRole } from "@/hooks/useAuth";
 import { adminApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
+  Award,
   Calculator,
   ChevronDown,
   ClipboardList,
@@ -176,6 +177,12 @@ const navItems: NavItem[] = [
     label: "Analytics",
     href: "/dashboard/shop/analytics",
     icon: TrendingUp,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Engagement",
+    href: "/dashboard/shop/engagement",
+    icon: Award,
     roles: ["SHOPKEEPER"],
   },
   {

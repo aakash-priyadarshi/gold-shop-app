@@ -3,6 +3,7 @@ import { Cron } from "@nestjs/schedule";
 import { SellerTier } from "@prisma/client";
 import { RedisService } from "../../common/redis";
 import { PrismaService } from "../../prisma/prisma.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import { PlatformConfigService } from "../platform-config/platform-config.service";
 
 @Injectable()
@@ -15,6 +16,7 @@ export class SellerPerformanceService {
     private prisma: PrismaService,
     private redisService: RedisService,
     private configService: PlatformConfigService,
+    private notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -408,6 +410,29 @@ export class SellerPerformanceService {
     }
 
     this.logger.log(`Shop ${shopId} tier updated to ${newTier} (cap: ${cap}%)`);
+
+    // Notify shop owner about tier change
+    try {
+      const shop = await this.prisma.shop.findUnique({
+        where: { id: shopId },
+        select: { userId: true, sellerTier: true },
+      });
+      if (shop?.userId) {
+        await this.notificationsService.create({
+          userId: shop.userId,
+          type: "SYSTEM_ALERT",
+          titleKey: "notification.tier_change.title",
+          titleParams: { tier: newTier },
+          bodyKey: "notification.tier_change.body",
+          bodyParams: { tier: newTier, cap },
+          referenceType: "SHOP",
+          referenceId: shopId,
+          channels: ["EMAIL", "PUSH"],
+        });
+      }
+    } catch (err) {
+      this.logger.error(`Failed to notify tier change for shop ${shopId}: ${err.message}`);
+    }
   }
 
   /**
@@ -440,7 +465,10 @@ export class SellerPerformanceService {
   /**
    * Get full performance dashboard data for a shop (including tier progress)
    */
-  async getDashboard(shopId: string, overrideTargetTier?: string): Promise<any> {
+  async getDashboard(
+    shopId: string,
+    overrideTargetTier?: string,
+  ): Promise<any> {
     const [performance, shop, badges] = await Promise.all([
       this.getPerformance(shopId),
       this.prisma.shop.findUnique({
@@ -475,12 +503,13 @@ export class SellerPerformanceService {
 
     // Load criteria for the next tier (or Elite if already Elite)
     // Allow override via query param so frontend can show any tier's requirements
-    const TIER_ORDER = ['STANDARD', 'SILVER', 'GOLD', 'ELITE'];
+    const TIER_ORDER = ["STANDARD", "SILVER", "GOLD", "ELITE"];
     const validOverride =
-      overrideTargetTier && TIER_ORDER.includes(overrideTargetTier.toUpperCase())
+      overrideTargetTier &&
+      TIER_ORDER.includes(overrideTargetTier.toUpperCase())
         ? overrideTargetTier.toUpperCase()
         : null;
-    const targetTier = validOverride || nextTier || 'ELITE';
+    const targetTier = validOverride || nextTier || "ELITE";
     const prefix = targetTier.toLowerCase();
 
     const criteriaKeys = {
@@ -604,5 +633,97 @@ export class SellerPerformanceService {
     } catch {
       /* ignore */
     }
+  }
+
+  /**
+   * Weekly performance digest — every Monday at 9 AM
+   * Sends a summary to each active shopkeeper
+   */
+  @Cron("0 0 9 * * 1") // Monday 9 AM
+  async sendWeeklyDigest(): Promise<void> {
+    this.logger.log("Sending weekly performance digests...");
+
+    const shops = await this.prisma.shop.findMany({
+      where: { isActive: true },
+      select: { id: true, userId: true, shopName: true },
+    });
+
+    for (const shop of shops) {
+      try {
+        const perf = await this.prisma.sellerPerformance.findUnique({
+          where: { shopId: shop.id },
+        });
+        if (!perf) continue;
+
+        // Count orders this week
+        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const weeklyOrders = await this.prisma.order.count({
+          where: { shopId: shop.id, createdAt: { gte: weekAgo } },
+        });
+
+        await this.notificationsService.create({
+          userId: shop.userId,
+          type: "SYSTEM_ALERT",
+          titleKey: "notification.weekly_digest.title",
+          bodyKey: "notification.weekly_digest.body",
+          bodyParams: {
+            shopName: shop.shopName,
+            weeklyOrders,
+            totalOrders: perf.totalOrders,
+            avgRating: perf.avgRating,
+            revenue: perf.totalRevenue,
+          },
+          referenceType: "SHOP",
+          referenceId: shop.id,
+          channels: ["EMAIL"],
+        });
+      } catch (err) {
+        this.logger.error(`Weekly digest failed for shop ${shop.id}: ${err.message}`);
+      }
+    }
+
+    this.logger.log(`Weekly digests sent to ${shops.length} shops`);
+  }
+
+  /**
+   * Dormant shop detection — runs daily at 10 AM
+   * Flags shops with no activity in last 14 days
+   */
+  @Cron("0 0 10 * * *") // Daily at 10 AM
+  async detectDormantShops(): Promise<void> {
+    this.logger.log("Checking for dormant shops...");
+
+    const dormantThreshold = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+
+    const dormantShops = await this.prisma.shop.findMany({
+      where: {
+        isActive: true,
+        isOnHold: false,
+        // No orders in last 14 days
+        orders: { none: { createdAt: { gte: dormantThreshold } } },
+        // No quotes in last 14 days
+        shopQuotes: { none: { createdAt: { gte: dormantThreshold } } },
+      },
+      select: { id: true, userId: true, shopName: true, updatedAt: true },
+    });
+
+    for (const shop of dormantShops) {
+      try {
+        await this.notificationsService.create({
+          userId: shop.userId,
+          type: "SYSTEM_ALERT",
+          titleKey: "notification.dormant_shop.title",
+          bodyKey: "notification.dormant_shop.body",
+          bodyParams: { shopName: shop.shopName },
+          referenceType: "SHOP",
+          referenceId: shop.id,
+          channels: ["EMAIL", "PUSH"],
+        });
+      } catch (err) {
+        this.logger.error(`Dormant notification failed for shop ${shop.id}: ${err.message}`);
+      }
+    }
+
+    this.logger.log(`Found ${dormantShops.length} dormant shops, notifications sent`);
   }
 }
