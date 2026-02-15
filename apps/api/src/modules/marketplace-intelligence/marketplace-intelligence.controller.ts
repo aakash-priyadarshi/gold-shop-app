@@ -7,13 +7,17 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Throttle } from "@nestjs/throttler";
 import { UserRole } from "@prisma/client";
+import { Request } from "express";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { AiRfqBuilderService } from "./ai-rfq-builder.service";
 import {
@@ -36,25 +40,55 @@ export class MarketplaceIntelligenceController {
 
   // ═══════════════════════════════════════
   // AI RFQ BUILDER (Public — rate limited)
+  // Guests: 5 requests/hour | Logged-in: 30/hour
   // ═══════════════════════════════════════
 
   @Post("rfq-builder")
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(OptionalJwtAuthGuard)
+  @Throttle({ default: { ttl: 3600000, limit: 30 } })
   @ApiBearerAuth()
   @ApiOperation({
     summary:
-      "AI-assisted RFQ builder — converts natural language to structured specs",
+      "AI-assisted RFQ builder — converts natural language to structured specs (guests allowed with rate limit)",
   })
-  async buildRfq(@Body() dto: AiRfqBuilderDto) {
-    return this.rfqBuilderService.buildRfqFromDescription(dto);
+  async buildRfq(@Body() dto: AiRfqBuilderDto, @Req() req: Request) {
+    const user = (req as any).user;
+    const isGuest = !user;
+
+    // Stricter rate limit for guests using Redis
+    if (isGuest) {
+      const ip = req.ip || req.headers["x-forwarded-for"] || "unknown";
+      const allowed = await this.rfqBuilderService.checkGuestRateLimit(
+        String(ip),
+      );
+      if (!allowed) {
+        return {
+          jewelleryType: "OTHER",
+          buildMethod: "METHOD_B",
+          composition: { primary: { material: "GOLD_22K", percentage: 100 } },
+          confidence: 0,
+          reasoning:
+            "You have reached the guest limit (5 AI requests per hour). Please sign in for unlimited access.",
+          suggestions: [
+            "Create a free account to get unlimited AI assistance",
+            "You can still fill the form manually below",
+          ],
+          guestLimitReached: true,
+        };
+      }
+    }
+
+    const result = await this.rfqBuilderService.buildRfqFromDescription(dto);
+    return { ...result, isGuest };
   }
 
   // ═══════════════════════════════════════
-  // BUDGET FEASIBILITY CHECKER
+  // BUDGET FEASIBILITY CHECKER (Public)
   // ═══════════════════════════════════════
 
   @Post("feasibility-check")
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(OptionalJwtAuthGuard)
+  @Throttle({ default: { ttl: 3600000, limit: 20 } })
   @ApiBearerAuth()
   @ApiOperation({
     summary: "Check if a budget is feasible for requested jewellery specs",
