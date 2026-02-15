@@ -19,7 +19,6 @@ import {
   Brain,
   Check,
   CheckCircle,
-  ChevronRight,
   Clock,
   Eye,
   Loader2,
@@ -132,7 +131,7 @@ export default function IntelligenceDashboardPage() {
   const handleMilestoneAction = async (
     milestoneId: string,
     actionIndex: number,
-    status: "completed" | "skipped"
+    status: "completed" | "skipped",
   ) => {
     try {
       await intelligenceApi.updateMilestoneAction(milestoneId, {
@@ -321,9 +320,7 @@ export default function IntelligenceDashboardPage() {
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-500">
-                          Avg Offers/RFQ
-                        </p>
+                        <p className="text-sm text-gray-500">Avg Offers/RFQ</p>
                         <p className="text-2xl font-bold">
                           {dashboard.averages.avgOffersPerRfq
                             ? dashboard.averages.avgOffersPerRfq.toFixed(1)
@@ -343,43 +340,39 @@ export default function IntelligenceDashboardPage() {
                     <CardTitle className="text-lg">
                       Top Jewellery Types
                     </CardTitle>
-                    <CardDescription>
-                      Most requested categories
-                    </CardDescription>
+                    <CardDescription>Most requested categories</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {dashboard.topJewelleryTypes.length > 0 ? (
                       <div className="space-y-3">
-                        {dashboard.topJewelleryTypes.map(
-                          (item, idx) => (
-                            <div
-                              key={item.rfqJewelleryType}
-                              className="flex items-center justify-between"
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium text-gray-500 w-4">
-                                  {idx + 1}.
-                                </span>
-                                <span className="font-medium">
-                                  {item.rfqJewelleryType}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <span className="text-sm text-gray-500">
-                                  {item._count.id} RFQs
-                                </span>
-                                {item._avg.avgOfferPrice && (
-                                  <Badge variant="outline">
-                                    ~NPR{" "}
-                                    {Math.round(
-                                      item._avg.avgOfferPrice
-                                    ).toLocaleString()}
-                                  </Badge>
-                                )}
-                              </div>
+                        {dashboard.topJewelleryTypes.map((item, idx) => (
+                          <div
+                            key={item.rfqJewelleryType}
+                            className="flex items-center justify-between"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-gray-500 w-4">
+                                {idx + 1}.
+                              </span>
+                              <span className="font-medium">
+                                {item.rfqJewelleryType}
+                              </span>
                             </div>
-                          )
-                        )}
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm text-gray-500">
+                                {item._count.id} RFQs
+                              </span>
+                              {item._avg.avgOfferPrice && (
+                                <Badge variant="outline">
+                                  ~NPR{" "}
+                                  {Math.round(
+                                    item._avg.avgOfferPrice,
+                                  ).toLocaleString()}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     ) : (
                       <p className="text-sm text-gray-400">
@@ -410,9 +403,7 @@ export default function IntelligenceDashboardPage() {
                                 .toLowerCase()
                                 .replace(/^\w/, (c: string) => c.toUpperCase())}
                             </span>
-                            <Badge variant="secondary">
-                              {item._count.id}
-                            </Badge>
+                            <Badge variant="secondary">{item._count.id}</Badge>
                           </div>
                         ))}
                       </div>
@@ -523,7 +514,7 @@ export default function IntelligenceDashboardPage() {
                                           handleMilestoneAction(
                                             milestone.id,
                                             idx,
-                                            "completed"
+                                            "completed",
                                           )
                                         }
                                       >
@@ -537,7 +528,7 @@ export default function IntelligenceDashboardPage() {
                                           handleMilestoneAction(
                                             milestone.id,
                                             idx,
-                                            "skipped"
+                                            "skipped",
                                           )
                                         }
                                       >
@@ -546,7 +537,7 @@ export default function IntelligenceDashboardPage() {
                                     </div>
                                   )}
                               </div>
-                            )
+                            ),
                           )}
                         </div>
                       </CardContent>
@@ -573,14 +564,15 @@ export default function IntelligenceDashboardPage() {
                 </Card>
               ) : (
                 anomalies.map((anomaly) => (
-                  <Card key={anomaly.id} className="border-l-4 border-l-amber-400">
+                  <Card
+                    key={anomaly.id}
+                    className="border-l-4 border-l-amber-400"
+                  >
                     <CardContent className="py-4">
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
-                            <Badge
-                              className={severityColors[anomaly.severity]}
-                            >
+                            <Badge className={severityColors[anomaly.severity]}>
                               {anomaly.severity}
                             </Badge>
                             <span className="font-medium text-sm">
@@ -590,7 +582,9 @@ export default function IntelligenceDashboardPage() {
                           <p className="text-sm text-gray-600">
                             Expected:{" "}
                             <span className="font-medium">
-                              {Math.round(anomaly.expectedValue).toLocaleString()}
+                              {Math.round(
+                                anomaly.expectedValue,
+                              ).toLocaleString()}
                             </span>{" "}
                             &bull; Actual:{" "}
                             <span className="font-medium">
@@ -629,8 +623,7 @@ export default function IntelligenceDashboardPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Sparkles className="h-5 w-5 text-purple-600" />
-                    Current AI Phase: {capabilities.phase} —{" "}
-                    {capabilities.name}
+                    Current AI Phase: {capabilities.phase} — {capabilities.name}
                   </CardTitle>
                   <CardDescription>
                     {capabilities.completedOrders} completed orders captured.
@@ -641,44 +634,39 @@ export default function IntelligenceDashboardPage() {
               </Card>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries(capabilities.capabilities).map(
-                  ([key, cap]) => (
-                    <Card
-                      key={key}
-                      className={
-                        cap.available
-                          ? "border-green-200"
-                          : "border-gray-200 opacity-60"
-                      }
-                    >
-                      <CardContent className="pt-6">
-                        <div className="flex items-start gap-3">
-                          {cap.available ? (
-                            <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
-                          ) : (
-                            <Clock className="h-5 w-5 text-gray-400 mt-0.5" />
-                          )}
-                          <div>
-                            <p className="font-medium">
-                              {key
-                                .replace(/([A-Z])/g, " $1")
-                                .replace(/^./, (s) => s.toUpperCase())}
-                            </p>
-                            <p className="text-sm text-gray-500 mt-1">
-                              {cap.description}
-                            </p>
-                            <Badge
-                              variant="outline"
-                              className="mt-2"
-                            >
-                              Accuracy: {cap.accuracy}
-                            </Badge>
-                          </div>
+                {Object.entries(capabilities.capabilities).map(([key, cap]) => (
+                  <Card
+                    key={key}
+                    className={
+                      cap.available
+                        ? "border-green-200"
+                        : "border-gray-200 opacity-60"
+                    }
+                  >
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-3">
+                        {cap.available ? (
+                          <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                        ) : (
+                          <Clock className="h-5 w-5 text-gray-400 mt-0.5" />
+                        )}
+                        <div>
+                          <p className="font-medium">
+                            {key
+                              .replace(/([A-Z])/g, " $1")
+                              .replace(/^./, (s) => s.toUpperCase())}
+                          </p>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {cap.description}
+                          </p>
+                          <Badge variant="outline" className="mt-2">
+                            Accuracy: {cap.accuracy}
+                          </Badge>
                         </div>
-                      </CardContent>
-                    </Card>
-                  )
-                )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
           )}

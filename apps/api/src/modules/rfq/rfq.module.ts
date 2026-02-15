@@ -7,7 +7,12 @@ import { RfqController } from "./rfq.controller";
 import { RfqService } from "./rfq.service";
 
 @Module({
-  imports: [ShopsModule, NotificationsModule, AuditModule, MarketplaceIntelligenceModule],
+  imports: [
+    ShopsModule,
+    NotificationsModule,
+    AuditModule,
+    MarketplaceIntelligenceModule,
+  ],
   controllers: [RfqController],
   providers: [RfqService],
   exports: [RfqService],

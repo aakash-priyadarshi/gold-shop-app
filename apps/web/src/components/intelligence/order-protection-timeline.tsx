@@ -14,7 +14,6 @@ import {
   Clock,
   Factory,
   Loader2,
-  Package,
   Shield,
   Star,
   Truck,
@@ -62,7 +61,10 @@ const iconMap: Record<string, React.ReactNode> = {
   star: <Star className="h-5 w-5" />,
 };
 
-const statusColors: Record<string, { bg: string; border: string; text: string; icon: string }> = {
+const statusColors: Record<
+  string,
+  { bg: string; border: string; text: string; icon: string }
+> = {
   completed: {
     bg: "bg-green-50",
     border: "border-green-300",
@@ -83,7 +85,9 @@ const statusColors: Record<string, { bg: string; border: string; text: string; i
   },
 };
 
-export function OrderProtectionTimeline({ orderId }: OrderProtectionTimelineProps) {
+export function OrderProtectionTimeline({
+  orderId,
+}: OrderProtectionTimelineProps) {
   const [data, setData] = useState<ProtectionData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -135,7 +139,9 @@ export function OrderProtectionTimeline({ orderId }: OrderProtectionTimelineProp
                 : "border-blue-300 text-blue-700"
             }
           >
-            {data.protectionLevel === "FULL" ? "Full Protection" : "Standard Protection"}
+            {data.protectionLevel === "FULL"
+              ? "Full Protection"
+              : "Standard Protection"}
           </Badge>
         </div>
       </CardHeader>
@@ -233,7 +239,8 @@ export function OrderProtectionTimeline({ orderId }: OrderProtectionTimelineProp
                   {stage.estimatedDelivery && (
                     <div className="text-xs flex items-center gap-1 mt-1 text-gray-500">
                       <Clock className="h-3 w-3" />
-                      Est. {new Date(stage.estimatedDelivery).toLocaleDateString()}
+                      Est.{" "}
+                      {new Date(stage.estimatedDelivery).toLocaleDateString()}
                     </div>
                   )}
 

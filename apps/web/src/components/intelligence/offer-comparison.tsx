@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/card";
 import { intelligenceApi } from "@/lib/api";
 import {
-  Award,
   CheckCircle,
   Clock,
   Crown,
@@ -81,7 +80,10 @@ interface OfferComparisonProps {
   onSelectOffer?: (offerId: string) => void;
 }
 
-export function OfferComparison({ rfqId, onSelectOffer }: OfferComparisonProps) {
+export function OfferComparison({
+  rfqId,
+  onSelectOffer,
+}: OfferComparisonProps) {
   const [data, setData] = useState<ComparisonData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -133,13 +135,17 @@ export function OfferComparison({ rfqId, onSelectOffer }: OfferComparisonProps) 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-semibold text-lg">Compare {data.totalOffers} Offers</h3>
+          <h3 className="font-semibold text-lg">
+            Compare {data.totalOffers} Offers
+          </h3>
           <p className="text-sm text-gray-500">
-            {data.jewelleryType} &bull; {data.buildMethod.replace("METHOD_", "Method ")}
+            {data.jewelleryType} &bull;{" "}
+            {data.buildMethod.replace("METHOD_", "Method ")}
             {data.budget.min && data.budget.max && (
               <span>
                 {" "}
-                &bull; Budget: {formatNpr(data.budget.min)} – {formatNpr(data.budget.max)}
+                &bull; Budget: {formatNpr(data.budget.min)} –{" "}
+                {formatNpr(data.budget.max)}
               </span>
             )}
           </p>
@@ -149,19 +155,28 @@ export function OfferComparison({ rfqId, onSelectOffer }: OfferComparisonProps) 
       {/* Highlight Badges */}
       <div className="flex flex-wrap gap-2">
         {data.highlights.lowestPrice && (
-          <Badge variant="outline" className="gap-1 text-green-700 border-green-300">
+          <Badge
+            variant="outline"
+            className="gap-1 text-green-700 border-green-300"
+          >
             <TrendingDown className="h-3 w-3" />
             Best Price
           </Badge>
         )}
         {data.highlights.fastestDelivery && (
-          <Badge variant="outline" className="gap-1 text-blue-700 border-blue-300">
+          <Badge
+            variant="outline"
+            className="gap-1 text-blue-700 border-blue-300"
+          >
             <Zap className="h-3 w-3" />
             Fastest
           </Badge>
         )}
         {data.highlights.highestRated && (
-          <Badge variant="outline" className="gap-1 text-yellow-700 border-yellow-300">
+          <Badge
+            variant="outline"
+            className="gap-1 text-yellow-700 border-yellow-300"
+          >
             <Star className="h-3 w-3" />
             Top Rated
           </Badge>
@@ -234,7 +249,9 @@ export function OfferComparison({ rfqId, onSelectOffer }: OfferComparisonProps) 
                 <div className="flex items-center gap-3 text-xs text-gray-500">
                   <span className="flex items-center gap-1">
                     <Star className="h-3 w-3 text-yellow-500" />
-                    {offer.shop.rating > 0 ? offer.shop.rating.toFixed(1) : "New"}
+                    {offer.shop.rating > 0
+                      ? offer.shop.rating.toFixed(1)
+                      : "New"}
                   </span>
                   <span>{offer.shop.totalOrders} orders</span>
                   {offer.shop.onTimeRate > 0 && (
@@ -277,7 +294,9 @@ export function OfferComparison({ rfqId, onSelectOffer }: OfferComparisonProps) 
                   )}
                   <div className="flex justify-between font-semibold border-t pt-1.5">
                     <span>Total</span>
-                    <span className="text-green-700">{formatNpr(offer.pricing.total)}</span>
+                    <span className="text-green-700">
+                      {formatNpr(offer.pricing.total)}
+                    </span>
                   </div>
                   <div className="flex justify-between text-xs text-gray-400">
                     <span>Booking fee ({offer.pricing.bookingFeePct}%)</span>
@@ -291,7 +310,9 @@ export function OfferComparison({ rfqId, onSelectOffer }: OfferComparisonProps) 
                     <Clock className="h-3 w-3" />
                     Delivery
                   </span>
-                  <span className="font-medium">{offer.delivery.estimatedDays} days</span>
+                  <span className="font-medium">
+                    {offer.delivery.estimatedDays} days
+                  </span>
                 </div>
 
                 {/* Weight */}

@@ -777,7 +777,7 @@ export class RfqService {
       await this.intelligenceService.captureOfferSelection(rfqId, offerId);
     } catch (err) {
       // Non-critical — don't block the main flow
-      console.error('Intelligence data capture failed:', err);
+      console.error("Intelligence data capture failed:", err);
     }
 
     return {

@@ -1,12 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
-import { PrismaService } from '../../prisma/prisma.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import { RedisService } from '../../common/redis';
+import { Injectable, Logger } from "@nestjs/common";
+import { Cron, CronExpression } from "@nestjs/schedule";
+import { RedisService } from "../../common/redis";
+import { PrismaService } from "../../prisma/prisma.service";
+import { NotificationsService } from "../notifications/notifications.service";
 
 /**
  * Marketplace Intelligence Service
- * 
+ *
  * Responsibilities:
  * 1. Data capture: Populates RfqOrderInsight from completed RFQ→Order cycles
  * 2. Phase milestone tracking: Monitors order counts and alerts admin at thresholds
@@ -16,59 +16,63 @@ import { RedisService } from '../../common/redis';
 @Injectable()
 export class MarketplaceIntelligenceService {
   private readonly logger = new Logger(MarketplaceIntelligenceService.name);
-  private readonly CACHE_PREFIX = 'mkt:intel:';
+  private readonly CACHE_PREFIX = "mkt:intel:";
   private readonly CACHE_TTL = 1800; // 30 minutes
 
   // Phase milestone definitions
   private readonly MILESTONES = [
     {
       phase: 1,
-      name: 'PHASE_1_LAUNCH',
+      name: "PHASE_1_LAUNCH",
       threshold: 0,
-      description: 'Platform launched — AI uses general knowledge only. RFQ builder, feasibility checker, and tooltips all active with zero-data prompts.',
+      description:
+        "Platform launched — AI uses general knowledge only. RFQ builder, feasibility checker, and tooltips all active with zero-data prompts.",
       actions: [
-        'Verify Gemini Flash API is responding',
-        'Test RFQ builder with sample queries',
-        'Ensure data capture is recording insights',
-        'Monitor AI response quality manually',
+        "Verify Gemini Flash API is responding",
+        "Test RFQ builder with sample queries",
+        "Ensure data capture is recording insights",
+        "Monitor AI response quality manually",
       ],
     },
     {
       phase: 2,
-      name: 'PHASE_2_100_ORDERS',
+      name: "PHASE_2_100_ORDERS",
       threshold: 100,
-      description: 'Enough data for category-level insights. AI can now reference real pricing ranges, popular materials, and average delivery times.',
+      description:
+        "Enough data for category-level insights. AI can now reference real pricing ranges, popular materials, and average delivery times.",
       actions: [
-        'Review captured RfqOrderInsight data quality',
-        'Enable market-aware prompts in RFQ builder',
-        'Update feasibility checker with real price ranges',
-        'Generate category pricing reports',
-        'Review quote anomaly patterns',
+        "Review captured RfqOrderInsight data quality",
+        "Enable market-aware prompts in RFQ builder",
+        "Update feasibility checker with real price ranges",
+        "Generate category pricing reports",
+        "Review quote anomaly patterns",
       ],
     },
     {
       phase: 2,
-      name: 'PHASE_2_200_ORDERS',
+      name: "PHASE_2_200_ORDERS",
       threshold: 200,
-      description: 'Strong data foundation. Can compute per-shop benchmarks and reliable market averages.',
+      description:
+        "Strong data foundation. Can compute per-shop benchmarks and reliable market averages.",
       actions: [
-        'Enable per-shop performance benchmarks in AI prompts',
-        'Turn on automated counter-offer suggestions',
-        'Publish market price indices to sellers',
-        'Generate first AI accuracy report',
+        "Enable per-shop performance benchmarks in AI prompts",
+        "Turn on automated counter-offer suggestions",
+        "Publish market price indices to sellers",
+        "Generate first AI accuracy report",
       ],
     },
     {
       phase: 3,
-      name: 'PHASE_3_500_ORDERS',
+      name: "PHASE_3_500_ORDERS",
       threshold: 500,
-      description: 'Full AI capability unlocked. Predictive pricing, personalized recommendations, and advanced anomaly detection.',
+      description:
+        "Full AI capability unlocked. Predictive pricing, personalized recommendations, and advanced anomaly detection.",
       actions: [
-        'Enable predictive price suggestions for customers',
-        'Turn on personalized seller recommendations',
-        'Activate advanced anomaly detection (ML-like patterns)',
-        'Generate comprehensive market report for admin',
-        'Review and potentially increase Gemini daily limits',
+        "Enable predictive price suggestions for customers",
+        "Turn on personalized seller recommendations",
+        "Activate advanced anomaly detection (ML-like patterns)",
+        "Generate comprehensive market report for admin",
+        "Review and potentially increase Gemini daily limits",
       ],
     },
   ];
@@ -91,7 +95,9 @@ export class MarketplaceIntelligenceService {
     try {
       await this.prisma.aiPhaseMilestone.count();
     } catch {
-      this.logger.warn('AiPhaseMilestone table not found — skipping initialization. Run the migration first.');
+      this.logger.warn(
+        "AiPhaseMilestone table not found — skipping initialization. Run the migration first.",
+      );
       return;
     }
 
@@ -111,13 +117,13 @@ export class MarketplaceIntelligenceService {
           thresholdValue: milestone.threshold,
           actionItems: milestone.actions.map((action) => ({
             action,
-            status: 'pending',
+            status: "pending",
             completedAt: null,
           })),
         },
       });
     }
-    this.logger.log('AI phase milestones initialized');
+    this.logger.log("AI phase milestones initialized");
   }
 
   /**
@@ -143,7 +149,7 @@ export class MarketplaceIntelligenceService {
 
     const unreachedMilestones = await this.prisma.aiPhaseMilestone.findMany({
       where: { isReached: false },
-      orderBy: { thresholdValue: 'asc' },
+      orderBy: { thresholdValue: "asc" },
     });
 
     for (const milestone of unreachedMilestones) {
@@ -178,7 +184,7 @@ export class MarketplaceIntelligenceService {
    */
   async getMilestones(): Promise<any[]> {
     const milestones = await this.prisma.aiPhaseMilestone.findMany({
-      orderBy: [{ phase: 'asc' }, { thresholdValue: 'asc' }],
+      orderBy: [{ phase: "asc" }, { thresholdValue: "asc" }],
     });
 
     const completedOrders = await this.prisma.rfqOrderInsight.count({
@@ -187,9 +193,13 @@ export class MarketplaceIntelligenceService {
 
     return milestones.map((m) => ({
       ...m,
-      progress: m.thresholdValue > 0
-        ? Math.min(100, Math.round((completedOrders / m.thresholdValue) * 100))
-        : 100,
+      progress:
+        m.thresholdValue > 0
+          ? Math.min(
+              100,
+              Math.round((completedOrders / m.thresholdValue) * 100),
+            )
+          : 100,
       currentValue: completedOrders,
     }));
   }
@@ -200,7 +210,7 @@ export class MarketplaceIntelligenceService {
   async updateMilestoneAction(
     milestoneId: string,
     actionIndex: number,
-    status: 'pending' | 'completed' | 'skipped',
+    status: "pending" | "completed" | "skipped",
   ): Promise<any> {
     const milestone = await this.prisma.aiPhaseMilestone.findUnique({
       where: { id: milestoneId },
@@ -211,7 +221,7 @@ export class MarketplaceIntelligenceService {
     const actions = milestone.actionItems as any[];
     if (actionIndex >= 0 && actionIndex < actions.length) {
       actions[actionIndex].status = status;
-      if (status === 'completed') {
+      if (status === "completed") {
         actions[actionIndex].completedAt = new Date().toISOString();
       }
     }
@@ -222,29 +232,35 @@ export class MarketplaceIntelligenceService {
     });
   }
 
-  private async notifyAdminsOfMilestone(milestone: any, currentValue: number): Promise<void> {
+  private async notifyAdminsOfMilestone(
+    milestone: any,
+    currentValue: number,
+  ): Promise<void> {
     try {
       const admins = await this.prisma.user.findMany({
-        where: { role: 'ADMIN', status: 'ACTIVE' },
+        where: { role: "ADMIN", status: "ACTIVE" },
         select: { id: true },
       });
 
       for (const admin of admins) {
         await this.notificationsService.create({
           userId: admin.id,
-          type: 'SYSTEM_ALERT',
-          titleKey: 'notification.ai_milestone.title',
-          titleParams: { milestone: milestone.milestoneName, phase: milestone.phase },
-          bodyKey: 'notification.ai_milestone.body',
+          type: "SYSTEM_ALERT",
+          titleKey: "notification.ai_milestone.title",
+          titleParams: {
+            milestone: milestone.milestoneName,
+            phase: milestone.phase,
+          },
+          bodyKey: "notification.ai_milestone.body",
           bodyParams: {
             milestone: milestone.milestoneName,
             description: milestone.description,
             currentValue,
             threshold: milestone.thresholdValue,
           },
-          referenceType: 'AI_PHASE',
+          referenceType: "AI_PHASE",
           referenceId: milestone.id,
-          channels: ['EMAIL', 'PUSH'],
+          channels: ["EMAIL", "PUSH"],
         });
       }
 
@@ -253,7 +269,9 @@ export class MarketplaceIntelligenceService {
         data: { adminNotifiedAt: new Date() },
       });
     } catch (error) {
-      this.logger.error(`Failed to notify admins of milestone: ${error.message}`);
+      this.logger.error(
+        `Failed to notify admins of milestone: ${error.message}`,
+      );
     }
   }
 
@@ -264,7 +282,10 @@ export class MarketplaceIntelligenceService {
   /**
    * Capture insight when an offer is selected (called from offers service)
    */
-  async captureOfferSelection(rfqId: string, selectedOfferId: string): Promise<void> {
+  async captureOfferSelection(
+    rfqId: string,
+    selectedOfferId: string,
+  ): Promise<void> {
     try {
       const rfq = await this.prisma.rfqRequest.findUnique({
         where: { id: rfqId },
@@ -279,28 +300,41 @@ export class MarketplaceIntelligenceService {
       if (!rfq) return;
 
       const selectedOffer = rfq.offers.find((o) => o.id === selectedOfferId);
-      const nonDeclinedOffers = rfq.offers.filter((o) => o.status !== 'DECLINED');
+      const nonDeclinedOffers = rfq.offers.filter(
+        (o) => o.status !== "DECLINED",
+      );
 
-      const avgPrice = nonDeclinedOffers.length > 0
-        ? nonDeclinedOffers.reduce((sum, o) => sum + o.totalPriceNpr, 0) / nonDeclinedOffers.length
-        : null;
+      const avgPrice =
+        nonDeclinedOffers.length > 0
+          ? nonDeclinedOffers.reduce((sum, o) => sum + o.totalPriceNpr, 0) /
+            nonDeclinedOffers.length
+          : null;
 
-      const avgMakingPct = nonDeclinedOffers.length > 0
-        ? nonDeclinedOffers.reduce((sum, o) => {
-            const pct = o.metalCostNpr > 0 ? (o.makingChargeNpr / o.metalCostNpr) * 100 : 0;
-            return sum + pct;
-          }, 0) / nonDeclinedOffers.length
-        : null;
+      const avgMakingPct =
+        nonDeclinedOffers.length > 0
+          ? nonDeclinedOffers.reduce((sum, o) => {
+              const pct =
+                o.metalCostNpr > 0
+                  ? (o.makingChargeNpr / o.metalCostNpr) * 100
+                  : 0;
+              return sum + pct;
+            }, 0) / nonDeclinedOffers.length
+          : null;
 
-      const avgDays = nonDeclinedOffers.length > 0
-        ? Math.round(nonDeclinedOffers.reduce((sum, o) => sum + o.estimatedDays, 0) / nonDeclinedOffers.length)
-        : null;
+      const avgDays =
+        nonDeclinedOffers.length > 0
+          ? Math.round(
+              nonDeclinedOffers.reduce((sum, o) => sum + o.estimatedDays, 0) /
+                nonDeclinedOffers.length,
+            )
+          : null;
 
-      const firstOffer = nonDeclinedOffers.length > 0
-        ? nonDeclinedOffers.reduce((earliest, o) =>
-            o.createdAt < earliest.createdAt ? o : earliest,
-          ).createdAt
-        : null;
+      const firstOffer =
+        nonDeclinedOffers.length > 0
+          ? nonDeclinedOffers.reduce((earliest, o) =>
+              o.createdAt < earliest.createdAt ? o : earliest,
+            ).createdAt
+          : null;
 
       await this.prisma.rfqOrderInsight.create({
         data: {
@@ -312,15 +346,17 @@ export class MarketplaceIntelligenceService {
           rfqBudgetMax: rfq.budgetMaxNpr,
           rfqWeightCategory: rfq.weightCategory,
           rfqSpecialNotes: rfq.specialInstructions,
-          rfqMarketRegion: rfq.customer?.preferredCountry || 'NP',
+          rfqMarketRegion: rfq.customer?.preferredCountry || "NP",
           totalOffers: nonDeclinedOffers.length,
           avgOfferPrice: avgPrice,
-          minOfferPrice: nonDeclinedOffers.length > 0
-            ? Math.min(...nonDeclinedOffers.map((o) => o.totalPriceNpr))
-            : null,
-          maxOfferPrice: nonDeclinedOffers.length > 0
-            ? Math.max(...nonDeclinedOffers.map((o) => o.totalPriceNpr))
-            : null,
+          minOfferPrice:
+            nonDeclinedOffers.length > 0
+              ? Math.min(...nonDeclinedOffers.map((o) => o.totalPriceNpr))
+              : null,
+          maxOfferPrice:
+            nonDeclinedOffers.length > 0
+              ? Math.max(...nonDeclinedOffers.map((o) => o.totalPriceNpr))
+              : null,
           avgMakingChargePct: avgMakingPct,
           avgEstimatedDays: avgDays,
           selectedOfferId,
@@ -334,14 +370,20 @@ export class MarketplaceIntelligenceService {
 
       this.logger.log(`Captured RFQ insight for RFQ ${rfqId}`);
     } catch (error) {
-      this.logger.error(`Failed to capture offer selection insight: ${error.message}`);
+      this.logger.error(
+        `Failed to capture offer selection insight: ${error.message}`,
+      );
     }
   }
 
   /**
    * Update insight when order completes (called from orders service)
    */
-  async captureOrderCompletion(orderId: string, rfqOfferId: string, rating?: number): Promise<void> {
+  async captureOrderCompletion(
+    orderId: string,
+    rfqOfferId: string,
+    rating?: number,
+  ): Promise<void> {
     try {
       // Find the insight by selectedOfferId
       const insight = await this.prisma.rfqOrderInsight.findFirst({
@@ -361,7 +403,9 @@ export class MarketplaceIntelligenceService {
         this.logger.log(`Updated insight for completed order ${orderId}`);
       }
     } catch (error) {
-      this.logger.error(`Failed to capture order completion insight: ${error.message}`);
+      this.logger.error(
+        `Failed to capture order completion insight: ${error.message}`,
+      );
     }
   }
 
@@ -394,7 +438,12 @@ export class MarketplaceIntelligenceService {
 
       if (insight) {
         const existingReasons = (insight.lossReasons as any[]) || [];
-        existingReasons.push({ offerId, category, note, recordedAt: new Date().toISOString() });
+        existingReasons.push({
+          offerId,
+          category,
+          note,
+          recordedAt: new Date().toISOString(),
+        });
 
         await this.prisma.rfqOrderInsight.update({
           where: { id: insight.id },
@@ -411,15 +460,15 @@ export class MarketplaceIntelligenceService {
   /**
    * Run anomaly detection every 6 hours
    */
-  @Cron('0 30 */6 * * *') // Every 6 hours at :30
+  @Cron("0 30 */6 * * *") // Every 6 hours at :30
   async detectQuoteAnomalies(): Promise<void> {
-    this.logger.log('Running quote anomaly detection...');
+    this.logger.log("Running quote anomaly detection...");
 
     try {
       // Quick table existence check
       await this.prisma.quoteAnomaly.count();
     } catch {
-      this.logger.warn('QuoteAnomaly table not found — skipping detection.');
+      this.logger.warn("QuoteAnomaly table not found — skipping detection.");
       return;
     }
 
@@ -429,7 +478,7 @@ export class MarketplaceIntelligenceService {
       const recentOffers = await this.prisma.rfqOffer.findMany({
         where: {
           createdAt: { gte: since },
-          status: { not: 'DECLINED' },
+          status: { not: "DECLINED" },
         },
         include: {
           rfq: { select: { jewelleryType: true, buildMethod: true } },
@@ -438,7 +487,7 @@ export class MarketplaceIntelligenceService {
       });
 
       if (recentOffers.length < 3) {
-        this.logger.log('Not enough recent offers for anomaly detection');
+        this.logger.log("Not enough recent offers for anomaly detection");
         return;
       }
 
@@ -459,16 +508,18 @@ export class MarketplaceIntelligenceService {
         const prices = offers.map((o) => o.totalPriceNpr);
         const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
         const stdDev = Math.sqrt(
-          prices.reduce((sum, p) => sum + Math.pow(p - avgPrice, 2), 0) / prices.length,
+          prices.reduce((sum, p) => sum + Math.pow(p - avgPrice, 2), 0) /
+            prices.length,
         );
 
         // Making charge percentages
         const makingPcts = offers
           .filter((o) => o.metalCostNpr > 0)
           .map((o) => (o.makingChargeNpr / o.metalCostNpr) * 100);
-        const avgMakingPct = makingPcts.length > 0
-          ? makingPcts.reduce((a, b) => a + b, 0) / makingPcts.length
-          : 0;
+        const avgMakingPct =
+          makingPcts.length > 0
+            ? makingPcts.reduce((a, b) => a + b, 0) / makingPcts.length
+            : 0;
 
         for (const offer of offers) {
           // Price anomaly: more than 2 standard deviations from mean
@@ -476,9 +527,10 @@ export class MarketplaceIntelligenceService {
             const deviation = Math.abs(offer.totalPriceNpr - avgPrice);
             if (deviation > 2 * stdDev) {
               const deviationPct = (deviation / avgPrice) * 100;
-              const anomalyType = offer.totalPriceNpr > avgPrice
-                ? 'PRICE_TOO_HIGH'
-                : 'PRICE_TOO_LOW';
+              const anomalyType =
+                offer.totalPriceNpr > avgPrice
+                  ? "PRICE_TOO_HIGH"
+                  : "PRICE_TOO_LOW";
 
               await this.prisma.quoteAnomaly.create({
                 data: {
@@ -486,7 +538,12 @@ export class MarketplaceIntelligenceService {
                   shopId: offer.shopId,
                   rfqId: offer.rfqId,
                   anomalyType,
-                  severity: deviationPct > 100 ? 'HIGH' : deviationPct > 50 ? 'MEDIUM' : 'LOW',
+                  severity:
+                    deviationPct > 100
+                      ? "HIGH"
+                      : deviationPct > 50
+                        ? "MEDIUM"
+                        : "LOW",
                   expectedValue: avgPrice,
                   actualValue: offer.totalPriceNpr,
                   deviationPct,
@@ -498,15 +555,22 @@ export class MarketplaceIntelligenceService {
 
           // Making charge anomaly
           if (offer.metalCostNpr > 0) {
-            const offerMakingPct = (offer.makingChargeNpr / offer.metalCostNpr) * 100;
-            if (avgMakingPct > 0 && Math.abs(offerMakingPct - avgMakingPct) > 10) {
+            const offerMakingPct =
+              (offer.makingChargeNpr / offer.metalCostNpr) * 100;
+            if (
+              avgMakingPct > 0 &&
+              Math.abs(offerMakingPct - avgMakingPct) > 10
+            ) {
               await this.prisma.quoteAnomaly.create({
                 data: {
                   offerId: offer.id,
                   shopId: offer.shopId,
                   rfqId: offer.rfqId,
-                  anomalyType: 'MAKING_CHARGE_SPIKE',
-                  severity: Math.abs(offerMakingPct - avgMakingPct) > 20 ? 'HIGH' : 'MEDIUM',
+                  anomalyType: "MAKING_CHARGE_SPIKE",
+                  severity:
+                    Math.abs(offerMakingPct - avgMakingPct) > 20
+                      ? "HIGH"
+                      : "MEDIUM",
                   expectedValue: avgMakingPct,
                   actualValue: offerMakingPct,
                   deviationPct: Math.abs(offerMakingPct - avgMakingPct),
@@ -524,7 +588,7 @@ export class MarketplaceIntelligenceService {
         const highSeverity = await this.prisma.quoteAnomaly.count({
           where: {
             createdAt: { gte: since },
-            severity: 'HIGH',
+            severity: "HIGH",
             isReviewed: false,
           },
         });
@@ -533,7 +597,7 @@ export class MarketplaceIntelligenceService {
           await this.notifyAdminsOfAnomalies(highSeverity);
         }
       } else {
-        this.logger.log('No anomalies detected');
+        this.logger.log("No anomalies detected");
       }
     } catch (error) {
       this.logger.error(`Anomaly detection failed: ${error.message}`);
@@ -556,12 +620,12 @@ export class MarketplaceIntelligenceService {
 
     const anomalies = await this.prisma.quoteAnomaly.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: filters?.limit || 50,
     });
 
     const stats = await this.prisma.quoteAnomaly.groupBy({
-      by: ['anomalyType', 'severity'],
+      by: ["anomalyType", "severity"],
       where: { isReviewed: false },
       _count: { id: true },
     });
@@ -572,7 +636,11 @@ export class MarketplaceIntelligenceService {
   /**
    * Mark anomaly as reviewed
    */
-  async reviewAnomaly(anomalyId: string, adminId: string, note?: string): Promise<any> {
+  async reviewAnomaly(
+    anomalyId: string,
+    adminId: string,
+    note?: string,
+  ): Promise<any> {
     return this.prisma.quoteAnomaly.update({
       where: { id: anomalyId },
       data: {
@@ -587,24 +655,26 @@ export class MarketplaceIntelligenceService {
   private async notifyAdminsOfAnomalies(count: number): Promise<void> {
     try {
       const admins = await this.prisma.user.findMany({
-        where: { role: 'ADMIN', status: 'ACTIVE' },
+        where: { role: "ADMIN", status: "ACTIVE" },
         select: { id: true },
       });
 
       for (const admin of admins) {
         await this.notificationsService.create({
           userId: admin.id,
-          type: 'SYSTEM_ALERT',
-          titleKey: 'notification.quote_anomaly.title',
+          type: "SYSTEM_ALERT",
+          titleKey: "notification.quote_anomaly.title",
           titleParams: { count },
-          bodyKey: 'notification.quote_anomaly.body',
+          bodyKey: "notification.quote_anomaly.body",
           bodyParams: { count },
-          referenceType: 'QUOTE_ANOMALY',
-          channels: ['EMAIL', 'PUSH'],
+          referenceType: "QUOTE_ANOMALY",
+          channels: ["EMAIL", "PUSH"],
         });
       }
     } catch (error) {
-      this.logger.error(`Failed to notify admins of anomalies: ${error.message}`);
+      this.logger.error(
+        `Failed to notify admins of anomalies: ${error.message}`,
+      );
     }
   }
 
@@ -620,7 +690,7 @@ export class MarketplaceIntelligenceService {
       where: { id: rfqId },
       include: {
         offers: {
-          where: { status: { not: 'DECLINED' } },
+          where: { status: { not: "DECLINED" } },
           include: {
             shop: {
               select: {
@@ -633,7 +703,7 @@ export class MarketplaceIntelligenceService {
               },
             },
           },
-          orderBy: { totalPriceNpr: 'asc' },
+          orderBy: { totalPriceNpr: "asc" },
         },
       },
     });
@@ -660,9 +730,12 @@ export class MarketplaceIntelligenceService {
     // Compute comparison metrics
     const offers = rfq.offers.map((offer) => {
       const perf = perfMap.get(offer.shop.id);
-      const makingPct = offer.metalCostNpr > 0
-        ? Math.round((offer.makingChargeNpr / offer.metalCostNpr) * 100 * 10) / 10
-        : 0;
+      const makingPct =
+        offer.metalCostNpr > 0
+          ? Math.round(
+              (offer.makingChargeNpr / offer.metalCostNpr) * 100 * 10,
+            ) / 10
+          : 0;
 
       return {
         id: offer.id,
@@ -704,21 +777,26 @@ export class MarketplaceIntelligenceService {
     // Highlight best values
     const highlights = {
       lowestPrice: offers.length > 0 ? offers[0].id : null,
-      fastestDelivery: offers.length > 0
-        ? offers.reduce((best, o) =>
-            o.delivery.estimatedDays < best.delivery.estimatedDays ? o : best,
-          ).id
-        : null,
-      highestRated: offers.length > 0
-        ? offers.reduce((best, o) =>
-            o.shop.rating > best.shop.rating ? o : best,
-          ).id
-        : null,
-      lowestMakingCharge: offers.length > 0
-        ? offers.reduce((best, o) =>
-            o.pricing.makingChargePct < best.pricing.makingChargePct ? o : best,
-          ).id
-        : null,
+      fastestDelivery:
+        offers.length > 0
+          ? offers.reduce((best, o) =>
+              o.delivery.estimatedDays < best.delivery.estimatedDays ? o : best,
+            ).id
+          : null,
+      highestRated:
+        offers.length > 0
+          ? offers.reduce((best, o) =>
+              o.shop.rating > best.shop.rating ? o : best,
+            ).id
+          : null,
+      lowestMakingCharge:
+        offers.length > 0
+          ? offers.reduce((best, o) =>
+              o.pricing.makingChargePct < best.pricing.makingChargePct
+                ? o
+                : best,
+            ).id
+          : null,
     };
 
     return {
@@ -743,7 +821,7 @@ export class MarketplaceIntelligenceService {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: {
-        milestones: { orderBy: { completedAt: 'asc' } },
+        milestones: { orderBy: { completedAt: "asc" } },
         shop: {
           select: { shopName: true, isVerified: true, sellerTier: true },
         },
@@ -755,21 +833,30 @@ export class MarketplaceIntelligenceService {
     // Build protection stages
     const stages = [
       {
-        id: 'booking',
-        label: 'Booking Fee Protected',
-        description: 'Your booking fee is held securely. If the seller doesn\'t start production, you get a full refund.',
-        icon: 'shield',
-        status: this.getStageStatus(order, ['CREATED', 'PAYMENT_PENDING']),
+        id: "booking",
+        label: "Booking Fee Protected",
+        description:
+          "Your booking fee is held securely. If the seller doesn't start production, you get a full refund.",
+        icon: "shield",
+        status: this.getStageStatus(order, ["CREATED", "PAYMENT_PENDING"]),
         protectedAmount: order.bookingFeePaidNpr || 0,
       },
       {
-        id: 'production',
-        label: 'Production Monitored',
-        description: 'We track every milestone. If you approved the design, the seller commits to specifications.',
-        icon: 'factory',
-        status: this.getStageStatus(order, ['IN_PRODUCTION', 'QC_PENDING']),
+        id: "production",
+        label: "Production Monitored",
+        description:
+          "We track every milestone. If you approved the design, the seller commits to specifications.",
+        icon: "factory",
+        status: this.getStageStatus(order, ["IN_PRODUCTION", "QC_PENDING"]),
         milestones: order.milestones
-          .filter((m) => ['CAD_APPROVED', 'CASTING_STARTED', 'STONE_SETTING', 'POLISHING'].includes(m.type))
+          .filter((m) =>
+            [
+              "CAD_APPROVED",
+              "CASTING_STARTED",
+              "STONE_SETTING",
+              "POLISHING",
+            ].includes(m.type),
+          )
           .map((m) => ({
             type: m.type,
             title: m.title,
@@ -778,30 +865,35 @@ export class MarketplaceIntelligenceService {
           })),
       },
       {
-        id: 'quality',
-        label: 'Quality Assured',
-        description: 'Every piece undergoes quality check. If it doesn\'t match specs, we intervene.',
-        icon: 'check-circle',
-        status: this.getStageStatus(order, ['QC_PASSED', 'READY_TO_SHIP']),
-        qcPassed: order.milestones.some((m) => m.type === 'QUALITY_CHECK'),
+        id: "quality",
+        label: "Quality Assured",
+        description:
+          "Every piece undergoes quality check. If it doesn't match specs, we intervene.",
+        icon: "check-circle",
+        status: this.getStageStatus(order, ["QC_PASSED", "READY_TO_SHIP"]),
+        qcPassed: order.milestones.some((m) => m.type === "QUALITY_CHECK"),
       },
       {
-        id: 'shipping',
-        label: 'Insured Delivery',
-        description: 'Tracked and insured shipping. Full protection until delivery is confirmed.',
-        icon: 'truck',
-        status: this.getStageStatus(order, ['SHIPPED', 'OUT_FOR_DELIVERY']),
+        id: "shipping",
+        label: "Insured Delivery",
+        description:
+          "Tracked and insured shipping. Full protection until delivery is confirmed.",
+        icon: "truck",
+        status: this.getStageStatus(order, ["SHIPPED", "OUT_FOR_DELIVERY"]),
         trackingNumber: order.trackingNumber,
         estimatedDelivery: order.estimatedDelivery,
       },
       {
-        id: 'delivered',
-        label: 'Satisfaction Guaranteed',
-        description: 'Inspect your jewellery. If it doesn\'t match, raise a dispute within 48 hours.',
-        icon: 'star',
-        status: this.getStageStatus(order, ['DELIVERED', 'COMPLETED']),
+        id: "delivered",
+        label: "Satisfaction Guaranteed",
+        description:
+          "Inspect your jewellery. If it doesn't match, raise a dispute within 48 hours.",
+        icon: "star",
+        status: this.getStageStatus(order, ["DELIVERED", "COMPLETED"]),
         disputeWindowEnds: order.actualDelivery
-          ? new Date(new Date(order.actualDelivery).getTime() + 48 * 60 * 60 * 1000)
+          ? new Date(
+              new Date(order.actualDelivery).getTime() + 48 * 60 * 60 * 1000,
+            )
           : null,
       },
     ];
@@ -813,28 +905,35 @@ export class MarketplaceIntelligenceService {
       shop: order.shop,
       stages,
       totalProtected: order.totalNpr,
-      protectionLevel: order.shop.isVerified ? 'FULL' : 'STANDARD',
+      protectionLevel: order.shop.isVerified ? "FULL" : "STANDARD",
     };
   }
 
   private getStageStatus(
     order: any,
     relevantStatuses: string[],
-  ): 'completed' | 'active' | 'upcoming' {
+  ): "completed" | "active" | "upcoming" {
     const orderIdx = this.getStatusIndex(order.detailedStatus);
     const stageIdx = Math.max(
       ...relevantStatuses.map((s) => this.getStatusIndex(s)),
     );
 
-    if (orderIdx > stageIdx) return 'completed';
-    if (relevantStatuses.includes(order.detailedStatus)) return 'active';
-    return 'upcoming';
+    if (orderIdx > stageIdx) return "completed";
+    if (relevantStatuses.includes(order.detailedStatus)) return "active";
+    return "upcoming";
   }
 
   private getStatusIndex(status: string): number {
     const order = [
-      'PLACED', 'CONFIRMED', 'IN_PROGRESS', 'READY',
-      'PACKED', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'COMPLETED',
+      "PLACED",
+      "CONFIRMED",
+      "IN_PROGRESS",
+      "READY",
+      "PACKED",
+      "SHIPPED",
+      "OUT_FOR_DELIVERY",
+      "DELIVERED",
+      "COMPLETED",
     ];
     const idx = order.indexOf(status);
     return idx >= 0 ? idx : -1;
@@ -877,7 +976,7 @@ export class MarketplaceIntelligenceService {
       }),
       this.prisma.shopRating.findMany({
         where: { shopId, isPublic: true },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         take: 10,
         select: {
           overall: true,
@@ -890,7 +989,7 @@ export class MarketplaceIntelligenceService {
         },
       }),
       this.prisma.order.count({
-        where: { shopId, status: { in: ['DELIVERED', 'COMPLETED'] } },
+        where: { shopId, status: { in: ["DELIVERED", "COMPLETED"] } },
       }),
     ]);
 
@@ -902,15 +1001,19 @@ export class MarketplaceIntelligenceService {
     if (perf) {
       trustScore += Math.min(25, (perf.avgRating / 5) * 25);
       trustScore += Math.min(15, (perf.onTimeDispatchRate / 100) * 15);
-      trustScore += Math.min(10, Math.min(perf.totalOrders, 50) / 50 * 10);
+      trustScore += Math.min(10, (Math.min(perf.totalOrders, 50) / 50) * 10);
       trustScore += Math.min(10, (1 - perf.cancellationRate / 100) * 10);
-      trustScore += Math.min(15, ((100 - (perf.responseTimeHours || 48)) / 48) * 15);
+      trustScore += Math.min(
+        15,
+        ((100 - (perf.responseTimeHours || 48)) / 48) * 15,
+      );
     }
     trustScore = Math.max(0, Math.min(100, Math.round(trustScore)));
 
     // Tenure
     const tenureMonths = Math.floor(
-      (Date.now() - new Date(shop.createdAt).getTime()) / (30 * 24 * 60 * 60 * 1000),
+      (Date.now() - new Date(shop.createdAt).getTime()) /
+        (30 * 24 * 60 * 60 * 1000),
     );
 
     return {
@@ -980,28 +1083,34 @@ export class MarketplaceIntelligenceService {
 
     // Suggestion 1: Negotiate making charge if above market average
     if (avgData._avg.avgMakingChargePct && offer.metalCostNpr > 0) {
-      const currentMakingPct = (offer.makingChargeNpr / offer.metalCostNpr) * 100;
+      const currentMakingPct =
+        (offer.makingChargeNpr / offer.metalCostNpr) * 100;
       const marketAvgPct = avgData._avg.avgMakingChargePct;
 
       if (currentMakingPct > marketAvgPct * 1.1) {
         const suggestedMakingNpr = (marketAvgPct / 100) * offer.metalCostNpr;
         suggestions.push({
-          type: 'MAKING_CHARGE',
-          label: 'Negotiate Making Charge',
+          type: "MAKING_CHARGE",
+          label: "Negotiate Making Charge",
           description: `The making charge (${currentMakingPct.toFixed(1)}%) is above the market average (${marketAvgPct.toFixed(1)}%). Consider negotiating.`,
           suggestedValue: Math.round(suggestedMakingNpr),
           currentValue: offer.makingChargeNpr,
-          potentialSaving: Math.round(offer.makingChargeNpr - suggestedMakingNpr),
+          potentialSaving: Math.round(
+            offer.makingChargeNpr - suggestedMakingNpr,
+          ),
         });
       }
     }
 
     // Suggestion 2: If budget exists, suggest budget-aligned counter
-    if (offer.rfq.budgetMaxNpr && offer.totalPriceNpr > offer.rfq.budgetMaxNpr) {
+    if (
+      offer.rfq.budgetMaxNpr &&
+      offer.totalPriceNpr > offer.rfq.budgetMaxNpr
+    ) {
       const overBudget = offer.totalPriceNpr - offer.rfq.budgetMaxNpr;
       suggestions.push({
-        type: 'BUDGET_ALIGN',
-        label: 'Budget Alignment',
+        type: "BUDGET_ALIGN",
+        label: "Budget Alignment",
         description: `This offer is NPR ${overBudget.toLocaleString()} over your budget. You could counter with your max budget.`,
         suggestedValue: offer.rfq.budgetMaxNpr,
         currentValue: offer.totalPriceNpr,
@@ -1010,14 +1119,18 @@ export class MarketplaceIntelligenceService {
     }
 
     // Suggestion 3: Faster delivery
-    if (avgData._avg.avgEstimatedDays && offer.estimatedDays > avgData._avg.avgEstimatedDays * 1.2) {
+    if (
+      avgData._avg.avgEstimatedDays &&
+      offer.estimatedDays > avgData._avg.avgEstimatedDays * 1.2
+    ) {
       suggestions.push({
-        type: 'DELIVERY_TIME',
-        label: 'Negotiate Delivery',
+        type: "DELIVERY_TIME",
+        label: "Negotiate Delivery",
         description: `Estimated ${offer.estimatedDays} days is slower than average (${Math.round(avgData._avg.avgEstimatedDays)} days).`,
         suggestedValue: Math.round(avgData._avg.avgEstimatedDays),
         currentValue: offer.estimatedDays,
-        potentialSaving: offer.estimatedDays - Math.round(avgData._avg.avgEstimatedDays),
+        potentialSaving:
+          offer.estimatedDays - Math.round(avgData._avg.avgEstimatedDays),
       });
     }
 
@@ -1025,8 +1138,8 @@ export class MarketplaceIntelligenceService {
     if (offer.bookingFeePercent > 20) {
       const standardFee = Math.round((offer.totalPriceNpr * 20) / 100);
       suggestions.push({
-        type: 'BOOKING_FEE',
-        label: 'Lower Booking Fee',
+        type: "BOOKING_FEE",
+        label: "Lower Booking Fee",
         description: `Booking fee is ${offer.bookingFeePercent}% (standard is 20%). Request a lower upfront payment.`,
         suggestedValue: standardFee,
         currentValue: offer.bookingFeeNpr,
@@ -1078,20 +1191,20 @@ export class MarketplaceIntelligenceService {
       }),
       this.prisma.quoteAnomaly.count({ where: { isReviewed: false } }),
       this.prisma.aiPhaseMilestone.findMany({
-        orderBy: [{ phase: 'asc' }, { thresholdValue: 'asc' }],
+        orderBy: [{ phase: "asc" }, { thresholdValue: "asc" }],
       }),
       this.prisma.rfqOrderInsight.groupBy({
-        by: ['rfqJewelleryType'],
+        by: ["rfqJewelleryType"],
         _count: { id: true },
         _avg: { avgOfferPrice: true },
-        orderBy: { _count: { id: 'desc' } },
+        orderBy: { _count: { id: "desc" } },
         take: 5,
       }),
       this.prisma.rfqOffer.groupBy({
-        by: ['lossReasonCategory'],
+        by: ["lossReasonCategory"],
         where: { lossReasonCategory: { not: null } },
         _count: { id: true },
-        orderBy: { _count: { id: 'desc' } },
+        orderBy: { _count: { id: "desc" } },
       }),
     ]);
 
@@ -1113,25 +1226,36 @@ export class MarketplaceIntelligenceService {
       },
       milestones: milestones.map((m) => ({
         ...m,
-        progress: m.thresholdValue > 0
-          ? Math.min(100, Math.round((completedInsights / m.thresholdValue) * 100))
-          : 100,
+        progress:
+          m.thresholdValue > 0
+            ? Math.min(
+                100,
+                Math.round((completedInsights / m.thresholdValue) * 100),
+              )
+            : 100,
       })),
       topJewelleryTypes,
       lossReasonBreakdown,
     };
 
     try {
-      await this.redisService.set(cacheKey, JSON.stringify(dashboard), this.CACHE_TTL);
+      await this.redisService.set(
+        cacheKey,
+        JSON.stringify(dashboard),
+        this.CACHE_TTL,
+      );
     } catch {}
 
     return dashboard;
   }
 
-  private determineCurrentPhase(completedOrders: number): { phase: number; name: string } {
-    if (completedOrders >= 500) return { phase: 3, name: 'Full AI Capability' };
-    if (completedOrders >= 100) return { phase: 2, name: 'Category Insights' };
-    return { phase: 1, name: 'General Knowledge' };
+  private determineCurrentPhase(completedOrders: number): {
+    phase: number;
+    name: string;
+  } {
+    if (completedOrders >= 500) return { phase: 3, name: "Full AI Capability" };
+    if (completedOrders >= 100) return { phase: 2, name: "Category Insights" };
+    return { phase: 1, name: "General Knowledge" };
   }
 
   /**
@@ -1150,36 +1274,46 @@ export class MarketplaceIntelligenceService {
       capabilities: {
         rfqBuilder: {
           available: true,
-          accuracy: totalCompleted >= 500 ? 'high' : totalCompleted >= 100 ? 'medium' : 'general',
-          description: totalCompleted >= 500
-            ? 'Uses real market data for highly accurate suggestions'
-            : totalCompleted >= 100
-              ? 'Uses category-level pricing insights'
-              : 'Uses general jewellery knowledge (no market data yet)',
+          accuracy:
+            totalCompleted >= 500
+              ? "high"
+              : totalCompleted >= 100
+                ? "medium"
+                : "general",
+          description:
+            totalCompleted >= 500
+              ? "Uses real market data for highly accurate suggestions"
+              : totalCompleted >= 100
+                ? "Uses category-level pricing insights"
+                : "Uses general jewellery knowledge (no market data yet)",
         },
         feasibilityChecker: {
           available: true,
-          accuracy: 'high', // Always high — it's math-based
-          description: 'Validates budgets against current metal prices and making charges',
+          accuracy: "high", // Always high — it's math-based
+          description:
+            "Validates budgets against current metal prices and making charges",
         },
         tooltips: {
           available: true,
-          accuracy: 'high',
-          description: 'Pre-generated explanations for jewellery terms and processes',
+          accuracy: "high",
+          description:
+            "Pre-generated explanations for jewellery terms and processes",
         },
         counterOfferPlaybooks: {
           available: totalCompleted >= 100,
-          accuracy: totalCompleted >= 200 ? 'high' : 'medium',
-          description: totalCompleted >= 100
-            ? 'Data-driven counter-offer suggestions based on market averages'
-            : 'Requires 100+ completed orders to activate',
+          accuracy: totalCompleted >= 200 ? "high" : "medium",
+          description:
+            totalCompleted >= 100
+              ? "Data-driven counter-offer suggestions based on market averages"
+              : "Requires 100+ completed orders to activate",
         },
         anomalyDetection: {
           available: totalCompleted >= 50,
-          accuracy: totalCompleted >= 200 ? 'high' : 'medium',
-          description: totalCompleted >= 50
-            ? 'Detects pricing outliers using statistical analysis'
-            : 'Requires 50+ completed orders to activate',
+          accuracy: totalCompleted >= 200 ? "high" : "medium",
+          description:
+            totalCompleted >= 50
+              ? "Detects pricing outliers using statistical analysis"
+              : "Requires 50+ completed orders to activate",
         },
       },
     };

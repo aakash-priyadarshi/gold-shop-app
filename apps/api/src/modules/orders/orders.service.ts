@@ -1,22 +1,28 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { MarketplaceIntelligenceService } from '../marketplace-intelligence/marketplace-intelligence.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import { MailService } from '../mail/mail.service';
-import { OrderStatus, OrderType, MilestoneType, Prisma, CurrencyCode } from '@prisma/client';
 import {
-  CreateInventoryOrderDto,
-  CreateCustomOrderDto,
-  UpdateOrderStatusDto,
-  CreateMilestoneDto,
-  OrderFilterDto,
-  AdminOrderFilterDto,
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
+import { MilestoneType, OrderStatus, OrderType, Prisma } from "@prisma/client";
+import { PrismaService } from "../../prisma/prisma.service";
+import { MailService } from "../mail/mail.service";
+import { MarketplaceIntelligenceService } from "../marketplace-intelligence/marketplace-intelligence.service";
+import { NotificationsService } from "../notifications/notifications.service";
+import {
   AdminCancelOrderDto,
+  AdminOrderFilterDto,
   AdminUpdateTimelineDto,
   AdminVerifyPaymentDto,
   CreateCounterOfferDto,
+  CreateCustomOrderDto,
+  CreateInventoryOrderDto,
+  CreateMilestoneDto,
+  OrderFilterDto,
   RespondToCounterOfferDto,
-} from './dto/order.dto';
+  UpdateOrderStatusDto,
+} from "./dto/order.dto";
 
 @Injectable()
 export class OrdersService {
@@ -59,7 +65,9 @@ export class OrdersService {
           lastOrderAt: new Date(),
         },
       });
-      this.logger.log(`Updated purchase stats for customer ${customerId}: +${orderTotal} ${currency}`);
+      this.logger.log(
+        `Updated purchase stats for customer ${customerId}: +${orderTotal} ${currency}`,
+      );
     } catch (error) {
       this.logger.error(`Failed to update purchase stats: ${error.message}`);
       // Don't throw - this is a non-critical operation
@@ -82,15 +90,17 @@ export class OrdersService {
     });
 
     if (!item) {
-      throw new NotFoundException('Inventory item not found');
+      throw new NotFoundException("Inventory item not found");
     }
 
-    if (item.status !== 'AVAILABLE') {
-      throw new BadRequestException('Item is not available for purchase');
+    if (item.status !== "AVAILABLE") {
+      throw new BadRequestException("Item is not available for purchase");
     }
 
     if (item.stockQuantity < dto.quantity) {
-      throw new BadRequestException(`Only ${item.stockQuantity} items available`);
+      throw new BadRequestException(
+        `Only ${item.stockQuantity} items available`,
+      );
     }
 
     // Get customer's preferred currency
@@ -130,9 +140,9 @@ export class OrdersService {
           shippingNpr: 0,
           discountNpr: 0,
           totalNpr: total,
-          displayCurrency: customer?.preferredCurrency || 'NPR',
-          paymentMethod: 'ONLINE',
-          paymentStatus: 'PENDING',
+          displayCurrency: customer?.preferredCurrency || "NPR",
+          paymentMethod: "ONLINE",
+          paymentStatus: "PENDING",
           balanceDueNpr: total,
           shippingAddress: (dto.shippingAddress || {}) as Prisma.InputJsonValue,
           status: OrderStatus.CREATED,
@@ -148,7 +158,8 @@ export class OrdersService {
         where: { id: item.id },
         data: {
           stockQuantity: { decrement: dto.quantity },
-          status: item.stockQuantity - dto.quantity <= 0 ? 'RESERVED' : 'AVAILABLE',
+          status:
+            item.stockQuantity - dto.quantity <= 0 ? "RESERVED" : "AVAILABLE",
         },
       });
 
@@ -158,23 +169,23 @@ export class OrdersService {
     // Notify shop about new order
     await this.notificationsService.create({
       userId: item.shop.userId,
-      type: 'ORDER_PLACED',
-      titleKey: 'notification.order.new.title',
+      type: "ORDER_PLACED",
+      titleKey: "notification.order.new.title",
       titleParams: { orderNumber: order.orderNumber },
-      bodyKey: 'notification.order.new.body',
+      bodyKey: "notification.order.new.body",
       bodyParams: {
         orderNumber: order.orderNumber,
         itemName: item.nameEn,
         total: total,
       },
-      referenceType: 'ORDER',
+      referenceType: "ORDER",
       referenceId: order.id,
-      channels: ['EMAIL', 'PUSH'],
+      channels: ["EMAIL", "PUSH"],
     });
 
     // Send email notifications (non-blocking)
-    this.sendOrderEmails(order, item, total).catch(err => 
-      this.logger.error(`Failed to send order emails: ${err.message}`)
+    this.sendOrderEmails(order, item, total).catch((err) =>
+      this.logger.error(`Failed to send order emails: ${err.message}`),
     );
 
     return order;
@@ -184,8 +195,14 @@ export class OrdersService {
   private async sendOrderEmails(order: any, item: any, total: number) {
     // Get full user details
     const [customer, shopOwner] = await Promise.all([
-      this.prisma.user.findUnique({ where: { id: order.customerId }, select: { email: true, firstName: true } }),
-      this.prisma.user.findUnique({ where: { id: item.shop.userId }, select: { email: true, firstName: true } }),
+      this.prisma.user.findUnique({
+        where: { id: order.customerId },
+        select: { email: true, firstName: true },
+      }),
+      this.prisma.user.findUnique({
+        where: { id: item.shop.userId },
+        select: { email: true, firstName: true },
+      }),
     ]);
 
     if (!customer || !shopOwner) return;
@@ -199,8 +216,8 @@ export class OrdersService {
       shipping: 0,
       tax: item.taxNpr,
       total: total,
-      currency: 'NPR',
-      shippingAddress: 'Pending',
+      currency: "NPR",
+      shippingAddress: "Pending",
       shopName: order.shop.shopName,
     });
 
@@ -211,8 +228,8 @@ export class OrdersService {
       customerName: `${order.customer.firstName} ${order.customer.lastName}`,
       items: [{ name: item.nameEn, quantity: 1, price: item.totalPriceNpr }],
       total: total,
-      currency: 'NPR',
-      dashboardUrl: 'https://www.orivraa.com/dashboard/shop/orders',
+      currency: "NPR",
+      dashboardUrl: "https://www.orivraa.com/dashboard/shop/orders",
     });
   }
 
@@ -230,20 +247,20 @@ export class OrdersService {
     });
 
     if (!rfq) {
-      throw new NotFoundException('RFQ request not found');
+      throw new NotFoundException("RFQ request not found");
     }
 
     if (rfq.customerId !== customerId) {
-      throw new ForbiddenException('Not your RFQ request');
+      throw new ForbiddenException("Not your RFQ request");
     }
 
     const offer = rfq.offers[0];
     if (!offer) {
-      throw new NotFoundException('Offer not found');
+      throw new NotFoundException("Offer not found");
     }
 
-    if (offer.status !== 'PENDING' && offer.status !== 'ACCEPTED') {
-      throw new BadRequestException('Offer is no longer available');
+    if (offer.status !== "PENDING" && offer.status !== "ACCEPTED") {
+      throw new BadRequestException("Offer is no longer available");
     }
 
     // Validate pay-at-shop: only allowed for same-city custom orders
@@ -254,7 +271,10 @@ export class OrdersService {
         where: { id: offer.shopId },
         select: { city: true },
       });
-      if (shop && shop.city.toLowerCase() === dto.shippingAddress.city.toLowerCase()) {
+      if (
+        shop &&
+        shop.city.toLowerCase() === dto.shippingAddress.city.toLowerCase()
+      ) {
         allowPayAtShop = true;
       }
     }
@@ -288,9 +308,9 @@ export class OrdersService {
           shippingNpr: 0,
           discountNpr: 0,
           totalNpr: offer.totalPriceNpr,
-          displayCurrency: customer?.preferredCurrency || 'NPR',
-          paymentMethod: allowPayAtShop ? 'PAY_AT_SHOP' : 'ONLINE',
-          paymentStatus: allowPayAtShop ? 'PENDING_AT_SHOP' : 'PENDING',
+          displayCurrency: customer?.preferredCurrency || "NPR",
+          paymentMethod: allowPayAtShop ? "PAY_AT_SHOP" : "ONLINE",
+          paymentStatus: allowPayAtShop ? "PENDING_AT_SHOP" : "PENDING",
           paidAtShopRequested: allowPayAtShop,
           paidAtShopRequestedAt: allowPayAtShop ? new Date() : undefined,
           bookingFeePaidNpr: 0,
@@ -308,14 +328,14 @@ export class OrdersService {
       // Update offer status
       await tx.rfqOffer.update({
         where: { id: offer.id },
-        data: { status: 'SELECTED' },
+        data: { status: "SELECTED" },
       });
 
       // Update RFQ status
       await tx.rfqRequest.update({
         where: { id: rfq.id },
         data: {
-          status: 'OFFER_SELECTED',
+          status: "OFFER_SELECTED",
           selectedOfferId: offer.id,
         },
       });
@@ -326,17 +346,17 @@ export class OrdersService {
     // Notify shop
     await this.notificationsService.create({
       userId: offer.shop.userId,
-      type: 'OFFER_SELECTED',
-      titleKey: 'notification.offer.selected.title',
+      type: "OFFER_SELECTED",
+      titleKey: "notification.offer.selected.title",
       titleParams: { orderNumber: order.orderNumber },
-      bodyKey: 'notification.offer.selected.body',
+      bodyKey: "notification.offer.selected.body",
       bodyParams: {
         orderNumber: order.orderNumber,
         total: offer.totalPriceNpr,
       },
-      referenceType: 'ORDER',
+      referenceType: "ORDER",
       referenceId: order.id,
-      channels: ['EMAIL', 'PUSH'],
+      channels: ["EMAIL", "PUSH"],
     });
 
     return order;
@@ -355,9 +375,9 @@ export class OrdersService {
         where,
         include: {
           shop: { select: { id: true, shopName: true } },
-          milestones: { orderBy: { completedAt: 'desc' }, take: 1 },
+          milestones: { orderBy: { completedAt: "desc" }, take: 1 },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -387,10 +407,12 @@ export class OrdersService {
       this.prisma.order.findMany({
         where,
         include: {
-          customer: { select: { id: true, firstName: true, lastName: true, email: true } },
-          milestones: { orderBy: { completedAt: 'desc' }, take: 1 },
+          customer: {
+            select: { id: true, firstName: true, lastName: true, email: true },
+          },
+          milestones: { orderBy: { completedAt: "desc" }, take: 1 },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -412,13 +434,13 @@ export class OrdersService {
   async getCustomerPurchaseStats(customerId: string) {
     const stats = await this.prisma.customerPurchaseStats.findMany({
       where: { customerId },
-      orderBy: { totalSpent: 'desc' },
+      orderBy: { totalSpent: "desc" },
     });
 
     // Also get a summary
     const summary = {
       totalOrders: stats.reduce((sum, s) => sum + s.orderCount, 0),
-      currencyBreakdown: stats.map(s => ({
+      currencyBreakdown: stats.map((s) => ({
         currency: s.currency,
         orderCount: s.orderCount,
         totalSpent: s.totalSpent,
@@ -435,22 +457,30 @@ export class OrdersService {
       where: { id },
       include: {
         shop: { select: { id: true, shopName: true, userId: true } },
-        customer: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
-        milestones: { orderBy: { completedAt: 'desc' } },
+        customer: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+          },
+        },
+        milestones: { orderBy: { completedAt: "desc" } },
       },
     });
 
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException("Order not found");
     }
 
     // Check access
-    if (userRole === 'CUSTOMER' && order.customerId !== userId) {
-      throw new ForbiddenException('Not your order');
+    if (userRole === "CUSTOMER" && order.customerId !== userId) {
+      throw new ForbiddenException("Not your order");
     }
 
-    if (userRole === 'SHOPKEEPER' && order.shop.userId !== userId) {
-      throw new ForbiddenException('Not your shop order');
+    if (userRole === "SHOPKEEPER" && order.shop.userId !== userId) {
+      throw new ForbiddenException("Not your shop order");
     }
 
     return order;
@@ -466,33 +496,35 @@ export class OrdersService {
     });
 
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException("Order not found");
     }
 
     // Verify shop ownership
     if (order.shop.userId !== userId) {
-      throw new ForbiddenException('Not your shop order');
+      throw new ForbiddenException("Not your shop order");
     }
 
     // Validate status transition
     const validTransitions: Record<string, string[]> = {
-      CREATED: ['PAYMENT_PENDING', 'CANCELLED'],
-      PAYMENT_PENDING: ['PAID', 'PAYMENT_FAILED', 'CANCELLED'],
-      PAID: ['PACKED', 'IN_PRODUCTION'],
-      PACKED: ['SHIPPED'],
-      IN_PRODUCTION: ['QC_PENDING'],
-      QC_PENDING: ['QC_PASSED', 'QC_FAILED'],
-      QC_PASSED: ['READY_TO_SHIP'],
-      QC_FAILED: ['IN_PRODUCTION'],
-      READY_TO_SHIP: ['SHIPPED'],
-      SHIPPED: ['OUT_FOR_DELIVERY'],
-      OUT_FOR_DELIVERY: ['DELIVERED'],
-      DELIVERED: ['COMPLETED'],
+      CREATED: ["PAYMENT_PENDING", "CANCELLED"],
+      PAYMENT_PENDING: ["PAID", "PAYMENT_FAILED", "CANCELLED"],
+      PAID: ["PACKED", "IN_PRODUCTION"],
+      PACKED: ["SHIPPED"],
+      IN_PRODUCTION: ["QC_PENDING"],
+      QC_PENDING: ["QC_PASSED", "QC_FAILED"],
+      QC_PASSED: ["READY_TO_SHIP"],
+      QC_FAILED: ["IN_PRODUCTION"],
+      READY_TO_SHIP: ["SHIPPED"],
+      SHIPPED: ["OUT_FOR_DELIVERY"],
+      OUT_FOR_DELIVERY: ["DELIVERED"],
+      DELIVERED: ["COMPLETED"],
     };
 
     const allowedNext = validTransitions[order.status] || [];
     if (!allowedNext.includes(dto.status)) {
-      throw new BadRequestException(`Cannot transition from ${order.status} to ${dto.status}`);
+      throw new BadRequestException(
+        `Cannot transition from ${order.status} to ${dto.status}`,
+      );
     }
 
     const updatedOrder = await this.prisma.order.update({
@@ -503,10 +535,10 @@ export class OrdersService {
     });
 
     // Update customer purchase stats when order is delivered
-    if (dto.status === 'DELIVERED') {
+    if (dto.status === "DELIVERED") {
       await this.updateCustomerPurchaseStats(
         order.customerId,
-        order.displayCurrency || 'NPR',
+        order.displayCurrency || "NPR",
         order.totalNpr,
       );
 
@@ -520,34 +552,35 @@ export class OrdersService {
         }
       } catch (err) {
         // Non-critical — don't block the main flow
-        this.logger.warn('Intelligence order completion capture failed', err);
+        this.logger.warn("Intelligence order completion capture failed", err);
       }
     }
 
     // Notify customer with status-specific notification type
     const statusToNotificationType: Record<string, string> = {
-      'CONFIRMED': 'ORDER_CONFIRMED',
-      'PACKED': 'ORDER_PACKED',
-      'SHIPPED': 'ORDER_SHIPPED',
-      'OUT_FOR_DELIVERY': 'ORDER_OUT_FOR_DELIVERY',
-      'DELIVERED': 'ORDER_DELIVERED',
-      'CANCELLED': 'ORDER_CANCELLED',
+      CONFIRMED: "ORDER_CONFIRMED",
+      PACKED: "ORDER_PACKED",
+      SHIPPED: "ORDER_SHIPPED",
+      OUT_FOR_DELIVERY: "ORDER_OUT_FOR_DELIVERY",
+      DELIVERED: "ORDER_DELIVERED",
+      CANCELLED: "ORDER_CANCELLED",
     };
-    const notificationType = statusToNotificationType[dto.status] || 'ORDER_STATUS_UPDATE';
+    const notificationType =
+      statusToNotificationType[dto.status] || "ORDER_STATUS_UPDATE";
 
     await this.notificationsService.create({
       userId: order.customerId,
       type: notificationType,
-      titleKey: 'notification.order.status.title',
+      titleKey: "notification.order.status.title",
       titleParams: { status: dto.status },
-      bodyKey: 'notification.order.status.body',
+      bodyKey: "notification.order.status.body",
       bodyParams: {
         orderNumber: order.orderNumber,
         status: dto.status,
       },
-      referenceType: 'ORDER',
+      referenceType: "ORDER",
       referenceId: order.id,
-      channels: ['EMAIL', 'PUSH'],
+      channels: ["EMAIL", "PUSH"],
     });
 
     return updatedOrder;
@@ -563,11 +596,11 @@ export class OrdersService {
     });
 
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException("Order not found");
     }
 
     if (order.shop.userId !== userId) {
-      throw new ForbiddenException('Not your shop order');
+      throw new ForbiddenException("Not your shop order");
     }
 
     const milestone = await this.prisma.orderMilestone.create({
@@ -576,7 +609,7 @@ export class OrdersService {
         type: MilestoneType.CUSTOM,
         title: dto.title,
         description: dto.description,
-        actorType: 'SHOP',
+        actorType: "SHOP",
         actorId: userId,
         evidenceUrls: dto.images || [],
         notes: dto.description,
@@ -587,24 +620,28 @@ export class OrdersService {
     // Notify customer
     await this.notificationsService.create({
       userId: order.customerId,
-      type: 'PRODUCTION_MILESTONE',
-      titleKey: 'notification.milestone.title',
+      type: "PRODUCTION_MILESTONE",
+      titleKey: "notification.milestone.title",
       titleParams: { title: dto.title },
-      bodyKey: 'notification.milestone.body',
+      bodyKey: "notification.milestone.body",
       bodyParams: {
         orderNumber: order.orderNumber,
         milestone: dto.title,
       },
-      referenceType: 'ORDER',
+      referenceType: "ORDER",
       referenceId: order.id,
-      channels: ['EMAIL', 'PUSH'],
+      channels: ["EMAIL", "PUSH"],
     });
 
     return milestone;
   }
 
   // Complete milestone
-  async completeMilestone(orderId: string, milestoneId: string, userId: string) {
+  async completeMilestone(
+    orderId: string,
+    milestoneId: string,
+    userId: string,
+  ) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: {
@@ -613,11 +650,11 @@ export class OrdersService {
     });
 
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException("Order not found");
     }
 
     if (order.shop.userId !== userId) {
-      throw new ForbiddenException('Not your shop order');
+      throw new ForbiddenException("Not your shop order");
     }
 
     const milestone = await this.prisma.orderMilestone.update({
@@ -630,17 +667,17 @@ export class OrdersService {
     // Notify customer
     await this.notificationsService.create({
       userId: order.customerId,
-      type: 'PRODUCTION_MILESTONE',
-      titleKey: 'notification.milestone.complete.title',
+      type: "PRODUCTION_MILESTONE",
+      titleKey: "notification.milestone.complete.title",
       titleParams: { title: milestone.title },
-      bodyKey: 'notification.milestone.complete.body',
+      bodyKey: "notification.milestone.complete.body",
       bodyParams: {
         orderNumber: order.orderNumber,
         milestone: milestone.title,
       },
-      referenceType: 'ORDER',
+      referenceType: "ORDER",
       referenceId: order.id,
-      channels: ['EMAIL', 'PUSH'],
+      channels: ["EMAIL", "PUSH"],
     });
 
     return milestone;
@@ -656,17 +693,17 @@ export class OrdersService {
     });
 
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException("Order not found");
     }
 
     if (order.customerId !== userId) {
-      throw new ForbiddenException('Not your order');
+      throw new ForbiddenException("Not your order");
     }
 
     // Check if cancellation is allowed
-    const cancellableStatuses = ['CREATED', 'PAYMENT_PENDING'];
+    const cancellableStatuses = ["CREATED", "PAYMENT_PENDING"];
     if (!cancellableStatuses.includes(order.status)) {
-      throw new BadRequestException('Order cannot be cancelled at this stage');
+      throw new BadRequestException("Order cannot be cancelled at this stage");
     }
 
     const updatedOrder = await this.prisma.order.update({
@@ -682,7 +719,7 @@ export class OrdersService {
         where: { id: order.inventoryItemId },
         data: {
           stockQuantity: { increment: 1 },
-          status: 'AVAILABLE',
+          status: "AVAILABLE",
         },
       });
     }
@@ -690,17 +727,17 @@ export class OrdersService {
     // Notify shop
     await this.notificationsService.create({
       userId: order.shop.userId,
-      type: 'SYSTEM_ALERT',
-      titleKey: 'notification.order.cancelled.title',
+      type: "SYSTEM_ALERT",
+      titleKey: "notification.order.cancelled.title",
       titleParams: { orderNumber: order.orderNumber },
-      bodyKey: 'notification.order.cancelled.body',
+      bodyKey: "notification.order.cancelled.body",
       bodyParams: {
         orderNumber: order.orderNumber,
         reason: reason,
       },
-      referenceType: 'ORDER',
+      referenceType: "ORDER",
       referenceId: order.id,
-      channels: ['EMAIL', 'PUSH'],
+      channels: ["EMAIL", "PUSH"],
     });
 
     return updatedOrder;
@@ -708,39 +745,35 @@ export class OrdersService {
 
   // Get order statistics for shop
   async getOrderStats(shopId: string) {
-    const [
-      pendingOrders,
-      activeOrders,
-      completedOrders,
-      totalRevenue,
-    ] = await Promise.all([
-      this.prisma.order.count({
-        where: { shopId, status: { in: ['CREATED', 'PAYMENT_PENDING'] } },
-      }),
-      this.prisma.order.count({
-        where: {
-          shopId,
-          status: {
-            in: [
-              'PAID',
-              'IN_PRODUCTION',
-              'QC_PENDING',
-              'QC_PASSED',
-              'READY_TO_SHIP',
-              'SHIPPED',
-              'OUT_FOR_DELIVERY',
-            ],
+    const [pendingOrders, activeOrders, completedOrders, totalRevenue] =
+      await Promise.all([
+        this.prisma.order.count({
+          where: { shopId, status: { in: ["CREATED", "PAYMENT_PENDING"] } },
+        }),
+        this.prisma.order.count({
+          where: {
+            shopId,
+            status: {
+              in: [
+                "PAID",
+                "IN_PRODUCTION",
+                "QC_PENDING",
+                "QC_PASSED",
+                "READY_TO_SHIP",
+                "SHIPPED",
+                "OUT_FOR_DELIVERY",
+              ],
+            },
           },
-        },
-      }),
-      this.prisma.order.count({
-        where: { shopId, status: 'COMPLETED' },
-      }),
-      this.prisma.order.aggregate({
-        where: { shopId, status: 'COMPLETED' },
-        _sum: { totalNpr: true },
-      }),
-    ]);
+        }),
+        this.prisma.order.count({
+          where: { shopId, status: "COMPLETED" },
+        }),
+        this.prisma.order.aggregate({
+          where: { shopId, status: "COMPLETED" },
+          _sum: { totalNpr: true },
+        }),
+      ]);
 
     return {
       pendingOrders,
@@ -756,7 +789,17 @@ export class OrdersService {
 
   // Get all orders (Admin)
   async findAllOrders(filters: AdminOrderFilterDto) {
-    const { page = 1, limit = 20, status, paymentStatus, type, shopId, customerId, search, createdByAdmin } = filters;
+    const {
+      page = 1,
+      limit = 20,
+      status,
+      paymentStatus,
+      type,
+      shopId,
+      customerId,
+      search,
+      createdByAdmin,
+    } = filters;
 
     const where: any = {};
 
@@ -769,11 +812,11 @@ export class OrdersService {
 
     if (search) {
       where.OR = [
-        { orderNumber: { contains: search, mode: 'insensitive' } },
-        { customer: { firstName: { contains: search, mode: 'insensitive' } } },
-        { customer: { lastName: { contains: search, mode: 'insensitive' } } },
-        { customer: { email: { contains: search, mode: 'insensitive' } } },
-        { shop: { businessName: { contains: search, mode: 'insensitive' } } },
+        { orderNumber: { contains: search, mode: "insensitive" } },
+        { customer: { firstName: { contains: search, mode: "insensitive" } } },
+        { customer: { lastName: { contains: search, mode: "insensitive" } } },
+        { customer: { email: { contains: search, mode: "insensitive" } } },
+        { shop: { businessName: { contains: search, mode: "insensitive" } } },
       ];
     }
 
@@ -781,11 +824,27 @@ export class OrdersService {
       this.prisma.order.findMany({
         where,
         include: {
-          customer: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
+          customer: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true,
+            },
+          },
           shop: { select: { id: true, shopName: true } },
-          commissionLedger: { select: { id: true, amount: true, status: true, dueAt: true, paidAt: true } },
+          commissionLedger: {
+            select: {
+              id: true,
+              amount: true,
+              status: true,
+              dueAt: true,
+              paidAt: true,
+            },
+          },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -793,18 +852,18 @@ export class OrdersService {
     ]);
 
     // Calculate commission breakdown for each order
-    const ordersWithCommission = orders.map(order => {
+    const ordersWithCommission = orders.map((order) => {
       const commission = order.commissionLedger;
       const shopkeeperAmount = order.totalNpr ? order.totalNpr * 0.99 : 0; // 99% to shopkeeper
       const platformAmount = order.totalNpr ? order.totalNpr * 0.01 : 0; // 1% to platform
-      
+
       return {
         ...order,
         commissionBreakdown: {
           shopkeeperAmount: Math.round(shopkeeperAmount * 100) / 100,
           platformCommission: Math.round(platformAmount * 100) / 100,
           commissionRate: 0.01, // 1%
-          commissionStatus: commission?.status || 'NOT_CREATED',
+          commissionStatus: commission?.status || "NOT_CREATED",
           commissionDueAt: commission?.dueAt || null,
           commissionPaidAt: commission?.paidAt || null,
         },
@@ -835,23 +894,23 @@ export class OrdersService {
     ] = await Promise.all([
       this.prisma.order.count(),
       this.prisma.order.count({
-        where: { status: { in: ['CREATED', 'PAYMENT_PENDING'] } },
+        where: { status: { in: ["CREATED", "PAYMENT_PENDING"] } },
       }),
       this.prisma.order.count({
-        where: { status: { in: ['IN_PRODUCTION', 'QC_PENDING', 'QC_PASSED'] } },
+        where: { status: { in: ["IN_PRODUCTION", "QC_PENDING", "QC_PASSED"] } },
       }),
       this.prisma.order.count({
-        where: { status: 'COMPLETED' },
+        where: { status: "COMPLETED" },
       }),
       this.prisma.order.count({
-        where: { status: 'CANCELLED' },
+        where: { status: "CANCELLED" },
       }),
       this.prisma.order.aggregate({
-        where: { status: 'COMPLETED' },
+        where: { status: "COMPLETED" },
         _sum: { totalNpr: true },
       }),
       this.prisma.order.aggregate({
-        where: { paymentStatus: { in: ['PENDING', 'PARTIAL'] } },
+        where: { paymentStatus: { in: ["PENDING", "PARTIAL"] } },
         _sum: { balanceDueNpr: true },
       }),
     ]);
@@ -868,68 +927,80 @@ export class OrdersService {
   }
 
   // Cancel order as admin
-  async adminCancelOrder(orderId: string, adminId: string, dto: AdminCancelOrderDto) {
+  async adminCancelOrder(
+    orderId: string,
+    adminId: string,
+    dto: AdminCancelOrderDto,
+  ) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: {
-        customer: { select: { id: true, firstName: true, lastName: true, email: true } },
+        customer: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
         shop: { select: { id: true, userId: true, shopName: true } },
       },
     });
 
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException("Order not found");
     }
 
-    if (order.status === 'CANCELLED' || order.status === 'COMPLETED') {
-      throw new BadRequestException('Cannot cancel a completed or already cancelled order');
+    if (order.status === "CANCELLED" || order.status === "COMPLETED") {
+      throw new BadRequestException(
+        "Cannot cancel a completed or already cancelled order",
+      );
     }
 
     const updatedOrder = await this.prisma.order.update({
       where: { id: orderId },
       data: {
-        status: 'CANCELLED' as OrderStatus,
-        adminNotes: `[ADMIN CANCELLED] ${dto.reason}${dto.adminNotes ? '\n' + dto.adminNotes : ''}`
+        status: "CANCELLED" as OrderStatus,
+        adminNotes: `[ADMIN CANCELLED] ${dto.reason}${dto.adminNotes ? "\n" + dto.adminNotes : ""}`,
       },
     });
 
     // Notify customer
     await this.notificationsService.create({
       userId: order.customerId,
-      type: 'SYSTEM_ALERT',
-      titleKey: 'notification.order.admin_cancelled.title',
+      type: "SYSTEM_ALERT",
+      titleKey: "notification.order.admin_cancelled.title",
       titleParams: { orderNumber: order.orderNumber },
-      bodyKey: 'notification.order.admin_cancelled.body',
+      bodyKey: "notification.order.admin_cancelled.body",
       bodyParams: {
         orderNumber: order.orderNumber,
         reason: dto.reason,
       },
-      referenceType: 'ORDER',
+      referenceType: "ORDER",
       referenceId: order.id,
-      channels: ['EMAIL', 'PUSH'],
+      channels: ["EMAIL", "PUSH"],
     });
 
     // Notify shop
     await this.notificationsService.create({
       userId: order.shop.userId,
-      type: 'SYSTEM_ALERT',
-      titleKey: 'notification.order.admin_cancelled.title',
+      type: "SYSTEM_ALERT",
+      titleKey: "notification.order.admin_cancelled.title",
       titleParams: { orderNumber: order.orderNumber },
-      bodyKey: 'notification.order.admin_cancelled.shop_body',
+      bodyKey: "notification.order.admin_cancelled.shop_body",
       bodyParams: {
         orderNumber: order.orderNumber,
         reason: dto.reason,
       },
-      referenceType: 'ORDER',
+      referenceType: "ORDER",
       referenceId: order.id,
-      channels: ['EMAIL', 'PUSH'],
+      channels: ["EMAIL", "PUSH"],
     });
 
     return updatedOrder;
   }
 
   // Update order timeline (Admin)
-  async adminUpdateTimeline(orderId: string, adminId: string, dto: AdminUpdateTimelineDto) {
+  async adminUpdateTimeline(
+    orderId: string,
+    adminId: string,
+    dto: AdminUpdateTimelineDto,
+  ) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: {
@@ -938,40 +1009,46 @@ export class OrdersService {
     });
 
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException("Order not found");
     }
 
     const previousDelivery = order.estimatedDelivery;
-    
+
     const updatedOrder = await this.prisma.order.update({
       where: { id: orderId },
       data: {
         estimatedDelivery: new Date(dto.estimatedDelivery),
-        adminNotes: dto.adminNotes ? `${order.adminNotes || ''}\n[TIMELINE UPDATED] ${dto.adminNotes}`.trim() : order.adminNotes,
+        adminNotes: dto.adminNotes
+          ? `${order.adminNotes || ""}\n[TIMELINE UPDATED] ${dto.adminNotes}`.trim()
+          : order.adminNotes,
       },
     });
 
     // Notify customer of timeline change
     await this.notificationsService.create({
       userId: order.customerId,
-      type: 'SYSTEM_ALERT',
-      titleKey: 'notification.order.timeline_updated.title',
+      type: "SYSTEM_ALERT",
+      titleKey: "notification.order.timeline_updated.title",
       titleParams: { orderNumber: order.orderNumber },
-      bodyKey: 'notification.order.timeline_updated.body',
+      bodyKey: "notification.order.timeline_updated.body",
       bodyParams: {
         orderNumber: order.orderNumber,
         newDate: dto.estimatedDelivery,
       },
-      referenceType: 'ORDER',
+      referenceType: "ORDER",
       referenceId: order.id,
-      channels: ['EMAIL', 'PUSH'],
+      channels: ["EMAIL", "PUSH"],
     });
 
     return updatedOrder;
   }
 
   // Manually verify payment (Admin)
-  async adminVerifyPayment(orderId: string, adminId: string, dto: AdminVerifyPaymentDto) {
+  async adminVerifyPayment(
+    orderId: string,
+    adminId: string,
+    dto: AdminVerifyPaymentDto,
+  ) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: {
@@ -981,54 +1058,56 @@ export class OrdersService {
     });
 
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException("Order not found");
     }
 
-    if (order.paymentStatus === 'COMPLETED') {
-      throw new BadRequestException('Payment is already marked as completed');
+    if (order.paymentStatus === "COMPLETED") {
+      throw new BadRequestException("Payment is already marked as completed");
     }
 
     const updatedOrder = await this.prisma.order.update({
       where: { id: orderId },
       data: {
-        paymentStatus: 'COMPLETED',
+        paymentStatus: "COMPLETED",
         balanceDueNpr: 0,
         paymentVerifiedByAdmin: true,
         paymentVerifiedAt: new Date(),
         paymentVerifiedById: adminId,
-        adminNotes: `${order.adminNotes || ''}\n[PAYMENT VERIFIED BY ADMIN] ${dto.verificationNotes}`.trim(),
-        status: order.status === 'CREATED' ? 'PAID' as OrderStatus : order.status,
+        adminNotes:
+          `${order.adminNotes || ""}\n[PAYMENT VERIFIED BY ADMIN] ${dto.verificationNotes}`.trim(),
+        status:
+          order.status === "CREATED" ? ("PAID" as OrderStatus) : order.status,
       },
     });
 
     // Notify customer
     await this.notificationsService.create({
       userId: order.customerId,
-      type: 'SYSTEM_ALERT',
-      titleKey: 'notification.payment.verified.title',
+      type: "SYSTEM_ALERT",
+      titleKey: "notification.payment.verified.title",
       titleParams: { orderNumber: order.orderNumber },
-      bodyKey: 'notification.payment.verified.body',
+      bodyKey: "notification.payment.verified.body",
       bodyParams: {
         orderNumber: order.orderNumber,
       },
-      referenceType: 'ORDER',
+      referenceType: "ORDER",
       referenceId: order.id,
-      channels: ['EMAIL', 'PUSH'],
+      channels: ["EMAIL", "PUSH"],
     });
 
     // Notify shop
     await this.notificationsService.create({
       userId: order.shop.userId,
-      type: 'SYSTEM_ALERT',
-      titleKey: 'notification.payment.verified.shop_title',
+      type: "SYSTEM_ALERT",
+      titleKey: "notification.payment.verified.shop_title",
       titleParams: { orderNumber: order.orderNumber },
-      bodyKey: 'notification.payment.verified.shop_body',
+      bodyKey: "notification.payment.verified.shop_body",
       bodyParams: {
         orderNumber: order.orderNumber,
       },
-      referenceType: 'ORDER',
+      referenceType: "ORDER",
       referenceId: order.id,
-      channels: ['EMAIL', 'PUSH'],
+      channels: ["EMAIL", "PUSH"],
     });
 
     return updatedOrder;
@@ -1042,7 +1121,11 @@ export class OrdersService {
   // ══════════════════════════════════════
 
   // Create counter-offer for custom order
-  async createCounterOffer(orderId: string, shopkeeperId: string, dto: CreateCounterOfferDto) {
+  async createCounterOffer(
+    orderId: string,
+    shopkeeperId: string,
+    dto: CreateCounterOfferDto,
+  ) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: {
@@ -1052,15 +1135,17 @@ export class OrdersService {
     });
 
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException("Order not found");
     }
 
     if (order.shop.userId !== shopkeeperId) {
-      throw new ForbiddenException('Not authorized to modify this order');
+      throw new ForbiddenException("Not authorized to modify this order");
     }
 
-    if (order.orderType !== 'CUSTOM') {
-      throw new BadRequestException('Counter-offers are only available for custom orders');
+    if (order.orderType !== "CUSTOM") {
+      throw new BadRequestException(
+        "Counter-offers are only available for custom orders",
+      );
     }
 
     // Get next version number
@@ -1081,8 +1166,8 @@ export class OrdersService {
       data: {
         orderId,
         versionNumber: nextVersionNumber,
-        status: 'PENDING',
-        createdByRole: 'SHOPKEEPER',
+        status: "PENDING",
+        createdByRole: "SHOPKEEPER",
         createdById: shopkeeperId,
         productSnapshot: {},
         materials: dto.materials || undefined,
@@ -1102,17 +1187,17 @@ export class OrdersService {
     // Notify customer of counter-offer
     await this.notificationsService.create({
       userId: order.customerId,
-      type: 'SYSTEM_ALERT',
-      titleKey: 'notification.order.counter_offer.title',
+      type: "SYSTEM_ALERT",
+      titleKey: "notification.order.counter_offer.title",
       titleParams: { shopName: order.shop.shopName },
-      bodyKey: 'notification.order.counter_offer.body',
+      bodyKey: "notification.order.counter_offer.body",
       bodyParams: {
         orderNumber: order.orderNumber,
         newPrice: totalPrice,
       },
-      referenceType: 'ORDER',
+      referenceType: "ORDER",
       referenceId: order.id,
-      channels: ['EMAIL', 'PUSH'],
+      channels: ["EMAIL", "PUSH"],
     });
 
     return newVersion;
@@ -1128,24 +1213,24 @@ export class OrdersService {
     });
 
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException("Order not found");
     }
 
     // Check access
     const hasAccess =
-      userRole === 'ADMIN' ||
+      userRole === "ADMIN" ||
       order.customerId === userId ||
       order.shop.userId === userId;
 
     if (!hasAccess) {
-      throw new ForbiddenException('Not authorized to view this order');
+      throw new ForbiddenException("Not authorized to view this order");
     }
 
     const versions = await this.prisma.orderVersion.findMany({
       where: { orderId },
-      orderBy: { versionNumber: 'desc' },
+      orderBy: { versionNumber: "desc" },
     });
-    
+
     return versions;
   }
 
@@ -1164,11 +1249,13 @@ export class OrdersService {
     });
 
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException("Order not found");
     }
 
     if (order.customerId !== customerId) {
-      throw new ForbiddenException('Not authorized to respond to this counter-offer');
+      throw new ForbiddenException(
+        "Not authorized to respond to this counter-offer",
+      );
     }
 
     const version = await this.prisma.orderVersion.findUnique({
@@ -1176,28 +1263,28 @@ export class OrdersService {
     });
 
     if (!version || version.orderId !== orderId) {
-      throw new NotFoundException('Counter-offer not found');
+      throw new NotFoundException("Counter-offer not found");
     }
 
-    if (version.status !== 'PENDING') {
-      throw new BadRequestException('This counter-offer is no longer pending');
+    if (version.status !== "PENDING") {
+      throw new BadRequestException("This counter-offer is no longer pending");
     }
 
-    const isAccept = dto.response === 'ACCEPT';
-    
+    const isAccept = dto.response === "ACCEPT";
+
     // Parse timeline from Json field
     const timelineData = version.timeline as { estimatedDays?: number } | null;
     const estimatedDays = timelineData?.estimatedDays || 14;
-    
+
     if (isAccept) {
       // Accept the counter-offer - update order with new values
       await this.prisma.$transaction(async (tx) => {
         // Update version status
         await tx.orderVersion.update({
           where: { id: versionId },
-          data: { 
-            status: 'ACCEPTED',
-            customerResponse: 'ACCEPTED',
+          data: {
+            status: "ACCEPTED",
+            customerResponse: "ACCEPTED",
             respondedAt: new Date(),
           },
         });
@@ -1208,8 +1295,10 @@ export class OrdersService {
           data: {
             currentVersionId: versionId,
             totalNpr: version.totalNpr,
-            estimatedDelivery: new Date(Date.now() + estimatedDays * 24 * 60 * 60 * 1000),
-            status: 'PAID', // Move to PAID status to proceed with order
+            estimatedDelivery: new Date(
+              Date.now() + estimatedDays * 24 * 60 * 60 * 1000,
+            ),
+            status: "PAID", // Move to PAID status to proceed with order
           },
         });
 
@@ -1218,33 +1307,33 @@ export class OrdersService {
           where: {
             orderId,
             id: { not: versionId },
-            status: 'PENDING',
+            status: "PENDING",
           },
-          data: { status: 'SUPERSEDED' },
+          data: { status: "SUPERSEDED" },
         });
       });
 
       // Notify shopkeeper
       await this.notificationsService.create({
         userId: order.shop.userId,
-        type: 'SYSTEM_ALERT',
-        titleKey: 'notification.order.counter_offer_accepted.title',
+        type: "SYSTEM_ALERT",
+        titleKey: "notification.order.counter_offer_accepted.title",
         titleParams: { orderNumber: order.orderNumber },
-        bodyKey: 'notification.order.counter_offer_accepted.body',
+        bodyKey: "notification.order.counter_offer_accepted.body",
         bodyParams: { orderNumber: order.orderNumber },
-        referenceType: 'ORDER',
+        referenceType: "ORDER",
         referenceId: order.id,
-        channels: ['EMAIL', 'PUSH'],
+        channels: ["EMAIL", "PUSH"],
       });
 
-      return { status: 'accepted', versionId };
+      return { status: "accepted", versionId };
     } else {
       // Reject the counter-offer
       await this.prisma.orderVersion.update({
         where: { id: versionId },
         data: {
-          status: 'REJECTED',
-          customerResponse: 'REJECTED',
+          status: "REJECTED",
+          customerResponse: "REJECTED",
           customerNotes: dto.notes,
           respondedAt: new Date(),
         },
@@ -1253,20 +1342,20 @@ export class OrdersService {
       // Notify shopkeeper
       await this.notificationsService.create({
         userId: order.shop.userId,
-        type: 'SYSTEM_ALERT',
-        titleKey: 'notification.order.counter_offer_rejected.title',
+        type: "SYSTEM_ALERT",
+        titleKey: "notification.order.counter_offer_rejected.title",
         titleParams: { orderNumber: order.orderNumber },
-        bodyKey: 'notification.order.counter_offer_rejected.body',
+        bodyKey: "notification.order.counter_offer_rejected.body",
         bodyParams: {
           orderNumber: order.orderNumber,
-          reason: dto.notes || 'No reason provided',
+          reason: dto.notes || "No reason provided",
         },
-        referenceType: 'ORDER',
+        referenceType: "ORDER",
         referenceId: order.id,
-        channels: ['EMAIL', 'PUSH'],
+        channels: ["EMAIL", "PUSH"],
       });
 
-      return { status: 'rejected', versionId };
+      return { status: "rejected", versionId };
     }
   }
 
@@ -1281,7 +1370,7 @@ export class OrdersService {
     });
 
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException("Order not found");
     }
 
     const updated = await this.prisma.order.update({
@@ -1297,20 +1386,22 @@ export class OrdersService {
     try {
       await this.notificationsService.create({
         userId: order.customerId,
-        type: 'SYSTEM_ALERT',
-        titleKey: 'notification.order.status_updated.title',
+        type: "SYSTEM_ALERT",
+        titleKey: "notification.order.status_updated.title",
         titleParams: { orderNumber: order.orderNumber },
-        bodyKey: 'notification.order.status_updated.body',
-        bodyParams: { 
+        bodyKey: "notification.order.status_updated.body",
+        bodyParams: {
           orderNumber: order.orderNumber,
           status: dto.detailedStatus,
         },
-        referenceType: 'ORDER',
+        referenceType: "ORDER",
         referenceId: order.id,
-        channels: ['EMAIL', 'PUSH'],
+        channels: ["EMAIL", "PUSH"],
       });
     } catch (notifyError) {
-      this.logger.warn(`Failed to send notification for order ${orderId}: ${notifyError}`);
+      this.logger.warn(
+        `Failed to send notification for order ${orderId}: ${notifyError}`,
+      );
     }
 
     return updated;
@@ -1323,12 +1414,14 @@ export class OrdersService {
     });
 
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException("Order not found");
     }
 
     // Validate: PAID status requires a payment method
-    if (dto.paymentStatus === 'PAID' && !dto.paymentMethod) {
-      throw new BadRequestException('Payment method is required when marking as PAID');
+    if (dto.paymentStatus === "PAID" && !dto.paymentMethod) {
+      throw new BadRequestException(
+        "Payment method is required when marking as PAID",
+      );
     }
 
     const updated = await this.prisma.order.update({
@@ -1336,12 +1429,16 @@ export class OrdersService {
       data: {
         paymentStatusEnum: dto.paymentStatus,
         paymentMethodEnum: dto.paymentMethod || null,
-        paymentStatus: dto.paymentStatus === 'PAID' ? 'COMPLETED' : 
-                       dto.paymentStatus === 'PARTIAL' ? 'PARTIAL' : 'PENDING',
+        paymentStatus:
+          dto.paymentStatus === "PAID"
+            ? "COMPLETED"
+            : dto.paymentStatus === "PARTIAL"
+              ? "PARTIAL"
+              : "PENDING",
         adminNotes: dto.adminNotes || order.adminNotes,
-        paymentVerifiedByAdmin: dto.paymentStatus === 'PAID',
-        paymentVerifiedAt: dto.paymentStatus === 'PAID' ? new Date() : null,
-        paymentVerifiedById: dto.paymentStatus === 'PAID' ? adminId : null,
+        paymentVerifiedByAdmin: dto.paymentStatus === "PAID",
+        paymentVerifiedAt: dto.paymentStatus === "PAID" ? new Date() : null,
+        paymentVerifiedById: dto.paymentStatus === "PAID" ? adminId : null,
         updatedAt: new Date(),
       },
     });
@@ -1353,7 +1450,11 @@ export class OrdersService {
   // SHOPKEEPER ORDER CONTROLS
   // ══════════════════════════════════════
 
-  async shopkeeperUpdateOrderStatus(orderId: string, shopkeeperId: string, dto: any) {
+  async shopkeeperUpdateOrderStatus(
+    orderId: string,
+    shopkeeperId: string,
+    dto: any,
+  ) {
     // First verify the shopkeeper owns this order
     const user = await this.prisma.user.findUnique({
       where: { id: shopkeeperId },
@@ -1362,13 +1463,13 @@ export class OrdersService {
 
     const activeShop = user?.shops?.[0];
     if (!activeShop) {
-      throw new ForbiddenException('You do not have a shop');
+      throw new ForbiddenException("You do not have a shop");
     }
 
     // Check if shop is on hold
     if (activeShop.isOnHold) {
       throw new ForbiddenException(
-        'Your shop is on hold due to unpaid commissions. Please settle outstanding commissions to continue.',
+        "Your shop is on hold due to unpaid commissions. Please settle outstanding commissions to continue.",
       );
     }
 
@@ -1378,20 +1479,28 @@ export class OrdersService {
     });
 
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException("Order not found");
     }
 
     if (order.shopId !== activeShop.id) {
-      throw new ForbiddenException('This order does not belong to your shop');
+      throw new ForbiddenException("This order does not belong to your shop");
     }
 
     // Shopkeepers can only set certain statuses (DetailedOrderStatus values)
     // For INVENTORY orders: CONFIRMED -> PACKED -> SHIPPED -> OUT_FOR_DELIVERY -> DELIVERED
     // For CUSTOM orders: CONFIRMED -> IN_PROGRESS -> READY -> SHIPPED -> OUT_FOR_DELIVERY -> DELIVERED
-    const allowedStatuses = ['CONFIRMED', 'IN_PROGRESS', 'READY', 'PACKED', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
+    const allowedStatuses = [
+      "CONFIRMED",
+      "IN_PROGRESS",
+      "READY",
+      "PACKED",
+      "SHIPPED",
+      "OUT_FOR_DELIVERY",
+      "DELIVERED",
+    ];
     if (!allowedStatuses.includes(dto.detailedStatus)) {
       throw new BadRequestException(
-        `Shopkeepers can only set these statuses: ${allowedStatuses.join(', ')}`,
+        `Shopkeepers can only set these statuses: ${allowedStatuses.join(", ")}`,
       );
     }
 
@@ -1407,20 +1516,22 @@ export class OrdersService {
     try {
       await this.notificationsService.create({
         userId: order.customerId,
-        type: 'SYSTEM_ALERT',
-        titleKey: 'notification.order.status_updated.title',
+        type: "SYSTEM_ALERT",
+        titleKey: "notification.order.status_updated.title",
         titleParams: { orderNumber: order.orderNumber },
-        bodyKey: 'notification.order.status_updated.body',
-        bodyParams: { 
+        bodyKey: "notification.order.status_updated.body",
+        bodyParams: {
           orderNumber: order.orderNumber,
           status: dto.detailedStatus,
         },
-        referenceType: 'ORDER',
+        referenceType: "ORDER",
         referenceId: order.id,
-        channels: ['EMAIL', 'PUSH'],
+        channels: ["EMAIL", "PUSH"],
       });
     } catch (notifyError) {
-      this.logger.warn(`Failed to send notification for order ${orderId}: ${notifyError}`);
+      this.logger.warn(
+        `Failed to send notification for order ${orderId}: ${notifyError}`,
+      );
     }
 
     return updated;
@@ -1435,13 +1546,13 @@ export class OrdersService {
 
     const activeShop = user?.shops?.[0];
     if (!activeShop) {
-      throw new ForbiddenException('You do not have a shop');
+      throw new ForbiddenException("You do not have a shop");
     }
 
     // Check if shop is on hold
     if (activeShop.isOnHold) {
       throw new ForbiddenException(
-        'Your shop is on hold due to unpaid commissions. Please settle outstanding commissions to continue.',
+        "Your shop is on hold due to unpaid commissions. Please settle outstanding commissions to continue.",
       );
     }
 
@@ -1450,11 +1561,11 @@ export class OrdersService {
     });
 
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException("Order not found");
     }
 
     if (order.shopId !== activeShop.id) {
-      throw new ForbiddenException('This order does not belong to your shop');
+      throw new ForbiddenException("This order does not belong to your shop");
     }
 
     // Update order with paid at shop status
@@ -1465,9 +1576,9 @@ export class OrdersService {
         data: {
           paidAtShopRequested: true,
           paidAtShopRequestedAt: new Date(),
-          paymentStatusEnum: 'PAID_ON_SHOP',
-          paymentStatus: 'COMPLETED',
-          paymentMethodEnum: 'PAID_AT_SHOP',
+          paymentStatusEnum: "PAID_ON_SHOP",
+          paymentStatus: "COMPLETED",
+          paymentMethodEnum: "PAID_AT_SHOP",
           balanceDueNpr: 0,
           updatedAt: new Date(),
         },
@@ -1487,15 +1598,15 @@ export class OrdersService {
           orderTotal: order.totalNpr,
           commissionRate,
           amount: commissionAmount,
-          currency: order.displayCurrency || 'NPR',
-          status: 'PENDING',
+          currency: order.displayCurrency || "NPR",
+          status: "PENDING",
           dueAt,
           notes: dto.notes,
         },
         update: {
           orderTotal: order.totalNpr,
           amount: commissionAmount,
-          status: 'PENDING',
+          status: "PENDING",
           dueAt,
           notes: dto.notes,
           updatedAt: new Date(),
@@ -1510,9 +1621,8 @@ export class OrdersService {
       commission: {
         amount: order.totalNpr * 0.01,
         dueInDays: 21,
-        message: 'Commission of 1% is due within 21 days',
+        message: "Commission of 1% is due within 21 days",
       },
     };
   }
 }
-
