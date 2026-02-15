@@ -1,27 +1,28 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Patch, 
-  Delete,
-  Body, 
-  Param, 
-  Query,
-  UseGuards,
-  HttpCode,
-  HttpStatus,
-  Logger,
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    HttpCode,
+    HttpStatus,
+    Logger,
+    Param,
+    Patch,
+    Post,
+    Query,
+    UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { UserRole } from '@prisma/client';
-import { NotificationsService } from '../notifications/notifications.service';
 import { MailService } from '../mail/mail.service';
-import * as bcrypt from 'bcryptjs';
+import { NotificationsService } from '../notifications/notifications.service';
+import { SellerEngagementService } from '../seller-performance/seller-engagement.service';
 
 @ApiTags('admin')
 @Controller('admin')
@@ -34,6 +35,7 @@ export class AdminController {
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
     private mailService: MailService,
+    private sellerEngagement: SellerEngagementService,
   ) {}
 
   // ═══════════════════════════════════════
@@ -843,5 +845,97 @@ export class AdminController {
       include: { author: { select: { firstName: true, lastName: true } } },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  // ═══════════════════════════════════════
+  // SELLER CRM
+  // ═══════════════════════════════════════
+
+  @Get('sellers')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'List all sellers with engagement data' })
+  async getSellerDirectory(
+    @Query('search') search?: string,
+    @Query('tier') tier?: string,
+    @Query('status') status?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.sellerEngagement.getSellerDirectory({
+      search, tier, status, sortBy,
+      page: page ? parseInt(page) : 1,
+      limit: limit ? parseInt(limit) : 20,
+    });
+  }
+
+  @Get('sellers/stats')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get seller CRM stats' })
+  async getSellerCrmStats() {
+    return this.sellerEngagement.getSellerCrmStats();
+  }
+
+  @Get('sellers/export')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get seller data for CSV export' })
+  async getSellerExport() {
+    return this.sellerEngagement.getExportData();
+  }
+
+  @Get('sellers/:shopId')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get detailed seller profile with all engagement data' })
+  async getSellerProfile(@Param('shopId') shopId: string) {
+    return this.sellerEngagement.getSellerProfile(shopId);
+  }
+
+  @Get('sellers/:shopId/health-score')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get seller health score' })
+  async getSellerHealthScore(@Param('shopId') shopId: string) {
+    return this.sellerEngagement.calculateHealthScore(shopId);
+  }
+
+  @Get('sellers/:shopId/onboarding')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get seller onboarding progress' })
+  async getSellerOnboarding(@Param('shopId') shopId: string) {
+    return this.sellerEngagement.getOnboardingProgress(shopId);
+  }
+
+  @Get('sellers/:shopId/milestones')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get seller milestones' })
+  async getSellerMilestones(@Param('shopId') shopId: string) {
+    return this.sellerEngagement.getMilestones(shopId);
+  }
+
+  @Get('sellers/:shopId/rfq-funnel')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get seller RFQ funnel' })
+  async getSellerRfqFunnel(
+    @Param('shopId') shopId: string,
+    @Query('days') days?: string,
+  ) {
+    return this.sellerEngagement.getRfqFunnel(shopId, days ? parseInt(days) : 90);
+  }
+
+  @Post('sellers/:shopId/notes')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Add a note to a seller' })
+  async addSellerNote(
+    @Param('shopId') shopId: string,
+    @CurrentUser('id') adminId: string,
+    @Body() body: { note: string; category?: string },
+  ) {
+    return this.sellerEngagement.addSellerNote(shopId, adminId, body.note, body.category);
+  }
+
+  @Get('sellers/:shopId/notes')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get all notes for a seller' })
+  async getSellerNotes(@Param('shopId') shopId: string) {
+    return this.sellerEngagement.getSellerNotes(shopId);
   }
 }

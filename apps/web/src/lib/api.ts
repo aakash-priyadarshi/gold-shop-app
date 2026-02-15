@@ -339,6 +339,32 @@ export const adminApi = {
   ) => api.post(`/admin/customers/${customerId}/notes`, data),
   getCustomerNotes: (customerId: string) =>
     api.get(`/admin/customers/${customerId}/notes`),
+  // Seller CRM
+  getSellers: (params?: {
+    search?: string;
+    tier?: string;
+    status?: string;
+    sortBy?: string;
+    page?: number;
+    limit?: number;
+  }) => api.get("/admin/sellers", { params }),
+  getSellerStats: () => api.get("/admin/sellers/stats"),
+  getSellerExport: () => api.get("/admin/sellers/export"),
+  getSellerProfile: (shopId: string) => api.get(`/admin/sellers/${shopId}`),
+  getSellerHealthScore: (shopId: string) =>
+    api.get(`/admin/sellers/${shopId}/health-score`),
+  getSellerOnboarding: (shopId: string) =>
+    api.get(`/admin/sellers/${shopId}/onboarding`),
+  getSellerMilestones: (shopId: string) =>
+    api.get(`/admin/sellers/${shopId}/milestones`),
+  getSellerRfqFunnel: (shopId: string, days?: number) =>
+    api.get(
+      `/admin/sellers/${shopId}/rfq-funnel${days ? `?days=${days}` : ""}`,
+    ),
+  addSellerNote: (shopId: string, data: { note: string; category?: string }) =>
+    api.post(`/admin/sellers/${shopId}/notes`, data),
+  getSellerNotes: (shopId: string) =>
+    api.get(`/admin/sellers/${shopId}/notes`),
 };
 
 // Materials API
@@ -402,6 +428,12 @@ export const sellerPerformanceApi = {
   recalculate: (shopId: string) =>
     api.post(`/seller-performance/recalculate/${shopId}`),
   recalculateAll: () => api.post("/seller-performance/recalculate-all"),
+  // Engagement features
+  getHealthScore: () => api.get("/seller-performance/health-score"),
+  getOnboarding: () => api.get("/seller-performance/onboarding"),
+  getMilestones: () => api.get("/seller-performance/milestones"),
+  getRfqFunnel: (days?: number) =>
+    api.get(`/seller-performance/rfq-funnel${days ? `?days=${days}` : ""}`),
 };
 
 // Designs API (AI Image Generation)
