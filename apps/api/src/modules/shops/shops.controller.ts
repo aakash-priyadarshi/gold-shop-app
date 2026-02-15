@@ -90,6 +90,7 @@ export class ShopsController {
     @Query("page") page?: string,
     @Query("pageSize") pageSize?: string,
     @Query("includeInternational") includeInternational?: string,
+    @Query("gemstoneCost") gemstoneCost?: string,
   ) {
     return this.shopsService.findMatchingSellers({
       jewelleryType,
@@ -109,6 +110,7 @@ export class ShopsController {
       page: page ? parseInt(page, 10) : 1,
       pageSize: pageSize ? parseInt(pageSize, 10) : 20,
       includeInternational: includeInternational === "true",
+      gemstoneCost: gemstoneCost ? parseFloat(gemstoneCost) : 0,
     });
   }
 
