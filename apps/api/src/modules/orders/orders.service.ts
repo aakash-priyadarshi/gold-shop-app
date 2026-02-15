@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { MarketplaceIntelligenceService } from '../marketplace-intelligence/marketplace-intelligence.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MailService } from '../mail/mail.service';
 import { OrderStatus, OrderType, MilestoneType, Prisma, CurrencyCode } from '@prisma/client';
@@ -23,6 +24,7 @@ export class OrdersService {
 
   constructor(
     private prisma: PrismaService,
+    private intelligenceService: MarketplaceIntelligenceService,
     private notificationsService: NotificationsService,
     private mailService: MailService,
   ) {}
@@ -507,6 +509,19 @@ export class OrdersService {
         order.displayCurrency || 'NPR',
         order.totalNpr,
       );
+
+      // Capture order completion data for marketplace intelligence
+      try {
+        if (order.rfqOfferId) {
+          await this.intelligenceService.captureOrderCompletion(
+            order.id,
+            order.rfqOfferId,
+          );
+        }
+      } catch (err) {
+        // Non-critical — don't block the main flow
+        this.logger.warn('Intelligence order completion capture failed', err);
+      }
     }
 
     // Notify customer with status-specific notification type

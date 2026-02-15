@@ -5,10 +5,18 @@ import { PrismaService } from "../../prisma/prisma.service";
 
 export interface HealthScoreBreakdown {
   profileCompleteness: { score: number; max: number; missing: string[] };
-  performanceMetrics: { score: number; max: number; details: Record<string, number> };
+  performanceMetrics: {
+    score: number;
+    max: number;
+    details: Record<string, number>;
+  };
   verificationStatus: { score: number; max: number };
   capabilitySetup: { score: number; max: number; missing: string[] };
-  engagementActivity: { score: number; max: number; details: Record<string, number> };
+  engagementActivity: {
+    score: number;
+    max: number;
+    details: Record<string, number>;
+  };
   totalScore: number;
   grade: "A" | "B" | "C" | "D" | "F";
 }
@@ -92,17 +100,33 @@ export class SellerEngagementService {
       { key: "shopName", label: "Shop name", check: !!shop.shopName },
       { key: "description", label: "Description", check: !!shop.description },
       { key: "about", label: "About section", check: !!shop.about },
-      { key: "profileImage", label: "Profile image", check: !!shop.profileImage },
+      {
+        key: "profileImage",
+        label: "Profile image",
+        check: !!shop.profileImage,
+      },
       { key: "coverImage", label: "Cover image", check: !!shop.coverImage },
-      { key: "contactEmail", label: "Contact email", check: !!shop.contactEmail },
-      { key: "whatsappNumber", label: "WhatsApp number", check: !!shop.whatsappNumber },
+      {
+        key: "contactEmail",
+        label: "Contact email",
+        check: !!shop.contactEmail,
+      },
+      {
+        key: "whatsappNumber",
+        label: "WhatsApp number",
+        check: !!shop.whatsappNumber,
+      },
       { key: "address", label: "Address", check: !!shop.address },
       { key: "city", label: "City", check: !!shop.city },
       { key: "panNumber", label: "PAN number", check: !!shop.panNumber },
     ];
     const profileFilled = profileFields.filter((f) => f.check).length;
-    const profileMissing = profileFields.filter((f) => !f.check).map((f) => f.label);
-    const profileScore = Math.round((profileFilled / profileFields.length) * 25);
+    const profileMissing = profileFields
+      .filter((f) => !f.check)
+      .map((f) => f.label);
+    const profileScore = Math.round(
+      (profileFilled / profileFields.length) * 25,
+    );
 
     // ── 2. PERFORMANCE METRICS (max 35) ──
     const perfDetails: Record<string, number> = {};
@@ -110,22 +134,34 @@ export class SellerEngagementService {
 
     if (performance) {
       // Rating component (max 10)
-      const ratingScore = Math.min(10, Math.round((performance.avgRating / 5) * 10));
+      const ratingScore = Math.min(
+        10,
+        Math.round((performance.avgRating / 5) * 10),
+      );
       perfDetails.rating = ratingScore;
       perfScore += ratingScore;
 
       // Cancellation rate (max 10) — lower is better
-      const cancelScore = Math.max(0, 10 - Math.round(performance.cancellationRate / 2));
+      const cancelScore = Math.max(
+        0,
+        10 - Math.round(performance.cancellationRate / 2),
+      );
       perfDetails.cancellation = cancelScore;
       perfScore += cancelScore;
 
       // Order volume (max 10)
-      const volumeScore = Math.min(10, Math.round(performance.successfulOrders / 10));
+      const volumeScore = Math.min(
+        10,
+        Math.round(performance.successfulOrders / 10),
+      );
       perfDetails.volume = volumeScore;
       perfScore += volumeScore;
 
       // Positive feedback (max 5)
-      const feedbackScore = Math.min(5, Math.round((performance.positiveFeedbackRate / 100) * 5));
+      const feedbackScore = Math.min(
+        5,
+        Math.round((performance.positiveFeedbackRate / 100) * 5),
+      );
       perfDetails.feedback = feedbackScore;
       perfScore += feedbackScore;
     }
@@ -137,11 +173,31 @@ export class SellerEngagementService {
 
     // ── 4. CAPABILITY SETUP (max 15) ──
     const capFields: { key: string; label: string; check: boolean }[] = [
-      { key: "jewelleryTypes", label: "Jewellery types", check: shop.supportedJewelleryTypes.length > 0 },
-      { key: "methods", label: "Making methods", check: shop.supportedMethods.length > 0 },
-      { key: "materials", label: "Materials", check: shop.supportedMaterials.length > 0 },
-      { key: "finishes", label: "Surface finishes", check: shop.supportedFinishes.length > 0 },
-      { key: "bankDetails", label: "Bank account details", check: !!shop.bankAccountDetails },
+      {
+        key: "jewelleryTypes",
+        label: "Jewellery types",
+        check: shop.supportedJewelleryTypes.length > 0,
+      },
+      {
+        key: "methods",
+        label: "Making methods",
+        check: shop.supportedMethods.length > 0,
+      },
+      {
+        key: "materials",
+        label: "Materials",
+        check: shop.supportedMaterials.length > 0,
+      },
+      {
+        key: "finishes",
+        label: "Surface finishes",
+        check: shop.supportedFinishes.length > 0,
+      },
+      {
+        key: "bankDetails",
+        label: "Bank account details",
+        check: !!shop.bankAccountDetails,
+      },
     ];
     const capFilled = capFields.filter((f) => f.check).length;
     const capMissing = capFields.filter((f) => !f.check).map((f) => f.label);
@@ -164,15 +220,25 @@ export class SellerEngagementService {
     const engScore = ordersScore + rfqScore + badgeScore;
 
     // ── TOTAL ──
-    const totalScore = profileScore + perfScore + verifyScore + capScore + engScore;
+    const totalScore =
+      profileScore + perfScore + verifyScore + capScore + engScore;
     const grade: HealthScoreBreakdown["grade"] =
-      totalScore >= 85 ? "A" :
-      totalScore >= 70 ? "B" :
-      totalScore >= 50 ? "C" :
-      totalScore >= 30 ? "D" : "F";
+      totalScore >= 85
+        ? "A"
+        : totalScore >= 70
+          ? "B"
+          : totalScore >= 50
+            ? "C"
+            : totalScore >= 30
+              ? "D"
+              : "F";
 
     return {
-      profileCompleteness: { score: profileScore, max: 25, missing: profileMissing },
+      profileCompleteness: {
+        score: profileScore,
+        max: 25,
+        missing: profileMissing,
+      },
       performanceMetrics: { score: perfScore, max: 35, details: perfDetails },
       verificationStatus: { score: verifyScore, max: 15 },
       capabilitySetup: { score: capScore, max: 15, missing: capMissing },
@@ -198,32 +264,122 @@ export class SellerEngagementService {
 
     const steps: OnboardingStep[] = [
       // Profile setup
-      { key: "shopName", label: "Set shop name", completed: !!shop.shopName, category: "Profile" },
-      { key: "description", label: "Add shop description", completed: !!shop.description, category: "Profile" },
-      { key: "about", label: "Write about section", completed: !!shop.about, category: "Profile" },
-      { key: "profileImage", label: "Upload profile image", completed: !!shop.profileImage, category: "Profile" },
-      { key: "coverImage", label: "Upload cover image", completed: !!shop.coverImage, category: "Profile" },
-      { key: "contactEmail", label: "Add contact email", completed: !!shop.contactEmail, category: "Profile" },
-      { key: "whatsappNumber", label: "Add WhatsApp number", completed: !!shop.whatsappNumber, category: "Profile" },
+      {
+        key: "shopName",
+        label: "Set shop name",
+        completed: !!shop.shopName,
+        category: "Profile",
+      },
+      {
+        key: "description",
+        label: "Add shop description",
+        completed: !!shop.description,
+        category: "Profile",
+      },
+      {
+        key: "about",
+        label: "Write about section",
+        completed: !!shop.about,
+        category: "Profile",
+      },
+      {
+        key: "profileImage",
+        label: "Upload profile image",
+        completed: !!shop.profileImage,
+        category: "Profile",
+      },
+      {
+        key: "coverImage",
+        label: "Upload cover image",
+        completed: !!shop.coverImage,
+        category: "Profile",
+      },
+      {
+        key: "contactEmail",
+        label: "Add contact email",
+        completed: !!shop.contactEmail,
+        category: "Profile",
+      },
+      {
+        key: "whatsappNumber",
+        label: "Add WhatsApp number",
+        completed: !!shop.whatsappNumber,
+        category: "Profile",
+      },
 
       // Business setup
-      { key: "panNumber", label: "Add PAN number", completed: !!shop.panNumber, category: "Business" },
-      { key: "bankDetails", label: "Add bank account details", completed: !!shop.bankAccountDetails, category: "Business" },
-      { key: "verification", label: "Submit verification documents", completed: !!shop.verificationDocuments, category: "Business" },
-      { key: "verified", label: "Get shop verified", completed: shop.isVerified, category: "Business" },
+      {
+        key: "panNumber",
+        label: "Add PAN number",
+        completed: !!shop.panNumber,
+        category: "Business",
+      },
+      {
+        key: "bankDetails",
+        label: "Add bank account details",
+        completed: !!shop.bankAccountDetails,
+        category: "Business",
+      },
+      {
+        key: "verification",
+        label: "Submit verification documents",
+        completed: !!shop.verificationDocuments,
+        category: "Business",
+      },
+      {
+        key: "verified",
+        label: "Get shop verified",
+        completed: shop.isVerified,
+        category: "Business",
+      },
 
       // Capability setup
-      { key: "jewelleryTypes", label: "Set supported jewellery types", completed: shop.supportedJewelleryTypes.length > 0, category: "Capabilities" },
-      { key: "materials", label: "Set supported materials", completed: shop.supportedMaterials.length > 0, category: "Capabilities" },
-      { key: "methods", label: "Set making methods", completed: shop.supportedMethods.length > 0, category: "Capabilities" },
-      { key: "finishes", label: "Set surface finishes", completed: shop.supportedFinishes.length > 0, category: "Capabilities" },
+      {
+        key: "jewelleryTypes",
+        label: "Set supported jewellery types",
+        completed: shop.supportedJewelleryTypes.length > 0,
+        category: "Capabilities",
+      },
+      {
+        key: "materials",
+        label: "Set supported materials",
+        completed: shop.supportedMaterials.length > 0,
+        category: "Capabilities",
+      },
+      {
+        key: "methods",
+        label: "Set making methods",
+        completed: shop.supportedMethods.length > 0,
+        category: "Capabilities",
+      },
+      {
+        key: "finishes",
+        label: "Set surface finishes",
+        completed: shop.supportedFinishes.length > 0,
+        category: "Capabilities",
+      },
 
       // Catalog & pricing
-      { key: "inventory", label: "Add first inventory item", completed: hasInventory > 0, category: "Catalog" },
-      { key: "pricing", label: "Set up finish pricing", completed: hasPricing > 0, category: "Catalog" },
+      {
+        key: "inventory",
+        label: "Add first inventory item",
+        completed: hasInventory > 0,
+        category: "Catalog",
+      },
+      {
+        key: "pricing",
+        label: "Set up finish pricing",
+        completed: hasPricing > 0,
+        category: "Catalog",
+      },
 
       // First engagement
-      { key: "firstSale", label: "Complete your first sale", completed: !!performance?.firstSaleAt, category: "Engagement" },
+      {
+        key: "firstSale",
+        label: "Complete your first sale",
+        completed: !!performance?.firstSaleAt,
+        category: "Engagement",
+      },
     ];
 
     const completedCount = steps.filter((s) => s.completed).length;
@@ -495,14 +651,25 @@ export class SellerEngagementService {
     // Avg response time (for those who responded)
     const responseTimes = targets
       .filter((t) => t.respondedAt && t.sentAt)
-      .map((t) => (t.respondedAt!.getTime() - t.sentAt.getTime()) / (1000 * 60 * 60));
+      .map(
+        (t) =>
+          (t.respondedAt!.getTime() - t.sentAt.getTime()) / (1000 * 60 * 60),
+      );
     const avgResponseTimeHours =
       responseTimes.length > 0
-        ? Math.round((responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length) * 10) / 10
+        ? Math.round(
+            (responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length) *
+              10,
+          ) / 10
         : null;
 
     // Period breakdown (weekly for last N days)
-    const weeks: { period: string; targeted: number; viewed: number; responded: number }[] = [];
+    const weeks: {
+      period: string;
+      targeted: number;
+      viewed: number;
+      responded: number;
+    }[] = [];
     const weekMs = 7 * 24 * 60 * 60 * 1000;
     for (let i = 0; i < Math.ceil(days / 7); i++) {
       const weekStart = new Date(Date.now() - (i + 1) * weekMs);
@@ -524,8 +691,10 @@ export class SellerEngagementService {
       totalTargeted,
       viewed,
       responded,
-      viewRate: totalTargeted > 0 ? Math.round((viewed / totalTargeted) * 100) : 0,
-      responseRate: totalTargeted > 0 ? Math.round((responded / totalTargeted) * 100) : 0,
+      viewRate:
+        totalTargeted > 0 ? Math.round((viewed / totalTargeted) * 100) : 0,
+      responseRate:
+        totalTargeted > 0 ? Math.round((responded / totalTargeted) * 100) : 0,
       avgResponseTimeHours,
       periodBreakdown: weeks.reverse(),
     };
@@ -543,7 +712,14 @@ export class SellerEngagementService {
     page?: number;
     limit?: number;
   }) {
-    const { search, tier, status, sortBy = "createdAt", page = 1, limit = 20 } = params;
+    const {
+      search,
+      tier,
+      status,
+      sortBy = "createdAt",
+      page = 1,
+      limit = 20,
+    } = params;
     const skip = (page - 1) * limit;
 
     const where: any = {};
@@ -556,8 +732,10 @@ export class SellerEngagementService {
       ];
     }
     if (tier) where.sellerTier = tier;
-    if (status === "active") { where.isActive = true; where.isOnHold = false; }
-    else if (status === "inactive") where.isActive = false;
+    if (status === "active") {
+      where.isActive = true;
+      where.isOnHold = false;
+    } else if (status === "inactive") where.isActive = false;
     else if (status === "onHold") where.isOnHold = true;
     else if (status === "verified") where.isVerified = true;
     else if (status === "unverified") where.isVerified = false;
@@ -574,7 +752,14 @@ export class SellerEngagementService {
         include: {
           performance: true,
           badges: { where: { isActive: true } },
-          user: { select: { firstName: true, lastName: true, email: true, phone: true } },
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true,
+            },
+          },
           _count: {
             select: {
               orders: true,
@@ -599,7 +784,9 @@ export class SellerEngagementService {
         try {
           const health = await this.calculateHealthScore(shop.id);
           healthScore = health.totalScore;
-        } catch { /* skip */ }
+        } catch {
+          /* skip */
+        }
 
         return {
           id: shop.id,
@@ -623,7 +810,13 @@ export class SellerEngagementService {
       }),
     );
 
-    return { shops: directory, total, page, limit, totalPages: Math.ceil(total / limit) };
+    return {
+      shops: directory,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async getSellerCrmStats() {
@@ -644,7 +837,9 @@ export class SellerEngagementService {
       ]);
 
     const tiers: Record<string, number> = {};
-    tierCounts.forEach((t) => { tiers[t.sellerTier] = t._count.id; });
+    tierCounts.forEach((t) => {
+      tiers[t.sellerTier] = t._count.id;
+    });
 
     return {
       total,
@@ -659,41 +854,64 @@ export class SellerEngagementService {
   }
 
   async getSellerProfile(shopId: string) {
-    const [shop, performance, badges, recentOrders, rfqFunnel, healthScore, onboarding, milestones] =
-      await Promise.all([
-        this.prisma.shop.findUnique({
-          where: { id: shopId },
-          include: {
-            user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true, createdAt: true } },
-            _count: {
-              select: {
-                orders: true,
-                rfqOffers: true,
-                inventoryItems: true,
-                shopQuotes: true,
-                ratings: true,
-                invoices: true,
-              },
+    const [
+      shop,
+      performance,
+      badges,
+      recentOrders,
+      rfqFunnel,
+      healthScore,
+      onboarding,
+      milestones,
+    ] = await Promise.all([
+      this.prisma.shop.findUnique({
+        where: { id: shopId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true,
+              createdAt: true,
             },
           },
-        }),
-        this.prisma.sellerPerformance.findUnique({ where: { shopId } }),
-        this.prisma.sellerBadge.findMany({ where: { shopId }, orderBy: { awardedAt: "desc" } }),
-        this.prisma.order.findMany({
-          where: { shopId },
-          orderBy: { createdAt: "desc" },
-          take: 10,
-          select: {
-            id: true, orderNumber: true, status: true, totalNpr: true,
-            createdAt: true,
-            customer: { select: { firstName: true, lastName: true } },
+          _count: {
+            select: {
+              orders: true,
+              rfqOffers: true,
+              inventoryItems: true,
+              shopQuotes: true,
+              ratings: true,
+              invoices: true,
+            },
           },
-        }),
-        this.getRfqFunnel(shopId),
-        this.calculateHealthScore(shopId),
-        this.getOnboardingProgress(shopId),
-        this.getMilestones(shopId),
-      ]);
+        },
+      }),
+      this.prisma.sellerPerformance.findUnique({ where: { shopId } }),
+      this.prisma.sellerBadge.findMany({
+        where: { shopId },
+        orderBy: { awardedAt: "desc" },
+      }),
+      this.prisma.order.findMany({
+        where: { shopId },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        select: {
+          id: true,
+          orderNumber: true,
+          status: true,
+          totalNpr: true,
+          createdAt: true,
+          customer: { select: { firstName: true, lastName: true } },
+        },
+      }),
+      this.getRfqFunnel(shopId),
+      this.calculateHealthScore(shopId),
+      this.getOnboardingProgress(shopId),
+      this.getMilestones(shopId),
+    ]);
 
     return {
       shop,
@@ -711,7 +929,12 @@ export class SellerEngagementService {
    *  6. ADMIN SELLER NOTES
    * ═══════════════════════════════════════════════════════ */
 
-  async addSellerNote(shopId: string, adminId: string, note: string, category = "GENERAL") {
+  async addSellerNote(
+    shopId: string,
+    adminId: string,
+    note: string,
+    category = "GENERAL",
+  ) {
     // Reuse CustomerNote model — shopId = the shop being noted about, customerId = shop owner userId
     const shop = await this.prisma.shop.findUnique({
       where: { id: shopId },
@@ -753,7 +976,9 @@ export class SellerEngagementService {
     const shops = await this.prisma.shop.findMany({
       include: {
         performance: true,
-        user: { select: { firstName: true, lastName: true, email: true, phone: true } },
+        user: {
+          select: { firstName: true, lastName: true, email: true, phone: true },
+        },
         badges: { where: { isActive: true }, select: { badgeType: true } },
       },
       orderBy: { createdAt: "desc" },

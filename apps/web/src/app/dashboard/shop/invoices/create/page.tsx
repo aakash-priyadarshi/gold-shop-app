@@ -954,7 +954,8 @@ export default function CreateInvoicePage() {
                 Customer Details
               </CardTitle>
               <CardDescription>
-                Start typing phone number to search existing &amp; registered customers
+                Start typing phone number to search existing &amp; registered
+                customers
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

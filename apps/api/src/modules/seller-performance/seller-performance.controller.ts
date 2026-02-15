@@ -94,6 +94,9 @@ export class SellerPerformanceController {
     @CurrentUser("shopId") shopId: string,
     @Query("days") days?: string,
   ) {
-    return this.engagementService.getRfqFunnel(shopId, days ? parseInt(days) : 90);
+    return this.engagementService.getRfqFunnel(
+      shopId,
+      days ? parseInt(days) : 90,
+    );
   }
 }

@@ -826,17 +826,25 @@ export default function CreateRfqPage() {
     }
     shopsApi
       .getComponentPricingPublic(selectedSeller.id)
-      .then((res: { data: { baseMetalPrices?: Record<string, number>; platingPrices?: Record<string, number>; finishPrices?: Record<string, number> } }) => {
-        const data = res.data;
-        if (
-          data &&
-          (Object.keys(data.baseMetalPrices || {}).length > 0 ||
-            Object.keys(data.platingPrices || {}).length > 0 ||
-            Object.keys(data.finishPrices || {}).length > 0)
-        ) {
-          setShopPrices(data);
-        }
-      })
+      .then(
+        (res: {
+          data: {
+            baseMetalPrices?: Record<string, number>;
+            platingPrices?: Record<string, number>;
+            finishPrices?: Record<string, number>;
+          };
+        }) => {
+          const data = res.data;
+          if (
+            data &&
+            (Object.keys(data.baseMetalPrices || {}).length > 0 ||
+              Object.keys(data.platingPrices || {}).length > 0 ||
+              Object.keys(data.finishPrices || {}).length > 0)
+          ) {
+            setShopPrices(data);
+          }
+        },
+      )
       .catch(() => {
         /* ignore – fallback to system defaults */
       });
@@ -5315,7 +5323,9 @@ export default function CreateRfqPage() {
                             seller.materialCost * (totalMakingPercent / 100),
                           );
                           const subtotal =
-                            seller.materialCost + totalMakingCharge + (seller.componentCost || 0);
+                            seller.materialCost +
+                            totalMakingCharge +
+                            (seller.componentCost || 0);
                           const isInternational =
                             seller.country &&
                             country &&
@@ -5628,7 +5638,9 @@ export default function CreateRfqPage() {
                             (totalMakingPercent / 100),
                         );
                         const subtotal =
-                          selectedSeller.materialCost + totalMakingCharge + (selectedSeller.componentCost || 0);
+                          selectedSeller.materialCost +
+                          totalMakingCharge +
+                          (selectedSeller.componentCost || 0);
                         const isIntl =
                           selectedSeller.country &&
                           country &&

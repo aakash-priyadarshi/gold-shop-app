@@ -5,70 +5,70 @@ import { AdminSellerCRM } from "@/components/admin/AdminSellerCRM";
 import { AdminGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import api, { adminApi } from "@/lib/api";
 import {
-    AlertCircle,
-    Calendar,
-    CheckCircle,
-    Clock,
-    Eye,
-    Loader2,
-    Mail,
-    MapPin,
-    Pencil,
-    Phone,
-    Plus,
-    Search,
-    Shield,
-    Star,
-    Store,
-    Trash2,
-    User,
-    UserCheck,
-    Users,
-    UserX,
-    XCircle,
+  AlertCircle,
+  Calendar,
+  CheckCircle,
+  Clock,
+  Eye,
+  Loader2,
+  Mail,
+  MapPin,
+  Pencil,
+  Phone,
+  Plus,
+  Search,
+  Shield,
+  Star,
+  Store,
+  Trash2,
+  User,
+  UserCheck,
+  Users,
+  UserX,
+  XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -1036,260 +1036,263 @@ export default function AdminUsersPage() {
             </TabsList>
 
             <TabsContent value="users" className="space-y-6 mt-0">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">Total Users</p>
-                <p className="text-2xl font-bold">{userStats.total}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">Admins</p>
-                <p className="text-2xl font-bold text-purple-600">
-                  {userStats.admins}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">Shopkeepers</p>
-                <p className="text-2xl font-bold text-gold-600">
-                  {userStats.shopkeepers}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">Customers</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {userStats.customers}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">Active</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {userStats.active}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">Suspended</p>
-                <p className="text-2xl font-bold text-red-600">
-                  {userStats.suspended}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Filters */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="relative flex-1 min-w-[200px]">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by name or email..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Select value={roleFilter} onValueChange={setRoleFilter}>
-                  <SelectTrigger className="w-[150px]">
-                    <SelectValue placeholder="All Roles" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Roles</SelectItem>
-                    <SelectItem value="ADMIN">Admin</SelectItem>
-                    <SelectItem value="SHOPKEEPER">Shopkeeper</SelectItem>
-                    <SelectItem value="CUSTOMER">Customer</SelectItem>
-                    <SelectItem value="SUPPORT">Support</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="pending">
-                      Pending Verification
-                    </SelectItem>
-                    <SelectItem value="suspended">Suspended</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* Stats Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground">Total Users</p>
+                    <p className="text-2xl font-bold">{userStats.total}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground">Admins</p>
+                    <p className="text-2xl font-bold text-purple-600">
+                      {userStats.admins}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground">Shopkeepers</p>
+                    <p className="text-2xl font-bold text-gold-600">
+                      {userStats.shopkeepers}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground">Customers</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {userStats.customers}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground">Active</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {userStats.active}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground">Suspended</p>
+                    <p className="text-2xl font-bold text-red-600">
+                      {userStats.suspended}
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Users Table */}
-          <Card>
-            <CardContent className="p-0">
-              {isLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : filteredUsers.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No users found</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>User</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Shop</TableHead>
-                      <TableHead>Joined</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredUsers.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
-                              {getRoleIcon(user.role)}
-                            </div>
-                            <div>
-                              <p className="font-medium">
-                                {user.firstName} {user.lastName}
-                              </p>
-                              <p className="text-sm text-muted-foreground flex items-center gap-1">
-                                <Mail className="h-3 w-3" />
-                                {user.email}
-                              </p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getRoleBadgeColor(user.role)}>
-                            {user.role}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {user.status === "ACTIVE" ? (
-                            <Badge className="bg-green-100 text-green-700">
-                              <UserCheck className="h-3 w-3 mr-1" />
-                              Active
-                            </Badge>
-                          ) : user.status === "PENDING_VERIFICATION" ? (
-                            <Badge className="bg-amber-100 text-amber-700">
-                              Pending
-                            </Badge>
-                          ) : user.status === "SUSPENDED" ? (
-                            <Badge variant="destructive">
-                              <UserX className="h-3 w-3 mr-1" />
-                              Suspended
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">{user.status}</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {user.shop ? (
-                            <span className="text-sm">
-                              {user.shop.shopName}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Calendar className="h-3 w-3" />
-                            {formatDate(user.createdAt)}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {/* View Details */}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleViewUser(user)}
-                              title="View Details"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
+              {/* Filters */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="relative flex-1 min-w-[200px]">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search by name or email..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Select value={roleFilter} onValueChange={setRoleFilter}>
+                      <SelectTrigger className="w-[150px]">
+                        <SelectValue placeholder="All Roles" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Roles</SelectItem>
+                        <SelectItem value="ADMIN">Admin</SelectItem>
+                        <SelectItem value="SHOPKEEPER">Shopkeeper</SelectItem>
+                        <SelectItem value="CUSTOMER">Customer</SelectItem>
+                        <SelectItem value="SUPPORT">Support</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={statusFilter}
+                      onValueChange={setStatusFilter}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="All Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="pending">
+                          Pending Verification
+                        </SelectItem>
+                        <SelectItem value="suspended">Suspended</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
 
-                            {/* Edit User */}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleEditUser(user)}
-                              title="Edit User"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-
-                            {/* Suspend/Activate */}
-                            {user.role !== "ADMIN" &&
-                              (user.status === "ACTIVE" ? (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleSuspend(user.id)}
-                                  disabled={processingId === user.id}
-                                  className="text-amber-600 hover:text-amber-700"
-                                  title="Suspend User"
-                                >
-                                  {processingId === user.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <UserX className="h-4 w-4" />
-                                  )}
-                                </Button>
+              {/* Users Table */}
+              <Card>
+                <CardContent className="p-0">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : filteredUsers.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No users found</p>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>User</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Shop</TableHead>
+                          <TableHead>Joined</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredUsers.map((user) => (
+                          <TableRow key={user.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
+                                  {getRoleIcon(user.role)}
+                                </div>
+                                <div>
+                                  <p className="font-medium">
+                                    {user.firstName} {user.lastName}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                    <Mail className="h-3 w-3" />
+                                    {user.email}
+                                  </p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={getRoleBadgeColor(user.role)}>
+                                {user.role}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {user.status === "ACTIVE" ? (
+                                <Badge className="bg-green-100 text-green-700">
+                                  <UserCheck className="h-3 w-3 mr-1" />
+                                  Active
+                                </Badge>
+                              ) : user.status === "PENDING_VERIFICATION" ? (
+                                <Badge className="bg-amber-100 text-amber-700">
+                                  Pending
+                                </Badge>
+                              ) : user.status === "SUSPENDED" ? (
+                                <Badge variant="destructive">
+                                  <UserX className="h-3 w-3 mr-1" />
+                                  Suspended
+                                </Badge>
                               ) : (
+                                <Badge variant="secondary">{user.status}</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {user.shop ? (
+                                <span className="text-sm">
+                                  {user.shop.shopName}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                <Calendar className="h-3 w-3" />
+                                {formatDate(user.createdAt)}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {/* View Details */}
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  onClick={() => handleActivate(user.id)}
-                                  disabled={processingId === user.id}
-                                  className="text-green-600 hover:text-green-700"
-                                  title="Activate User"
+                                  onClick={() => handleViewUser(user)}
+                                  title="View Details"
                                 >
-                                  {processingId === user.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <UserCheck className="h-4 w-4" />
-                                  )}
+                                  <Eye className="h-4 w-4" />
                                 </Button>
-                              ))}
 
-                            {/* Delete User */}
-                            {user.role !== "ADMIN" && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                  setUserToDelete(user);
-                                  setDeleteDialogOpen(true);
-                                }}
-                                className="text-red-600 hover:text-red-700"
-                                title="Delete User"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+                                {/* Edit User */}
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleEditUser(user)}
+                                  title="Edit User"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+
+                                {/* Suspend/Activate */}
+                                {user.role !== "ADMIN" &&
+                                  (user.status === "ACTIVE" ? (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleSuspend(user.id)}
+                                      disabled={processingId === user.id}
+                                      className="text-amber-600 hover:text-amber-700"
+                                      title="Suspend User"
+                                    >
+                                      {processingId === user.id ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <UserX className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleActivate(user.id)}
+                                      disabled={processingId === user.id}
+                                      className="text-green-600 hover:text-green-700"
+                                      title="Activate User"
+                                    >
+                                      {processingId === user.id ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <UserCheck className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  ))}
+
+                                {/* Delete User */}
+                                {user.role !== "ADMIN" && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      setUserToDelete(user);
+                                      setDeleteDialogOpen(true);
+                                    }}
+                                    className="text-red-600 hover:text-red-700"
+                                    title="Delete User"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="customers" className="mt-0">

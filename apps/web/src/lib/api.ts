@@ -363,8 +363,7 @@ export const adminApi = {
     ),
   addSellerNote: (shopId: string, data: { note: string; category?: string }) =>
     api.post(`/admin/sellers/${shopId}/notes`, data),
-  getSellerNotes: (shopId: string) =>
-    api.get(`/admin/sellers/${shopId}/notes`),
+  getSellerNotes: (shopId: string) => api.get(`/admin/sellers/${shopId}/notes`),
 };
 
 // Materials API
@@ -483,6 +482,80 @@ export const invoicesApi = {
   getStats: () => api.get("/invoices/stats"),
   getSettings: () => api.get("/invoices/settings"),
   updateSettings: (data: any) => api.patch("/invoices/settings", data),
+};
+
+// Marketplace Intelligence API
+export const intelligenceApi = {
+  // AI RFQ Builder
+  buildRfq: (data: {
+    description: string;
+    budgetHint?: string;
+    occasion?: string;
+    preferredMetal?: string;
+    marketRegion?: string;
+  }) => api.post("/marketplace-intelligence/rfq-builder", data),
+
+  // Budget Feasibility Check
+  checkFeasibility: (data: {
+    jewelleryType: string;
+    buildMethod: string;
+    composition?: Record<string, any>;
+    targetWeightG?: number;
+    budgetNpr?: number;
+    marketRegion?: string;
+  }) => api.post("/marketplace-intelligence/feasibility-check", data),
+
+  // AI Tooltips
+  getTooltips: (category?: string) =>
+    api.get("/marketplace-intelligence/tooltips", {
+      params: category ? { category } : undefined,
+    }),
+
+  // Offer Comparison
+  compareOffers: (rfqId: string) =>
+    api.get(`/marketplace-intelligence/offers/compare/${rfqId}`),
+
+  // Order Protection Timeline
+  getOrderProtection: (orderId: string) =>
+    api.get(`/marketplace-intelligence/order-protection/${orderId}`),
+
+  // Trust Profile
+  getTrustProfile: (shopId: string) =>
+    api.get(`/marketplace-intelligence/trust-profile/${shopId}`),
+
+  // Counter-Offer Suggestions
+  getCounterOfferSuggestions: (offerId: string) =>
+    api.get(`/marketplace-intelligence/counter-offer-suggestions/${offerId}`),
+
+  // Loss Reasons
+  recordLossReason: (data: {
+    offerId: string;
+    category: string;
+    note?: string;
+  }) => api.post("/marketplace-intelligence/loss-reason", data),
+
+  // Admin: Intelligence Dashboard
+  getDashboard: () => api.get("/marketplace-intelligence/admin/dashboard"),
+  getAiCapabilities: () =>
+    api.get("/marketplace-intelligence/admin/ai-capabilities"),
+
+  // Admin: AI Phase Milestones
+  getMilestones: () => api.get("/marketplace-intelligence/admin/milestones"),
+  updateMilestoneAction: (
+    id: string,
+    data: { actionIndex: number; status: "pending" | "completed" | "skipped" },
+  ) => api.patch(`/marketplace-intelligence/admin/milestones/${id}/action`, data),
+
+  // Admin: Quote Anomalies
+  getAnomalies: (params?: {
+    type?: string;
+    severity?: string;
+    reviewed?: string;
+    limit?: string;
+  }) =>
+    api.get("/marketplace-intelligence/admin/anomalies", { params }),
+  reviewAnomaly: (id: string, data: { note?: string }) =>
+    api.patch(`/marketplace-intelligence/admin/anomalies/${id}/review`, data),
 };
 
 export default api;

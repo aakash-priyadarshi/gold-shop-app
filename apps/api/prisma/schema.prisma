@@ -461,6 +461,9 @@ model RfqOffer {
   shopNotes             String?
   status                OfferStatus @default(PENDING)
   parentOfferId         String?
+  // Win/Loss tracking (Sprint 3)
+  lossReasonCategory    String?     // PRICE_TOO_HIGH, SLOW_DELIVERY, LOW_TRUST, BETTER_OFFER, OTHER
+  lossReasonNote        String?     // Free-text explanation
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
   parentOffer           RfqOffer?   @relation("OfferChain", fields: [parentOfferId], references: [id])
@@ -1840,4 +1843,102 @@ model InvoiceSettings {
   updatedAt       DateTime @updatedAt
 
   shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+}
+
+// ═══════════════════════════════════════════
+// MARKETPLACE INTELLIGENCE & AI DATA CAPTURE
+// ═══════════════════════════════════════════
+
+// Captures data from every RFQ→Offer→Order cycle for AI training
+model RfqOrderInsight {
+  id                 String   @id @default(uuid())
+  rfqId              String
+  rfqJewelleryType   String
+  rfqBuildMethod     String
+  rfqComposition     Json
+  rfqBudgetMin       Float?
+  rfqBudgetMax       Float?
+  rfqWeightCategory  String?
+  rfqSpecialNotes    String?
+  rfqMarketRegion    String?
+
+  // Offer aggregates
+  totalOffers        Int      @default(0)
+  avgOfferPrice      Float?
+  minOfferPrice      Float?
+  maxOfferPrice      Float?
+  avgMakingChargePct Float?
+  avgEstimatedDays   Int?
+
+  // Outcome
+  selectedOfferId    String?
+  selectedShopId     String?
+  selectedPrice      Float?
+  orderId            String?
+  orderCompleted     Boolean  @default(false)
+  orderRating        Int?
+
+  // Loss analysis
+  lossReasons        Json?    // [{ offerId, reason, category }]
+
+  // Timing metrics
+  rfqCreatedAt       DateTime
+  firstOfferAt       DateTime?
+  offerSelectedAt    DateTime?
+  orderCompletedAt   DateTime?
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([rfqJewelleryType])
+  @@index([rfqBuildMethod])
+  @@index([selectedShopId])
+  @@index([orderCompleted])
+  @@index([rfqCreatedAt])
+  @@index([rfqMarketRegion])
+}
+
+// Tracks AI phase milestones and admin alerts
+model AiPhaseMilestone {
+  id              String    @id @default(uuid())
+  phase           Int       // 1, 2, 3
+  milestoneName   String    // e.g. "PHASE_1_LAUNCH", "100_ORDERS", "500_ORDERS"
+  description     String?   // Human-readable description of what this enables
+  thresholdValue  Int       // 0, 100, 200, 500
+  currentValue    Int       @default(0)
+  isReached       Boolean   @default(false)
+  reachedAt       DateTime?
+  adminNotifiedAt DateTime?
+  actionItems     Json?     // [{ action, status, completedAt }]
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([phase, milestoneName])
+  @@index([isReached])
+  @@index([phase])
+}
+
+// Quote anomaly detection results
+model QuoteAnomaly {
+  id              String   @id @default(uuid())
+  offerId         String
+  shopId          String
+  rfqId           String
+  anomalyType     String   // PRICE_TOO_HIGH, PRICE_TOO_LOW, MAKING_CHARGE_SPIKE, DELIVERY_OUTLIER
+  severity        String   @default("MEDIUM") // LOW, MEDIUM, HIGH
+  expectedValue   Float    // What the average/median was
+  actualValue     Float    // What this offer had
+  deviationPct    Float    // How far off from expected
+  isReviewed      Boolean  @default(false)
+  reviewedAt      DateTime?
+  reviewedBy      String?
+  reviewNote      String?
+  createdAt       DateTime @default(now())
+
+  @@index([shopId])
+  @@index([anomalyType])
+  @@index([isReviewed])
+  @@index([severity])
+  @@index([createdAt])
 }

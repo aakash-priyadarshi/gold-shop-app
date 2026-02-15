@@ -7,6 +7,7 @@ import {
 import { BuildMethod, JewelleryType, RfqStatus } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
+import { MarketplaceIntelligenceService } from "../marketplace-intelligence/marketplace-intelligence.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { ShopsService } from "../shops/shops.service";
 import { BroadcastRfqDto } from "./dto/broadcast-rfq.dto";
@@ -24,6 +25,7 @@ export class RfqService {
     private shopsService: ShopsService,
     private notificationsService: NotificationsService,
     private auditService: AuditService,
+    private intelligenceService: MarketplaceIntelligenceService,
   ) {}
 
   /**
@@ -769,6 +771,14 @@ export class RfqService {
       resourceId: rfqId,
       newValue: { offerId },
     });
+
+    // Capture data for marketplace intelligence
+    try {
+      await this.intelligenceService.captureOfferSelection(rfqId, offerId);
+    } catch (err) {
+      // Non-critical — don't block the main flow
+      console.error('Intelligence data capture failed:', err);
+    }
 
     return {
       rfqId,

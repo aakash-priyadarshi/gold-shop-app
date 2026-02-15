@@ -1759,41 +1759,71 @@ export class ShopsService {
 
       // System default finish prices (NPR per piece)
       const SYSTEM_FINISH_DEFAULTS: Record<string, number> = {
-        POLISHED: 25, HIGH_POLISH: 25, MATTE: 30, SATIN: 30,
-        BRUSHED: 35, OXIDISED_FINISH: 35, ANTIQUE: 40,
-        SANDBLASTED: 45, BARK_TEXTURE: 45, HAMMERED: 50,
-        FLORENTINE: 55, TWO_TONE: 60, ENGRAVED: 65, DIAMOND_CUT: 70,
+        POLISHED: 25,
+        HIGH_POLISH: 25,
+        MATTE: 30,
+        SATIN: 30,
+        BRUSHED: 35,
+        OXIDISED_FINISH: 35,
+        ANTIQUE: 40,
+        SANDBLASTED: 45,
+        BARK_TEXTURE: 45,
+        HAMMERED: 50,
+        FLORENTINE: 55,
+        TWO_TONE: 60,
+        ENGRAVED: 65,
+        DIAMOND_CUT: 70,
         RHODIUM_PLATED: 80,
       };
 
       // Finish cost: shop override → system default
       let finishCost = 0;
       if (surfaceFinish) {
-        finishCost = overrideMap['FINISH']?.[surfaceFinish]
-          || SYSTEM_FINISH_DEFAULTS[surfaceFinish]
-          || 0;
+        finishCost =
+          overrideMap["FINISH"]?.[surfaceFinish] ||
+          SYSTEM_FINISH_DEFAULTS[surfaceFinish] ||
+          0;
       }
 
       // Base metal cost (Method C): shop override → system defaults
       let baseMetalCost = 0;
-      if (baseMetal && buildMethod === 'METHOD_C') {
+      if (baseMetal && buildMethod === "METHOD_C") {
         const SYSTEM_BM_RATES: Record<string, number> = {
-          BRASS: 1.5, COPPER: 2.0, BRONZE: 1.8, STAINLESS_STEEL_316L: 3.5,
-          STAINLESS_STEEL_304: 3.0, TITANIUM: 8.0, NICKEL_SILVER: 2.5, PEWTER: 2.0,
+          BRASS: 1.5,
+          COPPER: 2.0,
+          BRONZE: 1.8,
+          STAINLESS_STEEL_316L: 3.5,
+          STAINLESS_STEEL_304: 3.0,
+          TITANIUM: 8.0,
+          NICKEL_SILVER: 2.5,
+          PEWTER: 2.0,
         };
-        const bmRate = overrideMap['BASE_METAL']?.[baseMetal] || SYSTEM_BM_RATES[baseMetal] || 0;
+        const bmRate =
+          overrideMap["BASE_METAL"]?.[baseMetal] ||
+          SYSTEM_BM_RATES[baseMetal] ||
+          0;
         baseMetalCost = bmRate * estimatedWeight;
       }
 
       // Plating cost (Method C): shop override → system defaults
       let platingCost = 0;
-      if (platingType && buildMethod === 'METHOD_C') {
+      if (platingType && buildMethod === "METHOD_C") {
         const SYSTEM_PLATING_RATES: Record<string, number> = {
-          GOLD_PLATED: 45, GOLD_FILLED: 120, VERMEIL: 80, ROSE_GOLD_PLATED: 50,
-          RHODIUM_PLATED: 40, PVD_GOLD: 75, PVD_ROSE: 75, PVD_BLACK: 65,
-          SILVER_PLATED: 25, RUTHENIUM_PLATED: 55,
+          GOLD_PLATED: 45,
+          GOLD_FILLED: 120,
+          VERMEIL: 80,
+          ROSE_GOLD_PLATED: 50,
+          RHODIUM_PLATED: 40,
+          PVD_GOLD: 75,
+          PVD_ROSE: 75,
+          PVD_BLACK: 65,
+          SILVER_PLATED: 25,
+          RUTHENIUM_PLATED: 55,
         };
-        platingCost = overrideMap['PLATING']?.[platingType] || SYSTEM_PLATING_RATES[platingType] || 0;
+        platingCost =
+          overrideMap["PLATING"]?.[platingType] ||
+          SYSTEM_PLATING_RATES[platingType] ||
+          0;
       }
 
       const componentCost = finishCost + baseMetalCost + platingCost;
@@ -2285,7 +2315,7 @@ export class ShopsService {
     const overrides = await this.prisma.shopPriceOverride.findMany({
       where: {
         shopId,
-        overrideType: { in: ['BASE_METAL', 'PLATING', 'FINISH'] },
+        overrideType: { in: ["BASE_METAL", "PLATING", "FINISH"] },
         isActive: true,
       },
     });
@@ -2295,11 +2325,11 @@ export class ShopsService {
     const finishPrices: Record<string, number> = {};
 
     for (const o of overrides) {
-      if (o.overrideType === 'BASE_METAL') {
+      if (o.overrideType === "BASE_METAL") {
         baseMetalPrices[o.itemCode] = o.overrideValue;
-      } else if (o.overrideType === 'PLATING') {
+      } else if (o.overrideType === "PLATING") {
         platingPrices[o.itemCode] = o.overrideValue;
-      } else if (o.overrideType === 'FINISH') {
+      } else if (o.overrideType === "FINISH") {
         finishPrices[o.itemCode] = o.overrideValue;
       }
     }
@@ -2321,12 +2351,16 @@ export class ShopsService {
   ) {
     const shop = await this.prisma.shop.findUnique({ where: { id: shopId } });
     if (!shop || shop.userId !== userId) {
-      throw new ForbiddenException('Not authorized');
+      throw new ForbiddenException("Not authorized");
     }
 
     const upserts: Promise<any>[] = [];
 
-    const upsertPrice = (overrideType: string, itemCode: string, value: number) => {
+    const upsertPrice = (
+      overrideType: string,
+      itemCode: string,
+      value: number,
+    ) => {
       upserts.push(
         this.prisma.shopPriceOverride.upsert({
           where: {
@@ -2336,7 +2370,7 @@ export class ShopsService {
             shopId,
             overrideType,
             itemCode,
-            overrideMode: 'FIXED',
+            overrideMode: "FIXED",
             overrideValue: value,
             isActive: true,
           },
@@ -2350,17 +2384,17 @@ export class ShopsService {
 
     if (dto.baseMetalPrices) {
       for (const [code, price] of Object.entries(dto.baseMetalPrices)) {
-        upsertPrice('BASE_METAL', code, price);
+        upsertPrice("BASE_METAL", code, price);
       }
     }
     if (dto.platingPrices) {
       for (const [code, price] of Object.entries(dto.platingPrices)) {
-        upsertPrice('PLATING', code, price);
+        upsertPrice("PLATING", code, price);
       }
     }
     if (dto.finishPrices) {
       for (const [code, price] of Object.entries(dto.finishPrices)) {
-        upsertPrice('FINISH', code, price);
+        upsertPrice("FINISH", code, price);
       }
     }
 
@@ -2368,9 +2402,9 @@ export class ShopsService {
 
     await this.auditService.log({
       userId,
-      actorType: 'USER',
-      action: 'UPDATE',
-      resourceType: 'SHOP_COMPONENT_PRICING',
+      actorType: "USER",
+      action: "UPDATE",
+      resourceType: "SHOP_COMPONENT_PRICING",
       resourceId: shopId,
       newValue: dto,
     });
