@@ -1674,9 +1674,18 @@ export default function CreateRfqPage() {
         formData.alloyConfig?.baseMetal
       ) {
         metalType = formData.alloyConfig.baseMetal;
-        // Derive alloy type from karat (e.g., GOLD + 18K → GOLD_18K)
-        if (formData.alloyConfig.karat && formData.alloyConfig.baseMetal) {
-          alloyType = `${formData.alloyConfig.baseMetal}_${formData.alloyConfig.karat}`;
+        // Derive alloy type from karat/purity
+        // Gold: GOLD + 18K → GOLD_18K, GOLD + 14K → GOLD_14K, GOLD + 10K → GOLD_10K
+        // Silver: STERLING_925 → SILVER_925, ARGENTIUM_935 → SILVER_999 (uses fine silver rate)
+        if (formData.alloyConfig.baseMetal === "GOLD" && formData.alloyConfig.karat) {
+          alloyType = `GOLD_${formData.alloyConfig.karat}`;
+        } else if (formData.alloyConfig.baseMetal === "SILVER") {
+          // Map silver purity to MarketRate code
+          const silverPurityMap: Record<string, string> = {
+            STERLING_925: "SILVER_925",
+            ARGENTIUM_935: "SILVER_999", // Uses fine silver rate as base
+          };
+          alloyType = silverPurityMap[formData.alloyConfig.silverPurity || "STERLING_925"] || "SILVER_925";
         }
       } else if (
         formData.buildMethod === "METHOD_C" &&
@@ -1863,10 +1872,15 @@ export default function CreateRfqPage() {
           return !!formData.metalType;
         case "METHOD_B":
           return (
-            !!formData.alloyConfig?.baseMetal && !!formData.alloyConfig?.karat
+            !!formData.alloyConfig?.baseMetal &&
+            (formData.alloyConfig.baseMetal === "GOLD"
+              ? !!formData.alloyConfig.karat
+              : !!formData.alloyConfig.silverPurity)
           );
         case "METHOD_C":
           return !!formData.methodCConfig?.baseMetal;
+        case "METHOD_D":
+          return !!formData.methodDConfig?.purity;
         default:
           return !!formData.metalType;
       }
@@ -2698,7 +2712,10 @@ export default function CreateRfqPage() {
         return !!formData.metalType;
       case "METHOD_B":
         return (
-          !!formData.alloyConfig?.baseMetal && !!formData.alloyConfig?.karat
+          !!formData.alloyConfig?.baseMetal &&
+          (formData.alloyConfig.baseMetal === "GOLD"
+            ? !!formData.alloyConfig.karat
+            : !!formData.alloyConfig.silverPurity)
         );
       case "METHOD_C":
         return (
