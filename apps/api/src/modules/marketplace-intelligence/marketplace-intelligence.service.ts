@@ -838,7 +838,7 @@ export class MarketplaceIntelligenceService {
         description:
           "Your booking fee is held securely. If the seller doesn't start production, you get a full refund.",
         icon: "shield",
-        status: this.getStageStatus(order, ["CREATED", "PAYMENT_PENDING"]),
+        status: this.getStageStatus(order, ["PLACED", "CONFIRMED"]),
         protectedAmount: order.bookingFeePaidNpr || 0,
       },
       {
@@ -847,7 +847,7 @@ export class MarketplaceIntelligenceService {
         description:
           "We track every milestone. If you approved the design, the seller commits to specifications.",
         icon: "factory",
-        status: this.getStageStatus(order, ["IN_PRODUCTION", "QC_PENDING"]),
+        status: this.getStageStatus(order, ["IN_PROGRESS"]),
         milestones: order.milestones
           .filter((m) =>
             [
@@ -870,7 +870,7 @@ export class MarketplaceIntelligenceService {
         description:
           "Every piece undergoes quality check. If it doesn't match specs, we intervene.",
         icon: "check-circle",
-        status: this.getStageStatus(order, ["QC_PASSED", "READY_TO_SHIP"]),
+        status: this.getStageStatus(order, ["READY", "PACKED"]),
         qcPassed: order.milestones.some((m) => m.type === "QUALITY_CHECK"),
       },
       {
@@ -889,7 +889,7 @@ export class MarketplaceIntelligenceService {
         description:
           "Inspect your jewellery. If it doesn't match, raise a dispute within 48 hours.",
         icon: "star",
-        status: this.getStageStatus(order, ["DELIVERED", "COMPLETED"]),
+        status: this.getStageStatus(order, ["DELIVERED"]),
         disputeWindowEnds: order.actualDelivery
           ? new Date(
               new Date(order.actualDelivery).getTime() + 48 * 60 * 60 * 1000,
@@ -924,7 +924,7 @@ export class MarketplaceIntelligenceService {
   }
 
   private getStatusIndex(status: string): number {
-    const order = [
+    const statusOrder = [
       "PLACED",
       "CONFIRMED",
       "IN_PROGRESS",
@@ -933,9 +933,8 @@ export class MarketplaceIntelligenceService {
       "SHIPPED",
       "OUT_FOR_DELIVERY",
       "DELIVERED",
-      "COMPLETED",
     ];
-    const idx = order.indexOf(status);
+    const idx = statusOrder.indexOf(status);
     return idx >= 0 ? idx : -1;
   }
 

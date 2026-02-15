@@ -806,13 +806,13 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
       },
       buildMethods: {
         METHOD_A:
-          "Handcrafted by artisans using traditional tools. Each piece is unique with subtle variations. Best for intricate ethnic designs.",
+          "Solid Pure Precious Metal — made entirely from a single high-purity metal (24K gold, fine silver 999, platinum). No alloys or plating. Ideal for investment pieces, coins, and simple bangles.",
         METHOD_B:
-          "Cast or die-struck from a master mold. Consistent quality and finish. Ideal for standard designs with fine detail.",
+          "Precious Metal Alloy — gold or silver mixed with other metals for durability (22K, 18K, 14K, 10K gold or 925 sterling silver). The standard for most wearable jewellery. Stronger and available in rose/white variants.",
         METHOD_C:
-          "Designed with CAD software and 3D printed, then cast in metal. Perfect precision and complex geometries. Modern approach.",
+          "Base Metal + Plating — core made from brass, copper, or stainless steel, then plated with gold, rhodium, or silver. Most affordable option. Great for fashion jewellery and trend pieces.",
         METHOD_D:
-          "Assembled from components with stone setting. Ideal for gem-heavy pieces. Combines machine and hand techniques.",
+          "Italian Machine Made — precision chains, necklaces, and bracelets produced on Italian link-forming machines. Consistent quality, lightweight, and elegant. Only available for chain-style jewellery.",
       },
       processes: {
         making_charge:
