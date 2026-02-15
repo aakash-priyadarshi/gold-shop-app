@@ -284,19 +284,24 @@ export default function ShopInventoryPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [materialsRes, capabilitiesRes, ratesRes, gemPricingRes, compPricingRes] =
-        await Promise.all([
-          shopsApi.getMaterials(),
-          shopsApi.getCapabilities(),
-          materialsApi.getMarketRates({
-            currency: shopCurrency,
-            country: shopCountry,
-          }),
-          shopsApi.getGemstonePricing().catch(() => ({ data: { rates: [] } })),
-          shopsApi.getComponentPricing().catch(() => ({
-            data: { baseMetalPrices: {}, platingPrices: {}, finishPrices: {} },
-          })),
-        ]);
+      const [
+        materialsRes,
+        capabilitiesRes,
+        ratesRes,
+        gemPricingRes,
+        compPricingRes,
+      ] = await Promise.all([
+        shopsApi.getMaterials(),
+        shopsApi.getCapabilities(),
+        materialsApi.getMarketRates({
+          currency: shopCurrency,
+          country: shopCountry,
+        }),
+        shopsApi.getGemstonePricing().catch(() => ({ data: { rates: [] } })),
+        shopsApi.getComponentPricing().catch(() => ({
+          data: { baseMetalPrices: {}, platingPrices: {}, finishPrices: {} },
+        })),
+      ]);
       // Load component pricing overrides
       const cp = compPricingRes.data || {};
       setBaseMetalPrices(cp.baseMetalPrices || {});
@@ -609,8 +614,7 @@ export default function ShopInventoryPage() {
         variant: "destructive",
         title: "Save Failed",
         description:
-          error.response?.data?.message ||
-          "Could not save component pricing",
+          error.response?.data?.message || "Could not save component pricing",
       });
     } finally {
       setIsSavingComponentPricing(false);
@@ -1995,8 +1999,7 @@ export default function ShopInventoryPage() {
                                   )}
                                   <div className="min-w-0 flex-1">
                                     <Label className="cursor-pointer text-sm block">
-                                      {info?.label ||
-                                        finish.replace(/_/g, " ")}
+                                      {info?.label || finish.replace(/_/g, " ")}
                                     </Label>
                                     <p className="text-[10px] text-muted-foreground truncate">
                                       {info?.description}

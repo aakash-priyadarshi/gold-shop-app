@@ -37,7 +37,6 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight,
-  Crown,
   Download,
   Eye,
   Heart,
@@ -105,10 +104,18 @@ interface CrmStats {
 
 interface HealthScore {
   profileCompleteness: { score: number; max: number; missing: string[] };
-  performanceMetrics: { score: number; max: number; details: Record<string, number> };
+  performanceMetrics: {
+    score: number;
+    max: number;
+    details: Record<string, number>;
+  };
   verificationStatus: { score: number; max: number };
   capabilitySetup: { score: number; max: number; missing: string[] };
-  engagementActivity: { score: number; max: number; details: Record<string, number> };
+  engagementActivity: {
+    score: number;
+    max: number;
+    details: Record<string, number>;
+  };
   totalScore: number;
   grade: string;
 }
@@ -140,7 +147,12 @@ interface RfqFunnel {
   viewRate: number;
   responseRate: number;
   avgResponseTimeHours: number | null;
-  periodBreakdown: { period: string; targeted: number; viewed: number; responded: number }[];
+  periodBreakdown: {
+    period: string;
+    targeted: number;
+    viewed: number;
+    responded: number;
+  }[];
 }
 
 interface SellerNote {
@@ -185,7 +197,9 @@ function formatCurrency(amount: number) {
 
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString("en-US", {
-    year: "numeric", month: "short", day: "numeric",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   });
 }
 
@@ -204,7 +218,9 @@ export function AdminSellerCRM() {
   const [total, setTotal] = useState(0);
 
   // Profile drawer
-  const [selectedSeller, setSelectedSeller] = useState<SellerProfile | null>(null);
+  const [selectedSeller, setSelectedSeller] = useState<SellerProfile | null>(
+    null,
+  );
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [notes, setNotes] = useState<SellerNote[]>([]);
@@ -284,12 +300,17 @@ export function AdminSellerCRM() {
     try {
       const res = await adminApi.getSellerExport();
       const data: any[] = res.data;
-      if (!data.length) { toast({ title: "No data to export" }); return; }
+      if (!data.length) {
+        toast({ title: "No data to export" });
+        return;
+      }
       const headers = Object.keys(data[0]);
       const csv = [
         headers.join(","),
         ...data.map((row) =>
-          headers.map((h) => `"${String(row[h] ?? "").replace(/"/g, '""')}"`).join(","),
+          headers
+            .map((h) => `"${String(row[h] ?? "").replace(/"/g, '""')}"`)
+            .join(","),
         ),
       ].join("\n");
       const blob = new Blob([csv], { type: "text/csv" });
@@ -318,19 +339,25 @@ export function AdminSellerCRM() {
           </Card>
           <Card>
             <CardContent className="p-3 text-center">
-              <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+              <p className="text-2xl font-bold text-green-600">
+                {stats.active}
+              </p>
               <p className="text-xs text-muted-foreground">Active</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-3 text-center">
-              <p className="text-2xl font-bold text-red-600">{stats.inactive}</p>
+              <p className="text-2xl font-bold text-red-600">
+                {stats.inactive}
+              </p>
               <p className="text-xs text-muted-foreground">Inactive</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-3 text-center">
-              <p className="text-2xl font-bold text-blue-600">{stats.verified}</p>
+              <p className="text-2xl font-bold text-blue-600">
+                {stats.verified}
+              </p>
               <p className="text-xs text-muted-foreground">Verified</p>
             </CardContent>
           </Card>
@@ -342,19 +369,26 @@ export function AdminSellerCRM() {
           </Card>
           <Card>
             <CardContent className="p-3 text-center">
-              <p className="text-2xl font-bold text-purple-600">{stats.tiers?.ELITE || 0}</p>
+              <p className="text-2xl font-bold text-purple-600">
+                {stats.tiers?.ELITE || 0}
+              </p>
               <p className="text-xs text-muted-foreground">Elite Tier</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-3 text-center">
-              <p className="text-2xl font-bold">{formatCurrency(stats.avgRevenue)}</p>
+              <p className="text-2xl font-bold">
+                {formatCurrency(stats.avgRevenue)}
+              </p>
               <p className="text-xs text-muted-foreground">Avg Revenue</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-3 text-center">
-              <p className="text-2xl font-bold">{stats.avgRating}<Star className="h-3 w-3 inline ml-1 text-yellow-500" /></p>
+              <p className="text-2xl font-bold">
+                {stats.avgRating}
+                <Star className="h-3 w-3 inline ml-1 text-yellow-500" />
+              </p>
               <p className="text-xs text-muted-foreground">Avg Rating</p>
             </CardContent>
           </Card>
@@ -368,12 +402,23 @@ export function AdminSellerCRM() {
           <Input
             placeholder="Search shops, phone, email, city..."
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             className="pl-10"
           />
         </div>
-        <Select value={tierFilter} onValueChange={(v) => { setTierFilter(v); setPage(1); }}>
-          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Tier" /></SelectTrigger>
+        <Select
+          value={tierFilter}
+          onValueChange={(v) => {
+            setTierFilter(v);
+            setPage(1);
+          }}
+        >
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Tier" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Tiers</SelectItem>
             <SelectItem value="STANDARD">Standard</SelectItem>
@@ -382,8 +427,16 @@ export function AdminSellerCRM() {
             <SelectItem value="ELITE">Elite</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
+        <Select
+          value={statusFilter}
+          onValueChange={(v) => {
+            setStatusFilter(v);
+            setPage(1);
+          }}
+        >
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="active">Active</SelectItem>
@@ -393,8 +446,16 @@ export function AdminSellerCRM() {
             <SelectItem value="unverified">Unverified</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={sortBy} onValueChange={(v) => { setSortBy(v); setPage(1); }}>
-          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Sort" /></SelectTrigger>
+        <Select
+          value={sortBy}
+          onValueChange={(v) => {
+            setSortBy(v);
+            setPage(1);
+          }}
+        >
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Sort" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="createdAt">Newest</SelectItem>
             <SelectItem value="revenue">Revenue</SelectItem>
@@ -435,12 +496,20 @@ export function AdminSellerCRM() {
               </TableHeader>
               <TableBody>
                 {sellers.map((s) => (
-                  <TableRow key={s.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openProfile(s.id)}>
+                  <TableRow
+                    key={s.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => openProfile(s.id)}
+                  >
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center overflow-hidden">
                           {s.profileImage ? (
-                            <img src={s.profileImage} alt="" className="w-full h-full object-cover" />
+                            <img
+                              src={s.profileImage}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
                           ) : (
                             <Store className="h-4 w-4 text-muted-foreground" />
                           )}
@@ -448,30 +517,47 @@ export function AdminSellerCRM() {
                         <div>
                           <p className="font-medium text-sm">{s.shopName}</p>
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />{s.city}
-                            {s.owner && <span> · {s.owner.firstName} {s.owner.lastName}</span>}
+                            <MapPin className="h-3 w-3" />
+                            {s.city}
+                            {s.owner && (
+                              <span>
+                                {" "}
+                                · {s.owner.firstName} {s.owner.lastName}
+                              </span>
+                            )}
                           </p>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary" className={tierColor[s.sellerTier] || ""}>
+                      <Badge
+                        variant="secondary"
+                        className={tierColor[s.sellerTier] || ""}
+                      >
                         {s.sellerTier}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        <span className={`font-bold text-sm ${s.healthScore >= 70 ? "text-green-600" : s.healthScore >= 50 ? "text-yellow-600" : "text-red-600"}`}>
+                        <span
+                          className={`font-bold text-sm ${s.healthScore >= 70 ? "text-green-600" : s.healthScore >= 50 ? "text-yellow-600" : "text-red-600"}`}
+                        >
                           {s.healthScore}
                         </span>
-                        <span className="text-xs text-muted-foreground">/100</span>
+                        <span className="text-xs text-muted-foreground">
+                          /100
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm">{s.performance?.totalOrders || 0}</span>
+                      <span className="text-sm">
+                        {s.performance?.totalOrders || 0}
+                      </span>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm">{formatCurrency(s.performance?.totalRevenue || 0)}</span>
+                      <span className="text-sm">
+                        {formatCurrency(s.performance?.totalRevenue || 0)}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <span className="text-sm flex items-center gap-1">
@@ -481,14 +567,46 @@ export function AdminSellerCRM() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        {s.isVerified && <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">Verified</Badge>}
-                        {s.isOnHold && <Badge variant="secondary" className="bg-red-100 text-red-800 text-xs">On Hold</Badge>}
-                        {!s.isActive && <Badge variant="secondary" className="bg-gray-100 text-gray-800 text-xs">Inactive</Badge>}
-                        {s.isActive && !s.isOnHold && !s.isVerified && <Badge variant="secondary" className="text-xs">Active</Badge>}
+                        {s.isVerified && (
+                          <Badge
+                            variant="secondary"
+                            className="bg-green-100 text-green-800 text-xs"
+                          >
+                            Verified
+                          </Badge>
+                        )}
+                        {s.isOnHold && (
+                          <Badge
+                            variant="secondary"
+                            className="bg-red-100 text-red-800 text-xs"
+                          >
+                            On Hold
+                          </Badge>
+                        )}
+                        {!s.isActive && (
+                          <Badge
+                            variant="secondary"
+                            className="bg-gray-100 text-gray-800 text-xs"
+                          >
+                            Inactive
+                          </Badge>
+                        )}
+                        {s.isActive && !s.isOnHold && !s.isVerified && (
+                          <Badge variant="secondary" className="text-xs">
+                            Active
+                          </Badge>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openProfile(s.id); }}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openProfile(s.id);
+                        }}
+                      >
                         <Eye className="h-4 w-4" />
                       </Button>
                     </TableCell>
@@ -504,13 +622,24 @@ export function AdminSellerCRM() {
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Showing {(page - 1) * 20 + 1}-{Math.min(page * 20, total)} of {total}
+            Showing {(page - 1) * 20 + 1}-{Math.min(page * 20, total)} of{" "}
+            {total}
           </p>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -533,7 +662,10 @@ export function AdminSellerCRM() {
                   {selectedSeller.shop?.isVerified && (
                     <Shield className="h-4 w-4 text-green-600" />
                   )}
-                  <Badge variant="secondary" className={tierColor[selectedSeller.shop?.sellerTier] || ""}>
+                  <Badge
+                    variant="secondary"
+                    className={tierColor[selectedSeller.shop?.sellerTier] || ""}
+                  >
                     {selectedSeller.shop?.sellerTier}
                   </Badge>
                 </DialogTitle>
@@ -558,26 +690,52 @@ export function AdminSellerCRM() {
                           <Heart className="h-4 w-4" /> Health Score
                         </h3>
                         <div className="flex items-center gap-2">
-                          <span className={`text-3xl font-bold ${gradeColor[selectedSeller.healthScore.grade] || ""}`}>
+                          <span
+                            className={`text-3xl font-bold ${gradeColor[selectedSeller.healthScore.grade] || ""}`}
+                          >
                             {selectedSeller.healthScore.totalScore}
                           </span>
-                          <span className={`text-lg font-bold ${gradeColor[selectedSeller.healthScore.grade] || ""}`}>
+                          <span
+                            className={`text-lg font-bold ${gradeColor[selectedSeller.healthScore.grade] || ""}`}
+                          >
                             ({selectedSeller.healthScore.grade})
                           </span>
                         </div>
                       </div>
                       <div className="grid grid-cols-5 gap-3">
                         {[
-                          { label: "Profile", ...selectedSeller.healthScore.profileCompleteness },
-                          { label: "Performance", ...selectedSeller.healthScore.performanceMetrics },
-                          { label: "Verification", ...selectedSeller.healthScore.verificationStatus },
-                          { label: "Capabilities", ...selectedSeller.healthScore.capabilitySetup },
-                          { label: "Engagement", ...selectedSeller.healthScore.engagementActivity },
+                          {
+                            label: "Profile",
+                            ...selectedSeller.healthScore.profileCompleteness,
+                          },
+                          {
+                            label: "Performance",
+                            ...selectedSeller.healthScore.performanceMetrics,
+                          },
+                          {
+                            label: "Verification",
+                            ...selectedSeller.healthScore.verificationStatus,
+                          },
+                          {
+                            label: "Capabilities",
+                            ...selectedSeller.healthScore.capabilitySetup,
+                          },
+                          {
+                            label: "Engagement",
+                            ...selectedSeller.healthScore.engagementActivity,
+                          },
                         ].map((item) => (
                           <div key={item.label} className="text-center">
-                            <p className="text-xs text-muted-foreground mb-1">{item.label}</p>
-                            <p className="font-bold text-sm">{item.score}/{item.max}</p>
-                            <Progress value={(item.score / item.max) * 100} className="h-1.5 mt-1" />
+                            <p className="text-xs text-muted-foreground mb-1">
+                              {item.label}
+                            </p>
+                            <p className="font-bold text-sm">
+                              {item.score}/{item.max}
+                            </p>
+                            <Progress
+                              value={(item.score / item.max) * 100}
+                              className="h-1.5 mt-1"
+                            />
                           </div>
                         ))}
                       </div>
@@ -589,29 +747,50 @@ export function AdminSellerCRM() {
                     <Card>
                       <CardContent className="p-3 text-center">
                         <ShoppingBag className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                        <p className="text-xl font-bold">{selectedSeller.performance?.totalOrders || 0}</p>
-                        <p className="text-xs text-muted-foreground">Total Orders</p>
+                        <p className="text-xl font-bold">
+                          {selectedSeller.performance?.totalOrders || 0}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Total Orders
+                        </p>
                       </CardContent>
                     </Card>
                     <Card>
                       <CardContent className="p-3 text-center">
                         <TrendingUp className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                        <p className="text-xl font-bold">{formatCurrency(selectedSeller.performance?.totalRevenue || 0)}</p>
+                        <p className="text-xl font-bold">
+                          {formatCurrency(
+                            selectedSeller.performance?.totalRevenue || 0,
+                          )}
+                        </p>
                         <p className="text-xs text-muted-foreground">Revenue</p>
                       </CardContent>
                     </Card>
                     <Card>
                       <CardContent className="p-3 text-center">
                         <Star className="h-4 w-4 mx-auto mb-1 text-yellow-500" />
-                        <p className="text-xl font-bold">{(selectedSeller.performance?.avgRating || 0).toFixed(1)}</p>
-                        <p className="text-xs text-muted-foreground">Avg Rating</p>
+                        <p className="text-xl font-bold">
+                          {(selectedSeller.performance?.avgRating || 0).toFixed(
+                            1,
+                          )}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Avg Rating
+                        </p>
                       </CardContent>
                     </Card>
                     <Card>
                       <CardContent className="p-3 text-center">
                         <XCircle className="h-4 w-4 mx-auto mb-1 text-red-400" />
-                        <p className="text-xl font-bold">{(selectedSeller.performance?.cancellationRate || 0).toFixed(1)}%</p>
-                        <p className="text-xs text-muted-foreground">Cancellation</p>
+                        <p className="text-xl font-bold">
+                          {(
+                            selectedSeller.performance?.cancellationRate || 0
+                          ).toFixed(1)}
+                          %
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Cancellation
+                        </p>
                       </CardContent>
                     </Card>
                   </div>
@@ -620,25 +799,53 @@ export function AdminSellerCRM() {
                   <div className="grid md:grid-cols-2 gap-4">
                     <Card>
                       <CardContent className="p-4">
-                        <h4 className="font-semibold text-sm mb-3">Shop Details</h4>
+                        <h4 className="font-semibold text-sm mb-3">
+                          Shop Details
+                        </h4>
                         <div className="space-y-2 text-sm">
-                          <p className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5" />{selectedSeller.shop?.city}, {selectedSeller.shop?.state || selectedSeller.shop?.country}</p>
-                          <p className="flex items-center gap-2"><Phone className="h-3.5 w-3.5" />{selectedSeller.shop?.contactPhone}</p>
-                          {selectedSeller.shop?.contactEmail && <p className="flex items-center gap-2">{selectedSeller.shop.contactEmail}</p>}
-                          <p className="flex items-center gap-2"><Users className="h-3.5 w-3.5" />Owner: {selectedSeller.shop?.user?.firstName} {selectedSeller.shop?.user?.lastName}</p>
-                          <p className="text-muted-foreground">Joined: {formatDate(selectedSeller.shop?.createdAt)}</p>
+                          <p className="flex items-center gap-2">
+                            <MapPin className="h-3.5 w-3.5" />
+                            {selectedSeller.shop?.city},{" "}
+                            {selectedSeller.shop?.state ||
+                              selectedSeller.shop?.country}
+                          </p>
+                          <p className="flex items-center gap-2">
+                            <Phone className="h-3.5 w-3.5" />
+                            {selectedSeller.shop?.contactPhone}
+                          </p>
+                          {selectedSeller.shop?.contactEmail && (
+                            <p className="flex items-center gap-2">
+                              {selectedSeller.shop.contactEmail}
+                            </p>
+                          )}
+                          <p className="flex items-center gap-2">
+                            <Users className="h-3.5 w-3.5" />
+                            Owner: {selectedSeller.shop?.user?.firstName}{" "}
+                            {selectedSeller.shop?.user?.lastName}
+                          </p>
+                          <p className="text-muted-foreground">
+                            Joined: {formatDate(selectedSeller.shop?.createdAt)}
+                          </p>
                         </div>
                       </CardContent>
                     </Card>
                     <Card>
                       <CardContent className="p-4">
-                        <h4 className="font-semibold text-sm mb-3">Badges ({selectedSeller.badges.length})</h4>
+                        <h4 className="font-semibold text-sm mb-3">
+                          Badges ({selectedSeller.badges.length})
+                        </h4>
                         {selectedSeller.badges.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">No badges earned yet</p>
+                          <p className="text-sm text-muted-foreground">
+                            No badges earned yet
+                          </p>
                         ) : (
                           <div className="flex flex-wrap gap-2">
                             {selectedSeller.badges.map((b: any) => (
-                              <Badge key={b.id} variant="secondary" className="flex items-center gap-1">
+                              <Badge
+                                key={b.id}
+                                variant="secondary"
+                                className="flex items-center gap-1"
+                              >
                                 <Award className="h-3 w-3" />
                                 {b.badgeType.replace(/_/g, " ")}
                               </Badge>
@@ -653,20 +860,33 @@ export function AdminSellerCRM() {
                   {selectedSeller.recentOrders.length > 0 && (
                     <Card>
                       <CardContent className="p-4">
-                        <h4 className="font-semibold text-sm mb-3">Recent Orders</h4>
+                        <h4 className="font-semibold text-sm mb-3">
+                          Recent Orders
+                        </h4>
                         <div className="space-y-2">
-                          {selectedSeller.recentOrders.slice(0, 5).map((o: any) => (
-                            <div key={o.id} className="flex items-center justify-between text-sm">
-                              <div>
-                                <span className="font-mono text-xs">#{o.orderNumber}</span>
-                                <span className="text-muted-foreground ml-2">{o.buyer?.firstName} {o.buyer?.lastName}</span>
+                          {selectedSeller.recentOrders
+                            .slice(0, 5)
+                            .map((o: any) => (
+                              <div
+                                key={o.id}
+                                className="flex items-center justify-between text-sm"
+                              >
+                                <div>
+                                  <span className="font-mono text-xs">
+                                    #{o.orderNumber}
+                                  </span>
+                                  <span className="text-muted-foreground ml-2">
+                                    {o.buyer?.firstName} {o.buyer?.lastName}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-xs">
+                                    {o.status}
+                                  </Badge>
+                                  <span>{formatCurrency(o.totalPriceNpr)}</span>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-xs">{o.status}</Badge>
-                                <span>{formatCurrency(o.totalPriceNpr)}</span>
-                              </div>
-                            </div>
-                          ))}
+                            ))}
                         </div>
                       </CardContent>
                     </Card>
@@ -677,22 +897,36 @@ export function AdminSellerCRM() {
                 <TabsContent value="milestones" className="space-y-4 mt-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {selectedSeller.milestones.map((m) => (
-                      <Card key={m.id} className={m.achieved ? "border-green-200 bg-green-50/50" : ""}>
+                      <Card
+                        key={m.id}
+                        className={
+                          m.achieved ? "border-green-200 bg-green-50/50" : ""
+                        }
+                      >
                         <CardContent className="p-3">
                           <div className="flex items-start gap-3">
                             <span className="text-2xl">{m.icon}</span>
                             <div className="flex-1">
                               <div className="flex items-center justify-between">
-                                <h4 className="font-semibold text-sm">{m.title}</h4>
+                                <h4 className="font-semibold text-sm">
+                                  {m.title}
+                                </h4>
                                 {m.achieved ? (
                                   <CheckCircle className="h-4 w-4 text-green-600" />
                                 ) : (
-                                  <span className="text-xs text-muted-foreground">{Math.round(m.progress)}%</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {Math.round(m.progress)}%
+                                  </span>
                                 )}
                               </div>
-                              <p className="text-xs text-muted-foreground">{m.description}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {m.description}
+                              </p>
                               {!m.achieved && (
-                                <Progress value={m.progress} className="h-1.5 mt-2" />
+                                <Progress
+                                  value={m.progress}
+                                  className="h-1.5 mt-2"
+                                />
                               )}
                             </div>
                           </div>
@@ -702,7 +936,10 @@ export function AdminSellerCRM() {
                   </div>
                   <div className="text-center text-sm text-muted-foreground">
                     <Trophy className="h-4 w-4 inline mr-1" />
-                    {selectedSeller.milestones.filter((m) => m.achieved).length} of {selectedSeller.milestones.length} achieved
+                    {
+                      selectedSeller.milestones.filter((m) => m.achieved).length
+                    }{" "}
+                    of {selectedSeller.milestones.length} achieved
                   </div>
                 </TabsContent>
 
@@ -712,29 +949,43 @@ export function AdminSellerCRM() {
                     <Card>
                       <CardContent className="p-3 text-center">
                         <Target className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                        <p className="text-xl font-bold">{selectedSeller.rfqFunnel.totalTargeted}</p>
-                        <p className="text-xs text-muted-foreground">Targeted</p>
+                        <p className="text-xl font-bold">
+                          {selectedSeller.rfqFunnel.totalTargeted}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Targeted
+                        </p>
                       </CardContent>
                     </Card>
                     <Card>
                       <CardContent className="p-3 text-center">
                         <Eye className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                        <p className="text-xl font-bold">{selectedSeller.rfqFunnel.viewed}</p>
+                        <p className="text-xl font-bold">
+                          {selectedSeller.rfqFunnel.viewed}
+                        </p>
                         <p className="text-xs text-muted-foreground">Viewed</p>
                       </CardContent>
                     </Card>
                     <Card>
                       <CardContent className="p-3 text-center">
                         <MessageSquare className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                        <p className="text-xl font-bold">{selectedSeller.rfqFunnel.responded}</p>
-                        <p className="text-xs text-muted-foreground">Responded</p>
+                        <p className="text-xl font-bold">
+                          {selectedSeller.rfqFunnel.responded}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Responded
+                        </p>
                       </CardContent>
                     </Card>
                     <Card>
                       <CardContent className="p-3 text-center">
                         <BarChart3 className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                        <p className="text-xl font-bold">{selectedSeller.rfqFunnel.responseRate}%</p>
-                        <p className="text-xs text-muted-foreground">Response Rate</p>
+                        <p className="text-xl font-bold">
+                          {selectedSeller.rfqFunnel.responseRate}%
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Response Rate
+                        </p>
                       </CardContent>
                     </Card>
                     <Card>
@@ -745,7 +996,9 @@ export function AdminSellerCRM() {
                             ? `${selectedSeller.rfqFunnel.avgResponseTimeHours}h`
                             : "N/A"}
                         </p>
-                        <p className="text-xs text-muted-foreground">Avg Response</p>
+                        <p className="text-xs text-muted-foreground">
+                          Avg Response
+                        </p>
                       </CardContent>
                     </Card>
                   </div>
@@ -754,25 +1007,43 @@ export function AdminSellerCRM() {
                   {selectedSeller.rfqFunnel.periodBreakdown.length > 0 && (
                     <Card>
                       <CardContent className="p-4">
-                        <h4 className="font-semibold text-sm mb-3">Weekly Breakdown</h4>
+                        <h4 className="font-semibold text-sm mb-3">
+                          Weekly Breakdown
+                        </h4>
                         <Table>
                           <TableHeader>
                             <TableRow>
                               <TableHead>Period</TableHead>
-                              <TableHead className="text-center">Targeted</TableHead>
-                              <TableHead className="text-center">Viewed</TableHead>
-                              <TableHead className="text-center">Responded</TableHead>
+                              <TableHead className="text-center">
+                                Targeted
+                              </TableHead>
+                              <TableHead className="text-center">
+                                Viewed
+                              </TableHead>
+                              <TableHead className="text-center">
+                                Responded
+                              </TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {selectedSeller.rfqFunnel.periodBreakdown.map((w) => (
-                              <TableRow key={w.period}>
-                                <TableCell className="text-sm">{w.period}</TableCell>
-                                <TableCell className="text-center">{w.targeted}</TableCell>
-                                <TableCell className="text-center">{w.viewed}</TableCell>
-                                <TableCell className="text-center">{w.responded}</TableCell>
-                              </TableRow>
-                            ))}
+                            {selectedSeller.rfqFunnel.periodBreakdown.map(
+                              (w) => (
+                                <TableRow key={w.period}>
+                                  <TableCell className="text-sm">
+                                    {w.period}
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    {w.targeted}
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    {w.viewed}
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    {w.responded}
+                                  </TableCell>
+                                </TableRow>
+                              ),
+                            )}
                           </TableBody>
                         </Table>
                       </CardContent>
@@ -790,7 +1061,10 @@ export function AdminSellerCRM() {
                           {selectedSeller.onboarding.percentage}%
                         </span>
                       </div>
-                      <Progress value={selectedSeller.onboarding.percentage} className="h-2 mb-4" />
+                      <Progress
+                        value={selectedSeller.onboarding.percentage}
+                        className="h-2 mb-4"
+                      />
 
                       {Object.entries(selectedSeller.onboarding.categories).map(
                         ([cat, data]) => (
@@ -805,13 +1079,22 @@ export function AdminSellerCRM() {
                               {selectedSeller.onboarding.steps
                                 .filter((s) => s.category === cat)
                                 .map((step) => (
-                                  <div key={step.key} className="flex items-center gap-2 text-sm">
+                                  <div
+                                    key={step.key}
+                                    className="flex items-center gap-2 text-sm"
+                                  >
                                     {step.completed ? (
                                       <CheckCircle className="h-3.5 w-3.5 text-green-600 shrink-0" />
                                     ) : (
                                       <XCircle className="h-3.5 w-3.5 text-gray-300 shrink-0" />
                                     )}
-                                    <span className={step.completed ? "text-muted-foreground line-through" : ""}>
+                                    <span
+                                      className={
+                                        step.completed
+                                          ? "text-muted-foreground line-through"
+                                          : ""
+                                      }
+                                    >
                                       {step.label}
                                     </span>
                                   </div>
@@ -837,19 +1120,32 @@ export function AdminSellerCRM() {
                           rows={3}
                         />
                         <div className="flex items-center gap-2">
-                          <Select value={noteCategory} onValueChange={setNoteCategory}>
+                          <Select
+                            value={noteCategory}
+                            onValueChange={setNoteCategory}
+                          >
                             <SelectTrigger className="w-[140px]">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="GENERAL">General</SelectItem>
-                              <SelectItem value="PERFORMANCE">Performance</SelectItem>
-                              <SelectItem value="COMPLIANCE">Compliance</SelectItem>
+                              <SelectItem value="PERFORMANCE">
+                                Performance
+                              </SelectItem>
+                              <SelectItem value="COMPLIANCE">
+                                Compliance
+                              </SelectItem>
                               <SelectItem value="SUPPORT">Support</SelectItem>
-                              <SelectItem value="ENGAGEMENT">Engagement</SelectItem>
+                              <SelectItem value="ENGAGEMENT">
+                                Engagement
+                              </SelectItem>
                             </SelectContent>
                           </Select>
-                          <Button size="sm" onClick={addNote} disabled={!newNote.trim()}>
+                          <Button
+                            size="sm"
+                            onClick={addNote}
+                            disabled={!newNote.trim()}
+                          >
                             Add Note
                           </Button>
                         </div>
@@ -858,7 +1154,9 @@ export function AdminSellerCRM() {
                   </Card>
 
                   {notes.length === 0 ? (
-                    <p className="text-center text-sm text-muted-foreground py-6">No notes yet</p>
+                    <p className="text-center text-sm text-muted-foreground py-6">
+                      No notes yet
+                    </p>
                   ) : (
                     <div className="space-y-2">
                       {notes.map((n) => (
@@ -868,10 +1166,13 @@ export function AdminSellerCRM() {
                               <div>
                                 <p className="text-sm">{n.note}</p>
                                 <p className="text-xs text-muted-foreground mt-1">
-                                  {n.author.firstName} {n.author.lastName} · {formatDate(n.createdAt)}
+                                  {n.author.firstName} {n.author.lastName} ·{" "}
+                                  {formatDate(n.createdAt)}
                                 </p>
                               </div>
-                              <Badge variant="outline" className="text-xs">{n.category}</Badge>
+                              <Badge variant="outline" className="text-xs">
+                                {n.category}
+                              </Badge>
                             </div>
                           </CardContent>
                         </Card>

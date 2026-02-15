@@ -16,9 +16,9 @@ import {
   calculateBaseMetalCost,
   calculatePlatingCost,
   getBaseMetal,
+  getDefaultFinishPrice,
   getPlatingOption,
   getPlatingTier,
-  getDefaultFinishPrice,
   JEWELLERY_SURFACE_FACTORS,
   type BaseMetalType,
   type PlatingTierC,
@@ -535,7 +535,8 @@ export function calculateEstimate(request: EstimateRequest): EstimateBreakdown {
 
       // Calculate plating cost (REQUIRED for Method C) — use shop override if available
       if (platingType && platingTier && weightGrams > 0) {
-        const shopPlatingRate = request.shopPrices?.platingPrices?.[platingType];
+        const shopPlatingRate =
+          request.shopPrices?.platingPrices?.[platingType];
         if (shopPlatingRate !== undefined && shopPlatingRate > 0) {
           // Use shop rate as baseRateNpr but still apply tier & surface modifiers
           const tierInfo = getPlatingTier(platingTier);

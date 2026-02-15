@@ -26,6 +26,7 @@ import { adminApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
   Award,
+  Brain,
   Calculator,
   ChevronDown,
   ClipboardList,
@@ -115,6 +116,12 @@ const navItems: NavItem[] = [
     label: "Settings",
     href: "/dashboard/admin/settings",
     icon: Settings,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Intelligence",
+    href: "/dashboard/admin/intelligence",
+    icon: Brain,
     roles: ["ADMIN"],
   },
 

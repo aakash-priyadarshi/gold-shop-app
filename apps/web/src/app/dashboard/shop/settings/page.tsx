@@ -32,7 +32,6 @@ import { authApi, sellerPerformanceApi, shopsApi } from "@/lib/api";
 import { getCitiesForCountry, getStatesForCountry } from "@gold-shop/shared";
 import {
   AlertTriangle,
-  ArrowUpRight,
   Award,
   Building2,
   CheckCircle,
@@ -937,10 +936,7 @@ export default function ShopSettingsPage() {
                                         : `Requirements for ${viewMeta.label}`}
                                     </h5>
                                     <span className="text-sm font-bold text-primary">
-                                      {
-                                        tierDashboard.overallProgress
-                                          .percentage
-                                      }
+                                      {tierDashboard.overallProgress.percentage}
                                       %
                                     </span>
                                   </div>

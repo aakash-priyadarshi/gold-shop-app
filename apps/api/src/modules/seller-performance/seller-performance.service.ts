@@ -431,7 +431,9 @@ export class SellerPerformanceService {
         });
       }
     } catch (err) {
-      this.logger.error(`Failed to notify tier change for shop ${shopId}: ${err.message}`);
+      this.logger.error(
+        `Failed to notify tier change for shop ${shopId}: ${err.message}`,
+      );
     }
   }
 
@@ -678,7 +680,9 @@ export class SellerPerformanceService {
           channels: ["EMAIL"],
         });
       } catch (err) {
-        this.logger.error(`Weekly digest failed for shop ${shop.id}: ${err.message}`);
+        this.logger.error(
+          `Weekly digest failed for shop ${shop.id}: ${err.message}`,
+        );
       }
     }
 
@@ -720,10 +724,14 @@ export class SellerPerformanceService {
           channels: ["EMAIL", "PUSH"],
         });
       } catch (err) {
-        this.logger.error(`Dormant notification failed for shop ${shop.id}: ${err.message}`);
+        this.logger.error(
+          `Dormant notification failed for shop ${shop.id}: ${err.message}`,
+        );
       }
     }
 
-    this.logger.log(`Found ${dormantShops.length} dormant shops, notifications sent`);
+    this.logger.log(
+      `Found ${dormantShops.length} dormant shops, notifications sent`,
+    );
   }
 }

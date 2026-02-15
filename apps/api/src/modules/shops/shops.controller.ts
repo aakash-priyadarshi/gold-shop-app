@@ -358,7 +358,8 @@ export class ShopsController {
 
   @Get(":id/component-pricing")
   @ApiOperation({
-    summary: "Get shop component pricing (public — base metals, plating, finishes)",
+    summary:
+      "Get shop component pricing (public — base metals, plating, finishes)",
   })
   async getShopComponentPricingPublic(@Param("id") id: string) {
     return this.shopsService.getShopComponentPricing(id);

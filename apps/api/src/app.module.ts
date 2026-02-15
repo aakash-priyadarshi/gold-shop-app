@@ -19,6 +19,7 @@ import { JobsModule } from "./modules/jobs/jobs.module";
 import { MailModule } from "./modules/mail/mail.module";
 import { MarketConfigModule } from "./modules/market-config/market-config.module";
 import { MarketRatesModule } from "./modules/market-rates/market-rates.module";
+import { MarketplaceIntelligenceModule } from "./modules/marketplace-intelligence/marketplace-intelligence.module";
 import { MaterialsModule } from "./modules/materials/materials.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { OffersModule } from "./modules/offers/offers.module";
@@ -94,6 +95,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     PlatformConfigModule,
     SellerPerformanceModule,
     CustomerCrmModule,
+    MarketplaceIntelligenceModule,
   ],
 })
 export class AppModule {}

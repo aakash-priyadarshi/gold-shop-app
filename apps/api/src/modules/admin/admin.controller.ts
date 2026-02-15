@@ -1,31 +1,31 @@
 import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    HttpCode,
-    HttpStatus,
-    Logger,
-    Param,
-    Patch,
-    Post,
-    Query,
-    UseGuards,
-} from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { UserRole } from '@prisma/client';
-import * as bcrypt from 'bcryptjs';
-import { PrismaService } from '../../prisma/prisma.service';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { MailService } from '../mail/mail.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import { SellerEngagementService } from '../seller-performance/seller-engagement.service';
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Logger,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { UserRole } from "@prisma/client";
+import * as bcrypt from "bcryptjs";
+import { PrismaService } from "../../prisma/prisma.service";
+import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { Roles } from "../auth/decorators/roles.decorator";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RolesGuard } from "../auth/guards/roles.guard";
+import { MailService } from "../mail/mail.service";
+import { NotificationsService } from "../notifications/notifications.service";
+import { SellerEngagementService } from "../seller-performance/seller-engagement.service";
 
-@ApiTags('admin')
-@Controller('admin')
+@ApiTags("admin")
+@Controller("admin")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class AdminController {
@@ -42,13 +42,13 @@ export class AdminController {
   // VERIFICATION REQUESTS
   // ═══════════════════════════════════════
 
-  @Get('verifications')
+  @Get("verifications")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'List all verification requests' })
-  async getVerifications(@Query('status') status?: string) {
+  @ApiOperation({ summary: "List all verification requests" })
+  async getVerifications(@Query("status") status?: string) {
     const requests = await this.prisma.verificationRequest.findMany({
       where: status ? { status } : undefined,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       include: {
         shop: {
           select: {
@@ -70,17 +70,17 @@ export class AdminController {
         },
       },
     });
-    
-    const pending = requests.filter(r => r.status === 'PENDING').length;
+
+    const pending = requests.filter((r) => r.status === "PENDING").length;
     return { requests, pendingCount: pending };
   }
 
-  @Patch('verifications/:id/approve')
+  @Patch("verifications/:id/approve")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Approve a verification request' })
+  @ApiOperation({ summary: "Approve a verification request" })
   async approveVerification(
-    @Param('id') id: string,
-    @CurrentUser('id') adminId: string,
+    @Param("id") id: string,
+    @CurrentUser("id") adminId: string,
   ) {
     const request = await this.prisma.verificationRequest.findUnique({
       where: { id },
@@ -88,16 +88,16 @@ export class AdminController {
     });
 
     if (!request) {
-      return { error: 'Verification request not found' };
+      return { error: "Verification request not found" };
     }
 
     await this.prisma.verificationRequest.update({
       where: { id },
-      data: { status: 'APPROVED' },
+      data: { status: "APPROVED" },
     });
 
     // Update the shop or user as verified
-    if (request.type === 'SHOP' && request.shopId) {
+    if (request.type === "SHOP" && request.shopId) {
       await this.prisma.shop.update({
         where: { id: request.shopId },
         data: { isVerified: true },
@@ -107,51 +107,51 @@ export class AdminController {
       if (request.shop?.userId) {
         await this.notificationsService.create({
           userId: request.shop.userId,
-          type: 'SYSTEM_ALERT',
-          titleKey: 'notification.shop_verified.title',
-          bodyKey: 'notification.shop_verified.body',
-          channels: ['EMAIL', 'PUSH'],
+          type: "SYSTEM_ALERT",
+          titleKey: "notification.shop_verified.title",
+          bodyKey: "notification.shop_verified.body",
+          channels: ["EMAIL", "PUSH"],
         });
       }
-    } else if (request.type === 'USER' && request.userId) {
+    } else if (request.type === "USER" && request.userId) {
       await this.prisma.user.update({
         where: { id: request.userId },
-        data: { status: 'ACTIVE' },
+        data: { status: "ACTIVE" },
       });
     }
 
-    return { success: true, message: 'Verification approved' };
+    return { success: true, message: "Verification approved" };
   }
 
-  @Patch('verifications/:id/reject')
+  @Patch("verifications/:id/reject")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Reject a verification request' })
+  @ApiOperation({ summary: "Reject a verification request" })
   async rejectVerification(
-    @Param('id') id: string,
-    @Body('reason') reason: string,
+    @Param("id") id: string,
+    @Body("reason") reason: string,
   ) {
     await this.prisma.verificationRequest.update({
       where: { id },
-      data: { 
-        status: 'REJECTED',
+      data: {
+        status: "REJECTED",
         details: { rejectionReason: reason },
       },
     });
 
-    return { success: true, message: 'Verification rejected' };
+    return { success: true, message: "Verification rejected" };
   }
 
   // ═══════════════════════════════════════
   // REPORTS
   // ═══════════════════════════════════════
 
-  @Get('reports')
+  @Get("reports")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'List all user reports' })
-  async getReports(@Query('status') status?: string) {
+  @ApiOperation({ summary: "List all user reports" })
+  async getReports(@Query("status") status?: string) {
     const reports = await this.prisma.report.findMany({
       where: status ? { status } : undefined,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       include: {
         reporter: {
           select: { id: true, email: true, firstName: true, lastName: true },
@@ -164,17 +164,17 @@ export class AdminController {
     return { reports };
   }
 
-  @Patch('reports/:id/resolve')
+  @Patch("reports/:id/resolve")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Resolve a report' })
+  @ApiOperation({ summary: "Resolve a report" })
   async resolveReport(
-    @Param('id') id: string,
-    @Body('resolution') resolution: string,
+    @Param("id") id: string,
+    @Body("resolution") resolution: string,
   ) {
     await this.prisma.report.update({
       where: { id },
-      data: { 
-        status: 'RESOLVED',
+      data: {
+        status: "RESOLVED",
         details: { resolution },
       },
     });
@@ -185,19 +185,22 @@ export class AdminController {
   // USER MANAGEMENT
   // ═══════════════════════════════════════
 
-  @Post('users')
+  @Post("users")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Create a new user' })
-  async createUser(@Body() data: {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    role: UserRole;
-    phone?: string;
-  }) {
+  @ApiOperation({ summary: "Create a new user" })
+  async createUser(
+    @Body()
+    data: {
+      email: string;
+      password: string;
+      firstName: string;
+      lastName: string;
+      role: UserRole;
+      phone?: string;
+    },
+  ) {
     const passwordHash = await bcrypt.hash(data.password, 10);
-    
+
     const user = await this.prisma.user.create({
       data: {
         email: data.email,
@@ -206,12 +209,12 @@ export class AdminController {
         lastName: data.lastName,
         role: data.role,
         phone: data.phone,
-        status: 'ACTIVE',
+        status: "ACTIVE",
       },
     });
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       user: {
         id: user.id,
         email: user.email,
@@ -226,22 +229,25 @@ export class AdminController {
   // SHOP MANAGEMENT
   // ═══════════════════════════════════════
 
-  @Post('shops')
+  @Post("shops")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Create a new shop with owner' })
-  async createShop(@Body() data: {
-    ownerEmail: string;
-    ownerPassword: string;
-    ownerFirstName: string;
-    ownerLastName: string;
-    ownerPhone?: string;
-    shopName: string;
-    city: string;
-    address: string;
-    contactPhone: string;
-    contactEmail?: string;
-    country?: string;
-  }) {
+  @ApiOperation({ summary: "Create a new shop with owner" })
+  async createShop(
+    @Body()
+    data: {
+      ownerEmail: string;
+      ownerPassword: string;
+      ownerFirstName: string;
+      ownerLastName: string;
+      ownerPhone?: string;
+      shopName: string;
+      city: string;
+      address: string;
+      contactPhone: string;
+      contactEmail?: string;
+      country?: string;
+    },
+  ) {
     const passwordHash = await bcrypt.hash(data.ownerPassword, 10);
 
     // Create user and shop in transaction
@@ -253,8 +259,8 @@ export class AdminController {
           firstName: data.ownerFirstName,
           lastName: data.ownerLastName,
           phone: data.ownerPhone,
-          role: 'SHOPKEEPER',
-          status: 'ACTIVE',
+          role: "SHOPKEEPER",
+          status: "ACTIVE",
         },
       });
 
@@ -266,7 +272,7 @@ export class AdminController {
           address: data.address,
           contactPhone: data.contactPhone,
           contactEmail: data.contactEmail,
-          country: data.country || 'NP',
+          country: data.country || "NP",
           isVerified: true, // Admin created = auto verified
         },
       });
@@ -284,13 +290,14 @@ export class AdminController {
     };
   }
 
-  @Post('users/:userId/shops')
+  @Post("users/:userId/shops")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Create a new shop for an existing user' })
+  @ApiOperation({ summary: "Create a new shop for an existing user" })
   async createShopForUser(
-    @Param('userId') userId: string,
-    @CurrentUser('id') adminId: string,
-    @Body() data: {
+    @Param("userId") userId: string,
+    @CurrentUser("id") adminId: string,
+    @Body()
+    data: {
       shopName: string;
       city: string;
       address: string;
@@ -308,14 +315,14 @@ export class AdminController {
     });
 
     if (!user) {
-      return { success: false, error: 'User not found' };
+      return { success: false, error: "User not found" };
     }
 
     // Update user role to SHOPKEEPER if they're a CUSTOMER
-    if (user.role === 'CUSTOMER') {
+    if (user.role === "CUSTOMER") {
       await this.prisma.user.update({
         where: { id: userId },
-        data: { role: 'SHOPKEEPER' },
+        data: { role: "SHOPKEEPER" },
       });
     }
 
@@ -328,7 +335,7 @@ export class AdminController {
         address: data.address,
         contactPhone: data.contactPhone,
         contactEmail: data.contactEmail,
-        country: data.country || 'NP',
+        country: data.country || "NP",
         state: data.state,
         pincode: data.pincode,
         isVerified: data.isVerified ?? true, // Admin created = verified by default
@@ -344,7 +351,9 @@ export class AdminController {
     }
 
     // Log audit
-    this.logger.log(`Admin ${adminId} created shop ${shop.id} for user ${userId}`);
+    this.logger.log(
+      `Admin ${adminId} created shop ${shop.id} for user ${userId}`,
+    );
 
     return {
       success: true,
@@ -358,13 +367,13 @@ export class AdminController {
     };
   }
 
-  @Delete('users/:userId/shops/:shopId')
+  @Delete("users/:userId/shops/:shopId")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Delete a shop from a user' })
+  @ApiOperation({ summary: "Delete a shop from a user" })
   async deleteUserShop(
-    @Param('userId') userId: string,
-    @Param('shopId') shopId: string,
-    @CurrentUser('id') adminId: string,
+    @Param("userId") userId: string,
+    @Param("shopId") shopId: string,
+    @CurrentUser("id") adminId: string,
   ) {
     // Check if shop exists and belongs to user
     const shop = await this.prisma.shop.findFirst({
@@ -372,7 +381,10 @@ export class AdminController {
     });
 
     if (!shop) {
-      return { success: false, error: 'Shop not found or does not belong to this user' };
+      return {
+        success: false,
+        error: "Shop not found or does not belong to this user",
+      };
     }
 
     // Delete shop and related data in transaction
@@ -385,7 +397,7 @@ export class AdminController {
       await tx.verificationRequest.deleteMany({ where: { shopId } });
       // Delete shop
       await tx.shop.delete({ where: { id: shopId } });
-      
+
       // Clear active shop if this was the active one
       const user = await tx.user.findUnique({ where: { id: userId } });
       if (user?.activeShopId === shopId) {
@@ -398,33 +410,35 @@ export class AdminController {
       }
     });
 
-    this.logger.log(`Admin ${adminId} deleted shop ${shopId} from user ${userId}`);
+    this.logger.log(
+      `Admin ${adminId} deleted shop ${shopId} from user ${userId}`,
+    );
 
-    return { success: true, message: 'Shop deleted successfully' };
+    return { success: true, message: "Shop deleted successfully" };
   }
 
   // ═══════════════════════════════════════
   // PLATFORM SETTINGS
   // ═══════════════════════════════════════
 
-  @Get('settings')
+  @Get("settings")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get platform settings' })
+  @ApiOperation({ summary: "Get platform settings" })
   async getSettings() {
     const configs = await this.prisma.systemConfig.findMany();
     const settingsMap: Record<string, any> = {};
-    configs.forEach(c => {
+    configs.forEach((c) => {
       settingsMap[c.key] = c.value;
     });
     return { settings: settingsMap };
   }
 
-  @Patch('settings')
+  @Patch("settings")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Update platform settings' })
+  @ApiOperation({ summary: "Update platform settings" })
   async updateSettings(
     @Body() data: Record<string, any>,
-    @CurrentUser('id') adminId: string,
+    @CurrentUser("id") adminId: string,
   ) {
     for (const [key, value] of Object.entries(data)) {
       await this.prisma.systemConfig.upsert({
@@ -436,40 +450,41 @@ export class AdminController {
     return { success: true };
   }
 
-  @Post('settings/refresh-rates')
+  @Post("settings/refresh-rates")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Trigger market rate refresh' })
+  @ApiOperation({ summary: "Trigger market rate refresh" })
   @HttpCode(HttpStatus.OK)
   async refreshMarketRates() {
     // This would trigger a job to refresh market rates
     // For now, just return success
-    return { success: true, message: 'Market rate refresh triggered' };
+    return { success: true, message: "Market rate refresh triggered" };
   }
 
-  @Post('settings/clear-cache')
+  @Post("settings/clear-cache")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Clear platform cache' })
+  @ApiOperation({ summary: "Clear platform cache" })
   @HttpCode(HttpStatus.OK)
   async clearCache() {
     // TODO: Integrate with Redis to clear cache
-    return { success: true, message: 'Cache cleared' };
+    return { success: true, message: "Cache cleared" };
   }
 
   // ═══════════════════════════════════════
   // SYSTEM NOTIFICATIONS
   // ═══════════════════════════════════════
 
-  @Post('notifications/broadcast')
+  @Post("notifications/broadcast")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Send system notification to all users' })
+  @ApiOperation({ summary: "Send system notification to all users" })
   async broadcastNotification(
-    @Body() data: {
+    @Body()
+    data: {
       title: string;
       message: string;
       type: string;
       targetRoles?: string[];
     },
-    @CurrentUser('id') adminId: string,
+    @CurrentUser("id") adminId: string,
   ) {
     await this.prisma.systemNotification.create({
       data: {
@@ -481,15 +496,15 @@ export class AdminController {
       },
     });
 
-    return { success: true, message: 'Notification broadcasted' };
+    return { success: true, message: "Notification broadcasted" };
   }
 
-  @Get('notifications/system')
+  @Get("notifications/system")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get system notifications' })
+  @ApiOperation({ summary: "Get system notifications" })
   async getSystemNotifications() {
     const notifications = await this.prisma.systemNotification.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: 50,
     });
     return { notifications };
@@ -499,24 +514,24 @@ export class AdminController {
   // EMAIL SETTINGS
   // ═══════════════════════════════════════
 
-  @Post('email/test')
+  @Post("email/test")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Send a test email to verify SMTP configuration' })
+  @ApiOperation({ summary: "Send a test email to verify SMTP configuration" })
   @HttpCode(HttpStatus.OK)
   async sendTestEmail(
     @Body() data: { email: string },
-    @CurrentUser('id') adminId: string,
+    @CurrentUser("id") adminId: string,
   ) {
     if (!data.email) {
-      return { success: false, error: 'Email address is required' };
+      return { success: false, error: "Email address is required" };
     }
 
     this.logger.log(`Sending test email to ${data.email} by admin ${adminId}`);
 
     const result = await this.mailService.send({
       to: data.email,
-      subject: '✅ Orivraa Test Email - SMTP Configuration Working',
-      template: 'test-email',
+      subject: "✅ Orivraa Test Email - SMTP Configuration Working",
+      template: "test-email",
       context: {
         testTime: new Date().toISOString(),
         adminId,
@@ -525,29 +540,32 @@ export class AdminController {
 
     if (result.success) {
       this.logger.log(`Test email sent successfully: ${result.messageId}`);
-      return { 
-        success: true, 
-        message: 'Test email sent successfully',
+      return {
+        success: true,
+        message: "Test email sent successfully",
         messageId: result.messageId,
       };
     } else {
       this.logger.error(`Test email failed: ${result.error}`);
-      return { 
-        success: false, 
-        error: result.error || 'Failed to send test email',
+      return {
+        success: false,
+        error: result.error || "Failed to send test email",
       };
     }
   }
 
-  @Patch('email/admin-address')
+  @Patch("email/admin-address")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Update admin email address' })
+  @ApiOperation({ summary: "Update admin email address" })
   async updateAdminEmail(
     @Body() data: { email: string; currentPassword: string },
-    @CurrentUser('id') adminId: string,
+    @CurrentUser("id") adminId: string,
   ) {
     if (!data.email || !data.currentPassword) {
-      return { success: false, error: 'Email and current password are required' };
+      return {
+        success: false,
+        error: "Email and current password are required",
+      };
     }
 
     // Verify current admin password
@@ -556,12 +574,15 @@ export class AdminController {
     });
 
     if (!admin) {
-      return { success: false, error: 'Admin user not found' };
+      return { success: false, error: "Admin user not found" };
     }
 
-    const isPasswordValid = await bcrypt.compare(data.currentPassword, admin.passwordHash);
+    const isPasswordValid = await bcrypt.compare(
+      data.currentPassword,
+      admin.passwordHash,
+    );
     if (!isPasswordValid) {
-      return { success: false, error: 'Current password is incorrect' };
+      return { success: false, error: "Current password is incorrect" };
     }
 
     // Check if email is already in use
@@ -570,7 +591,10 @@ export class AdminController {
     });
 
     if (existingUser && existingUser.id !== adminId) {
-      return { success: false, error: 'Email is already in use by another user' };
+      return {
+        success: false,
+        error: "Email is already in use by another user",
+      };
     }
 
     // Update the admin email
@@ -581,19 +605,19 @@ export class AdminController {
 
     this.logger.log(`Admin email updated to ${data.email} by ${adminId}`);
 
-    return { 
-      success: true, 
-      message: 'Admin email updated successfully',
+    return {
+      success: true,
+      message: "Admin email updated successfully",
       newEmail: data.email,
     };
   }
 
-  @Get('email/status')
+  @Get("email/status")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get email configuration status' })
+  @ApiOperation({ summary: "Get email configuration status" })
   async getEmailStatus() {
     const providerInfo = this.mailService.getProviderInfo();
-    
+
     return {
       configured: providerInfo.configured,
       provider: providerInfo.provider,
@@ -605,9 +629,9 @@ export class AdminController {
   // DASHBOARD STATS
   // ═══════════════════════════════════════
 
-  @Get('stats')
+  @Get("stats")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get dashboard statistics' })
+  @ApiOperation({ summary: "Get dashboard statistics" })
   async getDashboardStats() {
     const [
       totalUsers,
@@ -619,8 +643,8 @@ export class AdminController {
       this.prisma.user.count(),
       this.prisma.shop.count(),
       this.prisma.order.count(),
-      this.prisma.verificationRequest.count({ where: { status: 'PENDING' } }),
-      this.prisma.report.count({ where: { status: 'OPEN' } }),
+      this.prisma.verificationRequest.count({ where: { status: "PENDING" } }),
+      this.prisma.report.count({ where: { status: "OPEN" } }),
     ]);
 
     return {
@@ -636,44 +660,53 @@ export class AdminController {
   // CUSTOMER CRM (Admin-level, cross-shop)
   // ═══════════════════════════════════════
 
-  @Get('customers')
+  @Get("customers")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'List all customers (registered + walk-in) across all shops' })
+  @ApiOperation({
+    summary: "List all customers (registered + walk-in) across all shops",
+  })
   async listCustomers(
-    @Query('query') query?: string,
-    @Query('type') type?: string, // 'all' | 'registered' | 'walkin'
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
+    @Query("query") query?: string,
+    @Query("type") type?: string, // 'all' | 'registered' | 'walkin'
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
   ) {
-    const pageNum = parseInt(page || '1');
-    const limitNum = parseInt(limit || '25');
+    const pageNum = parseInt(page || "1");
+    const limitNum = parseInt(limit || "25");
     const skip = (pageNum - 1) * limitNum;
 
     // Registered customers (CUSTOMER role users)
     let registeredCustomers: any[] = [];
     let registeredTotal = 0;
-    if (type !== 'walkin') {
-      const regWhere: any = { role: 'CUSTOMER' };
+    if (type !== "walkin") {
+      const regWhere: any = { role: "CUSTOMER" };
       if (query) {
         regWhere.OR = [
-          { firstName: { contains: query, mode: 'insensitive' } },
-          { lastName: { contains: query, mode: 'insensitive' } },
-          { email: { contains: query, mode: 'insensitive' } },
-          { phone: { contains: query, mode: 'insensitive' } },
+          { firstName: { contains: query, mode: "insensitive" } },
+          { lastName: { contains: query, mode: "insensitive" } },
+          { email: { contains: query, mode: "insensitive" } },
+          { phone: { contains: query, mode: "insensitive" } },
         ];
       }
       [registeredCustomers, registeredTotal] = await Promise.all([
         this.prisma.user.findMany({
           where: regWhere,
           select: {
-            id: true, firstName: true, lastName: true, email: true, phone: true,
-            preferredCountry: true, preferredCity: true, createdAt: true, lastLoginAt: true,
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            preferredCountry: true,
+            preferredCity: true,
+            createdAt: true,
+            lastLoginAt: true,
             _count: { select: { customerOrders: true, rfqRequests: true } },
-            purchaseStats: { orderBy: { totalSpent: 'desc' }, take: 1 },
+            purchaseStats: { orderBy: { totalSpent: "desc" }, take: 1 },
           },
-          orderBy: { createdAt: 'desc' },
-          skip: type === 'registered' ? skip : skip,
-          take: type === 'registered' ? limitNum : Math.ceil(limitNum / 2),
+          orderBy: { createdAt: "desc" },
+          skip: type === "registered" ? skip : skip,
+          take: type === "registered" ? limitNum : Math.ceil(limitNum / 2),
         }),
         this.prisma.user.count({ where: regWhere }),
       ]);
@@ -682,13 +715,13 @@ export class AdminController {
     // Walk-in customers
     let walkInCustomers: any[] = [];
     let walkInTotal = 0;
-    if (type !== 'registered') {
+    if (type !== "registered") {
       const wiWhere: any = {};
       if (query) {
         wiWhere.OR = [
-          { name: { contains: query, mode: 'insensitive' } },
-          { phone: { contains: query, mode: 'insensitive' } },
-          { email: { contains: query, mode: 'insensitive' } },
+          { name: { contains: query, mode: "insensitive" } },
+          { phone: { contains: query, mode: "insensitive" } },
+          { email: { contains: query, mode: "insensitive" } },
         ];
       }
       [walkInCustomers, walkInTotal] = await Promise.all([
@@ -698,32 +731,52 @@ export class AdminController {
             createdByShop: { select: { id: true, shopName: true, city: true } },
             _count: { select: { shopQuotes: true } },
           },
-          orderBy: { updatedAt: 'desc' },
-          skip: type === 'walkin' ? skip : Math.max(0, skip - registeredTotal),
-          take: type === 'walkin' ? limitNum : Math.max(0, limitNum - registeredCustomers.length),
+          orderBy: { updatedAt: "desc" },
+          skip: type === "walkin" ? skip : Math.max(0, skip - registeredTotal),
+          take:
+            type === "walkin"
+              ? limitNum
+              : Math.max(0, limitNum - registeredCustomers.length),
         }),
         this.prisma.walkInCustomer.count({ where: wiWhere }),
       ]);
     }
 
     const customers = [
-      ...registeredCustomers.map(c => ({
-        id: c.id, type: 'REGISTERED' as const,
+      ...registeredCustomers.map((c) => ({
+        id: c.id,
+        type: "REGISTERED" as const,
         name: `${c.firstName} ${c.lastName}`.trim(),
-        email: c.email, phone: c.phone,
-        country: c.preferredCountry, city: c.preferredCity,
+        email: c.email,
+        phone: c.phone,
+        country: c.preferredCountry,
+        city: c.preferredCity,
         shop: null,
-        orderCount: c._count.customerOrders, rfqCount: c._count.rfqRequests, quoteCount: 0,
+        orderCount: c._count.customerOrders,
+        rfqCount: c._count.rfqRequests,
+        quoteCount: 0,
         totalSpent: c.purchaseStats[0]?.totalSpent || 0,
         lastActive: c.lastLoginAt || c.createdAt,
         createdAt: c.createdAt,
       })),
-      ...walkInCustomers.map(w => ({
-        id: w.id, type: 'WALK_IN' as const,
-        name: w.name, email: w.email, phone: w.phone,
-        country: w.country, city: w.city,
-        shop: w.createdByShop ? { id: w.createdByShop.id, name: w.createdByShop.shopName, city: w.createdByShop.city } : null,
-        orderCount: 0, rfqCount: 0, quoteCount: w._count.shopQuotes,
+      ...walkInCustomers.map((w) => ({
+        id: w.id,
+        type: "WALK_IN" as const,
+        name: w.name,
+        email: w.email,
+        phone: w.phone,
+        country: w.country,
+        city: w.city,
+        shop: w.createdByShop
+          ? {
+              id: w.createdByShop.id,
+              name: w.createdByShop.shopName,
+              city: w.createdByShop.city,
+            }
+          : null,
+        orderCount: 0,
+        rfqCount: 0,
+        quoteCount: w._count.shopQuotes,
         totalSpent: 0,
         lastActive: w.updatedAt,
         createdAt: w.createdAt,
@@ -742,39 +795,65 @@ export class AdminController {
     };
   }
 
-  @Get('customers/:id')
+  @Get("customers/:id")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get customer profile (registered or walk-in)' })
-  async getCustomerProfile(@Param('id') id: string) {
+  @ApiOperation({ summary: "Get customer profile (registered or walk-in)" })
+  async getCustomerProfile(@Param("id") id: string) {
     // Try registered user first
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: {
-        id: true, firstName: true, lastName: true, email: true, phone: true,
-        preferredCurrency: true, preferredCountry: true, preferredCity: true,
-        createdAt: true, lastLoginAt: true, status: true,
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        preferredCurrency: true,
+        preferredCountry: true,
+        preferredCity: true,
+        createdAt: true,
+        lastLoginAt: true,
+        status: true,
         deliveryAddresses: true,
         purchaseStats: true,
         _count: { select: { customerOrders: true, rfqRequests: true } },
         customerOrders: {
-          orderBy: { createdAt: 'desc' }, take: 10,
-          select: { id: true, orderNumber: true, status: true, totalNpr: true, createdAt: true,
-            shop: { select: { shopName: true } } },
+          orderBy: { createdAt: "desc" },
+          take: 10,
+          select: {
+            id: true,
+            orderNumber: true,
+            status: true,
+            totalNpr: true,
+            createdAt: true,
+            shop: { select: { shopName: true } },
+          },
         },
         rfqRequests: {
-          orderBy: { createdAt: 'desc' }, take: 5,
-          select: { id: true, jewelleryType: true, status: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          select: {
+            id: true,
+            jewelleryType: true,
+            status: true,
+            createdAt: true,
+          },
         },
       },
     });
 
     if (user) {
       return {
-        type: 'REGISTERED', id: user.id,
+        type: "REGISTERED",
+        id: user.id,
         name: `${user.firstName} ${user.lastName}`.trim(),
-        firstName: user.firstName, lastName: user.lastName,
-        email: user.email, phone: user.phone, status: user.status,
-        country: user.preferredCountry, city: user.preferredCity,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        status: user.status,
+        country: user.preferredCountry,
+        city: user.preferredCity,
         currency: user.preferredCurrency,
         addresses: user.deliveryAddresses,
         purchaseStats: user.purchaseStats,
@@ -782,7 +861,8 @@ export class AdminController {
         rfqCount: user._count.rfqRequests,
         recentOrders: user.customerOrders,
         recentRfqs: user.rfqRequests,
-        lastActive: user.lastLoginAt, memberSince: user.createdAt,
+        lastActive: user.lastLoginAt,
+        memberSince: user.createdAt,
       };
     }
 
@@ -792,8 +872,16 @@ export class AdminController {
       include: {
         createdByShop: { select: { id: true, shopName: true, city: true } },
         shopQuotes: {
-          orderBy: { createdAt: 'desc' }, take: 10,
-          select: { id: true, quoteNumber: true, jewelleryType: true, totalPriceNpr: true, status: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+          take: 10,
+          select: {
+            id: true,
+            quoteNumber: true,
+            jewelleryType: true,
+            totalPriceNpr: true,
+            status: true,
+            createdAt: true,
+          },
         },
         _count: { select: { shopQuotes: true } },
       },
@@ -801,27 +889,32 @@ export class AdminController {
 
     if (walkIn) {
       return {
-        type: 'WALK_IN', id: walkIn.id,
-        name: walkIn.name, email: walkIn.email, phone: walkIn.phone,
-        country: walkIn.country, city: walkIn.city,
+        type: "WALK_IN",
+        id: walkIn.id,
+        name: walkIn.name,
+        email: walkIn.email,
+        phone: walkIn.phone,
+        country: walkIn.country,
+        city: walkIn.city,
         address: walkIn.address,
         shop: walkIn.createdByShop,
         quoteCount: walkIn._count.shopQuotes,
         recentQuotes: walkIn.shopQuotes,
         notes: walkIn.notes,
-        lastActive: walkIn.updatedAt, memberSince: walkIn.createdAt,
+        lastActive: walkIn.updatedAt,
+        memberSince: walkIn.createdAt,
       };
     }
 
     return null;
   }
 
-  @Post('customers/:id/notes')
+  @Post("customers/:id/notes")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Add a note to a customer' })
+  @ApiOperation({ summary: "Add a note to a customer" })
   async addCustomerNote(
-    @Param('id') customerId: string,
-    @CurrentUser('id') adminId: string,
+    @Param("id") customerId: string,
+    @CurrentUser("id") adminId: string,
     @Body() body: { note: string; category?: string },
   ) {
     // Admin notes have no shopId (null) — they are platform-level
@@ -830,20 +923,20 @@ export class AdminController {
         customerId,
         authorId: adminId,
         note: body.note,
-        category: body.category || 'GENERAL',
+        category: body.category || "GENERAL",
       },
       include: { author: { select: { firstName: true, lastName: true } } },
     });
   }
 
-  @Get('customers/:id/notes')
+  @Get("customers/:id/notes")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get all notes for a customer' })
-  async getCustomerNotes(@Param('id') customerId: string) {
+  @ApiOperation({ summary: "Get all notes for a customer" })
+  async getCustomerNotes(@Param("id") customerId: string) {
     return this.prisma.customerNote.findMany({
       where: { customerId },
       include: { author: { select: { firstName: true, lastName: true } } },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 
@@ -851,91 +944,104 @@ export class AdminController {
   // SELLER CRM
   // ═══════════════════════════════════════
 
-  @Get('sellers')
+  @Get("sellers")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'List all sellers with engagement data' })
+  @ApiOperation({ summary: "List all sellers with engagement data" })
   async getSellerDirectory(
-    @Query('search') search?: string,
-    @Query('tier') tier?: string,
-    @Query('status') status?: string,
-    @Query('sortBy') sortBy?: string,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
+    @Query("search") search?: string,
+    @Query("tier") tier?: string,
+    @Query("status") status?: string,
+    @Query("sortBy") sortBy?: string,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
   ) {
     return this.sellerEngagement.getSellerDirectory({
-      search, tier, status, sortBy,
+      search,
+      tier,
+      status,
+      sortBy,
       page: page ? parseInt(page) : 1,
       limit: limit ? parseInt(limit) : 20,
     });
   }
 
-  @Get('sellers/stats')
+  @Get("sellers/stats")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get seller CRM stats' })
+  @ApiOperation({ summary: "Get seller CRM stats" })
   async getSellerCrmStats() {
     return this.sellerEngagement.getSellerCrmStats();
   }
 
-  @Get('sellers/export')
+  @Get("sellers/export")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get seller data for CSV export' })
+  @ApiOperation({ summary: "Get seller data for CSV export" })
   async getSellerExport() {
     return this.sellerEngagement.getExportData();
   }
 
-  @Get('sellers/:shopId')
+  @Get("sellers/:shopId")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get detailed seller profile with all engagement data' })
-  async getSellerProfile(@Param('shopId') shopId: string) {
+  @ApiOperation({
+    summary: "Get detailed seller profile with all engagement data",
+  })
+  async getSellerProfile(@Param("shopId") shopId: string) {
     return this.sellerEngagement.getSellerProfile(shopId);
   }
 
-  @Get('sellers/:shopId/health-score')
+  @Get("sellers/:shopId/health-score")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get seller health score' })
-  async getSellerHealthScore(@Param('shopId') shopId: string) {
+  @ApiOperation({ summary: "Get seller health score" })
+  async getSellerHealthScore(@Param("shopId") shopId: string) {
     return this.sellerEngagement.calculateHealthScore(shopId);
   }
 
-  @Get('sellers/:shopId/onboarding')
+  @Get("sellers/:shopId/onboarding")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get seller onboarding progress' })
-  async getSellerOnboarding(@Param('shopId') shopId: string) {
+  @ApiOperation({ summary: "Get seller onboarding progress" })
+  async getSellerOnboarding(@Param("shopId") shopId: string) {
     return this.sellerEngagement.getOnboardingProgress(shopId);
   }
 
-  @Get('sellers/:shopId/milestones')
+  @Get("sellers/:shopId/milestones")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get seller milestones' })
-  async getSellerMilestones(@Param('shopId') shopId: string) {
+  @ApiOperation({ summary: "Get seller milestones" })
+  async getSellerMilestones(@Param("shopId") shopId: string) {
     return this.sellerEngagement.getMilestones(shopId);
   }
 
-  @Get('sellers/:shopId/rfq-funnel')
+  @Get("sellers/:shopId/rfq-funnel")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get seller RFQ funnel' })
+  @ApiOperation({ summary: "Get seller RFQ funnel" })
   async getSellerRfqFunnel(
-    @Param('shopId') shopId: string,
-    @Query('days') days?: string,
+    @Param("shopId") shopId: string,
+    @Query("days") days?: string,
   ) {
-    return this.sellerEngagement.getRfqFunnel(shopId, days ? parseInt(days) : 90);
+    return this.sellerEngagement.getRfqFunnel(
+      shopId,
+      days ? parseInt(days) : 90,
+    );
   }
 
-  @Post('sellers/:shopId/notes')
+  @Post("sellers/:shopId/notes")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Add a note to a seller' })
+  @ApiOperation({ summary: "Add a note to a seller" })
   async addSellerNote(
-    @Param('shopId') shopId: string,
-    @CurrentUser('id') adminId: string,
+    @Param("shopId") shopId: string,
+    @CurrentUser("id") adminId: string,
     @Body() body: { note: string; category?: string },
   ) {
-    return this.sellerEngagement.addSellerNote(shopId, adminId, body.note, body.category);
+    return this.sellerEngagement.addSellerNote(
+      shopId,
+      adminId,
+      body.note,
+      body.category,
+    );
   }
 
-  @Get('sellers/:shopId/notes')
+  @Get("sellers/:shopId/notes")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get all notes for a seller' })
-  async getSellerNotes(@Param('shopId') shopId: string) {
+  @ApiOperation({ summary: "Get all notes for a seller" })
+  async getSellerNotes(@Param("shopId") shopId: string) {
     return this.sellerEngagement.getSellerNotes(shopId);
   }
 }
