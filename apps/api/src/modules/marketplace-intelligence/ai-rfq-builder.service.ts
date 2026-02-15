@@ -346,7 +346,11 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
         jewelleryType: "OTHER",
         buildMethod: "METHOD_B",
         composition: { primary: { material: "GOLD_22K", percentage: 100 } },
-        methodBConfig: { baseMetal: "GOLD", karat: "22K", alloyFamily: "YELLOW_GOLD" },
+        methodBConfig: {
+          baseMetal: "GOLD",
+          karat: "22K",
+          alloyFamily: "YELLOW_GOLD",
+        },
         description: "",
         specialInstructions: dto.description,
         gemstones: [],
@@ -404,7 +408,13 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
 
     // Detect method
     let buildMethod = "METHOD_B";
-    const METHOD_D_TYPES = ["CHAIN", "NECKLACE", "BRACELET", "BANGLE", "ANKLET"];
+    const METHOD_D_TYPES = [
+      "CHAIN",
+      "NECKLACE",
+      "BRACELET",
+      "BANGLE",
+      "ANKLET",
+    ];
     if (material === "GOLD_24K" || material === "PLATINUM_PT950") {
       buildMethod = "METHOD_A";
     } else if (
@@ -431,17 +441,26 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
       if (material.startsWith("GOLD_")) {
         const karat = material.replace("GOLD_", "");
         let alloyFamily = "YELLOW_GOLD";
-        if (desc.includes("rose") || desc.includes("pink")) alloyFamily = "ROSE_GOLD";
+        if (desc.includes("rose") || desc.includes("pink"))
+          alloyFamily = "ROSE_GOLD";
         else if (desc.includes("white")) alloyFamily = "WHITE_GOLD";
         methodBConfig = { baseMetal: "GOLD", karat, alloyFamily };
       } else if (material === "SILVER_925") {
         methodBConfig = { baseMetal: "SILVER" };
       }
     } else if (buildMethod === "METHOD_C") {
-      const baseMetal = desc.includes("stainless") ? "STAINLESS_STEEL_316L" : "BRASS";
-      methodCConfig = { baseMetal, platingType: "GOLD_PLATED", platingTier: "STANDARD" };
+      const baseMetal = desc.includes("stainless")
+        ? "STAINLESS_STEEL_316L"
+        : "BRASS";
+      methodCConfig = {
+        baseMetal,
+        platingType: "GOLD_PLATED",
+        platingTier: "STANDARD",
+      };
     } else if (buildMethod === "METHOD_D") {
-      const purity = material.includes("SILVER") ? "SILVER_925" : material.replace("GOLD_", "") || "22K";
+      const purity = material.includes("SILVER")
+        ? "SILVER_925"
+        : material.replace("GOLD_", "") || "22K";
       methodDConfig = { purity, chainStyle: "ROPE" };
     }
 
@@ -512,7 +531,9 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
     }
     suggestions.push("Review the detected fields and adjust if needed");
     if (!budgetMinNpr) {
-      suggestions.push("Adding a budget range helps sellers give accurate quotes");
+      suggestions.push(
+        "Adding a budget range helps sellers give accurate quotes",
+      );
     }
 
     return {

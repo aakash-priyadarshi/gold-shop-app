@@ -1529,6 +1529,7 @@ export class ShopsService {
     page?: number;
     pageSize?: number;
     includeInternational?: boolean;
+    gemstoneCost?: number;
   }) {
     const {
       jewelleryType,
@@ -1548,6 +1549,7 @@ export class ShopsService {
       page = 1,
       pageSize = 20,
       includeInternational = false,
+      gemstoneCost = 0,
     } = params;
 
     console.log("[findMatchingSellers] Params:", {
@@ -1620,23 +1622,50 @@ export class ShopsService {
 
     // ── Fetch market rate for the requested metal from MarketRate table ──
     // MarketRate table is synced daily with live rates by MarketRatesService
-    const targetMetal = metalType || "GOLD_24K";
+    // Resolve the correct metalCode for market rate lookup based on build method:
+    //   METHOD_A: metalType is already full code (e.g., "GOLD_22K")
+    //   METHOD_B: metalType is base metal (e.g., "GOLD"), alloyType is full code (e.g., "GOLD_18K")
+    //   METHOD_C: no precious metal — use baseMetal for component cost only
+    //   METHOD_D: metalType should be full code, but handle bare purity (e.g., "22K" → "GOLD_22K")
+    let targetMetal: string;
+    if (buildMethod === "METHOD_B" && alloyType) {
+      targetMetal = alloyType; // e.g., "GOLD_18K"
+    } else if (metalType) {
+      // Handle bare purity codes like "22K" → "GOLD_22K"
+      if (/^\d+K$/i.test(metalType)) {
+        targetMetal = `GOLD_${metalType.toUpperCase()}`;
+      } else {
+        targetMetal = metalType;
+      }
+    } else if (buildMethod === "METHOD_C") {
+      // Method C: base metal + plating, no precious metal market rate needed
+      targetMetal = "";
+    } else {
+      targetMetal = "GOLD_24K";
+    }
     const rateCountry = (customerCountry || "IN").toUpperCase();
-    const marketRate = await this.prisma.marketRate.findFirst({
-      where: { metalCode: targetMetal, country: rateCountry, validUntil: null },
-      orderBy: { validFrom: "desc" },
-    });
-    let marketRatePerGram = marketRate?.ratePerGram || 0;
-    if (!marketRatePerGram) {
-      // Fallback: try any country or GOLD_24K
-      const fallbackRate = await this.prisma.marketRate.findFirst({
-        where: { metalCode: targetMetal, validUntil: null },
+    let marketRatePerGram = 0;
+    if (targetMetal) {
+      const marketRate = await this.prisma.marketRate.findFirst({
+        where: {
+          metalCode: targetMetal,
+          country: rateCountry,
+          validUntil: null,
+        },
         orderBy: { validFrom: "desc" },
       });
-      marketRatePerGram = fallbackRate?.ratePerGram || 8500;
+      marketRatePerGram = marketRate?.ratePerGram || 0;
+      if (!marketRatePerGram) {
+        // Fallback: try any country
+        const fallbackRate = await this.prisma.marketRate.findFirst({
+          where: { metalCode: targetMetal, validUntil: null },
+          orderBy: { validFrom: "desc" },
+        });
+        marketRatePerGram = fallbackRate?.ratePerGram || 8500;
+      }
     }
     console.log(
-      `[findMatchingSellers] Market rate for ${targetMetal} (${rateCountry}): ${marketRatePerGram}/g`,
+      `[findMatchingSellers] Market rate for ${targetMetal || "N/A (Method C)"} (${rateCountry}): ${marketRatePerGram}/g`,
     );
 
     // ── Step 2: Score each shop on feature matching ──
@@ -1738,8 +1767,10 @@ export class ShopsService {
             shop.ratings.length
           : 0;
 
+      // Use resolved targetMetal (e.g., "GOLD_18K") for shop rate lookup
+      // so it matches the same code stored in ShopMetalRate.metalType
       const shopMetalRate = shop.metalRates.find(
-        (r: any) => r.metalType === metalType,
+        (r: any) => r.metalType === targetMetal,
       );
       // Material cost is based on MARKET rate, not shop's custom rate
       const materialCost = marketRatePerGram * estimatedWeight;
@@ -1826,7 +1857,7 @@ export class ShopsService {
           0;
       }
 
-      const componentCost = finishCost + baseMetalCost + platingCost;
+      const componentCost = finishCost + baseMetalCost + platingCost + gemstoneCost;
       const estimatedPrice = materialCost + makingCharge + componentCost;
 
       // --- Location score ---
@@ -1878,6 +1909,7 @@ export class ShopsService {
         finishCost: Math.round(finishCost),
         baseMetalCost: Math.round(baseMetalCost),
         platingCost: Math.round(platingCost),
+        gemstoneCost: Math.round(gemstoneCost),
         componentCost: Math.round(componentCost),
         hasCustomRate: !!shopMetalRate,
         averageRating: Math.round(avgRating * 10) / 10,

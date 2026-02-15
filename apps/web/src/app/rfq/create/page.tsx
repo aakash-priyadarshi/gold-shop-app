@@ -705,6 +705,7 @@ export default function CreateRfqPage() {
     finishCost: number;
     baseMetalCost: number;
     platingCost: number;
+    gemstoneCost: number;
     componentCost: number;
     hasCustomRate: boolean;
     averageRating: number;
@@ -1688,7 +1689,13 @@ export default function CreateRfqPage() {
         formData.buildMethod === "METHOD_D" &&
         formData.methodDConfig?.purity
       ) {
-        metalType = formData.methodDConfig.purity;
+        // formData.metalType is already set correctly (e.g., "GOLD_22K") by the
+        // purity selector's onValueChange handler, so we use it as-is.
+        // Only override if metalType wasn't set (fallback: derive from purity code).
+        if (!metalType) {
+          const p = formData.methodDConfig.purity;
+          metalType = p === "SILVER_925" ? "SILVER_925" : `GOLD_${p}`;
+        }
       }
 
       const params = new URLSearchParams({
@@ -1709,6 +1716,10 @@ export default function CreateRfqPage() {
         params.append("minRating", String(sellerMinRating));
       if (sellerMaxPrice !== undefined)
         params.append("maxPrice", String(sellerMaxPrice));
+      // Pass pre-computed gemstone cost from live calculator so seller matching includes it
+      if (priceEstimate?.gemstoneCost && priceEstimate.gemstoneCost > 0) {
+        params.append("gemstoneCost", String(priceEstimate.gemstoneCost));
+      }
 
       // Priority 1: Use advanced filter values if set
       // Priority 2: Use selected delivery address location
@@ -1813,6 +1824,7 @@ export default function CreateRfqPage() {
     filterState,
     filterCity,
     includeInternational,
+    priceEstimate,
   ]);
 
   // Fetch delivery addresses when reaching Step 4
@@ -2157,17 +2169,37 @@ export default function CreateRfqPage() {
         let resolvedMethod = data.buildMethod || "METHOD_B";
 
         // Validate METHOD_D is only for supported types
-        const METHOD_D_TYPES = ["CHAIN", "NECKLACE", "BRACELET", "BANGLE", "ANKLET"];
-        if (resolvedMethod === "METHOD_D" && data.jewelleryType && !METHOD_D_TYPES.includes(data.jewelleryType)) {
+        const METHOD_D_TYPES = [
+          "CHAIN",
+          "NECKLACE",
+          "BRACELET",
+          "BANGLE",
+          "ANKLET",
+        ];
+        if (
+          resolvedMethod === "METHOD_D" &&
+          data.jewelleryType &&
+          !METHOD_D_TYPES.includes(data.jewelleryType)
+        ) {
           resolvedMethod = "METHOD_B"; // Fallback to alloy if not a chain-type
         }
 
         // Smart method detection from material if AI didn't specify method configs
         if (!data.methodBConfig && !data.methodCConfig && !data.methodDConfig) {
-          const pureMaterials = ["GOLD_24K", "SILVER_999", "PLATINUM_PT950", "PLATINUM_PT900", "PALLADIUM_PD950", "PALLADIUM_PD500"];
+          const pureMaterials = [
+            "GOLD_24K",
+            "SILVER_999",
+            "PLATINUM_PT950",
+            "PLATINUM_PT900",
+            "PALLADIUM_PD950",
+            "PALLADIUM_PD500",
+          ];
           if (pureMaterials.includes(material)) {
             resolvedMethod = "METHOD_A";
-          } else if (material.startsWith("GOLD_") || material === "SILVER_925") {
+          } else if (
+            material.startsWith("GOLD_") ||
+            material === "SILVER_925"
+          ) {
             resolvedMethod = "METHOD_B";
           }
         }
@@ -2178,13 +2210,13 @@ export default function CreateRfqPage() {
         if (resolvedMethod === "METHOD_A") {
           // Map material to valid PURE_METAL_IDS values
           const pureMetalMap: Record<string, string> = {
-            "GOLD_24K": "GOLD_24K",
-            "SILVER_999": "SILVER_999",
-            "PLATINUM_PT950": "PLATINUM_PT950",
-            "PLATINUM_PT900": "PLATINUM_PT900",
-            "PLATINUM_950": "PLATINUM_PT950",
-            "PALLADIUM_PD950": "PALLADIUM_PD950",
-            "PALLADIUM_PD500": "PALLADIUM_PD500",
+            GOLD_24K: "GOLD_24K",
+            SILVER_999: "SILVER_999",
+            PLATINUM_PT950: "PLATINUM_PT950",
+            PLATINUM_PT900: "PLATINUM_PT900",
+            PLATINUM_950: "PLATINUM_PT950",
+            PALLADIUM_PD950: "PALLADIUM_PD950",
+            PALLADIUM_PD500: "PALLADIUM_PD500",
           };
           const metalType = pureMetalMap[material] || "GOLD_24K";
           updateFormData("metalType", metalType);
@@ -2213,17 +2245,24 @@ export default function CreateRfqPage() {
               if (!["22K", "18K", "14K", "10K"].includes(karat as string)) {
                 karat = "22K"; // Default
               }
-            } else if (material === "SILVER_925" || material.startsWith("SILVER")) {
+            } else if (
+              material === "SILVER_925" ||
+              material.startsWith("SILVER")
+            ) {
               baseMetal = "SILVER";
               karat = undefined;
               alloyFamily = undefined;
             }
 
             // Detect alloy family from AI description/instructions
-            const aiText = `${data.description || ""} ${data.specialInstructions || ""} ${aiInput}`.toLowerCase();
+            const aiText =
+              `${data.description || ""} ${data.specialInstructions || ""} ${aiInput}`.toLowerCase();
             if (aiText.includes("rose") || aiText.includes("pink")) {
               alloyFamily = "ROSE_GOLD";
-            } else if (aiText.includes("white gold") || aiText.includes("white")) {
+            } else if (
+              aiText.includes("white gold") ||
+              aiText.includes("white")
+            ) {
               alloyFamily = "WHITE_GOLD";
             } else if (aiText.includes("green")) {
               alloyFamily = "GREEN_GOLD";
@@ -2287,10 +2326,20 @@ export default function CreateRfqPage() {
         if (data.surfaceFinish) {
           // Validate surface finish against known values
           const validFinishes = [
-            "HIGH_POLISH", "MATTE", "BRUSHED", "SATIN", "HAMMERED",
-            "SANDBLASTED", "FLORENTINE", "BARK_TEXTURE", "DIAMOND_CUT", "ENGRAVED",
+            "HIGH_POLISH",
+            "MATTE",
+            "BRUSHED",
+            "SATIN",
+            "HAMMERED",
+            "SANDBLASTED",
+            "FLORENTINE",
+            "BARK_TEXTURE",
+            "DIAMOND_CUT",
+            "ENGRAVED",
           ];
-          const finish = validFinishes.includes(data.surfaceFinish) ? data.surfaceFinish : "HIGH_POLISH";
+          const finish = validFinishes.includes(data.surfaceFinish)
+            ? data.surfaceFinish
+            : "HIGH_POLISH";
           updateFormData("surfaceFinish", finish);
         }
 
@@ -2307,7 +2356,18 @@ export default function CreateRfqPage() {
           updateFormData("hasGemstones", true);
           // Create proper GemstoneEntryV2 objects
           const gemstonesV2: GemstoneEntryV2[] = data.gemstones.map(
-            (gem: { stoneType?: string; shape?: string; count?: number; settingStyle?: string; color?: string; clarity?: string; sizeValue?: string }, i: number) => ({
+            (
+              gem: {
+                stoneType?: string;
+                shape?: string;
+                count?: number;
+                settingStyle?: string;
+                color?: string;
+                clarity?: string;
+                sizeValue?: string;
+              },
+              i: number,
+            ) => ({
               id: `gem-ai-${Date.now()}-${i}`,
               stoneType: gem.stoneType || "",
               shape: gem.shape || "ROUND",
@@ -2318,7 +2378,7 @@ export default function CreateRfqPage() {
               cut: "",
               settingStyle: gem.settingStyle || "PRONG",
               count: gem.count || 1,
-            })
+            }),
           );
           updateFormData("gemstonesV2", gemstonesV2);
         }
@@ -2353,7 +2413,8 @@ export default function CreateRfqPage() {
       });
     } catch (err: any) {
       setAiError(
-        err?.response?.data?.message || "AI assistant is temporarily unavailable. Please fill the form manually."
+        err?.response?.data?.message ||
+          "AI assistant is temporarily unavailable. Please fill the form manually.",
       );
     } finally {
       setAiLoading(false);
@@ -2946,7 +3007,9 @@ export default function CreateRfqPage() {
                                 </p>
                                 {aiResult.suggestions.length > 0 && (
                                   <div className="text-xs text-gray-500 space-y-1">
-                                    <span className="font-medium">Try something like:</span>
+                                    <span className="font-medium">
+                                      Try something like:
+                                    </span>
                                     <ul className="list-disc list-inside space-y-0.5 text-gray-600">
                                       {aiResult.suggestions.map((s, i) => (
                                         <li key={i}>{s}</li>
@@ -2959,13 +3022,15 @@ export default function CreateRfqPage() {
                               /* Normal result (possibly with missing info) */
                               <>
                                 <div className="flex items-center justify-between">
-                                  <span className={`font-medium flex items-center gap-1 ${
-                                    aiResult.confidence >= 70
-                                      ? "text-green-700"
-                                      : aiResult.confidence >= 40
-                                        ? "text-yellow-700"
-                                        : "text-orange-600"
-                                  }`}>
+                                  <span
+                                    className={`font-medium flex items-center gap-1 ${
+                                      aiResult.confidence >= 70
+                                        ? "text-green-700"
+                                        : aiResult.confidence >= 40
+                                          ? "text-yellow-700"
+                                          : "text-orange-600"
+                                    }`}
+                                  >
                                     <Check className="h-4 w-4" />
                                     {aiResult.confidence >= 70
                                       ? "Form filled — high confidence"
@@ -2991,16 +3056,17 @@ export default function CreateRfqPage() {
                                 </p>
 
                                 {/* Missing info indicators */}
-                                {aiResult.missingInfo && aiResult.missingInfo.length > 0 && (
-                                  <div className="text-xs bg-amber-50 border border-amber-200 rounded p-2">
-                                    <span className="font-medium text-amber-800">
-                                      Add these for better matches:{" "}
-                                    </span>
-                                    <span className="text-amber-700">
-                                      {aiResult.missingInfo.join(" • ")}
-                                    </span>
-                                  </div>
-                                )}
+                                {aiResult.missingInfo &&
+                                  aiResult.missingInfo.length > 0 && (
+                                    <div className="text-xs bg-amber-50 border border-amber-200 rounded p-2">
+                                      <span className="font-medium text-amber-800">
+                                        Add these for better matches:{" "}
+                                      </span>
+                                      <span className="text-amber-700">
+                                        {aiResult.missingInfo.join(" • ")}
+                                      </span>
+                                    </div>
+                                  )}
 
                                 {aiResult.suggestions.length > 0 && (
                                   <div className="text-xs text-gray-500">
@@ -3013,7 +3079,8 @@ export default function CreateRfqPage() {
                                 {aiResult.isGuest && (
                                   <div className="text-xs bg-blue-50 border border-blue-200 rounded p-2 flex items-center justify-between">
                                     <span className="text-blue-800">
-                                      ✨ Sign in to submit this to sellers and get real quotes
+                                      ✨ Sign in to submit this to sellers and
+                                      get real quotes
                                     </span>
                                     <a
                                       href="/auth/login?redirect=/rfq/create"
@@ -3029,7 +3096,8 @@ export default function CreateRfqPage() {
                         )}
 
                         <p className="text-xs text-gold-600/70">
-                          You can always adjust the fields below after AI fills them.
+                          You can always adjust the fields below after AI fills
+                          them.
                         </p>
                       </div>
                     )}
@@ -5938,6 +6006,14 @@ export default function CreateRfqPage() {
                                           Finish/Components:{" "}
                                           {currencyInfo?.symbol || "Rs."}
                                           {seller.componentCost.toLocaleString()}
+                                        </>
+                                      )}
+                                      {(seller.gemstoneCost || 0) > 0 && (
+                                        <>
+                                          <br />
+                                          Gemstones:{" "}
+                                          {currencyInfo?.symbol || "Rs."}
+                                          {seller.gemstoneCost.toLocaleString()}
                                         </>
                                       )}
                                       {taxRate > 0 && (
