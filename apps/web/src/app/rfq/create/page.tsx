@@ -2144,35 +2144,202 @@ export default function CreateRfqPage() {
 
       // Only fill form if confidence > 5 (not gibberish)
       if (data.confidence > 5) {
+        // Helper: parse material string like "GOLD_22K" into components
+        const material = data.composition?.primary?.material || "GOLD_22K";
+
+        // ─── Step 1: Jewellery Type ───
         if (data.jewelleryType) {
           updateFormData("jewelleryType", data.jewelleryType);
         }
-        if (data.buildMethod) {
-          updateFormData("buildMethod", data.buildMethod);
+
+        // ─── Step 1: Build Method + Metal Configuration ───
+        // Determine the correct build method based on AI response AND material
+        let resolvedMethod = data.buildMethod || "METHOD_B";
+
+        // Validate METHOD_D is only for supported types
+        const METHOD_D_TYPES = ["CHAIN", "NECKLACE", "BRACELET", "BANGLE", "ANKLET"];
+        if (resolvedMethod === "METHOD_D" && data.jewelleryType && !METHOD_D_TYPES.includes(data.jewelleryType)) {
+          resolvedMethod = "METHOD_B"; // Fallback to alloy if not a chain-type
         }
-        if (data.composition?.metalType) {
-          updateFormData("metalType", data.composition.metalType);
+
+        // Smart method detection from material if AI didn't specify method configs
+        if (!data.methodBConfig && !data.methodCConfig && !data.methodDConfig) {
+          const pureMaterials = ["GOLD_24K", "SILVER_999", "PLATINUM_PT950", "PLATINUM_PT900", "PALLADIUM_PD950", "PALLADIUM_PD500"];
+          if (pureMaterials.includes(material)) {
+            resolvedMethod = "METHOD_A";
+          } else if (material.startsWith("GOLD_") || material === "SILVER_925") {
+            resolvedMethod = "METHOD_B";
+          }
         }
+
+        updateFormData("buildMethod", resolvedMethod as BuildMethod);
+
+        // ─── METHOD_A (Pure Metal) ───
+        if (resolvedMethod === "METHOD_A") {
+          // Map material to valid PURE_METAL_IDS values
+          const pureMetalMap: Record<string, string> = {
+            "GOLD_24K": "GOLD_24K",
+            "SILVER_999": "SILVER_999",
+            "PLATINUM_PT950": "PLATINUM_PT950",
+            "PLATINUM_PT900": "PLATINUM_PT900",
+            "PLATINUM_950": "PLATINUM_PT950",
+            "PALLADIUM_PD950": "PALLADIUM_PD950",
+            "PALLADIUM_PD500": "PALLADIUM_PD500",
+          };
+          const metalType = pureMetalMap[material] || "GOLD_24K";
+          updateFormData("metalType", metalType);
+        }
+
+        // ─── METHOD_B (Precious Metal Alloy) ───
+        if (resolvedMethod === "METHOD_B") {
+          if (data.methodBConfig) {
+            // AI provided explicit config
+            updateFormData("alloyConfig", {
+              baseMetal: data.methodBConfig.baseMetal || "GOLD",
+              karat: data.methodBConfig.karat || undefined,
+              alloyFamily: data.methodBConfig.alloyFamily || undefined,
+              recipePresetId: undefined,
+            });
+          } else {
+            // Derive from material string (e.g. "GOLD_22K" → baseMetal=GOLD, karat=22K)
+            let baseMetal = "GOLD";
+            let karat: string | undefined = "22K";
+            let alloyFamily: string | undefined = "YELLOW_GOLD";
+
+            if (material.startsWith("GOLD_")) {
+              baseMetal = "GOLD";
+              karat = material.replace("GOLD_", ""); // "22K", "18K", "14K", "10K"
+              // Validate karat
+              if (!["22K", "18K", "14K", "10K"].includes(karat as string)) {
+                karat = "22K"; // Default
+              }
+            } else if (material === "SILVER_925" || material.startsWith("SILVER")) {
+              baseMetal = "SILVER";
+              karat = undefined;
+              alloyFamily = undefined;
+            }
+
+            // Detect alloy family from AI description/instructions
+            const aiText = `${data.description || ""} ${data.specialInstructions || ""} ${aiInput}`.toLowerCase();
+            if (aiText.includes("rose") || aiText.includes("pink")) {
+              alloyFamily = "ROSE_GOLD";
+            } else if (aiText.includes("white gold") || aiText.includes("white")) {
+              alloyFamily = "WHITE_GOLD";
+            } else if (aiText.includes("green")) {
+              alloyFamily = "GREEN_GOLD";
+            }
+
+            updateFormData("alloyConfig", {
+              baseMetal,
+              karat: baseMetal === "GOLD" ? karat : undefined,
+              alloyFamily: baseMetal === "GOLD" ? alloyFamily : undefined,
+              recipePresetId: undefined,
+            });
+          }
+        }
+
+        // ─── METHOD_C (Base Metal + Plating) ───
+        if (resolvedMethod === "METHOD_C") {
+          if (data.methodCConfig) {
+            updateFormData("methodCConfig", {
+              baseMetal: data.methodCConfig.baseMetal || "BRASS",
+              platingType: data.methodCConfig.platingType || "GOLD_PLATED",
+              platingTier: data.methodCConfig.platingTier || "STANDARD",
+            });
+          } else {
+            updateFormData("methodCConfig", {
+              baseMetal: "BRASS",
+              platingType: "GOLD_PLATED",
+              platingTier: "STANDARD",
+            });
+          }
+        }
+
+        // ─── METHOD_D (Italian Machine Made) ───
+        if (resolvedMethod === "METHOD_D") {
+          if (data.methodDConfig) {
+            updateFormData("methodDConfig", {
+              purity: data.methodDConfig.purity || "22K",
+              chainStyle: data.methodDConfig.chainStyle || "",
+            });
+          } else {
+            // Derive purity from material
+            let purity = "22K";
+            if (material.startsWith("GOLD_")) {
+              purity = material.replace("GOLD_", "");
+              if (!["22K", "18K", "14K"].includes(purity)) purity = "22K";
+            } else if (material.includes("SILVER")) {
+              purity = "SILVER_925";
+            }
+            updateFormData("methodDConfig", { purity, chainStyle: "" });
+          }
+        }
+
+        // ─── Step 1: Weight ───
         if (data.weightCategory) {
           updateFormData("weightCategory", data.weightCategory);
         }
         if (data.estimatedWeight) {
           updateFormData("estimatedWeight", String(data.estimatedWeight));
         }
+
+        // ─── Step 1: Surface Finish ───
         if (data.surfaceFinish) {
-          updateFormData("surfaceFinish", data.surfaceFinish);
+          // Validate surface finish against known values
+          const validFinishes = [
+            "HIGH_POLISH", "MATTE", "BRUSHED", "SATIN", "HAMMERED",
+            "SANDBLASTED", "FLORENTINE", "BARK_TEXTURE", "DIAMOND_CUT", "ENGRAVED",
+          ];
+          const finish = validFinishes.includes(data.surfaceFinish) ? data.surfaceFinish : "HIGH_POLISH";
+          updateFormData("surfaceFinish", finish);
         }
+
+        // ─── Step 2: Description ───
+        if (data.description) {
+          updateFormData("description", data.description);
+        } else if (data.specialInstructions) {
+          // Fallback: use specialInstructions as description if no separate description
+          updateFormData("description", data.specialInstructions);
+        }
+
+        // ─── Step 2: Gemstones ───
+        if (data.gemstones && data.gemstones.length > 0) {
+          updateFormData("hasGemstones", true);
+          // Create proper GemstoneEntryV2 objects
+          const gemstonesV2: GemstoneEntryV2[] = data.gemstones.map(
+            (gem: { stoneType?: string; shape?: string; count?: number; settingStyle?: string; color?: string; clarity?: string; sizeValue?: string }, i: number) => ({
+              id: `gem-ai-${Date.now()}-${i}`,
+              stoneType: gem.stoneType || "",
+              shape: gem.shape || "ROUND",
+              sizeUnit: "MM" as const,
+              sizeValue: gem.sizeValue || "",
+              color: gem.color || "",
+              clarity: gem.clarity || "",
+              cut: "",
+              settingStyle: gem.settingStyle || "PRONG",
+              count: gem.count || 1,
+            })
+          );
+          updateFormData("gemstonesV2", gemstonesV2);
+        }
+
+        // ─── Step 2: Special Instructions ───
+        if (data.specialInstructions && data.description) {
+          // Only set specialInstructions separately if description is also present
+          updateFormData("specialInstructions", data.specialInstructions);
+        }
+
+        // ─── Step 3: Budget ───
         if (data.budgetMinNpr) {
           updateFormData("budgetMin", String(data.budgetMinNpr));
         }
         if (data.budgetMaxNpr) {
           updateFormData("budgetMax", String(data.budgetMaxNpr));
         }
-        if (data.specialInstructions) {
-          updateFormData("description", data.specialInstructions);
-        }
-        if (data.gemstones && data.gemstones.length > 0) {
-          updateFormData("hasGemstones", true);
+
+        // ─── Step 3: Deadline ───
+        if (data.deadline) {
+          updateFormData("deadline", data.deadline);
         }
       }
 

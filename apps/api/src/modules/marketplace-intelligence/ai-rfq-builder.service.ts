@@ -175,53 +175,79 @@ ${dto.marketRegion ? `Market Region: ${dto.marketRegion}` : ""}
 
 ${marketContext}
 
+IMPORTANT: The form has 4 Build Methods with SPECIFIC metal configuration rules:
+
+**METHOD_A (Solid Pure Precious Metal)** - Only for PURE metals with NO alloying:
+  - Valid metals: GOLD_24K, SILVER_999, PLATINUM_PT950, PLATINUM_PT900, PALLADIUM_PD950, PALLADIUM_PD500
+  - Use ONLY when customer explicitly requests pure/24K gold, fine silver, or platinum
+
+**METHOD_B (Precious Metal Alloy)** - For gold alloys (22K, 18K, 14K, 10K) and sterling silver:
+  - baseMetal: "GOLD" or "SILVER"
+  - karat (for GOLD only): "22K", "18K", "14K", "10K"
+  - alloyFamily (for GOLD only): "YELLOW_GOLD", "WHITE_GOLD", "ROSE_GOLD", "GREEN_GOLD"
+  - DEFAULT choice for most jewellery requests. 22K gold = METHOD_B, not METHOD_A.
+
+**METHOD_C (Base Metal + Plating)** - Fashion/costume jewellery:
+  - baseMetal: "BRASS", "COPPER", "BRONZE", "STAINLESS_STEEL_316L", "TITANIUM"
+  - platingType: "GOLD_PLATED", "ROSE_GOLD_PLATED", "RHODIUM_PLATED", "SILVER_PLATED", "PVD_GOLD", "VERMEIL", etc.
+  - platingTier: "ECONOMY", "STANDARD", "PREMIUM"
+  - Use for budget/fashion jewellery, gold-plated items, stainless steel
+
+**METHOD_D (Italian Machine Made)** - ONLY for: CHAIN, NECKLACE, BRACELET, BANGLE, ANKLET
+  - purity: "22K", "18K", "14K", "SILVER_925"
+  - chainStyle: "ROPE", "FIGARO", "CURB", "BOX", "SNAKE", "SINGAPORE", "FRANCO", "WHEAT", "MARINER", "HERRINGBONE", "BYZANTINE", "HOLLOW_BANGLE", "LASER_CUT", "MACHINE_WOVEN"
+  - Use ONLY when customer requests machine-made chains/necklaces/bracelets
+
 Respond with a JSON object matching this exact structure:
 {
   "jewelleryType": one of [${this.JEWELLERY_TYPES.join(", ")}],
-  "buildMethod": one of [${this.BUILD_METHODS.join(", ")}] (METHOD_A=Handcrafted, METHOD_B=Cast/Die-struck, METHOD_C=CAD/3D Printed, METHOD_D=Assembly/Stone Setting),
+  "buildMethod": one of [${this.BUILD_METHODS.join(", ")}],
   "composition": {
-    "primary": { "material": "GOLD_22K|GOLD_18K|GOLD_14K|SILVER_925|PLATINUM_950", "percentage": 100 }
+    "primary": { "material": "GOLD_22K|GOLD_18K|GOLD_14K|GOLD_24K|SILVER_925|SILVER_999|PLATINUM_PT950", "percentage": 100 }
   },
+  "methodBConfig": { "baseMetal": "GOLD"|"SILVER", "karat": "22K"|"18K"|"14K"|"10K", "alloyFamily": "YELLOW_GOLD"|"WHITE_GOLD"|"ROSE_GOLD"|"GREEN_GOLD" } or null,
+  "methodCConfig": { "baseMetal": "BRASS"|"COPPER"|"BRONZE"|"STAINLESS_STEEL_316L", "platingType": "GOLD_PLATED"|"ROSE_GOLD_PLATED"|"RHODIUM_PLATED", "platingTier": "STANDARD" } or null,
+  "methodDConfig": { "purity": "22K"|"18K"|"14K"|"SILVER_925", "chainStyle": "ROPE"|"FIGARO"|"CURB"|"BOX"|"SNAKE"|etc. } or null,
   "weightCategory": one of [${this.WEIGHT_CATEGORIES.join(", ")}] or null,
   "estimatedWeight": number in grams or null,
-  "surfaceFinish": "HIGH_POLISH|MATTE|BRUSHED|SATIN|HAMMERED" or null,
+  "surfaceFinish": "HIGH_POLISH"|"MATTE"|"BRUSHED"|"SATIN"|"HAMMERED"|"SANDBLASTED"|"FLORENTINE"|"DIAMOND_CUT"|"ENGRAVED" or null,
   "budgetMinNpr": number or null (in NPR),
   "budgetMaxNpr": number or null (in NPR),
-  "specialInstructions": string summarizing any special requests,
-  "gemstones": [{ "stoneType": "DIAMOND_NATURAL|RUBY|SAPPHIRE|EMERALD|...", "shape": "ROUND|OVAL|PRINCESS|...", "count": number, "settingStyle": "PRONG|BEZEL|PAVE|..." }] or [],
-  "confidence": number 0-100 (how confident you are in this interpretation),
-  "reasoning": string explaining your choices AND any assumptions you made,
-  "suggestions": string[] (helpful tips OR clarifying questions the customer should answer),
-  "missingInfo": string[] (list of missing details that would improve the result, e.g. ["budget range", "preferred weight", "occasion"])
+  "description": string describing the design/appearance the customer wants,
+  "specialInstructions": string summarizing any special requests (engraving, sizing, packaging, etc.),
+  "deadline": "YYYY-MM-DD" date string or null (if customer mentions when they need it),
+  "gemstones": [{ "stoneType": "DIAMOND_NATURAL|RUBY|SAPPHIRE|EMERALD|PEARL|AMETHYST|TOPAZ|GARNET|OPAL|TURQUOISE|CZ", "shape": "ROUND|OVAL|PRINCESS|CUSHION|PEAR|MARQUISE|EMERALD_CUT|HEART|ASSCHER|RADIANT|BAGUETTE", "count": number, "settingStyle": "PRONG|BEZEL|PAVE|CHANNEL|TENSION|FLUSH|HALO|CLUSTER|BAR|INVISIBLE", "color": "string or null", "clarity": "string or null", "sizeValue": "string mm or null" }] or [],
+  "confidence": number 0-100,
+  "reasoning": string explaining your choices AND any assumptions,
+  "suggestions": string[],
+  "missingInfo": string[]
 }
 
-CRITICAL RULES FOR HANDLING AMBIGUOUS/INCOMPLETE INPUTS:
-1. **Very short or vague descriptions** (e.g. "ring", "gold jewellery", "something nice"):
-   - Still provide a reasonable default result (don't refuse)
-   - Set confidence to 15-30
-   - In "reasoning", explain: "Your description was brief, so I used common defaults: ..."
-   - In "suggestions", ask clarifying questions: "What karat gold? (22K is standard in Nepal)", "Any budget range in mind?", "Is this for a specific occasion?"
-   - In "missingInfo", list what's missing: ["jewellery type details", "metal preference", "budget", "occasion"]
+CRITICAL RULES:
+1. **Method Selection Logic**:
+   - Customer says "gold ring" / "22K necklace" / "18K bracelet" → METHOD_B (these are alloys)
+   - Customer says "pure gold" / "24 karat" → METHOD_A
+   - Customer says "gold plated" / "fashion" / "budget" / "stainless steel" → METHOD_C
+   - Customer says "machine made chain" / "Italian chain" / "rope chain" → METHOD_D (only for chain/necklace/bracelet/bangle/anklet)
+   - Default: METHOD_B with GOLD baseMetal and 22K karat for NP/IN markets, 18K for western
 
-2. **Gibberish or non-jewellery text** (e.g. "asdfghj", "hello world", "what is 2+2"):
-   - Set jewelleryType to "OTHER"
-   - Set confidence to 5-10
-   - In "reasoning": "I couldn't identify a jewellery request. Please describe what kind of jewellery you'd like."
-   - In "suggestions": ["Try: 'I want a gold ring for my wedding'", "Try: '22K gold necklace, budget 50-80K NPR'", "Describe the type, metal, and any gemstones you want"]
-   - In "missingInfo": ["jewellery description"]
+2. **When buildMethod is METHOD_B**: MUST include methodBConfig with baseMetal, karat (for gold), and alloyFamily
+   - Default alloyFamily to "YELLOW_GOLD" unless rose gold/white gold is mentioned
+   - For silver → baseMetal: "SILVER", no karat needed
 
-3. **Partially specified** (e.g. "gold ring" without karat/budget/weight):
-   - Fill in reasonable defaults for the missing parts
-   - Set confidence to 40-60
-   - In "reasoning", clearly state each assumption: "Assumed 22K gold (standard in [region])..."
-   - In "suggestions", mention what they can add for better accuracy
+3. **When buildMethod is METHOD_D**: MUST include methodDConfig AND jewelleryType must be CHAIN/NECKLACE/BRACELET/BANGLE/ANKLET
 
-4. **Well-specified descriptions**: confidence 70-95, provide optimization tips in suggestions
+4. **Ambiguous/Incomplete Inputs**:
+   - Very short/vague (e.g. "ring", "gold"): confidence 15-30, fill defaults, list missing info
+   - Gibberish: jewelleryType="OTHER", confidence 5-10, helpful suggestions
+   - Partial (e.g. "gold ring"): confidence 40-60, fill defaults, explain assumptions
+   - Well-specified: confidence 70-95, optimization tips
+
+5. **Always provide methodBConfig when buildMethod=METHOD_B, even if defaulting**
 
 Budget conversions: 1 USD ≈ 133 NPR, 1 INR ≈ 1.6 NPR, 1 AED ≈ 36 NPR, 1 GBP ≈ 170 NPR
 For "gold ring" without karat, default to 22K in NP/IN markets, 18K in western markets.
-For custom/handmade requests, use METHOD_A. For standard designs, use METHOD_B.
-Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale accordingly for other types.`;
+Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale accordingly.`;
   }
 
   private async getMarketContext(dto: AiRfqBuilderDto): Promise<string> {
@@ -279,12 +305,17 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
       composition: parsed.composition || {
         primary: { material: "GOLD_22K", percentage: 100 },
       },
+      methodBConfig: parsed.methodBConfig || undefined,
+      methodCConfig: parsed.methodCConfig || undefined,
+      methodDConfig: parsed.methodDConfig || undefined,
       weightCategory,
       estimatedWeight: parsed.estimatedWeight || undefined,
       surfaceFinish: parsed.surfaceFinish || undefined,
       budgetMinNpr: parsed.budgetMinNpr || undefined,
       budgetMaxNpr: parsed.budgetMaxNpr || undefined,
+      description: parsed.description || "",
       specialInstructions: parsed.specialInstructions || "",
+      deadline: parsed.deadline || undefined,
       gemstones: Array.isArray(parsed.gemstones) ? parsed.gemstones : [],
       confidence: Math.max(0, Math.min(100, parsed.confidence || 50)),
       reasoning: parsed.reasoning || "Generated from your description",
@@ -315,6 +346,8 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
         jewelleryType: "OTHER",
         buildMethod: "METHOD_B",
         composition: { primary: { material: "GOLD_22K", percentage: 100 } },
+        methodBConfig: { baseMetal: "GOLD", karat: "22K", alloyFamily: "YELLOW_GOLD" },
+        description: "",
         specialInstructions: dto.description,
         gemstones: [],
         confidence: 5,
@@ -358,7 +391,7 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
     let material = "GOLD_22K";
     if (desc.includes("silver") || desc.includes("925"))
       material = "SILVER_925";
-    else if (desc.includes("platinum")) material = "PLATINUM_950";
+    else if (desc.includes("platinum")) material = "PLATINUM_PT950";
     else if (desc.includes("18k") || desc.includes("18 karat"))
       material = "GOLD_18K";
     else if (desc.includes("14k") || desc.includes("14 karat"))
@@ -371,18 +404,45 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
 
     // Detect method
     let buildMethod = "METHOD_B";
-    if (
-      desc.includes("handmade") ||
-      desc.includes("handcraft") ||
-      desc.includes("custom")
-    ) {
+    const METHOD_D_TYPES = ["CHAIN", "NECKLACE", "BRACELET", "BANGLE", "ANKLET"];
+    if (material === "GOLD_24K" || material === "PLATINUM_PT950") {
       buildMethod = "METHOD_A";
     } else if (
-      desc.includes("3d") ||
-      desc.includes("cad") ||
-      desc.includes("modern")
+      desc.includes("gold plated") ||
+      desc.includes("fashion") ||
+      desc.includes("stainless") ||
+      desc.includes("brass")
     ) {
       buildMethod = "METHOD_C";
+    } else if (
+      (desc.includes("machine") || desc.includes("italian")) &&
+      METHOD_D_TYPES.includes(jewelleryType)
+    ) {
+      buildMethod = "METHOD_D";
+    }
+
+    // Build method-specific configs
+    let methodBConfig: any = undefined;
+    let methodCConfig: any = undefined;
+    let methodDConfig: any = undefined;
+
+    if (buildMethod === "METHOD_B") {
+      // Parse material into baseMetal + karat
+      if (material.startsWith("GOLD_")) {
+        const karat = material.replace("GOLD_", "");
+        let alloyFamily = "YELLOW_GOLD";
+        if (desc.includes("rose") || desc.includes("pink")) alloyFamily = "ROSE_GOLD";
+        else if (desc.includes("white")) alloyFamily = "WHITE_GOLD";
+        methodBConfig = { baseMetal: "GOLD", karat, alloyFamily };
+      } else if (material === "SILVER_925") {
+        methodBConfig = { baseMetal: "SILVER" };
+      }
+    } else if (buildMethod === "METHOD_C") {
+      const baseMetal = desc.includes("stainless") ? "STAINLESS_STEEL_316L" : "BRASS";
+      methodCConfig = { baseMetal, platingType: "GOLD_PLATED", platingTier: "STANDARD" };
+    } else if (buildMethod === "METHOD_D") {
+      const purity = material.includes("SILVER") ? "SILVER_925" : material.replace("GOLD_", "") || "22K";
+      methodDConfig = { purity, chainStyle: "ROPE" };
     }
 
     // Detect gemstones
@@ -459,11 +519,15 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
       jewelleryType,
       buildMethod,
       composition: { primary: { material, percentage: 100 } },
+      methodBConfig,
+      methodCConfig,
+      methodDConfig,
       weightCategory: undefined,
       surfaceFinish: "HIGH_POLISH",
       budgetMinNpr,
       budgetMaxNpr,
-      specialInstructions: dto.description,
+      description: dto.description,
+      specialInstructions: "",
       gemstones,
       confidence,
       reasoning:

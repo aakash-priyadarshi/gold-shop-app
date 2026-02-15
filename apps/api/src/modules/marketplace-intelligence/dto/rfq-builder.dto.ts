@@ -25,17 +25,29 @@ export class AiRfqBuilderResponse {
   jewelleryType: string;
   buildMethod: string;
   composition: Record<string, any>;
+  methodBConfig?: { baseMetal: string; karat?: string; alloyFamily?: string };
+  methodCConfig?: {
+    baseMetal: string;
+    platingType: string;
+    platingTier: string;
+  };
+  methodDConfig?: { purity: string; chainStyle?: string };
   weightCategory?: string;
   estimatedWeight?: number;
   surfaceFinish?: string;
   budgetMinNpr?: number;
   budgetMaxNpr?: number;
+  description?: string;
   specialInstructions?: string;
+  deadline?: string;
   gemstones?: Array<{
     stoneType: string;
     shape: string;
     count: number;
     settingStyle?: string;
+    color?: string;
+    clarity?: string;
+    sizeValue?: string;
   }>;
   confidence: number; // 0-100
   reasoning: string; // Why the AI chose these specs
