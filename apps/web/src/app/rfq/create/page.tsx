@@ -111,7 +111,7 @@ import {
   MethodCSelector,
   type MethodCConfig,
 } from "@/components/pricing/MethodCSelector";
-import { getApiUrl, shopsApi } from "@/lib/api";
+import { getApiUrl, intelligenceApi, shopsApi } from "@/lib/api";
 import {
   calculateEstimate,
   CHAIN_STYLE_OPTIONS,
@@ -471,6 +471,17 @@ export default function CreateRfqPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // AI RFQ Builder state
+  const [aiInput, setAiInput] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<{
+    confidence: number;
+    reasoning: string;
+    suggestions: string[];
+  } | null>(null);
+  const [aiError, setAiError] = useState("");
+  const [showAiAssistant, setShowAiAssistant] = useState(true);
 
   // Hover preview for jewellery type dropdown
   const [hoveredType, setHoveredType] = useState<string | null>(null);
@@ -2102,6 +2113,65 @@ export default function CreateRfqPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  // AI RFQ Builder: parse natural language into form fields
+  const handleAiBuild = async () => {
+    if (!aiInput.trim()) return;
+    setAiLoading(true);
+    setAiError("");
+    setAiResult(null);
+    try {
+      const res = await intelligenceApi.buildRfq({
+        description: aiInput,
+        marketRegion: country || "NP",
+      });
+      const data = res.data;
+
+      // Map AI response to form fields
+      if (data.jewelleryType) {
+        updateFormData("jewelleryType", data.jewelleryType);
+      }
+      if (data.buildMethod) {
+        updateFormData("buildMethod", data.buildMethod);
+      }
+      if (data.composition?.metalType) {
+        updateFormData("metalType", data.composition.metalType);
+      }
+      if (data.weightCategory) {
+        updateFormData("weightCategory", data.weightCategory);
+      }
+      if (data.estimatedWeight) {
+        updateFormData("estimatedWeight", String(data.estimatedWeight));
+      }
+      if (data.surfaceFinish) {
+        updateFormData("surfaceFinish", data.surfaceFinish);
+      }
+      if (data.budgetMinNpr) {
+        updateFormData("budgetMin", String(data.budgetMinNpr));
+      }
+      if (data.budgetMaxNpr) {
+        updateFormData("budgetMax", String(data.budgetMaxNpr));
+      }
+      if (data.specialInstructions) {
+        updateFormData("description", data.specialInstructions);
+      }
+      if (data.gemstones && data.gemstones.length > 0) {
+        updateFormData("hasGemstones", true);
+      }
+
+      setAiResult({
+        confidence: data.confidence,
+        reasoning: data.reasoning,
+        suggestions: data.suggestions || [],
+      });
+    } catch (err: any) {
+      setAiError(
+        err?.response?.data?.message || "AI assistant is temporarily unavailable. Please fill the form manually."
+      );
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   // Handler to select a similar design as reference for AI preview
   const handleSelectSimilarDesign = useCallback((design: SimilarDesign) => {
     // Set the design image as the preview
@@ -2598,6 +2668,109 @@ export default function CreateRfqPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {/* AI RFQ Builder Assistant */}
+                  <div className="rounded-lg border border-gold-200 bg-gradient-to-r from-gold-50 to-amber-50 p-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowAiAssistant(!showAiAssistant)}
+                      className="flex items-center justify-between w-full text-left"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-gold-600" />
+                        <span className="font-medium text-gold-800">
+                          Describe what you want — AI fills the form
+                        </span>
+                      </div>
+                      {showAiAssistant ? (
+                        <ChevronUp className="h-4 w-4 text-gold-600" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-gold-600" />
+                      )}
+                    </button>
+
+                    {showAiAssistant && (
+                      <div className="mt-3 space-y-3">
+                        <div className="flex gap-2">
+                          <Textarea
+                            placeholder='e.g. "I want a 22k gold necklace for my wedding, budget around 2 lakh" or "Simple silver ring with small diamond, under 15k"'
+                            value={aiInput}
+                            onChange={(e) => setAiInput(e.target.value)}
+                            className="min-h-[60px] bg-white text-sm"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                handleAiBuild();
+                              }
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            onClick={handleAiBuild}
+                            disabled={aiLoading || !aiInput.trim()}
+                            className="bg-gold-600 hover:bg-gold-700 text-white shrink-0 self-end"
+                          >
+                            {aiLoading ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Sparkles className="h-4 w-4 mr-1" />
+                                Fill
+                              </>
+                            )}
+                          </Button>
+                        </div>
+
+                        {aiError && (
+                          <div className="text-sm text-red-600 flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            {aiError}
+                          </div>
+                        )}
+
+                        {aiResult && (
+                          <div className="rounded-md bg-white p-3 text-sm space-y-2 border border-gold-100">
+                            <div className="flex items-center justify-between">
+                              <span className="text-green-700 font-medium flex items-center gap-1">
+                                <Check className="h-4 w-4" />
+                                Form filled
+                                {aiResult.confidence >= 70
+                                  ? " — high confidence"
+                                  : aiResult.confidence >= 40
+                                    ? " — review the fields below"
+                                    : " — low confidence, please verify"}
+                              </span>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  aiResult.confidence >= 70
+                                    ? "border-green-300 text-green-700"
+                                    : aiResult.confidence >= 40
+                                      ? "border-yellow-300 text-yellow-700"
+                                      : "border-red-300 text-red-700"
+                                }
+                              >
+                                {aiResult.confidence}% match
+                              </Badge>
+                            </div>
+                            <p className="text-gray-600 text-xs">
+                              {aiResult.reasoning}
+                            </p>
+                            {aiResult.suggestions.length > 0 && (
+                              <div className="text-xs text-gray-500">
+                                <span className="font-medium">Tips: </span>
+                                {aiResult.suggestions.join(" • ")}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        <p className="text-xs text-gold-600/70">
+                          You can always adjust the fields below after AI fills them.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="space-y-2">
                     <Label>Jewellery Type *</Label>
                     <Select

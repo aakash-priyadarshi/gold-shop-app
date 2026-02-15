@@ -1,15 +1,19 @@
-import { Module, OnModuleInit } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { NotificationsModule } from '../notifications/notifications.module';
-import { RedisModule } from '../../common/redis';
-import { MarketplaceIntelligenceController } from './marketplace-intelligence.controller';
-import { MarketplaceIntelligenceService } from './marketplace-intelligence.service';
-import { AiRfqBuilderService } from './ai-rfq-builder.service';
+import { Module, OnModuleInit } from "@nestjs/common";
+import { RedisModule } from "../../common/redis";
+import { PrismaService } from "../../prisma/prisma.service";
+import { NotificationsModule } from "../notifications/notifications.module";
+import { AiRfqBuilderService } from "./ai-rfq-builder.service";
+import { MarketplaceIntelligenceController } from "./marketplace-intelligence.controller";
+import { MarketplaceIntelligenceService } from "./marketplace-intelligence.service";
 
 @Module({
   imports: [NotificationsModule, RedisModule],
   controllers: [MarketplaceIntelligenceController],
-  providers: [PrismaService, MarketplaceIntelligenceService, AiRfqBuilderService],
+  providers: [
+    PrismaService,
+    MarketplaceIntelligenceService,
+    AiRfqBuilderService,
+  ],
   exports: [MarketplaceIntelligenceService, AiRfqBuilderService],
 })
 export class MarketplaceIntelligenceModule implements OnModuleInit {
@@ -22,7 +26,7 @@ export class MarketplaceIntelligenceModule implements OnModuleInit {
       await this.intelligenceService.initializeMilestones();
     } catch (err) {
       console.warn(
-        'MarketplaceIntelligence: Could not initialize milestones — migration may not be applied yet.',
+        "MarketplaceIntelligence: Could not initialize milestones — migration may not be applied yet.",
         err?.message,
       );
     }

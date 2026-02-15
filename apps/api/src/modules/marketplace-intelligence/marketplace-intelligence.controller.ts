@@ -8,24 +8,24 @@ import {
   Post,
   Query,
   UseGuards,
-} from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { UserRole } from '@prisma/client';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { MarketplaceIntelligenceService } from './marketplace-intelligence.service';
-import { AiRfqBuilderService } from './ai-rfq-builder.service';
+} from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { UserRole } from "@prisma/client";
+import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { Roles } from "../auth/decorators/roles.decorator";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RolesGuard } from "../auth/guards/roles.guard";
+import { AiRfqBuilderService } from "./ai-rfq-builder.service";
 import {
   AiRfqBuilderDto,
   FeasibilityCheckDto,
   RecordLossReasonDto,
   ReviewAnomalyDto,
-} from './dto/rfq-builder.dto';
+} from "./dto/rfq-builder.dto";
+import { MarketplaceIntelligenceService } from "./marketplace-intelligence.service";
 
-@ApiTags('marketplace-intelligence')
-@Controller('marketplace-intelligence')
+@ApiTags("marketplace-intelligence")
+@Controller("marketplace-intelligence")
 export class MarketplaceIntelligenceController {
   private readonly logger = new Logger(MarketplaceIntelligenceController.name);
 
@@ -38,10 +38,13 @@ export class MarketplaceIntelligenceController {
   // AI RFQ BUILDER (Public — rate limited)
   // ═══════════════════════════════════════
 
-  @Post('rfq-builder')
+  @Post("rfq-builder")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'AI-assisted RFQ builder — converts natural language to structured specs' })
+  @ApiOperation({
+    summary:
+      "AI-assisted RFQ builder — converts natural language to structured specs",
+  })
   async buildRfq(@Body() dto: AiRfqBuilderDto) {
     return this.rfqBuilderService.buildRfqFromDescription(dto);
   }
@@ -50,10 +53,12 @@ export class MarketplaceIntelligenceController {
   // BUDGET FEASIBILITY CHECKER
   // ═══════════════════════════════════════
 
-  @Post('feasibility-check')
+  @Post("feasibility-check")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Check if a budget is feasible for requested jewellery specs' })
+  @ApiOperation({
+    summary: "Check if a budget is feasible for requested jewellery specs",
+  })
   async checkFeasibility(@Body() dto: FeasibilityCheckDto) {
     return this.rfqBuilderService.checkFeasibility(dto);
   }
@@ -62,9 +67,9 @@ export class MarketplaceIntelligenceController {
   // AI TOOLTIPS
   // ═══════════════════════════════════════
 
-  @Get('tooltips')
-  @ApiOperation({ summary: 'Get AI-generated tooltips for UI elements' })
-  async getTooltips(@Query('category') category?: string) {
+  @Get("tooltips")
+  @ApiOperation({ summary: "Get AI-generated tooltips for UI elements" })
+  async getTooltips(@Query("category") category?: string) {
     return this.rfqBuilderService.getTooltips(category);
   }
 
@@ -72,11 +77,11 @@ export class MarketplaceIntelligenceController {
   // OFFER COMPARISON (Customer)
   // ═══════════════════════════════════════
 
-  @Get('offers/compare/:rfqId')
+  @Get("offers/compare/:rfqId")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get normalized offer comparison for an RFQ' })
-  async compareOffers(@Param('rfqId') rfqId: string) {
+  @ApiOperation({ summary: "Get normalized offer comparison for an RFQ" })
+  async compareOffers(@Param("rfqId") rfqId: string) {
     return this.intelligenceService.getOfferComparison(rfqId);
   }
 
@@ -84,11 +89,11 @@ export class MarketplaceIntelligenceController {
   // ORDER PROTECTION TIMELINE (Customer)
   // ═══════════════════════════════════════
 
-  @Get('order-protection/:orderId')
+  @Get("order-protection/:orderId")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get order protection timeline for customer trust' })
-  async getOrderProtection(@Param('orderId') orderId: string) {
+  @ApiOperation({ summary: "Get order protection timeline for customer trust" })
+  async getOrderProtection(@Param("orderId") orderId: string) {
     return this.intelligenceService.getOrderProtectionTimeline(orderId);
   }
 
@@ -96,9 +101,9 @@ export class MarketplaceIntelligenceController {
   // TRUST PROFILES (Public)
   // ═══════════════════════════════════════
 
-  @Get('trust-profile/:shopId')
-  @ApiOperation({ summary: 'Get trust-first shop profile data' })
-  async getTrustProfile(@Param('shopId') shopId: string) {
+  @Get("trust-profile/:shopId")
+  @ApiOperation({ summary: "Get trust-first shop profile data" })
+  async getTrustProfile(@Param("shopId") shopId: string) {
     return this.intelligenceService.getTrustProfile(shopId);
   }
 
@@ -106,11 +111,11 @@ export class MarketplaceIntelligenceController {
   // COUNTER-OFFER PLAYBOOKS (Customer)
   // ═══════════════════════════════════════
 
-  @Get('counter-offer-suggestions/:offerId')
+  @Get("counter-offer-suggestions/:offerId")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get data-driven counter-offer suggestions' })
-  async getCounterOfferSuggestions(@Param('offerId') offerId: string) {
+  @ApiOperation({ summary: "Get data-driven counter-offer suggestions" })
+  async getCounterOfferSuggestions(@Param("offerId") offerId: string) {
     return this.intelligenceService.getCounterOfferSuggestions(offerId);
   }
 
@@ -118,12 +123,16 @@ export class MarketplaceIntelligenceController {
   // WIN/LOSS REASONS (Customer)
   // ═══════════════════════════════════════
 
-  @Post('loss-reason')
+  @Post("loss-reason")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Record why an offer was not selected' })
+  @ApiOperation({ summary: "Record why an offer was not selected" })
   async recordLossReason(@Body() dto: RecordLossReasonDto) {
-    await this.intelligenceService.recordLossReason(dto.offerId, dto.category, dto.note);
+    await this.intelligenceService.recordLossReason(
+      dto.offerId,
+      dto.category,
+      dto.note,
+    );
     return { success: true };
   }
 
@@ -131,20 +140,20 @@ export class MarketplaceIntelligenceController {
   // ADMIN: INTELLIGENCE DASHBOARD
   // ═══════════════════════════════════════
 
-  @Get('admin/dashboard')
+  @Get("admin/dashboard")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get marketplace intelligence dashboard' })
+  @ApiOperation({ summary: "Get marketplace intelligence dashboard" })
   async getDashboard() {
     return this.intelligenceService.getDashboard();
   }
 
-  @Get('admin/ai-capabilities')
+  @Get("admin/ai-capabilities")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get current AI capabilities based on data' })
+  @ApiOperation({ summary: "Get current AI capabilities based on data" })
   async getAiCapabilities() {
     return this.intelligenceService.getAiCapabilities();
   }
@@ -153,58 +162,64 @@ export class MarketplaceIntelligenceController {
   // ADMIN: AI PHASE MILESTONES
   // ═══════════════════════════════════════
 
-  @Get('admin/milestones')
+  @Get("admin/milestones")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get all AI phase milestones with progress' })
+  @ApiOperation({ summary: "Get all AI phase milestones with progress" })
   async getMilestones() {
     return this.intelligenceService.getMilestones();
   }
 
-  @Patch('admin/milestones/:id/action')
+  @Patch("admin/milestones/:id/action")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update a milestone action item status' })
+  @ApiOperation({ summary: "Update a milestone action item status" })
   async updateMilestoneAction(
-    @Param('id') id: string,
-    @Body() body: { actionIndex: number; status: 'pending' | 'completed' | 'skipped' },
+    @Param("id") id: string,
+    @Body()
+    body: { actionIndex: number; status: "pending" | "completed" | "skipped" },
   ) {
-    return this.intelligenceService.updateMilestoneAction(id, body.actionIndex, body.status);
+    return this.intelligenceService.updateMilestoneAction(
+      id,
+      body.actionIndex,
+      body.status,
+    );
   }
 
   // ═══════════════════════════════════════
   // ADMIN: QUOTE ANOMALIES
   // ═══════════════════════════════════════
 
-  @Get('admin/anomalies')
+  @Get("admin/anomalies")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get quote anomalies for review' })
+  @ApiOperation({ summary: "Get quote anomalies for review" })
   async getAnomalies(
-    @Query('type') type?: string,
-    @Query('severity') severity?: string,
-    @Query('reviewed') reviewed?: string,
-    @Query('limit') limit?: string,
+    @Query("type") type?: string,
+    @Query("severity") severity?: string,
+    @Query("reviewed") reviewed?: string,
+    @Query("limit") limit?: string,
   ) {
     return this.intelligenceService.getAnomalies({
       type,
       severity,
-      reviewed: reviewed === 'true' ? true : reviewed === 'false' ? false : undefined,
+      reviewed:
+        reviewed === "true" ? true : reviewed === "false" ? false : undefined,
       limit: limit ? parseInt(limit) : undefined,
     });
   }
 
-  @Patch('admin/anomalies/:id/review')
+  @Patch("admin/anomalies/:id/review")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Mark a quote anomaly as reviewed' })
+  @ApiOperation({ summary: "Mark a quote anomaly as reviewed" })
   async reviewAnomaly(
-    @Param('id') id: string,
-    @CurrentUser('id') adminId: string,
+    @Param("id") id: string,
+    @CurrentUser("id") adminId: string,
     @Body() body: ReviewAnomalyDto,
   ) {
     return this.intelligenceService.reviewAnomaly(id, adminId, body.note);

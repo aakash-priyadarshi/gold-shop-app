@@ -122,7 +122,10 @@ function TrustScoreMeter({ score }: { score: number }) {
   );
 }
 
-export function TrustProfileCard({ shopId, compact = false }: TrustProfileCardProps) {
+export function TrustProfileCard({
+  shopId,
+  compact = false,
+}: TrustProfileCardProps) {
   const [data, setData] = useState<TrustProfileData | null>(null);
   const [loading, setLoading] = useState(true);
 

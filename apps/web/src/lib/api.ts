@@ -544,7 +544,8 @@ export const intelligenceApi = {
   updateMilestoneAction: (
     id: string,
     data: { actionIndex: number; status: "pending" | "completed" | "skipped" },
-  ) => api.patch(`/marketplace-intelligence/admin/milestones/${id}/action`, data),
+  ) =>
+    api.patch(`/marketplace-intelligence/admin/milestones/${id}/action`, data),
 
   // Admin: Quote Anomalies
   getAnomalies: (params?: {
@@ -552,8 +553,7 @@ export const intelligenceApi = {
     severity?: string;
     reviewed?: string;
     limit?: string;
-  }) =>
-    api.get("/marketplace-intelligence/admin/anomalies", { params }),
+  }) => api.get("/marketplace-intelligence/admin/anomalies", { params }),
   reviewAnomaly: (id: string, data: { note?: string }) =>
     api.patch(`/marketplace-intelligence/admin/anomalies/${id}/review`, data),
 };
