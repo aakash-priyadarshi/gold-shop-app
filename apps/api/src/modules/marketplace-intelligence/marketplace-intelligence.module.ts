@@ -17,6 +17,14 @@ export class MarketplaceIntelligenceModule implements OnModuleInit {
 
   async onModuleInit() {
     // Initialize AI phase milestones on startup (idempotent)
-    await this.intelligenceService.initializeMilestones();
+    // Wrapped in try-catch so the app still starts if migration hasn't been applied yet
+    try {
+      await this.intelligenceService.initializeMilestones();
+    } catch (err) {
+      console.warn(
+        'MarketplaceIntelligence: Could not initialize milestones — migration may not be applied yet.',
+        err?.message,
+      );
+    }
   }
 }

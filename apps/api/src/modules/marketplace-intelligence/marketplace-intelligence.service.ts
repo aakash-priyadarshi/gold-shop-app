@@ -87,6 +87,14 @@ export class MarketplaceIntelligenceService {
    * Initialize milestones on module startup (idempotent)
    */
   async initializeMilestones(): Promise<void> {
+    // Quick check if table exists — skip silently if migration not applied
+    try {
+      await this.prisma.aiPhaseMilestone.count();
+    } catch {
+      this.logger.warn('AiPhaseMilestone table not found — skipping initialization. Run the migration first.');
+      return;
+    }
+
     for (const milestone of this.MILESTONES) {
       await this.prisma.aiPhaseMilestone.upsert({
         where: {
@@ -117,6 +125,12 @@ export class MarketplaceIntelligenceService {
    */
   @Cron(CronExpression.EVERY_HOUR)
   async checkPhaseMilestones(): Promise<void> {
+    try {
+      await this.prisma.rfqOrderInsight.count();
+    } catch {
+      return; // Table doesn't exist yet — migration not applied
+    }
+
     const completedInsights = await this.prisma.rfqOrderInsight.count({
       where: { orderCompleted: true },
     });
@@ -400,6 +414,14 @@ export class MarketplaceIntelligenceService {
   @Cron('0 30 */6 * * *') // Every 6 hours at :30
   async detectQuoteAnomalies(): Promise<void> {
     this.logger.log('Running quote anomaly detection...');
+
+    try {
+      // Quick table existence check
+      await this.prisma.quoteAnomaly.count();
+    } catch {
+      this.logger.warn('QuoteAnomaly table not found — skipping detection.');
+      return;
+    }
 
     try {
       // Get recent offers (last 24h)
