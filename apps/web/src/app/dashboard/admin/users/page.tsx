@@ -1,7 +1,6 @@
 "use client";
 
 import { AdminCustomersCRM } from "@/components/admin/AdminCustomersCRM";
-import { AdminSellerCRM } from "@/components/admin/AdminSellerCRM";
 import { AdminGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import {
@@ -1029,10 +1028,6 @@ export default function AdminUsersPage() {
                 <User className="h-4 w-4" />
                 Customers CRM
               </TabsTrigger>
-              <TabsTrigger value="sellers" className="gap-2">
-                <Store className="h-4 w-4" />
-                Sellers CRM
-              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="users" className="space-y-6 mt-0">
@@ -1297,10 +1292,6 @@ export default function AdminUsersPage() {
 
             <TabsContent value="customers" className="mt-0">
               <AdminCustomersCRM />
-            </TabsContent>
-
-            <TabsContent value="sellers" className="mt-0">
-              <AdminSellerCRM />
             </TabsContent>
           </Tabs>
         </div>

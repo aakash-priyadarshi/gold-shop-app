@@ -1,6 +1,7 @@
 "use client";
 
 import { AdminGuard } from "@/components/auth/RouteGuard";
+import { AdminSellerCRM } from "@/components/admin/AdminSellerCRM";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,18 +41,16 @@ import {
   Calendar,
   CheckCircle,
   Eye,
-  ExternalLink,
-  FileCheck,
-  Globe,
   Loader2,
   Pencil,
   Plus,
   Search,
-  Shield,
+  Star,
   Store,
   Trash2,
+  TrendingUp,
   User,
-  XCircle,
+  Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -107,7 +106,7 @@ export default function AdminShopsPage() {
   const [filteredShops, setFilteredShops] = useState<Shop[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("pending");
+  const [activeTab, setActiveTab] = useState("directory");
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   // View/Edit shop dialog state
@@ -120,14 +119,6 @@ export default function AdminShopsPage() {
   // Create shop dialog state
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [creatingShop, setCreatingShop] = useState(false);
-
-  // KYC Review dialog state
-  const [kycDialogOpen, setKycDialogOpen] = useState(false);
-  const [kycShopId, setKycShopId] = useState<string | null>(null);
-  const [kycData, setKycData] = useState<any>(null);
-  const [kycLoading, setKycLoading] = useState(false);
-  const [kycProcessing, setKycProcessing] = useState(false);
-  const [kycRejectReason, setKycRejectReason] = useState("");
 
   const [ownerSearchQuery, setOwnerSearchQuery] = useState("");
   const [availableOwners, setAvailableOwners] = useState<any[]>([]);
@@ -150,7 +141,7 @@ export default function AdminShopsPage() {
 
   useEffect(() => {
     filterShops();
-  }, [shops, searchQuery, activeTab]);
+  }, [shops, searchQuery]);
 
   const loadShops = async () => {
     setIsLoading(true);
@@ -176,13 +167,6 @@ export default function AdminShopsPage() {
   const filterShops = () => {
     let filtered = [...shops];
 
-    // Filter by tab
-    if (activeTab === "pending") {
-      filtered = filtered.filter((s) => !s.isVerified);
-    } else if (activeTab === "verified") {
-      filtered = filtered.filter((s) => s.isVerified);
-    }
-
     // Filter by search
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -195,84 +179,6 @@ export default function AdminShopsPage() {
     }
 
     setFilteredShops(filtered);
-  };
-
-  const handleVerify = async (shopId: string, approve: boolean) => {
-    setProcessingId(shopId);
-    try {
-      if (approve) {
-        await api.patch(`/shops/${shopId}/verify`);
-        toast({
-          title: "Shop Verified",
-          description: "The shop has been approved and can now operate.",
-        });
-      } else {
-        // For rejection, we could add a reason dialog in the future
-        toast({
-          title: "Shop Rejected",
-          description: "The shop verification has been rejected.",
-        });
-      }
-      loadShops();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Action Failed",
-        description:
-          error.response?.data?.message || "Could not process request",
-      });
-    } finally {
-      setProcessingId(null);
-    }
-  };
-
-  const openKycReview = async (shopId: string) => {
-    setKycShopId(shopId);
-    setKycDialogOpen(true);
-    setKycLoading(true);
-    setKycData(null);
-    setKycRejectReason("");
-    try {
-      const response = await adminApi.getShopKyc(shopId);
-      setKycData(response.data);
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Failed to load KYC",
-        description: error.response?.data?.message || "Could not fetch KYC data",
-      });
-    } finally {
-      setKycLoading(false);
-    }
-  };
-
-  const handleKycAction = async (action: "approve" | "reject") => {
-    if (!kycShopId) return;
-    setKycProcessing(true);
-    try {
-      await adminApi.updateShopKycStatus(
-        kycShopId,
-        action,
-        action === "reject" ? kycRejectReason : undefined,
-      );
-      toast({
-        title: action === "approve" ? "KYC Approved" : "KYC Rejected",
-        description:
-          action === "approve"
-            ? "Shop has been verified based on KYC review."
-            : "Shop KYC has been rejected.",
-      });
-      setKycDialogOpen(false);
-      loadShops();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Action Failed",
-        description: error.response?.data?.message || "Could not process KYC action",
-      });
-    } finally {
-      setKycProcessing(false);
-    }
   };
 
   const searchOwners = async (query: string) => {
@@ -429,8 +335,11 @@ export default function AdminShopsPage() {
     return <span>🌍</span>;
   };
 
-  const pendingCount = shops.filter((s) => !s.isVerified).length;
   const verifiedCount = shops.filter((s) => s.isVerified).length;
+  const activeCount = shops.filter((s) => s.isActive).length;
+  const avgRating = shops.length > 0
+    ? (shops.reduce((sum, s) => sum + (s.rating || 0), 0) / shops.filter(s => s.rating).length || 0).toFixed(1)
+    : "0.0";
 
   return (
     <AdminGuard>
@@ -438,25 +347,75 @@ export default function AdminShopsPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Shop Management</h1>
+              <h1 className="text-2xl font-bold">Shops & Seller CRM</h1>
               <p className="text-muted-foreground">
-                Review and manage shop registrations
+                Manage shops, track seller performance, and support sellers
               </p>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search shops..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 w-64"
-                />
+          </div>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="directory" className="gap-2">
+                <Store className="h-4 w-4" />
+                Shop Directory
+                <Badge variant="outline" className="ml-1">
+                  {shops.length}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="crm" className="gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Seller CRM
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="directory" className="mt-4 space-y-4">
+              {/* Stats Row */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground">Total Shops</p>
+                    <p className="text-2xl font-bold">{shops.length}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground">Verified</p>
+                    <p className="text-2xl font-bold text-green-600">{verifiedCount}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground">Active</p>
+                    <p className="text-2xl font-bold text-blue-600">{activeCount}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 flex items-center gap-2">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Avg Rating</p>
+                      <p className="text-2xl font-bold text-amber-600">{avgRating}</p>
+                    </div>
+                    <Star className="h-5 w-5 text-amber-400 ml-auto" />
+                  </CardContent>
+                </Card>
               </div>
-              <Dialog
-                open={createDialogOpen}
-                onOpenChange={setCreateDialogOpen}
-              >
+
+              {/* Search + Actions */}
+              <div className="flex items-center gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search shops by name, email, or city..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Dialog
+                  open={createDialogOpen}
+                  onOpenChange={setCreateDialogOpen}
+                >
                 <DialogTrigger asChild>
                   <Button>
                     <Plus className="h-4 w-4 mr-2" />
@@ -669,28 +628,8 @@ export default function AdminShopsPage() {
                 </DialogContent>
               </Dialog>
             </div>
-          </div>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList>
-              <TabsTrigger value="pending" className="gap-2">
-                Pending
-                {pendingCount > 0 && (
-                  <Badge variant="secondary" className="ml-1">
-                    {pendingCount}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="verified" className="gap-2">
-                Verified
-                <Badge variant="outline" className="ml-1">
-                  {verifiedCount}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="all">All Shops</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value={activeTab} className="mt-4">
+              {/* Shops Table */}
               <Card>
                 <CardContent className="p-0">
                   {isLoading ? (
@@ -711,6 +650,7 @@ export default function AdminShopsPage() {
                           <TableHead>Location</TableHead>
                           <TableHead>Materials</TableHead>
                           <TableHead>Products</TableHead>
+                          <TableHead>Rating</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Registered</TableHead>
                           <TableHead>Actions</TableHead>
@@ -808,19 +748,37 @@ export default function AdminShopsPage() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              {shop.isVerified ? (
-                                <Badge className="bg-green-100 text-green-700">
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  Verified
-                                </Badge>
+                              {shop.rating ? (
+                                <div className="flex items-center gap-1">
+                                  <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
+                                  <span className="text-sm font-medium">{shop.rating.toFixed(1)}</span>
+                                  <span className="text-xs text-muted-foreground">({shop.totalReviews || 0})</span>
+                                </div>
                               ) : (
-                                <Badge
-                                  variant="secondary"
-                                  className="bg-amber-100 text-amber-700"
-                                >
-                                  Pending
-                                </Badge>
+                                <span className="text-xs text-muted-foreground">No reviews</span>
                               )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-1">
+                                {shop.isVerified ? (
+                                  <Badge className="bg-green-100 text-green-700 w-fit">
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Verified
+                                  </Badge>
+                                ) : (
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-amber-100 text-amber-700 w-fit"
+                                  >
+                                    Pending
+                                  </Badge>
+                                )}
+                                {!shop.isActive && (
+                                  <Badge variant="secondary" className="bg-red-100 text-red-700 w-fit text-xs">
+                                    Inactive
+                                  </Badge>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -834,6 +792,7 @@ export default function AdminShopsPage() {
                                   size="sm"
                                   variant="ghost"
                                   onClick={() => handleViewShop(shop)}
+                                  title="View Details"
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
@@ -841,37 +800,17 @@ export default function AdminShopsPage() {
                                   size="sm"
                                   variant="ghost"
                                   onClick={() => handleEditShop(shop)}
+                                  title="Edit Shop"
                                 >
                                   <Pencil className="h-4 w-4" />
                                 </Button>
-                                {!shop.isVerified && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => openKycReview(shop.id)}
-                                    className="gap-1 text-blue-600 hover:text-blue-700"
-                                  >
-                                    <FileCheck className="h-3.5 w-3.5" />
-                                    <span className="hidden xl:inline">Review KYC</span>
-                                  </Button>
-                                )}
-                                {shop.isVerified && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => openKycReview(shop.id)}
-                                    className="gap-1 text-green-600"
-                                  >
-                                    <FileCheck className="h-3.5 w-3.5" />
-                                    <span className="hidden xl:inline">KYC</span>
-                                  </Button>
-                                )}
                                 <Button
                                   size="sm"
                                   variant="ghost"
                                   onClick={() => handleDeleteShop(shop.id)}
                                   disabled={processingId === shop.id}
                                   className="text-red-600 hover:text-red-700"
+                                  title="Delete Shop"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -884,6 +823,10 @@ export default function AdminShopsPage() {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="crm" className="mt-4">
+              <AdminSellerCRM />
             </TabsContent>
           </Tabs>
         </div>
@@ -1184,42 +1127,6 @@ export default function AdminShopsPage() {
                     </div>
                   </div>
                 ) : null}
-
-                {/* KYC & Verification */}
-                <div className="border-t pt-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold flex items-center gap-2">
-                      <FileCheck className="h-4 w-4" />
-                      KYC & Verification
-                    </h4>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setViewDialogOpen(false);
-                        openKycReview(selectedShop.id);
-                      }}
-                      className="gap-1"
-                    >
-                      <Shield className="h-3.5 w-3.5" />
-                      Review KYC Details
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {selectedShop.isVerified ? (
-                      <Badge className="bg-green-100 text-green-700">
-                        <CheckCircle className="h-3 w-3 mr-1" /> Verified
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-amber-100 text-amber-700">
-                        Pending Verification
-                      </Badge>
-                    )}
-                    <p className="text-sm text-muted-foreground">
-                      Click &quot;Review KYC Details&quot; to view submitted documents and approve/reject.
-                    </p>
-                  </div>
-                </div>
               </div>
             )}
             <DialogFooter>
@@ -1464,187 +1371,6 @@ export default function AdminShopsPage() {
                 {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Save Changes
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* KYC Review Dialog */}
-        <Dialog open={kycDialogOpen} onOpenChange={setKycDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <FileCheck className="h-5 w-5" />
-                KYC Review
-              </DialogTitle>
-              <DialogDescription>
-                Review submitted KYC documents and verify or reject the shop
-              </DialogDescription>
-            </DialogHeader>
-
-            {kycLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : kycData ? (
-              <div className="space-y-5">
-                {/* Shop & Owner Info */}
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                  <div>
-                    <p className="font-semibold">{kycData.shopName}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {kycData.user?.firstName} {kycData.user?.lastName} — {kycData.user?.email}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{kycData.country}</span>
-                    {kycData.isVerified ? (
-                      <Badge className="bg-green-100 text-green-700">
-                        <CheckCircle className="h-3 w-3 mr-1" /> Verified
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-amber-100 text-amber-700">Pending</Badge>
-                    )}
-                  </div>
-                </div>
-
-                {/* Text-based KYC fields */}
-                <div>
-                  <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-3">
-                    Identification Numbers
-                  </h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { label: "PAN Number", value: kycData.panNumber },
-                      { label: "VAT/GST Number", value: kycData.vatNumber },
-                      { label: "BIS License", value: kycData.bisLicenseNumber },
-                    ].map((field) => (
-                      <div key={field.label} className="p-3 rounded-lg border bg-white">
-                        <Label className="text-muted-foreground text-xs">{field.label}</Label>
-                        <p className={`font-mono text-sm mt-1 ${field.value ? "text-foreground" : "text-muted-foreground italic"}`}>
-                          {field.value || "Not provided"}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Document uploads */}
-                {kycData.verificationDocuments && Object.keys(kycData.verificationDocuments).length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-3">
-                      Submitted Documents
-                    </h4>
-                    <div className="grid grid-cols-1 gap-3">
-                      {Object.entries(kycData.verificationDocuments as Record<string, any>).map(
-                        ([key, value]) => {
-                          const isUrl = typeof value === "string" && value.startsWith("http");
-                          const displayKey = key
-                            .replace(/([A-Z])/g, " $1")
-                            .replace(/^./, (s: string) => s.toUpperCase());
-                          return (
-                            <div
-                              key={key}
-                              className="flex items-center justify-between p-3 rounded-lg border bg-white"
-                            >
-                              <div>
-                                <p className="text-sm font-medium">{displayKey}</p>
-                                {!isUrl && (
-                                  <p className="text-xs font-mono text-muted-foreground mt-0.5">
-                                    {String(value)}
-                                  </p>
-                                )}
-                              </div>
-                              {isUrl && (
-                                <a
-                                  href={value}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 underline"
-                                >
-                                  <ExternalLink className="h-3.5 w-3.5" />
-                                  View Document
-                                </a>
-                              )}
-                            </div>
-                          );
-                        },
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {(!kycData.verificationDocuments || Object.keys(kycData.verificationDocuments).length === 0) &&
-                  !kycData.panNumber &&
-                  !kycData.vatNumber &&
-                  !kycData.bisLicenseNumber && (
-                    <div className="text-center py-6 text-muted-foreground">
-                      <FileCheck className="h-10 w-10 mx-auto mb-2 opacity-40" />
-                      <p className="font-medium">No KYC documents submitted yet</p>
-                      <p className="text-sm mt-1">
-                        The shop owner hasn&apos;t uploaded any verification documents.
-                      </p>
-                    </div>
-                  )}
-
-                {/* Reject reason input (shown when rejecting) */}
-                <div className="space-y-2">
-                  <Label htmlFor="rejectReason">Rejection Reason (optional)</Label>
-                  <Input
-                    id="rejectReason"
-                    value={kycRejectReason}
-                    onChange={(e) => setKycRejectReason(e.target.value)}
-                    placeholder="Reason for rejection (visible in audit log)"
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>Failed to load KYC data</p>
-              </div>
-            )}
-
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="outline" onClick={() => setKycDialogOpen(false)}>
-                Close
-              </Button>
-              {kycData && (
-                <>
-                  {kycData.isVerified ? (
-                    <Button
-                      variant="destructive"
-                      onClick={() => handleKycAction("reject")}
-                      disabled={kycProcessing}
-                    >
-                      {kycProcessing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                      <XCircle className="h-4 w-4 mr-1" />
-                      Revoke Verification
-                    </Button>
-                  ) : (
-                    <>
-                      <Button
-                        variant="outline"
-                        className="text-red-600 hover:text-red-700"
-                        onClick={() => handleKycAction("reject")}
-                        disabled={kycProcessing}
-                      >
-                        {kycProcessing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                        <XCircle className="h-4 w-4 mr-1" />
-                        Reject
-                      </Button>
-                      <Button
-                        className="bg-green-600 hover:bg-green-700"
-                        onClick={() => handleKycAction("approve")}
-                        disabled={kycProcessing}
-                      >
-                        {kycProcessing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        Approve & Verify
-                      </Button>
-                    </>
-                  )}
-                </>
-              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>

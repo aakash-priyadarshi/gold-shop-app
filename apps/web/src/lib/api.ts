@@ -376,6 +376,8 @@ export const adminApi = {
   addSellerNote: (shopId: string, data: { note: string; category?: string }) =>
     api.post(`/admin/sellers/${shopId}/notes`, data),
   getSellerNotes: (shopId: string) => api.get(`/admin/sellers/${shopId}/notes`),
+  updateSeller: (shopId: string, data: Record<string, any>) =>
+    api.patch(`/admin/sellers/${shopId}`, data),
 };
 
 // Materials API

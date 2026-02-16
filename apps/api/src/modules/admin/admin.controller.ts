@@ -988,6 +988,21 @@ export class AdminController {
     return this.sellerEngagement.getSellerProfile(shopId);
   }
 
+  @Patch("sellers/:shopId")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Update seller shop fields (isOnHold, isActive, etc.)" })
+  async updateSeller(
+    @Param("shopId") shopId: string,
+    @Body() body: Record<string, any>,
+  ) {
+    const allowedFields = ["isOnHold", "isActive", "isVerified", "sellerTier"];
+    const data: Record<string, any> = {};
+    for (const key of allowedFields) {
+      if (body[key] !== undefined) data[key] = body[key];
+    }
+    return this.prisma.shop.update({ where: { id: shopId }, data });
+  }
+
   @Get("sellers/:shopId/health-score")
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: "Get seller health score" })
