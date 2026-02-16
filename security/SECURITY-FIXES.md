@@ -43,6 +43,11 @@
 - **Issue:** `ThrottlerModule` was configured (100 req/min) but `ThrottlerGuard` was never applied globally — meaning the rate limit was not enforced on any endpoint unless explicitly guarded.
 - **Fix:** Added `ThrottlerGuard` as `APP_GUARD` provider. All endpoints now respect the global 100 req/min limit, and individual endpoints can override with `@Throttle()`.
 
+### 8. HIGH — Shop Orders IDOR (FIXED)
+- **Files:** `apps/api/src/modules/orders/orders.controller.ts`, `apps/api/src/modules/inventory/inventory.controller.ts`, `apps/api/src/modules/commission/commission.controller.ts`
+- **Issue:** `GET /orders/shop/:shopId`, `GET /orders/shop/:shopId/stats`, `GET /inventory/shop/:shopId/stats`, `GET /commission/shop/:shopId/summary`, `GET /commission/shop/:shopId/ledger` only checked `@Roles('SHOPKEEPER')` but did NOT verify the shopkeeper owned the requested shop. Any shopkeeper could query any shop's orders, stats, and commission data.
+- **Fix:** Added ownership check — `if (userRole === 'SHOPKEEPER' && shopId !== userShopId) throw new ForbiddenException()`. Admins bypass the check.
+
 ---
 
 ## Pre-Existing Security Features (Good)
