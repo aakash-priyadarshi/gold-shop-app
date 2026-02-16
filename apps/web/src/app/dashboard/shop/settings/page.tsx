@@ -52,7 +52,7 @@ import {
   Wallet,
   XCircle,
 } from "lucide-react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ShopData {
   id: string;
@@ -181,8 +181,6 @@ const TIER_META: Record<
   },
 };
 
-
-
 export default function ShopSettingsPage() {
   const { user } = useAuth();
   const { placeholders: countryPlaceholders, symbol: currencySymbol } =
@@ -194,7 +192,6 @@ export default function ShopSettingsPage() {
     null,
   );
   const [tierLoading, setTierLoading] = useState(false);
-
 
   // Phone availability check state
   const [phoneCheckState, setPhoneCheckState] = useState<{
@@ -809,7 +806,11 @@ export default function ShopSettingsPage() {
                                   </div>
                                 </div>
                                 <a href="/dashboard/shop/engagement">
-                                  <Button variant="outline" size="sm" className="gap-1 text-xs">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-1 text-xs"
+                                  >
                                     <Award className="h-3.5 w-3.5" />
                                     View Tier Roadmap & Details
                                   </Button>
@@ -824,7 +825,10 @@ export default function ShopSettingsPage() {
                         <p className="text-sm text-muted-foreground">
                           Tier information will appear once your shop has some
                           activity.{" "}
-                          <a href="/dashboard/shop/engagement" className="underline font-medium">
+                          <a
+                            href="/dashboard/shop/engagement"
+                            className="underline font-medium"
+                          >
                             View Engagement & Tiers
                           </a>
                         </p>

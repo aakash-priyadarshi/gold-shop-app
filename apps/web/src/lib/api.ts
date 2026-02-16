@@ -313,6 +313,11 @@ export const adminApi = {
   }) => api.post("/admin/notifications/broadcast", data),
   getSystemNotifications: () => api.get("/admin/notifications/system"),
 
+  // KYC Review
+  getShopKyc: (shopId: string) => api.get(`/shops/${shopId}/kyc`),
+  updateShopKycStatus: (shopId: string, action: "approve" | "reject", reason?: string) =>
+    api.patch(`/shops/${shopId}/kyc-status`, { action, reason }),
+
   // Email settings
   getEmailStatus: () => api.get("/admin/email/status"),
   sendTestEmail: (email: string) => api.post("/admin/email/test", { email }),
