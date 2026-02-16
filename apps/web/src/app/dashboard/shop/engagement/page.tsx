@@ -1,7 +1,5 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +22,6 @@ import { sellerPerformanceApi, shopsApi } from "@/lib/api";
 import {
   Activity,
   AlertTriangle,
-  ArrowRight,
   Award,
   BarChart3,
   CheckCircle,
@@ -49,6 +46,8 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
+import Link from "next/link";
+import React, { useEffect, useState } from "react";
 
 /* ═══════════════════════════════════════════════════════
  *  TYPES
@@ -284,17 +283,7 @@ function getKycFieldsForCountry(country: string): {
   description: string;
   fields: KycField[];
 } {
-  const EU_COUNTRIES = [
-    "DE",
-    "FR",
-    "IT",
-    "ES",
-    "NL",
-    "BE",
-    "AT",
-    "PT",
-    "IE",
-  ];
+  const EU_COUNTRIES = ["DE", "FR", "IT", "ES", "NL", "BE", "AT", "PT", "IE"];
 
   if (country === "IN") {
     return {
@@ -427,8 +416,7 @@ function getKycFieldsForCountry(country: string): {
           placeholder: "Assay office sponsor mark",
           type: "text",
           required: false,
-          helpText:
-            "UK Assay Office hallmark sponsor mark for precious metals",
+          helpText: "UK Assay Office hallmark sponsor mark for precious metals",
         },
         {
           key: "companyCertificate",
@@ -634,7 +622,11 @@ export default function ShopEngagementPage() {
     type: "kyc",
     onSuccess: () => {},
     onError: (err) =>
-      toast({ variant: "destructive", title: "Upload failed", description: err }),
+      toast({
+        variant: "destructive",
+        title: "Upload failed",
+        description: err,
+      }),
   });
 
   useEffect(() => {
@@ -732,10 +724,20 @@ export default function ShopEngagementPage() {
         ) {
           textFields[key] = value || undefined;
         } else if (
-          ["einNumber", "tradeLicenseNumber", "companiesHouseNumber", "businessRegistration", "hallmarkRegistration", "stateLicense"].includes(key)
+          [
+            "einNumber",
+            "tradeLicenseNumber",
+            "companiesHouseNumber",
+            "businessRegistration",
+            "hallmarkRegistration",
+            "stateLicense",
+          ].includes(key)
         ) {
           docs[key] = value;
-        } else if (value && (value.startsWith("http") || value.startsWith("data:"))) {
+        } else if (
+          value &&
+          (value.startsWith("http") || value.startsWith("data:"))
+        ) {
           docs[key] = value;
         } else if (value) {
           docs[key] = value;
@@ -830,9 +832,9 @@ export default function ShopEngagementPage() {
                         <Trophy className="h-4 w-4" /> Milestones
                       </h4>
                       <p>
-                        Achieve milestones by completing orders, earning revenue,
-                        getting positive reviews, and staying active. Milestones
-                        contribute to your overall shop reputation.
+                        Achieve milestones by completing orders, earning
+                        revenue, getting positive reviews, and staying active.
+                        Milestones contribute to your overall shop reputation.
                       </p>
                     </div>
                   </div>
@@ -846,26 +848,26 @@ export default function ShopEngagementPage() {
                       performance criteria:
                     </p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {(
-                        ["STANDARD", "SILVER", "GOLD", "ELITE"] as const
-                      ).map((t) => {
-                        const m = TIER_META[t];
-                        return (
-                          <div
-                            key={t}
-                            className={`p-2 rounded-lg border ${m.border} ${m.bg}`}
-                          >
-                            <p className={`font-semibold text-xs ${m.color}`}>
-                              {m.label}
-                            </p>
-                            <ul className="text-[11px] mt-1 space-y-0.5 text-gray-700">
-                              {m.benefits.map((b) => (
-                                <li key={b}>• {b}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        );
-                      })}
+                      {(["STANDARD", "SILVER", "GOLD", "ELITE"] as const).map(
+                        (t) => {
+                          const m = TIER_META[t];
+                          return (
+                            <div
+                              key={t}
+                              className={`p-2 rounded-lg border ${m.border} ${m.bg}`}
+                            >
+                              <p className={`font-semibold text-xs ${m.color}`}>
+                                {m.label}
+                              </p>
+                              <ul className="text-[11px] mt-1 space-y-0.5 text-gray-700">
+                                {m.benefits.map((b) => (
+                                  <li key={b}>• {b}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          );
+                        },
+                      )}
                     </div>
                   </div>
                   <div className="bg-blue-100/50 rounded p-2 text-xs">
@@ -909,8 +911,8 @@ export default function ShopEngagementPage() {
                       </h2>
                       <p className="text-muted-foreground">
                         Grade:{" "}
-                        <span className="font-bold">{healthScore.grade}</span>{" "}
-                        — {gradeLabel[healthScore.grade] || ""}
+                        <span className="font-bold">{healthScore.grade}</span> —{" "}
+                        {gradeLabel[healthScore.grade] || ""}
                       </p>
                     </div>
                   </div>
@@ -1043,9 +1045,7 @@ export default function ShopEngagementPage() {
                           "SILVER",
                           "GOLD",
                           "ELITE",
-                        ].indexOf(
-                          tierDashboard.shop?.sellerTier || "STANDARD",
-                        );
+                        ].indexOf(tierDashboard.shop?.sellerTier || "STANDARD");
                         const isCurrentOrPast = currentTierIdx >= i;
                         const viewingTier =
                           tierDashboard.viewingTier || tierDashboard.nextTier;
@@ -1100,9 +1100,7 @@ export default function ShopEngagementPage() {
                         "SILVER",
                         "GOLD",
                         "ELITE",
-                      ].indexOf(
-                        tierDashboard.shop?.sellerTier || "STANDARD",
-                      );
+                      ].indexOf(tierDashboard.shop?.sellerTier || "STANDARD");
                       const viewIdx = [
                         "STANDARD",
                         "SILVER",
@@ -1166,7 +1164,9 @@ export default function ShopEngagementPage() {
                                         <>
                                           {Number(criterion.current).toFixed(1)}
                                           {cMeta.unit} / &le;{" "}
-                                          {Number(criterion.required).toFixed(1)}
+                                          {Number(criterion.required).toFixed(
+                                            1,
+                                          )}
                                           {cMeta.unit}
                                         </>
                                       ) : (
@@ -1174,9 +1174,9 @@ export default function ShopEngagementPage() {
                                           {typeof criterion.current ===
                                             "number" &&
                                           criterion.current % 1 !== 0
-                                            ? Number(
-                                                criterion.current,
-                                              ).toFixed(1)
+                                            ? Number(criterion.current).toFixed(
+                                                1,
+                                              )
                                             : criterion.current}
                                           {cMeta.unit} /{" "}
                                           {typeof criterion.required ===
@@ -1475,11 +1475,8 @@ export default function ShopEngagementPage() {
                 <div className="flex-1">
                   <p className="font-medium text-blue-800">
                     Your shop country is set to{" "}
-                    <strong>
-                      {COUNTRY_NAMES[shopCountry] || shopCountry}
-                    </strong>{" "}
-                    — showing{" "}
-                    {COUNTRY_NAMES[shopCountry] || shopCountry} KYC
+                    <strong>{COUNTRY_NAMES[shopCountry] || shopCountry}</strong>{" "}
+                    — showing {COUNTRY_NAMES[shopCountry] || shopCountry} KYC
                     requirements.
                   </p>
                   <p className="text-sm text-blue-700 mt-0.5">

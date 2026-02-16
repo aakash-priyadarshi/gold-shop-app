@@ -519,6 +519,87 @@ export class ShopsService {
     return updated;
   }
 
+  /**
+   * Get KYC documents for a shop by shop ID (admin use)
+   */
+  async getShopKycByShopId(shopId: string) {
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: {
+        id: true,
+        shopName: true,
+        country: true,
+        panNumber: true,
+        vatNumber: true,
+        bisLicenseNumber: true,
+        verificationDocuments: true,
+        isVerified: true,
+        userId: true,
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!shop) {
+      throw new NotFoundException("Shop not found");
+    }
+
+    return shop;
+  }
+
+  /**
+   * Admin approve or reject shop KYC verification
+   */
+  async updateShopKycStatus(
+    shopId: string,
+    adminId: string,
+    action: "approve" | "reject",
+    reason?: string,
+  ) {
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+    });
+
+    if (!shop) {
+      throw new NotFoundException("Shop not found");
+    }
+
+    const isApproved = action === "approve";
+
+    const updated = await this.prisma.shop.update({
+      where: { id: shopId },
+      data: {
+        isVerified: isApproved,
+      },
+      select: {
+        id: true,
+        shopName: true,
+        isVerified: true,
+        country: true,
+        panNumber: true,
+        vatNumber: true,
+        bisLicenseNumber: true,
+        verificationDocuments: true,
+      },
+    });
+
+    await this.auditService.log({
+      userId: adminId,
+      actorType: "ADMIN",
+      action: isApproved ? "APPROVE" : "REJECT",
+      resourceType: "SHOP_KYC",
+      resourceId: shopId,
+      newValue: { action, reason },
+    });
+
+    return updated;
+  }
+
   async getShopDashboard(shopId: string) {
     const [shop, pendingRfqs, activeOrders, recentRatings] = await Promise.all([
       this.prisma.shop.findUnique({

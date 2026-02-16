@@ -299,6 +299,18 @@ function SidebarContent({
     };
   }, [checkScroll]);
 
+  // Scroll the active nav item into view on pathname change
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      const el = navRef.current;
+      if (!el) return;
+      const active = el.querySelector('[data-active="true"]') as HTMLElement;
+      if (active) {
+        active.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    });
+  }, [pathname]);
+
   return (
     <div className="flex flex-col h-full">
       {/* User info */}
@@ -350,6 +362,7 @@ function SidebarContent({
                 key={item.href}
                 href={item.href}
                 onClick={onNavClick}
+                data-active={isActive}
                 className={cn(
                   "flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 touch-target",
                   isActive

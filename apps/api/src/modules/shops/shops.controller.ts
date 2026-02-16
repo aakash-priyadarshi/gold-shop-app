@@ -405,6 +405,28 @@ export class ShopsController {
     return this.shopsService.verifyShop(id, adminId);
   }
 
+  @Get(":id/kyc")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Get KYC/verification documents for a shop (Admin)" })
+  async getShopKycAdmin(@Param("id") id: string) {
+    return this.shopsService.getShopKycByShopId(id);
+  }
+
+  @Patch(":id/kyc-status")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Approve or reject shop KYC verification (Admin)" })
+  async updateShopKycStatus(
+    @Param("id") id: string,
+    @CurrentUser("id") adminId: string,
+    @Body() body: { action: "approve" | "reject"; reason?: string },
+  ) {
+    return this.shopsService.updateShopKycStatus(id, adminId, body.action, body.reason);
+  }
+
   @Patch(":id/admin")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
