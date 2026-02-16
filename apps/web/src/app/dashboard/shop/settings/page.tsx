@@ -14,7 +14,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneInput, needsCountryCode } from "@/components/ui/phone-input";
-import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -182,22 +181,7 @@ const TIER_META: Record<
   },
 };
 
-const CRITERIA_LABELS: Record<
-  string,
-  { label: string; unit: string; lowerIsBetter?: boolean }
-> = {
-  orders: { label: "Completed Orders", unit: "" },
-  cancellationRate: {
-    label: "Cancellation Rate",
-    unit: "%",
-    lowerIsBetter: true,
-  },
-  rating: { label: "Average Rating (60d)", unit: "★" },
-  tenure: { label: "Shop Tenure", unit: " months" },
-  positiveFeedback: { label: "Positive Feedback", unit: "%" },
-  onTimeDispatch: { label: "On-Time Dispatch", unit: "%" },
-  verified: { label: "Shop Verified", unit: "" },
-};
+
 
 export default function ShopSettingsPage() {
   const { user } = useAuth();
@@ -210,7 +194,7 @@ export default function ShopSettingsPage() {
     null,
   );
   const [tierLoading, setTierLoading] = useState(false);
-  const [selectedViewTier, setSelectedViewTier] = useState<string | null>(null);
+
 
   // Phone availability check state
   const [phoneCheckState, setPhoneCheckState] = useState<{
@@ -781,15 +765,14 @@ export default function ShopSettingsPage() {
                       Your Seller Tier & Making Charge
                     </h4>
 
-                    {/* Current Tier Card */}
+                    {/* Compact Current Tier Badge */}
                     {tierLoading ? (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Loading tier information...
                       </div>
                     ) : tierDashboard ? (
-                      <div className="space-y-4">
-                        {/* Current Tier Banner */}
+                      <div className="space-y-3">
                         {(() => {
                           const currentTier =
                             tierDashboard.shop?.sellerTier || "STANDARD";
@@ -817,214 +800,33 @@ export default function ShopSettingsPage() {
                                       {meta.label} Tier
                                     </p>
                                     <p className="text-sm text-muted-foreground">
-                                      {currentTier === "STANDARD"
-                                        ? "Complete milestones below to unlock higher tiers"
-                                        : currentTier === "ELITE"
-                                          ? "You've reached the highest tier — no cap on making charge!"
-                                          : `Making charge cap: up to ${cap}%`}
+                                      {currentTier === "ELITE"
+                                        ? "No cap on making charge!"
+                                        : cap != null
+                                          ? `Making charge cap: up to ${cap}%`
+                                          : "Complete milestones to unlock higher tiers"}
                                     </p>
                                   </div>
                                 </div>
-                                {tierDashboard.shop?.tierUnlockedAt &&
-                                  currentTier !== "STANDARD" && (
-                                    <p className="text-xs text-muted-foreground">
-                                      Since{" "}
-                                      {new Date(
-                                        tierDashboard.shop.tierUnlockedAt,
-                                      ).toLocaleDateString()}
-                                    </p>
-                                  )}
+                                <a href="/dashboard/shop/engagement">
+                                  <Button variant="outline" size="sm" className="gap-1 text-xs">
+                                    <Award className="h-3.5 w-3.5" />
+                                    View Tier Roadmap & Details
+                                  </Button>
+                                </a>
                               </div>
                             </div>
                           );
                         })()}
-
-                        {/* Show all 4 tier roadmap — click any to view requirements */}
-                        <div className="rounded-lg border p-3 bg-muted/30">
-                          <h5 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
-                            Tier Roadmap — click to view requirements
-                          </h5>
-                          <div className="flex items-center gap-1">
-                            {(
-                              ["STANDARD", "SILVER", "GOLD", "ELITE"] as const
-                            ).map((t, i) => {
-                              const m = TIER_META[t];
-                              const currentTierIdx = [
-                                "STANDARD",
-                                "SILVER",
-                                "GOLD",
-                                "ELITE",
-                              ].indexOf(
-                                tierDashboard.shop?.sellerTier || "STANDARD",
-                              );
-                              const isCurrentOrPast = currentTierIdx >= i;
-                              const viewingTier =
-                                tierDashboard.viewingTier ||
-                                tierDashboard.nextTier;
-                              const isViewing = viewingTier === t;
-                              return (
-                                <div
-                                  key={t}
-                                  className="flex items-center gap-1 flex-1"
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedViewTier(t);
-                                      loadTierDashboard(t);
-                                    }}
-                                    className={`flex items-center gap-1 px-2 py-1.5 rounded text-xs font-medium flex-1 justify-center transition-all cursor-pointer ${
-                                      isViewing
-                                        ? `${m.bg} ${m.color} border-2 ${m.border} ring-2 ring-primary/30 shadow-sm`
-                                        : isCurrentOrPast
-                                          ? `${m.bg} ${m.color} border ${m.border} hover:shadow-sm`
-                                          : "bg-muted text-muted-foreground border border-muted hover:bg-muted/50 hover:border-muted-foreground/40"
-                                    }`}
-                                  >
-                                    {React.createElement(m.icon, {
-                                      className: "h-3 w-3",
-                                    })}
-                                    <span className="hidden sm:inline">
-                                      {m.label}
-                                    </span>
-                                  </button>
-                                  {i < 3 && (
-                                    <div
-                                      className={`h-px w-2 ${isCurrentOrPast ? "bg-primary" : "bg-muted-foreground/30"}`}
-                                    />
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        {/* Progress for viewed tier */}
-                        {tierDashboard.viewingTier && (
-                          <div className="space-y-3">
-                            {(() => {
-                              const viewTier = tierDashboard.viewingTier!;
-                              const viewMeta =
-                                TIER_META[viewTier] || TIER_META.STANDARD;
-                              const currentTierIdx = [
-                                "STANDARD",
-                                "SILVER",
-                                "GOLD",
-                                "ELITE",
-                              ].indexOf(
-                                tierDashboard.shop?.sellerTier || "STANDARD",
-                              );
-                              const viewIdx = [
-                                "STANDARD",
-                                "SILVER",
-                                "GOLD",
-                                "ELITE",
-                              ].indexOf(viewTier);
-                              const isAlreadyAchieved =
-                                currentTierIdx >= viewIdx;
-                              return (
-                                <>
-                                  <div className="flex items-center justify-between">
-                                    <h5
-                                      className={`text-sm font-semibold flex items-center gap-1.5 ${viewMeta.color}`}
-                                    >
-                                      {React.createElement(viewMeta.icon, {
-                                        className: "h-4 w-4",
-                                      })}
-                                      {isAlreadyAchieved
-                                        ? `${viewMeta.label} Tier — Achieved!`
-                                        : `Requirements for ${viewMeta.label}`}
-                                    </h5>
-                                    <span className="text-sm font-bold text-primary">
-                                      {tierDashboard.overallProgress.percentage}
-                                      %
-                                    </span>
-                                  </div>
-                                  <Progress
-                                    value={
-                                      tierDashboard.overallProgress.percentage
-                                    }
-                                    className="h-2"
-                                  />
-                                  <div className="grid gap-2">
-                                    {Object.entries(
-                                      tierDashboard.tierProgress,
-                                    ).map(([key, criterion]) => {
-                                      const cMeta = CRITERIA_LABELS[key];
-                                      if (!cMeta) return null;
-                                      const isBool =
-                                        typeof criterion.required === "boolean";
-                                      return (
-                                        <div
-                                          key={key}
-                                          className={`flex items-center justify-between rounded-md px-3 py-2 text-sm border ${
-                                            criterion.met
-                                              ? "bg-green-50 border-green-200"
-                                              : "bg-amber-50 border-amber-200"
-                                          }`}
-                                        >
-                                          <div className="flex items-center gap-2">
-                                            {criterion.met ? (
-                                              <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
-                                            ) : (
-                                              <XCircle className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                                            )}
-                                            <span>{cMeta.label}</span>
-                                          </div>
-                                          <span className="font-mono text-xs">
-                                            {isBool ? (
-                                              criterion.current ? (
-                                                "Yes"
-                                              ) : (
-                                                "No"
-                                              )
-                                            ) : cMeta.lowerIsBetter ? (
-                                              <>
-                                                {Number(
-                                                  criterion.current,
-                                                ).toFixed(1)}
-                                                {cMeta.unit} / ≤{" "}
-                                                {Number(
-                                                  criterion.required,
-                                                ).toFixed(1)}
-                                                {cMeta.unit}
-                                              </>
-                                            ) : (
-                                              <>
-                                                {typeof criterion.current ===
-                                                  "number" &&
-                                                criterion.current % 1 !== 0
-                                                  ? Number(
-                                                      criterion.current,
-                                                    ).toFixed(1)
-                                                  : criterion.current}
-                                                {cMeta.unit} /{" "}
-                                                {typeof criterion.required ===
-                                                  "number" &&
-                                                criterion.required % 1 !== 0
-                                                  ? Number(
-                                                      criterion.required,
-                                                    ).toFixed(1)
-                                                  : criterion.required}
-                                                {cMeta.unit}
-                                              </>
-                                            )}
-                                          </span>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                </>
-                              );
-                            })()}
-                          </div>
-                        )}
                       </div>
                     ) : (
                       <div className="bg-gray-50 border rounded-lg p-3">
                         <p className="text-sm text-muted-foreground">
                           Tier information will appear once your shop has some
-                          activity.
+                          activity.{" "}
+                          <a href="/dashboard/shop/engagement" className="underline font-medium">
+                            View Engagement & Tiers
+                          </a>
                         </p>
                       </div>
                     )}

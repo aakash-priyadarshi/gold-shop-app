@@ -36,7 +36,7 @@ export async function testInjection() {
       res.status === 401 || // Generic auth error
       res.status === 422 || // Unprocessable entity
       res.status === 429 || // Rate limited (also counts as blocked)
-      res.status === 403;   // WAF / firewall block
+      res.status === 403; // WAF / firewall block
     record({
       name: `SQLi in login — ${payload.substring(0, 30)}`,
       category: "Injection",
@@ -77,7 +77,7 @@ export async function testInjection() {
 
   const xssPayloads = [
     '<script>alert("XSS")</script>',
-    '<img src=x onerror=alert(1)>',
+    "<img src=x onerror=alert(1)>",
     '"><svg onload=alert(1)>',
     "javascript:alert(1)",
     "<body onload=alert(1)>",
@@ -234,7 +234,10 @@ export async function testInjection() {
       name: `Path traversal — ${path.substring(0, 30)}`,
       category: "Injection",
       severity: "HIGH",
-      status: res.status === 404 || res.status === 400 || res.status === 403 ? "PASS" : "WARN",
+      status:
+        res.status === 404 || res.status === 400 || res.status === 403
+          ? "PASS"
+          : "WARN",
       description: `Path traversal returned ${res.status}`,
       details: `Response: ${JSON.stringify(res.body).substring(0, 100)}`,
     });

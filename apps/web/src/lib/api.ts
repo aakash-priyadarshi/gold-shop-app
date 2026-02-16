@@ -104,6 +104,13 @@ export const shopsApi = {
   getMaterials: () => api.get("/shops/my-shop/materials"),
   updateMaterials: (data: any) => api.put("/shops/my-shop/materials", data),
   // Capabilities management
+  getKyc: () => api.get("/shops/my-shop/kyc"),
+  updateKyc: (data: {
+    panNumber?: string;
+    vatNumber?: string;
+    bisLicenseNumber?: string;
+    verificationDocuments?: Record<string, any>;
+  }) => api.patch("/shops/my-shop/kyc", data),
   getCapabilities: () => api.get("/shops/my-shop/capabilities"),
   updateCapabilities: (data: any) =>
     api.put("/shops/my-shop/capabilities", data),

@@ -604,6 +604,112 @@ export class ShopsService {
   }
 
   /**
+   * Get KYC/verification data for a shop
+   */
+  async getShopKyc(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { activeShopId: true },
+    });
+
+    const shop = await this.prisma.shop.findFirst({
+      where: user?.activeShopId
+        ? { id: user.activeShopId, userId }
+        : { userId },
+      select: {
+        id: true,
+        country: true,
+        panNumber: true,
+        vatNumber: true,
+        bisLicenseNumber: true,
+        verificationDocuments: true,
+        isVerified: true,
+      },
+    });
+
+    if (!shop) {
+      throw new NotFoundException("Shop not found for this user");
+    }
+
+    return shop;
+  }
+
+  /**
+   * Update KYC/verification documents for a shop
+   */
+  async updateShopKyc(
+    userId: string,
+    dto: {
+      panNumber?: string;
+      vatNumber?: string;
+      bisLicenseNumber?: string;
+      verificationDocuments?: Record<string, any>;
+    },
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { activeShopId: true },
+    });
+
+    const shop = await this.prisma.shop.findFirst({
+      where: user?.activeShopId
+        ? { id: user.activeShopId, userId }
+        : { userId },
+    });
+
+    if (!shop) {
+      throw new NotFoundException("Shop not found for this user");
+    }
+
+    // Merge new verification documents with existing ones
+    const existingDocs =
+      (shop.verificationDocuments as Record<string, any>) || {};
+    const mergedDocs = dto.verificationDocuments
+      ? { ...existingDocs, ...dto.verificationDocuments }
+      : existingDocs;
+
+    const previousValue = {
+      panNumber: shop.panNumber,
+      vatNumber: shop.vatNumber,
+      bisLicenseNumber: shop.bisLicenseNumber,
+      verificationDocuments: shop.verificationDocuments,
+    };
+
+    const updated = await this.prisma.shop.update({
+      where: { id: shop.id },
+      data: {
+        ...(dto.panNumber !== undefined && { panNumber: dto.panNumber }),
+        ...(dto.vatNumber !== undefined && { vatNumber: dto.vatNumber }),
+        ...(dto.bisLicenseNumber !== undefined && {
+          bisLicenseNumber: dto.bisLicenseNumber,
+        }),
+        verificationDocuments: mergedDocs,
+      },
+      select: {
+        id: true,
+        country: true,
+        panNumber: true,
+        vatNumber: true,
+        bisLicenseNumber: true,
+        verificationDocuments: true,
+        isVerified: true,
+      },
+    });
+
+    await this.auditService.log({
+      userId,
+      actorType: "USER",
+      action: "UPDATE",
+      resourceType: "SHOP_KYC",
+      resourceId: shop.id,
+      previousValue,
+      newValue: dto,
+    });
+
+    return updated;
+  }
+
+  /**
    * Update shop settings
    */
   async updateShopSettings(userId: string, dto: UpdateShopDto) {

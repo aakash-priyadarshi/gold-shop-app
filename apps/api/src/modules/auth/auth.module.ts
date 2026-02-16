@@ -35,7 +35,7 @@ import { TwoFactorService } from "./two-factor.service";
         if (!secret) {
           throw new Error(
             "CRITICAL: JWT_SECRET environment variable is not set. " +
-            "The application cannot start without a secure JWT secret.",
+              "The application cannot start without a secure JWT secret.",
           );
         }
         return {

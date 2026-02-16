@@ -430,6 +430,35 @@ export class ShopsController {
     return this.shopsService.adminDeleteShop(id, adminId);
   }
 
+  // ── KYC & Verification Endpoints ────────────────────
+
+  @Get("my-shop/kyc")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Get KYC/verification documents for current shop" })
+  async getMyShopKyc(@CurrentUser("id") userId: string) {
+    return this.shopsService.getShopKyc(userId);
+  }
+
+  @Patch("my-shop/kyc")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Update KYC/verification documents" })
+  async updateMyShopKyc(
+    @CurrentUser("id") userId: string,
+    @Body()
+    body: {
+      panNumber?: string;
+      vatNumber?: string;
+      bisLicenseNumber?: string;
+      verificationDocuments?: Record<string, any>;
+    },
+  ) {
+    return this.shopsService.updateShopKyc(userId, body);
+  }
+
   // ── Shop Profile Endpoints ──────────────────────────
 
   @Patch("my-shop/profile")

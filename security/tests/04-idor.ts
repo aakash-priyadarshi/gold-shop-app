@@ -111,7 +111,7 @@ export async function testIDOR() {
     {
       token: customerToken,
       body: { status: "COMPLETED" },
-    }
+    },
   );
   record({
     name: "IDOR — modify arbitrary order status",
@@ -143,8 +143,7 @@ export async function testIDOR() {
     name: "IDOR — access arbitrary RFQ",
     category: "IDOR",
     severity: "MEDIUM",
-    status:
-      rfqRes.status === 403 || rfqRes.status === 404 ? "PASS" : "WARN",
+    status: rfqRes.status === 403 || rfqRes.status === 404 ? "PASS" : "WARN",
     description:
       rfqRes.status === 403
         ? "Correctly denied access to other user's RFQ"
@@ -183,7 +182,7 @@ export async function testIDOR() {
     `/offers/${fakeOfferId}/withdraw`,
     {
       token: customerToken,
-    }
+    },
   );
   record({
     name: "IDOR — withdraw other shop's offer",
@@ -208,11 +207,9 @@ export async function testIDOR() {
   // ═══════════════════════════════════════
 
   const fakeShopId = "00000000-0000-0000-0000-000000000001";
-  const shopOrdersRes = await request(
-    "GET",
-    `/orders/shop/${fakeShopId}`,
-    { token: customerToken }
-  );
+  const shopOrdersRes = await request("GET", `/orders/shop/${fakeShopId}`, {
+    token: customerToken,
+  });
   record({
     name: "IDOR — customer accessing shop orders",
     category: "IDOR",
@@ -240,9 +237,7 @@ export async function testIDOR() {
     category: "IDOR",
     severity: "HIGH",
     status:
-      invoiceRes.status === 403 || invoiceRes.status === 404
-        ? "PASS"
-        : "WARN",
+      invoiceRes.status === 403 || invoiceRes.status === 404 ? "PASS" : "WARN",
     description:
       invoiceRes.status === 403
         ? "Correctly denied access to other user's invoice"
@@ -258,7 +253,7 @@ export async function testIDOR() {
   const crmProfileRes = await request(
     "GET",
     `/customer-crm/${fakeUserId}/profile`,
-    { token: customerToken }
+    { token: customerToken },
   );
   record({
     name: "IDOR — customer accessing CRM profile",
@@ -281,7 +276,7 @@ export async function testIDOR() {
   const trustRes = await request(
     "GET",
     `/marketplace-intelligence/trust-profile/${fakeShopId}`,
-    { token: customerToken }
+    { token: customerToken },
   );
   record({
     name: "IDOR — access trust profile of arbitrary shop",
@@ -306,7 +301,10 @@ export async function testIDOR() {
     { method: "GET" as const, path: "/admin/customers" },
     { method: "GET" as const, path: "/admin/sellers" },
     { method: "GET" as const, path: "/orders/admin/all" },
-    { method: "GET" as const, path: "/marketplace-intelligence/admin/dashboard" },
+    {
+      method: "GET" as const,
+      path: "/marketplace-intelligence/admin/dashboard",
+    },
     { method: "GET" as const, path: "/users" }, // Admin user list
   ];
 
@@ -318,8 +316,7 @@ export async function testIDOR() {
       name: `IDOR — customer → ${endpoint.path}`,
       category: "IDOR",
       severity: "HIGH",
-      status:
-        res.status === 403 || res.status === 401 ? "PASS" : "FAIL",
+      status: res.status === 403 || res.status === 401 ? "PASS" : "FAIL",
       description:
         res.status === 403 || res.status === 401
           ? `Admin endpoint correctly denied (${res.status})`
@@ -333,14 +330,10 @@ export async function testIDOR() {
   // ═══════════════════════════════════════
 
   // Try to verify a shop as a customer
-  const verifyShopRes = await request(
-    "PATCH",
-    `/shops/${fakeShopId}/verify`,
-    {
-      token: customerToken,
-      body: { verified: true },
-    }
-  );
+  const verifyShopRes = await request("PATCH", `/shops/${fakeShopId}/verify`, {
+    token: customerToken,
+    body: { verified: true },
+  });
   record({
     name: "IDOR — customer verifying a shop (admin action)",
     category: "IDOR",
@@ -356,22 +349,16 @@ export async function testIDOR() {
   });
 
   // Try to suspend a user as a customer
-  const suspendRes = await request(
-    "PATCH",
-    `/users/${fakeUserId}/suspend`,
-    {
-      token: customerToken,
-      body: { reason: "pen-test" },
-    }
-  );
+  const suspendRes = await request("PATCH", `/users/${fakeUserId}/suspend`, {
+    token: customerToken,
+    body: { reason: "pen-test" },
+  });
   record({
     name: "IDOR — customer suspending user (admin action)",
     category: "IDOR",
     severity: "CRITICAL",
     status:
-      suspendRes.status === 403 || suspendRes.status === 401
-        ? "PASS"
-        : "FAIL",
+      suspendRes.status === 403 || suspendRes.status === 401 ? "PASS" : "FAIL",
     description:
       suspendRes.status === 403 || suspendRes.status === 401
         ? "User suspension correctly restricted"
@@ -384,11 +371,9 @@ export async function testIDOR() {
 
   if (shopkeeperToken) {
     // A shopkeeper trying to access another shop's orders
-    const otherShopOrders = await request(
-      "GET",
-      `/orders/shop/${fakeShopId}`,
-      { token: shopkeeperToken }
-    );
+    const otherShopOrders = await request("GET", `/orders/shop/${fakeShopId}`, {
+      token: shopkeeperToken,
+    });
     record({
       name: "IDOR — shopkeeper accessing other shop's orders",
       category: "IDOR",
@@ -407,7 +392,7 @@ export async function testIDOR() {
     const otherShopCrm = await request(
       "GET",
       `/customer-crm/${fakeUserId}/profile`,
-      { token: shopkeeperToken }
+      { token: shopkeeperToken },
     );
     record({
       name: "IDOR — shopkeeper accessing CRM of non-customer",
@@ -432,7 +417,7 @@ export async function testIDOR() {
   const notifRes = await request(
     "PATCH",
     `/notifications/${fakeNotifId}/read`,
-    { token: customerToken }
+    { token: customerToken },
   );
   record({
     name: "IDOR — mark other user's notification as read",
@@ -442,7 +427,7 @@ export async function testIDOR() {
       notifRes.status === 403 ||
       notifRes.status === 404 ||
       notifRes.status === 401 ||
-      notifRes.status === 200  // Service uses updateMany({where: {id, userId}}) — 200 with 0 rows affected is safe
+      notifRes.status === 200 // Service uses updateMany({where: {id, userId}}) — 200 with 0 rows affected is safe
         ? "PASS"
         : "WARN",
     description:

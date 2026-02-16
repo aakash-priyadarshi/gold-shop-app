@@ -81,7 +81,8 @@ export async function testAuthentication() {
 
   // ─── 2.4 Access protected endpoint with garbage token ───
   const garbageToken = await request("GET", "/users/me", {
-    token: "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJoYWNrZXIiLCJyb2xlIjoiQURNSU4ifQ.garbage",
+    token:
+      "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJoYWNrZXIiLCJyb2xlIjoiQURNSU4ifQ.garbage",
   });
   record({
     name: "Rejects forged JWT",
@@ -99,8 +100,7 @@ export async function testAuthentication() {
   // This is a token with exp in the past (you'd need a real expired one in practice)
   const expiredPayload = Buffer.from(
     JSON.stringify({ sub: "fake-id", role: "CUSTOMER", exp: 1000000000 }),
-  )
-    .toString("base64url");
+  ).toString("base64url");
   const expiredToken = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${expiredPayload}.fakesig`;
   const expired = await request("GET", "/users/me", { token: expiredToken });
   record({
@@ -115,9 +115,16 @@ export async function testAuthentication() {
   });
 
   // ─── 2.6 JWT algorithm confusion (alg: none) ───
-  const noneHeader = Buffer.from(JSON.stringify({ alg: "none", typ: "JWT" })).toString("base64url");
+  const noneHeader = Buffer.from(
+    JSON.stringify({ alg: "none", typ: "JWT" }),
+  ).toString("base64url");
   const nonePayload = Buffer.from(
-    JSON.stringify({ sub: "admin-id", role: "ADMIN", iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 3600 }),
+    JSON.stringify({
+      sub: "admin-id",
+      role: "ADMIN",
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    }),
   ).toString("base64url");
   const noneToken = `${noneHeader}.${nonePayload}.`;
   const algNone = await request("GET", "/users/me", { token: noneToken });
@@ -148,7 +155,12 @@ export async function testAuthentication() {
       name: "Customer cannot access admin routes",
       category: "Auth",
       severity: "CRITICAL",
-      status: adminEndpoint.status === 403 || adminEndpoint.status === 401 || adminEndpoint.status === 404 ? "PASS" : "FAIL",
+      status:
+        adminEndpoint.status === 403 ||
+        adminEndpoint.status === 401 ||
+        adminEndpoint.status === 404
+          ? "PASS"
+          : "FAIL",
       description:
         adminEndpoint.status === 403 || adminEndpoint.status === 401
           ? `Admin route correctly blocked for customer (${adminEndpoint.status})`
@@ -167,7 +179,8 @@ export async function testAuthentication() {
       name: "Customer cannot list all users",
       category: "Auth",
       severity: "HIGH",
-      status: usersList.status === 403 || usersList.status === 401 ? "PASS" : "FAIL",
+      status:
+        usersList.status === 403 || usersList.status === 401 ? "PASS" : "FAIL",
       description:
         usersList.status === 403 || usersList.status === 401
           ? "User listing correctly restricted"
@@ -179,7 +192,8 @@ export async function testAuthentication() {
       category: "Auth",
       severity: "INFO",
       status: "SKIP",
-      description: "Could not login as customer — set PENTEST_CUSTOMER_EMAIL/PASSWORD",
+      description:
+        "Could not login as customer — set PENTEST_CUSTOMER_EMAIL/PASSWORD",
     });
   }
 
@@ -225,10 +239,7 @@ export async function testAuthentication() {
   });
 
   // ─── 2.11 check-phone endpoint — account enumeration ───
-  const checkPhone = await request(
-    "GET",
-    "/auth/check-phone?phone=9999999999",
-  );
+  const checkPhone = await request("GET", "/auth/check-phone?phone=9999999999");
   record({
     name: "Phone check endpoint — enumeration risk",
     category: "Auth",
