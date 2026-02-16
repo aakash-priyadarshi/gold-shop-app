@@ -1677,7 +1677,10 @@ export default function CreateRfqPage() {
         // Derive alloy type from karat/purity
         // Gold: GOLD + 18K → GOLD_18K, GOLD + 14K → GOLD_14K, GOLD + 10K → GOLD_10K
         // Silver: STERLING_925 → SILVER_925, ARGENTIUM_935 → SILVER_999 (uses fine silver rate)
-        if (formData.alloyConfig.baseMetal === "GOLD" && formData.alloyConfig.karat) {
+        if (
+          formData.alloyConfig.baseMetal === "GOLD" &&
+          formData.alloyConfig.karat
+        ) {
           alloyType = `GOLD_${formData.alloyConfig.karat}`;
         } else if (formData.alloyConfig.baseMetal === "SILVER") {
           // Map silver purity to MarketRate code
@@ -1685,7 +1688,10 @@ export default function CreateRfqPage() {
             STERLING_925: "SILVER_925",
             ARGENTIUM_935: "SILVER_999", // Uses fine silver rate as base
           };
-          alloyType = silverPurityMap[formData.alloyConfig.silverPurity || "STERLING_925"] || "SILVER_925";
+          alloyType =
+            silverPurityMap[
+              formData.alloyConfig.silverPurity || "STERLING_925"
+            ] || "SILVER_925";
         }
       } else if (
         formData.buildMethod === "METHOD_C" &&

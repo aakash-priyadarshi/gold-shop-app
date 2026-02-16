@@ -30,13 +30,21 @@ import { TwoFactorService } from "./two-factor.service";
     PassportModule.register({ defaultStrategy: "jwt" }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        secret:
-          configService.get<string>("JWT_SECRET") || "gold-shop-secret-key",
-        signOptions: {
-          expiresIn: configService.get<string>("JWT_EXPIRY") || "24h",
-        },
-      }),
+      useFactory: async (configService: ConfigService) => {
+        const secret = configService.get<string>("JWT_SECRET");
+        if (!secret) {
+          throw new Error(
+            "CRITICAL: JWT_SECRET environment variable is not set. " +
+            "The application cannot start without a secure JWT secret.",
+          );
+        }
+        return {
+          secret,
+          signOptions: {
+            expiresIn: configService.get<string>("JWT_EXPIRY") || "24h",
+          },
+        };
+      },
       inject: [ConfigService],
     }),
   ],

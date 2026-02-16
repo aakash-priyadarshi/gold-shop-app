@@ -1,7 +1,8 @@
 import { BullModule } from "@nestjs/bull";
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { ThrottlerModule } from "@nestjs/throttler";
+import { APP_GUARD } from "@nestjs/core";
+import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 
 // Core modules
 import { HttpClientModule } from "./common/http-client";
@@ -96,6 +97,13 @@ import { PrismaModule } from "./prisma/prisma.module";
     SellerPerformanceModule,
     CustomerCrmModule,
     MarketplaceIntelligenceModule,
+  ],
+  providers: [
+    // Apply ThrottlerGuard globally so @Throttle() decorators are enforced
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

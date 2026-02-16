@@ -19,6 +19,7 @@ import {
   ApiResponse,
   ApiTags,
 } from "@nestjs/swagger";
+import { Throttle } from "@nestjs/throttler";
 import { Response } from "express";
 import { AuthResponse, AuthService, RegisterResponse } from "./auth.service";
 import { CurrentUser } from "./decorators/current-user.decorator";
@@ -67,6 +68,7 @@ export class AuthController {
 
   @Get("check-email")
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @ApiOperation({
     summary: "Check if email is already registered (uses Redis cache)",
   })
@@ -101,6 +103,7 @@ export class AuthController {
 
   @Get("check-phone")
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @ApiOperation({
     summary: "Check if phone number is already registered (uses Redis cache)",
   })
