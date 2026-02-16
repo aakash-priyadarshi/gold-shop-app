@@ -842,37 +842,67 @@ export class MarketRatesService implements OnModuleInit {
   /**
    * Sync live rates to the MarketRate table so backend services
    * (findMatchingSellers, getEligibleShops, etc.) use up-to-date prices.
-   * Runs daily at 6 AM and on startup.
+   *
+   * Runs every 6 hours and on startup.
+   * Fetches spot prices + FX ONCE, then computes all regions locally.
+   * Bypasses the getMarketRates() cache to ensure fresh API data.
    */
-  @Cron("0 6 * * *") // Every day at 6:00 AM
+  @Cron("0 0 */6 * * *") // Every 6 hours (second=0, minute=0, hour=*/6)
   async syncRatesToMarketRateTable(): Promise<void> {
     this.logger.log("Syncing live market rates to MarketRate table...");
 
-    // Sync for all supported regions
-    const regionsToSync: Array<{
-      country: SupportedCountry;
-      currency: SupportedCurrency;
+    // ── Fetch raw data ONCE (1 API call for spot + 1 for FX) ──
+    let spotPrices: SpotPricesUsd;
+    let spotSource: "metalpriceapi" | "fallback";
+    let fxSnapshot: ExtendedFxSnapshot;
+
+    try {
+      const spotResult = await this.fetchSpotPricesUsdPerOunce();
+      spotPrices = spotResult.spotPrices;
+      spotSource = spotResult.spotSource;
+    } catch (error) {
+      this.logger.error(`Spot price fetch failed, using fallback: ${error}`);
+      spotPrices = this.FALLBACK_SPOT_PRICES;
+      spotSource = "fallback";
+    }
+
+    try {
+      fxSnapshot = await this.fxRatesService.getExtendedFxSnapshot();
+    } catch (error) {
+      this.logger.error(`FX fetch failed, aborting sync: ${error}`);
+      return; // Can't compute local prices without FX
+    }
+
+    this.logger.log(
+      `Spot: Gold=$${spotPrices.XAU.toFixed(2)}/oz (${spotSource}), ` +
+        `FX: USD/NPR=${fxSnapshot.USD_NPR.rate}, USD/INR=${fxSnapshot.USD_INR.rate}`,
+    );
+
+    // ── Compute and upsert rates for all regions ──
+    const allRegions: Array<{
       region: MarketRegion;
+      currency: SupportedCurrency;
+      country: string; // MarketRate table "country" column
     }> = [
-      { country: "IN", currency: "INR", region: "IN" },
-      { country: "NP", currency: "NPR", region: "NP" },
+      { region: "NP", currency: "NPR", country: "NP" },
+      { region: "IN", currency: "INR", country: "IN" },
+      { region: "AE", currency: "AED", country: "AE" },
+      { region: "UK", currency: "GBP", country: "UK" },
+      { region: "EU", currency: "EUR", country: "EU" },
+      { region: "US", currency: "USD", country: "US" },
     ];
 
-    // Also sync non-legacy regions (AE, UK, EU, US) using "IN" as legacy country fallback
-    const extraRegions: Array<{
-      region: MarketRegion;
-      currency: SupportedCurrency;
-    }> = [
-      { region: "AE", currency: "AED" },
-      { region: "UK", currency: "GBP" },
-      { region: "EU", currency: "EUR" },
-      { region: "US", currency: "USD" },
-    ];
+    let totalSynced = 0;
 
-    for (const { country, currency, region } of regionsToSync) {
+    for (const { region, currency, country } of allRegions) {
       try {
-        const liveRates = await this.getMarketRates(currency, region);
-        const metals = liveRates.metals;
+        const adjustments = getRegionAdjustments(region);
+        const fxRate = this.getFxRateForCurrency(currency, fxSnapshot);
+        const metals = this.calculateMetalRates(
+          spotPrices,
+          fxRate.rate,
+          adjustments.multiplier,
+        );
 
         // Upsert each metal rate into the MarketRate table
         for (const [metalCode, ratePerGram] of Object.entries(metals)) {
@@ -880,11 +910,7 @@ export class MarketRatesService implements OnModuleInit {
 
           // Expire old rates for this metal+country
           await this.prisma.marketRate.updateMany({
-            where: {
-              metalCode,
-              country,
-              validUntil: null,
-            },
+            where: { metalCode, country, validUntil: null },
             data: { validUntil: new Date() },
           });
 
@@ -894,7 +920,7 @@ export class MarketRatesService implements OnModuleInit {
               metalCode,
               country,
               ratePerGram,
-              source: liveRates.source || "metalpriceapi",
+              source: spotSource,
               validFrom: new Date(),
               validUntil: null,
             },
@@ -902,51 +928,51 @@ export class MarketRatesService implements OnModuleInit {
         }
 
         this.logger.log(
-          `Synced ${Object.keys(metals).length} metal rates for ${country} (${currency}). ` +
+          `Synced ${Object.keys(metals).length} rates for ${country} (${currency}). ` +
             `GOLD_24K=${metals.GOLD_24K}/g`,
         );
+        totalSynced += Object.keys(metals).length;
+
+        // Also update the DB snapshot cache so getMarketRates() serves fresh data
+        const freshResponse: MarketRatesResponse = {
+          region,
+          currency,
+          country: getLegacyCountry(region),
+          unit: "per_gram",
+          updatedAt: spotPrices.timestamp,
+          source: spotSource,
+          cache: "miss",
+          fx: fxRate,
+          fxSnapshot,
+          adjustments,
+          metals,
+          debug: {
+            spotSource,
+            fxSource: fxRate.source as any,
+            spotUsed: {
+              goldUsdOz: spotPrices.XAU,
+              silverUsdOz: spotPrices.XAG,
+              platinumUsdOz: spotPrices.XPT,
+              palladiumUsdOz: spotPrices.XPD,
+            },
+            fxUsed: this.buildFxUsedDebug(fxSnapshot),
+            regionUsed: region,
+            regionMultiplierUsed: adjustments.multiplier,
+            computedAt: new Date().toISOString(),
+          },
+        };
+        await this.storeInDbCache(region, currency, freshResponse);
+
+        // Also refresh memory cache
+        const cacheKey: CacheKey = `${region}:${currency}`;
+        this.setMemoryCache(cacheKey, freshResponse);
       } catch (error) {
         this.logger.error(`Failed to sync rates for ${country}: ${error}`);
       }
     }
 
-    // Sync extra regions into MarketRate table using region code as "country"
-    for (const { region, currency } of extraRegions) {
-      try {
-        const liveRates = await this.getMarketRates(currency, region);
-        const metals = liveRates.metals;
-
-        for (const [metalCode, ratePerGram] of Object.entries(metals)) {
-          if (!ratePerGram || ratePerGram <= 0) continue;
-
-          await this.prisma.marketRate.updateMany({
-            where: {
-              metalCode,
-              country: region,
-              validUntil: null,
-            },
-            data: { validUntil: new Date() },
-          });
-
-          await this.prisma.marketRate.create({
-            data: {
-              metalCode,
-              country: region,
-              ratePerGram,
-              source: liveRates.source || "metalpriceapi",
-              validFrom: new Date(),
-              validUntil: null,
-            },
-          });
-        }
-
-        this.logger.log(
-          `Synced ${Object.keys(metals).length} metal rates for ${region} (${currency}). ` +
-            `GOLD_24K=${metals.GOLD_24K}/g`,
-        );
-      } catch (error) {
-        this.logger.error(`Failed to sync rates for ${region}: ${error}`);
-      }
-    }
+    this.logger.log(
+      `Market rate sync complete: ${totalSynced} rates across ${allRegions.length} regions`,
+    );
   }
 }
