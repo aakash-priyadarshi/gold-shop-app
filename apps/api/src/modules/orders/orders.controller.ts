@@ -1,5 +1,6 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
   Post,
   Patch,
@@ -80,15 +81,29 @@ export class OrdersController {
   @ApiOperation({ summary: 'Get orders for a shop' })
   async getShopOrders(
     @Param('shopId') shopId: string,
+    @CurrentUser('shopId') userShopId: string,
+    @CurrentUser('role') userRole: string,
     @Query() filters: OrderFilterDto,
   ) {
+    // Shopkeepers can only access their own shop's orders
+    if (userRole === 'SHOPKEEPER' && shopId !== userShopId) {
+      throw new ForbiddenException('You can only access your own shop orders');
+    }
     return this.ordersService.findShopOrders(shopId, filters);
   }
 
   @Get('shop/:shopId/stats')
   @Roles('SHOPKEEPER', 'ADMIN')
   @ApiOperation({ summary: 'Get order statistics for a shop' })
-  async getShopOrderStats(@Param('shopId') shopId: string) {
+  async getShopOrderStats(
+    @Param('shopId') shopId: string,
+    @CurrentUser('shopId') userShopId: string,
+    @CurrentUser('role') userRole: string,
+  ) {
+    // Shopkeepers can only access their own shop's stats
+    if (userRole === 'SHOPKEEPER' && shopId !== userShopId) {
+      throw new ForbiddenException('You can only access your own shop stats');
+    }
     return this.ordersService.getOrderStats(shopId);
   }
 

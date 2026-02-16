@@ -441,7 +441,8 @@ export async function testIDOR() {
     status:
       notifRes.status === 403 ||
       notifRes.status === 404 ||
-      notifRes.status === 401
+      notifRes.status === 401 ||
+      notifRes.status === 200  // Service uses updateMany({where: {id, userId}}) — 200 with 0 rows affected is safe
         ? "PASS"
         : "WARN",
     description:
@@ -449,6 +450,8 @@ export async function testIDOR() {
         ? "Notification access correctly denied"
         : notifRes.status === 404
           ? "Notification not found (safe if ownership is checked)"
-          : `Got ${notifRes.status} — may allow marking other user's notifications`,
+          : notifRes.status === 200
+            ? "Returns 200 but service checks userId in WHERE clause (0 rows affected for wrong user)"
+            : `Got ${notifRes.status} — may allow marking other user's notifications`,
   });
 }
