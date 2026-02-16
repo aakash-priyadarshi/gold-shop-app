@@ -14,13 +14,15 @@ export async function testIDOR() {
   // Login as a regular customer
   const customerToken = await login(
     CONFIG.CUSTOMER.email,
-    CONFIG.CUSTOMER.password
+    CONFIG.CUSTOMER.password,
+    CONFIG.CUSTOMER.token || undefined,
   );
 
   // Login as shopkeeper if credentials provided
   const shopkeeperToken = await login(
     CONFIG.SHOPKEEPER.email,
-    CONFIG.SHOPKEEPER.password
+    CONFIG.SHOPKEEPER.password,
+    CONFIG.SHOPKEEPER.token || undefined,
   );
 
   if (!customerToken) {
