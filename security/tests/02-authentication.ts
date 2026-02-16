@@ -138,6 +138,7 @@ export async function testAuthentication() {
   const customerToken = await login(
     CONFIG.CUSTOMER.email,
     CONFIG.CUSTOMER.password,
+    CONFIG.CUSTOMER.token || undefined,
   );
   if (customerToken) {
     const adminEndpoint = await request("GET", "/admin/dashboard", {

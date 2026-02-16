@@ -1,9 +1,9 @@
 # Gold Shop App — Penetration Test Report
 
-**Date:** 2026-02-16T12:40:53.272Z
+**Date:** 2026-02-16T12:58:33.220Z
 **Target:** https://api.orivraa.com/api
 **Frontend:** https://orivraa.com
-**Duration:** 42.2s
+**Duration:** 31.1s
 **Tests:** 63 (✅ 50 Pass, ❌ 1 Fail, ⚠️ 8 Warn, ⏭️ 2 Skip)
 
 ---
@@ -19,7 +19,7 @@
 
 - **Server Header Hidden** [LOW]: Server header exposed: "cloudflare"
   - **Fix:** Hide server identity to reduce fingerprinting
-- **Email check endpoint — enumeration risk** [MEDIUM]: check-email returns {exists: false}. This endpoint enables account enumeration.
+- **Email check endpoint — enumeration risk** [MEDIUM]: check-email returns {exists: true}. This endpoint enables account enumeration.
   - **Fix:** Rate limit heavily or require CAPTCHA on check-email. Consider removing in favor of inline validation during registration
 - **Phone check endpoint — enumeration risk** [MEDIUM]: check-phone returns {exists: false}. This endpoint enables phone number enumeration.
   - **Fix:** Rate limit heavily or require authentication
@@ -29,8 +29,7 @@
   - **Fix:** Disable Swagger in production or restrict access with authentication
 - **Info disclosure — Swagger JSON accessible** [MEDIUM]: Swagger JSON spec is accessible — machine-readable API schema
   - **Fix:** Disable /docs-json in production
-- **Info disclosure — /shops/matching-debug exposed** [MEDIUM]: matching-debug endpoint is accessible — may reveal internal scoring logic
-  - **Fix:** Restrict /shops/matching-debug to admin-only or remove in production
+- **Info disclosure — /shops/matching-debug exposed** [MEDIUM]: matching-debug returned 502
 
 ---
 
@@ -60,7 +59,7 @@
 | ✅ PASS | CRITICAL | Rejects alg:none JWT | alg:none JWT correctly rejected |
 | ⏭️ SKIP | INFO | Customer login | Could not login as customer — set PENTEST_CUSTOMER_EMAIL/PASSWORD |
 | ✅ PASS | HIGH | Login rate limiting | Rate limiting triggered on rapid login attempts |
-| ⚠️ WARN | MEDIUM | Email check endpoint — enumeration risk | check-email returns {exists: false}. This endpoint enables account enumeration. |
+| ⚠️ WARN | MEDIUM | Email check endpoint — enumeration risk | check-email returns {exists: true}. This endpoint enables account enumeration. |
 | ⚠️ WARN | MEDIUM | Phone check endpoint — enumeration risk | check-phone returns {exists: false}. This endpoint enables phone number enumeration. |
 
 ### Injection
@@ -127,7 +126,7 @@
 | ⏭️ INFO | LOW | Info disclosure — /health accessible | /health returned 200 with content |
 | ⏭️ INFO | LOW | Info disclosure — 404 response | 404 response reveals framework info (e.g., "Cannot GET") |
 | ✅ PASS | MEDIUM | Info disclosure — unverified email leaks userId/email | No userId leak detected (user may not exist, or issue was fixed) |
-| ⚠️ WARN | MEDIUM | Info disclosure — /shops/matching-debug exposed | matching-debug endpoint is accessible — may reveal internal scoring logic |
+| ⚠️ WARN | MEDIUM | Info disclosure — /shops/matching-debug exposed | matching-debug returned 502 |
 
 ---
 
