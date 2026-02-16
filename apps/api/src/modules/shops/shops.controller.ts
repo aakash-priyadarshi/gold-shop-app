@@ -50,8 +50,11 @@ export class ShopsController {
     });
   }
 
-  // Debug endpoint to check why matching isn't finding sellers
+  // Debug endpoint to check why matching isn't finding sellers — admin only
   @Get("matching-debug")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: "Debug matching: show all shops and why each matches or not",
   })

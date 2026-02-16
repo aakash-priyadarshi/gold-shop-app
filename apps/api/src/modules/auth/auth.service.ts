@@ -366,10 +366,8 @@ export class AuthService {
     // Check if email is verified
     if (!user.emailVerified) {
       throw new ForbiddenException({
-        message: "Email not verified",
+        message: "Email not verified. Please check your inbox for the verification link.",
         code: "EMAIL_NOT_VERIFIED",
-        userId: user.id,
-        email: user.email,
       });
     }
 

@@ -118,7 +118,8 @@ async function bootstrap() {
     'https://orivraa.com',
     'https://www.orivraa.com',
     'https://gold-shop-app-web.vercel.app',
-    'http://localhost:3000',
+    // Only allow localhost in development
+    ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3000'] : []),
   ].filter((origin): origin is string => Boolean(origin));
 
   app.enableCors({
@@ -126,26 +127,28 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Swagger API documentation
-  const config = new DocumentBuilder()
-    .setTitle('Gold Shop Marketplace API')
-    .setDescription(
-      'Multi-vendor jewellery marketplace API supporting inventory sales and custom manufacturing',
-    )
-    .setVersion('1.0')
-    .addTag('auth', 'Authentication endpoints')
-    .addTag('users', 'User management')
-    .addTag('shops', 'Shop management')
-    .addTag('inventory', 'Inventory items')
-    .addTag('rfq', 'Request for Quote')
-    .addTag('offers', 'RFQ Offers')
-    .addTag('orders', 'Orders')
-    .addTag('payments', 'Payment processing')
-    .addBearerAuth()
-    .build();
+  // Swagger API documentation — disabled in production to avoid information disclosure
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('Gold Shop Marketplace API')
+      .setDescription(
+        'Multi-vendor jewellery marketplace API supporting inventory sales and custom manufacturing',
+      )
+      .setVersion('1.0')
+      .addTag('auth', 'Authentication endpoints')
+      .addTag('users', 'User management')
+      .addTag('shops', 'Shop management')
+      .addTag('inventory', 'Inventory items')
+      .addTag('rfq', 'Request for Quote')
+      .addTag('offers', 'RFQ Offers')
+      .addTag('orders', 'Orders')
+      .addTag('payments', 'Payment processing')
+      .addBearerAuth()
+      .build();
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document);
+  }
 
   // Global prefix
   app.setGlobalPrefix('api');

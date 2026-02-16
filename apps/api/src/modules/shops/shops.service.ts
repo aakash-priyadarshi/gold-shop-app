@@ -1857,7 +1857,8 @@ export class ShopsService {
           0;
       }
 
-      const componentCost = finishCost + baseMetalCost + platingCost + gemstoneCost;
+      const componentCost =
+        finishCost + baseMetalCost + platingCost + gemstoneCost;
       const estimatedPrice = materialCost + makingCharge + componentCost;
 
       // --- Location score ---

@@ -1,0 +1,15 @@
+{
+  "name": "gold-shop-pentest",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Penetration testing suite for gold-shop-app",
+  "scripts": {
+    "test": "npx tsx run-pentest.ts",
+    "test:quick": "npx tsx run-pentest.ts --skip-rate-limit",
+    "test:verbose": "PENTEST_VERBOSE=true npx tsx run-pentest.ts"
+  },
+  "dependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}
