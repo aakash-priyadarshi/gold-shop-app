@@ -1,9 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
-import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { JwtPayload } from '../auth.service';
+import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { PassportStrategy } from "@nestjs/passport";
+import { ExtractJwt, Strategy } from "passport-jwt";
+import { ConfigService } from "@nestjs/config";
+import { PrismaService } from "../../../prisma/prisma.service";
+import { JwtPayload } from "../auth.service";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -14,7 +14,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET'),
+      secretOrKey: configService.get<string>("JWT_SECRET"),
     });
   }
 
@@ -25,16 +25,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException("User not found");
     }
 
-    if (user.status === 'SUSPENDED' || user.status === 'DEACTIVATED') {
-      throw new UnauthorizedException('Account is not active');
+    if (user.status === "SUSPENDED" || user.status === "DEACTIVATED") {
+      throw new UnauthorizedException("Account is not active");
     }
 
     // Get active shop from user's shops (prefer activeShopId if set)
-    const activeShop = user.activeShopId 
-      ? user.shops?.find(s => s.id === user.activeShopId) 
+    const activeShop = user.activeShopId
+      ? user.shops?.find((s) => s.id === user.activeShopId)
       : user.shops?.[0];
 
     return {

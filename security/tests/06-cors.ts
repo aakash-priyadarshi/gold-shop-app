@@ -26,7 +26,8 @@ export async function testCORS() {
     name: "CORS — allowed origin accepted",
     category: "CORS",
     severity: "INFO",
-    status: allowedACAO === allowedOrigin || allowedACAO === "*" ? "PASS" : "WARN",
+    status:
+      allowedACAO === allowedOrigin || allowedACAO === "*" ? "PASS" : "WARN",
     description: allowedACAO
       ? `ACAO header: ${allowedACAO}`
       : "No Access-Control-Allow-Origin header returned for allowed origin",
@@ -115,7 +116,10 @@ export async function testCORS() {
       name: "CORS — preflight response",
       category: "CORS",
       severity: "MEDIUM",
-      status: preflightRes.status === 204 || preflightRes.status === 200 ? "PASS" : "WARN",
+      status:
+        preflightRes.status === 204 || preflightRes.status === 200
+          ? "PASS"
+          : "WARN",
       description: `Preflight status: ${preflightRes.status}, Methods: ${allowMethods}, Headers: ${allowHeaders}, Credentials: ${allowCredentials}`,
     });
 

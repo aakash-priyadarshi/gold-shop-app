@@ -130,18 +130,17 @@ export async function testInformationDisclosure() {
 
   for (const endpoint of debugEndpoints) {
     const res = await request("GET", endpoint);
-    const isExposed =
-      res.status === 200 &&
-      JSON.stringify(res.body).length > 5; // Has meaningful content
+    const isExposed = res.status === 200 && JSON.stringify(res.body).length > 5; // Has meaningful content
 
     // Only record if exposed (reduce noise)
     if (isExposed) {
       record({
         name: `Info disclosure — ${endpoint} accessible`,
         category: "Information Disclosure",
-        severity: endpoint.includes("env") || endpoint.includes("config")
-          ? "CRITICAL"
-          : "LOW",
+        severity:
+          endpoint.includes("env") || endpoint.includes("config")
+            ? "CRITICAL"
+            : "LOW",
         status:
           endpoint.includes("env") || endpoint.includes("config")
             ? "FAIL"
@@ -238,7 +237,7 @@ export async function testInformationDisclosure() {
 
   const notFoundRes = await request(
     "GET",
-    "/nonexistent-endpoint-" + Date.now()
+    "/nonexistent-endpoint-" + Date.now(),
   );
   const notFoundBody = JSON.stringify(notFoundRes.body || {});
   const leaksFramework =

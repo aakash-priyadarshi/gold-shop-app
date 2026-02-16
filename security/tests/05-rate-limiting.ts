@@ -208,7 +208,8 @@ export async function testRateLimiting() {
     name: "Rate limit — oversized request body (11MB)",
     category: "Rate Limiting",
     severity: "MEDIUM",
-    status: largeRes.status === 413 || largeRes.status === 400 ? "PASS" : "WARN",
+    status:
+      largeRes.status === 413 || largeRes.status === 400 ? "PASS" : "WARN",
     description:
       largeRes.status === 413
         ? "Request correctly rejected as too large (413)"
