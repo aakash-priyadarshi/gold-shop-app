@@ -1,21 +1,21 @@
 # Gold Shop App — Penetration Test Report
 
-**Date:** 2026-02-16T12:58:33.220Z
+**Date:** 2026-02-16T13:14:04.869Z
 **Target:** https://api.orivraa.com/api
 **Frontend:** https://orivraa.com
-**Duration:** 31.1s
-**Tests:** 63 (✅ 50 Pass, ❌ 1 Fail, ⚠️ 8 Warn, ⏭️ 2 Skip)
+**Duration:** 26.6s
+**Tests:** 88 (✅ 78 Pass, ❌ 1 Fail, ⚠️ 7 Warn, ⏭️ 0 Skip)
 
 ---
 
 ## Executive Summary
 
-### 🟠 High Severity Vulnerabilities (1)
+### 🔴 Critical Vulnerabilities (1)
 
-- **CORS — reject evil origin: http://localhost:3000**: CORS allows evil origin! ACAO: http://localhost:3000
-  - **Fix:** CORS origin whitelist is too permissive — restrict to exact production URLs
+- **Customer cannot access admin routes**: CRITICAL: Customer accessed admin route! Status: 404
+  - **Fix:** Ensure @Roles('ADMIN') guard on all admin endpoints
 
-### ⚠️ Warnings (8)
+### ⚠️ Warnings (7)
 
 - **Server Header Hidden** [LOW]: Server header exposed: "cloudflare"
   - **Fix:** Hide server identity to reduce fingerprinting
@@ -23,13 +23,10 @@
   - **Fix:** Rate limit heavily or require CAPTCHA on check-email. Consider removing in favor of inline validation during registration
 - **Phone check endpoint — enumeration risk** [MEDIUM]: check-phone returns {exists: false}. This endpoint enables phone number enumeration.
   - **Fix:** Rate limit heavily or require authentication
-- **XSS in RFQ builder — <img src=x onerror=alert(** [HIGH]: XSS payload reflected in response — check if stored
-- **XSS in RFQ builder — "><svg onload=alert(1)>** [HIGH]: XSS payload reflected in response — check if stored
-- **Info disclosure — Swagger UI accessible** [MEDIUM]: Swagger UI is accessible — exposes all API endpoints and DTOs
-  - **Fix:** Disable Swagger in production or restrict access with authentication
-- **Info disclosure — Swagger JSON accessible** [MEDIUM]: Swagger JSON spec is accessible — machine-readable API schema
-  - **Fix:** Disable /docs-json in production
-- **Info disclosure — /shops/matching-debug exposed** [MEDIUM]: matching-debug returned 502
+- **IDOR — customer accessing shop orders** [HIGH]: Got status 200 — check if shop ownership is verified
+- **IDOR — customer accessing CRM profile** [HIGH]: Got status 404 — CRM endpoint may lack proper authorization
+- **IDOR — shopkeeper accessing other shop's orders** [HIGH]: Got 200 — check if shop ID ownership is verified
+- **IDOR — mark other user's notification as read** [MEDIUM]: Got 200 — may allow marking other user's notifications
 
 ---
 
@@ -57,7 +54,8 @@
 | ✅ PASS | CRITICAL | Rejects forged JWT | Forged JWT correctly rejected |
 | ✅ PASS | HIGH | Rejects expired JWT | Expired JWT correctly rejected |
 | ✅ PASS | CRITICAL | Rejects alg:none JWT | alg:none JWT correctly rejected |
-| ⏭️ SKIP | INFO | Customer login | Could not login as customer — set PENTEST_CUSTOMER_EMAIL/PASSWORD |
+| ❌ FAIL | CRITICAL | Customer cannot access admin routes | CRITICAL: Customer accessed admin route! Status: 404 |
+| ✅ PASS | HIGH | Customer cannot list all users | User listing correctly restricted |
 | ✅ PASS | HIGH | Login rate limiting | Rate limiting triggered on rapid login attempts |
 | ⚠️ WARN | MEDIUM | Email check endpoint — enumeration risk | check-email returns {exists: true}. This endpoint enables account enumeration. |
 | ⚠️ WARN | MEDIUM | Phone check endpoint — enumeration risk | check-phone returns {exists: false}. This endpoint enables phone number enumeration. |
@@ -75,8 +73,8 @@
 | ✅ PASS | HIGH | SQLi in query — /shops?search='; DROP TABLE shops; -- | No server error from SQL injection attempt (200) |
 | ✅ PASS | HIGH | SQLi in query — /materials/market-rates?country=' UNION  | No server error from SQL injection attempt (200) |
 | ✅ PASS | HIGH | XSS in RFQ builder — <script>alert("XSS")</scr | XSS payload not reflected in response |
-| ⚠️ WARN | HIGH | XSS in RFQ builder — <img src=x onerror=alert( | XSS payload reflected in response — check if stored |
-| ⚠️ WARN | HIGH | XSS in RFQ builder — "><svg onload=alert(1)> | XSS payload reflected in response — check if stored |
+| ✅ PASS | HIGH | XSS in RFQ builder — <img src=x onerror=alert( | XSS payload not reflected in response |
+| ✅ PASS | HIGH | XSS in RFQ builder — "><svg onload=alert(1)> | XSS payload not reflected in response |
 | ✅ PASS | HIGH | XSS in registration fields | Registration correctly rejected XSS in name fields |
 | ✅ PASS | HIGH | NoSQL injection in login | NoSQL injection blocked (400) — class-validator rejects non-string |
 | ✅ PASS | HIGH | NoSQL injection in login | NoSQL injection blocked (400) — class-validator rejects non-string |
@@ -96,7 +94,31 @@
 
 | Status | Severity | Test | Description |
 |--------|----------|------|-------------|
-| ⏭️ SKIP | INFO | IDOR — cannot test (no customer login) | Cannot test IDOR without valid customer credentials. Update pentest.config.ts. |
+| ✅ PASS | HIGH | IDOR — access arbitrary user details | Correctly denied access to other user details |
+| ✅ PASS | HIGH | IDOR — customer accessing /users/:id (admin) | Admin endpoint correctly denied to customer |
+| ✅ PASS | HIGH | IDOR — access arbitrary order by ID | Order not found (safe if also checks in service) |
+| ✅ PASS | CRITICAL | IDOR — modify arbitrary order status | Order not found (safe) |
+| ✅ PASS | MEDIUM | IDOR — access arbitrary RFQ | RFQ not found (safe) |
+| ✅ PASS | MEDIUM | IDOR — access arbitrary offer | Offer not found (safe) |
+| ✅ PASS | CRITICAL | IDOR — withdraw other shop's offer | Offer not found (safe) |
+| ⚠️ WARN | HIGH | IDOR — customer accessing shop orders | Got status 200 — check if shop ownership is verified |
+| ✅ PASS | HIGH | IDOR — access arbitrary invoice | Invoice not found (safe) |
+| ⚠️ WARN | HIGH | IDOR — customer accessing CRM profile | Got status 404 — CRM endpoint may lack proper authorization |
+| ✅ PASS | LOW | IDOR — access trust profile of arbitrary shop | Trust profile request returned 200 (may be intentionally public) |
+| ✅ PASS | HIGH | IDOR — customer → /admin/stats | Admin endpoint correctly denied (403) |
+| ✅ PASS | HIGH | IDOR — customer → /admin/verifications | Admin endpoint correctly denied (403) |
+| ✅ PASS | HIGH | IDOR — customer → /admin/reports | Admin endpoint correctly denied (403) |
+| ✅ PASS | HIGH | IDOR — customer → /admin/settings | Admin endpoint correctly denied (403) |
+| ✅ PASS | HIGH | IDOR — customer → /admin/customers | Admin endpoint correctly denied (403) |
+| ✅ PASS | HIGH | IDOR — customer → /admin/sellers | Admin endpoint correctly denied (403) |
+| ✅ PASS | HIGH | IDOR — customer → /orders/admin/all | Admin endpoint correctly denied (403) |
+| ✅ PASS | HIGH | IDOR — customer → /marketplace-intelligence/admin/dashboard | Admin endpoint correctly denied (403) |
+| ✅ PASS | HIGH | IDOR — customer → /users | Admin endpoint correctly denied (403) |
+| ✅ PASS | CRITICAL | IDOR — customer verifying a shop (admin action) | Shop verification correctly restricted |
+| ✅ PASS | CRITICAL | IDOR — customer suspending user (admin action) | User suspension correctly restricted |
+| ⚠️ WARN | HIGH | IDOR — shopkeeper accessing other shop's orders | Got 200 — check if shop ID ownership is verified |
+| ✅ PASS | HIGH | IDOR — shopkeeper accessing CRM of non-customer | CRM correctly restricted |
+| ⚠️ WARN | MEDIUM | IDOR — mark other user's notification as read | Got 200 — may allow marking other user's notifications |
 
 ### CORS
 
@@ -108,7 +130,7 @@
 | ✅ PASS | HIGH | CORS — reject evil origin: https://orivraa.com.evil.com | Correctly rejected evil origin (ACAO: not set) |
 | ✅ PASS | HIGH | CORS — reject evil origin: null | Correctly rejected evil origin (ACAO: not set) |
 | ✅ PASS | HIGH | CORS — reject evil origin: https://localhost:3001 | Correctly rejected evil origin (ACAO: not set) |
-| ❌ FAIL | HIGH | CORS — reject evil origin: http://localhost:3000 | CORS allows evil origin! ACAO: http://localhost:3000 |
+| ✅ PASS | HIGH | CORS — reject evil origin: http://localhost:3000 | Correctly rejected evil origin (ACAO: not set) |
 | ✅ PASS | HIGH | CORS — reject evil origin: https://evil-orivraa.com | Correctly rejected evil origin (ACAO: not set) |
 | ✅ PASS | CRITICAL | CORS — wildcard (*) check | CORS does not use wildcard — origin whitelist in effect |
 | ✅ PASS | MEDIUM | CORS — preflight response | Preflight status: 204, Methods: GET,HEAD,PUT,PATCH,POST,DELETE, Headers: Content-Type, Authorization, Credentials: true |
@@ -119,14 +141,14 @@
 
 | Status | Severity | Test | Description |
 |--------|----------|------|-------------|
-| ⚠️ WARN | MEDIUM | Info disclosure — Swagger UI accessible | Swagger UI is accessible — exposes all API endpoints and DTOs |
-| ⚠️ WARN | MEDIUM | Info disclosure — Swagger JSON accessible | Swagger JSON spec is accessible — machine-readable API schema |
+| ✅ PASS | MEDIUM | Info disclosure — Swagger UI accessible | Swagger returned 404 — not exposed |
+| ✅ PASS | MEDIUM | Info disclosure — Swagger JSON accessible | Swagger JSON returned 404 |
 | ✅ PASS | MEDIUM | Info disclosure — error stack traces | Error response does not contain stack traces |
 | ✅ PASS | LOW | Info disclosure — version info in root endpoint | Root endpoint does not disclose version information |
 | ⏭️ INFO | LOW | Info disclosure — /health accessible | /health returned 200 with content |
 | ⏭️ INFO | LOW | Info disclosure — 404 response | 404 response reveals framework info (e.g., "Cannot GET") |
 | ✅ PASS | MEDIUM | Info disclosure — unverified email leaks userId/email | No userId leak detected (user may not exist, or issue was fixed) |
-| ⚠️ WARN | MEDIUM | Info disclosure — /shops/matching-debug exposed | matching-debug returned 502 |
+| ✅ PASS | MEDIUM | Info disclosure — /shops/matching-debug exposed | matching-debug returned 401 |
 
 ---
 

@@ -1,5 +1,6 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
   Patch,
   Param,
@@ -12,6 +13,7 @@ import { CommissionService } from './commission.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole, CommissionStatus } from '@prisma/client';
 
 @Controller('commission')
@@ -111,7 +113,14 @@ export class CommissionController {
    */
   @Get('shop/:shopId/summary')
   @Roles(UserRole.ADMIN, UserRole.SHOPKEEPER)
-  async getShopCommissionSummary(@Param('shopId') shopId: string) {
+  async getShopCommissionSummary(
+    @Param('shopId') shopId: string,
+    @CurrentUser('shopId') userShopId: string,
+    @CurrentUser('role') userRole: string,
+  ) {
+    if (userRole === 'SHOPKEEPER' && shopId !== userShopId) {
+      throw new ForbiddenException('You can only access your own commission data');
+    }
     return this.commissionService.getShopCommissionSummary(shopId);
   }
 
@@ -121,7 +130,14 @@ export class CommissionController {
    */
   @Get('shop/:shopId/ledger')
   @Roles(UserRole.ADMIN, UserRole.SHOPKEEPER)
-  async getShopCommissions(@Param('shopId') shopId: string) {
+  async getShopCommissions(
+    @Param('shopId') shopId: string,
+    @CurrentUser('shopId') userShopId: string,
+    @CurrentUser('role') userRole: string,
+  ) {
+    if (userRole === 'SHOPKEEPER' && shopId !== userShopId) {
+      throw new ForbiddenException('You can only access your own commission data');
+    }
     return this.commissionService.getShopCommissions(shopId);
   }
 }

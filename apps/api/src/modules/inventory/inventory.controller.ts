@@ -1,5 +1,6 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
   Post,
   Patch,
@@ -96,7 +97,13 @@ export class InventoryController {
   @Roles('SHOPKEEPER')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get inventory statistics' })
-  async getStats(@Param('shopId') shopId: string) {
+  async getStats(
+    @Param('shopId') shopId: string,
+    @CurrentUser('shopId') userShopId: string,
+  ) {
+    if (shopId !== userShopId) {
+      throw new ForbiddenException('You can only access your own shop stats');
+    }
     return this.inventoryService.getInventoryStats(shopId);
   }
 
