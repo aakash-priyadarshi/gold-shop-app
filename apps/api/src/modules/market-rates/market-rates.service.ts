@@ -843,11 +843,12 @@ export class MarketRatesService implements OnModuleInit {
    * Sync live rates to the MarketRate table so backend services
    * (findMatchingSellers, getEligibleShops, etc.) use up-to-date prices.
    *
-   * Runs every 6 hours and on startup.
-   * Fetches spot prices + FX ONCE, then computes all regions locally.
+   * Runs once daily at 6 AM and on startup.
+   * Fetches spot prices + FX ONCE (1 API call), then computes all regions locally.
    * Bypasses the getMarketRates() cache to ensure fresh API data.
+   * NOTE: MetalpriceAPI limit is 100 calls/month — daily = ~30 calls/month.
    */
-  @Cron("0 0 */6 * * *") // Every 6 hours (second=0, minute=0, hour=*/6)
+  @Cron("0 0 6 * * *") // Daily at 6:00 AM
   async syncRatesToMarketRateTable(): Promise<void> {
     this.logger.log("Syncing live market rates to MarketRate table...");
 
