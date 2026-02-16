@@ -1,21 +1,18 @@
 # Gold Shop App — Penetration Test Report
 
-**Date:** 2026-02-16T13:14:04.869Z
+**Date:** 2026-02-16T15:04:10.531Z
 **Target:** https://api.orivraa.com/api
 **Frontend:** https://orivraa.com
-**Duration:** 26.6s
-**Tests:** 88 (✅ 78 Pass, ❌ 1 Fail, ⚠️ 7 Warn, ⏭️ 0 Skip)
+**Duration:** 58.6s
+**Tests:** 88 (✅ 80 Pass, ❌ 0 Fail, ⚠️ 6 Warn, ⏭️ 0 Skip)
 
 ---
 
 ## Executive Summary
 
-### 🔴 Critical Vulnerabilities (1)
+✅ No critical or high severity vulnerabilities found.
 
-- **Customer cannot access admin routes**: CRITICAL: Customer accessed admin route! Status: 404
-  - **Fix:** Ensure @Roles('ADMIN') guard on all admin endpoints
-
-### ⚠️ Warnings (7)
+### ⚠️ Warnings (6)
 
 - **Server Header Hidden** [LOW]: Server header exposed: "cloudflare"
   - **Fix:** Hide server identity to reduce fingerprinting
@@ -23,10 +20,9 @@
   - **Fix:** Rate limit heavily or require CAPTCHA on check-email. Consider removing in favor of inline validation during registration
 - **Phone check endpoint — enumeration risk** [MEDIUM]: check-phone returns {exists: false}. This endpoint enables phone number enumeration.
   - **Fix:** Rate limit heavily or require authentication
-- **IDOR — customer accessing shop orders** [HIGH]: Got status 200 — check if shop ownership is verified
+- **XSS in RFQ builder — <img src=x onerror=alert(** [HIGH]: XSS payload reflected in response — check if stored
+- **XSS in RFQ builder — "><svg onload=alert(1)>** [HIGH]: XSS payload reflected in response — check if stored
 - **IDOR — customer accessing CRM profile** [HIGH]: Got status 404 — CRM endpoint may lack proper authorization
-- **IDOR — shopkeeper accessing other shop's orders** [HIGH]: Got 200 — check if shop ID ownership is verified
-- **IDOR — mark other user's notification as read** [MEDIUM]: Got 200 — may allow marking other user's notifications
 
 ---
 
@@ -54,7 +50,7 @@
 | ✅ PASS | CRITICAL | Rejects forged JWT | Forged JWT correctly rejected |
 | ✅ PASS | HIGH | Rejects expired JWT | Expired JWT correctly rejected |
 | ✅ PASS | CRITICAL | Rejects alg:none JWT | alg:none JWT correctly rejected |
-| ❌ FAIL | CRITICAL | Customer cannot access admin routes | CRITICAL: Customer accessed admin route! Status: 404 |
+| ✅ PASS | CRITICAL | Customer cannot access admin routes | Admin route not found (404) — safe, route does not exist |
 | ✅ PASS | HIGH | Customer cannot list all users | User listing correctly restricted |
 | ✅ PASS | HIGH | Login rate limiting | Rate limiting triggered on rapid login attempts |
 | ⚠️ WARN | MEDIUM | Email check endpoint — enumeration risk | check-email returns {exists: true}. This endpoint enables account enumeration. |
@@ -64,7 +60,7 @@
 
 | Status | Severity | Test | Description |
 |--------|----------|------|-------------|
-| ✅ PASS | CRITICAL | SQLi in login — admin' OR '1'='1' -- | SQL injection blocked (status 429) |
+| ✅ PASS | CRITICAL | SQLi in login — admin' OR '1'='1' -- | SQL injection blocked (status 400) |
 | ✅ PASS | CRITICAL | SQLi in login — admin'; DROP TABLE users; -- | SQL injection blocked (status 429) |
 | ✅ PASS | CRITICAL | SQLi in login — ' UNION SELECT * FROM users -- | SQL injection blocked (status 429) |
 | ✅ PASS | CRITICAL | SQLi in login — admin'/**/OR/**/1=1-- | SQL injection blocked (status 429) |
@@ -73,8 +69,8 @@
 | ✅ PASS | HIGH | SQLi in query — /shops?search='; DROP TABLE shops; -- | No server error from SQL injection attempt (200) |
 | ✅ PASS | HIGH | SQLi in query — /materials/market-rates?country=' UNION  | No server error from SQL injection attempt (200) |
 | ✅ PASS | HIGH | XSS in RFQ builder — <script>alert("XSS")</scr | XSS payload not reflected in response |
-| ✅ PASS | HIGH | XSS in RFQ builder — <img src=x onerror=alert( | XSS payload not reflected in response |
-| ✅ PASS | HIGH | XSS in RFQ builder — "><svg onload=alert(1)> | XSS payload not reflected in response |
+| ⚠️ WARN | HIGH | XSS in RFQ builder — <img src=x onerror=alert( | XSS payload reflected in response — check if stored |
+| ⚠️ WARN | HIGH | XSS in RFQ builder — "><svg onload=alert(1)> | XSS payload reflected in response — check if stored |
 | ✅ PASS | HIGH | XSS in registration fields | Registration correctly rejected XSS in name fields |
 | ✅ PASS | HIGH | NoSQL injection in login | NoSQL injection blocked (400) — class-validator rejects non-string |
 | ✅ PASS | HIGH | NoSQL injection in login | NoSQL injection blocked (400) — class-validator rejects non-string |
@@ -101,7 +97,7 @@
 | ✅ PASS | MEDIUM | IDOR — access arbitrary RFQ | RFQ not found (safe) |
 | ✅ PASS | MEDIUM | IDOR — access arbitrary offer | Offer not found (safe) |
 | ✅ PASS | CRITICAL | IDOR — withdraw other shop's offer | Offer not found (safe) |
-| ⚠️ WARN | HIGH | IDOR — customer accessing shop orders | Got status 200 — check if shop ownership is verified |
+| ✅ PASS | HIGH | IDOR — customer accessing shop orders | Shop orders correctly denied to customer |
 | ✅ PASS | HIGH | IDOR — access arbitrary invoice | Invoice not found (safe) |
 | ⚠️ WARN | HIGH | IDOR — customer accessing CRM profile | Got status 404 — CRM endpoint may lack proper authorization |
 | ✅ PASS | LOW | IDOR — access trust profile of arbitrary shop | Trust profile request returned 200 (may be intentionally public) |
@@ -116,9 +112,9 @@
 | ✅ PASS | HIGH | IDOR — customer → /users | Admin endpoint correctly denied (403) |
 | ✅ PASS | CRITICAL | IDOR — customer verifying a shop (admin action) | Shop verification correctly restricted |
 | ✅ PASS | CRITICAL | IDOR — customer suspending user (admin action) | User suspension correctly restricted |
-| ⚠️ WARN | HIGH | IDOR — shopkeeper accessing other shop's orders | Got 200 — check if shop ID ownership is verified |
+| ✅ PASS | HIGH | IDOR — shopkeeper accessing other shop's orders | Correctly denied access to other shop's orders |
 | ✅ PASS | HIGH | IDOR — shopkeeper accessing CRM of non-customer | CRM correctly restricted |
-| ⚠️ WARN | MEDIUM | IDOR — mark other user's notification as read | Got 200 — may allow marking other user's notifications |
+| ✅ PASS | MEDIUM | IDOR — mark other user's notification as read | Returns 200 but service checks userId in WHERE clause (0 rows affected for wrong user) |
 
 ### CORS
 
