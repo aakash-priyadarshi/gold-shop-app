@@ -30,34 +30,6 @@ export class SellerPerformanceController {
     return this.performanceService.getDashboard(shopId, targetTier);
   }
 
-  @Get(":shopId")
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({
-    summary: "Get seller performance for a specific shop (admin)",
-  })
-  async getShopPerformance(
-    @Param("shopId") shopId: string,
-    @Query("targetTier") targetTier?: string,
-  ) {
-    return this.performanceService.getDashboard(shopId, targetTier);
-  }
-
-  @Post("recalculate/:shopId")
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: "Force recalculate performance for a shop (admin)" })
-  async recalculate(@Param("shopId") shopId: string) {
-    const result = await this.performanceService.recalculateForShop(shopId);
-    return { message: "Performance recalculated", data: result };
-  }
-
-  @Post("recalculate-all")
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: "Force recalculate all seller performance (admin)" })
-  async recalculateAll() {
-    await this.performanceService.recalculateAll();
-    return { message: "All seller performance recalculated" };
-  }
-
   /* ─── HEALTH SCORE ─── */
 
   @Get("health-score")
@@ -98,5 +70,35 @@ export class SellerPerformanceController {
       shopId,
       days ? parseInt(days) : 90,
     );
+  }
+
+  /* ─── ADMIN: SHOP PERFORMANCE BY ID (must be LAST — :shopId is a catch-all) ─── */
+
+  @Get(":shopId")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: "Get seller performance for a specific shop (admin)",
+  })
+  async getShopPerformance(
+    @Param("shopId") shopId: string,
+    @Query("targetTier") targetTier?: string,
+  ) {
+    return this.performanceService.getDashboard(shopId, targetTier);
+  }
+
+  @Post("recalculate/:shopId")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Force recalculate performance for a shop (admin)" })
+  async recalculate(@Param("shopId") shopId: string) {
+    const result = await this.performanceService.recalculateForShop(shopId);
+    return { message: "Performance recalculated", data: result };
+  }
+
+  @Post("recalculate-all")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Force recalculate all seller performance (admin)" })
+  async recalculateAll() {
+    await this.performanceService.recalculateAll();
+    return { message: "All seller performance recalculated" };
   }
 }
