@@ -77,7 +77,7 @@ const navItems: NavItem[] = [
     roles: ["ADMIN"],
   },
   {
-    label: "Shops",
+    label: "Shops & CRM",
     href: "/dashboard/admin/shops",
     icon: Store,
     roles: ["ADMIN"],
@@ -91,7 +91,7 @@ const navItems: NavItem[] = [
     badgeKey: "pendingOrders",
   },
   {
-    label: "Verifications",
+    label: "KYC & Verification",
     href: "/dashboard/admin/verifications",
     icon: Shield,
     roles: ["ADMIN"],
