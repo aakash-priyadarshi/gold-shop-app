@@ -1,6 +1,6 @@
 # Gold Shop App — Architecture & Feature Inventory
 
-_Last updated: 2026-02-17_
+_Last updated: 2026-02-18_
 
 This document is a code-informed overview of the system architecture and the major product features implemented in this repository.
 
@@ -52,12 +52,13 @@ flowchart LR
 - Uses Next.js App Router under `apps/web/src/app`.
 - Main route areas (folder-level):
   - Public pages: `about/`, `shops/`, `shop/`, `rfq/`, `designs/`, `cart/`, `checkout/`, `orders/`, `notifications/`, `auth/`.
-  - Dashboards: `dashboard/customer/*`, `dashboard/shop/*`, `dashboard/admin/*`.
+  - Dashboards: `dashboard/customer/*`, `dashboard/shop/*`, `dashboard/admin/*`, `dashboard/sales/*`.
 
 Dashboard route map (folder inventory):
 - Customer dashboard (`apps/web/src/app/dashboard/customer`): `orders/`, `payments/`, `rfqs/`, `settings/`, `wishlist/`, `messages/`, `refunds/`.
 - Shop dashboard (`apps/web/src/app/dashboard/shop`): `analytics/`, `commissions/`, `customers/`, `engagement/`, `inventory/`, `invoices/`, `orders/`, `pricing/`, `products/`, `profile/`, `quotes/`, `rfqs/`, `settings/`, `shop-profile/`, `tools/`, `messages/`, `variants/`.
-- Admin dashboard (`apps/web/src/app/dashboard/admin`): `shops/`, `users/`, `verifications/`, `orders/`, `commissions/`, `intelligence/`, `reports/`, `settings/`, `profile/`, `support/`, `chat-monitoring/`, `refunds/`.
+- Admin dashboard (`apps/web/src/app/dashboard/admin`): `shops/`, `users/`, `verifications/`, `orders/`, `commissions/`, `intelligence/`, `reports/`, `settings/`, `profile/`, `support/`, `chat-monitoring/`, `refunds/`, `messages/`.
+- Sales dashboard (`apps/web/src/app/dashboard/sales`): `shops/`, `orders/`, `messages/`, `profile/`.
 
 ### Backend (NestJS)
 
@@ -175,7 +176,7 @@ Core domain aggregates (high-level):
 - `ProductVariant`: per-`InventoryItem` size/SKU entries with independent stock counts and optional price overrides
 - `SizeChart`: standardised reference data per jewellery type and sizing system (US, UK, EU, Indian, JP)
 
-Enums represent key business states and supported options, e.g. `OrderStatus`, `DetailedOrderStatus` (includes `REFUND_REQUESTED`), `PaymentMethod`, `PaymentStatusEnum`, `RfqStatus`, `OfferStatus`, `RefundStatus`, `ConversationStatus`, `CommissionStatus` (includes `REVERSED`), `NotificationType` (includes `NEW_MESSAGE`, `CONVERSATION_LOCKED`, `REFUND_REQUESTED`, `REFUND_APPROVED`, `REFUND_REJECTED`, `REFUND_PROCESSED`), and multiple material/finish/gem enums.
+Enums represent key business states and supported options, e.g. `OrderStatus`, `DetailedOrderStatus` (includes `REFUND_REQUESTED`), `PaymentMethod`, `PaymentStatusEnum`, `RfqStatus`, `OfferStatus`, `RefundStatus`, `ConversationStatus`, `CommissionStatus` (includes `REVERSED`), `NotificationType` (includes `NEW_MESSAGE`, `CONVERSATION_LOCKED`, `REFUND_REQUESTED`, `REFUND_APPROVED`, `REFUND_REJECTED`, `REFUND_PROCESSED`), `UserRole` (ADMIN, SHOPKEEPER, CUSTOMER, SUPPORT, SALES), and multiple material/finish/gem enums.
 
 ## 4) Key business flows
 
@@ -291,6 +292,17 @@ Enums represent key business states and supported options, e.g. `OrderStatus`, `
 - System settings/platform configuration
 - Chat monitoring: violation stats, per-user violation history with strike meter, view original blocked messages, unblock suspended users, unlock locked conversations; tabbed UI with stat cards
 - Refund management: review/approve/reject/process refund requests, commission reversal
+- Messages: full admin messaging page to view/respond in all conversations
+
+### Sales
+
+- Sales dashboard with stat cards (shops, orders, pending orders, messages)
+- Shop directory browsing with search and pagination
+- Seller CRM access (reuses AdminSellerCRM): seller directory, profiles, health score, onboarding progress, milestones, RFQ funnel, notes (read + write)
+- Order listing with status filters, search, and pagination (read-only)
+- In-app messaging: view all conversations, respond to customers/sellers
+- Profile management
+- Shared RBAC permissions: read-only access to users, shops, inventory, orders (+ update status), RFQs, offers, notifications (+ create), market rates, materials, reports
 
 ### Support (Internal Operations)
 
@@ -408,5 +420,35 @@ Worker (`cloudflare-worker`):
 **Migration**: `20260217111051_chat_blocking_and_notifications` — full DDL diff applied to Neon PostgreSQL production database.
 
 **Commits**: `b4c421f` (code), `cfca0a6` (migration), `ad977b3` (migration SQL update).
+
+### 2026-02-18 — Chat accessibility, broken page fixes, SALES role
+
+**Phase 1: Chat UI accessibility** (commit `e6ec6f6`)
+- Added "Message" button on `/shops` page (replacing phone icon)
+- Added "Message Shop" buttons on shop profile pages (`/shops/[id]`)
+- Added Messages nav item in `DashboardLayout` sidebar for ADMIN, SHOPKEEPER, and CUSTOMER roles
+- Added messages icon with unread badge in header (beside the 4-square-boxes icon)
+- Added "Message Shop" button on order details page (`/orders/[orderId]`)
+- Created admin messages page (`/dashboard/admin/messages`) with full chat interface
+- Added ADMIN role to chat controller `createConversation` and `sendMessage` endpoints
+
+**Phase 2: Fix broken pages** (commit `1d17dd5`)
+- **Engagement page fix**: NestJS route ordering bug — `@Get(":id/kyc")` was shadowing `@Get("my-shop/kyc")` in shops controller; moved all `my-shop/*` routes above the `:id` catch-all. Converted `Promise.all` to `Promise.allSettled` in engagement page for resilient data loading.
+- **Admin Seller CRM fix**: Replaced 5 instances of `throw new Error("Shop not found")` with `throw new NotFoundException("Shop not found")` in `seller-engagement.service.ts` (returns 404 instead of 500). Converted `getSellerProfile` to use `Promise.allSettled` with `.catch(() => null)` fallbacks. Fixed frontend field mismatches (`buyer → customer`, `totalPriceNpr → totalNpr`). Fixed brittle tab selector in AdminSellerCRM. Converted `openProfile` in AdminSellerCRM to `Promise.allSettled`.
+- **Customer detail page CRM**: Added `handleMessageCustomer` function + "Message Customer" button in header. Added platform messaging prompt in Contact Info card. Fixed order field mismatches (`totalAmount → totalNpr`, `currency → displayCurrency`).
+
+**Phase 3: SALES role implementation** (commit `fbf927f`)
+- **Schema**: Added `SALES` to `UserRole` enum in Prisma schema. Migration `20260217125532_add_sales_role` (`ALTER TYPE "UserRole" ADD VALUE 'SALES'`) applied to production DB.
+- **Shared RBAC** (`packages/shared/src/enums/roles.ts`): Added `SALES` to `UserRole` enum with permissions (USER:READ/LIST, SHOP:READ/LIST, INVENTORY_ITEM:READ/LIST, ORDER:READ/LIST/UPDATE_STATUS, RFQ:READ/LIST, OFFER:READ/LIST, NOTIFICATION:READ/LIST/CREATE, MARKET_RATE:READ, MATERIAL:READ/LIST, REPORT:READ/LIST) and tri-lingual descriptions (en/ne/hi).
+- **Frontend auth**: Added `"SALES"` to `UserRole` type, `getDashboardRoute` switch case (`/dashboard/sales`), and `roleRoutes` in `useAuth.tsx`. Added `SalesGuard` in `RouteGuard.tsx`.
+- **Navigation**: Added 5 SALES nav items in `DashboardLayout.tsx` (Dashboard, Shops & CRM, Orders, Messages, Profile). Added SALES role badge (yellow). Added SALES quick actions and messages route in `header.tsx`.
+- **Sales dashboard pages** (5 new pages):
+  - `/dashboard/sales` — Overview with stat cards and recent orders
+  - `/dashboard/sales/shops` — Shop directory + Seller CRM (reuses `AdminSellerCRM` component)
+  - `/dashboard/sales/orders` — Order listing with status filters and pagination
+  - `/dashboard/sales/messages` — Full chat interface for sales agents
+  - `/dashboard/sales/profile` — Profile management
+- **Backend access**: Added SALES to chat controller (create/list conversations, send/read messages, mark as read). Added SALES to order controller (`admin/all`, `admin/stats` read access). Added SALES to admin seller CRM endpoints (sellers directory, stats, profile, health score, onboarding, milestones, RFQ funnel, notes read/write). Export and write operations (update seller, cancel order, etc.) remain admin-only.
+
 
 
