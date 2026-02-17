@@ -55,6 +55,9 @@ model User {
   // CRM notes
   customerNotes        CustomerNote[]     @relation("CustomerNotes")
   authoredNotes        CustomerNote[]     @relation("AuthoredNotes")
+  // Chat
+  sentMessages         Message[]          @relation("MessageSender")
+  buyerConversations   Conversation[]     @relation("BuyerConversations")
 
   @@index([email])
   @@index([phone])
@@ -254,6 +257,7 @@ model Shop {
   invoices                Invoice[]
   invoiceSettings         InvoiceSettings?
   customerNotes           CustomerNote[]       @relation("ShopCustomerNotes")
+  conversations           Conversation[]       @relation("ShopConversations")
 
   @@index([userId])
   @@index([country, city])
@@ -354,13 +358,35 @@ model InventoryItem {
   labels           String[]
   status           InventoryStatus @default(AVAILABLE)
   stockQuantity    Int             @default(1)
+  hasSizes         Boolean         @default(false)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   shop             Shop            @relation(fields: [shopId], references: [id])
+  variants         ProductVariant[]
 
   @@index([shopId, status])
   @@index([jewelleryType])
   @@index([buildMethod])
+}
+
+// Product size variants (rings, bracelets, etc.)
+model ProductVariant {
+  id              String        @id @default(uuid())
+  inventoryItemId String
+  sizeLabel       String        // e.g. "US 7", "UK O", "16.5 cm"
+  sizeSystem      String        @default("US") // US, UK, EU, MM
+  sizeValue       Float?        // numeric value for sorting (e.g. 7.0)
+  sku             String        @unique
+  stock           Int           @default(0)
+  priceOverride   Float?        // optional price override for this variant
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@unique([inventoryItemId, sizeLabel])
+  @@index([inventoryItemId])
+  @@index([sku])
 }
 
 model RfqRequest {
@@ -606,11 +632,22 @@ model Order {
   paidAtShopRequestedAt  DateTime?
   paymentMethodEnum      PaymentMethod?
   paymentStatusEnum      PaymentStatusEnum   @default(UNPAID)
+  // Refund fields
+  refundStatus           RefundStatus?
+  refundableAmount       Float?
+  refundReason           String?
+  refundRequestedAt      DateTime?
+  refundProcessedAt      DateTime?
+  refundProcessedById    String?
+  refundIdempotencyKey   String?             @unique
+  // Variant reference (for sized products)
+  variantId              String?
   commissionLedger       CommissionLedger?
   customer               User                @relation("CustomerOrders", fields: [customerId], references: [id])
   shop                   Shop                @relation(fields: [shopId], references: [id])
   milestones             OrderMilestone[]
   versions               OrderVersion[]
+  conversation           Conversation?
 
   @@index([customerId])
   @@index([shopId])
@@ -1547,6 +1584,14 @@ enum NotificationType {
   QC_COMPLETED
   // System
   SYSTEM_ALERT
+  // Chat
+  NEW_MESSAGE
+  CONVERSATION_LOCKED
+  // Refund
+  REFUND_REQUESTED
+  REFUND_APPROVED
+  REFUND_REJECTED
+  REFUND_PROCESSED
 }
 
 enum WeightCategory {
@@ -1713,6 +1758,9 @@ enum DetailedOrderStatus {
   IN_PROGRESS // Custom: Forging / Being made
   READY // Custom: QC passed, ready to pack
 
+  // Refund states
+  REFUND_REQUESTED
+
   // Terminal states
   CANCELLED
   REFUNDED
@@ -1723,6 +1771,7 @@ enum CommissionStatus {
   PAID
   OVERDUE
   WAIVED
+  REVERSED
 }
 
 enum SellerTier {
@@ -1941,4 +1990,88 @@ model QuoteAnomaly {
   @@index([isReviewed])
   @@index([severity])
   @@index([createdAt])
+}
+
+// ═══════════════════════════════════════════
+// IN-APP CHAT SYSTEM (Anti-Circumvention)
+// ═══════════════════════════════════════════
+
+model Conversation {
+  id              String             @id @default(uuid())
+  orderId         String?            @unique
+  rfqId           String?
+  buyerId         String
+  shopId          String
+  status          ConversationStatus @default(ACTIVE)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  messages        Message[]
+  buyer           User               @relation("BuyerConversations", fields: [buyerId], references: [id])
+  shop            Shop               @relation("ShopConversations", fields: [shopId], references: [id])
+  order           Order?             @relation(fields: [orderId], references: [id])
+
+  @@index([buyerId])
+  @@index([shopId])
+  @@index([orderId])
+  @@index([rfqId])
+  @@index([status])
+}
+
+model Message {
+  id              String       @id @default(uuid())
+  conversationId  String
+  senderId        String
+  senderRole      String       // CUSTOMER, SHOPKEEPER, SUPPORT, ADMIN
+  content         String
+  maskedContent   String?      // Content after masking PII
+  hasViolation    Boolean      @default(false)
+  violationType   String?      // PHONE, EMAIL, WHATSAPP, TELEGRAM, INSTAGRAM, CONTACT_PHRASE
+  attachmentUrl   String?      // R2 image/file URL
+  attachmentType  String?      // image, document
+  isRead          Boolean      @default(false)
+  readAt          DateTime?
+  isSystem        Boolean      @default(false) // System-generated messages (warnings, etc.)
+  createdAt       DateTime     @default(now())
+
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender          User         @relation("MessageSender", fields: [senderId], references: [id])
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@index([conversationId, createdAt])
+}
+
+// ═══════════════════════════════════════════
+// RING / JEWELLERY SIZE CONFIG (Per-Market)
+// ═══════════════════════════════════════════
+
+model SizeChart {
+  id           String       @id @default(uuid())
+  jewelleryType JewelleryType
+  sizeSystem   String       // US, UK, EU, MM
+  region       MarketRegion
+  sizeLabel    String       // "7", "O", "55", "17.3mm"
+  sizeValue    Float        // numeric sort value
+  diameterMm   Float?       // inner diameter in mm
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+
+  @@unique([jewelleryType, sizeSystem, region, sizeLabel])
+  @@index([jewelleryType, region])
+}
+
+enum ConversationStatus {
+  ACTIVE
+  LOCKED       // Locked due to violations
+  ARCHIVED     // Completed / closed
+}
+
+enum RefundStatus {
+  NONE
+  REQUESTED
+  APPROVED
+  REJECTED
+  PROCESSED
 }

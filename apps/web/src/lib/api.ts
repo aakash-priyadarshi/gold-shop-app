@@ -575,4 +575,68 @@ export const intelligenceApi = {
     api.patch(`/marketplace-intelligence/admin/anomalies/${id}/review`, data),
 };
 
+// ─── Chat API ───
+export const chatApi = {
+  // Conversations
+  createConversation: (data: { shopId: string; orderId?: string; rfqId?: string }) =>
+    api.post('/chat/conversations', data),
+  listConversations: (shopId?: string) =>
+    api.get('/chat/conversations', { params: shopId ? { shopId } : {} }),
+  getMessages: (conversationId: string, page = 1, limit = 50) =>
+    api.get(`/chat/conversations/${conversationId}/messages`, { params: { page, limit } }),
+  sendMessage: (conversationId: string, data: { content: string; attachmentUrl?: string; attachmentType?: string }) =>
+    api.post(`/chat/conversations/${conversationId}/messages`, data),
+  markAsRead: (conversationId: string) =>
+    api.patch(`/chat/conversations/${conversationId}/read`),
+  // Admin
+  getViolationStats: () => api.get('/chat/admin/violations'),
+  unlockConversation: (conversationId: string) =>
+    api.patch(`/chat/admin/conversations/${conversationId}/unlock`),
+};
+
+// ─── Refunds API ───
+export const refundsApi = {
+  requestRefund: (data: { orderId: string; reason: string }) =>
+    api.post('/refunds/request', data),
+  checkEligibility: (orderId: string) =>
+    api.get(`/refunds/eligibility/${orderId}`),
+  listRequests: (status?: string) =>
+    api.get('/refunds/requests', { params: status ? { status } : {} }),
+  approveRefund: (orderId: string) =>
+    api.patch(`/refunds/${orderId}/approve`),
+  rejectRefund: (orderId: string, data: { rejectionReason: string }) =>
+    api.patch(`/refunds/${orderId}/reject`, data),
+  processRefund: (orderId: string) =>
+    api.patch(`/refunds/${orderId}/process`),
+};
+
+// ─── Support API ───
+export const supportApi = {
+  getDashboard: () => api.get('/support/dashboard'),
+  getOrders: (page = 1, limit = 20, status?: string) =>
+    api.get('/support/orders', { params: { page, limit, ...(status ? { status } : {}) } }),
+  getFlaggedConversations: () => api.get('/support/flagged-conversations'),
+  getPendingVerifications: () => api.get('/support/pending-verifications'),
+  getRecentActivity: (limit = 50) =>
+    api.get('/support/activity', { params: { limit } }),
+};
+
+// ─── Product Variants API ───
+export const variantsApi = {
+  toggleSizes: (itemId: string, hasSizes: boolean) =>
+    api.patch(`/inventory/${itemId}/variants/toggle-sizes`, { hasSizes }),
+  listVariants: (itemId: string) =>
+    api.get(`/inventory/${itemId}/variants`),
+  createVariant: (itemId: string, data: { sizeLabel: string; sizeSystem?: string; sizeValue?: number; sku: string; stock: number; priceOverride?: number }) =>
+    api.post(`/inventory/${itemId}/variants`, data),
+  bulkCreateVariants: (itemId: string, variants: Array<{ sizeLabel: string; sizeSystem?: string; sizeValue?: number; sku: string; stock: number; priceOverride?: number }>) =>
+    api.post(`/inventory/${itemId}/variants/bulk`, { variants }),
+  updateVariant: (itemId: string, variantId: string, data: { stock?: number; priceOverride?: number; isActive?: boolean }) =>
+    api.patch(`/inventory/${itemId}/variants/${variantId}`, data),
+  deleteVariant: (itemId: string, variantId: string) =>
+    api.delete(`/inventory/${itemId}/variants/${variantId}`),
+  getSizeChart: (jewelleryType: string, region?: string) =>
+    api.get(`/size-charts/${jewelleryType}`, { params: region ? { region } : {} }),
+};
+
 export default api;
