@@ -109,6 +109,113 @@ export class OrdersController {
     return this.ordersService.getOrderStats(shopId);
   }
 
+  // ══════════════════════════════════════
+  // ADMIN ENDPOINTS (must be before :id wildcard)
+  // ══════════════════════════════════════
+
+  @Get("admin/all")
+  @Roles("ADMIN")
+  @ApiOperation({ summary: "Get all orders (Admin)" })
+  async getAllOrders(@Query() filters: AdminOrderFilterDto) {
+    return this.ordersService.findAllOrders(filters);
+  }
+
+  @Get("admin/stats")
+  @Roles("ADMIN")
+  @ApiOperation({ summary: "Get platform-wide order statistics (Admin)" })
+  async getPlatformOrderStats() {
+    return this.ordersService.getPlatformStats();
+  }
+
+  @Post("admin/:id/cancel")
+  @Roles("ADMIN")
+  @ApiOperation({ summary: "Cancel order as admin" })
+  async adminCancelOrder(
+    @Param("id") id: string,
+    @CurrentUser("id") adminId: string,
+    @Body() dto: AdminCancelOrderDto,
+  ) {
+    return this.ordersService.adminCancelOrder(id, adminId, dto);
+  }
+
+  @Patch("admin/:id/timeline")
+  @Roles("ADMIN")
+  @ApiOperation({ summary: "Update order timeline (Admin)" })
+  async adminUpdateTimeline(
+    @Param("id") id: string,
+    @CurrentUser("id") adminId: string,
+    @Body() dto: AdminUpdateTimelineDto,
+  ) {
+    return this.ordersService.adminUpdateTimeline(id, adminId, dto);
+  }
+
+  @Post("admin/:id/verify-payment")
+  @Roles("ADMIN")
+  @ApiOperation({ summary: "Manually verify payment (Admin)" })
+  async adminVerifyPayment(
+    @Param("id") id: string,
+    @CurrentUser("id") adminId: string,
+    @Body() dto: AdminVerifyPaymentDto,
+  ) {
+    return this.ordersService.adminVerifyPayment(id, adminId, dto);
+  }
+
+  @Patch("admin/:id/order-status")
+  @Roles("ADMIN")
+  @ApiOperation({ summary: "Update order status (Admin)" })
+  async adminUpdateOrderStatus(
+    @Param("id") id: string,
+    @CurrentUser("id") adminId: string,
+    @Body() dto: AdminUpdateOrderStatusDto,
+  ) {
+    return this.ordersService.adminUpdateOrderStatus(id, adminId, dto);
+  }
+
+  @Patch("admin/:id/payment-status")
+  @Roles("ADMIN")
+  @ApiOperation({ summary: "Update payment status and method (Admin)" })
+  async adminUpdatePaymentStatus(
+    @Param("id") id: string,
+    @CurrentUser("id") adminId: string,
+    @Body() dto: AdminUpdatePaymentStatusDto,
+  ) {
+    return this.ordersService.adminUpdatePaymentStatus(id, adminId, dto);
+  }
+
+  // ══════════════════════════════════════
+  // SHOPKEEPER ENDPOINTS (must be before :id wildcard)
+  // ══════════════════════════════════════
+
+  @Patch("shop/:id/order-status")
+  @Roles("SHOPKEEPER")
+  @ApiOperation({ summary: "Update order status (Shopkeeper)" })
+  async shopkeeperUpdateOrderStatus(
+    @Param("id") id: string,
+    @CurrentUser("id") shopkeeperId: string,
+    @Body() dto: AdminUpdateOrderStatusDto,
+  ) {
+    return this.ordersService.shopkeeperUpdateOrderStatus(
+      id,
+      shopkeeperId,
+      dto,
+    );
+  }
+
+  @Post("shop/:id/paid-at-shop")
+  @Roles("SHOPKEEPER")
+  @ApiOperation({ summary: "Mark order as paid at shop (triggers commission)" })
+  async markPaidAtShop(
+    @Param("id") id: string,
+    @CurrentUser("id") shopkeeperId: string,
+    @Body() dto: ShopkeeperPaidAtShopDto,
+  ) {
+    return this.ordersService.markPaidAtShop(id, shopkeeperId, dto);
+  }
+
+  // ══════════════════════════════════════
+  // WILDCARD :id ROUTES (must be LAST)
+  // ══════════════════════════════════════
+
   @Get(":id")
   @ApiOperation({ summary: "Get order details" })
   async getOrder(
@@ -164,57 +271,6 @@ export class OrdersController {
   }
 
   // ══════════════════════════════════════
-  // ADMIN ENDPOINTS
-  // ══════════════════════════════════════
-
-  @Get("admin/all")
-  @Roles("ADMIN")
-  @ApiOperation({ summary: "Get all orders (Admin)" })
-  async getAllOrders(@Query() filters: AdminOrderFilterDto) {
-    return this.ordersService.findAllOrders(filters);
-  }
-
-  @Get("admin/stats")
-  @Roles("ADMIN")
-  @ApiOperation({ summary: "Get platform-wide order statistics (Admin)" })
-  async getPlatformOrderStats() {
-    return this.ordersService.getPlatformStats();
-  }
-
-  @Post("admin/:id/cancel")
-  @Roles("ADMIN")
-  @ApiOperation({ summary: "Cancel order as admin" })
-  async adminCancelOrder(
-    @Param("id") id: string,
-    @CurrentUser("id") adminId: string,
-    @Body() dto: AdminCancelOrderDto,
-  ) {
-    return this.ordersService.adminCancelOrder(id, adminId, dto);
-  }
-
-  @Patch("admin/:id/timeline")
-  @Roles("ADMIN")
-  @ApiOperation({ summary: "Update order timeline (Admin)" })
-  async adminUpdateTimeline(
-    @Param("id") id: string,
-    @CurrentUser("id") adminId: string,
-    @Body() dto: AdminUpdateTimelineDto,
-  ) {
-    return this.ordersService.adminUpdateTimeline(id, adminId, dto);
-  }
-
-  @Post("admin/:id/verify-payment")
-  @Roles("ADMIN")
-  @ApiOperation({ summary: "Manually verify payment (Admin)" })
-  async adminVerifyPayment(
-    @Param("id") id: string,
-    @CurrentUser("id") adminId: string,
-    @Body() dto: AdminVerifyPaymentDto,
-  ) {
-    return this.ordersService.adminVerifyPayment(id, adminId, dto);
-  }
-
-  // ══════════════════════════════════════
   // COUNTER-OFFER ENDPOINTS (Shopkeeper)
   // ══════════════════════════════════════
 
@@ -254,61 +310,5 @@ export class OrdersController {
       customerId,
       dto,
     );
-  }
-
-  // ══════════════════════════════════════
-  // ADMIN ORDER/PAYMENT STATUS CONTROLS
-  // ══════════════════════════════════════
-
-  @Patch("admin/:id/order-status")
-  @Roles("ADMIN")
-  @ApiOperation({ summary: "Update order status (Admin)" })
-  async adminUpdateOrderStatus(
-    @Param("id") id: string,
-    @CurrentUser("id") adminId: string,
-    @Body() dto: AdminUpdateOrderStatusDto,
-  ) {
-    return this.ordersService.adminUpdateOrderStatus(id, adminId, dto);
-  }
-
-  @Patch("admin/:id/payment-status")
-  @Roles("ADMIN")
-  @ApiOperation({ summary: "Update payment status and method (Admin)" })
-  async adminUpdatePaymentStatus(
-    @Param("id") id: string,
-    @CurrentUser("id") adminId: string,
-    @Body() dto: AdminUpdatePaymentStatusDto,
-  ) {
-    return this.ordersService.adminUpdatePaymentStatus(id, adminId, dto);
-  }
-
-  // ══════════════════════════════════════
-  // SHOPKEEPER ENDPOINTS
-  // ══════════════════════════════════════
-
-  @Patch("shop/:id/order-status")
-  @Roles("SHOPKEEPER")
-  @ApiOperation({ summary: "Update order status (Shopkeeper)" })
-  async shopkeeperUpdateOrderStatus(
-    @Param("id") id: string,
-    @CurrentUser("id") shopkeeperId: string,
-    @Body() dto: AdminUpdateOrderStatusDto,
-  ) {
-    return this.ordersService.shopkeeperUpdateOrderStatus(
-      id,
-      shopkeeperId,
-      dto,
-    );
-  }
-
-  @Post("shop/:id/paid-at-shop")
-  @Roles("SHOPKEEPER")
-  @ApiOperation({ summary: "Mark order as paid at shop (triggers commission)" })
-  async markPaidAtShop(
-    @Param("id") id: string,
-    @CurrentUser("id") shopkeeperId: string,
-    @Body() dto: ShopkeeperPaidAtShopDto,
-  ) {
-    return this.ordersService.markPaidAtShop(id, shopkeeperId, dto);
   }
 }
