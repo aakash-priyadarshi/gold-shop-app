@@ -5,9 +5,11 @@ import { ChatGateway } from './chat.gateway';
 import { ContactMaskingService } from './contact-masking.service';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
+    NotificationsModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

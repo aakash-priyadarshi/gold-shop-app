@@ -588,10 +588,16 @@ export const chatApi = {
     api.post(`/chat/conversations/${conversationId}/messages`, data),
   markAsRead: (conversationId: string) =>
     api.patch(`/chat/conversations/${conversationId}/read`),
-  // Admin
+  // Admin — violations & moderation
   getViolationStats: () => api.get('/chat/admin/violations'),
+  getUserViolationHistory: (userId: string) =>
+    api.get(`/chat/admin/violations/user/${userId}`),
+  getBlockedMessage: (messageId: string) =>
+    api.get(`/chat/admin/messages/${messageId}`),
   unlockConversation: (conversationId: string) =>
     api.patch(`/chat/admin/conversations/${conversationId}/unlock`),
+  unblockUser: (userId: string) =>
+    api.patch(`/chat/admin/users/${userId}/unblock`),
 };
 
 // ─── Refunds API ───
