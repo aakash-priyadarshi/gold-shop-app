@@ -5,16 +5,31 @@ import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { LifeBuoy, Lock, LogOut, ShieldAlert } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 /**
- * SuspendedOverlay — shown on top of the dashboard when the user's account is suspended.
- * Displays a lock visual with chains from all 4 corners, and only allows
- * contacting support or logging out.
+ * SuspendedOverlay — shown on top of the dashboard content when the user's
+ * account is suspended. Allows navigation (sidebar stays usable) but shows
+ * a lock overlay on all pages EXCEPT support-related ones.
  */
+
+const ALLOWED_PATHS = ["/help", "/platform-guidelines"];
+const ALLOWED_PATH_PREFIXES = ["/dashboard/customer/support", "/dashboard/shop/support", "/dashboard/admin/support", "/dashboard/sales/support"];
+
+function isAllowedPage(pathname: string | null): boolean {
+  if (!pathname) return false;
+  if (ALLOWED_PATHS.includes(pathname)) return true;
+  return ALLOWED_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
 export function SuspendedOverlay() {
   const { user, logout } = useAuth();
+  const pathname = usePathname();
 
   if (!user || user.status !== "SUSPENDED") return null;
+
+  // Don't show overlay on support / help / guidelines pages
+  if (isAllowedPage(pathname)) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">

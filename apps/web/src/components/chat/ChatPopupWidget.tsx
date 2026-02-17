@@ -73,7 +73,7 @@ const CLOUDFLARE_UPLOAD_URL =
    Widget
    ──────────────────────────────────────────────────────────── */
 export function ChatPopupWidget() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const {
     isOpen,
     isMinimized,
@@ -199,9 +199,20 @@ export function ChatPopupWidget() {
   const handleMessageBlocked = useCallback((data: ViolationWarning) => {
     setViolationAlert(data);
     setSending(false);
-    // Auto-dismiss after 15s
+
+    // 3rd strike — account has been suspended
+    // Refresh user profile so SuspendedOverlay activates, then reload the page
+    if (data.strikeCount >= 3) {
+      refreshUser().then(() => {
+        // Small delay so the user sees the final warning before the overlay appears
+        setTimeout(() => window.location.reload(), 2000);
+      });
+      return;
+    }
+
+    // Auto-dismiss after 15s for non-suspension violations
     setTimeout(() => setViolationAlert(null), 15000);
-  }, []);
+  }, [refreshUser]);
 
   const handleTypingEvent = useCallback(
     (data: { userId: string; isTyping: boolean }) => {
@@ -429,12 +440,20 @@ export function ChatPopupWidget() {
         });
         // Check if the response indicates a blocked message
         if (res.data?.blocked) {
-          setViolationAlert({
+          const violationData = {
             warning: res.data.warning,
             strikeCount: res.data.strikeCount,
             conversationId: activeConversationId,
-          });
-          setTimeout(() => setViolationAlert(null), 15000);
+          };
+          setViolationAlert(violationData);
+          // 3rd strike — suspension
+          if (res.data.strikeCount >= 3) {
+            refreshUser().then(() => {
+              setTimeout(() => window.location.reload(), 2000);
+            });
+          } else {
+            setTimeout(() => setViolationAlert(null), 15000);
+          }
         } else {
           await loadMessages(activeConversationId);
         }
