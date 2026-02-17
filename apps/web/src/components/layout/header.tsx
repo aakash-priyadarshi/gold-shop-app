@@ -40,7 +40,7 @@ import {
 import { BRAND } from "@/config/brand";
 import { useCart } from "@/contexts/CartContext";
 import { getDashboardRoute, useAuth, type UserRole } from "@/hooks/useAuth";
-import { notificationsApi, ordersApi } from "@/lib/api";
+import { notificationsApi, ordersApi, chatApi } from "@/lib/api";
 import {
   COUNTRIES,
   CURRENCIES,
@@ -56,6 +56,7 @@ import {
   BellIcon,
   BuildingOffice2Icon,
   BuildingStorefrontIcon,
+  ChatBubbleLeftRightIcon,
   ChevronRightIcon,
   ClipboardDocumentListIcon,
   Cog6ToothIcon,
@@ -175,6 +176,9 @@ export function Header() {
     (state) => state.setAuthenticated,
   );
 
+  // Unread messages count
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
   // Use next-themes for theme management (more reliable)
   const { theme, setTheme, resolvedTheme } = useTheme();
 
@@ -228,6 +232,44 @@ export function Header() {
   useEffect(() => {
     fetchRecentOrders();
   }, [fetchRecentOrders]);
+
+  // Fetch unread messages count
+  const fetchUnreadMessages = useCallback(async () => {
+    if (!isAuthenticated) {
+      setUnreadMessages(0);
+      return;
+    }
+    try {
+      const res = await chatApi.listConversations();
+      const conversations = res.data || [];
+      const unread = conversations.reduce(
+        (sum: number, c: any) => sum + (c.unreadCount || 0),
+        0,
+      );
+      setUnreadMessages(unread);
+    } catch {
+      // silently ignore
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    fetchUnreadMessages();
+    const interval = setInterval(fetchUnreadMessages, 30000);
+    return () => clearInterval(interval);
+  }, [fetchUnreadMessages]);
+
+  // Get messages page path based on role
+  const getMessagesPath = () => {
+    switch (user?.role) {
+      case "ADMIN":
+        return "/dashboard/admin/messages";
+      case "SHOPKEEPER":
+        return "/dashboard/shop/messages";
+      case "CUSTOMER":
+      default:
+        return "/dashboard/customer/messages";
+    }
+  };
 
   const navigation = [
     { name: "Shop", href: "/shop", icon: ShoppingBagIcon },
@@ -859,6 +901,29 @@ export function Header() {
                   </TooltipContent>
                 </Tooltip>
               )}
+
+              {/* Messages Icon */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href={getMessagesPath()}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="relative h-9 w-9 rounded-lg"
+                    >
+                      <ChatBubbleLeftRightIcon className="h-5 w-5" />
+                      {mounted && unreadMessages > 0 && (
+                        <span className="absolute -top-1 -right-1 h-5 w-5 bg-amber-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
+                          {unreadMessages > 9 ? "9+" : unreadMessages}
+                        </span>
+                      )}
+                    </Button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Messages{unreadMessages > 0 ? ` (${unreadMessages})` : ""}</p>
+                </TooltipContent>
+              </Tooltip>
 
               {/* Cart Popover */}
               <Popover open={cartPopoverOpen} onOpenChange={setCartPopoverOpen}>

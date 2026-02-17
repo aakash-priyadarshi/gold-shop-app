@@ -37,6 +37,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  MessageSquare,
   Package,
   Receipt,
   Search,
@@ -122,6 +123,12 @@ const navItems: NavItem[] = [
     label: "Intelligence",
     href: "/dashboard/admin/intelligence",
     icon: Brain,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Messages",
+    href: "/dashboard/admin/messages",
+    icon: MessageSquare,
     roles: ["ADMIN"],
   },
 
@@ -210,6 +217,12 @@ const navItems: NavItem[] = [
     icon: Settings,
     roles: ["SHOPKEEPER"],
   },
+  {
+    label: "Messages",
+    href: "/dashboard/shop/messages",
+    icon: MessageSquare,
+    roles: ["SHOPKEEPER"],
+  },
 
   // Customer routes
   {
@@ -234,6 +247,12 @@ const navItems: NavItem[] = [
     label: "Wishlist",
     href: "/dashboard/customer/wishlist",
     icon: Heart,
+    roles: ["CUSTOMER"],
+  },
+  {
+    label: "Messages",
+    href: "/dashboard/customer/messages",
+    icon: MessageSquare,
     roles: ["CUSTOMER"],
   },
   {
