@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
 /* ──────────────────────────────────────────────────────────
@@ -14,8 +14,9 @@ import { io, Socket } from "socket.io-client";
    • Falls back to HTTP if WS fails
    ────────────────────────────────────────────────────────── */
 
-const WS_BASE =
-  (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000").replace(/\/api$/, "");
+const WS_BASE = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+).replace(/\/api$/, "");
 
 let sharedSocket: Socket | null = null;
 let refCount = 0;
@@ -79,7 +80,8 @@ export function useChatSocket({
   cbRead.current = onMessagesRead;
 
   useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("token") : null;
     if (!token) return;
 
     const socket = getSharedSocket(token);
@@ -88,9 +90,11 @@ export function useChatSocket({
 
     const handleConnect = () => setConnected(true);
     const handleDisconnect = () => setConnected(false);
-    const handleNewMessage = (msg: ChatSocketMessage) => cbNewMessage.current?.(msg);
+    const handleNewMessage = (msg: ChatSocketMessage) =>
+      cbNewMessage.current?.(msg);
     const handleBlocked = (data: ViolationWarning) => cbBlocked.current?.(data);
-    const handleTyping = (data: { userId: string; isTyping: boolean }) => cbTyping.current?.(data);
+    const handleTyping = (data: { userId: string; isTyping: boolean }) =>
+      cbTyping.current?.(data);
     const handleRead = (data: { userId: string }) => cbRead.current?.(data);
 
     socket.on("connect", handleConnect);
@@ -135,10 +139,20 @@ export function useChatSocket({
   }, []);
 
   const sendMessage = useCallback(
-    (conversationId: string, content: string, attachmentUrl?: string, attachmentType?: string) => {
+    (
+      conversationId: string,
+      content: string,
+      attachmentUrl?: string,
+      attachmentType?: string,
+    ) => {
       const socket = socketRef.current;
       if (socket?.connected) {
-        socket.emit("sendMessage", { conversationId, content, attachmentUrl, attachmentType });
+        socket.emit("sendMessage", {
+          conversationId,
+          content,
+          attachmentUrl,
+          attachmentType,
+        });
         return true;
       }
       return false; // fallback to HTTP
@@ -146,12 +160,15 @@ export function useChatSocket({
     [],
   );
 
-  const sendTyping = useCallback((conversationId: string, isTyping: boolean) => {
-    const socket = socketRef.current;
-    if (socket?.connected) {
-      socket.emit("typing", { conversationId, isTyping });
-    }
-  }, []);
+  const sendTyping = useCallback(
+    (conversationId: string, isTyping: boolean) => {
+      const socket = socketRef.current;
+      if (socket?.connected) {
+        socket.emit("typing", { conversationId, isTyping });
+      }
+    },
+    [],
+  );
 
   const markRead = useCallback((conversationId: string) => {
     const socket = socketRef.current;
@@ -160,6 +177,21 @@ export function useChatSocket({
     }
   }, []);
 
+  const checkOnline = useCallback(
+    (userIds: string[]): Promise<string[]> => {
+      const socket = socketRef.current;
+      if (!socket?.connected) return Promise.resolve([]);
+      return new Promise((resolve) => {
+        socket.emit("checkOnline", { userIds }, (response: any) => {
+          resolve(response?.data?.online || []);
+        });
+        // Timeout fallback
+        setTimeout(() => resolve([]), 3000);
+      });
+    },
+    [],
+  );
+
   return {
     connected,
     joinConversation,
@@ -167,5 +199,6 @@ export function useChatSocket({
     sendMessage,
     sendTyping,
     markRead,
+    checkOnline,
   };
 }

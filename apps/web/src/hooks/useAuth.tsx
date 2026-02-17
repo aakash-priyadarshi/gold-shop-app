@@ -12,7 +12,7 @@ import React, {
 } from "react";
 
 // Types matching backend
-export type UserRole = "ADMIN" | "SHOPKEEPER" | "CUSTOMER" | "SALES";
+export type UserRole = "ADMIN" | "SHOPKEEPER" | "CUSTOMER" | "SALES" | "SUPPORT";
 
 export interface User {
   id: string;
@@ -149,6 +149,8 @@ export const getDashboardRoute = (role: UserRole): string => {
       return "/dashboard/customer";
     case "SALES":
       return "/dashboard/sales";
+    case "SUPPORT":
+      return "/dashboard/support";
     default:
       return "/";
   }
@@ -160,6 +162,7 @@ const roleRoutes: Record<UserRole, string[]> = {
   SHOPKEEPER: ["/dashboard/shop", "/shop", "/inventory"],
   CUSTOMER: ["/dashboard/customer", "/browse", "/cart", "/orders", "/rfq"],
   SALES: ["/dashboard/sales", "/dashboard/admin"],
+  SUPPORT: ["/dashboard/support", "/dashboard/admin"],
 };
 
 // Public routes that don't require auth
@@ -242,14 +245,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       try {
-        const response = await api.post<AuthResponse>("/auth/login", {
+        const response = await api.post<AuthResponse & { isSuspended?: boolean }>("/auth/login", {
           email,
           password,
           turnstileToken,
           rememberMe: rememberMe ?? false,
         });
 
-        const { accessToken, refreshToken, user: userData } = response.data;
+        const { accessToken, refreshToken, user: userData, isSuspended } = response.data;
         storeTokens(accessToken, refreshToken);
 
         // Fetch full user profile

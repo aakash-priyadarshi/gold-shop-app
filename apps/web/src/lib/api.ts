@@ -578,18 +578,26 @@ export const intelligenceApi = {
 // ─── Chat API ───
 export const chatApi = {
   // Conversations
-  createConversation: (data: { shopId: string; orderId?: string; rfqId?: string; buyerId?: string }) =>
-    api.post('/chat/conversations', data),
+  createConversation: (data: {
+    shopId: string;
+    orderId?: string;
+    rfqId?: string;
+    buyerId?: string;
+  }) => api.post("/chat/conversations", data),
   listConversations: (shopId?: string) =>
-    api.get('/chat/conversations', { params: shopId ? { shopId } : {} }),
+    api.get("/chat/conversations", { params: shopId ? { shopId } : {} }),
   getMessages: (conversationId: string, page = 1, limit = 50) =>
-    api.get(`/chat/conversations/${conversationId}/messages`, { params: { page, limit } }),
-  sendMessage: (conversationId: string, data: { content: string; attachmentUrl?: string; attachmentType?: string }) =>
-    api.post(`/chat/conversations/${conversationId}/messages`, data),
+    api.get(`/chat/conversations/${conversationId}/messages`, {
+      params: { page, limit },
+    }),
+  sendMessage: (
+    conversationId: string,
+    data: { content: string; attachmentUrl?: string; attachmentType?: string },
+  ) => api.post(`/chat/conversations/${conversationId}/messages`, data),
   markAsRead: (conversationId: string) =>
     api.patch(`/chat/conversations/${conversationId}/read`),
   // Admin — violations & moderation
-  getViolationStats: () => api.get('/chat/admin/violations'),
+  getViolationStats: () => api.get("/chat/admin/violations"),
   getUserViolationHistory: (userId: string) =>
     api.get(`/chat/admin/violations/user/${userId}`),
   getBlockedMessage: (messageId: string) =>
@@ -603,46 +611,122 @@ export const chatApi = {
 // ─── Refunds API ───
 export const refundsApi = {
   requestRefund: (data: { orderId: string; reason: string }) =>
-    api.post('/refunds/request', data),
+    api.post("/refunds/request", data),
   checkEligibility: (orderId: string) =>
     api.get(`/refunds/eligibility/${orderId}`),
   listRequests: (status?: string) =>
-    api.get('/refunds/requests', { params: status ? { status } : {} }),
-  approveRefund: (orderId: string) =>
-    api.patch(`/refunds/${orderId}/approve`),
+    api.get("/refunds/requests", { params: status ? { status } : {} }),
+  approveRefund: (orderId: string) => api.patch(`/refunds/${orderId}/approve`),
   rejectRefund: (orderId: string, data: { rejectionReason: string }) =>
     api.patch(`/refunds/${orderId}/reject`, data),
-  processRefund: (orderId: string) =>
-    api.patch(`/refunds/${orderId}/process`),
+  processRefund: (orderId: string) => api.patch(`/refunds/${orderId}/process`),
 };
 
 // ─── Support API ───
 export const supportApi = {
-  getDashboard: () => api.get('/support/dashboard'),
+  getDashboard: () => api.get("/support/dashboard"),
   getOrders: (page = 1, limit = 20, status?: string) =>
-    api.get('/support/orders', { params: { page, limit, ...(status ? { status } : {}) } }),
-  getFlaggedConversations: () => api.get('/support/flagged-conversations'),
-  getPendingVerifications: () => api.get('/support/pending-verifications'),
+    api.get("/support/orders", {
+      params: { page, limit, ...(status ? { status } : {}) },
+    }),
+  getFlaggedConversations: () => api.get("/support/flagged-conversations"),
+  getPendingVerifications: () => api.get("/support/pending-verifications"),
   getRecentActivity: (limit = 50) =>
-    api.get('/support/activity', { params: { limit } }),
+    api.get("/support/activity", { params: { limit } }),
+};
+
+// ─── Tickets API ───
+export const ticketsApi = {
+  // User-facing
+  create: (data: {
+    type: string;
+    subject: string;
+    description: string;
+    priority?: string;
+    orderId?: string;
+    conversationId?: string;
+  }) => api.post("/tickets", data),
+  createGuest: (data: {
+    type: string;
+    subject: string;
+    description: string;
+    guestEmail: string;
+    guestName?: string;
+  }) => api.post("/tickets/guest", data),
+  getMyTickets: (page = 1, limit = 10) =>
+    api.get("/tickets/my", { params: { page, limit } }),
+  getTicket: (id: string) => api.get(`/tickets/${id}`),
+  addMessage: (
+    ticketId: string,
+    data: {
+      content: string;
+      attachmentUrl?: string;
+      attachmentType?: string;
+      isInternal?: boolean;
+    },
+  ) => api.post(`/tickets/${ticketId}/messages`, data),
+  // Staff-only
+  listAll: (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    type?: string;
+    priority?: string;
+    assigneeId?: string;
+    search?: string;
+  }) => api.get("/tickets", { params }),
+  claim: (id: string) => api.patch(`/tickets/${id}/claim`),
+  updateStatus: (id: string, data: { status: string; note?: string }) =>
+    api.patch(`/tickets/${id}/status`, data),
+  resolve: (id: string, data?: { note?: string }) =>
+    api.patch(`/tickets/${id}/resolve`, data || {}),
+  close: (id: string) => api.patch(`/tickets/${id}/close`),
+  getStats: () => api.get("/tickets/stats/overview"),
+  // AI chatbot (public, no auth)
+  aiChat: (data: {
+    message: string;
+    history?: Array<{ role: "user" | "assistant"; content: string }>;
+  }) => api.post("/tickets/ai-chat", data),
 };
 
 // ─── Product Variants API ───
 export const variantsApi = {
   toggleSizes: (itemId: string, hasSizes: boolean) =>
     api.patch(`/inventory/${itemId}/variants/toggle-sizes`, { hasSizes }),
-  listVariants: (itemId: string) =>
-    api.get(`/inventory/${itemId}/variants`),
-  createVariant: (itemId: string, data: { sizeLabel: string; sizeSystem?: string; sizeValue?: number; sku: string; stock: number; priceOverride?: number }) =>
-    api.post(`/inventory/${itemId}/variants`, data),
-  bulkCreateVariants: (itemId: string, variants: Array<{ sizeLabel: string; sizeSystem?: string; sizeValue?: number; sku: string; stock: number; priceOverride?: number }>) =>
-    api.post(`/inventory/${itemId}/variants/bulk`, { variants }),
-  updateVariant: (itemId: string, variantId: string, data: { stock?: number; priceOverride?: number; isActive?: boolean }) =>
-    api.patch(`/inventory/${itemId}/variants/${variantId}`, data),
+  listVariants: (itemId: string) => api.get(`/inventory/${itemId}/variants`),
+  createVariant: (
+    itemId: string,
+    data: {
+      sizeLabel: string;
+      sizeSystem?: string;
+      sizeValue?: number;
+      sku: string;
+      stock: number;
+      priceOverride?: number;
+    },
+  ) => api.post(`/inventory/${itemId}/variants`, data),
+  bulkCreateVariants: (
+    itemId: string,
+    variants: Array<{
+      sizeLabel: string;
+      sizeSystem?: string;
+      sizeValue?: number;
+      sku: string;
+      stock: number;
+      priceOverride?: number;
+    }>,
+  ) => api.post(`/inventory/${itemId}/variants/bulk`, { variants }),
+  updateVariant: (
+    itemId: string,
+    variantId: string,
+    data: { stock?: number; priceOverride?: number; isActive?: boolean },
+  ) => api.patch(`/inventory/${itemId}/variants/${variantId}`, data),
   deleteVariant: (itemId: string, variantId: string) =>
     api.delete(`/inventory/${itemId}/variants/${variantId}`),
   getSizeChart: (jewelleryType: string, region?: string) =>
-    api.get(`/size-charts/${jewelleryType}`, { params: region ? { region } : {} }),
+    api.get(`/size-charts/${jewelleryType}`, {
+      params: region ? { region } : {},
+    }),
 };
 
 export default api;

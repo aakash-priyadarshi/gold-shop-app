@@ -155,6 +155,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       .emit('messagesRead', { userId: client.userId });
   }
 
+  @SubscribeMessage('checkOnline')
+  handleCheckOnline(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { userIds: string[] },
+  ) {
+    const onlineIds = this.getOnlineUsers(data.userIds || []);
+    return { event: 'onlineStatus', data: { online: onlineIds } };
+  }
+
   // ─── Helper: emit to specific user(s) ───
   emitToUser(userId: string, event: string, data: any) {
     const sockets = this.userSockets.get(userId);
@@ -163,5 +172,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.to(socketId).emit(event, data);
       }
     }
+  }
+
+  // ─── Check if a user is currently online ───
+  isUserOnline(userId: string): boolean {
+    const sockets = this.userSockets.get(userId);
+    return !!sockets && sockets.size > 0;
+  }
+
+  // ─── Get a list of online user IDs (from a given set) ───
+  getOnlineUsers(userIds: string[]): string[] {
+    return userIds.filter((id) => this.isUserOnline(id));
   }
 }

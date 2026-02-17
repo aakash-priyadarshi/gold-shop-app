@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { RefundStatus } from '@prisma/client';
+import { Injectable, Logger } from "@nestjs/common";
+import { RefundStatus } from "@prisma/client";
+import { PrismaService } from "../../prisma/prisma.service";
 
 /**
  * Aggregates data for the internal support team dashboard.
@@ -21,10 +21,12 @@ export class SupportService {
       lockedConversations,
       recentViolations,
     ] = await Promise.all([
-      this.prisma.order.count({ where: { refundStatus: RefundStatus.REQUESTED } }),
+      this.prisma.order.count({
+        where: { refundStatus: RefundStatus.REQUESTED },
+      }),
       this.prisma.order.count(),
-      this.prisma.conversation.count({ where: { status: 'ACTIVE' } }),
-      this.prisma.conversation.count({ where: { status: 'LOCKED' } }),
+      this.prisma.conversation.count({ where: { status: "ACTIVE" } }),
+      this.prisma.conversation.count({ where: { status: "LOCKED" } }),
       this.prisma.message.count({
         where: { hasViolation: true, createdAt: { gte: last24Hours() } },
       }),
@@ -47,7 +49,7 @@ export class SupportService {
     const [orders, total] = await Promise.all([
       this.prisma.order.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
         select: {
@@ -60,14 +62,19 @@ export class SupportService {
           displayCurrency: true,
           refundStatus: true,
           createdAt: true,
-          customer: { select: { id: true, firstName: true, lastName: true, email: true } },
+          customer: {
+            select: { id: true, firstName: true, lastName: true, email: true },
+          },
           shop: { select: { id: true, shopName: true } },
         },
       }),
       this.prisma.order.count({ where }),
     ]);
 
-    return { orders, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+    return {
+      orders,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   // ─── Flagged conversations (violations) ───
@@ -75,18 +82,18 @@ export class SupportService {
     return this.prisma.conversation.findMany({
       where: {
         OR: [
-          { status: 'LOCKED' },
+          { status: "LOCKED" },
           { messages: { some: { hasViolation: true } } },
         ],
       },
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { updatedAt: "desc" },
       include: {
         buyer: { select: { id: true, firstName: true, lastName: true } },
         shop: { select: { id: true, shopName: true } },
         _count: { select: { messages: true } },
         messages: {
           where: { hasViolation: true },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
           take: 5,
           select: {
             id: true,
@@ -107,10 +114,12 @@ export class SupportService {
   // ─── KYC verifications pending ───
   async getPendingVerifications() {
     return this.prisma.verificationRequest.findMany({
-      where: { status: 'PENDING', type: 'KYC' },
-      orderBy: { createdAt: 'desc' },
+      where: { status: "PENDING", type: "KYC" },
+      orderBy: { createdAt: "desc" },
       include: {
-        user: { select: { id: true, firstName: true, lastName: true, email: true } },
+        user: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
       },
     });
   }
@@ -118,7 +127,7 @@ export class SupportService {
   // ─── Recent activity log ───
   async getRecentActivity(limit = 50) {
     return this.prisma.auditLog.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: limit,
       select: {
         id: true,

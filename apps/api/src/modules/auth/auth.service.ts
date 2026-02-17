@@ -32,6 +32,7 @@ export interface AuthResponse {
   expiresIn: number;
   needsShopSetup?: boolean; // For Google OAuth shopkeeper registration
   accountNotFound?: boolean; // For Google OAuth login when account doesn't exist
+  isSuspended?: boolean; // True when account is suspended
   user: {
     id: string;
     email: string;
@@ -373,11 +374,9 @@ export class AuthService {
     }
 
     // Check if user is active
-    if (user.status === UserStatus.SUSPENDED) {
-      throw new UnauthorizedException(
-        "Account suspended. Please contact support.",
-      );
-    }
+    // Suspended users are allowed to login but with restricted access
+    // (frontend shows lock screen instead of full dashboard)
+    const isSuspended = user.status === UserStatus.SUSPENDED;
 
     if (user.status === UserStatus.DEACTIVATED) {
       throw new UnauthorizedException("Account deactivated");
@@ -393,20 +392,22 @@ export class AuthService {
     await this.auditService.log({
       userId: user.id,
       actorType: "USER",
-      action: "LOGIN",
+      action: isSuspended ? "LOGIN_SUSPENDED" : "LOGIN",
       resourceType: "USER",
       resourceId: user.id,
       ipAddress,
       userAgent,
     });
 
-    return this.generateTokens(
+    const tokens = await this.generateTokens(
       user,
       user.shops?.[0] || null,
       ipAddress,
       userAgent,
       dto.rememberMe,
     );
+
+    return { ...tokens, isSuspended };
   }
 
   /**
@@ -742,6 +743,8 @@ export class AuthService {
             isVerified: true,
             isActive: true,
             makingChargePercent: true,
+            isOnHold: true,
+            holdReason: true,
           },
         },
       },

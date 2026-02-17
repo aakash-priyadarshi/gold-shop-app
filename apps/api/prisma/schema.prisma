@@ -58,6 +58,10 @@ model User {
   // Chat
   sentMessages         Message[]          @relation("MessageSender")
   buyerConversations   Conversation[]     @relation("BuyerConversations")
+  // Support Tickets
+  supportTickets       SupportTicket[]    @relation("UserTickets")
+  assignedTickets      SupportTicket[]    @relation("AssignedTickets")
+  ticketMessages       TicketMessage[]    @relation("TicketMessageSender")
 
   @@index([email])
   @@index([phone])
@@ -1596,6 +1600,13 @@ enum NotificationType {
   REFUND_APPROVED
   REFUND_REJECTED
   REFUND_PROCESSED
+  // Support Tickets
+  TICKET_CREATED
+  TICKET_CLAIMED
+  TICKET_UPDATED
+  TICKET_MESSAGE
+  TICKET_RESOLVED
+  TICKET_CLOSED
 }
 
 enum WeightCategory {
@@ -2079,4 +2090,105 @@ enum RefundStatus {
   APPROVED
   REJECTED
   PROCESSED
+}
+
+// ═══════════════════════════════════════════
+// SUPPORT TICKET SYSTEM
+// ═══════════════════════════════════════════
+
+model SupportTicket {
+  id              String         @id @default(uuid())
+  ticketNumber    String         @unique // e.g. TKT-00001
+  userId          String?        // null for guest tickets (from public help page)
+  guestEmail      String?        // for non-logged-in users
+  guestName       String?        // for non-logged-in users
+  type            TicketType
+  subject         String
+  description     String
+  status          TicketStatus   @default(OPEN)
+  priority        TicketPriority @default(MEDIUM)
+
+  // Assignment
+  assigneeId      String?        // support/admin who claimed this
+  claimedAt       DateTime?
+
+  // Context (optional references)
+  orderId         String?        // related order
+  conversationId  String?        // related chat conversation
+
+  // Resolution
+  resolvedAt      DateTime?
+  closedAt        DateTime?
+  resolutionNote  String?
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Relations
+  user            User?          @relation("UserTickets", fields: [userId], references: [id])
+  assignee        User?          @relation("AssignedTickets", fields: [assigneeId], references: [id])
+  messages        TicketMessage[]
+
+  @@index([userId])
+  @@index([assigneeId])
+  @@index([status])
+  @@index([type])
+  @@index([priority])
+  @@index([createdAt])
+  @@index([ticketNumber])
+}
+
+model TicketMessage {
+  id              String   @id @default(uuid())
+  ticketId        String
+  senderId        String?  // null for system messages or guest messages
+  senderRole      String   // CUSTOMER, SHOPKEEPER, SUPPORT, ADMIN, SYSTEM, GUEST, AI_BOT
+  senderName      String?  // display name (for guests or bot)
+  content         String
+  attachmentUrl   String?
+  attachmentType  String?  // image, document, video
+  isInternal      Boolean  @default(false) // internal notes visible only to support/admin
+  createdAt       DateTime @default(now())
+
+  ticket          SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender          User?         @relation("TicketMessageSender", fields: [senderId], references: [id])
+
+  @@index([ticketId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@index([ticketId, createdAt])
+}
+
+enum TicketType {
+  ACCOUNT_SUSPENSION  // suspended account appeal
+  LOGIN_ISSUE         // can't login
+  PASSWORD_RECOVERY   // forgot password / hacked account
+  HACKED_ACCOUNT      // account compromise
+  ORDER_ISSUE         // problem with order
+  REFUND_ISSUE        // refund dispute
+  PAYMENT_ISSUE       // payment problem
+  PRODUCT_ISSUE       // product quality / mismatch
+  SHIPPING_ISSUE      // delivery problem
+  SELLER_COMPLAINT    // complaint about seller
+  BUYER_COMPLAINT     // complaint about buyer  
+  PLATFORM_BUG        // technical issue
+  FEATURE_REQUEST     // feature suggestion
+  KYC_VERIFICATION    // KYC help
+  OTHER               // general inquiry
+}
+
+enum TicketStatus {
+  OPEN          // newly created, unclaimed
+  CLAIMED       // claimed by support/admin
+  IN_PROGRESS   // being worked on
+  WAITING_USER  // waiting for user response
+  RESOLVED      // resolved by support
+  CLOSED        // confirmed closed
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }

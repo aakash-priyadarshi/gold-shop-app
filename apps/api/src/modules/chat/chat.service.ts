@@ -1,18 +1,83 @@
 import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
   BadRequestException,
+  ForbiddenException,
+  Injectable,
   Logger,
-} from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AuditService } from '../audit/audit.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import { ContactMaskingService } from './contact-masking.service';
-import { ConversationStatus, UserRole } from '@prisma/client';
+  NotFoundException,
+} from "@nestjs/common";
+import { ConversationStatus } from "@prisma/client";
+import { PrismaService } from "../../prisma/prisma.service";
+import { AuditService } from "../audit/audit.service";
+import { NotificationsService } from "../notifications/notifications.service";
+import { ContactMaskingService } from "./contact-masking.service";
 
 /** After this many global violations the user's account is blocked. */
 const MAX_WARNINGS = 3;
+
+/** Human-readable violation descriptions for each type — English & Hindi */
+const VIOLATION_DESCRIPTIONS: Record<string, { en: string; hi: string }> = {
+  PHONE: {
+    en: "sharing phone numbers",
+    hi: "फोन नंबर शेयर करना",
+  },
+  EMAIL: {
+    en: "sharing email addresses",
+    hi: "ईमेल एड्रेस शेयर करना",
+  },
+  WHATSAPP: {
+    en: "sharing WhatsApp contact",
+    hi: "WhatsApp कॉन्टैक्ट शेयर करना",
+  },
+  TELEGRAM: {
+    en: "sharing Telegram contact",
+    hi: "Telegram कॉन्टैक्ट शेयर करना",
+  },
+  INSTAGRAM: {
+    en: "sharing Instagram handle",
+    hi: "Instagram हैंडल शेयर करना",
+  },
+  FACEBOOK: {
+    en: "sharing Facebook/Messenger contact",
+    hi: "Facebook/Messenger कॉन्टैक्ट शेयर करना",
+  },
+  VIBER: {
+    en: "sharing Viber contact",
+    hi: "Viber कॉन्टैक्ट शेयर करना",
+  },
+  SIGNAL: {
+    en: "sharing Signal contact",
+    hi: "Signal कॉन्टैक्ट शेयर करना",
+  },
+  CONTACT_PHRASE: {
+    en: "attempting to share contact details",
+    hi: "कॉन्टैक्ट डिटेल्स शेयर करने का प्रयास",
+  },
+  OBFUSCATED_NUMBER: {
+    en: "sharing hidden/coded phone numbers",
+    hi: "छुपे/कोडेड फोन नंबर शेयर करना",
+  },
+  SPACED_DIGITS: {
+    en: "sharing hidden/coded phone numbers",
+    hi: "छुपे/कोडेड फोन नंबर शेयर करना",
+  },
+  IMAGE_CONTACT_INFO: {
+    en: "sharing contact information in images",
+    hi: "इमेज में कॉन्टैक्ट जानकारी शेयर करना",
+  },
+  AI_DETECTED: {
+    en: "attempting to share contact information",
+    hi: "कॉन्टैक्ट जानकारी शेयर करने का प्रयास",
+  },
+};
+
+const GUIDELINES_URL = "/platform-guidelines";
+
+function getViolationLabel(violationType: string | null): { en: string; hi: string } {
+  if (violationType && VIOLATION_DESCRIPTIONS[violationType]) {
+    return VIOLATION_DESCRIPTIONS[violationType];
+  }
+  return { en: "sharing contact information", hi: "कॉन्टैक्ट जानकारी शेयर करना" };
+}
 
 export interface SendMessageResult {
   /** The message object — null when blocked */
@@ -49,13 +114,13 @@ export class ChatService {
 
     let conversation = await this.prisma.conversation.findFirst({
       where,
-      include: { messages: { orderBy: { createdAt: 'desc' }, take: 1 } },
+      include: { messages: { orderBy: { createdAt: "desc" }, take: 1 } },
     });
 
     if (!conversation) {
       conversation = await this.prisma.conversation.create({
         data: { buyerId, shopId, orderId, rfqId },
-        include: { messages: { orderBy: { createdAt: 'desc' }, take: 1 } },
+        include: { messages: { orderBy: { createdAt: "desc" }, take: 1 } },
       });
     }
 
@@ -71,7 +136,10 @@ export class ChatService {
   }
 
   // ─── Helper: check if buyer has at least one order with a shop ───
-  async buyerHasOrderWithShop(buyerId: string, shopId: string): Promise<boolean> {
+  async buyerHasOrderWithShop(
+    buyerId: string,
+    shopId: string,
+  ): Promise<boolean> {
     const count = await this.prisma.order.count({
       where: { customerId: buyerId, shopId },
     });
@@ -94,12 +162,12 @@ export class ChatService {
     });
 
     if (!conversation) {
-      throw new NotFoundException('Conversation not found');
+      throw new NotFoundException("Conversation not found");
     }
 
     if (conversation.status === ConversationStatus.LOCKED) {
       throw new BadRequestException(
-        'This conversation has been locked due to policy violations.',
+        "This conversation has been locked due to policy violations.",
       );
     }
 
@@ -113,12 +181,12 @@ export class ChatService {
     const scanResult = await this.masking.deepScan(content, regexResult);
 
     // ── Layer 3: Image attachment scan ──
-    if (attachmentUrl && attachmentType === 'image') {
+    if (attachmentUrl && attachmentType === "image") {
       const imageResult = await this.masking.analyzeImage(attachmentUrl);
       if (imageResult.hasContactInfo && imageResult.confidence >= 0.7) {
         // Treat image violation same as text violation
         scanResult.hasViolation = true;
-        scanResult.violationType = 'IMAGE_CONTACT_INFO';
+        scanResult.violationType = "IMAGE_CONTACT_INFO";
         scanResult.originalMatches.push(`[Image: ${imageResult.description}]`);
         scanResult.aiDetected = true;
         scanResult.confidence = imageResult.confidence;
@@ -199,8 +267,8 @@ export class ChatService {
     await this.audit.log({
       userId: senderId,
       actorType: senderRole,
-      action: 'CONTACT_INFO_BLOCKED',
-      resourceType: 'Conversation',
+      action: "CONTACT_INFO_BLOCKED",
+      resourceType: "Conversation",
       resourceId: conversationId,
       metadata: {
         violationType: scanResult.violationType,
@@ -216,48 +284,56 @@ export class ChatService {
         `type=${scanResult.violationType} ai=${scanResult.aiDetected}`,
     );
 
-    // 4. Build warning message based on strike count
+    // 4. Build warning message based on strike count — SPECIFIC to violation type
     let warning: string;
     const remaining = MAX_WARNINGS - globalViolationCount;
+    const label = getViolationLabel(scanResult.violationType);
 
     if (globalViolationCount >= MAX_WARNINGS) {
       // ── 3RD STRIKE: BLOCK ACCOUNT ──
       warning =
-        'Your message was blocked. Sharing contact information is strictly prohibited. ' +
-        'Your account has been suspended due to repeated violations. ' +
-        'Please contact support to appeal.';
+        `🚫 Your message was blocked — ${label.en} (${label.hi}) is strictly prohibited on this platform. ` +
+        `Your account has been suspended due to repeated violations. ` +
+        `Please contact support to appeal. ` +
+        `Read our rules: ${GUIDELINES_URL}`;
 
       await this.blockUserAccount(senderId, senderRole, conversationId);
     } else if (globalViolationCount === MAX_WARNINGS - 1) {
       // ── 2ND STRIKE: Final warning + admin alert ──
       warning =
-        `⚠️ FINAL WARNING: Your message was blocked — sharing contact information is not allowed. ` +
-        `This is your last warning. One more violation and your account will be permanently suspended.`;
+        `⚠️ FINAL WARNING: Your message was blocked — ${label.en} (${label.hi}) is not allowed on this platform. ` +
+        `This is your last warning. One more violation and your account will be permanently suspended. ` +
+        `Read our platform rules: ${GUIDELINES_URL}`;
 
-      await this.notifyAdminSecondStrike(senderId, senderRole, globalViolationCount);
+      await this.notifyAdminSecondStrike(
+        senderId,
+        senderRole,
+        globalViolationCount,
+      );
     } else {
       // ── 1ST STRIKE: Warning ──
       warning =
-        `Your message was not sent — it contained contact information which is not allowed on this platform. ` +
+        `Your message was not sent — it was detected for ${label.en} (${label.hi}), which is not allowed on this platform. ` +
         `Warning ${globalViolationCount}/${MAX_WARNINGS}. ` +
-        `${remaining} warning(s) remaining before your account is suspended.`;
+        `${remaining} warning(s) remaining before your account is suspended. ` +
+        `Please read our platform guidelines: ${GUIDELINES_URL}`;
     }
 
     // 5. Send in-app notification to the violating user
     await this.notifications.create({
       userId: senderId,
-      type: 'CHAT_VIOLATION_WARNING',
-      titleKey: 'chat.violation.warning.title',
+      type: "CHAT_VIOLATION_WARNING",
+      titleKey: "chat.violation.warning.title",
       titleParams: { strike: globalViolationCount, max: MAX_WARNINGS },
-      bodyKey: 'chat.violation.warning.body',
+      bodyKey: "chat.violation.warning.body",
       bodyParams: {
         strike: globalViolationCount,
         max: MAX_WARNINGS,
         violationType: scanResult.violationType,
       },
-      referenceType: 'Conversation',
+      referenceType: "Conversation",
       referenceId: conversationId,
-      channels: ['IN_APP'],
+      channels: ["IN_APP"],
     });
 
     return {
@@ -276,7 +352,7 @@ export class ChatService {
     userRole: string,
     conversationId: string,
   ): Promise<void> {
-    if (userRole === 'SHOPKEEPER') {
+    if (userRole === "SHOPKEEPER") {
       // Put the shopkeeper's shop on hold
       const shop = await this.prisma.shop.findFirst({
         where: { userId },
@@ -287,52 +363,55 @@ export class ChatService {
           where: { id: shop.id },
           data: {
             isOnHold: true,
-            holdReason: 'CHAT_POLICY_VIOLATIONS: Account suspended after 3 contact-sharing violations.',
+            holdReason:
+              "CHAT_POLICY_VIOLATIONS: Account suspended after 3 contact-sharing violations.",
           },
         });
 
         await this.notifications.create({
           userId,
-          type: 'SHOP_ON_HOLD',
-          titleKey: 'shop.onHold.title',
+          type: "SHOP_ON_HOLD",
+          titleKey: "shop.onHold.title",
           titleParams: {},
-          bodyKey: 'shop.onHold.violations',
-          bodyParams: { reason: 'Repeated contact sharing violations' },
-          referenceType: 'Shop',
+          bodyKey: "shop.onHold.violations",
+          bodyParams: { reason: "Repeated contact sharing violations" },
+          referenceType: "Shop",
           referenceId: shop.id,
-          channels: ['IN_APP', 'EMAIL'],
+          channels: ["IN_APP", "EMAIL"],
         });
 
-        this.logger.error(`SHOP BLOCKED: shop=${shop.id} owner=${userId} reason=CHAT_VIOLATIONS`);
+        this.logger.error(
+          `SHOP BLOCKED: shop=${shop.id} owner=${userId} reason=CHAT_VIOLATIONS`,
+        );
       }
     }
 
     // Suspend the user account regardless of role
     await this.prisma.user.update({
       where: { id: userId },
-      data: { status: 'SUSPENDED' },
+      data: { status: "SUSPENDED" },
     });
 
     await this.notifications.create({
       userId,
-      type: 'ACCOUNT_SUSPENDED',
-      titleKey: 'account.suspended.title',
+      type: "ACCOUNT_SUSPENDED",
+      titleKey: "account.suspended.title",
       titleParams: {},
-      bodyKey: 'account.suspended.chatViolations',
-      bodyParams: { reason: 'Repeated contact sharing violations in chat' },
-      referenceType: 'User',
+      bodyKey: "account.suspended.chatViolations",
+      bodyParams: { reason: "Repeated contact sharing violations in chat" },
+      referenceType: "User",
       referenceId: userId,
-      channels: ['IN_APP', 'EMAIL'],
+      channels: ["IN_APP", "EMAIL"],
     });
 
     await this.audit.log({
       userId,
-      actorType: 'SYSTEM',
-      action: 'ACCOUNT_SUSPENDED',
-      resourceType: 'User',
+      actorType: "SYSTEM",
+      action: "ACCOUNT_SUSPENDED",
+      resourceType: "User",
       resourceId: userId,
       metadata: {
-        reason: 'MAX_CHAT_VIOLATIONS_EXCEEDED',
+        reason: "MAX_CHAT_VIOLATIONS_EXCEEDED",
         triggerConversation: conversationId,
       },
     });
@@ -346,7 +425,9 @@ export class ChatService {
       data: { status: ConversationStatus.LOCKED },
     });
 
-    this.logger.error(`ACCOUNT SUSPENDED: user=${userId} role=${userRole} reason=CHAT_VIOLATIONS`);
+    this.logger.error(
+      `ACCOUNT SUSPENDED: user=${userId} role=${userRole} reason=CHAT_VIOLATIONS`,
+    );
   }
 
   // ─── Admin alert when user reaches 2nd strike ───
@@ -357,21 +438,26 @@ export class ChatService {
   ): Promise<void> {
     // Find all admins
     const admins = await this.prisma.user.findMany({
-      where: { role: 'ADMIN' },
+      where: { role: "ADMIN" },
       select: { id: true },
     });
 
     for (const admin of admins) {
       await this.notifications.create({
         userId: admin.id,
-        type: 'SYSTEM_ALERT',
-        titleKey: 'admin.chatViolation.secondStrike.title',
+        type: "SYSTEM_ALERT",
+        titleKey: "admin.chatViolation.secondStrike.title",
         titleParams: { userId },
-        bodyKey: 'admin.chatViolation.secondStrike.body',
-        bodyParams: { userId, userRole, strikeCount, maxWarnings: MAX_WARNINGS },
-        referenceType: 'User',
+        bodyKey: "admin.chatViolation.secondStrike.body",
+        bodyParams: {
+          userId,
+          userRole,
+          strikeCount,
+          maxWarnings: MAX_WARNINGS,
+        },
+        referenceType: "User",
         referenceId: userId,
-        channels: ['IN_APP'],
+        channels: ["IN_APP"],
       });
     }
   }
@@ -388,11 +474,11 @@ export class ChatService {
       where: { id: conversationId },
     });
 
-    if (!conversation) throw new NotFoundException('Conversation not found');
+    if (!conversation) throw new NotFoundException("Conversation not found");
     this.authorizeConversationAccess(conversation, userId, userRole);
 
     // Admin and Support can see blocked messages, normal users cannot
-    const isAdmin = userRole === 'ADMIN' || userRole === 'SUPPORT';
+    const isAdmin = userRole === "ADMIN" || userRole === "SUPPORT";
     const whereClause: any = { conversationId };
     if (!isAdmin) {
       whereClause.isBlocked = false;
@@ -401,11 +487,13 @@ export class ChatService {
     const [messages, total] = await Promise.all([
       this.prisma.message.findMany({
         where: whereClause,
-        orderBy: { createdAt: 'asc' },
+        orderBy: { createdAt: "asc" },
         skip: (page - 1) * limit,
         take: limit,
         include: {
-          sender: { select: { id: true, firstName: true, lastName: true, role: true } },
+          sender: {
+            select: { id: true, firstName: true, lastName: true, role: true },
+          },
         },
       }),
       this.prisma.message.count({ where: whereClause }),
@@ -421,27 +509,32 @@ export class ChatService {
   async listConversations(userId: string, userRole: string, shopId?: string) {
     let where: any;
 
-    if (userRole === 'CUSTOMER') {
+    if (userRole === "CUSTOMER") {
       where = { buyerId: userId };
-    } else if (userRole === 'SHOPKEEPER' && shopId) {
+    } else if (userRole === "SHOPKEEPER" && shopId) {
       where = { shopId };
-    } else if (userRole === 'ADMIN' || userRole === 'SUPPORT') {
+    } else if (userRole === "ADMIN" || userRole === "SUPPORT") {
       where = {};
     } else {
-      throw new ForbiddenException('No access to conversations');
+      throw new ForbiddenException("No access to conversations");
     }
 
     return this.prisma.conversation.findMany({
       where,
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { updatedAt: "desc" },
       include: {
         buyer: { select: { id: true, firstName: true, lastName: true } },
         shop: { select: { id: true, shopName: true } },
         messages: {
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
           take: 1,
           where: { isBlocked: false }, // Don't show blocked messages in preview
-          select: { content: true, createdAt: true, senderRole: true, isRead: true },
+          select: {
+            content: true,
+            createdAt: true,
+            senderRole: true,
+            isRead: true,
+          },
         },
       },
     });
@@ -477,21 +570,23 @@ export class ChatService {
       this.prisma.message.count({ where: { hasViolation: true } }),
       this.prisma.message.count({ where: { isBlocked: true } }),
       this.prisma.message.groupBy({
-        by: ['violationType'],
+        by: ["violationType"],
         where: { hasViolation: true },
         _count: true,
       }),
       this.prisma.conversation.count({
         where: { status: ConversationStatus.LOCKED },
       }),
-      this.prisma.user.count({ where: { status: 'SUSPENDED' } }),
+      this.prisma.user.count({ where: { status: "SUSPENDED" } }),
       this.prisma.shop.count({ where: { isOnHold: true } }),
       this.prisma.message.findMany({
         where: { hasViolation: true },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         take: 20,
         include: {
-          sender: { select: { id: true, firstName: true, lastName: true, role: true } },
+          sender: {
+            select: { id: true, firstName: true, lastName: true, role: true },
+          },
           conversation: {
             select: {
               id: true,
@@ -519,7 +614,7 @@ export class ChatService {
     const [violations, user, shop] = await Promise.all([
       this.prisma.message.findMany({
         where: { senderId: userId, hasViolation: true },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         include: {
           conversation: {
             select: {
@@ -532,7 +627,13 @@ export class ChatService {
       }),
       this.prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, firstName: true, lastName: true, role: true, status: true },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          status: true,
+        },
       }),
       this.prisma.shop.findFirst({
         where: { userId },
@@ -544,8 +645,7 @@ export class ChatService {
       user,
       shop,
       totalViolations: violations.length,
-      isBlocked:
-        user?.status === 'SUSPENDED' || (shop?.isOnHold ?? false),
+      isBlocked: user?.status === "SUSPENDED" || (shop?.isOnHold ?? false),
       violations,
     };
   }
@@ -553,18 +653,18 @@ export class ChatService {
   // ─── Admin: unblock user (reset violations enforcement) ───
   async unblockUser(userId: string, adminId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) throw new NotFoundException("User not found");
 
     // Re-activate user account
-    if (user.status === 'SUSPENDED') {
+    if (user.status === "SUSPENDED") {
       await this.prisma.user.update({
         where: { id: userId },
-        data: { status: 'ACTIVE' },
+        data: { status: "ACTIVE" },
       });
     }
 
     // Remove shop hold if shopkeeper
-    if (user.role === 'SHOPKEEPER') {
+    if (user.role === "SHOPKEEPER") {
       await this.prisma.shop.updateMany({
         where: { userId, isOnHold: true },
         data: { isOnHold: false, holdReason: null },
@@ -582,23 +682,23 @@ export class ChatService {
 
     await this.audit.log({
       userId: adminId,
-      actorType: 'ADMIN',
-      action: 'USER_UNBLOCKED',
-      resourceType: 'User',
+      actorType: "ADMIN",
+      action: "USER_UNBLOCKED",
+      resourceType: "User",
       resourceId: userId,
       metadata: { previousStatus: user.status, role: user.role },
     });
 
     await this.notifications.create({
       userId,
-      type: 'SYSTEM_ALERT',
-      titleKey: 'account.reactivated.title',
+      type: "SYSTEM_ALERT",
+      titleKey: "account.reactivated.title",
       titleParams: {},
-      bodyKey: 'account.reactivated.body',
+      bodyKey: "account.reactivated.body",
       bodyParams: {},
-      referenceType: 'User',
+      referenceType: "User",
       referenceId: userId,
-      channels: ['IN_APP', 'EMAIL'],
+      channels: ["IN_APP", "EMAIL"],
     });
 
     this.logger.log(`USER UNBLOCKED: user=${userId} by admin=${adminId}`);
@@ -615,9 +715,9 @@ export class ChatService {
 
     await this.audit.log({
       userId: adminId,
-      actorType: 'ADMIN',
-      action: 'CONVERSATION_UNLOCKED',
-      resourceType: 'Conversation',
+      actorType: "ADMIN",
+      action: "CONVERSATION_UNLOCKED",
+      resourceType: "Conversation",
       resourceId: conversationId,
     });
   }
@@ -627,7 +727,9 @@ export class ChatService {
     const message = await this.prisma.message.findUnique({
       where: { id: messageId },
       include: {
-        sender: { select: { id: true, firstName: true, lastName: true, role: true } },
+        sender: {
+          select: { id: true, firstName: true, lastName: true, role: true },
+        },
         conversation: {
           select: {
             id: true,
@@ -638,7 +740,7 @@ export class ChatService {
       },
     });
 
-    if (!message) throw new NotFoundException('Message not found');
+    if (!message) throw new NotFoundException("Message not found");
     return message;
   }
 
@@ -648,10 +750,10 @@ export class ChatService {
     userId: string,
     userRole: string,
   ) {
-    if (userRole === 'ADMIN' || userRole === 'SUPPORT') return;
+    if (userRole === "ADMIN" || userRole === "SUPPORT") return;
 
-    if (userRole === 'CUSTOMER' && conversation.buyerId !== userId) {
-      throw new ForbiddenException('Access denied to this conversation');
+    if (userRole === "CUSTOMER" && conversation.buyerId !== userId) {
+      throw new ForbiddenException("Access denied to this conversation");
     }
   }
 }

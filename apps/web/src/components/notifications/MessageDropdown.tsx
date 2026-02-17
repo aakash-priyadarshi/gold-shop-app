@@ -1,7 +1,5 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { MessageSquare, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,12 +9,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { chatApi } from "@/lib/api";
-import { formatDistanceToNow } from "date-fns";
-import { useAuth } from "@/hooks/useAuth";
 import { useChatPopup } from "@/contexts/ChatPopupContext";
-import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
+import { chatApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { formatDistanceToNow } from "date-fns";
+import { Loader2, MessageSquare } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 
 interface Conversation {
   id: string;
@@ -158,9 +158,7 @@ export function MessageDropdown() {
             recentConvs.map((conv) => {
               const lastMsg = conv.messages?.[0];
               const isUnread =
-                lastMsg &&
-                !lastMsg.isRead &&
-                lastMsg.senderRole !== user?.role;
+                lastMsg && !lastMsg.isRead && lastMsg.senderRole !== user?.role;
 
               return (
                 <button

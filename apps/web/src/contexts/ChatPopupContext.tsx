@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useCallback, useContext, useState } from "react";
 
 export interface ChatPopupState {
   /** Whether the chat widget is visible at all */
@@ -26,7 +26,9 @@ const ChatPopupContext = createContext<ChatPopupState | null>(null);
 export function ChatPopupProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [activeConversationId, setActiveConversationId] = useState<
+    string | null
+  >(null);
 
   const openChat = useCallback((conversationId: string) => {
     setActiveConversationId(conversationId);
