@@ -1,10 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -12,8 +8,8 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -22,24 +18,26 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Send,
-  Loader2,
-  Bot,
-  User,
-  LifeBuoy,
-  MessageSquare,
-  ShieldCheck,
-  CreditCard,
-  Package,
-  AlertCircle,
-  ChevronRight,
-  ArrowLeft,
-  Ticket,
-  ExternalLink,
-} from "lucide-react";
-import { ticketsApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { ticketsApi } from "@/lib/api";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Bot,
+  CreditCard,
+  ExternalLink,
+  LifeBuoy,
+  Loader2,
+  MessageSquare,
+  Package,
+  Send,
+  ShieldCheck,
+  Ticket,
+  User,
+} from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 // ─── Types ───
 interface ChatMessage {
@@ -126,7 +124,10 @@ export default function HelpPage() {
         role: m.role,
         content: m.content,
       }));
-      const { data } = await ticketsApi.aiChat({ message: text.trim(), history });
+      const { data } = await ticketsApi.aiChat({
+        message: text.trim(),
+        history,
+      });
 
       const assistantMsg: ChatMessage = {
         role: "assistant",
@@ -192,8 +193,12 @@ export default function HelpPage() {
         {/* Quick links */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {HELP_TOPICS.map((topic) => (
-            <Card key={topic.title} className="p-3 hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => sendMessage(`Tell me about ${topic.title.toLowerCase()}`)}
+            <Card
+              key={topic.title}
+              className="p-3 hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() =>
+                sendMessage(`Tell me about ${topic.title.toLowerCase()}`)
+              }
             >
               <topic.icon className="h-5 w-5 text-amber-600 mb-2" />
               <h3 className="font-medium text-sm">{topic.title}</h3>

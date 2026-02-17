@@ -2,8 +2,8 @@
 
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { ChatPopupWidget } from "@/components/chat/ChatPopupWidget";
-import { SuspendedOverlay } from "@/components/dashboard/SuspendedOverlay";
 import { ShopSwitcher } from "@/components/dashboard/ShopSwitcher";
+import { SuspendedOverlay } from "@/components/dashboard/SuspendedOverlay";
 import { MessageDropdown } from "@/components/notifications/MessageDropdown";
 import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -37,7 +37,6 @@ import {
   CreditCard,
   FileText,
   Heart,
-  Headphones,
   Home,
   LayoutDashboard,
   LifeBuoy,
@@ -625,60 +624,157 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gold-50/20">
-        {/* Mobile Header */}
-        <header className="lg:hidden sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100 safe-area-top">
-          <div className="flex items-center justify-between h-14 px-4">
-            {/* Mobile Menu Button */}
-            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="touch-target -ml-2"
-                >
-                  <Menu className="h-5 w-5" />
-                  <span className="sr-only">Open menu</span>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gold-50/20">
+      {/* Mobile Header */}
+      <header className="lg:hidden sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100 safe-area-top">
+        <div className="flex items-center justify-between h-14 px-4">
+          {/* Mobile Menu Button */}
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="touch-target -ml-2"
+              >
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[280px] p-0">
+              <SheetHeader className="p-4 border-b border-gray-100">
+                <SheetTitle className="flex items-center gap-2">
+                  <BrandLogo variant="icon" size="sm" />
+                  <span className="font-bold text-lg">{BRAND.name}</span>
+                </SheetTitle>
+              </SheetHeader>
+              <SidebarContent
+                user={user}
+                userNavItems={userNavItems}
+                pathname={pathname}
+                badgeCounts={badgeCounts}
+                onNavClick={() => setMobileMenuOpen(false)}
+                onLogout={logout}
+                getRoleBadge={getRoleBadge}
+                getInitials={getInitials}
+              />
+            </SheetContent>
+          </Sheet>
+
+          {/* Mobile Logo */}
+          <Link href="/" className="flex items-center gap-2">
+            <BrandLogo variant="icon" size="sm" />
+            <span className="font-bold text-base">{BRAND.name}</span>
+          </Link>
+
+          {/* Mobile Actions */}
+          <div className="flex items-center gap-1">
+            <MessageDropdown />
+            <NotificationDropdown />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="touch-target">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-gradient-to-br from-gold-400 to-gold-600 text-white text-xs">
+                      {getInitials()}
+                    </AvatarFallback>
+                  </Avatar>
                 </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-[280px] p-0">
-                <SheetHeader className="p-4 border-b border-gray-100">
-                  <SheetTitle className="flex items-center gap-2">
-                    <BrandLogo variant="icon" size="sm" />
-                    <span className="font-bold text-lg">{BRAND.name}</span>
-                  </SheetTitle>
-                </SheetHeader>
-                <SidebarContent
-                  user={user}
-                  userNavItems={userNavItems}
-                  pathname={pathname}
-                  badgeCounts={badgeCounts}
-                  onNavClick={() => setMobileMenuOpen(false)}
-                  onLogout={logout}
-                  getRoleBadge={getRoleBadge}
-                  getInitials={getInitials}
-                />
-              </SheetContent>
-            </Sheet>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div>
+                    <p className="font-medium">
+                      {user.firstName} {user.lastName}
+                    </p>
+                    <p className="text-xs text-gray-500">{user.email}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href={`/dashboard/${user.role.toLowerCase()}/settings`}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/">
+                    <Store className="h-4 w-4 mr-2" />
+                    Browse Marketplace
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout} className="text-red-600">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </header>
 
-            {/* Mobile Logo */}
-            <Link href="/" className="flex items-center gap-2">
-              <BrandLogo variant="icon" size="sm" />
-              <span className="font-bold text-base">{BRAND.name}</span>
+      {/* Desktop Layout */}
+      <div className="hidden lg:flex">
+        {/* Desktop Sidebar */}
+        <aside className="fixed top-0 left-0 z-40 h-screen w-72 bg-white border-r border-gray-100 shadow-sm">
+          {/* Logo */}
+          <div className="flex items-center h-16 px-6 border-b border-gray-100">
+            <Link href="/" className="flex items-center gap-3">
+              <BrandLogo variant="icon" size="md" />
+              <span className="font-bold text-xl tracking-tight">
+                {BRAND.name}
+              </span>
             </Link>
+          </div>
 
-            {/* Mobile Actions */}
-            <div className="flex items-center gap-1">
+          <SidebarContent
+            user={user}
+            userNavItems={userNavItems}
+            pathname={pathname}
+            badgeCounts={badgeCounts}
+            onLogout={logout}
+            getRoleBadge={getRoleBadge}
+            getInitials={getInitials}
+          />
+        </aside>
+
+        {/* Desktop Main Content */}
+        <div className="flex-1 ml-72">
+          {/* Desktop Header */}
+          <header className="sticky top-0 z-30 h-16 bg-white/80 backdrop-blur-xl border-b border-gray-100 flex items-center justify-between px-6">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 bg-gray-100/80 rounded-xl px-4 py-2.5 w-72">
+                <Search className="h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  className="bg-transparent border-none outline-none text-sm w-full placeholder:text-gray-400"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
               <MessageDropdown />
               <NotificationDropdown />
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="touch-target">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-gradient-to-br from-gold-400 to-gold-600 text-white text-xs">
+                  <Button
+                    variant="ghost"
+                    className="flex items-center gap-2 hover:bg-gray-100 rounded-xl"
+                  >
+                    <Avatar className="h-9 w-9 ring-2 ring-gold-100">
+                      <AvatarFallback className="bg-gradient-to-br from-gold-400 to-gold-600 text-white text-sm">
                         {getInitials()}
                       </AvatarFallback>
                     </Avatar>
+                    <div className="hidden xl:block text-left">
+                      <p className="text-sm font-medium">{user.firstName}</p>
+                      <p className="text-xs text-gray-500 capitalize">
+                        {user.role.toLowerCase()}
+                      </p>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -713,122 +809,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-          </div>
-        </header>
+          </header>
 
-        {/* Desktop Layout */}
-        <div className="hidden lg:flex">
-          {/* Desktop Sidebar */}
-          <aside className="fixed top-0 left-0 z-40 h-screen w-72 bg-white border-r border-gray-100 shadow-sm">
-            {/* Logo */}
-            <div className="flex items-center h-16 px-6 border-b border-gray-100">
-              <Link href="/" className="flex items-center gap-3">
-                <BrandLogo variant="icon" size="md" />
-                <span className="font-bold text-xl tracking-tight">
-                  {BRAND.name}
-                </span>
-              </Link>
-            </div>
-
-            <SidebarContent
-              user={user}
-              userNavItems={userNavItems}
-              pathname={pathname}
-              badgeCounts={badgeCounts}
-              onLogout={logout}
-              getRoleBadge={getRoleBadge}
-              getInitials={getInitials}
-            />
-          </aside>
-
-          {/* Desktop Main Content */}
-          <div className="flex-1 ml-72">
-            {/* Desktop Header */}
-            <header className="sticky top-0 z-30 h-16 bg-white/80 backdrop-blur-xl border-b border-gray-100 flex items-center justify-between px-6">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 bg-gray-100/80 rounded-xl px-4 py-2.5 w-72">
-                  <Search className="h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    className="bg-transparent border-none outline-none text-sm w-full placeholder:text-gray-400"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <MessageDropdown />
-                <NotificationDropdown />
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className="flex items-center gap-2 hover:bg-gray-100 rounded-xl"
-                    >
-                      <Avatar className="h-9 w-9 ring-2 ring-gold-100">
-                        <AvatarFallback className="bg-gradient-to-br from-gold-400 to-gold-600 text-white text-sm">
-                          {getInitials()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="hidden xl:block text-left">
-                        <p className="text-sm font-medium">{user.firstName}</p>
-                        <p className="text-xs text-gray-500 capitalize">
-                          {user.role.toLowerCase()}
-                        </p>
-                      </div>
-                      <ChevronDown className="h-4 w-4 text-gray-400" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>
-                      <div>
-                        <p className="font-medium">
-                          {user.firstName} {user.lastName}
-                        </p>
-                        <p className="text-xs text-gray-500">{user.email}</p>
-                      </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link
-                        href={`/dashboard/${user.role.toLowerCase()}/settings`}
-                      >
-                        <Settings className="h-4 w-4 mr-2" />
-                        Settings
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/">
-                        <Store className="h-4 w-4 mr-2" />
-                        Browse Marketplace
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={logout} className="text-red-600">
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Sign out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </header>
-
-            {/* Page content */}
-            <main className="p-6">{children}</main>
-          </div>
+          {/* Page content */}
+          <main className="p-6">{children}</main>
         </div>
-
-        {/* Mobile Main Content */}
-        <main className="lg:hidden px-4 py-4 pb-20 safe-area-bottom">
-          {children}
-        </main>
-
-        {/* Floating Chat Popup */}
-        <ChatPopupWidget />
-
-        {/* Suspended account lock overlay */}
-        <SuspendedOverlay />
       </div>
+
+      {/* Mobile Main Content */}
+      <main className="lg:hidden px-4 py-4 pb-20 safe-area-bottom">
+        {children}
+      </main>
+
+      {/* Floating Chat Popup */}
+      <ChatPopupWidget />
+
+      {/* Suspended account lock overlay */}
+      <SuspendedOverlay />
+    </div>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,10 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -20,30 +18,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAuth } from "@/hooks/useAuth";
+import { TicketMessage, useTicketSocket } from "@/hooks/useTicketSocket";
+import { ticketsApi } from "@/lib/api";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  Loader2,
-  Search,
-  MessageSquare,
-  CheckCircle2,
-  AlertCircle,
-  Send,
   ArrowLeft,
+  CheckCircle2,
+  Clock,
+  Eye,
+  Loader2,
+  Lock,
+  Search,
+  Send,
   Ticket,
   UserCheck,
-  Clock,
-  Shield,
-  Eye,
-  Lock,
 } from "lucide-react";
-import { ticketsApi } from "@/lib/api";
-import { useAuth } from "@/hooks/useAuth";
-import { useTicketSocket, TicketMessage, TicketData } from "@/hooks/useTicketSocket";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // ─── Types ───
 interface TicketItem {
@@ -59,8 +49,19 @@ interface TicketItem {
   userId?: string | null;
   guestEmail?: string | null;
   guestName?: string | null;
-  user?: { id: string; firstName: string; lastName: string; email: string; role?: string } | null;
-  assignee?: { id: string; firstName: string; lastName: string; email?: string } | null;
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role?: string;
+  } | null;
+  assignee?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+  } | null;
   assigneeId?: string | null;
   _count?: { messages: number };
   messages?: TicketMessage[];
@@ -145,43 +146,47 @@ export default function StaffTicketsPage() {
   const [totalPages, setTotalPages] = useState(1);
 
   // Real-time
-  const { joinTicket, leaveTicket, sendTicketMessage, claimTicket: wsClaimTicket } =
-    useTicketSocket({
-      onNewTicket: (newTicket) => {
-        // Add to list if viewing OPEN
-        if (statusFilter === "OPEN" || statusFilter === "") {
-          setTickets((prev) => [newTicket as any, ...prev]);
-        }
-        setStats((prev) => (prev ? { ...prev, open: prev.open + 1, total: prev.total + 1 } : prev));
-      },
-      onTicketClaimed: (claimed) => {
-        setTickets((prev) =>
-          prev.map((t) => (t.id === claimed.id ? { ...t, ...claimed } : t)),
+  const {
+    joinTicket,
+    leaveTicket,
+    sendTicketMessage,
+    claimTicket: wsClaimTicket,
+  } = useTicketSocket({
+    onNewTicket: (newTicket) => {
+      // Add to list if viewing OPEN
+      if (statusFilter === "OPEN" || statusFilter === "") {
+        setTickets((prev) => [newTicket as any, ...prev]);
+      }
+      setStats((prev) =>
+        prev ? { ...prev, open: prev.open + 1, total: prev.total + 1 } : prev,
+      );
+    },
+    onTicketClaimed: (claimed) => {
+      setTickets((prev) =>
+        prev.map((t) => (t.id === claimed.id ? { ...t, ...claimed } : t)),
+      );
+      if (selectedTicket?.id === claimed.id) {
+        setSelectedTicket((prev) => (prev ? { ...prev, ...claimed } : prev));
+      }
+    },
+    onTicketStatusChanged: (changed) => {
+      setTickets((prev) =>
+        prev.map((t) => (t.id === changed.id ? { ...t, ...changed } : t)),
+      );
+      if (selectedTicket?.id === changed.id) {
+        setSelectedTicket((prev) => (prev ? { ...prev, ...changed } : prev));
+      }
+      // Refresh stats
+      loadStats();
+    },
+    onNewTicketMessage: (msg) => {
+      if (selectedTicket && msg.ticketId === selectedTicket.id) {
+        setSelectedTicket((prev) =>
+          prev ? { ...prev, messages: [...(prev.messages || []), msg] } : prev,
         );
-        if (selectedTicket?.id === claimed.id) {
-          setSelectedTicket((prev) => (prev ? { ...prev, ...claimed } : prev));
-        }
-      },
-      onTicketStatusChanged: (changed) => {
-        setTickets((prev) =>
-          prev.map((t) => (t.id === changed.id ? { ...t, ...changed } : t)),
-        );
-        if (selectedTicket?.id === changed.id) {
-          setSelectedTicket((prev) => (prev ? { ...prev, ...changed } : prev));
-        }
-        // Refresh stats
-        loadStats();
-      },
-      onNewTicketMessage: (msg) => {
-        if (selectedTicket && msg.ticketId === selectedTicket.id) {
-          setSelectedTicket((prev) =>
-            prev
-              ? { ...prev, messages: [...(prev.messages || []), msg] }
-              : prev,
-          );
-        }
-      },
-    });
+      }
+    },
+  });
 
   const loadStats = useCallback(async () => {
     try {
@@ -239,7 +244,11 @@ export default function StaffTicketsPage() {
     } catch {}
   };
 
-  const handleStatusChange = async (ticketId: string, status: string, note?: string) => {
+  const handleStatusChange = async (
+    ticketId: string,
+    status: string,
+    note?: string,
+  ) => {
     try {
       await ticketsApi.updateStatus(ticketId, { status, note });
       loadTickets();
@@ -270,10 +279,26 @@ export default function StaffTicketsPage() {
           <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
             {[
               { label: "Open", value: stats.open, color: "text-blue-600" },
-              { label: "Claimed", value: stats.claimed, color: "text-yellow-600" },
-              { label: "In Progress", value: stats.inProgress, color: "text-purple-600" },
-              { label: "Waiting User", value: stats.waitingUser, color: "text-orange-600" },
-              { label: "Resolved", value: stats.resolved, color: "text-green-600" },
+              {
+                label: "Claimed",
+                value: stats.claimed,
+                color: "text-yellow-600",
+              },
+              {
+                label: "In Progress",
+                value: stats.inProgress,
+                color: "text-purple-600",
+              },
+              {
+                label: "Waiting User",
+                value: stats.waitingUser,
+                color: "text-orange-600",
+              },
+              {
+                label: "Resolved",
+                value: stats.resolved,
+                color: "text-green-600",
+              },
               { label: "Total", value: stats.total, color: "text-gray-600" },
             ].map((s) => (
               <Card key={s.label} className="p-3">
@@ -360,30 +385,42 @@ export default function StaffTicketsPage() {
                             <span className="font-mono text-xs text-muted-foreground">
                               {ticket.ticketNumber}
                             </span>
-                            <Badge variant="secondary" className={STATUS_COLORS[ticket.status] || ""}>
+                            <Badge
+                              variant="secondary"
+                              className={STATUS_COLORS[ticket.status] || ""}
+                            >
                               {formatStatus(ticket.status)}
                             </Badge>
-                            <Badge variant="secondary" className={PRIORITY_COLORS[ticket.priority] || ""}>
+                            <Badge
+                              variant="secondary"
+                              className={PRIORITY_COLORS[ticket.priority] || ""}
+                            >
                               {ticket.priority}
                             </Badge>
                             <span className="text-xs text-muted-foreground">
                               {TYPE_LABELS[ticket.type] || ticket.type}
                             </span>
                           </div>
-                          <h3 className="font-medium truncate">{ticket.subject}</h3>
+                          <h3 className="font-medium truncate">
+                            {ticket.subject}
+                          </h3>
                           <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
                             {ticket.user ? (
                               <span>
-                                {ticket.user.firstName} {ticket.user.lastName} ({ticket.user.email})
+                                {ticket.user.firstName} {ticket.user.lastName} (
+                                {ticket.user.email})
                               </span>
                             ) : ticket.guestEmail ? (
-                              <span>Guest: {ticket.guestName || ticket.guestEmail}</span>
+                              <span>
+                                Guest: {ticket.guestName || ticket.guestEmail}
+                              </span>
                             ) : (
                               <span>Anonymous</span>
                             )}
                             {ticket.assignee && (
                               <span className="text-green-600">
-                                → {ticket.assignee.firstName} {ticket.assignee.lastName}
+                                → {ticket.assignee.firstName}{" "}
+                                {ticket.assignee.lastName}
                               </span>
                             )}
                           </div>
@@ -391,10 +428,15 @@ export default function StaffTicketsPage() {
                         <div className="text-right text-xs text-muted-foreground shrink-0">
                           <div>{formatDate(ticket.createdAt)}</div>
                           {ticket._count?.messages && (
-                            <div className="mt-1">{ticket._count.messages} msgs</div>
+                            <div className="mt-1">
+                              {ticket._count.messages} msgs
+                            </div>
                           )}
                           {ticket.status === "OPEN" && (
-                            <Badge variant="outline" className="mt-1 text-blue-600 border-blue-300">
+                            <Badge
+                              variant="outline"
+                              className="mt-1 text-blue-600 border-blue-300"
+                            >
                               Unclaimed
                             </Badge>
                           )}
@@ -490,10 +532,16 @@ function StaffTicketDetail({
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <CardTitle className="text-lg">{ticket.subject}</CardTitle>
-                <Badge variant="secondary" className={STATUS_COLORS[ticket.status] || ""}>
+                <Badge
+                  variant="secondary"
+                  className={STATUS_COLORS[ticket.status] || ""}
+                >
                   {formatStatus(ticket.status)}
                 </Badge>
-                <Badge variant="secondary" className={PRIORITY_COLORS[ticket.priority] || ""}>
+                <Badge
+                  variant="secondary"
+                  className={PRIORITY_COLORS[ticket.priority] || ""}
+                >
                   {ticket.priority}
                 </Badge>
               </div>
@@ -515,7 +563,9 @@ function StaffTicketDetail({
                   <div>
                     {ticket.user.firstName} {ticket.user.lastName}
                   </div>
-                  <div className="text-muted-foreground">{ticket.user.email}</div>
+                  <div className="text-muted-foreground">
+                    {ticket.user.email}
+                  </div>
                   <div className="text-xs text-muted-foreground">
                     Role: {ticket.user.role}
                   </div>
@@ -523,7 +573,9 @@ function StaffTicketDetail({
               ) : ticket.guestEmail ? (
                 <>
                   <div>{ticket.guestName || "Guest"}</div>
-                  <div className="text-muted-foreground">{ticket.guestEmail}</div>
+                  <div className="text-muted-foreground">
+                    {ticket.guestEmail}
+                  </div>
                 </>
               ) : (
                 <div className="text-muted-foreground">Anonymous</div>
@@ -552,15 +604,16 @@ function StaffTicketDetail({
               )}
               {(isMyClaim || ticket.assignee) && !isClosed && (
                 <div className="flex gap-1 flex-wrap">
-                  {ticket.status !== "IN_PROGRESS" && ticket.status !== "OPEN" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onStatusChange("IN_PROGRESS")}
-                    >
-                      In Progress
-                    </Button>
-                  )}
+                  {ticket.status !== "IN_PROGRESS" &&
+                    ticket.status !== "OPEN" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onStatusChange("IN_PROGRESS")}
+                      >
+                        In Progress
+                      </Button>
+                    )}
                   <Button
                     size="sm"
                     variant="outline"
@@ -572,7 +625,9 @@ function StaffTicketDetail({
                     size="sm"
                     variant="default"
                     className="bg-green-600 hover:bg-green-700"
-                    onClick={() => onStatusChange("RESOLVED", resolveNote || undefined)}
+                    onClick={() =>
+                      onStatusChange("RESOLVED", resolveNote || undefined)
+                    }
                   >
                     <CheckCircle2 className="h-3 w-3 mr-1" /> Resolve
                   </Button>
@@ -635,12 +690,17 @@ function StaffTicketDetail({
                       }`}
                     >
                       <div className="text-xs font-medium mb-1 opacity-70 flex items-center gap-1">
-                        {msg.senderName || msg.sender?.firstName || msg.senderRole}
+                        {msg.senderName ||
+                          msg.sender?.firstName ||
+                          msg.senderRole}
                         <span className="text-[10px] opacity-50">
                           ({msg.senderRole})
                         </span>
                         {isInternalNote && (
-                          <Badge variant="secondary" className="text-[9px] py-0 px-1 bg-yellow-200">
+                          <Badge
+                            variant="secondary"
+                            className="text-[9px] py-0 px-1 bg-yellow-200"
+                          >
                             INTERNAL
                           </Badge>
                         )}

@@ -12,7 +12,12 @@ import React, {
 } from "react";
 
 // Types matching backend
-export type UserRole = "ADMIN" | "SHOPKEEPER" | "CUSTOMER" | "SALES" | "SUPPORT";
+export type UserRole =
+  | "ADMIN"
+  | "SHOPKEEPER"
+  | "CUSTOMER"
+  | "SALES"
+  | "SUPPORT";
 
 export interface User {
   id: string;
@@ -245,14 +250,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       try {
-        const response = await api.post<AuthResponse & { isSuspended?: boolean }>("/auth/login", {
+        const response = await api.post<
+          AuthResponse & { isSuspended?: boolean }
+        >("/auth/login", {
           email,
           password,
           turnstileToken,
           rememberMe: rememberMe ?? false,
         });
 
-        const { accessToken, refreshToken, user: userData, isSuspended } = response.data;
+        const {
+          accessToken,
+          refreshToken,
+          user: userData,
+          isSuspended,
+        } = response.data;
         storeTokens(accessToken, refreshToken);
 
         // Fetch full user profile

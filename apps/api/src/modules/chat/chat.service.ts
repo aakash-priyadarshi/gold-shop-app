@@ -72,11 +72,17 @@ const VIOLATION_DESCRIPTIONS: Record<string, { en: string; hi: string }> = {
 
 const GUIDELINES_URL = "/platform-guidelines";
 
-function getViolationLabel(violationType: string | null): { en: string; hi: string } {
+function getViolationLabel(violationType: string | null): {
+  en: string;
+  hi: string;
+} {
   if (violationType && VIOLATION_DESCRIPTIONS[violationType]) {
     return VIOLATION_DESCRIPTIONS[violationType];
   }
-  return { en: "sharing contact information", hi: "कॉन्टैक्ट जानकारी शेयर करना" };
+  return {
+    en: "sharing contact information",
+    hi: "कॉन्टैक्ट जानकारी शेयर करना",
+  };
 }
 
 export interface SendMessageResult {
@@ -524,7 +530,7 @@ export class ChatService {
       orderBy: { updatedAt: "desc" },
       include: {
         buyer: { select: { id: true, firstName: true, lastName: true } },
-        shop: { select: { id: true, shopName: true } },
+        shop: { select: { id: true, shopName: true, userId: true } },
         messages: {
           orderBy: { createdAt: "desc" },
           take: 1,
@@ -590,7 +596,7 @@ export class ChatService {
           conversation: {
             select: {
               id: true,
-              shop: { select: { id: true, shopName: true } },
+              shop: { select: { id: true, shopName: true, userId: true } },
               buyer: { select: { id: true, firstName: true, lastName: true } },
             },
           },
@@ -680,7 +686,9 @@ export class ChatService {
       data: { status: ConversationStatus.ACTIVE },
     });
 
-    this.logger.log(`USER UNBLOCKED: user=${userId} by admin=${adminId} (previous status: ${user.status})`);
+    this.logger.log(
+      `USER UNBLOCKED: user=${userId} by admin=${adminId} (previous status: ${user.status})`,
+    );
 
     // ── Non-critical: audit & notification (don't block or fail the response) ──
     try {
@@ -709,7 +717,9 @@ export class ChatService {
         channels: ["IN_APP", "EMAIL"],
       });
     } catch (e) {
-      this.logger.warn(`Failed to send notification for unblock user=${userId}: ${e}`);
+      this.logger.warn(
+        `Failed to send notification for unblock user=${userId}: ${e}`,
+      );
     }
 
     return { success: true, userId };

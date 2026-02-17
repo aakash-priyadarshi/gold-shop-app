@@ -177,20 +177,17 @@ export function useChatSocket({
     }
   }, []);
 
-  const checkOnline = useCallback(
-    (userIds: string[]): Promise<string[]> => {
-      const socket = socketRef.current;
-      if (!socket?.connected) return Promise.resolve([]);
-      return new Promise((resolve) => {
-        socket.emit("checkOnline", { userIds }, (response: any) => {
-          resolve(response?.data?.online || []);
-        });
-        // Timeout fallback
-        setTimeout(() => resolve([]), 3000);
+  const checkOnline = useCallback((userIds: string[]): Promise<string[]> => {
+    const socket = socketRef.current;
+    if (!socket?.connected) return Promise.resolve([]);
+    return new Promise((resolve) => {
+      socket.emit("checkOnline", { userIds }, (response: any) => {
+        resolve(response?.data?.online || []);
       });
-    },
-    [],
-  );
+      // Timeout fallback
+      setTimeout(() => resolve([]), 3000);
+    });
+  }, []);
 
   return {
     connected,

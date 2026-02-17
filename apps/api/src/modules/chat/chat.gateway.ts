@@ -1,16 +1,16 @@
+import { Logger } from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
 import {
-  WebSocketGateway,
-  WebSocketServer,
-  SubscribeMessage,
-  OnGatewayConnection,
-  OnGatewayDisconnect,
   ConnectedSocket,
   MessageBody,
-} from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { Logger, UseGuards } from '@nestjs/common';
-import { ChatService } from './chat.service';
-import { JwtService } from '@nestjs/jwt';
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+  SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
+} from "@nestjs/websockets";
+import { Server, Socket } from "socket.io";
+import { ChatService } from "./chat.service";
 
 interface AuthenticatedSocket extends Socket {
   userId: string;
@@ -18,8 +18,8 @@ interface AuthenticatedSocket extends Socket {
 }
 
 @WebSocketGateway({
-  namespace: '/chat',
-  cors: { origin: '*' },
+  namespace: "/chat",
+  cors: { origin: "*" },
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
@@ -37,7 +37,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const token =
         client.handshake.auth?.token ||
-        client.handshake.headers?.authorization?.replace('Bearer ', '');
+        client.handshake.headers?.authorization?.replace("Bearer ", "");
 
       if (!token) {
         client.disconnect();
@@ -70,16 +70,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(`Client disconnected: ${client.id}`);
   }
 
-  @SubscribeMessage('joinConversation')
+  @SubscribeMessage("joinConversation")
   handleJoinConversation(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { conversationId: string },
   ) {
     client.join(`conversation:${data.conversationId}`);
-    return { event: 'joined', data: { conversationId: data.conversationId } };
+    return { event: "joined", data: { conversationId: data.conversationId } };
   }
 
-  @SubscribeMessage('leaveConversation')
+  @SubscribeMessage("leaveConversation")
   handleLeaveConversation(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { conversationId: string },
@@ -87,7 +87,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.leave(`conversation:${data.conversationId}`);
   }
 
-  @SubscribeMessage('sendMessage')
+  @SubscribeMessage("sendMessage")
   async handleSendMessage(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody()
@@ -111,7 +111,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (result.blocked) {
         // Message was blocked — notify ONLY the sender, NOT the conversation
         return {
-          event: 'messageBlocked',
+          event: "messageBlocked",
           data: {
             warning: result.warning,
             strikeCount: result.strikeCount,
@@ -123,28 +123,26 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Clean message — broadcast to all in conversation room
       this.server
         .to(`conversation:${data.conversationId}`)
-        .emit('newMessage', result.message);
+        .emit("newMessage", result.message);
 
-      return { event: 'messageSent', data: result.message };
+      return { event: "messageSent", data: result.message };
     } catch (error: any) {
-      return { event: 'error', data: { message: error.message } };
+      return { event: "error", data: { message: error.message } };
     }
   }
 
-  @SubscribeMessage('typing')
+  @SubscribeMessage("typing")
   handleTyping(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { conversationId: string; isTyping: boolean },
   ) {
-    client
-      .to(`conversation:${data.conversationId}`)
-      .emit('userTyping', {
-        userId: client.userId,
-        isTyping: data.isTyping,
-      });
+    client.to(`conversation:${data.conversationId}`).emit("userTyping", {
+      userId: client.userId,
+      isTyping: data.isTyping,
+    });
   }
 
-  @SubscribeMessage('markRead')
+  @SubscribeMessage("markRead")
   async handleMarkRead(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { conversationId: string },
@@ -152,16 +150,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     await this.chatService.markAsRead(data.conversationId, client.userId);
     client
       .to(`conversation:${data.conversationId}`)
-      .emit('messagesRead', { userId: client.userId });
+      .emit("messagesRead", { userId: client.userId });
   }
 
-  @SubscribeMessage('checkOnline')
+  @SubscribeMessage("checkOnline")
   handleCheckOnline(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { userIds: string[] },
   ) {
     const onlineIds = this.getOnlineUsers(data.userIds || []);
-    return { event: 'onlineStatus', data: { online: onlineIds } };
+    return { event: "onlineStatus", data: { online: onlineIds } };
   }
 
   // ─── Helper: emit to specific user(s) ───

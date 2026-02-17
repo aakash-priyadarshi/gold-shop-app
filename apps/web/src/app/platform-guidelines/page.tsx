@@ -49,8 +49,8 @@ export default function PlatformGuidelinesPage() {
             for all users.
           </p>
           <p className="text-base text-gray-500 mt-2">
-            प्लेटफ़ॉर्म गाइडलाइन्स — सभी यूज़र्स के लिए एक सुरक्षित और
-            भरोसेमंद बाज़ार सुनिश्चित करने के नियम
+            प्लेटफ़ॉर्म गाइडलाइन्स — सभी यूज़र्स के लिए एक सुरक्षित और भरोसेमंद
+            बाज़ार सुनिश्चित करने के नियम
           </p>
         </div>
 
@@ -297,8 +297,8 @@ export default function PlatformGuidelinesPage() {
                     सम्मानजनक रहें
                   </li>
                   <li>
-                    • Provide accurate information for orders / ऑर्डर के लिए
-                    सही जानकारी दें
+                    • Provide accurate information for orders / ऑर्डर के लिए सही
+                    जानकारी दें
                   </li>
                   <li>
                     • Complete payments through platform only / पेमेंट सिर्फ
@@ -320,12 +320,12 @@ export default function PlatformGuidelinesPage() {
                     विवरण और तस्वीरों के साथ प्रॉडक्ट लिस्ट करें
                   </li>
                   <li>
-                    • Fulfill orders within promised timelines / वादे किए गए
-                    समय में ऑर्डर पूरे करें
+                    • Fulfill orders within promised timelines / वादे किए गए समय
+                    में ऑर्डर पूरे करें
                   </li>
                   <li>
-                    • Maintain hallmark and quality certifications / हॉलमार्क
-                    और क्वालिटी प्रमाणपत्र बनाए रखें
+                    • Maintain hallmark and quality certifications / हॉलमार्क और
+                    क्वालिटी प्रमाणपत्र बनाए रखें
                   </li>
                   <li>
                     • Respond to customer queries within 24 hours / 24 घंटे के
