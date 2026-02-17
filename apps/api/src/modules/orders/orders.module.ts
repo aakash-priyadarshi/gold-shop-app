@@ -4,11 +4,12 @@ import { MarketplaceIntelligenceModule } from "../marketplace-intelligence/marke
 import { NotificationsModule } from "../notifications/notifications.module";
 import { OrdersController } from "./orders.controller";
 import { OrdersService } from "./orders.service";
+import { StateMachineService } from "./state-machine.service";
 
 @Module({
   imports: [PrismaModule, NotificationsModule, MarketplaceIntelligenceModule],
   controllers: [OrdersController],
-  providers: [OrdersService],
-  exports: [OrdersService],
+  providers: [OrdersService, StateMachineService],
+  exports: [OrdersService, StateMachineService],
 })
 export class OrdersModule {}

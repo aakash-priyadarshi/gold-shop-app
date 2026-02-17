@@ -33,6 +33,10 @@ import { SellerPerformanceModule } from "./modules/seller-performance/seller-per
 import { ShopQuotesModule } from "./modules/shop-quotes/shop-quotes.module";
 import { ShopsModule } from "./modules/shops/shops.module";
 import { UsersModule } from "./modules/users/users.module";
+import { ChatModule } from "./modules/chat/chat.module";
+import { RefundsModule } from "./modules/refunds/refunds.module";
+import { SupportModule } from "./modules/support/support.module";
+import { ProductVariantsModule } from "./modules/product-variants/product-variants.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
 @Module({
@@ -97,6 +101,10 @@ import { PrismaModule } from "./prisma/prisma.module";
     SellerPerformanceModule,
     CustomerCrmModule,
     MarketplaceIntelligenceModule,
+    ChatModule,
+    RefundsModule,
+    SupportModule,
+    ProductVariantsModule,
   ],
   providers: [
     // Apply ThrottlerGuard globally so @Throttle() decorators are enforced
