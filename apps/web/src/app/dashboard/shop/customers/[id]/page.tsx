@@ -15,6 +15,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useChatPopup } from "@/contexts/ChatPopupContext";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
@@ -67,6 +68,7 @@ export default function CustomerProfilePage() {
   const [loading, setLoading] = useState(true);
   const { symbol: currencySymbol } = useShopCurrency();
   const { user } = useAuth();
+  const { openChat } = useChatPopup();
 
   // New note form
   const [newNote, setNewNote] = useState("");
@@ -92,7 +94,7 @@ export default function CustomerProfilePage() {
         (c: any) => c.buyer?.id === customerId || c.buyerId === customerId,
       );
       if (existing) {
-        router.push(`/dashboard/shop/messages?chat=${existing.id}`);
+        openChat(existing.id);
         return;
       }
 
@@ -107,7 +109,7 @@ export default function CustomerProfilePage() {
         buyerId: customerId,
       });
       if (convRes.data?.id) {
-        router.push(`/dashboard/shop/messages?chat=${convRes.data.id}`);
+        openChat(convRes.data.id);
       } else {
         toast({ variant: "destructive", title: "Failed to create conversation" });
       }
