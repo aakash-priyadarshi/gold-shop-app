@@ -73,17 +73,26 @@ const VARIANTS: Record<string, ImageVariant[]> = {
 };
 
 // Allowed MIME types — images, videos, and documents
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+];
 const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm"];
 const ALLOWED_DOC_TYPES = [
   "application/pdf",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
-const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES, ...ALLOWED_DOC_TYPES];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (images/docs)
-const MAX_VIDEO_SIZE = 25 * 1024 * 1024; // 25MB (videos)
-const MAX_DOC_SIZE = 15 * 1024 * 1024; // 15MB (documents)
+const ALLOWED_TYPES = [
+  ...ALLOWED_IMAGE_TYPES,
+  ...ALLOWED_VIDEO_TYPES,
+  ...ALLOWED_DOC_TYPES,
+];
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB (images in chat)
+const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10MB (videos, max 30s)
+const MAX_DOC_SIZE = 5 * 1024 * 1024; // 5MB (documents)
 
 // Upload types that allow video and document files
 const MEDIA_UPLOAD_TYPES = ["chat"];
@@ -333,7 +342,11 @@ async function handleUpload(
   }
 
   // Validate file size — different limits per type
-  const maxSize = isVideo ? MAX_VIDEO_SIZE : isDoc ? MAX_DOC_SIZE : MAX_FILE_SIZE;
+  const maxSize = isVideo
+    ? MAX_VIDEO_SIZE
+    : isDoc
+      ? MAX_DOC_SIZE
+      : MAX_FILE_SIZE;
   if (file.size > maxSize) {
     return new Response(
       JSON.stringify({

@@ -57,7 +57,12 @@ export interface TicketData {
   priority: string;
   assigneeId?: string | null;
   userId?: string | null;
-  user?: { id: string; firstName: string; lastName: string; email: string } | null;
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  } | null;
   assignee?: { id: string; firstName: string; lastName: string } | null;
 }
 

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,17 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -28,21 +18,28 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
-  Loader2,
-  Plus,
-  MessageSquare,
-  Clock,
-  CheckCircle2,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/hooks/useAuth";
+import { TicketMessage, useTicketSocket } from "@/hooks/useTicketSocket";
+import { ticketsApi } from "@/lib/api";
+import {
   AlertCircle,
-  Send,
   ArrowLeft,
   LifeBuoy,
-  Paperclip,
+  Loader2,
+  MessageSquare,
+  Plus,
+  Send,
 } from "lucide-react";
-import { ticketsApi } from "@/lib/api";
-import { useAuth } from "@/hooks/useAuth";
-import { useTicketSocket, TicketMessage } from "@/hooks/useTicketSocket";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // ─── Types ───
 interface Ticket {
@@ -120,9 +117,7 @@ export default function UserSupportPage() {
     onNewTicketMessage: (msg) => {
       if (selectedTicket && msg.ticketId === selectedTicket.id) {
         setSelectedTicket((prev) =>
-          prev
-            ? { ...prev, messages: [...(prev.messages || []), msg] }
-            : prev,
+          prev ? { ...prev, messages: [...(prev.messages || []), msg] } : prev,
         );
       }
     },
@@ -254,17 +249,13 @@ export default function UserSupportPage() {
                             </span>
                             <Badge
                               variant="secondary"
-                              className={
-                                STATUS_COLORS[ticket.status] || ""
-                              }
+                              className={STATUS_COLORS[ticket.status] || ""}
                             >
                               {formatStatus(ticket.status)}
                             </Badge>
                             <Badge
                               variant="secondary"
-                              className={
-                                PRIORITY_COLORS[ticket.priority] || ""
-                              }
+                              className={PRIORITY_COLORS[ticket.priority] || ""}
                             >
                               {ticket.priority}
                             </Badge>
@@ -479,9 +470,7 @@ function TicketDetailView({
                 >
                   <div
                     className={`max-w-[70%] rounded-lg px-3 py-2 text-sm ${
-                      isMe
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted"
+                      isMe ? "bg-primary text-primary-foreground" : "bg-muted"
                     }`}
                   >
                     {!isMe && (
@@ -494,7 +483,9 @@ function TicketDetailView({
                     <p className="whitespace-pre-wrap">{msg.content}</p>
                     <div
                       className={`text-[10px] mt-1 ${
-                        isMe ? "text-primary-foreground/60" : "text-muted-foreground"
+                        isMe
+                          ? "text-primary-foreground/60"
+                          : "text-muted-foreground"
                       }`}
                     >
                       {formatDate(msg.createdAt)}

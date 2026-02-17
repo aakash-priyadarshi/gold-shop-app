@@ -1011,7 +1011,14 @@ export class AdminController {
     const updatedShop = await this.prisma.shop.update({
       where: { id: shopId },
       data,
-      select: { id: true, userId: true, shopName: true, isOnHold: true, isActive: true, isVerified: true },
+      select: {
+        id: true,
+        userId: true,
+        shopName: true,
+        isOnHold: true,
+        isActive: true,
+        isVerified: true,
+      },
     });
 
     // ── Sync User.status when isOnHold changes ──
@@ -1026,14 +1033,21 @@ export class AdminController {
         // Unlock any locked conversations for this shop owner
         await this.prisma.conversation.updateMany({
           where: {
-            OR: [{ buyerId: updatedShop.userId }, { shop: { userId: updatedShop.userId } }],
+            OR: [
+              { buyerId: updatedShop.userId },
+              { shop: { userId: updatedShop.userId } },
+            ],
             status: "LOCKED",
           },
           data: { status: "ACTIVE" },
         });
-        this.logger.log(`Shop ${shopId} unhold: User ${updatedShop.userId} reactivated, conversations unlocked`);
+        this.logger.log(
+          `Shop ${shopId} unhold: User ${updatedShop.userId} reactivated, conversations unlocked`,
+        );
       } catch (e) {
-        this.logger.error(`Failed to sync user status on unhold for shop ${shopId}: ${e}`);
+        this.logger.error(
+          `Failed to sync user status on unhold for shop ${shopId}: ${e}`,
+        );
       }
     } else if (body.isOnHold === true && updatedShop.userId) {
       try {
@@ -1041,9 +1055,13 @@ export class AdminController {
           where: { id: updatedShop.userId },
           data: { status: "SUSPENDED" },
         });
-        this.logger.log(`Shop ${shopId} put on hold: User ${updatedShop.userId} suspended`);
+        this.logger.log(
+          `Shop ${shopId} put on hold: User ${updatedShop.userId} suspended`,
+        );
       } catch (e) {
-        this.logger.error(`Failed to sync user status on hold for shop ${shopId}: ${e}`);
+        this.logger.error(
+          `Failed to sync user status on hold for shop ${shopId}: ${e}`,
+        );
       }
     }
 

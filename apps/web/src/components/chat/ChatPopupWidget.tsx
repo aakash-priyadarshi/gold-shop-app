@@ -1,5 +1,7 @@
 "use client";
 
+import data from "@emoji-mart/data";
+import Picker from "@emoji-mart/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -16,8 +18,8 @@ import {
   AlertTriangle,
   ArrowLeft,
   ExternalLink,
-  File,
-  Image as ImageIcon,
+  FileText,
+  ImageIcon,
   Loader2,
   Lock,
   MessageSquare,
@@ -25,11 +27,12 @@ import {
   Paperclip,
   Send,
   Shield,
+  Smile,
   Video,
-  Wifi,
   WifiOff,
   X,
 } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /* ────────────────────────────────────────────────────────────
@@ -42,7 +45,7 @@ interface Conversation {
   status: string;
   updatedAt: string;
   buyer: { id: string; firstName: string; lastName: string };
-  shop: { id: string; shopName: string };
+  shop: { id: string; shopName: string; userId?: string };
   messages: Array<{
     content: string;
     createdAt: string;
@@ -99,10 +102,16 @@ export function ChatPopupWidget() {
     null,
   );
   const [uploading, setUploading] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevConvRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const attachMenuRef = useRef<HTMLDivElement>(null);
+  const [fileAccept, setFileAccept] = useState("");
+  const pathname = usePathname();
 
   const isShopkeeper = user?.role === "SHOPKEEPER";
   const shopId = user?.shop?.id;
@@ -207,7 +216,7 @@ export function ChatPopupWidget() {
     if (!connected || conversations.length === 0) return;
     // Gather the other party's user IDs from conversations
     const otherUserIds = conversations.map((c) =>
-      isShopkeeper ? c.buyerId : c.shopId,
+      isShopkeeper ? c.buyerId : (c.shop?.userId || c.shopId),
     );
     const uniqueIds = Array.from(new Set(otherUserIds)).filter(Boolean);
     if (uniqueIds.length === 0) return;
@@ -226,43 +235,78 @@ export function ChatPopupWidget() {
   }, [connected, conversations, isShopkeeper, checkOnline]);
 
   /* ── File attachment handler ── */
+  const openFilePicker = (type: "image" | "video" | "document") => {
+    setShowAttachMenu(false);
+    if (type === "image") {
+      setFileAccept("image/jpeg,image/png,image/webp,image/gif");
+    } else if (type === "video") {
+      setFileAccept("video/mp4,video/webm");
+    } else {
+      setFileAccept("application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    }
+    // Need to wait a tick so the accept attribute updates
+    setTimeout(() => fileInputRef.current?.click(), 50);
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate type
-    const allowedImages = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-    const allowedVideos = ["video/mp4", "video/webm"];
-    const allowedDocs = [
-      "application/pdf",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ];
-    const isImage = allowedImages.includes(file.type);
-    const isVideo = allowedVideos.includes(file.type);
-    const isDoc = allowedDocs.includes(file.type);
+    const isImage = file.type.startsWith("image/");
+    const isVideo = file.type.startsWith("video/");
+    const isDoc =
+      file.type === "application/pdf" ||
+      file.type.includes("msword") ||
+      file.type.includes("wordprocessingml");
 
     if (!isImage && !isVideo && !isDoc) {
-      alert("Only images (JPG, PNG, WebP, GIF), videos (MP4, WebM up to 10s), and documents (PDF, DOC) are allowed.");
+      alert("Only images (JPG, PNG, WebP, GIF), videos (MP4, WebM), and documents (PDF, DOC) are allowed.");
       return;
     }
 
-    // Validate size (images: 10MB, videos: 25MB, docs: 15MB)
-    const maxSize = isVideo ? 25 * 1024 * 1024 : isDoc ? 15 * 1024 * 1024 : 10 * 1024 * 1024;
-    if (file.size > maxSize) {
-      alert(`File too large. Max: ${maxSize / 1024 / 1024}MB`);
+    // Validate size: images 2MB, videos 10MB, docs 5MB
+    if (isImage && file.size > 2 * 1024 * 1024) {
+      alert("Image too large. Maximum size: 2 MB");
+      e.target.value = "";
+      return;
+    }
+    if (isVideo && file.size > 10 * 1024 * 1024) {
+      alert("Video too large. Maximum size: 10 MB");
+      e.target.value = "";
+      return;
+    }
+    if (isDoc && file.size > 5 * 1024 * 1024) {
+      alert("Document too large. Maximum size: 5 MB");
+      e.target.value = "";
       return;
     }
 
-    setAttachmentFile(file);
-    if (isImage) {
-      const reader = new FileReader();
-      reader.onload = (ev) => setAttachmentPreview(ev.target?.result as string);
-      reader.readAsDataURL(file);
-    } else if (isVideo) {
-      setAttachmentPreview("video");
+    // Validate video duration (max 30 seconds)
+    if (isVideo) {
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.onloadedmetadata = () => {
+        URL.revokeObjectURL(video.src);
+        if (video.duration > 30) {
+          alert("Video too long. Maximum duration: 30 seconds");
+          setAttachmentFile(null);
+          setAttachmentPreview(null);
+          return;
+        }
+        // Video is valid
+        setAttachmentFile(file);
+        setAttachmentPreview("video");
+      };
+      video.src = URL.createObjectURL(file);
     } else {
-      setAttachmentPreview("document");
+      setAttachmentFile(file);
+      if (isImage) {
+        const reader = new FileReader();
+        reader.onload = (ev) => setAttachmentPreview(ev.target?.result as string);
+        reader.readAsDataURL(file);
+      } else {
+        setAttachmentPreview("document");
+      }
     }
 
     // Reset the input so the same file can be selected again
@@ -274,7 +318,9 @@ export function ChatPopupWidget() {
     setAttachmentPreview(null);
   };
 
-  const uploadFile = async (file: File): Promise<{ url: string; type: string } | null> => {
+  const uploadFile = async (
+    file: File,
+  ): Promise<{ url: string; type: string } | null> => {
     try {
       setUploading(true);
       const formData = new FormData();
@@ -319,8 +365,13 @@ export function ChatPopupWidget() {
 
   /* ── Send message: prefer WebSocket, fallback to HTTP ── */
   const handleSend = async () => {
-    if ((!newMessage.trim() && !attachmentFile) || !activeConversationId) return;
-    const content = newMessage || (attachmentFile ? `[${attachmentFile.type.startsWith("video") ? "Video" : attachmentFile.type.startsWith("image") ? "Photo" : "Document"}]` : "");
+    if ((!newMessage.trim() && !attachmentFile) || !activeConversationId)
+      return;
+    const content =
+      newMessage ||
+      (attachmentFile
+        ? `[${attachmentFile.type.startsWith("video") ? "Video" : attachmentFile.type.startsWith("image") ? "Photo" : "Document"}]`
+        : "");
     setNewMessage("");
     setSending(true);
 
@@ -341,7 +392,13 @@ export function ChatPopupWidget() {
 
     // Try WebSocket first (instant, no HTTP round-trip)
     const sentViaWs =
-      connected && wsSendMessage(activeConversationId, content, attachmentUrl, attachmentType);
+      connected &&
+      wsSendMessage(
+        activeConversationId,
+        content,
+        attachmentUrl,
+        attachmentType,
+      );
 
     if (!sentViaWs) {
       // Fallback to HTTP
@@ -460,10 +517,35 @@ export function ChatPopupWidget() {
     return conv.shop?.shopName || "Shop";
   };
 
+  /* ── Emoji handler ── */
+  const handleEmojiSelect = (emoji: any) => {
+    setNewMessage((prev) => prev + emoji.native);
+    setShowEmojiPicker(false);
+  };
+
+  /* ── Close menus on outside click ── */
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+      if (attachMenuRef.current && !attachMenuRef.current.contains(e.target as Node)) {
+        setShowAttachMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  /* ── Hide the chat bubble on /messages pages since it overlaps the send button ── */
+  const isOnMessagesPage = pathname?.includes("/messages");
+
   /* ─────────────────────────────────────────────────────────
      RENDER: Floating bubble (when closed or minimized)
      ───────────────────────────────────────────────────────── */
   if (!isOpen || isMinimized) {
+    // Don't show bubble on messages pages — it hides the send button
+    if (isOnMessagesPage) return null;
     return (
       <button
         onClick={() => (isOpen ? toggleMinimize() : openChatList())}
@@ -524,22 +606,26 @@ export function ChatPopupWidget() {
             {activeConversationId ? getConvName(activeConv!) : "Messages"}
           </span>
           {/* Online / Connection indicator */}
-          {activeConversationId && activeConv && (() => {
-            const otherId = isShopkeeper ? activeConv.buyerId : activeConv.shopId;
-            const isOnline = onlineUsers.has(otherId);
-            return isOnline ? (
-              <span className="flex items-center gap-1 flex-shrink-0">
-                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                <span className="text-[10px] text-green-200">Online</span>
-              </span>
-            ) : (
-              connected ? (
-                <span className="text-[10px] text-white/50 flex-shrink-0">Offline</span>
+          {activeConversationId &&
+            activeConv &&
+            (() => {
+              const otherId = isShopkeeper
+                ? activeConv.buyerId
+                : (activeConv.shop?.userId || activeConv.shopId);
+              const isOnline = onlineUsers.has(otherId);
+              return isOnline ? (
+                <span className="flex items-center gap-1 flex-shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                  <span className="text-[10px] text-green-200">Online</span>
+                </span>
+              ) : connected ? (
+                <span className="text-[10px] text-white/50 flex-shrink-0">
+                  Offline
+                </span>
               ) : (
                 <WifiOff className="h-3 w-3 text-red-200 flex-shrink-0" />
-              )
-            );
-          })()}
+              );
+            })()}
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           {/* View full messages page */}
@@ -617,7 +703,9 @@ export function ChatPopupWidget() {
                       <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold-100 to-gold-200 flex items-center justify-center text-gold-700 text-xs font-bold">
                         {getConvName(conv).charAt(0).toUpperCase()}
                       </div>
-                      {onlineUsers.has(isShopkeeper ? conv.buyerId : conv.shopId) && (
+                      {onlineUsers.has(
+                        isShopkeeper ? conv.buyerId : (conv.shop?.userId || conv.shopId),
+                      ) && (
                         <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white" />
                       )}
                     </div>
@@ -772,7 +860,11 @@ export function ChatPopupWidget() {
                         {msg.attachmentUrl && (
                           <div className="mb-1.5">
                             {msg.attachmentType === "image" ? (
-                              <a href={msg.attachmentUrl} target="_blank" rel="noopener noreferrer">
+                              <a
+                                href={msg.attachmentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
                                 <img
                                   src={msg.attachmentUrl}
                                   alt="Shared image"
@@ -798,7 +890,7 @@ export function ChatPopupWidget() {
                                     : "bg-gray-200 text-gray-700 hover:bg-gray-300",
                                 )}
                               >
-                                <File className="h-4 w-4" />
+                                <FileText className="h-4 w-4" />
                                 Document
                                 <ExternalLink className="h-3 w-3" />
                               </a>
@@ -854,7 +946,7 @@ export function ChatPopupWidget() {
               Conversation locked — contact support
             </div>
           ) : (
-            <div className="px-3 py-2.5 border-t flex-shrink-0 bg-white space-y-2">
+            <div className="px-3 py-2.5 border-t flex-shrink-0 bg-white space-y-2 relative">
               {/* Attachment preview */}
               {attachmentPreview && (
                 <div className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 rounded-lg">
@@ -870,12 +962,17 @@ export function ChatPopupWidget() {
                     </div>
                   ) : (
                     <div className="w-10 h-10 rounded bg-orange-100 flex items-center justify-center">
-                      <File className="h-5 w-5 text-orange-600" />
+                      <FileText className="h-5 w-5 text-orange-600" />
                     </div>
                   )}
-                  <span className="text-xs text-gray-600 truncate flex-1">
-                    {attachmentFile?.name}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs text-gray-600 truncate block">
+                      {attachmentFile?.name}
+                    </span>
+                    <span className="text-[10px] text-gray-400">
+                      {attachmentFile ? `${(attachmentFile.size / 1024 / 1024).toFixed(1)} MB` : ""}
+                    </span>
+                  </div>
                   <button
                     onClick={clearAttachment}
                     className="p-1 hover:bg-gray-200 rounded"
@@ -885,38 +982,115 @@ export function ChatPopupWidget() {
                 </div>
               )}
 
-              <div className="flex gap-2">
-                {/* Hidden file input */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
+              {/* Emoji picker popover */}
+              {showEmojiPicker && (
+                <div
+                  ref={emojiPickerRef}
+                  className="absolute bottom-full left-0 mb-2 z-50"
+                >
+                  <Picker
+                    data={data}
+                    onEmojiSelect={handleEmojiSelect}
+                    theme="light"
+                    previewPosition="none"
+                    skinTonePosition="none"
+                    maxFrequentRows={1}
+                    perLine={7}
+                    emojiSize={20}
+                    emojiButtonSize={28}
+                    set="native"
+                  />
+                </div>
+              )}
+
+              {/* Attachment type chooser */}
+              {showAttachMenu && (
+                <div
+                  ref={attachMenuRef}
+                  className="absolute bottom-full left-8 mb-2 z-50 bg-white rounded-xl shadow-lg border border-gray-200 p-1.5 min-w-[140px]"
+                >
+                  <button
+                    onClick={() => openFilePicker("image")}
+                    className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm hover:bg-gray-50 transition text-left"
+                  >
+                    <ImageIcon className="h-4 w-4 text-green-600" />
+                    <div>
+                      <span className="font-medium">Photo</span>
+                      <span className="text-[10px] text-gray-400 block">Max 2 MB</span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => openFilePicker("video")}
+                    className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm hover:bg-gray-50 transition text-left"
+                  >
+                    <Video className="h-4 w-4 text-blue-600" />
+                    <div>
+                      <span className="font-medium">Video</span>
+                      <span className="text-[10px] text-gray-400 block">Max 30s, 10 MB</span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => openFilePicker("document")}
+                    className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm hover:bg-gray-50 transition text-left"
+                  >
+                    <FileText className="h-4 w-4 text-orange-600" />
+                    <div>
+                      <span className="font-medium">Document</span>
+                      <span className="text-[10px] text-gray-400 block">PDF, DOC — Max 5 MB</span>
+                    </div>
+                  </button>
+                </div>
+              )}
+
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={fileAccept || "image/*,video/*,.pdf,.doc,.docx"}
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+
+              <div className="flex items-center gap-1.5">
+                {/* Emoji button */}
                 <button
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => { setShowEmojiPicker(!showEmojiPicker); setShowAttachMenu(false); }}
                   disabled={sending || uploading}
-                  className="h-9 w-9 flex items-center justify-center rounded-xl border border-gray-200 hover:bg-gray-50 transition text-gray-500 hover:text-gray-700 flex-shrink-0"
+                  className="h-9 w-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition text-gray-500 hover:text-gray-700 flex-shrink-0"
+                  title="Emoji"
+                >
+                  <Smile className="h-4 w-4" />
+                </button>
+                {/* Attach button */}
+                <button
+                  onClick={() => { setShowAttachMenu(!showAttachMenu); setShowEmojiPicker(false); }}
+                  disabled={sending || uploading}
+                  className="h-9 w-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition text-gray-500 hover:text-gray-700 flex-shrink-0"
                   title="Attach file"
                 >
                   <Paperclip className="h-4 w-4" />
                 </button>
+                {/* Message input */}
                 <Input
                   value={newMessage}
                   onChange={(e) => handleInputChange(e.target.value)}
-                  onKeyDown={(e) =>
-                    e.key === "Enter" && !e.shiftKey && handleSend()
-                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) handleSend();
+                  }}
+                  onFocus={() => { setShowEmojiPicker(false); setShowAttachMenu(false); }}
                   placeholder="Type a message…"
                   disabled={sending || uploading}
-                  className="text-sm h-9 rounded-xl"
+                  className="text-sm h-9 rounded-xl flex-1 min-w-0"
                 />
+                {/* Send button — fixed width so it doesn't shrink */}
                 <Button
                   onClick={handleSend}
-                  disabled={(sending || uploading) || (!newMessage.trim() && !attachmentFile)}
-                  size="sm"
-                  className="h-9 w-9 p-0 rounded-xl bg-gold-500 hover:bg-gold-600"
+                  disabled={
+                    sending ||
+                    uploading ||
+                    (!newMessage.trim() && !attachmentFile)
+                  }
+                  className="h-9 w-9 min-w-[36px] p-0 rounded-xl bg-gold-500 hover:bg-gold-600 flex-shrink-0"
                 >
                   {sending || uploading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

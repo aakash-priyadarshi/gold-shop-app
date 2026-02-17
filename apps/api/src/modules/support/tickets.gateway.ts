@@ -1,16 +1,16 @@
+import { Logger } from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
 import {
-  WebSocketGateway,
-  WebSocketServer,
-  SubscribeMessage,
-  OnGatewayConnection,
-  OnGatewayDisconnect,
   ConnectedSocket,
   MessageBody,
-} from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { TicketsService, AddTicketMessageDto } from './tickets.service';
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+  SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
+} from "@nestjs/websockets";
+import { Server, Socket } from "socket.io";
+import { AddTicketMessageDto, TicketsService } from "./tickets.service";
 
 interface AuthenticatedSocket extends Socket {
   userId: string;
@@ -18,8 +18,8 @@ interface AuthenticatedSocket extends Socket {
 }
 
 @WebSocketGateway({
-  namespace: '/support',
-  cors: { origin: '*' },
+  namespace: "/support",
+  cors: { origin: "*" },
 })
 export class TicketsGateway
   implements OnGatewayConnection, OnGatewayDisconnect
@@ -41,7 +41,7 @@ export class TicketsGateway
     try {
       const token =
         client.handshake.auth?.token ||
-        client.handshake.headers?.authorization?.replace('Bearer ', '');
+        client.handshake.headers?.authorization?.replace("Bearer ", "");
 
       if (!token) {
         client.disconnect();
@@ -58,8 +58,8 @@ export class TicketsGateway
       this.userSockets.get(client.userId)!.add(client.id);
 
       // Auto-join the support:staff room for support/admin
-      if (client.userRole === 'SUPPORT' || client.userRole === 'ADMIN') {
-        client.join('support:staff');
+      if (client.userRole === "SUPPORT" || client.userRole === "ADMIN") {
+        client.join("support:staff");
       }
 
       this.logger.log(
@@ -81,16 +81,16 @@ export class TicketsGateway
   }
 
   // ─── Join a ticket room (to receive live messages) ───
-  @SubscribeMessage('joinTicket')
+  @SubscribeMessage("joinTicket")
   handleJoinTicket(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { ticketId: string },
   ) {
     client.join(`ticket:${data.ticketId}`);
-    return { event: 'joinedTicket', data: { ticketId: data.ticketId } };
+    return { event: "joinedTicket", data: { ticketId: data.ticketId } };
   }
 
-  @SubscribeMessage('leaveTicket')
+  @SubscribeMessage("leaveTicket")
   handleLeaveTicket(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { ticketId: string },
@@ -99,7 +99,7 @@ export class TicketsGateway
   }
 
   // ─── Send a message in a ticket (real-time) ───
-  @SubscribeMessage('ticketMessage')
+  @SubscribeMessage("ticketMessage")
   async handleTicketMessage(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody()
@@ -123,23 +123,23 @@ export class TicketsGateway
         data.ticketId,
         client.userId,
         client.userRole,
-        '', // name resolved from DB in service
+        "", // name resolved from DB in service
         dto,
       );
 
       // Broadcast to everyone in the ticket room
       this.server
         .to(`ticket:${data.ticketId}`)
-        .emit('newTicketMessage', message);
+        .emit("newTicketMessage", message);
 
-      return { event: 'ticketMessageSent', data: message };
+      return { event: "ticketMessageSent", data: message };
     } catch (error: any) {
-      return { event: 'error', data: { message: error.message } };
+      return { event: "error", data: { message: error.message } };
     }
   }
 
   // ─── Claim ticket (real-time) ───
-  @SubscribeMessage('claimTicket')
+  @SubscribeMessage("claimTicket")
   async handleClaimTicket(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { ticketId: string },
@@ -151,17 +151,17 @@ export class TicketsGateway
       );
 
       // Notify all staff + the ticket room
-      this.server.to('support:staff').emit('ticketClaimed', ticket);
-      this.server.to(`ticket:${data.ticketId}`).emit('ticketUpdated', ticket);
+      this.server.to("support:staff").emit("ticketClaimed", ticket);
+      this.server.to(`ticket:${data.ticketId}`).emit("ticketUpdated", ticket);
 
-      return { event: 'ticketClaimSuccess', data: ticket };
+      return { event: "ticketClaimSuccess", data: ticket };
     } catch (error: any) {
-      return { event: 'error', data: { message: error.message } };
+      return { event: "error", data: { message: error.message } };
     }
   }
 
   // ─── Update status (real-time) ───
-  @SubscribeMessage('updateTicketStatus')
+  @SubscribeMessage("updateTicketStatus")
   async handleUpdateStatus(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody()
@@ -175,14 +175,12 @@ export class TicketsGateway
         data.note,
       );
 
-      this.server.to('support:staff').emit('ticketStatusChanged', ticket);
-      this.server
-        .to(`ticket:${data.ticketId}`)
-        .emit('ticketUpdated', ticket);
+      this.server.to("support:staff").emit("ticketStatusChanged", ticket);
+      this.server.to(`ticket:${data.ticketId}`).emit("ticketUpdated", ticket);
 
-      return { event: 'statusUpdateSuccess', data: ticket };
+      return { event: "statusUpdateSuccess", data: ticket };
     } catch (error: any) {
-      return { event: 'error', data: { message: error.message } };
+      return { event: "error", data: { message: error.message } };
     }
   }
 
@@ -198,6 +196,6 @@ export class TicketsGateway
 
   /** Broadcast new ticket to all support staff in real-time */
   broadcastNewTicket(ticket: any) {
-    this.server.to('support:staff').emit('newTicket', ticket);
+    this.server.to("support:staff").emit("newTicket", ticket);
   }
 }

@@ -1,5 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 
 /**
  * AI-powered support chatbot using Gemini Flash.
@@ -18,16 +18,19 @@ export interface AiChatResponse {
 export class AiChatbotService {
   private readonly logger = new Logger(AiChatbotService.name);
   private readonly GEMINI_API_URL =
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
   private readonly apiKey: string;
 
   constructor(private configService: ConfigService) {
-    this.apiKey = this.configService.get<string>('GEMINI_API_KEY') || '';
+    this.apiKey = this.configService.get<string>("GEMINI_API_KEY") || "";
   }
 
   async chat(
     message: string,
-    conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [],
+    conversationHistory: Array<{
+      role: "user" | "assistant";
+      content: string;
+    }> = [],
   ): Promise<AiChatResponse> {
     if (!this.apiKey) {
       return this.fallbackResponse(message);
@@ -35,20 +38,27 @@ export class AiChatbotService {
 
     try {
       const systemPrompt = this.buildSystemPrompt();
-      const contents = this.buildContents(systemPrompt, conversationHistory, message);
+      const contents = this.buildContents(
+        systemPrompt,
+        conversationHistory,
+        message,
+      );
 
-      const response = await fetch(`${this.GEMINI_API_URL}?key=${this.apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents,
-          generationConfig: {
-            temperature: 0.3,
-            maxOutputTokens: 500,
-            topP: 0.8,
-          },
-        }),
-      });
+      const response = await fetch(
+        `${this.GEMINI_API_URL}?key=${this.apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents,
+            generationConfig: {
+              temperature: 0.3,
+              maxOutputTokens: 500,
+              topP: 0.8,
+            },
+          }),
+        },
+      );
 
       if (!response.ok) {
         this.logger.warn(`Gemini API error: ${response.status}`);
@@ -56,12 +66,11 @@ export class AiChatbotService {
       }
 
       const data = await response.json();
-      const text =
-        data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
       return this.parseAiResponse(text);
     } catch (error) {
-      this.logger.error('AI chatbot error:', error);
+      this.logger.error("AI chatbot error:", error);
       return this.fallbackResponse(message);
     }
   }
@@ -96,16 +105,16 @@ Always respond with valid JSON only. No markdown, no extra text.`;
 
   private buildContents(
     systemPrompt: string,
-    history: Array<{ role: 'user' | 'assistant'; content: string }>,
+    history: Array<{ role: "user" | "assistant"; content: string }>,
     currentMessage: string,
   ) {
     const parts: any[] = [
       {
-        role: 'user',
+        role: "user",
         parts: [{ text: systemPrompt }],
       },
       {
-        role: 'model',
+        role: "model",
         parts: [
           {
             text: '{"reply": "Hello! I\'m the OriVraa support assistant. How can I help you today?", "shouldEscalate": false, "suggestedTicketType": null, "confidence": 1.0}',
@@ -117,14 +126,14 @@ Always respond with valid JSON only. No markdown, no extra text.`;
     // Add conversation history
     for (const msg of history.slice(-6)) {
       parts.push({
-        role: msg.role === 'user' ? 'user' : 'model',
+        role: msg.role === "user" ? "user" : "model",
         parts: [{ text: msg.content }],
       });
     }
 
     // Current message
     parts.push({
-      role: 'user',
+      role: "user",
       parts: [{ text: currentMessage }],
     });
 
@@ -138,7 +147,8 @@ Always respond with valid JSON only. No markdown, no extra text.`;
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         return {
-          reply: parsed.reply || 'I apologize, I could not process your request.',
+          reply:
+            parsed.reply || "I apologize, I could not process your request.",
           shouldEscalate: !!parsed.shouldEscalate,
           suggestedTicketType: parsed.suggestedTicketType || undefined,
           confidence: parsed.confidence || 0.5,
@@ -149,7 +159,9 @@ Always respond with valid JSON only. No markdown, no extra text.`;
     }
 
     return {
-      reply: text || 'I apologize, I could not process your request. Please try again.',
+      reply:
+        text ||
+        "I apologize, I could not process your request. Please try again.",
       shouldEscalate: false,
       confidence: 0.3,
     };
@@ -158,50 +170,70 @@ Always respond with valid JSON only. No markdown, no extra text.`;
   private fallbackResponse(message: string): AiChatResponse {
     const lower = message.toLowerCase();
 
-    if (lower.includes('order') || lower.includes('delivery') || lower.includes('track')) {
+    if (
+      lower.includes("order") ||
+      lower.includes("delivery") ||
+      lower.includes("track")
+    ) {
       return {
         reply:
-          'For order-related queries, please check your order status in Dashboard → My Orders. If you need further help, please create a support ticket and our team will assist you.',
+          "For order-related queries, please check your order status in Dashboard → My Orders. If you need further help, please create a support ticket and our team will assist you.",
         shouldEscalate: true,
-        suggestedTicketType: 'ORDER_ISSUE',
+        suggestedTicketType: "ORDER_ISSUE",
         confidence: 0.6,
       };
     }
 
-    if (lower.includes('refund') || lower.includes('return') || lower.includes('money back')) {
+    if (
+      lower.includes("refund") ||
+      lower.includes("return") ||
+      lower.includes("money back")
+    ) {
       return {
         reply:
           'For refund requests, go to your order details and click "Request Refund". If the option is not available or you need help, create a support ticket.',
         shouldEscalate: true,
-        suggestedTicketType: 'REFUND_ISSUE',
+        suggestedTicketType: "REFUND_ISSUE",
         confidence: 0.6,
       };
     }
 
-    if (lower.includes('suspend') || lower.includes('block') || lower.includes('ban')) {
+    if (
+      lower.includes("suspend") ||
+      lower.includes("block") ||
+      lower.includes("ban")
+    ) {
       return {
         reply:
-          'If your account has been suspended, it may be due to a policy violation. Please create a support ticket to appeal the suspension.',
+          "If your account has been suspended, it may be due to a policy violation. Please create a support ticket to appeal the suspension.",
         shouldEscalate: true,
-        suggestedTicketType: 'ACCOUNT_SUSPENSION',
+        suggestedTicketType: "ACCOUNT_SUSPENSION",
         confidence: 0.7,
       };
     }
 
-    if (lower.includes('login') || lower.includes('password') || lower.includes('sign in')) {
+    if (
+      lower.includes("login") ||
+      lower.includes("password") ||
+      lower.includes("sign in")
+    ) {
       return {
         reply:
-          'For login issues, try resetting your password on the login page. If you still cannot access your account, please create a support ticket.',
+          "For login issues, try resetting your password on the login page. If you still cannot access your account, please create a support ticket.",
         shouldEscalate: true,
-        suggestedTicketType: 'LOGIN_ISSUE',
+        suggestedTicketType: "LOGIN_ISSUE",
         confidence: 0.6,
       };
     }
 
-    if (lower.includes('kyc') || lower.includes('verification') || lower.includes('verify')) {
+    if (
+      lower.includes("kyc") ||
+      lower.includes("verification") ||
+      lower.includes("verify")
+    ) {
       return {
         reply:
-          'KYC verification is required for shopkeepers. Upload your ID documents in Dashboard → Profile → KYC. Verification typically takes 24-48 hours.',
+          "KYC verification is required for shopkeepers. Upload your ID documents in Dashboard → Profile → KYC. Verification typically takes 24-48 hours.",
         shouldEscalate: false,
         confidence: 0.7,
       };
@@ -209,7 +241,7 @@ Always respond with valid JSON only. No markdown, no extra text.`;
 
     return {
       reply:
-        'I can help with general questions about OriVraa — orders, payments, account management, and more. For specific issues, please create a support ticket and our team will assist you personally.',
+        "I can help with general questions about OriVraa — orders, payments, account management, and more. For specific issues, please create a support ticket and our team will assist you personally.",
       shouldEscalate: false,
       confidence: 0.4,
     };

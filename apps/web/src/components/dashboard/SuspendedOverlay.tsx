@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
-import { Lock, LifeBuoy, LogOut, ShieldAlert } from "lucide-react";
+import { LifeBuoy, Lock, LogOut, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 
 /**
@@ -76,20 +76,23 @@ export function SuspendedOverlay() {
       </svg>
 
       {/* Chain link decorations at corners */}
-      {["top-3 left-3", "top-3 right-3", "bottom-3 left-3", "bottom-3 right-3"].map(
-        (pos, i) => (
-          <div
-            key={i}
-            className={cn(
-              "absolute w-10 h-10 rounded-full border-4 border-zinc-400/60 flex items-center justify-center animate-pulse",
-              pos,
-            )}
-            style={{ animationDelay: `${i * 0.2}s` }}
-          >
-            <div className="w-4 h-4 rounded-full border-2 border-zinc-500/50" />
-          </div>
-        ),
-      )}
+      {[
+        "top-3 left-3",
+        "top-3 right-3",
+        "bottom-3 left-3",
+        "bottom-3 right-3",
+      ].map((pos, i) => (
+        <div
+          key={i}
+          className={cn(
+            "absolute w-10 h-10 rounded-full border-4 border-zinc-400/60 flex items-center justify-center animate-pulse",
+            pos,
+          )}
+          style={{ animationDelay: `${i * 0.2}s` }}
+        >
+          <div className="w-4 h-4 rounded-full border-2 border-zinc-500/50" />
+        </div>
+      ))}
 
       {/* Center lock card */}
       <div className="relative z-10 max-w-md w-full mx-4">
@@ -122,8 +125,8 @@ export function SuspendedOverlay() {
               dashboard features are locked.
             </p>
             <p className="text-sm text-gray-600">
-              आपका अकाउंट नीति उल्लंघन के कारण सस्पेंड किया गया है। सभी
-              डैशबोर्ड फीचर्स लॉक हैं।
+              आपका अकाउंट नीति उल्लंघन के कारण सस्पेंड किया गया है। सभी डैशबोर्ड
+              फीचर्स लॉक हैं।
             </p>
             <p className="text-xs text-gray-500 mt-2">
               To restore access, please contact our support team or create a
