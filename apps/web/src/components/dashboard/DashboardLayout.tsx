@@ -1,8 +1,10 @@
 "use client";
 
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { ChatPopupWidget } from "@/components/chat/ChatPopupWidget";
 import { ShopSwitcher } from "@/components/dashboard/ShopSwitcher";
 import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
+import { ChatPopupProvider } from "@/contexts/ChatPopupContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -560,6 +562,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
+    <ChatPopupProvider>
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gold-50/20">
       {/* Mobile Header */}
       <header className="lg:hidden sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100 safe-area-top">
@@ -754,6 +757,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <main className="lg:hidden px-4 py-4 pb-20 safe-area-bottom">
         {children}
       </main>
+
+      {/* Floating Chat Popup */}
+      <ChatPopupWidget />
     </div>
+    </ChatPopupProvider>
   );
 }
