@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 
 /* ─────────────────────── TYPES ─────────────────────── */
@@ -93,7 +93,7 @@ export class SellerEngagementService {
         this.prisma.rfqShopTarget.count({ where: { shopId } }),
       ]);
 
-    if (!shop) throw new Error("Shop not found");
+    if (!shop) throw new NotFoundException("Shop not found");
 
     // ── 1. PROFILE COMPLETENESS (max 25) ──
     const profileFields: { key: string; label: string; check: boolean }[] = [
@@ -260,7 +260,7 @@ export class SellerEngagementService {
       this.prisma.shopFinishPricing.count({ where: { shopId }, take: 1 }),
     ]);
 
-    if (!shop) throw new Error("Shop not found");
+    if (!shop) throw new NotFoundException("Shop not found");
 
     const steps: OnboardingStep[] = [
       // Profile setup
@@ -415,7 +415,7 @@ export class SellerEngagementService {
         this.prisma.shopRating.count({ where: { shopId } }),
       ]);
 
-    if (!shop) throw new Error("Shop not found");
+    if (!shop) throw new NotFoundException("Shop not found");
 
     const perf = performance || {
       totalOrders: 0,
@@ -854,16 +854,8 @@ export class SellerEngagementService {
   }
 
   async getSellerProfile(shopId: string) {
-    const [
-      shop,
-      performance,
-      badges,
-      recentOrders,
-      rfqFunnel,
-      healthScore,
-      onboarding,
-      milestones,
-    ] = await Promise.all([
+    // Use Promise.allSettled so one sub-call failure doesn't kill the entire profile
+    const results = await Promise.allSettled([
       this.prisma.shop.findUnique({
         where: { id: shopId },
         include: {
@@ -907,11 +899,38 @@ export class SellerEngagementService {
           customer: { select: { firstName: true, lastName: true } },
         },
       }),
-      this.getRfqFunnel(shopId),
-      this.calculateHealthScore(shopId),
-      this.getOnboardingProgress(shopId),
-      this.getMilestones(shopId),
+      this.getRfqFunnel(shopId).catch(() => null),
+      this.calculateHealthScore(shopId).catch(() => null),
+      this.getOnboardingProgress(shopId).catch(() => null),
+      this.getMilestones(shopId).catch(() => null),
     ]);
+
+    const shop = results[0].status === "fulfilled" ? results[0].value : null;
+    if (!shop) throw new NotFoundException("Shop not found");
+
+    const performance =
+      results[1].status === "fulfilled" ? results[1].value : null;
+    const badges =
+      results[2].status === "fulfilled" ? results[2].value : [];
+    const recentOrders =
+      results[3].status === "fulfilled" ? results[3].value : [];
+    const rfqFunnel =
+      results[4].status === "fulfilled" ? results[4].value : null;
+    const healthScore =
+      results[5].status === "fulfilled" ? results[5].value : null;
+    const onboarding =
+      results[6].status === "fulfilled" ? results[6].value : null;
+    const milestones =
+      results[7].status === "fulfilled" ? results[7].value : [];
+
+    // Log any failures for debugging
+    results.forEach((r, i) => {
+      if (r.status === "rejected") {
+        this.logger.warn(
+          `getSellerProfile sub-call ${i} failed for shop ${shopId}: ${r.reason}`,
+        );
+      }
+    });
 
     return {
       shop,
@@ -940,7 +959,7 @@ export class SellerEngagementService {
       where: { id: shopId },
       select: { userId: true },
     });
-    if (!shop) throw new Error("Shop not found");
+    if (!shop) throw new NotFoundException("Shop not found");
 
     return this.prisma.customerNote.create({
       data: {
@@ -959,7 +978,7 @@ export class SellerEngagementService {
       where: { id: shopId },
       select: { userId: true },
     });
-    if (!shop) throw new Error("Shop not found");
+    if (!shop) throw new NotFoundException("Shop not found");
 
     return this.prisma.customerNote.findMany({
       where: { customerId: shop.userId, shopId: null },

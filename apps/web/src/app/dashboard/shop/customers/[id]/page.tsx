@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
-import { customerCrmApi } from "@/lib/api";
+import { chatApi, customerCrmApi } from "@/lib/api";
 import {
   ArrowLeft,
   Calendar,
@@ -69,6 +69,39 @@ export default function CustomerProfilePage() {
   const [newNote, setNewNote] = useState("");
   const [noteCategory, setNoteCategory] = useState("GENERAL");
   const [addingNote, setAddingNote] = useState(false);
+  const [startingChat, setStartingChat] = useState(false);
+
+  const handleMessageCustomer = async () => {
+    if (profile?.type !== "REGISTERED") {
+      toast({
+        title: "Cannot message walk-in customers",
+        description:
+          "Only registered customers can be messaged through the platform.",
+      });
+      return;
+    }
+    setStartingChat(true);
+    try {
+      const res = await chatApi.listConversations();
+      const conversations = res.data || [];
+      const existing = conversations.find(
+        (c: any) => c.buyer?.id === customerId || c.buyerId === customerId,
+      );
+      if (existing) {
+        router.push(`/dashboard/shop/messages?chat=${existing.id}`);
+      } else {
+        toast({
+          title: "No conversation yet",
+          description:
+            "This customer hasn't contacted you yet. Customers can message you from your shop page or their orders.",
+        });
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Failed to find conversation" });
+    } finally {
+      setStartingChat(false);
+    }
+  };
 
   useEffect(() => {
     loadAll();
@@ -184,6 +217,21 @@ export default function CustomerProfilePage() {
                 </div>
               </div>
             </div>
+            {/* Message Customer button */}
+            {profile.type === "REGISTERED" && (
+              <Button
+                className="bg-amber-500 hover:bg-amber-600 text-white"
+                onClick={handleMessageCustomer}
+                disabled={startingChat}
+              >
+                {startingChat ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                )}
+                Message Customer
+              </Button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -221,6 +269,28 @@ export default function CustomerProfilePage() {
                     Customer since{" "}
                     {new Date(profile.memberSince).toLocaleDateString()}
                   </div>
+                  {profile.type === "REGISTERED" && (
+                    <>
+                      <Separator />
+                      <p className="text-xs text-muted-foreground">
+                        Use platform messaging for all customer communication
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={handleMessageCustomer}
+                        disabled={startingChat}
+                      >
+                        {startingChat ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <MessageSquare className="h-4 w-4 mr-1" />
+                        )}
+                        Message via Platform
+                      </Button>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
@@ -369,22 +439,18 @@ export default function CustomerProfilePage() {
                           <CardContent className="flex items-center justify-between p-4">
                             <div>
                               <p className="font-medium">{order.orderNumber}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {order.rfqRequest?.jewelleryType || "Order"} —{" "}
-                                {order.rfqRequest?.buildMethod || ""}
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(order.createdAt).toLocaleDateString()}
                               </p>
                             </div>
-                            <div className="text-right">
-                              <p className="font-bold text-amber-600">
-                                {order.currency}{" "}
-                                {order.totalAmount?.toLocaleString()}
-                              </p>
+                            <div className="text-right flex items-center gap-3">
                               <Badge variant="outline" className="text-xs">
                                 {order.status}
                               </Badge>
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {new Date(order.createdAt).toLocaleDateString()}
+                              <p className="font-bold text-amber-600">
+                                {order.displayCurrency || currencySymbol}{" "}
+                                {(order.totalNpr || 0).toLocaleString()}
+                              </p>
                             </div>
                           </CardContent>
                         </Card>
