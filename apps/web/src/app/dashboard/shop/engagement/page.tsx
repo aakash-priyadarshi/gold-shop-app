@@ -648,7 +648,7 @@ export default function ShopEngagementPage() {
 
       // Extract fulfilled values, null for rejected
       const getValue = (r: PromiseSettledResult<any>) =>
-        r.status === "fulfilled" ? r.data : null;
+        r.status === "fulfilled" ? r.value : null;
 
       const hs = results[0].status === "fulfilled" ? results[0].value : null;
       const ob = results[1].status === "fulfilled" ? results[1].value : null;
