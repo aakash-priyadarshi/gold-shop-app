@@ -228,6 +228,7 @@ export function AdminSellerCRM() {
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerLoading, setDrawerLoading] = useState(false);
+  const [activeDrawerTab, setActiveDrawerTab] = useState("overview");
   const [notes, setNotes] = useState<SellerNote[]>([]);
   const [newNote, setNewNote] = useState("");
   const [noteCategory, setNoteCategory] = useState("GENERAL");
@@ -272,6 +273,7 @@ export function AdminSellerCRM() {
   const openProfile = async (shopId: string) => {
     setDrawerOpen(true);
     setDrawerLoading(true);
+    setActiveDrawerTab("overview");
     try {
       const results = await Promise.allSettled([
         adminApi.getSellerProfile(shopId),
@@ -689,7 +691,7 @@ export function AdminSellerCRM() {
                 </DialogTitle>
               </DialogHeader>
 
-              <Tabs defaultValue="overview" className="mt-4">
+              <Tabs value={activeDrawerTab} onValueChange={setActiveDrawerTab} className="mt-4">
                 <TabsList className="grid grid-cols-6 w-full">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="insights">Insights</TabsTrigger>
@@ -1295,11 +1297,7 @@ export function AdminSellerCRM() {
                           onClick={() => {
                             setNewNote("Follow-up scheduled: ");
                             setNoteCategory("ENGAGEMENT");
-                            // Switch to notes tab
-                            const notesTab = document.querySelector(
-                              '[role="tab"][value="notes"]',
-                            ) as HTMLButtonElement;
-                            if (notesTab) notesTab.click();
+                            setActiveDrawerTab("notes");
                           }}
                         >
                           <MessageSquare className="h-3.5 w-3.5" />
@@ -1312,10 +1310,7 @@ export function AdminSellerCRM() {
                           onClick={() => {
                             setNewNote("Performance review: ");
                             setNoteCategory("PERFORMANCE");
-                            const notesTab = document.querySelector(
-                              '[role="tab"][value="notes"]',
-                            ) as HTMLButtonElement;
-                            if (notesTab) notesTab.click();
+                            setActiveDrawerTab("notes");
                           }}
                         >
                           <BarChart3 className="h-3.5 w-3.5" />

@@ -193,6 +193,18 @@ export function Header() {
 
   // Unread messages count
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [messagesPopoverOpen, setMessagesPopoverOpen] = useState(false);
+  const [recentMessages, setRecentMessages] = useState<
+    Array<{
+      id: string;
+      lastMessage?: string;
+      lastMessageAt?: string;
+      unreadCount: number;
+      shop?: { shopName: string };
+      customer?: { firstName: string; lastName: string };
+      participants?: Array<{ user?: { firstName: string; lastName: string }; role: string }>;
+    }>
+  >([]);
 
   // Use next-themes for theme management (more reliable)
   const { theme, setTheme, resolvedTheme } = useTheme();
@@ -248,10 +260,11 @@ export function Header() {
     fetchRecentOrders();
   }, [fetchRecentOrders]);
 
-  // Fetch unread messages count
+  // Fetch unread messages count and recent messages
   const fetchUnreadMessages = useCallback(async () => {
     if (!isAuthenticated) {
       setUnreadMessages(0);
+      setRecentMessages([]);
       return;
     }
     try {
@@ -262,6 +275,15 @@ export function Header() {
         0,
       );
       setUnreadMessages(unread);
+      // Store top 5 recent conversations sorted by lastMessageAt
+      const sorted = [...conversations]
+        .sort((a: any, b: any) => {
+          const dateA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+          const dateB = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+          return dateB - dateA;
+        })
+        .slice(0, 5);
+      setRecentMessages(sorted);
     } catch {
       // silently ignore
     }
@@ -740,35 +762,201 @@ export function Header() {
                     </div>
                   </PopoverContent>
                 </Popover>
+              ) : user.role === "SHOPKEEPER" ? (
+                <Popover
+                  open={dashboardPopoverOpen}
+                  onOpenChange={setDashboardPopoverOpen}
+                >
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 rounded-lg"
+                        >
+                          <Squares2X2Icon className="h-5 w-5" />
+                        </Button>
+                      </PopoverTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Shop Dashboard</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <PopoverContent className="w-56 p-2" align="end">
+                    <div className="space-y-1">
+                      <Link href="/dashboard/shop" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <Squares2X2Icon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">Dashboard</span>
+                        </div>
+                      </Link>
+                      <Link href="/dashboard/shop/orders" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <ShoppingCartIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">Orders</span>
+                        </div>
+                      </Link>
+                      <Link href="/dashboard/shop/products" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <CubeIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">Products</span>
+                        </div>
+                      </Link>
+                      <Link href="/dashboard/shop/rfqs" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <ClipboardDocumentListIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">RFQ Requests</span>
+                        </div>
+                      </Link>
+                      <Link href="/dashboard/shop/customers" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <UserIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">Customers</span>
+                        </div>
+                      </Link>
+                      <Link href="/dashboard/shop/analytics" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <SparklesIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">Analytics</span>
+                        </div>
+                      </Link>
+                      <div className="border-t my-1" />
+                      <Link href="/dashboard/shop/settings" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <Cog6ToothIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">Settings</span>
+                        </div>
+                      </Link>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              ) : user.role === "ADMIN" ? (
+                <Popover
+                  open={dashboardPopoverOpen}
+                  onOpenChange={setDashboardPopoverOpen}
+                >
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 rounded-lg"
+                        >
+                          <ShieldCheckIcon className="h-5 w-5" />
+                        </Button>
+                      </PopoverTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Admin Dashboard</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <PopoverContent className="w-56 p-2" align="end">
+                    <div className="space-y-1">
+                      <Link href="/dashboard/admin" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <ShieldCheckIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">Admin Panel</span>
+                        </div>
+                      </Link>
+                      <Link href="/dashboard/admin/orders" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <ClipboardDocumentListIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">All Orders</span>
+                        </div>
+                      </Link>
+                      <Link href="/dashboard/admin/shops" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <BuildingStorefrontIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">Shops & CRM</span>
+                        </div>
+                      </Link>
+                      <Link href="/dashboard/admin/users" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <UserIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">Users</span>
+                        </div>
+                      </Link>
+                      <Link href="/dashboard/admin/verifications" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <DocumentTextIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">KYC & Verification</span>
+                        </div>
+                      </Link>
+                      <div className="border-t my-1" />
+                      <Link href="/dashboard/admin/settings" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <Cog6ToothIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">Settings</span>
+                        </div>
+                      </Link>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              ) : user.role === "SALES" ? (
+                <Popover
+                  open={dashboardPopoverOpen}
+                  onOpenChange={setDashboardPopoverOpen}
+                >
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 rounded-lg"
+                        >
+                          <Squares2X2Icon className="h-5 w-5" />
+                        </Button>
+                      </PopoverTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Sales Dashboard</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <PopoverContent className="w-56 p-2" align="end">
+                    <div className="space-y-1">
+                      <Link href="/dashboard/sales" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <Squares2X2Icon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">Dashboard</span>
+                        </div>
+                      </Link>
+                      <Link href="/dashboard/sales/shops" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <BuildingStorefrontIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">Shops & CRM</span>
+                        </div>
+                      </Link>
+                      <Link href="/dashboard/sales/orders" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <ClipboardDocumentListIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">Orders</span>
+                        </div>
+                      </Link>
+                      <div className="border-t my-1" />
+                      <Link href="/dashboard/sales/profile" onClick={() => setDashboardPopoverOpen(false)}>
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                          <UserIcon className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">Profile</span>
+                        </div>
+                      </Link>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               ) : (
-                // For non-customer roles, use the first quick action as a simple link
+                // Fallback for other roles — simple dashboard link
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Link
-                      href={
-                        getRoleQuickActions(user.role)[0]?.href ||
-                        getDashboardRoute(user.role)
-                      }
-                    >
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 rounded-lg"
-                      >
-                        {(() => {
-                          const Icon =
-                            getRoleQuickActions(user.role)[0]?.icon ||
-                            Squares2X2Icon;
-                          return <Icon className="h-5 w-5" />;
-                        })()}
+                    <Link href={getDashboardRoute(user.role)}>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg">
+                        <Squares2X2Icon className="h-5 w-5" />
                       </Button>
                     </Link>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>
-                      {getRoleQuickActions(user.role)[0]?.tooltip ||
-                        "Dashboard"}
-                    </p>
+                    <p>Dashboard</p>
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -888,7 +1076,7 @@ export function Header() {
                   </PopoverContent>
                 </Popover>
               ) : (
-                // For non-customer roles, use the second quick action as a simple link
+                // For non-customer roles, show a orders link
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Link
@@ -919,30 +1107,109 @@ export function Header() {
                 </Tooltip>
               )}
 
-              {/* Messages Icon */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link href={getMessagesPath()}>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="relative h-9 w-9 rounded-lg"
-                    >
-                      <ChatBubbleLeftRightIcon className="h-5 w-5" />
-                      {mounted && unreadMessages > 0 && (
-                        <span className="absolute -top-1 -right-1 h-5 w-5 bg-amber-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
-                          {unreadMessages > 9 ? "9+" : unreadMessages}
-                        </span>
-                      )}
-                    </Button>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>
-                    Messages{unreadMessages > 0 ? ` (${unreadMessages})` : ""}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
+              {/* Messages Popover */}
+              <Popover open={messagesPopoverOpen} onOpenChange={setMessagesPopoverOpen}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="relative h-9 w-9 rounded-lg"
+                      >
+                        <ChatBubbleLeftRightIcon className="h-5 w-5" />
+                        {mounted && unreadMessages > 0 && (
+                          <span className="absolute -top-1 -right-1 h-5 w-5 bg-amber-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
+                            {unreadMessages > 9 ? "9+" : unreadMessages}
+                          </span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      Messages{unreadMessages > 0 ? ` (${unreadMessages})` : ""}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+                <PopoverContent className="w-80 p-0" align="end">
+                  <div className="flex items-center justify-between p-3 border-b">
+                    <h3 className="font-semibold">Messages</h3>
+                    {unreadMessages > 0 && (
+                      <span className="text-xs bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">
+                        {unreadMessages} unread
+                      </span>
+                    )}
+                  </div>
+                  <ScrollArea className="h-[280px]">
+                    {recentMessages.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center p-6 text-center">
+                        <ChatBubbleLeftRightIcon className="h-12 w-12 text-gray-300 mb-3" />
+                        <p className="text-muted-foreground">No messages yet</p>
+                        <Link href="/shop" onClick={() => setMessagesPopoverOpen(false)}>
+                          <Button variant="link" className="mt-2 text-amber-600">
+                            Browse Shops
+                          </Button>
+                        </Link>
+                      </div>
+                    ) : (
+                      <div className="divide-y">
+                        {recentMessages.map((conv) => {
+                          // Determine display name based on conversation participants
+                          const otherParticipant = conv.participants?.find(
+                            (p: any) => p.user?.firstName && p.role !== user?.role
+                          );
+                          const displayName = conv.shop?.shopName
+                            || (otherParticipant?.user
+                              ? `${otherParticipant.user.firstName} ${otherParticipant.user.lastName}`
+                              : "Conversation");
+                          return (
+                            <Link
+                              key={conv.id}
+                              href={`${getMessagesPath()}?conversation=${conv.id}`}
+                              onClick={() => setMessagesPopoverOpen(false)}
+                            >
+                              <div className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors">
+                                <div className="h-9 w-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                                  <ChatBubbleLeftRightIcon className="h-4 w-4 text-amber-600" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between">
+                                    <p className={`text-sm truncate ${conv.unreadCount > 0 ? 'font-semibold' : 'font-medium'}`}>
+                                      {displayName}
+                                    </p>
+                                    {conv.unreadCount > 0 && (
+                                      <span className="ml-2 h-5 w-5 bg-amber-500 text-white text-xs rounded-full flex items-center justify-center font-semibold flex-shrink-0">
+                                        {conv.unreadCount > 9 ? "9+" : conv.unreadCount}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                                    {conv.lastMessage || "No messages yet"}
+                                  </p>
+                                  {conv.lastMessageAt && (
+                                    <p className="text-xs text-gray-400 mt-0.5">
+                                      {new Date(conv.lastMessageAt).toLocaleDateString()}
+                                    </p>
+                                  )}
+                                </div>
+                                <ChevronRightIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </ScrollArea>
+                  <div className="border-t p-3">
+                    <Link href={getMessagesPath()} onClick={() => setMessagesPopoverOpen(false)}>
+                      <Button variant="outline" className="w-full">
+                        View All Messages
+                      </Button>
+                    </Link>
+                  </div>
+                </PopoverContent>
+              </Popover>
 
               {/* Cart Popover */}
               <Popover open={cartPopoverOpen} onOpenChange={setCartPopoverOpen}>

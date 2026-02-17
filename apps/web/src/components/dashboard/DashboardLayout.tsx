@@ -43,6 +43,7 @@ import {
   Search,
   Settings,
   Shield,
+  ShieldAlert,
   ShoppingCart,
   Store,
   TrendingUp,
@@ -69,6 +70,18 @@ const navItems: NavItem[] = [
     label: "Dashboard",
     href: "/dashboard/admin",
     icon: LayoutDashboard,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Messages",
+    href: "/dashboard/admin/messages",
+    icon: MessageSquare,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Chat Moderation",
+    href: "/dashboard/admin/chat-monitoring",
+    icon: ShieldAlert,
     roles: ["ADMIN"],
   },
   {
@@ -125,18 +138,18 @@ const navItems: NavItem[] = [
     icon: Brain,
     roles: ["ADMIN"],
   },
-  {
-    label: "Messages",
-    href: "/dashboard/admin/messages",
-    icon: MessageSquare,
-    roles: ["ADMIN"],
-  },
 
   // Shopkeeper routes
   {
     label: "Dashboard",
     href: "/dashboard/shop",
     icon: LayoutDashboard,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Messages",
+    href: "/dashboard/shop/messages",
+    icon: MessageSquare,
     roles: ["SHOPKEEPER"],
   },
   {
@@ -217,18 +230,18 @@ const navItems: NavItem[] = [
     icon: Settings,
     roles: ["SHOPKEEPER"],
   },
-  {
-    label: "Messages",
-    href: "/dashboard/shop/messages",
-    icon: MessageSquare,
-    roles: ["SHOPKEEPER"],
-  },
 
   // Customer routes
   {
     label: "Dashboard",
     href: "/dashboard/customer",
     icon: LayoutDashboard,
+    roles: ["CUSTOMER"],
+  },
+  {
+    label: "Messages",
+    href: "/dashboard/customer/messages",
+    icon: MessageSquare,
     roles: ["CUSTOMER"],
   },
   {
@@ -247,12 +260,6 @@ const navItems: NavItem[] = [
     label: "Wishlist",
     href: "/dashboard/customer/wishlist",
     icon: Heart,
-    roles: ["CUSTOMER"],
-  },
-  {
-    label: "Messages",
-    href: "/dashboard/customer/messages",
-    icon: MessageSquare,
     roles: ["CUSTOMER"],
   },
   {
@@ -276,6 +283,12 @@ const navItems: NavItem[] = [
     roles: ["SALES"],
   },
   {
+    label: "Messages",
+    href: "/dashboard/sales/messages",
+    icon: MessageSquare,
+    roles: ["SALES"],
+  },
+  {
     label: "Shops & CRM",
     href: "/dashboard/sales/shops",
     icon: Store,
@@ -285,12 +298,6 @@ const navItems: NavItem[] = [
     label: "Orders",
     href: "/dashboard/sales/orders",
     icon: ShoppingCart,
-    roles: ["SALES"],
-  },
-  {
-    label: "Messages",
-    href: "/dashboard/sales/messages",
-    icon: MessageSquare,
     roles: ["SALES"],
   },
   {
