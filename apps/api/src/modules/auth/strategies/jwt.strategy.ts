@@ -28,7 +28,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException("User not found");
     }
 
-    if (user.status === "SUSPENDED" || user.status === "DEACTIVATED") {
+    // Only block deactivated users — suspended users must stay logged in
+    // so they can see the suspension overlay and access help/support
+    if (user.status === "DEACTIVATED") {
       throw new UnauthorizedException("Account is not active");
     }
 

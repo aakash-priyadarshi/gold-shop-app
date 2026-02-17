@@ -526,16 +526,13 @@ export class AuthService {
         });
       }
 
-      // Check if user is active
-      if (user.status === UserStatus.SUSPENDED) {
-        throw new UnauthorizedException(
-          "Account suspended. Please contact support.",
-        );
-      }
-
+      // Block only deactivated — suspended users are allowed to log in
+      // (they see the locked dashboard overlay and can contact support)
       if (user.status === UserStatus.DEACTIVATED) {
         throw new UnauthorizedException("Account deactivated");
       }
+
+      const isSuspended = user.status === UserStatus.SUSPENDED;
 
       // Update last login
       await this.prisma.user.update({
@@ -547,7 +544,7 @@ export class AuthService {
       await this.auditService.log({
         userId: user.id,
         actorType: "USER",
-        action: "LOGIN",
+        action: isSuspended ? "LOGIN_SUSPENDED" : "LOGIN",
         resourceType: "USER",
         resourceId: user.id,
         metadata: { method: "google" },
@@ -567,7 +564,7 @@ export class AuthService {
         return { ...tokens, needsShopSetup: true };
       }
 
-      return tokens;
+      return { ...tokens, isSuspended };
     }
 
     // User doesn't exist
@@ -674,11 +671,9 @@ export class AuthService {
       }
 
       const user = storedToken.user;
-      if (
-        !user ||
-        user.status === UserStatus.SUSPENDED ||
-        user.status === UserStatus.DEACTIVATED
-      ) {
+      // Only block deactivated users from refreshing — suspended users
+      // must stay logged in so they can see the lock overlay and contact support
+      if (!user || user.status === UserStatus.DEACTIVATED) {
         throw new UnauthorizedException("User account is not active");
       }
 

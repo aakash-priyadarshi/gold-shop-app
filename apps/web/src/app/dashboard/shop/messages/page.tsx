@@ -49,7 +49,7 @@ interface Message {
 }
 
 export default function ShopMessagesPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const shopData = user?.shop;
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<
@@ -84,8 +84,14 @@ export default function ShopMessagesPage() {
   const handleMessageBlocked = useCallback((data: ViolationWarning) => {
     setViolationAlert(data);
     setSending(false);
+    if (data.strikeCount >= 3) {
+      refreshUser().then(() => {
+        setTimeout(() => window.location.reload(), 2000);
+      });
+      return;
+    }
     setTimeout(() => setViolationAlert(null), 15000);
-  }, []);
+  }, [refreshUser]);
 
   const handleTyping = useCallback(
     (data: { userId: string; isTyping: boolean }) => {
@@ -192,7 +198,13 @@ export default function ShopMessagesPage() {
             strikeCount: res.data.strikeCount,
             conversationId: selectedConversation,
           });
-          setTimeout(() => setViolationAlert(null), 15000);
+          if (res.data.strikeCount >= 3) {
+            refreshUser().then(() => {
+              setTimeout(() => window.location.reload(), 2000);
+            });
+          } else {
+            setTimeout(() => setViolationAlert(null), 15000);
+          }
         } else {
           await loadMessages(selectedConversation);
         }
