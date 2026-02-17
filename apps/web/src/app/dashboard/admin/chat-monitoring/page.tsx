@@ -66,10 +66,18 @@ interface FlaggedConversation {
   id: string;
   status: string;
   createdAt: string;
-  buyer?: { name: string };
-  shop?: { name: string };
+  buyer?: { id: string; firstName: string; lastName: string };
+  shop?: { id: string; shopName: string };
   order?: { orderNumber: string };
   _count?: { messages: number };
+  messages?: Array<{
+    id: string;
+    content: string;
+    violationType: string;
+    senderRole: string;
+    createdAt: string;
+    sender?: { id: string; firstName: string; lastName: string; role: string };
+  }>;
 }
 
 export default function AdminChatMonitoringPage() {
@@ -264,11 +272,18 @@ export default function AdminChatMonitoringPage() {
                   ) : (
                     <div className="space-y-2">
                       {flagged.map((c) => (
-                        <div key={c.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div key={c.id} className="p-3 border rounded-lg space-y-2">
+                          <div className="flex items-center justify-between">
                           <div>
-                            <span className="font-medium">
-                              {c.buyer?.name || 'Unknown'} ↔ {c.shop?.name || 'Unknown'}
-                            </span>
+                            <div className="font-medium flex items-center gap-1 flex-wrap">
+                              <a href={`/dashboard/admin/users?id=${c.buyer?.id}`} className="text-blue-600 hover:underline">
+                                {c.buyer ? `${c.buyer.firstName} ${c.buyer.lastName}` : 'Unknown Buyer'}
+                              </a>
+                              <span className="text-muted-foreground">↔</span>
+                              <a href={`/dashboard/admin/shops?id=${c.shop?.id}`} className="text-blue-600 hover:underline">
+                                {c.shop?.shopName || 'Unknown Shop'}
+                              </a>
+                            </div>
                             {c.order && (
                               <p className="text-sm text-muted-foreground">
                                 Order: {c.order.orderNumber}
@@ -294,6 +309,21 @@ export default function AdminChatMonitoringPage() {
                               </Button>
                             )}
                           </div>
+                          </div>
+                          {/* Show latest violation messages */}
+                          {c.messages && c.messages.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              {c.messages.slice(0, 2).map((m) => (
+                                <div key={m.id} className="text-xs bg-red-50 dark:bg-red-950/20 p-2 rounded border border-red-200 dark:border-red-900">
+                                  <span className="font-medium text-red-700">
+                                    {m.sender ? `${m.sender.firstName} ${m.sender.lastName} (${m.sender.role})` : m.senderRole}
+                                  </span>
+                                  <span className="text-muted-foreground"> · {m.violationType} · {new Date(m.createdAt).toLocaleString()}</span>
+                                  <p className="font-mono mt-0.5 text-red-800">{m.content.substring(0, 100)}{m.content.length > 100 ? '…' : ''}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

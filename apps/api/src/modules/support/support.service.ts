@@ -83,6 +83,7 @@ export class SupportService {
       include: {
         buyer: { select: { id: true, firstName: true, lastName: true } },
         shop: { select: { id: true, shopName: true } },
+        _count: { select: { messages: true } },
         messages: {
           where: { hasViolation: true },
           orderBy: { createdAt: 'desc' },
@@ -94,6 +95,9 @@ export class SupportService {
             violationType: true,
             senderRole: true,
             createdAt: true,
+            sender: {
+              select: { id: true, firstName: true, lastName: true, role: true },
+            },
           },
         },
       },

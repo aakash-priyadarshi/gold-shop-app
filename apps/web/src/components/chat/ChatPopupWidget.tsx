@@ -3,12 +3,13 @@
 import { useAuth } from "@/hooks/useAuth";
 import { chatApi } from "@/lib/api";
 import { useChatPopup } from "@/contexts/ChatPopupContext";
+import { useChatSocket, type ChatSocketMessage, type ViolationWarning } from "@/hooks/useChatSocket";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import {
+  AlertTriangle,
   ArrowLeft,
   MessageSquare,
   Minus,
@@ -17,6 +18,8 @@ import {
   Shield,
   Lock,
   Loader2,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 import { useEffect, useState, useRef, useCallback } from "react";
 
@@ -72,13 +75,66 @@ export function ChatPopupWidget() {
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [sending, setSending] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [violationAlert, setViolationAlert] = useState<ViolationWarning | null>(null);
+  const [typingUser, setTypingUser] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevConvRef = useRef<string | null>(null);
 
   const isShopkeeper = user?.role === "SHOPKEEPER";
   const shopId = user?.shop?.id;
 
-  /* ── Load conversations ── */
+  /* ── WebSocket: live message handling ── */
+  const handleNewMessage = useCallback(
+    (msg: ChatSocketMessage) => {
+      // If we're in the conversation, append the message
+      if (msg.conversationId === activeConversationId) {
+        setMessages((prev) => {
+          // Avoid duplicates
+          if (prev.some((m) => m.id === msg.id)) return prev;
+          return [...prev, msg as unknown as Message];
+        });
+      }
+      // Refresh conversation list for the sidebar/unread counts
+      loadConversationsQuiet();
+    },
+    [activeConversationId],
+  );
+
+  const handleMessageBlocked = useCallback((data: ViolationWarning) => {
+    setViolationAlert(data);
+    setSending(false);
+    // Auto-dismiss after 15s
+    setTimeout(() => setViolationAlert(null), 15000);
+  }, []);
+
+  const handleTypingEvent = useCallback(
+    (data: { userId: string; isTyping: boolean }) => {
+      if (data.userId !== user?.id) {
+        setTypingUser(data.isTyping ? data.userId : null);
+        if (data.isTyping) {
+          if (typingTimeout.current) clearTimeout(typingTimeout.current);
+          typingTimeout.current = setTimeout(() => setTypingUser(null), 4000);
+        }
+      }
+    },
+    [user?.id],
+  );
+
+  const {
+    connected,
+    joinConversation,
+    leaveConversation,
+    sendMessage: wsSendMessage,
+    sendTyping,
+    markRead: wsMarkRead,
+  } = useChatSocket({
+    onNewMessage: handleNewMessage,
+    onMessageBlocked: handleMessageBlocked,
+    onTyping: handleTypingEvent,
+  });
+
+  /* ── Load conversations (full, with loading state) ── */
   const loadConversations = useCallback(async () => {
     if (!user) return;
     setLoadingConvs(true);
@@ -86,22 +142,37 @@ export function ChatPopupWidget() {
       const res = await chatApi.listConversations(isShopkeeper ? shopId : undefined);
       const convs: Conversation[] = res.data || [];
       setConversations(convs);
-
-      // Count unread
-      const unread = convs.reduce((acc, c) => {
-        const lastMsg = c.messages?.[0];
-        if (lastMsg && !lastMsg.isRead && lastMsg.senderRole !== user.role) {
-          return acc + 1;
-        }
-        return acc;
-      }, 0);
-      setUnreadCount(unread);
+      updateUnreadCount(convs);
     } catch {
       /* silent */
     } finally {
       setLoadingConvs(false);
     }
   }, [user, isShopkeeper, shopId]);
+
+  /* ── Quiet refresh (no loading spinner) ── */
+  const loadConversationsQuiet = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await chatApi.listConversations(isShopkeeper ? shopId : undefined);
+      const convs: Conversation[] = res.data || [];
+      setConversations(convs);
+      updateUnreadCount(convs);
+    } catch {
+      /* silent */
+    }
+  }, [user, isShopkeeper, shopId]);
+
+  const updateUnreadCount = (convs: Conversation[]) => {
+    const unread = convs.reduce((acc, c) => {
+      const lastMsg = c.messages?.[0];
+      if (lastMsg && !lastMsg.isRead && lastMsg.senderRole !== user?.role) {
+        return acc + 1;
+      }
+      return acc;
+    }, 0);
+    setUnreadCount(unread);
+  };
 
   /* ── Load messages for active conversation ── */
   const loadMessages = useCallback(async (convId: string) => {
@@ -117,19 +188,43 @@ export function ChatPopupWidget() {
     }
   }, []);
 
-  /* ── Send message ── */
+  /* ── Send message: prefer WebSocket, fallback to HTTP ── */
   const handleSend = async () => {
     if (!newMessage.trim() || !activeConversationId) return;
+    const content = newMessage;
+    setNewMessage("");
     setSending(true);
-    try {
-      await chatApi.sendMessage(activeConversationId, { content: newMessage });
-      setNewMessage("");
-      await loadMessages(activeConversationId);
-    } catch (e: any) {
-      /* show inline later if needed */
-    } finally {
-      setSending(false);
+
+    // Try WebSocket first (instant, no HTTP round-trip)
+    const sentViaWs = connected && wsSendMessage(activeConversationId, content);
+
+    if (!sentViaWs) {
+      // Fallback to HTTP
+      try {
+        const res = await chatApi.sendMessage(activeConversationId, { content });
+        // Check if the response indicates a blocked message
+        if (res.data?.blocked) {
+          setViolationAlert({
+            warning: res.data.warning,
+            strikeCount: res.data.strikeCount,
+            conversationId: activeConversationId,
+          });
+          setTimeout(() => setViolationAlert(null), 15000);
+        } else {
+          await loadMessages(activeConversationId);
+        }
+      } catch (e: any) {
+        const msg = e?.response?.data?.message || "Failed to send message";
+        setViolationAlert({
+          warning: msg,
+          strikeCount: 0,
+          conversationId: activeConversationId,
+        });
+        setTimeout(() => setViolationAlert(null), 10000);
+      }
     }
+
+    setSending(false);
   };
 
   /* ── Auto-scroll to bottom ── */
@@ -144,33 +239,47 @@ export function ChatPopupWidget() {
     }
   }, [isOpen, isMinimized, loadConversations]);
 
-  /* ── Load messages when conversation changes ── */
+  /* ── Load messages & join/leave WS rooms when conversation changes ── */
   useEffect(() => {
+    // Leave previous room
+    if (prevConvRef.current && prevConvRef.current !== activeConversationId) {
+      leaveConversation(prevConvRef.current);
+    }
+    prevConvRef.current = activeConversationId;
+
     if (activeConversationId && isOpen && !isMinimized) {
       loadMessages(activeConversationId);
+      joinConversation(activeConversationId);
+      if (connected) wsMarkRead(activeConversationId);
     }
-  }, [activeConversationId, isOpen, isMinimized, loadMessages]);
+  }, [activeConversationId, isOpen, isMinimized, connected, joinConversation, leaveConversation, loadMessages, wsMarkRead]);
 
-  /* ── Poll for new messages every 8s when chat is open ── */
-  useEffect(() => {
-    if (isOpen && !isMinimized && activeConversationId) {
-      pollRef.current = setInterval(() => {
-        loadMessages(activeConversationId);
-      }, 8000);
-    }
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, [isOpen, isMinimized, activeConversationId, loadMessages]);
-
-  /* ── Poll conversation list for unread badge even when minimized/closed ── */
+  /* ── Slow poll as fallback (60s) — only if WebSocket is NOT connected ── */
   useEffect(() => {
     if (!user) return;
-    // Initial load for unread count
-    loadConversations();
-    const interval = setInterval(loadConversations, 30000);
+    // Always do initial load
+    loadConversationsQuiet();
+    // If WS connected, use very slow polling (60s) as a safety net
+    // If WS disconnected, use faster polling (15s) as fallback
+    const interval = setInterval(
+      () => {
+        loadConversationsQuiet();
+        if (activeConversationId && isOpen && !isMinimized) {
+          loadMessages(activeConversationId);
+        }
+      },
+      connected ? 60000 : 15000,
+    );
     return () => clearInterval(interval);
-  }, [user, loadConversations]);
+  }, [user, connected, activeConversationId, isOpen, isMinimized, loadConversationsQuiet, loadMessages]);
+
+  /* ── Typing indicator on input ── */
+  const handleInputChange = (value: string) => {
+    setNewMessage(value);
+    if (activeConversationId && connected) {
+      sendTyping(activeConversationId, true);
+    }
+  };
 
   const activeConv = conversations.find((c) => c.id === activeConversationId);
 
@@ -231,7 +340,7 @@ export function ChatPopupWidget() {
         <div className="flex items-center gap-2 min-w-0">
           {activeConversationId && (
             <button
-              onClick={() => openChatList()}
+              onClick={() => { setViolationAlert(null); openChatList(); }}
               className="p-1 rounded-lg hover:bg-white/20 transition"
               aria-label="Back to conversations"
             >
@@ -242,6 +351,12 @@ export function ChatPopupWidget() {
           <span className="font-semibold text-sm truncate">
             {activeConversationId ? getConvName(activeConv!) : "Messages"}
           </span>
+          {/* Connection indicator */}
+          {activeConversationId && (
+            connected
+              ? <Wifi className="h-3 w-3 text-green-200 flex-shrink-0" />
+              : <WifiOff className="h-3 w-3 text-red-200 flex-shrink-0" />
+          )}
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           <button
@@ -329,6 +444,50 @@ export function ChatPopupWidget() {
             Messages are monitored for safety
           </div>
 
+          {/* Violation warning banner */}
+          {violationAlert && violationAlert.conversationId === activeConversationId && (
+            <div className="px-3 py-2.5 bg-red-50 border-b border-red-200 flex-shrink-0 animate-in slide-in-from-top-2 duration-200">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-red-800">Message Blocked</p>
+                  <p className="text-[11px] text-red-700 mt-0.5 leading-relaxed">{violationAlert.warning}</p>
+                  {violationAlert.strikeCount > 0 && (
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <span className="text-[10px] font-semibold text-red-800">
+                        Warnings: {violationAlert.strikeCount}/3
+                      </span>
+                      <div className="flex gap-0.5">
+                        {[1, 2, 3].map((i) => (
+                          <div
+                            key={i}
+                            className={cn(
+                              "w-4 h-1.5 rounded-full",
+                              violationAlert.strikeCount >= i
+                                ? i === 3 ? "bg-red-600" : i === 2 ? "bg-orange-500" : "bg-yellow-500"
+                                : "bg-gray-200",
+                            )}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-[10px] text-red-600">
+                        {violationAlert.strikeCount >= 3
+                          ? "Account suspended"
+                          : `${3 - violationAlert.strikeCount} remaining`}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setViolationAlert(null)}
+                  className="text-red-400 hover:text-red-600 p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Messages */}
           <ScrollArea className="flex-1 px-3 py-2">
             {loadingMsgs ? (
@@ -370,6 +529,18 @@ export function ChatPopupWidget() {
                     )}
                   </div>
                 ))}
+                {/* Typing indicator */}
+                {typingUser && (
+                  <div className="flex justify-start">
+                    <div className="bg-gray-100 px-3 py-2 rounded-2xl rounded-bl-md">
+                      <div className="flex gap-1">
+                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
             )}
@@ -385,7 +556,7 @@ export function ChatPopupWidget() {
             <div className="px-3 py-2.5 border-t flex gap-2 flex-shrink-0 bg-white">
               <Input
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
+                onChange={(e) => handleInputChange(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
                 placeholder="Type a message…"
                 disabled={sending}

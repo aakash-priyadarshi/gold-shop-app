@@ -3,13 +3,13 @@
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { CustomerGuard } from '@/components/auth/RouteGuard';
 import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { MessageSquare, Send, ArrowLeft, Shield, Lock } from 'lucide-react';
-import { useEffect, useState, useRef } from 'react';
+import { MessageSquare, Send, ArrowLeft, Shield, Lock, AlertTriangle, X, Wifi, WifiOff } from 'lucide-react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { chatApi } from '@/lib/api';
+import { useChatSocket, type ChatSocketMessage, type ViolationWarning } from '@/hooks/useChatSocket';
 import Link from 'next/link';
 
 interface Conversation {
@@ -51,21 +51,70 @@ export default function CustomerMessagesPage() {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [violationAlert, setViolationAlert] = useState<ViolationWarning | null>(null);
+  const [typingUser, setTypingUser] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevConvRef = useRef<string | null>(null);
+
+  /* ── WebSocket callbacks ── */
+  const handleNewMessage = useCallback(
+    (msg: ChatSocketMessage) => {
+      if (msg.conversationId === selectedConversation) {
+        setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg as unknown as Message]));
+      }
+      loadConversationsQuiet();
+    },
+    [selectedConversation],
+  );
+
+  const handleMessageBlocked = useCallback((data: ViolationWarning) => {
+    setViolationAlert(data);
+    setSending(false);
+    setTimeout(() => setViolationAlert(null), 15000);
+  }, []);
+
+  const handleTyping = useCallback(
+    (data: { userId: string; isTyping: boolean }) => {
+      if (data.userId !== user?.id) {
+        setTypingUser(data.isTyping ? data.userId : null);
+        if (data.isTyping) setTimeout(() => setTypingUser(null), 4000);
+      }
+    },
+    [user?.id],
+  );
+
+  const { connected, joinConversation, leaveConversation, sendMessage: wsSendMessage, sendTyping, markRead: wsMarkRead } =
+    useChatSocket({ onNewMessage: handleNewMessage, onMessageBlocked: handleMessageBlocked, onTyping: handleTyping });
 
   useEffect(() => {
     loadConversations();
   }, []);
 
+  /* ── Join/leave WS rooms on conversation switch ── */
   useEffect(() => {
+    if (prevConvRef.current && prevConvRef.current !== selectedConversation) {
+      leaveConversation(prevConvRef.current);
+    }
+    prevConvRef.current = selectedConversation;
     if (selectedConversation) {
       loadMessages(selectedConversation);
+      joinConversation(selectedConversation);
+      if (connected) wsMarkRead(selectedConversation);
     }
-  }, [selectedConversation]);
+  }, [selectedConversation, connected]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  /* ── Slow fallback polling ── */
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadConversationsQuiet();
+      if (selectedConversation) loadMessages(selectedConversation);
+    }, connected ? 60000 : 15000);
+    return () => clearInterval(interval);
+  }, [connected, selectedConversation]);
 
   async function loadConversations() {
     try {
@@ -76,6 +125,13 @@ export default function CustomerMessagesPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function loadConversationsQuiet() {
+    try {
+      const res = await chatApi.listConversations();
+      setConversations(res.data);
+    } catch { /* silent */ }
   }
 
   async function loadMessages(conversationId: string) {
@@ -90,16 +146,32 @@ export default function CustomerMessagesPage() {
 
   async function handleSend() {
     if (!newMessage.trim() || !selectedConversation) return;
+    const content = newMessage;
+    setNewMessage('');
     setSending(true);
-    try {
-      await chatApi.sendMessage(selectedConversation, { content: newMessage });
-      setNewMessage('');
-      loadMessages(selectedConversation);
-    } catch (e: any) {
-      alert(e.response?.data?.message || 'Failed to send message');
-    } finally {
-      setSending(false);
+
+    const sentViaWs = connected && wsSendMessage(selectedConversation, content);
+    if (!sentViaWs) {
+      try {
+        const res = await chatApi.sendMessage(selectedConversation, { content });
+        if (res.data?.blocked) {
+          setViolationAlert({ warning: res.data.warning, strikeCount: res.data.strikeCount, conversationId: selectedConversation });
+          setTimeout(() => setViolationAlert(null), 15000);
+        } else {
+          await loadMessages(selectedConversation);
+        }
+      } catch (e: any) {
+        const msg = e?.response?.data?.message || 'Failed to send message';
+        setViolationAlert({ warning: msg, strikeCount: 0, conversationId: selectedConversation });
+        setTimeout(() => setViolationAlert(null), 10000);
+      }
     }
+    setSending(false);
+  }
+
+  function handleInputChange(value: string) {
+    setNewMessage(value);
+    if (selectedConversation && connected) sendTyping(selectedConversation, true);
   }
 
   const selectedConv = conversations.find((c) => c.id === selectedConversation);
@@ -111,6 +183,11 @@ export default function CustomerMessagesPage() {
           <div className="flex items-center gap-2 mb-4">
             <MessageSquare className="h-6 w-6" />
             <h1 className="text-2xl font-bold">Messages</h1>
+            {connected ? (
+              <span className="flex items-center gap-1 text-xs text-green-600"><Wifi className="h-3 w-3" /> Live</span>
+            ) : (
+              <span className="flex items-center gap-1 text-xs text-gray-400"><WifiOff className="h-3 w-3" /> Polling</span>
+            )}
           </div>
 
           <div className="flex flex-1 gap-4 min-h-0">
@@ -179,6 +256,46 @@ export default function CustomerMessagesPage() {
                     </div>
                   </div>
 
+                  {/* Violation warning banner */}
+                  {violationAlert && violationAlert.conversationId === selectedConversation && (
+                    <div className="px-4 py-3 bg-red-50 border-b border-red-200">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-red-800">⚠️ Message Blocked</p>
+                          <p className="text-sm text-red-700 mt-1">{violationAlert.warning}</p>
+                          {violationAlert.strikeCount > 0 && (
+                            <div className="flex items-center gap-2 mt-2">
+                              <span className="text-xs font-semibold text-red-800">
+                                Warnings: {violationAlert.strikeCount}/3
+                              </span>
+                              <div className="flex gap-1">
+                                {[1, 2, 3].map((i) => (
+                                  <div
+                                    key={i}
+                                    className={`w-6 h-2 rounded-full ${
+                                      violationAlert.strikeCount >= i
+                                        ? i === 3 ? 'bg-red-600' : i === 2 ? 'bg-orange-500' : 'bg-yellow-500'
+                                        : 'bg-gray-200'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-xs text-red-600">
+                                {violationAlert.strikeCount >= 3
+                                  ? 'Account suspended!'
+                                  : `${3 - violationAlert.strikeCount} warning(s) remaining before account suspension`}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <button onClick={() => setViolationAlert(null)} className="text-red-400 hover:text-red-600">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Messages */}
                   <div className="flex-1 overflow-y-auto p-4 space-y-3">
                     {messages.map((msg) => (
@@ -217,6 +334,18 @@ export default function CustomerMessagesPage() {
                         )}
                       </div>
                     ))}
+                    {/* Typing indicator */}
+                    {typingUser && (
+                      <div className="flex justify-start">
+                        <div className="bg-muted px-3 py-2 rounded-lg">
+                          <div className="flex gap-1">
+                            <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     <div ref={messagesEndRef} />
                   </div>
 
@@ -229,7 +358,7 @@ export default function CustomerMessagesPage() {
                     <div className="p-3 border-t flex gap-2">
                       <Input
                         value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
+                        onChange={(e) => handleInputChange(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
                         placeholder="Type a message..."
                         disabled={sending}
