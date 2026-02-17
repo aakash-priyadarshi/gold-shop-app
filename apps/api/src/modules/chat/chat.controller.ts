@@ -1,7 +1,9 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   DefaultValuePipe,
+  ForbiddenException,
   Get,
   Param,
   ParseIntPipe,
@@ -47,9 +49,38 @@ export class ChatController {
         dto.rfqId,
       );
     }
-    throw new Error(
-      "Shopkeepers cannot initiate conversations — customers contact you first",
-    );
+
+    // SHOPKEEPER: can initiate conversation with a buyer who has orders
+    if (userRole === "SHOPKEEPER") {
+      if (!dto.buyerId) {
+        throw new BadRequestException(
+          "buyerId is required for shopkeeper-initiated conversations",
+        );
+      }
+      // Verify the shop belongs to this user
+      const shop = await this.chatService.findShopByOwner(userId);
+      if (!shop || shop.id !== dto.shopId) {
+        throw new ForbiddenException("Shop does not belong to you");
+      }
+      // Verify the buyer has at least one order with this shop
+      const hasOrder = await this.chatService.buyerHasOrderWithShop(
+        dto.buyerId,
+        dto.shopId,
+      );
+      if (!hasOrder) {
+        throw new ForbiddenException(
+          "You can only message customers who have placed orders with your shop",
+        );
+      }
+      return this.chatService.getOrCreateConversation(
+        dto.buyerId,
+        dto.shopId,
+        dto.orderId,
+        dto.rfqId,
+      );
+    }
+
+    throw new Error("Cannot initiate conversations with this role");
   }
 
   @Get("conversations")

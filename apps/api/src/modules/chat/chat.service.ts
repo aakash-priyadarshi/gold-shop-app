@@ -62,6 +62,22 @@ export class ChatService {
     return conversation;
   }
 
+  // ─── Helper: find shop by owner userId ───
+  async findShopByOwner(userId: string) {
+    return this.prisma.shop.findFirst({
+      where: { userId },
+      select: { id: true, shopName: true, isOnHold: true },
+    });
+  }
+
+  // ─── Helper: check if buyer has at least one order with a shop ───
+  async buyerHasOrderWithShop(buyerId: string, shopId: string): Promise<boolean> {
+    const count = await this.prisma.order.count({
+      where: { customerId: buyerId, shopId },
+    });
+    return count > 0;
+  }
+
   // ═══════════════════════════════════════════════════════════
   //  SEND MESSAGE — with multi-layer moderation
   // ═══════════════════════════════════════════════════════════

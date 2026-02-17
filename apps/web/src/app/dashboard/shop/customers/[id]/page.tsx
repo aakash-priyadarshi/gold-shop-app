@@ -16,8 +16,9 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
-import { chatApi, customerCrmApi } from "@/lib/api";
+import { chatApi, customerCrmApi, shopsApi } from "@/lib/api";
 import {
   ArrowLeft,
   Calendar,
@@ -65,6 +66,7 @@ export default function CustomerProfilePage() {
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { symbol: currencySymbol } = useShopCurrency();
+  const { user } = useAuth();
 
   // New note form
   const [newNote, setNewNote] = useState("");
@@ -83,6 +85,7 @@ export default function CustomerProfilePage() {
     }
     setStartingChat(true);
     try {
+      // 1. Check for existing conversation
       const res = await chatApi.listConversations();
       const conversations = res.data || [];
       const existing = conversations.find(
@@ -90,15 +93,27 @@ export default function CustomerProfilePage() {
       );
       if (existing) {
         router.push(`/dashboard/shop/messages?chat=${existing.id}`);
-      } else {
-        toast({
-          title: "No conversation yet",
-          description:
-            "This customer hasn't contacted you yet. Customers can message you from your shop page or their orders.",
-        });
+        return;
       }
-    } catch {
-      toast({ variant: "destructive", title: "Failed to find conversation" });
+
+      // 2. No existing conversation — create one (requires customer to have orders)
+      const shopId = user?.shop?.id;
+      if (!shopId) {
+        toast({ variant: "destructive", title: "Shop not found" });
+        return;
+      }
+      const convRes = await chatApi.createConversation({
+        shopId,
+        buyerId: customerId,
+      });
+      if (convRes.data?.id) {
+        router.push(`/dashboard/shop/messages?chat=${convRes.data.id}`);
+      } else {
+        toast({ variant: "destructive", title: "Failed to create conversation" });
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Failed to start conversation";
+      toast({ variant: "destructive", title: msg });
     } finally {
       setStartingChat(false);
     }

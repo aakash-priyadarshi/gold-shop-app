@@ -11,6 +11,11 @@ export class CreateConversationDto {
 
   @IsUUID()
   shopId: string;
+
+  /** Used by shopkeepers to specify which customer (buyer) to message */
+  @IsOptional()
+  @IsUUID()
+  buyerId?: string;
 }
 
 export class SendMessageDto {
