@@ -28,14 +28,14 @@ export class ChatController {
   // ─── Conversations ───
 
   @Post('conversations')
-  @Roles('CUSTOMER', 'SHOPKEEPER', 'ADMIN')
+  @Roles('CUSTOMER', 'SHOPKEEPER', 'ADMIN', 'SALES')
   @ApiOperation({ summary: 'Create or get existing conversation' })
   async createConversation(
     @CurrentUser('id') userId: string,
     @CurrentUser('role') userRole: string,
     @Body() dto: CreateConversationDto,
   ) {
-    if (userRole === 'CUSTOMER' || userRole === 'ADMIN') {
+    if (userRole === 'CUSTOMER' || userRole === 'ADMIN' || userRole === 'SALES') {
       return this.chatService.getOrCreateConversation(
         userId,
         dto.shopId,
@@ -47,7 +47,7 @@ export class ChatController {
   }
 
   @Get('conversations')
-  @Roles('CUSTOMER', 'SHOPKEEPER', 'ADMIN', 'SUPPORT')
+  @Roles('CUSTOMER', 'SHOPKEEPER', 'ADMIN', 'SUPPORT', 'SALES')
   @ApiOperation({ summary: 'List conversations for current user' })
   async listConversations(
     @CurrentUser('id') userId: string,
@@ -58,7 +58,7 @@ export class ChatController {
   }
 
   @Get('conversations/:id/messages')
-  @Roles('CUSTOMER', 'SHOPKEEPER', 'ADMIN', 'SUPPORT')
+  @Roles('CUSTOMER', 'SHOPKEEPER', 'ADMIN', 'SUPPORT', 'SALES')
   @ApiOperation({ summary: 'Get messages in a conversation (paginated)' })
   async getMessages(
     @CurrentUser('id') userId: string,
@@ -71,7 +71,7 @@ export class ChatController {
   }
 
   @Post('conversations/:id/messages')
-  @Roles('CUSTOMER', 'SHOPKEEPER', 'ADMIN')
+  @Roles('CUSTOMER', 'SHOPKEEPER', 'ADMIN', 'SALES')
   @ApiOperation({ summary: 'Send a message (blocked if contact info detected)' })
   async sendMessage(
     @CurrentUser('id') userId: string,
@@ -90,7 +90,7 @@ export class ChatController {
   }
 
   @Patch('conversations/:id/read')
-  @Roles('CUSTOMER', 'SHOPKEEPER', 'ADMIN', 'SUPPORT')
+  @Roles('CUSTOMER', 'SHOPKEEPER', 'ADMIN', 'SUPPORT', 'SALES')
   @ApiOperation({ summary: 'Mark all messages in a conversation as read' })
   async markAsRead(
     @CurrentUser('id') userId: string,

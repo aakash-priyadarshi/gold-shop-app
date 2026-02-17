@@ -165,3 +165,11 @@ export function ShopAccessGuard({ children }: { children: React.ReactNode }) {
     </RouteGuard>
   );
 }
+
+export function SalesGuard({ children }: { children: React.ReactNode }) {
+  return (
+    <RouteGuard allowedRoles={["SALES"]} requireAuth={true}>
+      {children}
+    </RouteGuard>
+  );
+}

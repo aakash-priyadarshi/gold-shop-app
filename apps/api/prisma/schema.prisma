@@ -1412,6 +1412,7 @@ enum UserRole {
   SHOPKEEPER
   CUSTOMER
   SUPPORT
+  SALES
 }
 
 enum UserStatus {

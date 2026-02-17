@@ -945,7 +945,7 @@ export class AdminController {
   // ═══════════════════════════════════════
 
   @Get("sellers")
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SALES)
   @ApiOperation({ summary: "List all sellers with engagement data" })
   async getSellerDirectory(
     @Query("search") search?: string,
@@ -966,7 +966,7 @@ export class AdminController {
   }
 
   @Get("sellers/stats")
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SALES)
   @ApiOperation({ summary: "Get seller CRM stats" })
   async getSellerCrmStats() {
     return this.sellerEngagement.getSellerCrmStats();
@@ -980,7 +980,7 @@ export class AdminController {
   }
 
   @Get("sellers/:shopId")
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SALES)
   @ApiOperation({
     summary: "Get detailed seller profile with all engagement data",
   })
@@ -1006,28 +1006,28 @@ export class AdminController {
   }
 
   @Get("sellers/:shopId/health-score")
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SALES)
   @ApiOperation({ summary: "Get seller health score" })
   async getSellerHealthScore(@Param("shopId") shopId: string) {
     return this.sellerEngagement.calculateHealthScore(shopId);
   }
 
   @Get("sellers/:shopId/onboarding")
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SALES)
   @ApiOperation({ summary: "Get seller onboarding progress" })
   async getSellerOnboarding(@Param("shopId") shopId: string) {
     return this.sellerEngagement.getOnboardingProgress(shopId);
   }
 
   @Get("sellers/:shopId/milestones")
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SALES)
   @ApiOperation({ summary: "Get seller milestones" })
   async getSellerMilestones(@Param("shopId") shopId: string) {
     return this.sellerEngagement.getMilestones(shopId);
   }
 
   @Get("sellers/:shopId/rfq-funnel")
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SALES)
   @ApiOperation({ summary: "Get seller RFQ funnel" })
   async getSellerRfqFunnel(
     @Param("shopId") shopId: string,
@@ -1040,7 +1040,7 @@ export class AdminController {
   }
 
   @Post("sellers/:shopId/notes")
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SALES)
   @ApiOperation({ summary: "Add a note to a seller" })
   async addSellerNote(
     @Param("shopId") shopId: string,
@@ -1056,7 +1056,7 @@ export class AdminController {
   }
 
   @Get("sellers/:shopId/notes")
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SALES)
   @ApiOperation({ summary: "Get all notes for a seller" })
   async getSellerNotes(@Param("shopId") shopId: string) {
     return this.sellerEngagement.getSellerNotes(shopId);

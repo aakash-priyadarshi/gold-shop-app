@@ -267,6 +267,38 @@ const navItems: NavItem[] = [
     icon: Settings,
     roles: ["CUSTOMER"],
   },
+
+  // Sales routes
+  {
+    label: "Dashboard",
+    href: "/dashboard/sales",
+    icon: LayoutDashboard,
+    roles: ["SALES"],
+  },
+  {
+    label: "Shops & CRM",
+    href: "/dashboard/sales/shops",
+    icon: Store,
+    roles: ["SALES"],
+  },
+  {
+    label: "Orders",
+    href: "/dashboard/sales/orders",
+    icon: ShoppingCart,
+    roles: ["SALES"],
+  },
+  {
+    label: "Messages",
+    href: "/dashboard/sales/messages",
+    icon: MessageSquare,
+    roles: ["SALES"],
+  },
+  {
+    label: "Profile",
+    href: "/dashboard/sales/profile",
+    icon: UserCircle,
+    roles: ["SALES"],
+  },
 ];
 
 interface DashboardLayoutProps {
@@ -510,6 +542,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       case "CUSTOMER":
         return (
           <span className="status-badge status-badge-green">Customer</span>
+        );
+      case "SALES":
+        return (
+          <span className="status-badge status-badge-yellow">Sales</span>
         );
     }
   };
