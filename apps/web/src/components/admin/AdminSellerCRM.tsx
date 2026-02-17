@@ -273,12 +273,22 @@ export function AdminSellerCRM() {
     setDrawerOpen(true);
     setDrawerLoading(true);
     try {
-      const [profileRes, notesRes] = await Promise.all([
+      const results = await Promise.allSettled([
         adminApi.getSellerProfile(shopId),
         adminApi.getSellerNotes(shopId),
       ]);
-      setSelectedSeller(profileRes.data);
-      setNotes(notesRes.data);
+      if (results[0].status === "fulfilled") {
+        setSelectedSeller(results[0].value.data);
+      } else {
+        console.warn("Failed to load seller profile:", results[0].reason);
+        toast({ variant: "destructive", title: "Failed to load seller profile" });
+      }
+      if (results[1].status === "fulfilled") {
+        setNotes(results[1].value.data || []);
+      } else {
+        console.warn("Failed to load seller notes:", results[1].reason);
+        setNotes([]);
+      }
     } catch {
       toast({ variant: "destructive", title: "Failed to load seller profile" });
     } finally {
@@ -915,14 +925,15 @@ export function AdminSellerCRM() {
                                     #{o.orderNumber}
                                   </span>
                                   <span className="text-muted-foreground ml-2">
-                                    {o.buyer?.firstName} {o.buyer?.lastName}
+                                    {o.customer?.firstName || o.buyer?.firstName}{" "}
+                                    {o.customer?.lastName || o.buyer?.lastName}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <Badge variant="outline" className="text-xs">
                                     {o.status}
                                   </Badge>
-                                  <span>{formatCurrency(o.totalPriceNpr)}</span>
+                                  <span>{formatCurrency(o.totalPriceNpr || o.totalNpr || 0)}</span>
                                 </div>
                               </div>
                             ))}
@@ -1278,7 +1289,7 @@ export function AdminSellerCRM() {
                             setNoteCategory("ENGAGEMENT");
                             // Switch to notes tab
                             const notesTab = document.querySelector(
-                              '[data-state="inactive"][value="notes"]',
+                              '[role="tab"][value="notes"]',
                             ) as HTMLButtonElement;
                             if (notesTab) notesTab.click();
                           }}
@@ -1294,7 +1305,7 @@ export function AdminSellerCRM() {
                             setNewNote("Performance review: ");
                             setNoteCategory("PERFORMANCE");
                             const notesTab = document.querySelector(
-                              '[data-state="inactive"][value="notes"]',
+                              '[role="tab"][value="notes"]',
                             ) as HTMLButtonElement;
                             if (notesTab) notesTab.click();
                           }}

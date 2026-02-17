@@ -351,115 +351,8 @@ export class ShopsController {
     return this.shopsService.updateShopComponentPricing(shopId, userId, dto);
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // PUBLIC ENDPOINTS
-  // ═══════════════════════════════════════════════════════════════
-
-  @Get(":id")
-  @ApiOperation({ summary: "Get shop by ID" })
-  async findOne(@Param("id") id: string) {
-    return this.shopsService.findById(id);
-  }
-
-  @Get(":id/component-pricing")
-  @ApiOperation({
-    summary:
-      "Get shop component pricing (public — base metals, plating, finishes)",
-  })
-  async getShopComponentPricingPublic(@Param("id") id: string) {
-    return this.shopsService.getShopComponentPricing(id);
-  }
-
-  @Patch(":id")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SHOPKEEPER)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: "Update shop details" })
-  async update(
-    @Param("id") id: string,
-    @CurrentUser("id") userId: string,
-    @Body() dto: UpdateShopDto,
-  ) {
-    return this.shopsService.update(id, userId, dto);
-  }
-
-  @Patch(":id/metal-rates")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SHOPKEEPER)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: "Update shop metal rates" })
-  async updateMetalRates(
-    @Param("id") id: string,
-    @CurrentUser("id") userId: string,
-    @Body() dto: UpdateMetalRatesDto,
-  ) {
-    return this.shopsService.updateMetalRates(id, userId, dto);
-  }
-
-  @Patch(":id/verify")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: "Verify a shop (Admin only)" })
-  async verify(@Param("id") id: string, @CurrentUser("id") adminId: string) {
-    return this.shopsService.verifyShop(id, adminId);
-  }
-
-  @Get(":id/kyc")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: "Get KYC/verification documents for a shop (Admin)",
-  })
-  async getShopKycAdmin(@Param("id") id: string) {
-    return this.shopsService.getShopKycByShopId(id);
-  }
-
-  @Patch(":id/kyc-status")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: "Approve or reject shop KYC verification (Admin)" })
-  async updateShopKycStatus(
-    @Param("id") id: string,
-    @CurrentUser("id") adminId: string,
-    @Body() body: { action: "approve" | "reject"; reason?: string },
-  ) {
-    return this.shopsService.updateShopKycStatus(
-      id,
-      adminId,
-      body.action,
-      body.reason,
-    );
-  }
-
-  @Patch(":id/admin")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: "Update shop details (Admin only)" })
-  async adminUpdateShop(
-    @Param("id") id: string,
-    @CurrentUser("id") adminId: string,
-    @Body() dto: UpdateShopDto,
-  ) {
-    return this.shopsService.adminUpdateShop(id, adminId, dto);
-  }
-
-  @Delete(":id/admin")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: "Delete a shop (Admin only)" })
-  async adminDeleteShop(
-    @Param("id") id: string,
-    @CurrentUser("id") adminId: string,
-  ) {
-    return this.shopsService.adminDeleteShop(id, adminId);
-  }
-
   // ── KYC & Verification Endpoints ────────────────────
+  // NOTE: These must be above @Get(":id") to avoid route shadowing
 
   @Get("my-shop/kyc")
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -583,5 +476,113 @@ export class ShopsController {
       adminId,
       body.action,
     );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PUBLIC ENDPOINTS (parameterized routes must be LAST)
+  // ═══════════════════════════════════════════════════════════════
+
+  @Get(":id")
+  @ApiOperation({ summary: "Get shop by ID" })
+  async findOne(@Param("id") id: string) {
+    return this.shopsService.findById(id);
+  }
+
+  @Get(":id/component-pricing")
+  @ApiOperation({
+    summary:
+      "Get shop component pricing (public — base metals, plating, finishes)",
+  })
+  async getShopComponentPricingPublic(@Param("id") id: string) {
+    return this.shopsService.getShopComponentPricing(id);
+  }
+
+  @Patch(":id")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Update shop details" })
+  async update(
+    @Param("id") id: string,
+    @CurrentUser("id") userId: string,
+    @Body() dto: UpdateShopDto,
+  ) {
+    return this.shopsService.update(id, userId, dto);
+  }
+
+  @Patch(":id/metal-rates")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Update shop metal rates" })
+  async updateMetalRates(
+    @Param("id") id: string,
+    @CurrentUser("id") userId: string,
+    @Body() dto: UpdateMetalRatesDto,
+  ) {
+    return this.shopsService.updateMetalRates(id, userId, dto);
+  }
+
+  @Patch(":id/verify")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Verify a shop (Admin only)" })
+  async verify(@Param("id") id: string, @CurrentUser("id") adminId: string) {
+    return this.shopsService.verifyShop(id, adminId);
+  }
+
+  @Get(":id/kyc")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Get KYC/verification documents for a shop (Admin)",
+  })
+  async getShopKycAdmin(@Param("id") id: string) {
+    return this.shopsService.getShopKycByShopId(id);
+  }
+
+  @Patch(":id/kyc-status")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Approve or reject shop KYC verification (Admin)" })
+  async updateShopKycStatus(
+    @Param("id") id: string,
+    @CurrentUser("id") adminId: string,
+    @Body() body: { action: "approve" | "reject"; reason?: string },
+  ) {
+    return this.shopsService.updateShopKycStatus(
+      id,
+      adminId,
+      body.action,
+      body.reason,
+    );
+  }
+
+  @Patch(":id/admin")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Update shop details (Admin only)" })
+  async adminUpdateShop(
+    @Param("id") id: string,
+    @CurrentUser("id") adminId: string,
+    @Body() dto: UpdateShopDto,
+  ) {
+    return this.shopsService.adminUpdateShop(id, adminId, dto);
+  }
+
+  @Delete(":id/admin")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Delete a shop (Admin only)" })
+  async adminDeleteShop(
+    @Param("id") id: string,
+    @CurrentUser("id") adminId: string,
+  ) {
+    return this.shopsService.adminDeleteShop(id, adminId);
   }
 }

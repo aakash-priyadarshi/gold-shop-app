@@ -638,31 +638,52 @@ export default function ShopEngagementPage() {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [hs, ob, ms, rf, kyc] = await Promise.all([
+      const results = await Promise.allSettled([
         sellerPerformanceApi.getHealthScore(),
         sellerPerformanceApi.getOnboarding(),
         sellerPerformanceApi.getMilestones(),
         sellerPerformanceApi.getRfqFunnel(),
         shopsApi.getKyc(),
       ]);
-      setHealthScore(hs.data);
-      setOnboarding(ob.data);
-      setMilestones(ms.data);
-      setRfqFunnel(rf.data);
-      setKycData(kyc.data);
 
-      // Pre-fill KYC text fields
-      const k = kyc.data;
-      const docs = (k.verificationDocuments as Record<string, any>) || {};
-      setKycForm({
-        panNumber: k.panNumber || "",
-        vatNumber: k.vatNumber || "",
-        bisLicenseNumber: k.bisLicenseNumber || "",
-        ...Object.fromEntries(
-          Object.entries(docs).filter(
-            ([, v]) => typeof v === "string" && !v.startsWith("http"),
+      // Extract fulfilled values, null for rejected
+      const getValue = (r: PromiseSettledResult<any>) =>
+        r.status === "fulfilled" ? r.data : null;
+
+      const hs = results[0].status === "fulfilled" ? results[0].value : null;
+      const ob = results[1].status === "fulfilled" ? results[1].value : null;
+      const ms = results[2].status === "fulfilled" ? results[2].value : null;
+      const rf = results[3].status === "fulfilled" ? results[3].value : null;
+      const kyc = results[4].status === "fulfilled" ? results[4].value : null;
+
+      if (hs?.data) setHealthScore(hs.data);
+      if (ob?.data) setOnboarding(ob.data);
+      if (ms?.data) setMilestones(ms.data);
+      if (rf?.data) setRfqFunnel(rf.data);
+      if (kyc?.data) {
+        setKycData(kyc.data);
+
+        // Pre-fill KYC text fields
+        const k = kyc.data;
+        const docs = (k.verificationDocuments as Record<string, any>) || {};
+        setKycForm({
+          panNumber: k.panNumber || "",
+          vatNumber: k.vatNumber || "",
+          bisLicenseNumber: k.bisLicenseNumber || "",
+          ...Object.fromEntries(
+            Object.entries(docs).filter(
+              ([, v]) => typeof v === "string" && !v.startsWith("http"),
+            ),
           ),
-        ),
+        });
+      }
+
+      // Log any failed calls for debugging
+      results.forEach((r, i) => {
+        if (r.status === "rejected") {
+          const labels = ["healthScore", "onboarding", "milestones", "rfqFunnel", "kyc"];
+          console.warn(`Engagement: ${labels[i]} failed:`, r.reason?.message || r.reason);
+        }
       });
 
       // Load tier dashboard
