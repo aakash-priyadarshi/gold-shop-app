@@ -416,13 +416,16 @@ export default function ShopDetailPage() {
       router.push(`/dashboard/customer/messages?chat=${conversationId}`);
     } catch (err: any) {
       if (err.response?.data?.conversationId) {
-        router.push(`/dashboard/customer/messages?chat=${err.response.data.conversationId}`);
+        router.push(
+          `/dashboard/customer/messages?chat=${err.response.data.conversationId}`,
+        );
         return;
       }
       toast({
         variant: "destructive",
         title: "Error",
-        description: err.response?.data?.message || "Failed to start conversation",
+        description:
+          err.response?.data?.message || "Failed to start conversation",
       });
     } finally {
       setStartingChat(false);

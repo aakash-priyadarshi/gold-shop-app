@@ -281,7 +281,10 @@ export function AdminSellerCRM() {
         setSelectedSeller(results[0].value.data);
       } else {
         console.warn("Failed to load seller profile:", results[0].reason);
-        toast({ variant: "destructive", title: "Failed to load seller profile" });
+        toast({
+          variant: "destructive",
+          title: "Failed to load seller profile",
+        });
       }
       if (results[1].status === "fulfilled") {
         setNotes(results[1].value.data || []);
@@ -925,7 +928,8 @@ export function AdminSellerCRM() {
                                     #{o.orderNumber}
                                   </span>
                                   <span className="text-muted-foreground ml-2">
-                                    {o.customer?.firstName || o.buyer?.firstName}{" "}
+                                    {o.customer?.firstName ||
+                                      o.buyer?.firstName}{" "}
                                     {o.customer?.lastName || o.buyer?.lastName}
                                   </span>
                                 </div>
@@ -933,7 +937,11 @@ export function AdminSellerCRM() {
                                   <Badge variant="outline" className="text-xs">
                                     {o.status}
                                   </Badge>
-                                  <span>{formatCurrency(o.totalPriceNpr || o.totalNpr || 0)}</span>
+                                  <span>
+                                    {formatCurrency(
+                                      o.totalPriceNpr || o.totalNpr || 0,
+                                    )}
+                                  </span>
                                 </div>
                               </div>
                             ))}

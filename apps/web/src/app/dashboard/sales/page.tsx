@@ -12,16 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import api from "@/lib/api";
-import {
-  ArrowUpRight,
-  ArrowDownRight,
-  ShoppingCart,
-  Store,
-  TrendingUp,
-  Users,
-  MessageSquare,
-  Clock,
-} from "lucide-react";
+import { Clock, MessageSquare, ShoppingCart, Store } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -61,7 +52,7 @@ export default function SalesDashboardPage() {
         totalOrders: orderData?.pagination?.total || 0,
         pendingOrders:
           orderData?.data?.filter(
-            (o: any) => o.status === "PENDING" || o.status === "CONFIRMED"
+            (o: any) => o.status === "PENDING" || o.status === "CONFIRMED",
           )?.length || 0,
         recentConversations: 0,
       });
@@ -219,8 +210,8 @@ export default function SalesDashboardPage() {
                               order.status === "DELIVERED"
                                 ? "default"
                                 : order.status === "PENDING"
-                                ? "secondary"
-                                : "outline"
+                                  ? "secondary"
+                                  : "outline"
                             }
                           >
                             {order.status}

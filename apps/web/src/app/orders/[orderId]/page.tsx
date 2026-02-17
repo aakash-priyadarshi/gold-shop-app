@@ -227,7 +227,9 @@ export default function OrderTrackingPage() {
       router.push(`/dashboard/customer/messages?chat=${conversationId}`);
     } catch (err: any) {
       if (err.response?.data?.conversationId) {
-        router.push(`/dashboard/customer/messages?chat=${err.response.data.conversationId}`);
+        router.push(
+          `/dashboard/customer/messages?chat=${err.response.data.conversationId}`,
+        );
         return;
       }
       console.error("Failed to start conversation:", err);
@@ -672,7 +674,11 @@ export default function OrderTrackingPage() {
                 <CardTitle className="text-lg">Need Help?</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start" asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  asChild
+                >
                   <Link href={`/shop/${order.shop.id}`}>
                     <BuildingStorefrontIcon className="h-4 w-4 mr-2" />
                     View Shop

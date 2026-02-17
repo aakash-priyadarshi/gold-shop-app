@@ -544,9 +544,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <span className="status-badge status-badge-green">Customer</span>
         );
       case "SALES":
-        return (
-          <span className="status-badge status-badge-yellow">Sales</span>
-        );
+        return <span className="status-badge status-badge-yellow">Sales</span>;
     }
   };
 

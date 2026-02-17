@@ -1,25 +1,25 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Param,
   Body,
+  Controller,
+  DefaultValuePipe,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
   Query,
   UseGuards,
-  ParseIntPipe,
-  DefaultValuePipe,
-} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { ChatService } from './chat.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { CreateConversationDto, SendMessageDto } from './dto/chat.dto';
+} from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { Roles } from "../auth/decorators/roles.decorator";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RolesGuard } from "../auth/guards/roles.guard";
+import { ChatService } from "./chat.service";
+import { CreateConversationDto, SendMessageDto } from "./dto/chat.dto";
 
-@ApiTags('chat')
-@Controller('chat')
+@ApiTags("chat")
+@Controller("chat")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class ChatController {
@@ -27,15 +27,19 @@ export class ChatController {
 
   // ─── Conversations ───
 
-  @Post('conversations')
-  @Roles('CUSTOMER', 'SHOPKEEPER', 'ADMIN', 'SALES')
-  @ApiOperation({ summary: 'Create or get existing conversation' })
+  @Post("conversations")
+  @Roles("CUSTOMER", "SHOPKEEPER", "ADMIN", "SALES")
+  @ApiOperation({ summary: "Create or get existing conversation" })
   async createConversation(
-    @CurrentUser('id') userId: string,
-    @CurrentUser('role') userRole: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("role") userRole: string,
     @Body() dto: CreateConversationDto,
   ) {
-    if (userRole === 'CUSTOMER' || userRole === 'ADMIN' || userRole === 'SALES') {
+    if (
+      userRole === "CUSTOMER" ||
+      userRole === "ADMIN" ||
+      userRole === "SALES"
+    ) {
       return this.chatService.getOrCreateConversation(
         userId,
         dto.shopId,
@@ -43,40 +47,50 @@ export class ChatController {
         dto.rfqId,
       );
     }
-    throw new Error('Shopkeepers cannot initiate conversations — customers contact you first');
+    throw new Error(
+      "Shopkeepers cannot initiate conversations — customers contact you first",
+    );
   }
 
-  @Get('conversations')
-  @Roles('CUSTOMER', 'SHOPKEEPER', 'ADMIN', 'SUPPORT', 'SALES')
-  @ApiOperation({ summary: 'List conversations for current user' })
+  @Get("conversations")
+  @Roles("CUSTOMER", "SHOPKEEPER", "ADMIN", "SUPPORT", "SALES")
+  @ApiOperation({ summary: "List conversations for current user" })
   async listConversations(
-    @CurrentUser('id') userId: string,
-    @CurrentUser('role') userRole: string,
-    @Query('shopId') shopId?: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("role") userRole: string,
+    @Query("shopId") shopId?: string,
   ) {
     return this.chatService.listConversations(userId, userRole, shopId);
   }
 
-  @Get('conversations/:id/messages')
-  @Roles('CUSTOMER', 'SHOPKEEPER', 'ADMIN', 'SUPPORT', 'SALES')
-  @ApiOperation({ summary: 'Get messages in a conversation (paginated)' })
+  @Get("conversations/:id/messages")
+  @Roles("CUSTOMER", "SHOPKEEPER", "ADMIN", "SUPPORT", "SALES")
+  @ApiOperation({ summary: "Get messages in a conversation (paginated)" })
   async getMessages(
-    @CurrentUser('id') userId: string,
-    @CurrentUser('role') userRole: string,
-    @Param('id') conversationId: string,
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("role") userRole: string,
+    @Param("id") conversationId: string,
+    @Query("page", new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query("limit", new DefaultValuePipe(50), ParseIntPipe) limit: number,
   ) {
-    return this.chatService.getMessages(conversationId, userId, userRole, page, limit);
+    return this.chatService.getMessages(
+      conversationId,
+      userId,
+      userRole,
+      page,
+      limit,
+    );
   }
 
-  @Post('conversations/:id/messages')
-  @Roles('CUSTOMER', 'SHOPKEEPER', 'ADMIN', 'SALES')
-  @ApiOperation({ summary: 'Send a message (blocked if contact info detected)' })
+  @Post("conversations/:id/messages")
+  @Roles("CUSTOMER", "SHOPKEEPER", "ADMIN", "SALES")
+  @ApiOperation({
+    summary: "Send a message (blocked if contact info detected)",
+  })
   async sendMessage(
-    @CurrentUser('id') userId: string,
-    @CurrentUser('role') userRole: string,
-    @Param('id') conversationId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("role") userRole: string,
+    @Param("id") conversationId: string,
     @Body() dto: SendMessageDto,
   ) {
     return this.chatService.sendMessage(
@@ -89,12 +103,12 @@ export class ChatController {
     );
   }
 
-  @Patch('conversations/:id/read')
-  @Roles('CUSTOMER', 'SHOPKEEPER', 'ADMIN', 'SUPPORT', 'SALES')
-  @ApiOperation({ summary: 'Mark all messages in a conversation as read' })
+  @Patch("conversations/:id/read")
+  @Roles("CUSTOMER", "SHOPKEEPER", "ADMIN", "SUPPORT", "SALES")
+  @ApiOperation({ summary: "Mark all messages in a conversation as read" })
   async markAsRead(
-    @CurrentUser('id') userId: string,
-    @Param('id') conversationId: string,
+    @CurrentUser("id") userId: string,
+    @Param("id") conversationId: string,
   ) {
     await this.chatService.markAsRead(conversationId, userId);
     return { success: true };
@@ -102,44 +116,46 @@ export class ChatController {
 
   // ─── Admin / Support ───
 
-  @Get('admin/violations')
-  @Roles('ADMIN', 'SUPPORT')
-  @ApiOperation({ summary: 'Get contact violation statistics and recent violations' })
+  @Get("admin/violations")
+  @Roles("ADMIN", "SUPPORT")
+  @ApiOperation({
+    summary: "Get contact violation statistics and recent violations",
+  })
   async getViolationStats() {
     return this.chatService.getViolationStats();
   }
 
-  @Get('admin/violations/user/:userId')
-  @Roles('ADMIN', 'SUPPORT')
-  @ApiOperation({ summary: 'Get per-user violation history' })
-  async getUserViolationHistory(@Param('userId') userId: string) {
+  @Get("admin/violations/user/:userId")
+  @Roles("ADMIN", "SUPPORT")
+  @ApiOperation({ summary: "Get per-user violation history" })
+  async getUserViolationHistory(@Param("userId") userId: string) {
     return this.chatService.getUserViolationHistory(userId);
   }
 
-  @Get('admin/messages/:messageId')
-  @Roles('ADMIN')
-  @ApiOperation({ summary: 'Get original blocked message (admin review)' })
-  async getBlockedMessage(@Param('messageId') messageId: string) {
+  @Get("admin/messages/:messageId")
+  @Roles("ADMIN")
+  @ApiOperation({ summary: "Get original blocked message (admin review)" })
+  async getBlockedMessage(@Param("messageId") messageId: string) {
     return this.chatService.getBlockedMessageOriginal(messageId);
   }
 
-  @Patch('admin/conversations/:id/unlock')
-  @Roles('ADMIN')
-  @ApiOperation({ summary: 'Unlock a locked conversation' })
+  @Patch("admin/conversations/:id/unlock")
+  @Roles("ADMIN")
+  @ApiOperation({ summary: "Unlock a locked conversation" })
   async unlockConversation(
-    @CurrentUser('id') adminId: string,
-    @Param('id') conversationId: string,
+    @CurrentUser("id") adminId: string,
+    @Param("id") conversationId: string,
   ) {
     await this.chatService.unlockConversation(conversationId, adminId);
     return { success: true };
   }
 
-  @Patch('admin/users/:userId/unblock')
-  @Roles('ADMIN')
-  @ApiOperation({ summary: 'Unblock a user suspended for chat violations' })
+  @Patch("admin/users/:userId/unblock")
+  @Roles("ADMIN")
+  @ApiOperation({ summary: "Unblock a user suspended for chat violations" })
   async unblockUser(
-    @CurrentUser('id') adminId: string,
-    @Param('userId') userId: string,
+    @CurrentUser("id") adminId: string,
+    @Param("userId") userId: string,
   ) {
     return this.chatService.unblockUser(userId, adminId);
   }

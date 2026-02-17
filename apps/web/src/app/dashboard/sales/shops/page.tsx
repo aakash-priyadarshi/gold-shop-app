@@ -18,13 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import api from "@/lib/api";
-import {
-  Eye,
-  Loader2,
-  Search,
-  Store,
-  TrendingUp,
-} from "lucide-react";
+import { Eye, Loader2, Search, Store, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -60,7 +54,7 @@ export default function SalesShopsPage() {
     try {
       setLoading(true);
       const res = await api.get(
-        `/shops?page=${currentPage}&limit=20${searchQuery ? `&search=${searchQuery}` : ""}`
+        `/shops?page=${currentPage}&limit=20${searchQuery ? `&search=${searchQuery}` : ""}`,
       );
       setShops(res.data?.data || res.data?.shops || []);
       setTotalPages(res.data?.pagination?.totalPages || 1);
@@ -91,9 +85,7 @@ export default function SalesShopsPage() {
       <DashboardLayout>
         <div className="space-y-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Shops & CRM
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900">Shops & CRM</h1>
             <p className="text-gray-500 mt-1">
               Browse shops and manage seller relationships
             </p>
@@ -156,9 +148,7 @@ export default function SalesShopsPage() {
                         {shops.map((shop) => (
                           <TableRow key={shop.id}>
                             <TableCell>
-                              <div className="font-medium">
-                                {shop.shopName}
-                              </div>
+                              <div className="font-medium">{shop.shopName}</div>
                             </TableCell>
                             <TableCell>
                               <div className="text-sm">

@@ -40,7 +40,7 @@ import {
 import { BRAND } from "@/config/brand";
 import { useCart } from "@/contexts/CartContext";
 import { getDashboardRoute, useAuth, type UserRole } from "@/hooks/useAuth";
-import { notificationsApi, ordersApi, chatApi } from "@/lib/api";
+import { chatApi, notificationsApi, ordersApi } from "@/lib/api";
 import {
   COUNTRIES,
   CURRENCIES,
@@ -938,7 +938,9 @@ export function Header() {
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Messages{unreadMessages > 0 ? ` (${unreadMessages})` : ""}</p>
+                  <p>
+                    Messages{unreadMessages > 0 ? ` (${unreadMessages})` : ""}
+                  </p>
                 </TooltipContent>
               </Tooltip>
 
