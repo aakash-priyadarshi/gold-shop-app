@@ -990,7 +990,9 @@ export class AdminController {
 
   @Patch("sellers/:shopId")
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: "Update seller shop fields (isOnHold, isActive, etc.)" })
+  @ApiOperation({
+    summary: "Update seller shop fields (isOnHold, isActive, etc.)",
+  })
   async updateSeller(
     @Param("shopId") shopId: string,
     @Body() body: Record<string, any>,

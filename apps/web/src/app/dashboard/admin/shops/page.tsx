@@ -1,7 +1,7 @@
 "use client";
 
-import { AdminGuard } from "@/components/auth/RouteGuard";
 import { AdminSellerCRM } from "@/components/admin/AdminSellerCRM";
+import { AdminGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,7 +50,6 @@ import {
   Trash2,
   TrendingUp,
   User,
-  Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -337,9 +336,13 @@ export default function AdminShopsPage() {
 
   const verifiedCount = shops.filter((s) => s.isVerified).length;
   const activeCount = shops.filter((s) => s.isActive).length;
-  const avgRating = shops.length > 0
-    ? (shops.reduce((sum, s) => sum + (s.rating || 0), 0) / shops.filter(s => s.rating).length || 0).toFixed(1)
-    : "0.0";
+  const avgRating =
+    shops.length > 0
+      ? (
+          shops.reduce((sum, s) => sum + (s.rating || 0), 0) /
+            shops.filter((s) => s.rating).length || 0
+        ).toFixed(1)
+      : "0.0";
 
   return (
     <AdminGuard>
@@ -381,20 +384,28 @@ export default function AdminShopsPage() {
                 <Card>
                   <CardContent className="p-4">
                     <p className="text-sm text-muted-foreground">Verified</p>
-                    <p className="text-2xl font-bold text-green-600">{verifiedCount}</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {verifiedCount}
+                    </p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-4">
                     <p className="text-sm text-muted-foreground">Active</p>
-                    <p className="text-2xl font-bold text-blue-600">{activeCount}</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {activeCount}
+                    </p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-4 flex items-center gap-2">
                     <div>
-                      <p className="text-sm text-muted-foreground">Avg Rating</p>
-                      <p className="text-2xl font-bold text-amber-600">{avgRating}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Avg Rating
+                      </p>
+                      <p className="text-2xl font-bold text-amber-600">
+                        {avgRating}
+                      </p>
                     </div>
                     <Star className="h-5 w-5 text-amber-400 ml-auto" />
                   </CardContent>
@@ -416,218 +427,226 @@ export default function AdminShopsPage() {
                   open={createDialogOpen}
                   onOpenChange={setCreateDialogOpen}
                 >
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Shop
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[500px]">
-                  <DialogHeader>
-                    <DialogTitle>Create New Shop</DialogTitle>
-                    <DialogDescription>
-                      Add a new shop with a new owner account.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-                    <div className="space-y-2">
-                      <Label htmlFor="shopName">Shop Name *</Label>
-                      <Input
-                        id="shopName"
-                        value={newShop.shopName}
-                        onChange={(e) =>
-                          setNewShop((prev) => ({
-                            ...prev,
-                            shopName: e.target.value,
-                          }))
-                        }
-                        placeholder="e.g., Golden Jewellers"
-                      />
-                    </div>
-
-                    <div className="border-t pt-4">
-                      <p className="text-sm font-medium mb-3">Owner Details</p>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="ownerFirstName">First Name *</Label>
-                          <Input
-                            id="ownerFirstName"
-                            value={newShop.ownerFirstName}
-                            onChange={(e) =>
-                              setNewShop((prev) => ({
-                                ...prev,
-                                ownerFirstName: e.target.value,
-                              }))
-                            }
-                            placeholder="First name"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="ownerLastName">Last Name</Label>
-                          <Input
-                            id="ownerLastName"
-                            value={newShop.ownerLastName}
-                            onChange={(e) =>
-                              setNewShop((prev) => ({
-                                ...prev,
-                                ownerLastName: e.target.value,
-                              }))
-                            }
-                            placeholder="Last name"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2 mt-3">
-                        <Label htmlFor="ownerEmail">Owner Email *</Label>
-                        <Input
-                          id="ownerEmail"
-                          type="email"
-                          value={newShop.ownerEmail}
-                          onChange={(e) =>
-                            setNewShop((prev) => ({
-                              ...prev,
-                              ownerEmail: e.target.value,
-                            }))
-                          }
-                          placeholder="owner@example.com"
-                        />
-                      </div>
-                      <div className="space-y-2 mt-3">
-                        <Label htmlFor="ownerPassword">Password *</Label>
-                        <Input
-                          id="ownerPassword"
-                          type="password"
-                          value={newShop.ownerPassword}
-                          onChange={(e) =>
-                            setNewShop((prev) => ({
-                              ...prev,
-                              ownerPassword: e.target.value,
-                            }))
-                          }
-                          placeholder="Password for owner account"
-                        />
-                      </div>
-                      <div className="space-y-2 mt-3">
-                        <Label htmlFor="ownerPhone">Owner Phone</Label>
-                        <Input
-                          id="ownerPhone"
-                          type="tel"
-                          value={newShop.ownerPhone}
-                          onChange={(e) =>
-                            setNewShop((prev) => ({
-                              ...prev,
-                              ownerPhone: e.target.value,
-                            }))
-                          }
-                          placeholder="+977 98XXXXXXXX"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="border-t pt-4">
-                      <p className="text-sm font-medium mb-3">Shop Details</p>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Shop
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                      <DialogTitle>Create New Shop</DialogTitle>
+                      <DialogDescription>
+                        Add a new shop with a new owner account.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
                       <div className="space-y-2">
-                        <Label htmlFor="contactPhone">Contact Phone *</Label>
+                        <Label htmlFor="shopName">Shop Name *</Label>
                         <Input
-                          id="contactPhone"
-                          type="tel"
-                          value={newShop.contactPhone}
+                          id="shopName"
+                          value={newShop.shopName}
                           onChange={(e) =>
                             setNewShop((prev) => ({
                               ...prev,
-                              contactPhone: e.target.value,
+                              shopName: e.target.value,
                             }))
                           }
-                          placeholder="Shop contact number"
+                          placeholder="e.g., Golden Jewellers"
                         />
                       </div>
-                      <div className="space-y-2 mt-3">
-                        <Label htmlFor="country">Country</Label>
-                        <Select
-                          value={newShop.country}
-                          onValueChange={(value) =>
-                            setNewShop((prev) => ({ ...prev, country: value }))
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="NP">
-                              <span className="flex items-center gap-2">
-                                <FlagImage code="NP" size={16} /> Nepal
-                              </span>
-                            </SelectItem>
-                            <SelectItem value="IN">
-                              <span className="flex items-center gap-2">
-                                <FlagImage code="IN" size={16} /> India
-                              </span>
-                            </SelectItem>
-                            <SelectItem value="AE">
-                              <span className="flex items-center gap-2">
-                                <FlagImage code="AE" size={16} /> UAE
-                              </span>
-                            </SelectItem>
-                            <SelectItem value="US">
-                              <span className="flex items-center gap-2">
-                                <FlagImage code="US" size={16} /> USA
-                              </span>
-                            </SelectItem>
-                            <SelectItem value="UK">
-                              <span className="flex items-center gap-2">
-                                <FlagImage code="UK" size={16} /> UK
-                              </span>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
+
+                      <div className="border-t pt-4">
+                        <p className="text-sm font-medium mb-3">
+                          Owner Details
+                        </p>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="ownerFirstName">First Name *</Label>
+                            <Input
+                              id="ownerFirstName"
+                              value={newShop.ownerFirstName}
+                              onChange={(e) =>
+                                setNewShop((prev) => ({
+                                  ...prev,
+                                  ownerFirstName: e.target.value,
+                                }))
+                              }
+                              placeholder="First name"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="ownerLastName">Last Name</Label>
+                            <Input
+                              id="ownerLastName"
+                              value={newShop.ownerLastName}
+                              onChange={(e) =>
+                                setNewShop((prev) => ({
+                                  ...prev,
+                                  ownerLastName: e.target.value,
+                                }))
+                              }
+                              placeholder="Last name"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2 mt-3">
+                          <Label htmlFor="ownerEmail">Owner Email *</Label>
+                          <Input
+                            id="ownerEmail"
+                            type="email"
+                            value={newShop.ownerEmail}
+                            onChange={(e) =>
+                              setNewShop((prev) => ({
+                                ...prev,
+                                ownerEmail: e.target.value,
+                              }))
+                            }
+                            placeholder="owner@example.com"
+                          />
+                        </div>
+                        <div className="space-y-2 mt-3">
+                          <Label htmlFor="ownerPassword">Password *</Label>
+                          <Input
+                            id="ownerPassword"
+                            type="password"
+                            value={newShop.ownerPassword}
+                            onChange={(e) =>
+                              setNewShop((prev) => ({
+                                ...prev,
+                                ownerPassword: e.target.value,
+                              }))
+                            }
+                            placeholder="Password for owner account"
+                          />
+                        </div>
+                        <div className="space-y-2 mt-3">
+                          <Label htmlFor="ownerPhone">Owner Phone</Label>
+                          <Input
+                            id="ownerPhone"
+                            type="tel"
+                            value={newShop.ownerPhone}
+                            onChange={(e) =>
+                              setNewShop((prev) => ({
+                                ...prev,
+                                ownerPhone: e.target.value,
+                              }))
+                            }
+                            placeholder="+977 98XXXXXXXX"
+                          />
+                        </div>
                       </div>
-                      <div className="space-y-2 mt-3">
-                        <Label htmlFor="city">City</Label>
-                        <Input
-                          id="city"
-                          value={newShop.city}
-                          onChange={(e) =>
-                            setNewShop((prev) => ({
-                              ...prev,
-                              city: e.target.value,
-                            }))
-                          }
-                          placeholder="e.g., Kathmandu"
-                        />
-                      </div>
-                      <div className="space-y-2 mt-3">
-                        <Label htmlFor="address">Address</Label>
-                        <Input
-                          id="address"
-                          value={newShop.address}
-                          onChange={(e) =>
-                            setNewShop((prev) => ({
-                              ...prev,
-                              address: e.target.value,
-                            }))
-                          }
-                          placeholder="Full address"
-                        />
+
+                      <div className="border-t pt-4">
+                        <p className="text-sm font-medium mb-3">Shop Details</p>
+                        <div className="space-y-2">
+                          <Label htmlFor="contactPhone">Contact Phone *</Label>
+                          <Input
+                            id="contactPhone"
+                            type="tel"
+                            value={newShop.contactPhone}
+                            onChange={(e) =>
+                              setNewShop((prev) => ({
+                                ...prev,
+                                contactPhone: e.target.value,
+                              }))
+                            }
+                            placeholder="Shop contact number"
+                          />
+                        </div>
+                        <div className="space-y-2 mt-3">
+                          <Label htmlFor="country">Country</Label>
+                          <Select
+                            value={newShop.country}
+                            onValueChange={(value) =>
+                              setNewShop((prev) => ({
+                                ...prev,
+                                country: value,
+                              }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="NP">
+                                <span className="flex items-center gap-2">
+                                  <FlagImage code="NP" size={16} /> Nepal
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="IN">
+                                <span className="flex items-center gap-2">
+                                  <FlagImage code="IN" size={16} /> India
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="AE">
+                                <span className="flex items-center gap-2">
+                                  <FlagImage code="AE" size={16} /> UAE
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="US">
+                                <span className="flex items-center gap-2">
+                                  <FlagImage code="US" size={16} /> USA
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="UK">
+                                <span className="flex items-center gap-2">
+                                  <FlagImage code="UK" size={16} /> UK
+                                </span>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2 mt-3">
+                          <Label htmlFor="city">City</Label>
+                          <Input
+                            id="city"
+                            value={newShop.city}
+                            onChange={(e) =>
+                              setNewShop((prev) => ({
+                                ...prev,
+                                city: e.target.value,
+                              }))
+                            }
+                            placeholder="e.g., Kathmandu"
+                          />
+                        </div>
+                        <div className="space-y-2 mt-3">
+                          <Label htmlFor="address">Address</Label>
+                          <Input
+                            id="address"
+                            value={newShop.address}
+                            onChange={(e) =>
+                              setNewShop((prev) => ({
+                                ...prev,
+                                address: e.target.value,
+                              }))
+                            }
+                            placeholder="Full address"
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <DialogFooter>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCreateDialogOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button onClick={handleCreateShop} disabled={creatingShop}>
-                      {creatingShop && (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      )}
-                      Create Shop
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
+                        onClick={() => setCreateDialogOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleCreateShop}
+                        disabled={creatingShop}
+                      >
+                        {creatingShop && (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        )}
+                        Create Shop
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
 
               {/* Shops Table */}
               <Card>
@@ -751,11 +770,17 @@ export default function AdminShopsPage() {
                               {shop.rating ? (
                                 <div className="flex items-center gap-1">
                                   <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
-                                  <span className="text-sm font-medium">{shop.rating.toFixed(1)}</span>
-                                  <span className="text-xs text-muted-foreground">({shop.totalReviews || 0})</span>
+                                  <span className="text-sm font-medium">
+                                    {shop.rating.toFixed(1)}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    ({shop.totalReviews || 0})
+                                  </span>
                                 </div>
                               ) : (
-                                <span className="text-xs text-muted-foreground">No reviews</span>
+                                <span className="text-xs text-muted-foreground">
+                                  No reviews
+                                </span>
                               )}
                             </TableCell>
                             <TableCell>
@@ -774,7 +799,10 @@ export default function AdminShopsPage() {
                                   </Badge>
                                 )}
                                 {!shop.isActive && (
-                                  <Badge variant="secondary" className="bg-red-100 text-red-700 w-fit text-xs">
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-red-100 text-red-700 w-fit text-xs"
+                                  >
                                     Inactive
                                   </Badge>
                                 )}

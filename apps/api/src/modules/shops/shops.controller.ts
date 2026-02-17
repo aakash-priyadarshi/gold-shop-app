@@ -409,7 +409,9 @@ export class ShopsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Get KYC/verification documents for a shop (Admin)" })
+  @ApiOperation({
+    summary: "Get KYC/verification documents for a shop (Admin)",
+  })
   async getShopKycAdmin(@Param("id") id: string) {
     return this.shopsService.getShopKycByShopId(id);
   }
@@ -424,7 +426,12 @@ export class ShopsController {
     @CurrentUser("id") adminId: string,
     @Body() body: { action: "approve" | "reject"; reason?: string },
   ) {
-    return this.shopsService.updateShopKycStatus(id, adminId, body.action, body.reason);
+    return this.shopsService.updateShopKycStatus(
+      id,
+      adminId,
+      body.action,
+      body.reason,
+    );
   }
 
   @Patch(":id/admin")
