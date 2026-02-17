@@ -910,8 +910,7 @@ export class SellerEngagementService {
 
     const performance =
       results[1].status === "fulfilled" ? results[1].value : null;
-    const badges =
-      results[2].status === "fulfilled" ? results[2].value : [];
+    const badges = results[2].status === "fulfilled" ? results[2].value : [];
     const recentOrders =
       results[3].status === "fulfilled" ? results[3].value : [];
     const rfqFunnel =

@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { AdminGuard } from '@/components/auth/RouteGuard';
-import { useAuth } from '@/hooks/useAuth';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { MessageSquare, Send, Lock, Shield, Users, Store } from 'lucide-react';
-import { useEffect, useState, useRef } from 'react';
-import { chatApi } from '@/lib/api';
+import { AdminGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/useAuth";
+import { chatApi } from "@/lib/api";
+import { Lock, MessageSquare, Send, Shield, Store, Users } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 interface Conversation {
   id: string;
@@ -16,7 +16,12 @@ interface Conversation {
   updatedAt: string;
   buyer: { id: string; firstName: string; lastName: string };
   shop: { id: string; shopName: string };
-  messages: Array<{ content: string; createdAt: string; senderRole: string; isRead: boolean }>;
+  messages: Array<{
+    content: string;
+    createdAt: string;
+    senderRole: string;
+    isRead: boolean;
+  }>;
   unreadCount?: number;
 }
 
@@ -36,9 +41,11 @@ interface Message {
 export default function AdminMessagesPage() {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+  const [selectedConversation, setSelectedConversation] = useState<
+    string | null
+  >(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
+  const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -52,7 +59,7 @@ export default function AdminMessagesPage() {
   }, [selectedConversation]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   async function loadConversations() {
@@ -60,7 +67,7 @@ export default function AdminMessagesPage() {
       const res = await chatApi.listConversations();
       setConversations(res.data || []);
     } catch (e) {
-      console.error('Failed to load conversations', e);
+      console.error("Failed to load conversations", e);
     } finally {
       setLoading(false);
     }
@@ -72,7 +79,7 @@ export default function AdminMessagesPage() {
       setMessages(res.data.messages || []);
       chatApi.markAsRead(conversationId);
     } catch (e) {
-      console.error('Failed to load messages', e);
+      console.error("Failed to load messages", e);
     }
   }
 
@@ -81,10 +88,10 @@ export default function AdminMessagesPage() {
     setSending(true);
     try {
       await chatApi.sendMessage(selectedConversation, { content: newMessage });
-      setNewMessage('');
+      setNewMessage("");
       loadMessages(selectedConversation);
     } catch (e: any) {
-      alert(e.response?.data?.message || 'Failed to send message');
+      alert(e.response?.data?.message || "Failed to send message");
     } finally {
       setSending(false);
     }
@@ -98,7 +105,7 @@ export default function AdminMessagesPage() {
         loadMessages(conversationId);
       }
     } catch (e) {
-      console.error('Failed to unlock conversation', e);
+      console.error("Failed to unlock conversation", e);
     }
   }
 
@@ -132,7 +139,7 @@ export default function AdminMessagesPage() {
                     key={conv.id}
                     onClick={() => setSelectedConversation(conv.id)}
                     className={`w-full p-3 text-left border-b hover:bg-muted/50 transition ${
-                      selectedConversation === conv.id ? 'bg-muted' : ''
+                      selectedConversation === conv.id ? "bg-muted" : ""
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -140,11 +147,14 @@ export default function AdminMessagesPage() {
                         {conv.buyer.firstName} {conv.buyer.lastName}
                       </span>
                       <div className="flex items-center gap-1">
-                        {conv.status === 'LOCKED' && (
+                        {conv.status === "LOCKED" && (
                           <Lock className="h-3 w-3 text-destructive" />
                         )}
                         {(conv.unreadCount || 0) > 0 && (
-                          <Badge variant="default" className="text-xs h-5 px-1.5">
+                          <Badge
+                            variant="default"
+                            className="text-xs h-5 px-1.5"
+                          >
                             {conv.unreadCount}
                           </Badge>
                         )}
@@ -152,7 +162,9 @@ export default function AdminMessagesPage() {
                     </div>
                     <div className="flex items-center gap-1 mt-0.5">
                       <Store className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">{conv.shop.shopName}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {conv.shop.shopName}
+                      </span>
                     </div>
                     {conv.messages[0] && (
                       <p className="text-sm text-muted-foreground truncate mt-1">
@@ -181,13 +193,16 @@ export default function AdminMessagesPage() {
                       <div className="flex items-center gap-2">
                         <Users className="h-4 w-4 text-muted-foreground" />
                         <h3 className="font-medium">
-                          {selectedConv?.buyer.firstName} {selectedConv?.buyer.lastName}
+                          {selectedConv?.buyer.firstName}{" "}
+                          {selectedConv?.buyer.lastName}
                         </h3>
                         <span className="text-muted-foreground">↔</span>
                         <Store className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{selectedConv?.shop.shopName}</span>
+                        <span className="font-medium">
+                          {selectedConv?.shop.shopName}
+                        </span>
                       </div>
-                      {selectedConv?.status === 'LOCKED' && (
+                      {selectedConv?.status === "LOCKED" && (
                         <div className="flex items-center gap-2 mt-1">
                           <Badge variant="destructive" className="text-xs">
                             <Lock className="h-3 w-3 mr-1" /> Locked
@@ -216,10 +231,10 @@ export default function AdminMessagesPage() {
                         key={msg.id}
                         className={`flex ${
                           msg.isSystem
-                            ? 'justify-center'
+                            ? "justify-center"
                             : msg.senderId === user?.id
-                              ? 'justify-end'
-                              : 'justify-start'
+                              ? "justify-end"
+                              : "justify-start"
                         }`}
                       >
                         {msg.isSystem ? (
@@ -230,11 +245,11 @@ export default function AdminMessagesPage() {
                           <div
                             className={`max-w-[70%] px-3 py-2 rounded-lg ${
                               msg.senderId === user?.id
-                                ? 'bg-primary text-primary-foreground'
-                                : msg.senderRole === 'SHOPKEEPER'
-                                  ? 'bg-amber-50 border border-amber-200'
-                                  : 'bg-muted'
-                            } ${msg.hasViolation ? 'border-2 border-yellow-500' : ''}`}
+                                ? "bg-primary text-primary-foreground"
+                                : msg.senderRole === "SHOPKEEPER"
+                                  ? "bg-amber-50 border border-amber-200"
+                                  : "bg-muted"
+                            } ${msg.hasViolation ? "border-2 border-yellow-500" : ""}`}
                           >
                             <div className="text-xs font-medium opacity-75 mb-1">
                               {msg.sender
@@ -244,7 +259,8 @@ export default function AdminMessagesPage() {
                             <p className="text-sm">{msg.content}</p>
                             {msg.hasViolation && (
                               <p className="text-xs mt-1 opacity-75">
-                                ⚠️ Violation: {msg.violationType || 'Contact info detected'}
+                                ⚠️ Violation:{" "}
+                                {msg.violationType || "Contact info detected"}
                               </p>
                             )}
                             <span className="text-xs opacity-60 mt-1 block">
@@ -262,11 +278,16 @@ export default function AdminMessagesPage() {
                     <Input
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && !e.shiftKey && handleSend()
+                      }
                       placeholder="Send a message as Admin..."
                       disabled={sending}
                     />
-                    <Button onClick={handleSend} disabled={sending || !newMessage.trim()}>
+                    <Button
+                      onClick={handleSend}
+                      disabled={sending || !newMessage.trim()}
+                    >
                       <Send className="h-4 w-4" />
                     </Button>
                   </div>

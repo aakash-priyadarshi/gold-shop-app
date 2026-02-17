@@ -44,7 +44,10 @@ export default function SalesProfilePage() {
         phone,
       });
       await refreshUser();
-      toast({ title: "Profile updated", description: "Your profile has been saved." });
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been saved.",
+      });
     } catch (err: any) {
       toast({
         title: "Error",

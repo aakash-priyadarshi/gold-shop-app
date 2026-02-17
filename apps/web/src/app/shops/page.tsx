@@ -18,8 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import api, { chatApi } from "@/lib/api";
 import {
   BuildingStorefrontIcon,
@@ -212,13 +212,16 @@ export default function ShopsPage() {
     } catch (err: any) {
       // If conversation already exists, the backend might return it
       if (err.response?.data?.conversationId) {
-        router.push(`/dashboard/customer/messages?chat=${err.response.data.conversationId}`);
+        router.push(
+          `/dashboard/customer/messages?chat=${err.response.data.conversationId}`,
+        );
         return;
       }
       toast({
         variant: "destructive",
         title: "Error",
-        description: err.response?.data?.message || "Failed to start conversation",
+        description:
+          err.response?.data?.message || "Failed to start conversation",
       });
     } finally {
       setMessagingShopId(null);

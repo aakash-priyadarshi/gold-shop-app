@@ -681,8 +681,17 @@ export default function ShopEngagementPage() {
       // Log any failed calls for debugging
       results.forEach((r, i) => {
         if (r.status === "rejected") {
-          const labels = ["healthScore", "onboarding", "milestones", "rfqFunnel", "kyc"];
-          console.warn(`Engagement: ${labels[i]} failed:`, r.reason?.message || r.reason);
+          const labels = [
+            "healthScore",
+            "onboarding",
+            "milestones",
+            "rfqFunnel",
+            "kyc",
+          ];
+          console.warn(
+            `Engagement: ${labels[i]} failed:`,
+            r.reason?.message || r.reason,
+          );
         }
       });
 
