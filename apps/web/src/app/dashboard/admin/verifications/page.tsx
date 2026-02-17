@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { AdminGuard } from '@/components/auth/RouteGuard';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AdminGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -12,9 +12,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -22,10 +22,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from '@/hooks/use-toast';
-import api, { adminApi } from '@/lib/api';
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/hooks/use-toast";
+import api, { adminApi } from "@/lib/api";
 import {
   CheckCircle,
   ExternalLink,
@@ -37,13 +37,13 @@ import {
   Store,
   User,
   XCircle,
-} from 'lucide-react';
-import { useEffect, useState } from 'react';
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface VerificationRequest {
   id: string;
-  type: 'SHOP' | 'USER';
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  type: "SHOP" | "USER";
+  status: "PENDING" | "APPROVED" | "REJECTED";
   createdAt: string;
   shop?: {
     id: string;
@@ -77,13 +77,15 @@ interface Shop {
 export default function AdminVerificationsPage() {
   const [requests, setRequests] = useState<VerificationRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('kyc');
+  const [activeTab, setActiveTab] = useState("kyc");
 
   // Shops for KYC review
   const [shops, setShops] = useState<Shop[]>([]);
   const [shopsLoading, setShopsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [kycFilter, setKycFilter] = useState<'all' | 'pending' | 'verified'>('pending');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [kycFilter, setKycFilter] = useState<"all" | "pending" | "verified">(
+    "pending",
+  );
 
   // KYC Review dialog state
   const [kycDialogOpen, setKycDialogOpen] = useState(false);
@@ -91,7 +93,7 @@ export default function AdminVerificationsPage() {
   const [kycData, setKycData] = useState<any>(null);
   const [kycLoading, setKycLoading] = useState(false);
   const [kycProcessing, setKycProcessing] = useState(false);
-  const [kycRejectReason, setKycRejectReason] = useState('');
+  const [kycRejectReason, setKycRejectReason] = useState("");
 
   useEffect(() => {
     loadRequests();
@@ -101,15 +103,15 @@ export default function AdminVerificationsPage() {
   const loadRequests = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/admin/verifications');
+      const response = await api.get("/admin/verifications");
       let arr = response.data.requests || response.data || [];
       if (!Array.isArray(arr)) arr = [];
       setRequests(arr);
     } catch (error) {
       toast({
-        variant: 'destructive',
-        title: 'Failed to load verifications',
-        description: 'Could not fetch verification requests',
+        variant: "destructive",
+        title: "Failed to load verifications",
+        description: "Could not fetch verification requests",
       });
     } finally {
       setIsLoading(false);
@@ -119,12 +121,12 @@ export default function AdminVerificationsPage() {
   const loadShops = async () => {
     setShopsLoading(true);
     try {
-      const response = await api.get('/shops');
+      const response = await api.get("/shops");
       let shopsArr = response.data.shops || response.data || [];
       if (!Array.isArray(shopsArr)) shopsArr = [];
       setShops(shopsArr);
     } catch (error) {
-      console.error('Failed to load shops:', error);
+      console.error("Failed to load shops:", error);
     } finally {
       setShopsLoading(false);
     }
@@ -135,44 +137,46 @@ export default function AdminVerificationsPage() {
     setKycDialogOpen(true);
     setKycLoading(true);
     setKycData(null);
-    setKycRejectReason('');
+    setKycRejectReason("");
     try {
       const response = await adminApi.getShopKyc(shopId);
       setKycData(response.data);
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Failed to load KYC',
-        description: error.response?.data?.message || 'Could not fetch KYC data',
+        variant: "destructive",
+        title: "Failed to load KYC",
+        description:
+          error.response?.data?.message || "Could not fetch KYC data",
       });
     } finally {
       setKycLoading(false);
     }
   };
 
-  const handleKycAction = async (action: 'approve' | 'reject') => {
+  const handleKycAction = async (action: "approve" | "reject") => {
     if (!kycShopId) return;
     setKycProcessing(true);
     try {
       await adminApi.updateShopKycStatus(
         kycShopId,
         action,
-        action === 'reject' ? kycRejectReason : undefined,
+        action === "reject" ? kycRejectReason : undefined,
       );
       toast({
-        title: action === 'approve' ? 'KYC Approved' : 'KYC Rejected',
+        title: action === "approve" ? "KYC Approved" : "KYC Rejected",
         description:
-          action === 'approve'
-            ? 'Shop has been verified based on KYC review.'
-            : 'Shop KYC has been rejected.',
+          action === "approve"
+            ? "Shop has been verified based on KYC review."
+            : "Shop KYC has been rejected.",
       });
       setKycDialogOpen(false);
       loadShops();
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Action Failed',
-        description: error.response?.data?.message || 'Could not process KYC action',
+        variant: "destructive",
+        title: "Action Failed",
+        description:
+          error.response?.data?.message || "Could not process KYC action",
       });
     } finally {
       setKycProcessing(false);
@@ -180,23 +184,27 @@ export default function AdminVerificationsPage() {
   };
 
   const filteredShops = shops.filter((s) => {
-    const matchesSearch = !searchQuery || 
+    const matchesSearch =
+      !searchQuery ||
       s.shopName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.owner?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.city?.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesFilter = kycFilter === 'all' 
-      ? true 
-      : kycFilter === 'pending' 
-        ? !s.isVerified 
-        : s.isVerified;
-    
+
+    const matchesFilter =
+      kycFilter === "all"
+        ? true
+        : kycFilter === "pending"
+          ? !s.isVerified
+          : s.isVerified;
+
     return matchesSearch && matchesFilter;
   });
 
   const pendingCount = shops.filter((s) => !s.isVerified).length;
   const verifiedCount = shops.filter((s) => s.isVerified).length;
-  const pendingRequestCount = requests.filter((r) => r.status === 'PENDING').length;
+  const pendingRequestCount = requests.filter(
+    (r) => r.status === "PENDING",
+  ).length;
 
   return (
     <AdminGuard>
@@ -217,13 +225,17 @@ export default function AdminVerificationsPage() {
             <Card>
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">Pending KYC</p>
-                <p className="text-2xl font-bold text-amber-600">{pendingCount}</p>
+                <p className="text-2xl font-bold text-amber-600">
+                  {pendingCount}
+                </p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">Verified Shops</p>
-                <p className="text-2xl font-bold text-green-600">{verifiedCount}</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {verifiedCount}
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -234,8 +246,12 @@ export default function AdminVerificationsPage() {
             </Card>
             <Card>
               <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">Pending Requests</p>
-                <p className="text-2xl font-bold text-blue-600">{pendingRequestCount}</p>
+                <p className="text-sm text-muted-foreground">
+                  Pending Requests
+                </p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {pendingRequestCount}
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -246,7 +262,10 @@ export default function AdminVerificationsPage() {
                 <FileCheck className="h-4 w-4" />
                 KYC Review
                 {pendingCount > 0 && (
-                  <Badge variant="secondary" className="ml-1 bg-amber-100 text-amber-700">
+                  <Badge
+                    variant="secondary"
+                    className="ml-1 bg-amber-100 text-amber-700"
+                  >
                     {pendingCount}
                   </Badge>
                 )}
@@ -277,22 +296,22 @@ export default function AdminVerificationsPage() {
                 <div className="flex gap-1">
                   <Button
                     size="sm"
-                    variant={kycFilter === 'pending' ? 'default' : 'outline'}
-                    onClick={() => setKycFilter('pending')}
+                    variant={kycFilter === "pending" ? "default" : "outline"}
+                    onClick={() => setKycFilter("pending")}
                   >
                     Pending ({pendingCount})
                   </Button>
                   <Button
                     size="sm"
-                    variant={kycFilter === 'verified' ? 'default' : 'outline'}
-                    onClick={() => setKycFilter('verified')}
+                    variant={kycFilter === "verified" ? "default" : "outline"}
+                    onClick={() => setKycFilter("verified")}
                   >
                     Verified ({verifiedCount})
                   </Button>
                   <Button
                     size="sm"
-                    variant={kycFilter === 'all' ? 'default' : 'outline'}
-                    onClick={() => setKycFilter('all')}
+                    variant={kycFilter === "all" ? "default" : "outline"}
+                    onClick={() => setKycFilter("all")}
                   >
                     All
                   </Button>
@@ -333,7 +352,7 @@ export default function AdminVerificationsPage() {
                                 <div>
                                   <p className="font-medium">{shop.shopName}</p>
                                   <p className="text-xs text-muted-foreground">
-                                    {shop.city || 'No city'}
+                                    {shop.city || "No city"}
                                   </p>
                                 </div>
                               </div>
@@ -362,7 +381,10 @@ export default function AdminVerificationsPage() {
                                   Verified
                                 </Badge>
                               ) : (
-                                <Badge variant="secondary" className="bg-amber-100 text-amber-700">
+                                <Badge
+                                  variant="secondary"
+                                  className="bg-amber-100 text-amber-700"
+                                >
                                   Pending
                                 </Badge>
                               )}
@@ -375,12 +397,12 @@ export default function AdminVerificationsPage() {
                             <TableCell>
                               <Button
                                 size="sm"
-                                variant={shop.isVerified ? 'ghost' : 'outline'}
+                                variant={shop.isVerified ? "ghost" : "outline"}
                                 onClick={() => openKycReview(shop.id)}
-                                className={`gap-1 ${shop.isVerified ? 'text-green-600' : 'text-blue-600 hover:text-blue-700'}`}
+                                className={`gap-1 ${shop.isVerified ? "text-green-600" : "text-blue-600 hover:text-blue-700"}`}
                               >
                                 <FileCheck className="h-3.5 w-3.5" />
-                                {shop.isVerified ? 'View KYC' : 'Review KYC'}
+                                {shop.isVerified ? "View KYC" : "Review KYC"}
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -422,28 +444,47 @@ export default function AdminVerificationsPage() {
                         {requests.map((req) => (
                           <TableRow key={req.id}>
                             <TableCell>
-                              {req.type === 'SHOP' ? (
-                                <span className="flex items-center gap-2"><Store className="h-4 w-4" /> Shop</span>
+                              {req.type === "SHOP" ? (
+                                <span className="flex items-center gap-2">
+                                  <Store className="h-4 w-4" /> Shop
+                                </span>
                               ) : (
-                                <span className="flex items-center gap-2"><User className="h-4 w-4" /> User</span>
+                                <span className="flex items-center gap-2">
+                                  <User className="h-4 w-4" /> User
+                                </span>
                               )}
                             </TableCell>
                             <TableCell>
-                              {req.type === 'SHOP' && req.shop ? (
-                                <span>{req.shop.shopName} ({req.shop.ownerName})</span>
+                              {req.type === "SHOP" && req.shop ? (
+                                <span>
+                                  {req.shop.shopName} ({req.shop.ownerName})
+                                </span>
                               ) : req.user ? (
-                                <span>{req.user.name} ({req.user.email})</span>
-                              ) : '—'}
+                                <span>
+                                  {req.user.name} ({req.user.email})
+                                </span>
+                              ) : (
+                                "—"
+                              )}
                             </TableCell>
                             <TableCell>
-                              {req.status === 'PENDING' ? (
-                                <Badge variant="secondary" className="bg-amber-100 text-amber-700">Pending</Badge>
-                              ) : req.status === 'APPROVED' ? (
+                              {req.status === "PENDING" ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="bg-amber-100 text-amber-700"
+                                >
+                                  Pending
+                                </Badge>
+                              ) : req.status === "APPROVED" ? (
                                 <Badge className="bg-green-100 text-green-700">
-                                  <CheckCircle className="h-3 w-3 mr-1" /> Approved
+                                  <CheckCircle className="h-3 w-3 mr-1" />{" "}
+                                  Approved
                                 </Badge>
                               ) : (
-                                <Badge variant="secondary" className="bg-red-100 text-red-700">
+                                <Badge
+                                  variant="secondary"
+                                  className="bg-red-100 text-red-700"
+                                >
                                   <XCircle className="h-3 w-3 mr-1" /> Rejected
                                 </Badge>
                               )}
@@ -463,7 +504,6 @@ export default function AdminVerificationsPage() {
             </TabsContent>
           </Tabs>
         </div>
-
         {/* KYC Review Dialog */}
         <Dialog open={kycDialogOpen} onOpenChange={setKycDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -488,18 +528,23 @@ export default function AdminVerificationsPage() {
                   <div>
                     <p className="font-semibold">{kycData.shopName}</p>
                     <p className="text-sm text-muted-foreground">
-                      {kycData.user?.firstName} {kycData.user?.lastName} — {kycData.user?.email}
+                      {kycData.user?.firstName} {kycData.user?.lastName} —{" "}
+                      {kycData.user?.email}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Globe className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{kycData.country}</span>
+                    <span className="text-sm font-medium">
+                      {kycData.country}
+                    </span>
                     {kycData.isVerified ? (
                       <Badge className="bg-green-100 text-green-700">
                         <CheckCircle className="h-3 w-3 mr-1" /> Verified
                       </Badge>
                     ) : (
-                      <Badge className="bg-amber-100 text-amber-700">Pending</Badge>
+                      <Badge className="bg-amber-100 text-amber-700">
+                        Pending
+                      </Badge>
                     )}
                   </div>
                 </div>
@@ -511,14 +556,21 @@ export default function AdminVerificationsPage() {
                   </h4>
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { label: 'PAN Number', value: kycData.panNumber },
-                      { label: 'VAT/GST Number', value: kycData.vatNumber },
-                      { label: 'BIS License', value: kycData.bisLicenseNumber },
+                      { label: "PAN Number", value: kycData.panNumber },
+                      { label: "VAT/GST Number", value: kycData.vatNumber },
+                      { label: "BIS License", value: kycData.bisLicenseNumber },
                     ].map((field) => (
-                      <div key={field.label} className="p-3 rounded-lg border bg-white dark:bg-muted/30">
-                        <Label className="text-muted-foreground text-xs">{field.label}</Label>
-                        <p className={`font-mono text-sm mt-1 ${field.value ? 'text-foreground' : 'text-muted-foreground italic'}`}>
-                          {field.value || 'Not provided'}
+                      <div
+                        key={field.label}
+                        className="p-3 rounded-lg border bg-white dark:bg-muted/30"
+                      >
+                        <Label className="text-muted-foreground text-xs">
+                          {field.label}
+                        </Label>
+                        <p
+                          className={`font-mono text-sm mt-1 ${field.value ? "text-foreground" : "text-muted-foreground italic"}`}
+                        >
+                          {field.value || "Not provided"}
                         </p>
                       </div>
                     ))}
@@ -526,17 +578,21 @@ export default function AdminVerificationsPage() {
                 </div>
 
                 {/* Document uploads */}
-                {kycData.verificationDocuments && Object.keys(kycData.verificationDocuments).length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-3">
-                      Submitted Documents
-                    </h4>
-                    <div className="grid grid-cols-1 gap-3">
-                      {Object.entries(kycData.verificationDocuments as Record<string, any>).map(
-                        ([key, value]) => {
-                          const isUrl = typeof value === 'string' && value.startsWith('http');
+                {kycData.verificationDocuments &&
+                  Object.keys(kycData.verificationDocuments).length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-3">
+                        Submitted Documents
+                      </h4>
+                      <div className="grid grid-cols-1 gap-3">
+                        {Object.entries(
+                          kycData.verificationDocuments as Record<string, any>,
+                        ).map(([key, value]) => {
+                          const isUrl =
+                            typeof value === "string" &&
+                            value.startsWith("http");
                           const displayKey = key
-                            .replace(/([A-Z])/g, ' $1')
+                            .replace(/([A-Z])/g, " $1")
                             .replace(/^./, (s: string) => s.toUpperCase());
                           return (
                             <div
@@ -544,7 +600,9 @@ export default function AdminVerificationsPage() {
                               className="flex items-center justify-between p-3 rounded-lg border bg-white dark:bg-muted/30"
                             >
                               <div>
-                                <p className="text-sm font-medium">{displayKey}</p>
+                                <p className="text-sm font-medium">
+                                  {displayKey}
+                                </p>
                                 {!isUrl && (
                                   <p className="text-xs font-mono text-muted-foreground mt-0.5">
                                     {String(value)}
@@ -564,28 +622,33 @@ export default function AdminVerificationsPage() {
                               )}
                             </div>
                           );
-                        },
-                      )}
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {(!kycData.verificationDocuments || Object.keys(kycData.verificationDocuments).length === 0) &&
+                {(!kycData.verificationDocuments ||
+                  Object.keys(kycData.verificationDocuments).length === 0) &&
                   !kycData.panNumber &&
                   !kycData.vatNumber &&
                   !kycData.bisLicenseNumber && (
                     <div className="text-center py-6 text-muted-foreground">
                       <FileCheck className="h-10 w-10 mx-auto mb-2 opacity-40" />
-                      <p className="font-medium">No KYC documents submitted yet</p>
+                      <p className="font-medium">
+                        No KYC documents submitted yet
+                      </p>
                       <p className="text-sm mt-1">
-                        The shop owner hasn&apos;t uploaded any verification documents.
+                        The shop owner hasn&apos;t uploaded any verification
+                        documents.
                       </p>
                     </div>
                   )}
 
                 {/* Reject reason input */}
                 <div className="space-y-2">
-                  <Label htmlFor="rejectReason">Rejection Reason (optional)</Label>
+                  <Label htmlFor="rejectReason">
+                    Rejection Reason (optional)
+                  </Label>
                   <Input
                     id="rejectReason"
                     value={kycRejectReason}
@@ -609,10 +672,12 @@ export default function AdminVerificationsPage() {
                   {kycData.isVerified ? (
                     <Button
                       variant="destructive"
-                      onClick={() => handleKycAction('reject')}
+                      onClick={() => handleKycAction("reject")}
                       disabled={kycProcessing}
                     >
-                      {kycProcessing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      {kycProcessing && (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      )}
                       <XCircle className="h-4 w-4 mr-1" />
                       Revoke Verification
                     </Button>
@@ -621,19 +686,23 @@ export default function AdminVerificationsPage() {
                       <Button
                         variant="outline"
                         className="text-red-600 hover:text-red-700"
-                        onClick={() => handleKycAction('reject')}
+                        onClick={() => handleKycAction("reject")}
                         disabled={kycProcessing}
                       >
-                        {kycProcessing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                        {kycProcessing && (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        )}
                         <XCircle className="h-4 w-4 mr-1" />
                         Reject
                       </Button>
                       <Button
                         className="bg-green-600 hover:bg-green-700"
-                        onClick={() => handleKycAction('approve')}
+                        onClick={() => handleKycAction("approve")}
                         disabled={kycProcessing}
                       >
-                        {kycProcessing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                        {kycProcessing && (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        )}
                         <CheckCircle className="h-4 w-4 mr-1" />
                         Approve & Verify
                       </Button>
@@ -643,7 +712,8 @@ export default function AdminVerificationsPage() {
               )}
             </DialogFooter>
           </DialogContent>
-        </Dialog>      </DashboardLayout>
+        </Dialog>{" "}
+      </DashboardLayout>
     </AdminGuard>
   );
 }

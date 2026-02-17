@@ -9,6 +9,7 @@
  * - profile: Profile avatars (large: 400px, medium: 200px, thumb: 100px)
  * - rfq: Custom order reference images (large: 1200px, medium: 600px, thumb: 200px)
  * - designs: AI-generated design images (large: 1024px, medium: 512px, thumb: 200px)
+ * - kyc: KYC/verification documents (large: 1600px, medium: 800px, thumb: 200px)
  */
 
 export interface Env {
@@ -58,6 +59,11 @@ const VARIANTS: Record<string, ImageVariant[]> = {
     { suffix: "", maxWidth: 1024, maxHeight: 1024, quality: 90 }, // AI images are typically 1024px
     { suffix: "_medium", maxWidth: 512, maxHeight: 512, quality: 85 },
     { suffix: "_thumb", maxWidth: 200, maxHeight: 200, quality: 80 },
+  ],
+  kyc: [
+    { suffix: "", maxWidth: 1600, maxHeight: 1600, quality: 95 }, // KYC docs need high fidelity
+    { suffix: "_medium", maxWidth: 800, maxHeight: 800, quality: 90 },
+    { suffix: "_thumb", maxWidth: 200, maxHeight: 200, quality: 85 },
   ],
 };
 
@@ -146,7 +152,8 @@ export default {
         path.startsWith("/product/") ||
         path.startsWith("/profile/") ||
         path.startsWith("/rfq/") ||
-        path.startsWith("/designs/")
+        path.startsWith("/designs/") ||
+        path.startsWith("/kyc/")
       ) {
         const key = path.substring(1); // Remove leading slash
         return handleServe(key, env, corsHeaders);

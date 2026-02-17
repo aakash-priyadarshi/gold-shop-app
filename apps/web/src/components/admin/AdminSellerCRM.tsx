@@ -32,10 +32,10 @@ import { toast } from "@/hooks/use-toast";
 import { adminApi } from "@/lib/api";
 import {
   Activity,
+  AlertTriangle,
   Award,
   BarChart3,
   CheckCircle,
-  AlertTriangle,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -690,58 +690,88 @@ export function AdminSellerCRM() {
                 <TabsContent value="overview" className="space-y-4 mt-4">
                   {/* Health Score Card */}
                   {selectedSeller.healthScore ? (
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold flex items-center gap-2">
-                          <Heart className="h-4 w-4" /> Health Score
-                        </h3>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`text-3xl font-bold ${gradeColor[selectedSeller.healthScore.grade] || ""}`}
-                          >
-                            {selectedSeller.healthScore.totalScore}
-                          </span>
-                          <span
-                            className={`text-lg font-bold ${gradeColor[selectedSeller.healthScore.grade] || ""}`}
-                          >
-                            ({selectedSeller.healthScore.grade})
-                          </span>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-5 gap-3">
-                        {([
-                          { label: "Profile", data: selectedSeller.healthScore.profileCompleteness },
-                          { label: "Performance", data: selectedSeller.healthScore.performanceMetrics },
-                          { label: "Verification", data: selectedSeller.healthScore.verificationStatus },
-                          { label: "Capabilities", data: selectedSeller.healthScore.capabilitySetup },
-                          { label: "Engagement", data: selectedSeller.healthScore.engagementActivity },
-                        ] as { label: string; data: { score: number; max: number } | null | undefined }[]).map((item) => {
-                          const score = item.data?.score ?? 0;
-                          const max = item.data?.max ?? 1;
-                          return (
-                          <div key={item.label} className="text-center">
-                            <p className="text-xs text-muted-foreground mb-1">
-                              {item.label}
-                            </p>
-                            <p className="font-bold text-sm">
-                              {score}/{max}
-                            </p>
-                            <Progress
-                              value={max > 0 ? (score / max) * 100 : 0}
-                              className="h-1.5 mt-1"
-                            />
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="font-semibold flex items-center gap-2">
+                            <Heart className="h-4 w-4" /> Health Score
+                          </h3>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-3xl font-bold ${gradeColor[selectedSeller.healthScore.grade] || ""}`}
+                            >
+                              {selectedSeller.healthScore.totalScore}
+                            </span>
+                            <span
+                              className={`text-lg font-bold ${gradeColor[selectedSeller.healthScore.grade] || ""}`}
+                            >
+                              ({selectedSeller.healthScore.grade})
+                            </span>
                           </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
+                        </div>
+                        <div className="grid grid-cols-5 gap-3">
+                          {(
+                            [
+                              {
+                                label: "Profile",
+                                data: selectedSeller.healthScore
+                                  .profileCompleteness,
+                              },
+                              {
+                                label: "Performance",
+                                data: selectedSeller.healthScore
+                                  .performanceMetrics,
+                              },
+                              {
+                                label: "Verification",
+                                data: selectedSeller.healthScore
+                                  .verificationStatus,
+                              },
+                              {
+                                label: "Capabilities",
+                                data: selectedSeller.healthScore
+                                  .capabilitySetup,
+                              },
+                              {
+                                label: "Engagement",
+                                data: selectedSeller.healthScore
+                                  .engagementActivity,
+                              },
+                            ] as {
+                              label: string;
+                              data:
+                                | { score: number; max: number }
+                                | null
+                                | undefined;
+                            }[]
+                          ).map((item) => {
+                            const score = item.data?.score ?? 0;
+                            const max = item.data?.max ?? 1;
+                            return (
+                              <div key={item.label} className="text-center">
+                                <p className="text-xs text-muted-foreground mb-1">
+                                  {item.label}
+                                </p>
+                                <p className="font-bold text-sm">
+                                  {score}/{max}
+                                </p>
+                                <Progress
+                                  value={max > 0 ? (score / max) * 100 : 0}
+                                  className="h-1.5 mt-1"
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
                   ) : (
                     <Card>
                       <CardContent className="p-4 text-center text-muted-foreground">
                         <Heart className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                        <p className="text-sm">Health score not available for this shop yet</p>
+                        <p className="text-sm">
+                          Health score not available for this shop yet
+                        </p>
                       </CardContent>
                     </Card>
                   )}
@@ -811,7 +841,8 @@ export function AdminSellerCRM() {
                             <MapPin className="h-3.5 w-3.5" />
                             {selectedSeller.shop?.city || "N/A"},{" "}
                             {selectedSeller.shop?.state ||
-                              selectedSeller.shop?.country || "N/A"}
+                              selectedSeller.shop?.country ||
+                              "N/A"}
                           </p>
                           <p className="flex items-center gap-2">
                             <Phone className="h-3.5 w-3.5" />
@@ -824,13 +855,15 @@ export function AdminSellerCRM() {
                           )}
                           <p className="flex items-center gap-2">
                             <Users className="h-3.5 w-3.5" />
-                            Owner: {selectedSeller.shop?.user?.firstName || ""}{" "}
+                            Owner: {selectedSeller.shop?.user?.firstName ||
+                              ""}{" "}
                             {selectedSeller.shop?.user?.lastName || ""}
                           </p>
                           {selectedSeller.shop?.createdAt && (
-                          <p className="text-muted-foreground">
-                            Joined: {formatDate(selectedSeller.shop.createdAt)}
-                          </p>
+                            <p className="text-muted-foreground">
+                              Joined:{" "}
+                              {formatDate(selectedSeller.shop.createdAt)}
+                            </p>
                           )}
                         </div>
                       </CardContent>
@@ -912,14 +945,36 @@ export function AdminSellerCRM() {
 
                     // Calculate churn risk
                     let riskScore = 0;
-                    if (hs < 30) riskScore += 40; else if (hs < 50) riskScore += 20; else if (hs < 70) riskScore += 10;
-                    if (orders === 0) riskScore += 25; else if (orders < 3) riskScore += 15;
-                    if (cancRate > 30) riskScore += 20; else if (cancRate > 15) riskScore += 10;
-                    if (rating > 0 && rating < 2.5) riskScore += 15; else if (rating > 0 && rating < 3.5) riskScore += 5;
+                    if (hs < 30) riskScore += 40;
+                    else if (hs < 50) riskScore += 20;
+                    else if (hs < 70) riskScore += 10;
+                    if (orders === 0) riskScore += 25;
+                    else if (orders < 3) riskScore += 15;
+                    if (cancRate > 30) riskScore += 20;
+                    else if (cancRate > 15) riskScore += 10;
+                    if (rating > 0 && rating < 2.5) riskScore += 15;
+                    else if (rating > 0 && rating < 3.5) riskScore += 5;
                     if (isOnHold) riskScore += 10;
-                    const risk = riskScore >= 60 ? "HIGH" : riskScore >= 30 ? "MEDIUM" : "LOW";
-                    const riskColor = risk === "HIGH" ? "text-red-600 bg-red-50 border-red-200" : risk === "MEDIUM" ? "text-amber-600 bg-amber-50 border-amber-200" : "text-green-600 bg-green-50 border-green-200";
-                    const riskIcon = risk === "HIGH" ? <AlertTriangle className="h-5 w-5" /> : risk === "MEDIUM" ? <TrendingDown className="h-5 w-5" /> : <CheckCircle className="h-5 w-5" />;
+                    const risk =
+                      riskScore >= 60
+                        ? "HIGH"
+                        : riskScore >= 30
+                          ? "MEDIUM"
+                          : "LOW";
+                    const riskColor =
+                      risk === "HIGH"
+                        ? "text-red-600 bg-red-50 border-red-200"
+                        : risk === "MEDIUM"
+                          ? "text-amber-600 bg-amber-50 border-amber-200"
+                          : "text-green-600 bg-green-50 border-green-200";
+                    const riskIcon =
+                      risk === "HIGH" ? (
+                        <AlertTriangle className="h-5 w-5" />
+                      ) : risk === "MEDIUM" ? (
+                        <TrendingDown className="h-5 w-5" />
+                      ) : (
+                        <CheckCircle className="h-5 w-5" />
+                      );
 
                     return (
                       <Card className={`border ${riskColor}`}>
@@ -928,13 +983,22 @@ export function AdminSellerCRM() {
                             <div className="flex items-center gap-3">
                               {riskIcon}
                               <div>
-                                <h3 className="font-semibold">Churn Risk: {risk}</h3>
+                                <h3 className="font-semibold">
+                                  Churn Risk: {risk}
+                                </h3>
                                 <p className="text-xs opacity-75">
-                                  Score: {riskScore}/100 — {risk === "HIGH" ? "Immediate attention needed" : risk === "MEDIUM" ? "Monitor closely" : "Healthy seller"}
+                                  Score: {riskScore}/100 —{" "}
+                                  {risk === "HIGH"
+                                    ? "Immediate attention needed"
+                                    : risk === "MEDIUM"
+                                      ? "Monitor closely"
+                                      : "Healthy seller"}
                                 </p>
                               </div>
                             </div>
-                            <span className="text-2xl font-bold">{riskScore}</span>
+                            <span className="text-2xl font-bold">
+                              {riskScore}
+                            </span>
                           </div>
                           {riskScore > 0 && (
                             <Progress value={riskScore} className="h-2 mt-3" />
@@ -953,15 +1017,25 @@ export function AdminSellerCRM() {
                       </h3>
                       <div className="space-y-2">
                         {(() => {
-                          const tips: { icon: React.ReactNode; text: string; priority: string }[] = [];
+                          const tips: {
+                            icon: React.ReactNode;
+                            text: string;
+                            priority: string;
+                          }[] = [];
                           const hs = selectedSeller!.healthScore;
                           const perf = selectedSeller!.performance;
                           const onb = selectedSeller!.onboarding;
                           const rfq = selectedSeller!.rfqFunnel;
 
                           // Profile completeness
-                          if (hs && hs.profileCompleteness && hs.profileCompleteness.score < hs.profileCompleteness.max) {
-                            const missing = hs.profileCompleteness.missing || [];
+                          if (
+                            hs &&
+                            hs.profileCompleteness &&
+                            hs.profileCompleteness.score <
+                              hs.profileCompleteness.max
+                          ) {
+                            const missing =
+                              hs.profileCompleteness.missing || [];
                             tips.push({
                               icon: <Users className="h-4 w-4 text-blue-500" />,
                               text: `Complete shop profile — ${missing.length > 0 ? `missing: ${missing.slice(0, 3).join(", ")}` : "profile is incomplete"}`,
@@ -970,18 +1044,29 @@ export function AdminSellerCRM() {
                           }
 
                           // No products
-                          if (!selectedSeller!.shop?.inventoryCount && (selectedSeller as any).counts?.inventoryItems === 0) {
+                          if (
+                            !selectedSeller!.shop?.inventoryCount &&
+                            (selectedSeller as any).counts?.inventoryItems === 0
+                          ) {
                             tips.push({
-                              icon: <ShoppingBag className="h-4 w-4 text-purple-500" />,
+                              icon: (
+                                <ShoppingBag className="h-4 w-4 text-purple-500" />
+                              ),
                               text: "Add products to inventory — shops with listings get 5x more visibility",
                               priority: "HIGH",
                             });
                           }
 
                           // Low rating
-                          if (perf && perf.avgRating > 0 && perf.avgRating < 3.5) {
+                          if (
+                            perf &&
+                            perf.avgRating > 0 &&
+                            perf.avgRating < 3.5
+                          ) {
                             tips.push({
-                              icon: <Star className="h-4 w-4 text-yellow-500" />,
+                              icon: (
+                                <Star className="h-4 w-4 text-yellow-500" />
+                              ),
                               text: `Improve customer satisfaction — current rating is ${perf.avgRating.toFixed(1)}★. Consider faster response times`,
                               priority: "MEDIUM",
                             });
@@ -990,16 +1075,24 @@ export function AdminSellerCRM() {
                           // High cancellation
                           if (perf && perf.cancellationRate > 15) {
                             tips.push({
-                              icon: <XCircle className="h-4 w-4 text-red-500" />,
+                              icon: (
+                                <XCircle className="h-4 w-4 text-red-500" />
+                              ),
                               text: `Reduce cancellation rate (${perf.cancellationRate.toFixed(1)}%) — review order fulfillment process`,
                               priority: "HIGH",
                             });
                           }
 
                           // Low RFQ response
-                          if (rfq && rfq.totalTargeted > 0 && rfq.responseRate < 50) {
+                          if (
+                            rfq &&
+                            rfq.totalTargeted > 0 &&
+                            rfq.responseRate < 50
+                          ) {
                             tips.push({
-                              icon: <MessageSquare className="h-4 w-4 text-indigo-500" />,
+                              icon: (
+                                <MessageSquare className="h-4 w-4 text-indigo-500" />
+                              ),
                               text: `Respond to more RFQs — ${rfq.responseRate}% response rate, aim for 80%+`,
                               priority: "MEDIUM",
                             });
@@ -1008,7 +1101,9 @@ export function AdminSellerCRM() {
                           // Low onboarding
                           if (onb && onb.percentage < 60) {
                             tips.push({
-                              icon: <Target className="h-4 w-4 text-orange-500" />,
+                              icon: (
+                                <Target className="h-4 w-4 text-orange-500" />
+                              ),
                               text: `Complete onboarding (${onb.percentage}%) — fully onboarded sellers earn 3x more`,
                               priority: "MEDIUM",
                             });
@@ -1017,14 +1112,21 @@ export function AdminSellerCRM() {
                           // Verification
                           if (!selectedSeller!.shop?.isVerified) {
                             tips.push({
-                              icon: <Shield className="h-4 w-4 text-green-500" />,
+                              icon: (
+                                <Shield className="h-4 w-4 text-green-500" />
+                              ),
                               text: "Get KYC verified — verified shops appear higher in search results",
                               priority: "HIGH",
                             });
                           }
 
                           // Capability setup
-                          if (hs && hs.capabilitySetup && hs.capabilitySetup.score < hs.capabilitySetup.max * 0.5) {
+                          if (
+                            hs &&
+                            hs.capabilitySetup &&
+                            hs.capabilitySetup.score <
+                              hs.capabilitySetup.max * 0.5
+                          ) {
                             tips.push({
                               icon: <Award className="h-4 w-4 text-teal-500" />,
                               text: "Set up capabilities — add supported materials, jewellery types, and build methods",
@@ -1036,26 +1138,45 @@ export function AdminSellerCRM() {
                             return (
                               <p className="text-sm text-muted-foreground text-center py-2">
                                 <CheckCircle className="h-4 w-4 inline mr-1 text-green-500" />
-                                Great job! This seller is well-engaged with no urgent recommendations.
+                                Great job! This seller is well-engaged with no
+                                urgent recommendations.
                               </p>
                             );
                           }
 
                           // Sort by priority
-                          const priorityOrder: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
-                          tips.sort((a, b) => (priorityOrder[a.priority] ?? 99) - (priorityOrder[b.priority] ?? 99));
+                          const priorityOrder: Record<string, number> = {
+                            HIGH: 0,
+                            MEDIUM: 1,
+                            LOW: 2,
+                          };
+                          tips.sort(
+                            (a, b) =>
+                              (priorityOrder[a.priority] ?? 99) -
+                              (priorityOrder[b.priority] ?? 99),
+                          );
 
                           return tips.map((tip, i) => (
-                            <div key={i} className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/50">
+                            <div
+                              key={i}
+                              className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/50"
+                            >
                               <div className="mt-0.5">{tip.icon}</div>
                               <div className="flex-1">
                                 <p className="text-sm">{tip.text}</p>
                               </div>
-                              <Badge variant="outline" className={`text-xs shrink-0 ${
-                                tip.priority === "HIGH" ? "border-red-300 text-red-600" :
-                                tip.priority === "MEDIUM" ? "border-amber-300 text-amber-600" :
-                                "border-gray-300 text-gray-600"
-                              }`}>{tip.priority}</Badge>
+                              <Badge
+                                variant="outline"
+                                className={`text-xs shrink-0 ${
+                                  tip.priority === "HIGH"
+                                    ? "border-red-300 text-red-600"
+                                    : tip.priority === "MEDIUM"
+                                      ? "border-amber-300 text-amber-600"
+                                      : "border-gray-300 text-gray-600"
+                                }`}
+                              >
+                                {tip.priority}
+                              </Badge>
                             </div>
                           ));
                         })()}
@@ -1076,8 +1197,14 @@ export function AdminSellerCRM() {
                           size="sm"
                           className="justify-start gap-2"
                           onClick={() => {
-                            if (selectedSeller!.shop?.contactEmail || selectedSeller!.shop?.user?.email) {
-                              window.open(`mailto:${selectedSeller!.shop?.contactEmail || selectedSeller!.shop?.user?.email}?subject=Orivraa%20Seller%20Support`, "_blank");
+                            if (
+                              selectedSeller!.shop?.contactEmail ||
+                              selectedSeller!.shop?.user?.email
+                            ) {
+                              window.open(
+                                `mailto:${selectedSeller!.shop?.contactEmail || selectedSeller!.shop?.user?.email}?subject=Orivraa%20Seller%20Support`,
+                                "_blank",
+                              );
                             } else {
                               toast({ title: "No email address available" });
                             }
@@ -1091,8 +1218,13 @@ export function AdminSellerCRM() {
                           size="sm"
                           className="justify-start gap-2"
                           onClick={() => {
-                            if (selectedSeller!.shop?.contactPhone || selectedSeller!.shop?.user?.phone) {
-                              window.open(`tel:${selectedSeller!.shop?.contactPhone || selectedSeller!.shop?.user?.phone}`);
+                            if (
+                              selectedSeller!.shop?.contactPhone ||
+                              selectedSeller!.shop?.user?.phone
+                            ) {
+                              window.open(
+                                `tel:${selectedSeller!.shop?.contactPhone || selectedSeller!.shop?.user?.phone}`,
+                              );
                             } else {
                               toast({ title: "No phone number available" });
                             }
@@ -1108,11 +1240,16 @@ export function AdminSellerCRM() {
                           onClick={async () => {
                             if (!selectedSeller!.shop?.id) return;
                             try {
-                              await adminApi.updateSeller(selectedSeller!.shop.id, {
-                                isOnHold: !selectedSeller!.shop.isOnHold,
-                              });
+                              await adminApi.updateSeller(
+                                selectedSeller!.shop.id,
+                                {
+                                  isOnHold: !selectedSeller!.shop.isOnHold,
+                                },
+                              );
                               toast({
-                                title: selectedSeller!.shop.isOnHold ? "Hold removed" : "Shop put on hold",
+                                title: selectedSeller!.shop.isOnHold
+                                  ? "Hold removed"
+                                  : "Shop put on hold",
                                 description: selectedSeller!.shop.isOnHold
                                   ? "The shop is no longer on hold."
                                   : "The shop has been placed on hold.",
@@ -1120,12 +1257,17 @@ export function AdminSellerCRM() {
                               setDrawerOpen(false);
                               loadSellers();
                             } catch {
-                              toast({ variant: "destructive", title: "Failed to update hold status" });
+                              toast({
+                                variant: "destructive",
+                                title: "Failed to update hold status",
+                              });
                             }
                           }}
                         >
                           <PauseCircle className="h-3.5 w-3.5" />
-                          {selectedSeller!.shop?.isOnHold ? "Remove Hold" : "Put on Hold"}
+                          {selectedSeller!.shop?.isOnHold
+                            ? "Remove Hold"
+                            : "Put on Hold"}
                         </Button>
                         <Button
                           variant="outline"
@@ -1135,7 +1277,9 @@ export function AdminSellerCRM() {
                             setNewNote("Follow-up scheduled: ");
                             setNoteCategory("ENGAGEMENT");
                             // Switch to notes tab
-                            const notesTab = document.querySelector('[data-state="inactive"][value="notes"]') as HTMLButtonElement;
+                            const notesTab = document.querySelector(
+                              '[data-state="inactive"][value="notes"]',
+                            ) as HTMLButtonElement;
                             if (notesTab) notesTab.click();
                           }}
                         >
@@ -1149,7 +1293,9 @@ export function AdminSellerCRM() {
                           onClick={() => {
                             setNewNote("Performance review: ");
                             setNoteCategory("PERFORMANCE");
-                            const notesTab = document.querySelector('[data-state="inactive"][value="notes"]') as HTMLButtonElement;
+                            const notesTab = document.querySelector(
+                              '[data-state="inactive"][value="notes"]',
+                            ) as HTMLButtonElement;
                             if (notesTab) notesTab.click();
                           }}
                         >
@@ -1176,175 +1322,186 @@ export function AdminSellerCRM() {
                     <Card>
                       <CardContent className="p-4 text-center text-muted-foreground">
                         <Trophy className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                        <p className="text-sm">No milestones data available yet</p>
+                        <p className="text-sm">
+                          No milestones data available yet
+                        </p>
                       </CardContent>
                     </Card>
                   ) : (
-                  <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {(selectedSeller.milestones || []).map((m) => (
-                      <Card
-                        key={m.id}
-                        className={
-                          m.achieved ? "border-green-200 bg-green-50/50" : ""
-                        }
-                      >
-                        <CardContent className="p-3">
-                          <div className="flex items-start gap-3">
-                            <span className="text-2xl">{m.icon}</span>
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between">
-                                <h4 className="font-semibold text-sm">
-                                  {m.title}
-                                </h4>
-                                {m.achieved ? (
-                                  <CheckCircle className="h-4 w-4 text-green-600" />
-                                ) : (
-                                  <span className="text-xs text-muted-foreground">
-                                    {Math.round(m.progress)}%
-                                  </span>
-                                )}
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {(selectedSeller.milestones || []).map((m) => (
+                          <Card
+                            key={m.id}
+                            className={
+                              m.achieved
+                                ? "border-green-200 bg-green-50/50"
+                                : ""
+                            }
+                          >
+                            <CardContent className="p-3">
+                              <div className="flex items-start gap-3">
+                                <span className="text-2xl">{m.icon}</span>
+                                <div className="flex-1">
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="font-semibold text-sm">
+                                      {m.title}
+                                    </h4>
+                                    {m.achieved ? (
+                                      <CheckCircle className="h-4 w-4 text-green-600" />
+                                    ) : (
+                                      <span className="text-xs text-muted-foreground">
+                                        {Math.round(m.progress)}%
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">
+                                    {m.description}
+                                  </p>
+                                  {!m.achieved && (
+                                    <Progress
+                                      value={m.progress}
+                                      className="h-1.5 mt-2"
+                                    />
+                                  )}
+                                </div>
                               </div>
-                              <p className="text-xs text-muted-foreground">
-                                {m.description}
-                              </p>
-                              {!m.achieved && (
-                                <Progress
-                                  value={m.progress}
-                                  className="h-1.5 mt-2"
-                                />
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                  <div className="text-center text-sm text-muted-foreground">
-                    <Trophy className="h-4 w-4 inline mr-1" />
-                    {
-                      (selectedSeller.milestones || []).filter((m) => m.achieved).length
-                    }{" "}
-                    of {(selectedSeller.milestones || []).length} achieved
-                  </div>
-                  </>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                      <div className="text-center text-sm text-muted-foreground">
+                        <Trophy className="h-4 w-4 inline mr-1" />
+                        {
+                          (selectedSeller.milestones || []).filter(
+                            (m) => m.achieved,
+                          ).length
+                        }{" "}
+                        of {(selectedSeller.milestones || []).length} achieved
+                      </div>
+                    </>
                   )}
                 </TabsContent>
 
                 {/* ─── RFQ FUNNEL TAB ─── */}
                 <TabsContent value="rfq" className="space-y-4 mt-4">
                   {selectedSeller.rfqFunnel ? (
-                  <>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                    <Card>
-                      <CardContent className="p-3 text-center">
-                        <Target className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                        <p className="text-xl font-bold">
-                          {selectedSeller.rfqFunnel.totalTargeted}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Targeted
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-3 text-center">
-                        <Eye className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                        <p className="text-xl font-bold">
-                          {selectedSeller.rfqFunnel.viewed}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Viewed</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-3 text-center">
-                        <MessageSquare className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                        <p className="text-xl font-bold">
-                          {selectedSeller.rfqFunnel.responded}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Responded
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-3 text-center">
-                        <BarChart3 className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                        <p className="text-xl font-bold">
-                          {selectedSeller.rfqFunnel.responseRate}%
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Response Rate
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-3 text-center">
-                        <Activity className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                        <p className="text-xl font-bold">
-                          {selectedSeller.rfqFunnel.avgResponseTimeHours
-                            ? `${selectedSeller.rfqFunnel.avgResponseTimeHours}h`
-                            : "N/A"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Avg Response
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </div>
+                    <>
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        <Card>
+                          <CardContent className="p-3 text-center">
+                            <Target className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                            <p className="text-xl font-bold">
+                              {selectedSeller.rfqFunnel.totalTargeted}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Targeted
+                            </p>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-3 text-center">
+                            <Eye className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                            <p className="text-xl font-bold">
+                              {selectedSeller.rfqFunnel.viewed}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Viewed
+                            </p>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-3 text-center">
+                            <MessageSquare className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                            <p className="text-xl font-bold">
+                              {selectedSeller.rfqFunnel.responded}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Responded
+                            </p>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-3 text-center">
+                            <BarChart3 className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                            <p className="text-xl font-bold">
+                              {selectedSeller.rfqFunnel.responseRate}%
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Response Rate
+                            </p>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-3 text-center">
+                            <Activity className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                            <p className="text-xl font-bold">
+                              {selectedSeller.rfqFunnel.avgResponseTimeHours
+                                ? `${selectedSeller.rfqFunnel.avgResponseTimeHours}h`
+                                : "N/A"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Avg Response
+                            </p>
+                          </CardContent>
+                        </Card>
+                      </div>
 
-                  {/* Weekly Breakdown */}
-                  {(selectedSeller.rfqFunnel.periodBreakdown || []).length > 0 && (
-                    <Card>
-                      <CardContent className="p-4">
-                        <h4 className="font-semibold text-sm mb-3">
-                          Weekly Breakdown
-                        </h4>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Period</TableHead>
-                              <TableHead className="text-center">
-                                Targeted
-                              </TableHead>
-                              <TableHead className="text-center">
-                                Viewed
-                              </TableHead>
-                              <TableHead className="text-center">
-                                Responded
-                              </TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {selectedSeller.rfqFunnel.periodBreakdown.map(
-                              (w) => (
-                                <TableRow key={w.period}>
-                                  <TableCell className="text-sm">
-                                    {w.period}
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    {w.targeted}
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    {w.viewed}
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    {w.responded}
-                                  </TableCell>
+                      {/* Weekly Breakdown */}
+                      {(selectedSeller.rfqFunnel.periodBreakdown || []).length >
+                        0 && (
+                        <Card>
+                          <CardContent className="p-4">
+                            <h4 className="font-semibold text-sm mb-3">
+                              Weekly Breakdown
+                            </h4>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Period</TableHead>
+                                  <TableHead className="text-center">
+                                    Targeted
+                                  </TableHead>
+                                  <TableHead className="text-center">
+                                    Viewed
+                                  </TableHead>
+                                  <TableHead className="text-center">
+                                    Responded
+                                  </TableHead>
                                 </TableRow>
-                              ),
-                            )}
-                          </TableBody>
-                        </Table>
-                      </CardContent>
-                    </Card>
-                  )}
-                  </>
+                              </TableHeader>
+                              <TableBody>
+                                {selectedSeller.rfqFunnel.periodBreakdown.map(
+                                  (w) => (
+                                    <TableRow key={w.period}>
+                                      <TableCell className="text-sm">
+                                        {w.period}
+                                      </TableCell>
+                                      <TableCell className="text-center">
+                                        {w.targeted}
+                                      </TableCell>
+                                      <TableCell className="text-center">
+                                        {w.viewed}
+                                      </TableCell>
+                                      <TableCell className="text-center">
+                                        {w.responded}
+                                      </TableCell>
+                                    </TableRow>
+                                  ),
+                                )}
+                              </TableBody>
+                            </Table>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </>
                   ) : (
                     <Card>
                       <CardContent className="p-4 text-center text-muted-foreground">
                         <Target className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                        <p className="text-sm">No RFQ funnel data available yet</p>
+                        <p className="text-sm">
+                          No RFQ funnel data available yet
+                        </p>
                       </CardContent>
                     </Card>
                   )}
@@ -1353,21 +1510,22 @@ export function AdminSellerCRM() {
                 {/* ─── ONBOARDING TAB ─── */}
                 <TabsContent value="onboarding" className="space-y-4 mt-4">
                   {selectedSeller.onboarding ? (
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold">Onboarding Progress</h3>
-                        <span className="text-2xl font-bold">
-                          {selectedSeller.onboarding.percentage}%
-                        </span>
-                      </div>
-                      <Progress
-                        value={selectedSeller.onboarding.percentage}
-                        className="h-2 mb-4"
-                      />
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="font-semibold">Onboarding Progress</h3>
+                          <span className="text-2xl font-bold">
+                            {selectedSeller.onboarding.percentage}%
+                          </span>
+                        </div>
+                        <Progress
+                          value={selectedSeller.onboarding.percentage}
+                          className="h-2 mb-4"
+                        />
 
-                      {Object.entries(selectedSeller.onboarding.categories || {}).map(
-                        ([cat, data]) => (
+                        {Object.entries(
+                          selectedSeller.onboarding.categories || {},
+                        ).map(([cat, data]) => (
                           <div key={cat} className="mb-4">
                             <div className="flex items-center justify-between mb-1">
                               <h4 className="text-sm font-medium">{cat}</h4>
@@ -1401,15 +1559,16 @@ export function AdminSellerCRM() {
                                 ))}
                             </div>
                           </div>
-                        ),
-                      )}
-                    </CardContent>
-                  </Card>
+                        ))}
+                      </CardContent>
+                    </Card>
                   ) : (
                     <Card>
                       <CardContent className="p-4 text-center text-muted-foreground">
                         <Activity className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                        <p className="text-sm">No onboarding data available yet</p>
+                        <p className="text-sm">
+                          No onboarding data available yet
+                        </p>
                       </CardContent>
                     </Card>
                   )}

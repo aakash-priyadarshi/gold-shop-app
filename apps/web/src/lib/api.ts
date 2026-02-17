@@ -315,8 +315,11 @@ export const adminApi = {
 
   // KYC Review
   getShopKyc: (shopId: string) => api.get(`/shops/${shopId}/kyc`),
-  updateShopKycStatus: (shopId: string, action: "approve" | "reject", reason?: string) =>
-    api.patch(`/shops/${shopId}/kyc-status`, { action, reason }),
+  updateShopKycStatus: (
+    shopId: string,
+    action: "approve" | "reject",
+    reason?: string,
+  ) => api.patch(`/shops/${shopId}/kyc-status`, { action, reason }),
 
   // Email settings
   getEmailStatus: () => api.get("/admin/email/status"),
