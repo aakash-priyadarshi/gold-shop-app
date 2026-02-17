@@ -1,6 +1,6 @@
 # Gold Shop App — Architecture & Feature Inventory
 
-_Last updated: 2026-02-18_
+_Last updated: 2026-02-17_
 
 This document is a code-informed overview of the system architecture and the major product features implemented in this repository.
 
@@ -97,7 +97,7 @@ Backend module inventory (`apps/api/src/modules/*`):
 - `mail`: email sending
 - `health`: health endpoints
 - `admin`, `marketplace-intelligence`, `i18n`: admin tools + intelligence + localization support
-- `chat`: anti-circumvention in-app messaging with PII masking, WebSocket real-time delivery, and violation tracking
+- `chat`: anti-circumvention in-app messaging with **3-strike global blocking** (messages BLOCKED, not masked), dual-layer detection (regex + Gemini Flash AI deep scan including image analysis), per-user violation tracking, account suspension on 3rd strike, admin unblock; WebSocket real-time delivery
 - `refunds`: metal-only refund policy enforcement, eligibility checks, refund lifecycle (request → approve/reject → process), commission reversal
 - `support`: internal operations dashboard aggregating pending refunds, flagged conversations, KYC queue, and order monitoring
 - `product-variants`: size variant management for rings/bangles/bracelets with SKU-level stock, price overrides, and standardised size charts
@@ -166,7 +166,7 @@ Core domain aggregates (high-level):
 
 **Messaging & anti-circumvention**
 - `Conversation`: per-order or per-RFQ chat thread between buyer and shop; statuses: `ACTIVE`, `LOCKED`, `ARCHIVED`
-- `Message`: individual messages with `maskedContent` (PII-scrubbed), violation flags, attachment support, read tracking
+- `Message`: individual messages with `maskedContent` (PII-scrubbed), `isBlocked` flag (blocked messages are stored but never delivered to recipient), violation flags (`hasViolation`, `violationType`), attachment support, read tracking
 
 **Refunds**
 - Refund fields on `Order`: `refundStatus` (enum `RefundStatus`: `NONE`, `REQUESTED`, `APPROVED`, `REJECTED`, `PROCESSED`), `refundableAmount`, `refundReason`, `refundRequestedAt`, `refundProcessedAt`, `refundProcessedById`, `refundIdempotencyKey`
@@ -212,14 +212,22 @@ Enums represent key business states and supported options, e.g. `OrderStatus`, `
 - User-facing notifications are stored in `Notification`.
 - Sensitive/important changes are tracked in `AuditLog`.
 
-### 4.6 In-app messaging (anti-circumvention)
+### 4.6 In-app messaging (anti-circumvention & 3-strike blocking)
 
 1. A `Conversation` is created when a buyer initiates contact about an order or RFQ.
-2. Every message passes through `ContactMaskingService` which scans for emails, phone numbers, WhatsApp/Telegram/Instagram handles, and contact-sharing phrases.
-3. If PII is detected, the violation is flagged (`hasViolation: true`, `violationType`) and the message is stored with both original and masked content.
-4. After 5 violations on a conversation, it is auto-locked (`ConversationStatus.LOCKED`); only admins can unlock.
-5. Real-time delivery via WebSocket gateway (`/chat` namespace, Socket.IO) with JWT authentication.
-6. REST endpoints for CRUD, admin violation stats, and unlocking.
+2. Every message passes through a **dual-layer detection pipeline**:
+   - **Layer 1 — Regex**: expanded patterns for emails, phone numbers, WhatsApp/Telegram/Instagram/Facebook/Viber/Signal handles, spaced-out digits, obfuscated numbers ("nine eight seven…"), and contact-sharing phrases.
+   - **Layer 2 — Gemini Flash AI**: deep scan via `gemini-2.0-flash` catches obfuscated attempts, coded language, creative spelling, and contextual contact sharing that regex misses. Falls back gracefully to regex-only on API failure.
+   - **Image analysis**: attached images are scanned by Gemini's vision model for screenshots of phone numbers, QR codes, or contact cards.
+3. If a violation is detected, the message is **BLOCKED** (stored with `isBlocked: true` but never delivered to the recipient). The sender receives a warning with their current strike count.
+4. Violations are tracked **per-user globally** (across all conversations, not per-conversation):
+   - **Strike 1**: Warning message to sender.
+   - **Strike 2**: Warning + admin notification (`CONTACT_VIOLATION_WARNING`).
+   - **Strike 3**: Account blocked — `Shop.isOnHold = true` and/or `User.status = SUSPENDED`. Admin notification (`ACCOUNT_BLOCKED_VIOLATIONS`).
+5. After 5 violations on a single conversation, it is auto-locked (`ConversationStatus.LOCKED`).
+6. Admins can **unblock users** (resets `isOnHold`/`status`, creates audit log entry) and **view per-user violation history** including original blocked message content.
+7. Real-time delivery via WebSocket gateway (`/chat` namespace, Socket.IO) with JWT authentication. Blocked messages are only echoed back to the sender (not broadcast to conversation room).
+8. REST endpoints for CRUD, admin violation stats, per-user violation history, blocked message retrieval, user unblock, and conversation unlocking.
 
 ### 4.7 Refund system (metal-only policy)
 
@@ -255,7 +263,7 @@ Enums represent key business states and supported options, e.g. `OrderStatus`, `
 - Place orders (inventory + custom) and track status
 - Manage delivery addresses and profile settings
 - Wishlist and notifications
-- In-app messaging with shops (PII masked, anti-circumvention)
+- In-app messaging with shops (contact info blocked, 3-strike system)
 - Request refunds on delivered metal-only orders within 7-day window
 - Select product sizes (rings, bangles, etc.) with variant-level stock visibility
 
@@ -269,7 +277,7 @@ Enums represent key business states and supported options, e.g. `OrderStatus`, `
 - Pricing tools and shop-level overrides
 - Customer CRM notes (shop staff notes about customers)
 - Commissions and analytics areas
-- In-app messaging with customers (PII masked)
+- In-app messaging with customers (contact info blocked, 3-strike system — account suspended on 3rd violation)
 - Size variant management: enable sizes, create/edit/delete variants, manage per-size stock and price overrides
 
 ### Admin
@@ -281,7 +289,7 @@ Enums represent key business states and supported options, e.g. `OrderStatus`, `
 - Reports moderation
 - Marketplace intelligence (anomaly/insight primitives)
 - System settings/platform configuration
-- Chat monitoring: violation stats, top offenders, unlock locked conversations
+- Chat monitoring: violation stats, per-user violation history with strike meter, view original blocked messages, unblock suspended users, unlock locked conversations; tabbed UI with stat cards
 - Refund management: review/approve/reject/process refund requests, commission reversal
 
 ### Support (Internal Operations)
@@ -303,7 +311,10 @@ Enums represent key business states and supported options, e.g. `OrderStatus`, `
 | POST | `/chat/conversations/:id/messages` | Participant | Send message (auto-masked) |
 | PATCH | `/chat/conversations/:id/read` | Participant | Mark messages as read |
 | GET | `/chat/admin/violations` | ADMIN | Violation statistics |
+| GET | `/chat/admin/violations/user/:userId` | ADMIN | Per-user violation history (messages, strikes, block status) |
+| GET | `/chat/admin/messages/:messageId` | ADMIN | Retrieve original content of a blocked message |
 | PATCH | `/chat/admin/conversations/:id/unlock` | ADMIN | Unlock a locked conversation |
+| PATCH | `/chat/admin/users/:userId/unblock` | ADMIN | Unblock a suspended user (resets Shop.isOnHold / User.status) |
 
 WebSocket gateway: namespace `/chat`, events: `joinConversation`, `leaveConversation`, `sendMessage`, `typing`, `markRead`.
 
@@ -356,6 +367,7 @@ Backend (`apps/api`):
 - `REDIS_HOST`, `REDIS_PORT`
 - `NODE_ENV`
 - `PREFER_IPV4` (optional; helps Windows DNS behavior)
+- `GEMINI_API_KEY` (Google AI — used by `ContactMaskingService` for Gemini Flash deep scan and image analysis)
 
 Frontend (`apps/web`):
 - `NEXT_PUBLIC_IMAGE_WORKER_URL` (defaults to `https://images.orivraa.com`)
@@ -365,5 +377,36 @@ Worker (`cloudflare-worker`):
 - `UPLOAD_SECRET` (optional)
 
 ---
+
+## 9) Changelog
+
+### 2026-02-17 — Chat moderation rework & bug fixes
+
+**Bug fix: Railway crash** (`RefundsModule` DI)
+- `RefundsModule` was missing `NotificationsModule` import, causing NestJS dependency injection failure on Railway startup. Added the import.
+
+**Chat moderation: 3-strike global blocking system** (complete rework)
+- **Detection pipeline upgraded to dual-layer**:
+  - Layer 1 (regex): expanded patterns — added Facebook, Viber, Signal handle detection; obfuscated number words ("nine-eight-seven"); spaced-out digits; more contact-sharing phrases.
+  - Layer 2 (AI): integrated Gemini Flash (`gemini-2.0-flash`) for deep scan of message text — catches coded language, creative spelling, contextual contact sharing attempts that bypass regex.
+  - Image analysis: Gemini vision model scans attached images for phone number screenshots, QR codes, contact cards.
+- **Messages are now BLOCKED, not masked**: violating messages are stored (`isBlocked: true`) but never delivered to the recipient. Previously, content was masked and still sent.
+- **Per-user global strike system** (replaces per-conversation 5-violation lock):
+  - Violations tracked globally per user across all conversations.
+  - Strike 1: sender sees warning with strike count.
+  - Strike 2: warning + admin notification (`CONTACT_VIOLATION_WARNING`).
+  - Strike 3: account blocked — `Shop.isOnHold = true` and/or `User.status = SUSPENDED`; admin notification (`ACCOUNT_BLOCKED_VIOLATIONS`).
+  - Per-conversation 5-violation auto-lock also retained as secondary safeguard.
+- **Admin tools**:
+  - New endpoint: `GET /chat/admin/violations/user/:userId` — per-user violation history with blocked message list.
+  - New endpoint: `GET /chat/admin/messages/:messageId` — retrieve original content of any blocked message.
+  - New endpoint: `PATCH /chat/admin/users/:userId/unblock` — unblock suspended user, reset `isOnHold`/`status`, audit-logged.
+- **WebSocket behavior**: blocked messages are echoed only to the sender (not broadcast to conversation room).
+- **Frontend admin chat-monitoring page**: tabbed layout (Overview / User History), 5 stat cards (total violations, blocked messages, locked conversations, blocked users, active conversations), recent violations table, per-user search with strike meter gauge, unblock button.
+- **Schema changes**: added `Message.isBlocked` (Boolean, default false); new `NotificationType` enum values (`CONTACT_VIOLATION_WARNING`, `ACCOUNT_BLOCKED_VIOLATIONS`).
+
+**Migration**: `20260217111051_chat_blocking_and_notifications` — full DDL diff applied to Neon PostgreSQL production database.
+
+**Commits**: `b4c421f` (code), `cfca0a6` (migration), `ad977b3` (migration SQL update).
 
 
