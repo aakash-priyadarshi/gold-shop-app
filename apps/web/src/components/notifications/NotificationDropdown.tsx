@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bell, Check, CheckCheck, Package, Truck, DollarSign, MessageSquare, AlertCircle, Hammer, CheckCircle2, ShoppingBag } from 'lucide-react';
+import { Bell, Check, CheckCheck, Package, Truck, DollarSign, MessageSquare, AlertCircle, Hammer, CheckCircle2, ShoppingBag, ShieldAlert, Lock, UserX, Ban, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -156,6 +156,62 @@ const notificationConfig: Record<string, {
     formatTitle: () => `Booking Expired`,
     formatBody: (params) => `Order #${params?.orderNumber || ''} booking has expired`,
   },
+  // Chat & violation notifications
+  CHAT_VIOLATION_WARNING: {
+    icon: ShieldAlert,
+    color: 'text-red-600',
+    formatTitle: (params) => params?.strikeCount ? `Chat Warning — Strike ${params.strikeCount}/3` : 'Chat Warning',
+    formatBody: (params) => params?.warning || params?.message || 'Your message was blocked for a policy violation',
+  },
+  NEW_MESSAGE: {
+    icon: MessageSquare,
+    color: 'text-blue-500',
+    formatTitle: (params) => params?.senderName ? `Message from ${params.senderName}` : 'New Message',
+    formatBody: (params) => params?.preview || params?.message || 'You have a new message',
+  },
+  CONVERSATION_LOCKED: {
+    icon: Lock,
+    color: 'text-red-500',
+    formatTitle: () => 'Conversation Locked',
+    formatBody: (params) => params?.reason || 'A conversation has been locked due to policy violations',
+  },
+  ACCOUNT_SUSPENDED: {
+    icon: UserX,
+    color: 'text-red-700',
+    formatTitle: () => 'Account Suspended',
+    formatBody: (params) => params?.reason || 'Your account has been suspended due to repeated policy violations',
+  },
+  SHOP_ON_HOLD: {
+    icon: Ban,
+    color: 'text-orange-600',
+    formatTitle: (params) => params?.shopName ? `Shop On Hold: ${params.shopName}` : 'Shop On Hold',
+    formatBody: (params) => params?.reason || 'Shop has been placed on hold due to policy violations',
+  },
+  // Refund notifications
+  REFUND_REQUESTED: {
+    icon: RotateCcw,
+    color: 'text-orange-500',
+    formatTitle: (params) => `Refund Requested`,
+    formatBody: (params) => params?.orderNumber ? `Refund requested for Order #${params.orderNumber}` : 'A refund has been requested',
+  },
+  REFUND_APPROVED: {
+    icon: CheckCircle2,
+    color: 'text-green-500',
+    formatTitle: () => 'Refund Approved',
+    formatBody: (params) => params?.amount ? `₹${params.amount.toLocaleString()} will be refunded` : 'Your refund has been approved',
+  },
+  REFUND_REJECTED: {
+    icon: AlertCircle,
+    color: 'text-red-500',
+    formatTitle: () => 'Refund Rejected',
+    formatBody: (params) => params?.reason || 'Your refund request has been rejected',
+  },
+  REFUND_PROCESSED: {
+    icon: DollarSign,
+    color: 'text-green-600',
+    formatTitle: () => 'Refund Processed',
+    formatBody: (params) => params?.amount ? `₹${params.amount.toLocaleString()} has been refunded` : 'Your refund has been processed',
+  },
   // System notifications (fallback)
   SYSTEM_ALERT: {
     icon: AlertCircle,
@@ -249,6 +305,16 @@ export function NotificationDropdown() {
           : `/dashboard/customer/rfqs/${notification.referenceId}`;
       case 'SHOP':
         return `/dashboard/shop`;
+      case 'Conversation':
+        return isShopkeeper
+          ? `/dashboard/shop/messages`
+          : user?.role === 'ADMIN'
+          ? `/dashboard/admin/chat-monitoring`
+          : `/dashboard/customer/messages`;
+      case 'User':
+        return user?.role === 'ADMIN'
+          ? `/dashboard/admin/users?id=${notification.referenceId}`
+          : null;
       default:
         return null;
     }
