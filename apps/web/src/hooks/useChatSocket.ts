@@ -181,11 +181,22 @@ export function useChatSocket({
     const socket = socketRef.current;
     if (!socket?.connected) return Promise.resolve([]);
     return new Promise((resolve) => {
+      let resolved = false;
       socket.emit("checkOnline", { userIds }, (response: any) => {
-        resolve(response?.data?.online || []);
+        if (resolved) return;
+        resolved = true;
+        // Handle both plain ACK format { online: [...] } and legacy { data: { online: [...] } }
+        const online =
+          response?.online || response?.data?.online || [];
+        resolve(online);
       });
       // Timeout fallback
-      setTimeout(() => resolve([]), 3000);
+      setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          resolve([]);
+        }
+      }, 5000);
     });
   }, []);
 

@@ -125,6 +125,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         .to(`conversation:${data.conversationId}`)
         .emit("newMessage", result.message);
 
+      // Also emit directly to both participants so they receive
+      // the message even when their chatbox is closed (not in the room)
+      // Client-side deduplicates by message ID
+      if (result.buyerUserId) {
+        this.emitToUser(result.buyerUserId, "newMessage", result.message);
+      }
+      if (result.shopUserId) {
+        this.emitToUser(result.shopUserId, "newMessage", result.message);
+      }
+
       return { event: "messageSent", data: result.message };
     } catch (error: any) {
       return { event: "error", data: { message: error.message } };
@@ -159,7 +169,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { userIds: string[] },
   ) {
     const onlineIds = this.getOnlineUsers(data.userIds || []);
-    return { event: "onlineStatus", data: { online: onlineIds } };
+    // Return plain data so NestJS sends it as a Socket.IO ACK (not a separate event)
+    return { online: onlineIds };
   }
 
   // ─── Helper: emit to specific user(s) ───
