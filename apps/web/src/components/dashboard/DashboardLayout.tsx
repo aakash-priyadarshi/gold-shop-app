@@ -3,6 +3,7 @@
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { ChatPopupWidget } from "@/components/chat/ChatPopupWidget";
 import { ShopSwitcher } from "@/components/dashboard/ShopSwitcher";
+import { MessageDropdown } from "@/components/notifications/MessageDropdown";
 import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
 import { ChatPopupProvider } from "@/contexts/ChatPopupContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -607,6 +608,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {/* Mobile Actions */}
           <div className="flex items-center gap-1">
+            <MessageDropdown />
             <NotificationDropdown />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -692,6 +694,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
 
             <div className="flex items-center gap-3">
+              <MessageDropdown />
               <NotificationDropdown />
 
               <DropdownMenu>
