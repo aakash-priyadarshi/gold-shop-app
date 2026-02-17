@@ -578,7 +578,7 @@ export const intelligenceApi = {
 // ─── Chat API ───
 export const chatApi = {
   // Conversations
-  createConversation: (data: { shopId: string; orderId?: string; rfqId?: string }) =>
+  createConversation: (data: { shopId: string; orderId?: string; rfqId?: string; buyerId?: string }) =>
     api.post('/chat/conversations', data),
   listConversations: (shopId?: string) =>
     api.get('/chat/conversations', { params: shopId ? { shopId } : {} }),
