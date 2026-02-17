@@ -11,8 +11,7 @@ import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { customerCrmApi } from "@/lib/api";
 import {
   Loader2,
-  Mail,
-  Phone,
+  MessageSquare,
   Search,
   ShoppingCart,
   User,
@@ -94,7 +93,7 @@ export default function CustomerDirectoryPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              placeholder="Search by name, phone, or email..."
+              placeholder="Search by name..."
               className="pl-10"
             />
           </div>
@@ -146,18 +145,12 @@ export default function CustomerDirectoryPage() {
                         </div>
                       </div>
 
-                      {/* Contact info */}
+                      {/* Customer location & membership */}
                       <div className="space-y-1 text-sm text-muted-foreground">
-                        {customer.phone && (
+                        {customer.type === "REGISTERED" && (
                           <div className="flex items-center gap-2">
-                            <Phone className="h-3 w-3" />
-                            <span>{customer.phone}</span>
-                          </div>
-                        )}
-                        {customer.email && (
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-3 w-3" />
-                            <span className="truncate">{customer.email}</span>
+                            <MessageSquare className="h-3 w-3 text-amber-500" />
+                            <span className="text-amber-600 text-xs font-medium">Platform messaging available</span>
                           </div>
                         )}
                       </div>

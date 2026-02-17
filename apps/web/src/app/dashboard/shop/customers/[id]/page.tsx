@@ -28,6 +28,7 @@ import {
   MessageSquare,
   Phone,
   Send,
+  Shield,
   ShoppingCart,
   StickyNote,
   TrendingUp,
@@ -239,21 +240,9 @@ export default function CustomerProfilePage() {
             <div className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Contact Info</CardTitle>
+                  <CardTitle className="text-base">Customer Info</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {profile.phone && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span>{profile.phone}</span>
-                    </div>
-                  )}
-                  {profile.email && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span>{profile.email}</span>
-                    </div>
-                  )}
                   {profile.city && (
                     <div className="flex items-center gap-2 text-sm">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -263,33 +252,42 @@ export default function CustomerProfilePage() {
                       </span>
                     </div>
                   )}
-                  <Separator />
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4" />
                     Customer since{" "}
                     {new Date(profile.memberSince).toLocaleDateString()}
                   </div>
-                  {profile.type === "REGISTERED" && (
+                  <Separator />
+                  {profile.type === "REGISTERED" ? (
                     <>
-                      <Separator />
-                      <p className="text-xs text-muted-foreground">
-                        Use platform messaging for all customer communication
-                      </p>
                       <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
+                        className="w-full bg-amber-500 hover:bg-amber-600 text-white"
                         onClick={handleMessageCustomer}
                         disabled={startingChat}
                       >
                         {startingChat ? (
-                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         ) : (
-                          <MessageSquare className="h-4 w-4 mr-1" />
+                          <MessageSquare className="h-4 w-4 mr-2" />
                         )}
-                        Message via Platform
+                        Message Customer
                       </Button>
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-1.5">
+                        <p className="text-xs font-semibold text-amber-700 flex items-center gap-1">
+                          <Shield className="h-3.5 w-3.5" />
+                          Platform Communication Policy
+                        </p>
+                        <p className="text-xs text-amber-600 leading-relaxed">
+                          All customer communication must happen through platform messaging. 
+                          Do not share personal contact details (phone numbers, email addresses, 
+                          social media) in messages. Violations may result in account suspension.
+                        </p>
+                      </div>
                     </>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Walk-in customer — messaging not available
+                    </p>
                   )}
                 </CardContent>
               </Card>
