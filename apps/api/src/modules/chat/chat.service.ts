@@ -94,6 +94,10 @@ export interface SendMessageResult {
   warning: string | null;
   /** Current global strike count for the sender */
   strikeCount: number;
+  /** Buyer's user ID (for direct delivery) */
+  buyerUserId?: string;
+  /** Shop owner's user ID (for direct delivery) */
+  shopUserId?: string;
 }
 
 @Injectable()
@@ -165,6 +169,7 @@ export class ChatService {
   ): Promise<SendMessageResult> {
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
+      include: { shop: { select: { userId: true } } },
     });
 
     if (!conversation) {
@@ -230,7 +235,14 @@ export class ChatService {
       data: { updatedAt: new Date() },
     });
 
-    return { message, blocked: false, warning: null, strikeCount: 0 };
+    return {
+      message,
+      blocked: false,
+      warning: null,
+      strikeCount: 0,
+      buyerUserId: conversation.buyerId,
+      shopUserId: (conversation as any).shop?.userId,
+    };
   }
 
   // ═══════════════════════════════════════════════════════════

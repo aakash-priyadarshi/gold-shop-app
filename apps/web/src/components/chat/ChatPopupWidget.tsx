@@ -110,27 +110,90 @@ export function ChatPopupWidget() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const attachMenuRef = useRef<HTMLDivElement>(null);
+  const seenMsgIds = useRef<Set<string>>(new Set());
   const [fileAccept, setFileAccept] = useState("");
   const pathname = usePathname();
 
   const isShopkeeper = user?.role === "SHOPKEEPER";
   const shopId = user?.shop?.id;
 
+  const updateUnreadCount = (convs: Conversation[]) => {
+    const unread = convs.reduce((acc, c) => {
+      const lastMsg = c.messages?.[0];
+      if (lastMsg && !lastMsg.isRead && lastMsg.senderRole !== user?.role) {
+        return acc + 1;
+      }
+      return acc;
+    }, 0);
+    setUnreadCount(unread);
+  };
+
+  /* ── Load conversations (full, with loading state) ── */
+  const loadConversations = useCallback(async () => {
+    if (!user) return;
+    setLoadingConvs(true);
+    try {
+      const res = await chatApi.listConversations(
+        isShopkeeper ? shopId : undefined,
+      );
+      const convs: Conversation[] = res.data || [];
+      setConversations(convs);
+      updateUnreadCount(convs);
+    } catch {
+      /* silent */
+    } finally {
+      setLoadingConvs(false);
+    }
+  }, [user, isShopkeeper, shopId]);
+
+  /* ── Quiet refresh (no loading spinner) ── */
+  const loadConversationsQuiet = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await chatApi.listConversations(
+        isShopkeeper ? shopId : undefined,
+      );
+      const convs: Conversation[] = res.data || [];
+      setConversations(convs);
+      updateUnreadCount(convs);
+    } catch {
+      /* silent */
+    }
+  }, [user, isShopkeeper, shopId]);
+
   /* ── WebSocket: live message handling ── */
   const handleNewMessage = useCallback(
     (msg: ChatSocketMessage) => {
+      // Global dedup — message may arrive from both room broadcast and direct emit
+      if (seenMsgIds.current.has(msg.id)) return;
+      seenMsgIds.current.add(msg.id);
+      // Keep the set from growing unbounded
+      if (seenMsgIds.current.size > 200) {
+        const arr = Array.from(seenMsgIds.current);
+        seenMsgIds.current = new Set(arr.slice(-100));
+      }
+
       // If we're in the conversation, append the message
       if (msg.conversationId === activeConversationId) {
         setMessages((prev) => {
-          // Avoid duplicates
           if (prev.some((m) => m.id === msg.id)) return prev;
           return [...prev, msg as unknown as Message];
         });
       }
-      // Refresh conversation list for the sidebar/unread counts
+
+      // If the chatbox is closed/minimized or msg is for a different conversation,
+      // immediately bump the unread count so the badge shows right away
+      if (
+        msg.senderId !== user?.id &&
+        (!isOpen || isMinimized || msg.conversationId !== activeConversationId)
+      ) {
+        setUnreadCount((prev) => prev + 1);
+      }
+
+      // Also refresh conversation list for accurate sidebar/unread counts
       loadConversationsQuiet();
     },
-    [activeConversationId],
+    [activeConversationId, isOpen, isMinimized, user?.id, loadConversationsQuiet],
   );
 
   const handleMessageBlocked = useCallback((data: ViolationWarning) => {
@@ -166,50 +229,6 @@ export function ChatPopupWidget() {
     onMessageBlocked: handleMessageBlocked,
     onTyping: handleTypingEvent,
   });
-
-  /* ── Load conversations (full, with loading state) ── */
-  const loadConversations = useCallback(async () => {
-    if (!user) return;
-    setLoadingConvs(true);
-    try {
-      const res = await chatApi.listConversations(
-        isShopkeeper ? shopId : undefined,
-      );
-      const convs: Conversation[] = res.data || [];
-      setConversations(convs);
-      updateUnreadCount(convs);
-    } catch {
-      /* silent */
-    } finally {
-      setLoadingConvs(false);
-    }
-  }, [user, isShopkeeper, shopId]);
-
-  /* ── Quiet refresh (no loading spinner) ── */
-  const loadConversationsQuiet = useCallback(async () => {
-    if (!user) return;
-    try {
-      const res = await chatApi.listConversations(
-        isShopkeeper ? shopId : undefined,
-      );
-      const convs: Conversation[] = res.data || [];
-      setConversations(convs);
-      updateUnreadCount(convs);
-    } catch {
-      /* silent */
-    }
-  }, [user, isShopkeeper, shopId]);
-
-  const updateUnreadCount = (convs: Conversation[]) => {
-    const unread = convs.reduce((acc, c) => {
-      const lastMsg = c.messages?.[0];
-      if (lastMsg && !lastMsg.isRead && lastMsg.senderRole !== user?.role) {
-        return acc + 1;
-      }
-      return acc;
-    }, 0);
-    setUnreadCount(unread);
-  };
 
   /* ── Online presence check ── */
   useEffect(() => {
