@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import { MarketProvider, useMarket, type MarketRegion, type CurrencyCode as MarketCurrency } from '@/hooks/useMarket';
 import { usePreferencesStore, type CountryCode, type CurrencyCode } from '@/store/preferences';
 import { CartProvider } from '@/contexts/CartContext';
+import { ChatPopupProvider } from '@/contexts/ChatPopupContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -107,9 +108,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <AuthProvider>
             <CartProvider>
               <MarketProvider>
-                <MarketPreferencesSync>
-                  {children}
-                </MarketPreferencesSync>
+                <ChatPopupProvider>
+                  <MarketPreferencesSync>
+                    {children}
+                  </MarketPreferencesSync>
+                </ChatPopupProvider>
               </MarketProvider>
             </CartProvider>
           </AuthProvider>

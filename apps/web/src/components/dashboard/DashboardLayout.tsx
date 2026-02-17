@@ -24,7 +24,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { BRAND } from "@/config/brand";
-import { ChatPopupProvider } from "@/contexts/ChatPopupContext";
+// ChatPopupProvider is now in root Providers
 import { useAuth, UserRole } from "@/hooks/useAuth";
 import { adminApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -625,7 +625,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <ChatPopupProvider>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gold-50/20">
         {/* Mobile Header */}
         <header className="lg:hidden sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100 safe-area-top">
@@ -831,6 +830,5 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Suspended account lock overlay */}
         <SuspendedOverlay />
       </div>
-    </ChatPopupProvider>
   );
 }
