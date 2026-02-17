@@ -132,6 +132,21 @@ const getRoleQuickActions = (role: UserRole | undefined) => {
           tooltip: "Track My Orders",
         },
       ];
+    case "SALES":
+      return [
+        {
+          href: "/dashboard/sales",
+          icon: Squares2X2Icon,
+          label: "Dashboard",
+          tooltip: "Sales Dashboard",
+        },
+        {
+          href: "/dashboard/sales/orders",
+          icon: ClipboardDocumentListIcon,
+          label: "Orders",
+          tooltip: "View Orders",
+        },
+      ];
   }
 };
 
@@ -265,6 +280,8 @@ export function Header() {
         return "/dashboard/admin/messages";
       case "SHOPKEEPER":
         return "/dashboard/shop/messages";
+      case "SALES":
+        return "/dashboard/sales/messages";
       case "CUSTOMER":
       default:
         return "/dashboard/customer/messages";

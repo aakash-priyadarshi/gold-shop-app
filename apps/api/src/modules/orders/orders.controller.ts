@@ -114,14 +114,14 @@ export class OrdersController {
   // ══════════════════════════════════════
 
   @Get("admin/all")
-  @Roles("ADMIN")
+  @Roles("ADMIN", "SALES")
   @ApiOperation({ summary: "Get all orders (Admin)" })
   async getAllOrders(@Query() filters: AdminOrderFilterDto) {
     return this.ordersService.findAllOrders(filters);
   }
 
   @Get("admin/stats")
-  @Roles("ADMIN")
+  @Roles("ADMIN", "SALES")
   @ApiOperation({ summary: "Get platform-wide order statistics (Admin)" })
   async getPlatformOrderStats() {
     return this.ordersService.getPlatformStats();

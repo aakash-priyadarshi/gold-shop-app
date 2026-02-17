@@ -12,7 +12,7 @@ import React, {
 } from "react";
 
 // Types matching backend
-export type UserRole = "ADMIN" | "SHOPKEEPER" | "CUSTOMER";
+export type UserRole = "ADMIN" | "SHOPKEEPER" | "CUSTOMER" | "SALES";
 
 export interface User {
   id: string;
@@ -147,6 +147,8 @@ export const getDashboardRoute = (role: UserRole): string => {
       return "/dashboard/shop";
     case "CUSTOMER":
       return "/dashboard/customer";
+    case "SALES":
+      return "/dashboard/sales";
     default:
       return "/";
   }
@@ -157,6 +159,7 @@ const roleRoutes: Record<UserRole, string[]> = {
   ADMIN: ["/dashboard/admin", "/admin", "/api/admin"],
   SHOPKEEPER: ["/dashboard/shop", "/shop", "/inventory"],
   CUSTOMER: ["/dashboard/customer", "/browse", "/cart", "/orders", "/rfq"],
+  SALES: ["/dashboard/sales", "/dashboard/admin"],
 };
 
 // Public routes that don't require auth

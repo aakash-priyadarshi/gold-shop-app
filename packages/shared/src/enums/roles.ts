@@ -1,6 +1,6 @@
 // ══════════════════════════════════════════════════════════════════════════════
 // GOLD SHOP MARKETPLACE - USER ROLES & PERMISSIONS
-// EXACTLY FOUR ROLES — NO MORE, NO LESS
+// FIVE ROLES: ADMIN, SHOPKEEPER, CUSTOMER, SUPPORT, SALES
 // ══════════════════════════════════════════════════════════════════════════════
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -11,6 +11,7 @@ export enum UserRole {
   SHOPKEEPER = 'SHOPKEEPER',
   CUSTOMER = 'CUSTOMER',
   SUPPORT = 'SUPPORT',
+  SALES = 'SALES',
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -236,6 +237,49 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'MATERIAL:READ',
     'MATERIAL:LIST',
   ] as Permission[],
+
+  [UserRole.SALES]: [
+    // User management (read-only for CRM)
+    'USER:READ',
+    'USER:LIST',
+
+    // Shop viewing & seller management
+    'SHOP:READ',
+    'SHOP:LIST',
+
+    // Inventory viewing
+    'INVENTORY_ITEM:READ',
+    'INVENTORY_ITEM:LIST',
+
+    // Orders (view + status for escalation handling)
+    'ORDER:READ',
+    'ORDER:LIST',
+    'ORDER:UPDATE_STATUS',
+
+    // RFQ management (assist customers)
+    'RFQ:READ',
+    'RFQ:LIST',
+    'OFFER:READ',
+    'OFFER:LIST',
+
+    // Cannot modify prices or materials!
+
+    // Notifications (read + send)
+    'NOTIFICATION:READ',
+    'NOTIFICATION:LIST',
+    'NOTIFICATION:CREATE',
+
+    // Market rates (read)
+    'MARKET_RATE:READ',
+
+    // Materials (read)
+    'MATERIAL:READ',
+    'MATERIAL:LIST',
+
+    // Reports
+    'REPORT:READ',
+    'REPORT:LIST',
+  ] as Permission[],
 };
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -299,5 +343,10 @@ export const ROLE_DESCRIPTIONS: Record<UserRole, { en: string; ne: string; hi: s
     en: 'Support Staff - Customer service and order tracking',
     ne: 'सहायता कर्मचारी - ग्राहक सेवा र अर्डर ट्र्याकिङ',
     hi: 'सहायता कर्मचारी - ग्राहक सेवा और ऑर्डर ट्रैकिंग',
+  },
+  [UserRole.SALES]: {
+    en: 'Sales Agent - Seller onboarding, CRM, and escalation handling',
+    ne: 'बिक्री एजेन्ट - विक्रेता अनबोर्डिङ, CRM, र एस्केलेसन ह्यान्डलिङ',
+    hi: 'बिक्री एजेंट - विक्रेता ऑनबोर्डिंग, CRM, और एस्केलेशन हैंडलिंग',
   },
 };
