@@ -1587,6 +1587,9 @@ enum NotificationType {
   // Chat
   NEW_MESSAGE
   CONVERSATION_LOCKED
+  CHAT_VIOLATION_WARNING
+  ACCOUNT_SUSPENDED
+  SHOP_ON_HOLD
   // Refund
   REFUND_REQUESTED
   REFUND_APPROVED
@@ -2032,6 +2035,7 @@ model Message {
   isRead          Boolean      @default(false)
   readAt          DateTime?
   isSystem        Boolean      @default(false) // System-generated messages (warnings, etc.)
+  isBlocked       Boolean      @default(false) // Blocked by moderation — not delivered to recipient
   createdAt       DateTime     @default(now())
 
   conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)

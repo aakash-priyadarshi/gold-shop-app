@@ -99,7 +99,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     },
   ) {
     try {
-      const message = await this.chatService.sendMessage(
+      const result = await this.chatService.sendMessage(
         data.conversationId,
         client.userId,
         client.userRole,
@@ -108,12 +108,24 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.attachmentType,
       );
 
-      // Broadcast to all in conversation room
+      if (result.blocked) {
+        // Message was blocked — notify ONLY the sender, NOT the conversation
+        return {
+          event: 'messageBlocked',
+          data: {
+            warning: result.warning,
+            strikeCount: result.strikeCount,
+            conversationId: data.conversationId,
+          },
+        };
+      }
+
+      // Clean message — broadcast to all in conversation room
       this.server
         .to(`conversation:${data.conversationId}`)
-        .emit('newMessage', message);
+        .emit('newMessage', result.message);
 
-      return { event: 'messageSent', data: message };
+      return { event: 'messageSent', data: result.message };
     } catch (error: any) {
       return { event: 'error', data: { message: error.message } };
     }

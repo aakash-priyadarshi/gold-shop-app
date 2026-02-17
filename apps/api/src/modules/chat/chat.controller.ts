@@ -35,7 +35,6 @@ export class ChatController {
     @CurrentUser('role') userRole: string,
     @Body() dto: CreateConversationDto,
   ) {
-    // Customers are always the buyer
     if (userRole === 'CUSTOMER') {
       return this.chatService.getOrCreateConversation(
         userId,
@@ -44,7 +43,6 @@ export class ChatController {
         dto.rfqId,
       );
     }
-    // Shopkeepers need a buyerId from context (order or rfq)
     throw new Error('Shopkeepers should use order/rfq context to start conversations');
   }
 
@@ -74,7 +72,7 @@ export class ChatController {
 
   @Post('conversations/:id/messages')
   @Roles('CUSTOMER', 'SHOPKEEPER')
-  @ApiOperation({ summary: 'Send a message in a conversation' })
+  @ApiOperation({ summary: 'Send a message (blocked if contact info detected)' })
   async sendMessage(
     @CurrentUser('id') userId: string,
     @CurrentUser('role') userRole: string,
@@ -106,9 +104,23 @@ export class ChatController {
 
   @Get('admin/violations')
   @Roles('ADMIN', 'SUPPORT')
-  @ApiOperation({ summary: 'Get contact violation statistics' })
+  @ApiOperation({ summary: 'Get contact violation statistics and recent violations' })
   async getViolationStats() {
     return this.chatService.getViolationStats();
+  }
+
+  @Get('admin/violations/user/:userId')
+  @Roles('ADMIN', 'SUPPORT')
+  @ApiOperation({ summary: 'Get per-user violation history' })
+  async getUserViolationHistory(@Param('userId') userId: string) {
+    return this.chatService.getUserViolationHistory(userId);
+  }
+
+  @Get('admin/messages/:messageId')
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Get original blocked message (admin review)' })
+  async getBlockedMessage(@Param('messageId') messageId: string) {
+    return this.chatService.getBlockedMessageOriginal(messageId);
   }
 
   @Patch('admin/conversations/:id/unlock')
@@ -120,5 +132,15 @@ export class ChatController {
   ) {
     await this.chatService.unlockConversation(conversationId, adminId);
     return { success: true };
+  }
+
+  @Patch('admin/users/:userId/unblock')
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Unblock a user suspended for chat violations' })
+  async unblockUser(
+    @CurrentUser('id') adminId: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.chatService.unblockUser(userId, adminId);
   }
 }
