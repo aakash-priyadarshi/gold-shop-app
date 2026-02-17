@@ -197,17 +197,45 @@ export class UsersService {
       throw new ForbiddenException("Cannot suspend admin users");
     }
 
-    return this.prisma.user.update({
+    // Suspend user account
+    const updated = await this.prisma.user.update({
       where: { id: userId },
       data: { status: "SUSPENDED" },
     });
+
+    // Also put their shops on hold (unified suspension)
+    if (user.role === UserRole.SHOPKEEPER) {
+      await this.prisma.shop.updateMany({
+        where: { userId },
+        data: { isOnHold: true, holdReason: "Account suspended by admin" },
+      });
+    }
+
+    return updated;
   }
 
   async activateUser(userId: string) {
-    return this.prisma.user.update({
+    const updated = await this.prisma.user.update({
       where: { id: userId },
       data: { status: "ACTIVE" },
     });
+
+    // Also remove hold from their shops (unified unsuspend)
+    await this.prisma.shop.updateMany({
+      where: { userId, isOnHold: true },
+      data: { isOnHold: false, holdReason: null },
+    });
+
+    // Unlock any locked conversations
+    await this.prisma.conversation.updateMany({
+      where: {
+        OR: [{ buyerId: userId }, { shop: { userId } }],
+        status: "LOCKED",
+      },
+      data: { status: "ACTIVE" },
+    });
+
+    return updated;
   }
 
   /**

@@ -1002,7 +1002,34 @@ export class AdminController {
     for (const key of allowedFields) {
       if (body[key] !== undefined) data[key] = body[key];
     }
-    return this.prisma.shop.update({ where: { id: shopId }, data });
+    const updatedShop = await this.prisma.shop.update({ where: { id: shopId }, data });
+
+    // ── Sync User.status when isOnHold changes ──
+    // Removing hold → also reactivate the user account + unlock conversations
+    // Putting on hold → also suspend the user account
+    if (body.isOnHold === false && updatedShop.userId) {
+      await this.prisma.user.update({
+        where: { id: updatedShop.userId },
+        data: { status: "ACTIVE" },
+      });
+      // Unlock any locked conversations for this shop owner
+      await this.prisma.conversation.updateMany({
+        where: {
+          OR: [{ buyerId: updatedShop.userId }, { shop: { userId: updatedShop.userId } }],
+          status: "LOCKED",
+        },
+        data: { status: "ACTIVE" },
+      });
+      this.logger.log(`Shop ${shopId} unhold: User ${updatedShop.userId} reactivated, conversations unlocked`);
+    } else if (body.isOnHold === true && updatedShop.userId) {
+      await this.prisma.user.update({
+        where: { id: updatedShop.userId },
+        data: { status: "SUSPENDED" },
+      });
+      this.logger.log(`Shop ${shopId} put on hold: User ${updatedShop.userId} suspended`);
+    }
+
+    return updatedShop;
   }
 
   @Get("sellers/:shopId/health-score")
