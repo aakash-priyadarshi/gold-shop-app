@@ -18,19 +18,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import api from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "@/hooks/use-toast";
+import api, { chatApi } from "@/lib/api";
 import {
   BuildingStorefrontIcon,
+  ChatBubbleLeftRightIcon,
   CheckBadgeIcon,
   FunnelIcon,
   MagnifyingGlassIcon,
   MapPinIcon,
-  PhoneIcon,
   StarIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { StarIcon as StarSolidIcon } from "@heroicons/react/24/solid";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 interface Shop {
@@ -100,8 +103,11 @@ const COUNTRIES = {
 };
 
 export default function ShopsPage() {
+  const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
   const [shops, setShops] = useState<Shop[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [messagingShopId, setMessagingShopId] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>({
     country: "all",
     state: "all",
@@ -177,6 +183,45 @@ export default function ShopsPage() {
       ]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleMessageShop = async (shopId: string) => {
+    if (!isAuthenticated) {
+      toast({
+        variant: "destructive",
+        title: "Login Required",
+        description: "Please login to message this shop",
+      });
+      router.push(`/auth/login?redirect=/shops`);
+      return;
+    }
+    if (user?.role !== "CUSTOMER") {
+      toast({
+        variant: "destructive",
+        title: "Not Allowed",
+        description: "Only customers can initiate conversations with shops",
+      });
+      return;
+    }
+    setMessagingShopId(shopId);
+    try {
+      const res = await chatApi.createConversation({ shopId });
+      const conversationId = res.data?.id || res.data?.conversationId;
+      router.push(`/dashboard/customer/messages?chat=${conversationId}`);
+    } catch (err: any) {
+      // If conversation already exists, the backend might return it
+      if (err.response?.data?.conversationId) {
+        router.push(`/dashboard/customer/messages?chat=${err.response.data.conversationId}`);
+        return;
+      }
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.response?.data?.message || "Failed to start conversation",
+      });
+    } finally {
+      setMessagingShopId(null);
     }
   };
 
@@ -565,10 +610,17 @@ export default function ShopsPage() {
                         View Shop
                       </Button>
                     </Link>
-                    <Button variant="outline" size="icon" asChild>
-                      <a href={`tel:${shop.contactPhone}`}>
-                        <PhoneIcon className="h-4 w-4" />
-                      </a>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleMessageShop(shop.id)}
+                      disabled={messagingShopId === shop.id}
+                    >
+                      {messagingShopId === shop.id ? (
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      ) : (
+                        <ChatBubbleLeftRightIcon className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                 </CardContent>

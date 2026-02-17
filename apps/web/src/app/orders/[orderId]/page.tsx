@@ -20,12 +20,13 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
-import { ordersApi } from "@/lib/api";
+import { chatApi, ordersApi } from "@/lib/api";
 import { CURRENCIES, usePreferencesStore } from "@/store/preferences";
 import {
   ArrowLeftIcon,
   BuildingStorefrontIcon,
   CalendarIcon,
+  ChatBubbleLeftRightIcon,
   CheckCircleIcon,
   ClockIcon,
   ExclamationTriangleIcon,
@@ -124,6 +125,7 @@ export default function OrderTrackingPage() {
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [startingChat, setStartingChat] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -209,6 +211,28 @@ export default function OrderTrackingPage() {
         return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
       default:
         return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
+    }
+  };
+
+  // Handle messaging the shop about this order
+  const handleMessageShop = async () => {
+    if (!order) return;
+    setStartingChat(true);
+    try {
+      const res = await chatApi.createConversation({
+        shopId: order.shop.id,
+        orderId: order.id,
+      });
+      const conversationId = res.data?.id || res.data?.conversationId;
+      router.push(`/dashboard/customer/messages?chat=${conversationId}`);
+    } catch (err: any) {
+      if (err.response?.data?.conversationId) {
+        router.push(`/dashboard/customer/messages?chat=${err.response.data.conversationId}`);
+        return;
+      }
+      console.error("Failed to start conversation:", err);
+    } finally {
+      setStartingChat(false);
     }
   };
 
@@ -648,19 +672,24 @@ export default function OrderTrackingPage() {
                 <CardTitle className="text-lg">Need Help?</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  asChild
-                >
+                <Button variant="outline" className="w-full justify-start" asChild>
                   <Link href={`/shop/${order.shop.id}`}>
                     <BuildingStorefrontIcon className="h-4 w-4 mr-2" />
                     View Shop
                   </Link>
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <PhoneIcon className="h-4 w-4 mr-2" />
-                  Contact Support
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={handleMessageShop}
+                  disabled={startingChat}
+                >
+                  {startingChat ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <ChatBubbleLeftRightIcon className="h-4 w-4 mr-2" />
+                  )}
+                  Message Shop
                 </Button>
               </CardContent>
             </Card>

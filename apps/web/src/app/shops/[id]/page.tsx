@@ -34,9 +34,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import api, { materialsApi } from "@/lib/api";
+import api, { chatApi, materialsApi } from "@/lib/api";
 import {
   BuildingStorefrontIcon,
+  ChatBubbleLeftRightIcon,
   CheckBadgeIcon,
   ChevronLeftIcon,
   ClockIcon,
@@ -174,6 +175,9 @@ export default function ShopDetailPage() {
 
   // Market rates for pricing display
   const [marketRates, setMarketRates] = useState<Record<string, number>>({});
+
+  // Messaging state
+  const [startingChat, setStartingChat] = useState(false);
 
   // Product quantity state for cart
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -384,6 +388,44 @@ export default function ShopDetailPage() {
       });
     } finally {
       setSubmittingOrder(false);
+    }
+  };
+
+  const handleMessageShop = async () => {
+    if (!isAuthenticated) {
+      toast({
+        variant: "destructive",
+        title: "Login Required",
+        description: "Please login to message this shop",
+      });
+      router.push(`/auth/login?redirect=/shops/${shopId}`);
+      return;
+    }
+    if (user?.role !== "CUSTOMER") {
+      toast({
+        variant: "destructive",
+        title: "Not Allowed",
+        description: "Only customers can initiate conversations with shops",
+      });
+      return;
+    }
+    setStartingChat(true);
+    try {
+      const res = await chatApi.createConversation({ shopId });
+      const conversationId = res.data?.id || res.data?.conversationId;
+      router.push(`/dashboard/customer/messages?chat=${conversationId}`);
+    } catch (err: any) {
+      if (err.response?.data?.conversationId) {
+        router.push(`/dashboard/customer/messages?chat=${err.response.data.conversationId}`);
+        return;
+      }
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.response?.data?.message || "Failed to start conversation",
+      });
+    } finally {
+      setStartingChat(false);
     }
   };
 
@@ -704,6 +746,24 @@ export default function ShopDetailPage() {
                   </DialogContent>
                 </Dialog>
 
+                {/* Message Shop button — only for non-owners */}
+                {!isShopOwner && (
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                    onClick={handleMessageShop}
+                    disabled={startingChat}
+                  >
+                    {startingChat ? (
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    ) : (
+                      <ChatBubbleLeftRightIcon className="h-5 w-5 mr-2" />
+                    )}
+                    Message Shop
+                  </Button>
+                )}
+
                 {isShopOwner && shop.contactPhone && (
                   <a href={`tel:${shop.contactPhone}`}>
                     <Button
@@ -995,13 +1055,25 @@ export default function ShopDetailPage() {
                     </div>
                   )}
 
-                  {/* Non-owners see a message to use platform */}
+                  {/* Non-owners see a message button */}
                   {!isShopOwner && (
-                    <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <div className="bg-amber-50 rounded-lg p-3 text-center space-y-2">
                       <p className="text-sm text-muted-foreground">
-                        Use Custom Order or platform messaging to contact this
-                        shop
+                        Have questions? Message this shop directly.
                       </p>
+                      <Button
+                        size="sm"
+                        className="w-full gold-gradient text-white"
+                        onClick={handleMessageShop}
+                        disabled={startingChat}
+                      >
+                        {startingChat ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <ChatBubbleLeftRightIcon className="h-4 w-4 mr-2" />
+                        )}
+                        Message Shop
+                      </Button>
                     </div>
                   )}
 

@@ -28,14 +28,14 @@ export class ChatController {
   // ─── Conversations ───
 
   @Post('conversations')
-  @Roles('CUSTOMER', 'SHOPKEEPER')
+  @Roles('CUSTOMER', 'SHOPKEEPER', 'ADMIN')
   @ApiOperation({ summary: 'Create or get existing conversation' })
   async createConversation(
     @CurrentUser('id') userId: string,
     @CurrentUser('role') userRole: string,
     @Body() dto: CreateConversationDto,
   ) {
-    if (userRole === 'CUSTOMER') {
+    if (userRole === 'CUSTOMER' || userRole === 'ADMIN') {
       return this.chatService.getOrCreateConversation(
         userId,
         dto.shopId,
@@ -43,7 +43,7 @@ export class ChatController {
         dto.rfqId,
       );
     }
-    throw new Error('Shopkeepers should use order/rfq context to start conversations');
+    throw new Error('Shopkeepers cannot initiate conversations — customers contact you first');
   }
 
   @Get('conversations')
@@ -71,7 +71,7 @@ export class ChatController {
   }
 
   @Post('conversations/:id/messages')
-  @Roles('CUSTOMER', 'SHOPKEEPER')
+  @Roles('CUSTOMER', 'SHOPKEEPER', 'ADMIN')
   @ApiOperation({ summary: 'Send a message (blocked if contact info detected)' })
   async sendMessage(
     @CurrentUser('id') userId: string,
