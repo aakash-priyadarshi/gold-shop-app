@@ -19,16 +19,14 @@ import { useChatPopup } from "@/contexts/ChatPopupContext";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
-import { chatApi, customerCrmApi, shopsApi } from "@/lib/api";
+import { chatApi, customerCrmApi } from "@/lib/api";
 import {
   ArrowLeft,
   Calendar,
   DollarSign,
   Loader2,
-  Mail,
   MapPin,
   MessageSquare,
-  Phone,
   Send,
   Shield,
   ShoppingCart,
@@ -111,10 +109,14 @@ export default function CustomerProfilePage() {
       if (convRes.data?.id) {
         openChat(convRes.data.id);
       } else {
-        toast({ variant: "destructive", title: "Failed to create conversation" });
+        toast({
+          variant: "destructive",
+          title: "Failed to create conversation",
+        });
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || "Failed to start conversation";
+      const msg =
+        err?.response?.data?.message || "Failed to start conversation";
       toast({ variant: "destructive", title: msg });
     } finally {
       setStartingChat(false);
@@ -295,9 +297,11 @@ export default function CustomerProfilePage() {
                           Platform Communication Policy
                         </p>
                         <p className="text-xs text-amber-600 leading-relaxed">
-                          All customer communication must happen through platform messaging. 
-                          Do not share personal contact details (phone numbers, email addresses, 
-                          social media) in messages. Violations may result in account suspension.
+                          All customer communication must happen through
+                          platform messaging. Do not share personal contact
+                          details (phone numbers, email addresses, social media)
+                          in messages. Violations may result in account
+                          suspension.
                         </p>
                       </div>
                     </>

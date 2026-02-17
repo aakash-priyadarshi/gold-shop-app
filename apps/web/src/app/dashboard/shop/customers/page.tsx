@@ -150,7 +150,9 @@ export default function CustomerDirectoryPage() {
                         {customer.type === "REGISTERED" && (
                           <div className="flex items-center gap-2">
                             <MessageSquare className="h-3 w-3 text-amber-500" />
-                            <span className="text-amber-600 text-xs font-medium">Platform messaging available</span>
+                            <span className="text-amber-600 text-xs font-medium">
+                              Platform messaging available
+                            </span>
                           </div>
                         )}
                       </div>

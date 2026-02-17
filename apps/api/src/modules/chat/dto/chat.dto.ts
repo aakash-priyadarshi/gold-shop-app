@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsEnum, MaxLength, IsUUID } from 'class-validator';
+import { IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
 
 export class CreateConversationDto {
   @IsOptional()

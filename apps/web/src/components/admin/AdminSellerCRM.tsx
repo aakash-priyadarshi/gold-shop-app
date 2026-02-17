@@ -691,7 +691,11 @@ export function AdminSellerCRM() {
                 </DialogTitle>
               </DialogHeader>
 
-              <Tabs value={activeDrawerTab} onValueChange={setActiveDrawerTab} className="mt-4">
+              <Tabs
+                value={activeDrawerTab}
+                onValueChange={setActiveDrawerTab}
+                className="mt-4"
+              >
                 <TabsList className="grid grid-cols-6 w-full">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="insights">Insights</TabsTrigger>

@@ -51,14 +51,15 @@ flowchart LR
 
 - Uses Next.js App Router under `apps/web/src/app`.
 - Main route areas (folder-level):
-  - Public pages: `about/`, `shops/`, `shop/`, `rfq/`, `designs/`, `cart/`, `checkout/`, `orders/`, `notifications/`, `auth/`.
-  - Dashboards: `dashboard/customer/*`, `dashboard/shop/*`, `dashboard/admin/*`, `dashboard/sales/*`.
+  - Public pages: `about/`, `shops/`, `shop/`, `rfq/`, `designs/`, `cart/`, `checkout/`, `orders/`, `notifications/`, `auth/`, `help/`, `platform-guidelines/`.
+  - Dashboards: `dashboard/customer/*`, `dashboard/shop/*`, `dashboard/admin/*`, `dashboard/sales/*`, `dashboard/support/*`.
 
 Dashboard route map (folder inventory):
 - Customer dashboard (`apps/web/src/app/dashboard/customer`): `orders/`, `payments/`, `rfqs/`, `settings/`, `wishlist/`, `messages/`, `refunds/`.
 - Shop dashboard (`apps/web/src/app/dashboard/shop`): `analytics/`, `commissions/`, `customers/`, `engagement/`, `inventory/`, `invoices/`, `orders/`, `pricing/`, `products/`, `profile/`, `quotes/`, `rfqs/`, `settings/`, `shop-profile/`, `tools/`, `messages/`, `variants/`.
 - Admin dashboard (`apps/web/src/app/dashboard/admin`): `shops/`, `users/`, `verifications/`, `orders/`, `commissions/`, `intelligence/`, `reports/`, `settings/`, `profile/`, `support/`, `chat-monitoring/`, `refunds/`, `messages/`.
 - Sales dashboard (`apps/web/src/app/dashboard/sales`): `shops/`, `orders/`, `messages/`, `profile/`.
+- Support dashboard (`apps/web/src/app/dashboard/support`): `tickets/`, `page.tsx` (overview).
 
 ### Backend (NestJS)
 
@@ -98,9 +99,9 @@ Backend module inventory (`apps/api/src/modules/*`):
 - `mail`: email sending
 - `health`: health endpoints
 - `admin`, `marketplace-intelligence`, `i18n`: admin tools + intelligence + localization support
-- `chat`: anti-circumvention in-app messaging with **3-strike global blocking** (messages BLOCKED, not masked), dual-layer detection (regex + Gemini Flash AI deep scan including image analysis), per-user violation tracking, account suspension on 3rd strike, admin unblock; WebSocket real-time delivery
+- `chat`: anti-circumvention in-app messaging with **3-strike global blocking** (messages BLOCKED, not masked), dual-layer detection (regex + Gemini Flash AI deep scan including image analysis), per-user violation tracking, account suspension on 3rd strike, admin unblock; WebSocket real-time delivery; **online presence tracking** (30s polling), **file attachments** (images, video ≤10s, documents via R2), type-specific violation warnings (13 types with English+Hindi labels)
 - `refunds`: metal-only refund policy enforcement, eligibility checks, refund lifecycle (request → approve/reject → process), commission reversal
-- `support`: internal operations dashboard aggregating pending refunds, flagged conversations, KYC queue, and order monitoring
+- `support`: internal operations dashboard aggregating pending refunds, flagged conversations, KYC queue, and order monitoring; **ticket system** (SupportTicket + TicketMessage models, real-time WebSocket `/support` namespace, claim/resolve/close lifecycle, internal notes, auto-priority); **AI chatbot** (Gemini Flash 2.0 for public help queries with escalation to tickets)
 - `product-variants`: size variant management for rings/bangles/bracelets with SKU-level stock, price overrides, and standardised size charts
 
 ### Images (Cloudflare Worker + R2)
@@ -115,7 +116,14 @@ Endpoints:
 - `GET /images/{key}` and `GET /{type}/{filename}`: serve from R2
 
 Upload types (worker-side variants defined):
-- `product`, `profile`, `rfq`, `designs`, `kyc`
+- `product` (1200/600/200px, images only, 10MB)
+- `profile` (400/200px, images only, 10MB)
+- `rfq` (1200/600px, images only, 10MB)
+- `designs` (1200/600/200px, images only, 10MB)
+- `kyc` (1200px, images only, 10MB)
+- `chat` (1200/600/200px, images 10MB + video mp4/webm 25MB + documents pdf/doc/docx 15MB)
+- `shop` (800/400px, images only, 10MB)
+- `user` (400/200px, images only, 10MB)
 
 Frontend upload helper:
 - `apps/web/src/lib/image-upload.ts`: client-side resize/compress + upload via `X-Upload-Type` header
@@ -176,7 +184,11 @@ Core domain aggregates (high-level):
 - `ProductVariant`: per-`InventoryItem` size/SKU entries with independent stock counts and optional price overrides
 - `SizeChart`: standardised reference data per jewellery type and sizing system (US, UK, EU, Indian, JP)
 
-Enums represent key business states and supported options, e.g. `OrderStatus`, `DetailedOrderStatus` (includes `REFUND_REQUESTED`), `PaymentMethod`, `PaymentStatusEnum`, `RfqStatus`, `OfferStatus`, `RefundStatus`, `ConversationStatus`, `CommissionStatus` (includes `REVERSED`), `NotificationType` (includes `NEW_MESSAGE`, `CONVERSATION_LOCKED`, `REFUND_REQUESTED`, `REFUND_APPROVED`, `REFUND_REJECTED`, `REFUND_PROCESSED`), `UserRole` (ADMIN, SHOPKEEPER, CUSTOMER, SUPPORT, SALES), and multiple material/finish/gem enums.
+**Support & Tickets**
+- `SupportTicket`: id, ticketNumber (unique, `TKT-XXXXX`), userId?, guestEmail?, guestName?, type (TicketType), subject, description, status (TicketStatus, default OPEN), priority (TicketPriority, default MEDIUM), assigneeId?, claimedAt?, orderId?, conversationId?, resolvedAt?, closedAt?, resolutionNote?, timestamps; indexed on userId, assigneeId, status, type, priority, createdAt, ticketNumber
+- `TicketMessage`: id, ticketId, senderId?, senderRole (string: CUSTOMER/SUPPORT/ADMIN/SYSTEM/GUEST/AI_BOT), senderName?, content, attachmentUrl?, attachmentType?, isInternal (bool, default false — staff-only notes), timestamps; indexed on ticketId, senderId
+
+Enums represent key business states and supported options, e.g. `OrderStatus`, `DetailedOrderStatus` (includes `REFUND_REQUESTED`), `PaymentMethod`, `PaymentStatusEnum`, `RfqStatus`, `OfferStatus`, `RefundStatus`, `ConversationStatus`, `CommissionStatus` (includes `REVERSED`), `NotificationType` (includes `NEW_MESSAGE`, `CONVERSATION_LOCKED`, `REFUND_REQUESTED`, `REFUND_APPROVED`, `REFUND_REJECTED`, `REFUND_PROCESSED`, `TICKET_CREATED`, `TICKET_CLAIMED`, `TICKET_UPDATED`, `TICKET_MESSAGE`, `TICKET_RESOLVED`, `TICKET_CLOSED`), `UserRole` (ADMIN, SHOPKEEPER, CUSTOMER, SUPPORT, SALES), `TicketType` (ACCOUNT_SUSPENSION, LOGIN_ISSUE, PASSWORD_RECOVERY, HACKED_ACCOUNT, ORDER_ISSUE, REFUND_ISSUE, PAYMENT_ISSUE, PRODUCT_ISSUE, SHIPPING_ISSUE, SELLER_COMPLAINT, BUYER_COMPLAINT, PLATFORM_BUG, FEATURE_REQUEST, KYC_VERIFICATION, OTHER), `TicketStatus` (OPEN, CLAIMED, IN_PROGRESS, WAITING_USER, RESOLVED, CLOSED), `TicketPriority` (LOW, MEDIUM, HIGH, URGENT), and multiple material/finish/gem enums.
 
 ## 4) Key business flows
 
@@ -248,7 +260,53 @@ Enums represent key business states and supported options, e.g. `OrderStatus`, `
 3. `SizeChart` provides reference data for standard sizes per jewellery type and region.
 4. Frontend `SizeVariantSelector` component allows customers to pick a size; out-of-stock sizes are disabled.
 
-### 4.9 Order state machine
+### 4.9 Account suspension UX
+
+Instead of logging suspended users out:
+1. Login succeeds but returns `isSuspended: true` flag.
+2. `getMe()` includes `isOnHold`/`holdReason` for shops.
+3. **SuspendedOverlay** (z-index 100) renders over the entire dashboard:
+   - Dark backdrop with SVG chain lines from all 4 corners to center (animated, pulsing).
+   - Chain link decorations at each corner.
+   - Large lock icon center-screen.
+   - Bilingual explanation text (English + Hindi).
+   - "Contact Support" button → `/help`.
+   - "Read Platform Guidelines" link → `/platform-guidelines`.
+   - "Sign Out" button.
+4. User cannot interact with any dashboard functionality while suspended.
+
+### 4.10 Support ticket system
+
+**Lifecycle**: `OPEN → CLAIMED → IN_PROGRESS ⇄ WAITING_USER → RESOLVED → CLOSED`
+
+1. Users create tickets from `/dashboard/{role}/support` or via AI chatbot escalation on `/help`.
+2. Guest users (non-authenticated) can create tickets with email from `/help`.
+3. New tickets emit `newTicket` via WebSocket to all online SUPPORT/ADMIN staff.
+4. Staff claim tickets (`OPEN → CLAIMED`); only one assignee per ticket.
+5. Staff manage tickets: add messages, internal notes (staff-only), change status.
+6. Users reply in ticket chat; auto-transitions `WAITING_USER → IN_PROGRESS`.
+7. Resolution adds a note; closing sets `closedAt`.
+8. All lifecycle events create system messages and in-app notifications.
+9. Auto-priority: `HACKED_ACCOUNT` and `ACCOUNT_SUSPENSION` types auto-set to `URGENT`.
+
+**15 ticket types**: Account Suspension, Login Issue, Password Recovery, Hacked Account, Order Issue, Refund Issue, Payment Issue, Product Issue, Shipping Issue, Seller Complaint, Buyer Complaint, Platform Bug, Feature Request, KYC Verification, Other.
+
+### 4.11 Public help page + AI chatbot
+
+- Public page at `/help` — no authentication required.
+- **AI chatbot** powered by Gemini Flash 2.0:
+  - System prompt defines OriVraa context, rules, and response format.
+  - Returns structured JSON: `{ reply, shouldEscalate, suggestedTicketType, confidence }`.
+  - Handles: order queries, payment questions, account help, platform rules.
+  - Escalates: account issues, specific orders, refunds, security → suggests appropriate `TicketType`.
+  - Conversation history (last 6 messages) maintained for context.
+  - Fallback: keyword-based rule engine when Gemini is unavailable.
+- **Quick topic cards**: Orders, Payments, Account, Chat.
+- **Seamless escalation**: AI suggests creating ticket → pre-filled form with chat context.
+- **Guest ticket creation**: email + name fields for unauthenticated users.
+- Link to `/platform-guidelines` for self-service.
+
+### 4.12 Order state machine
 
 - `StateMachineService` defines explicit transition maps for both `OrderStatus` and `RefundStatus`.
 - `validateOrderTransition(from, to)` and `validateRefundTransition(from, to)` throw `BadRequestException` on illegal transitions.
@@ -307,10 +365,21 @@ Enums represent key business states and supported options, e.g. `OrderStatus`, `
 ### Support (Internal Operations)
 
 - Dashboard with real-time stats: pending refunds, active/locked conversations, violations (24h), total orders
+- **Ticket management**: claim/assign tickets, manage lifecycle (in-progress/waiting/resolve/close), internal notes, real-time WebSocket updates
+- **Ticket stats overview**: 6 cards (open, claimed, in-progress, waiting, resolved, closed) with counts
+- Ticket list with filters: status, type, priority, search, assignee
 - Orders queue for attention/processing
 - Flagged conversations review
 - Pending KYC verifications queue
 - Recent audit activity feed
+
+### All roles (shared features)
+
+- **Help & Support**: ticket creation/tracking from dashboard sidebar
+- **Public help page** (`/help`): AI chatbot + ticket creation (guest or authenticated)
+- **Platform guidelines** (`/platform-guidelines`): bilingual rules page
+- In-app chat via `ChatPopupWidget` with online indicators, file attachments
+- **Account suspension**: locked dashboard overlay instead of forced logout
 
 ## 6) New API endpoints (added 2026-02-18)
 
@@ -328,7 +397,27 @@ Enums represent key business states and supported options, e.g. `OrderStatus`, `
 | PATCH | `/chat/admin/conversations/:id/unlock` | ADMIN | Unlock a locked conversation |
 | PATCH | `/chat/admin/users/:userId/unblock` | ADMIN | Unblock a suspended user (resets Shop.isOnHold / User.status) |
 
-WebSocket gateway: namespace `/chat`, events: `joinConversation`, `leaveConversation`, `sendMessage`, `typing`, `markRead`.
+WebSocket gateway: namespace `/chat`, events: `joinConversation`, `leaveConversation`, `sendMessage`, `typing`, `markRead`, `checkOnline`.
+  - New events: `onlineStatus` (server→client), `newMessage` (server→room), `messageBlocked` (server→sender).
+
+### Tickets (`/api/tickets`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/tickets` | JWT | Create ticket (authenticated user) |
+| POST | `/tickets/guest` | Public | Create ticket (guest with email) |
+| POST | `/tickets/ai-chat` | Public | AI chatbot query |
+| GET | `/tickets/my` | JWT | List my tickets |
+| GET | `/tickets/:id` | JWT | Get ticket with messages |
+| POST | `/tickets/:id/messages` | JWT | Add message to ticket |
+| GET | `/tickets` | SUPPORT, ADMIN | List all tickets (filtered) |
+| PATCH | `/tickets/:id/claim` | SUPPORT, ADMIN | Claim a ticket |
+| PATCH | `/tickets/:id/status` | SUPPORT, ADMIN | Update ticket status |
+| PATCH | `/tickets/:id/resolve` | SUPPORT, ADMIN | Resolve ticket with note |
+| PATCH | `/tickets/:id/close` | SUPPORT, ADMIN | Close ticket |
+| GET | `/tickets/stats/overview` | SUPPORT, ADMIN | Ticket statistics (counts by status) |
+
+WebSocket gateway: namespace `/support`, events: `joinTicket`, `leaveTicket`, `ticketMessage`, `claimTicket`, `updateTicketStatus`.
+  - Server broadcasts: `newTicket` (→staff room), `ticketClaimed`, `ticketStatusChanged`, `newTicketMessage` (→ticket room), `ticketUpdated`.
 
 ### Refunds (`/api/refunds`)
 | Method | Path | Auth | Description |
@@ -449,6 +538,43 @@ Worker (`cloudflare-worker`):
   - `/dashboard/sales/messages` — Full chat interface for sales agents
   - `/dashboard/sales/profile` — Profile management
 - **Backend access**: Added SALES to chat controller (create/list conversations, send/read messages, mark as read). Added SALES to order controller (`admin/all`, `admin/stats` read access). Added SALES to admin seller CRM endpoints (sellers directory, stats, profile, health score, onboarding, milestones, RFQ funnel, notes read/write). Export and write operations (update seller, cancel order, etc.) remain admin-only.
+
+### 2026-02-19 — Violation specificity, Chat UX, Suspension lock, Ticket system, AI chatbot
+
+**Violation warning specificity** (commit TBD)
+- Added `VIOLATION_DESCRIPTIONS` map with 13 violation types, each with English + Hindi specific messages.
+- Violation warnings now include the exact type detected (e.g., "Phone number detected / फ़ोन नंबर पाया गया").
+- Added `GUIDELINES_URL = "/platform-guidelines"` link in all warning messages.
+- Created `/platform-guidelines` page — bilingual (English/Hindi) page covering contact sharing policy, warning system, allowed behaviors, marketplace rules.
+
+**Chat UX improvements** (commit TBD)
+- **Online presence**: Added `checkOnline` event to chat gateway. `ChatPopupWidget` polls online status every 30 seconds. Green dot + "Online"/"Offline" text per conversation.
+- **"See full messages" link**: Redirects to `/dashboard/{role}/messages` from the popup widget.
+- **File attachments**: 📎 button to attach images, video (mp4/webm ≤25MB), documents (pdf/doc/docx ≤15MB). Preview before send with clear button. Upload via R2 worker with `X-Upload-Type: chat`. Inline rendering: images as thumbnails, video with controls, documents as download links.
+- **R2 worker update**: Added `chat` upload type (1200/600/200px variants for images), split `ALLOWED_TYPES` into IMAGE/VIDEO/DOC categories, per-type size limits, `/chat/` serve route.
+
+**Account suspension lock screen** (commit TBD)
+- Login no longer blocks suspended users; returns `isSuspended: true`.
+- `SuspendedOverlay` component renders over entire dashboard (z-100): dark backdrop, SVG chains from 4 corners, lock icon, bilingual explanation, Contact Support / Guidelines / Sign Out buttons.
+- `DashboardLayout` renders overlay when `user.status === "SUSPENDED"`.
+
+**Support ticket system** (commit TBD)
+- **Prisma schema**: Added `SupportTicket` and `TicketMessage` models with 3 new enums (`TicketType` 15 values, `TicketStatus` 6 values, `TicketPriority` 4 values). Added 6 new `NotificationType` values for ticket events.
+- **Backend service** (`tickets.service.ts`): Full CRUD — `createTicket` (auto-number TKT-XXXXX, auto-priority for security types, notifies all staff), `listTickets` (filtered/sorted), `getTicket` (access control, internal note filtering), `claimTicket`, `updateTicketStatus`, `addMessage` (auto-transition WAITING_USER→IN_PROGRESS on user reply), `resolveTicket`, `closeTicket`, `getTicketStats`, `getMyTickets`.
+- **Backend controller** (`tickets.controller.ts`): 12 REST endpoints (see API section). Public endpoints: guest ticket creation, AI chatbot. Auth endpoints: user ticket CRUD. Staff endpoints: list all, claim, status management, stats.
+- **WebSocket gateway** (`tickets.gateway.ts`): Namespace `/support`. JWT auth on handshake. Auto-joins `support:staff` room for SUPPORT/ADMIN. Events: `joinTicket`/`leaveTicket`, `ticketMessage`, `claimTicket`, `updateTicketStatus`. Broadcasts to staff room + ticket rooms.
+- **Frontend API** (`api.ts`): Full `ticketsApi` object with 12 methods.
+- **Frontend hook** (`useTicketSocket.ts`): Socket.IO hook for `/support` namespace with shared singleton, event callbacks, room management.
+- **User pages** (`UserSupportPage.tsx`): Shared component for customer/shop dashboards — ticket list with status/priority badges, create dialog, ticket detail with chat-style messages, real-time updates.
+- **Staff pages** (`StaffTicketsPage.tsx`): Shared component for admin/support — stats overview (6 cards), filtered ticket list, pagination, ticket detail with claim/manage actions, internal notes (yellow highlight), real-time updates.
+- **Support dashboard** (`/dashboard/support/page.tsx`): Stats cards + platform overview (pending refunds, orders, chats, violations).
+- **Navigation updates**: Added SUPPORT role nav items (Dashboard, Tickets, Messages, Flagged Chats, Profile). Added "Help & Support" for Customer and Shopkeeper. Added Admin Tickets link.
+
+**Public help page + AI chatbot** (commit TBD)
+- **AI chatbot service** (`ai-chatbot.service.ts`): Gemini Flash 2.0 with system prompt defining OriVraa context. Returns structured JSON (`reply`, `shouldEscalate`, `suggestedTicketType`, `confidence`). Maintains conversation history (last 6 messages). Keyword-based fallback when Gemini unavailable.
+- **Help page** (`/help/page.tsx`): Public page with AI chat interface, quick topic cards, quick question buttons. Escalation prompts when AI suggests ticket. Supports both authenticated and guest ticket creation. Guest form adds email/name. Chat context auto-included in ticket description. Link to platform guidelines.
+
+**Schema changes**: `SupportTicket`, `TicketMessage` models; `TicketType`, `TicketStatus`, `TicketPriority` enums; 6 new `NotificationType` values; User relations for tickets.
 
 
 

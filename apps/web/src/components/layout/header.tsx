@@ -202,7 +202,10 @@ export function Header() {
       unreadCount: number;
       shop?: { shopName: string };
       customer?: { firstName: string; lastName: string };
-      participants?: Array<{ user?: { firstName: string; lastName: string }; role: string }>;
+      participants?: Array<{
+        user?: { firstName: string; lastName: string };
+        role: string;
+      }>;
     }>
   >([]);
 
@@ -278,8 +281,12 @@ export function Header() {
       // Store top 5 recent conversations sorted by lastMessageAt
       const sorted = [...conversations]
         .sort((a: any, b: any) => {
-          const dateA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
-          const dateB = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+          const dateA = a.lastMessageAt
+            ? new Date(a.lastMessageAt).getTime()
+            : 0;
+          const dateB = b.lastMessageAt
+            ? new Date(b.lastMessageAt).getTime()
+            : 0;
           return dateB - dateA;
         })
         .slice(0, 5);
@@ -785,44 +792,65 @@ export function Header() {
                   </Tooltip>
                   <PopoverContent className="w-56 p-2" align="end">
                     <div className="space-y-1">
-                      <Link href="/dashboard/shop" onClick={() => setDashboardPopoverOpen(false)}>
+                      <Link
+                        href="/dashboard/shop"
+                        onClick={() => setDashboardPopoverOpen(false)}
+                      >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
                           <Squares2X2Icon className="h-4 w-4 text-gray-500" />
                           <span className="text-sm">Dashboard</span>
                         </div>
                       </Link>
-                      <Link href="/dashboard/shop/orders" onClick={() => setDashboardPopoverOpen(false)}>
+                      <Link
+                        href="/dashboard/shop/orders"
+                        onClick={() => setDashboardPopoverOpen(false)}
+                      >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
                           <ShoppingCartIcon className="h-4 w-4 text-gray-500" />
                           <span className="text-sm">Orders</span>
                         </div>
                       </Link>
-                      <Link href="/dashboard/shop/products" onClick={() => setDashboardPopoverOpen(false)}>
+                      <Link
+                        href="/dashboard/shop/products"
+                        onClick={() => setDashboardPopoverOpen(false)}
+                      >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
                           <CubeIcon className="h-4 w-4 text-gray-500" />
                           <span className="text-sm">Products</span>
                         </div>
                       </Link>
-                      <Link href="/dashboard/shop/rfqs" onClick={() => setDashboardPopoverOpen(false)}>
+                      <Link
+                        href="/dashboard/shop/rfqs"
+                        onClick={() => setDashboardPopoverOpen(false)}
+                      >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
                           <ClipboardDocumentListIcon className="h-4 w-4 text-gray-500" />
                           <span className="text-sm">RFQ Requests</span>
                         </div>
                       </Link>
-                      <Link href="/dashboard/shop/customers" onClick={() => setDashboardPopoverOpen(false)}>
+                      <Link
+                        href="/dashboard/shop/customers"
+                        onClick={() => setDashboardPopoverOpen(false)}
+                      >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
                           <UserIcon className="h-4 w-4 text-gray-500" />
                           <span className="text-sm">Customers</span>
                         </div>
                       </Link>
-                      <Link href="/dashboard/shop/analytics" onClick={() => setDashboardPopoverOpen(false)}>
+                      <Link
+                        href="/dashboard/shop/analytics"
+                        onClick={() => setDashboardPopoverOpen(false)}
+                      >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
                           <SparklesIcon className="h-4 w-4 text-gray-500" />
                           <span className="text-sm">Analytics</span>
                         </div>
                       </Link>
                       <div className="border-t my-1" />
-                      <Link href="/dashboard/shop/settings" onClick={() => setDashboardPopoverOpen(false)}>
+                      <Link
+                        href="/dashboard/shop/settings"
+                        onClick={() => setDashboardPopoverOpen(false)}
+                      >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
                           <Cog6ToothIcon className="h-4 w-4 text-gray-500" />
                           <span className="text-sm">Settings</span>
@@ -854,38 +882,56 @@ export function Header() {
                   </Tooltip>
                   <PopoverContent className="w-56 p-2" align="end">
                     <div className="space-y-1">
-                      <Link href="/dashboard/admin" onClick={() => setDashboardPopoverOpen(false)}>
+                      <Link
+                        href="/dashboard/admin"
+                        onClick={() => setDashboardPopoverOpen(false)}
+                      >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
                           <ShieldCheckIcon className="h-4 w-4 text-gray-500" />
                           <span className="text-sm">Admin Panel</span>
                         </div>
                       </Link>
-                      <Link href="/dashboard/admin/orders" onClick={() => setDashboardPopoverOpen(false)}>
+                      <Link
+                        href="/dashboard/admin/orders"
+                        onClick={() => setDashboardPopoverOpen(false)}
+                      >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
                           <ClipboardDocumentListIcon className="h-4 w-4 text-gray-500" />
                           <span className="text-sm">All Orders</span>
                         </div>
                       </Link>
-                      <Link href="/dashboard/admin/shops" onClick={() => setDashboardPopoverOpen(false)}>
+                      <Link
+                        href="/dashboard/admin/shops"
+                        onClick={() => setDashboardPopoverOpen(false)}
+                      >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
                           <BuildingStorefrontIcon className="h-4 w-4 text-gray-500" />
                           <span className="text-sm">Shops & CRM</span>
                         </div>
                       </Link>
-                      <Link href="/dashboard/admin/users" onClick={() => setDashboardPopoverOpen(false)}>
+                      <Link
+                        href="/dashboard/admin/users"
+                        onClick={() => setDashboardPopoverOpen(false)}
+                      >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
                           <UserIcon className="h-4 w-4 text-gray-500" />
                           <span className="text-sm">Users</span>
                         </div>
                       </Link>
-                      <Link href="/dashboard/admin/verifications" onClick={() => setDashboardPopoverOpen(false)}>
+                      <Link
+                        href="/dashboard/admin/verifications"
+                        onClick={() => setDashboardPopoverOpen(false)}
+                      >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
                           <DocumentTextIcon className="h-4 w-4 text-gray-500" />
                           <span className="text-sm">KYC & Verification</span>
                         </div>
                       </Link>
                       <div className="border-t my-1" />
-                      <Link href="/dashboard/admin/settings" onClick={() => setDashboardPopoverOpen(false)}>
+                      <Link
+                        href="/dashboard/admin/settings"
+                        onClick={() => setDashboardPopoverOpen(false)}
+                      >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
                           <Cog6ToothIcon className="h-4 w-4 text-gray-500" />
                           <span className="text-sm">Settings</span>
@@ -917,26 +963,38 @@ export function Header() {
                   </Tooltip>
                   <PopoverContent className="w-56 p-2" align="end">
                     <div className="space-y-1">
-                      <Link href="/dashboard/sales" onClick={() => setDashboardPopoverOpen(false)}>
+                      <Link
+                        href="/dashboard/sales"
+                        onClick={() => setDashboardPopoverOpen(false)}
+                      >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
                           <Squares2X2Icon className="h-4 w-4 text-gray-500" />
                           <span className="text-sm">Dashboard</span>
                         </div>
                       </Link>
-                      <Link href="/dashboard/sales/shops" onClick={() => setDashboardPopoverOpen(false)}>
+                      <Link
+                        href="/dashboard/sales/shops"
+                        onClick={() => setDashboardPopoverOpen(false)}
+                      >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
                           <BuildingStorefrontIcon className="h-4 w-4 text-gray-500" />
                           <span className="text-sm">Shops & CRM</span>
                         </div>
                       </Link>
-                      <Link href="/dashboard/sales/orders" onClick={() => setDashboardPopoverOpen(false)}>
+                      <Link
+                        href="/dashboard/sales/orders"
+                        onClick={() => setDashboardPopoverOpen(false)}
+                      >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
                           <ClipboardDocumentListIcon className="h-4 w-4 text-gray-500" />
                           <span className="text-sm">Orders</span>
                         </div>
                       </Link>
                       <div className="border-t my-1" />
-                      <Link href="/dashboard/sales/profile" onClick={() => setDashboardPopoverOpen(false)}>
+                      <Link
+                        href="/dashboard/sales/profile"
+                        onClick={() => setDashboardPopoverOpen(false)}
+                      >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
                           <UserIcon className="h-4 w-4 text-gray-500" />
                           <span className="text-sm">Profile</span>
@@ -950,7 +1008,11 @@ export function Header() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Link href={getDashboardRoute(user.role)}>
-                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 rounded-lg"
+                      >
                         <Squares2X2Icon className="h-5 w-5" />
                       </Button>
                     </Link>
@@ -1108,7 +1170,10 @@ export function Header() {
               )}
 
               {/* Messages Popover */}
-              <Popover open={messagesPopoverOpen} onOpenChange={setMessagesPopoverOpen}>
+              <Popover
+                open={messagesPopoverOpen}
+                onOpenChange={setMessagesPopoverOpen}
+              >
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <PopoverTrigger asChild>
@@ -1146,8 +1211,14 @@ export function Header() {
                       <div className="flex flex-col items-center justify-center p-6 text-center">
                         <ChatBubbleLeftRightIcon className="h-12 w-12 text-gray-300 mb-3" />
                         <p className="text-muted-foreground">No messages yet</p>
-                        <Link href="/shop" onClick={() => setMessagesPopoverOpen(false)}>
-                          <Button variant="link" className="mt-2 text-amber-600">
+                        <Link
+                          href="/shop"
+                          onClick={() => setMessagesPopoverOpen(false)}
+                        >
+                          <Button
+                            variant="link"
+                            className="mt-2 text-amber-600"
+                          >
                             Browse Shops
                           </Button>
                         </Link>
@@ -1157,10 +1228,12 @@ export function Header() {
                         {recentMessages.map((conv) => {
                           // Determine display name based on conversation participants
                           const otherParticipant = conv.participants?.find(
-                            (p: any) => p.user?.firstName && p.role !== user?.role
+                            (p: any) =>
+                              p.user?.firstName && p.role !== user?.role,
                           );
-                          const displayName = conv.shop?.shopName
-                            || (otherParticipant?.user
+                          const displayName =
+                            conv.shop?.shopName ||
+                            (otherParticipant?.user
                               ? `${otherParticipant.user.firstName} ${otherParticipant.user.lastName}`
                               : "Conversation");
                           return (
@@ -1175,12 +1248,16 @@ export function Header() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center justify-between">
-                                    <p className={`text-sm truncate ${conv.unreadCount > 0 ? 'font-semibold' : 'font-medium'}`}>
+                                    <p
+                                      className={`text-sm truncate ${conv.unreadCount > 0 ? "font-semibold" : "font-medium"}`}
+                                    >
                                       {displayName}
                                     </p>
                                     {conv.unreadCount > 0 && (
                                       <span className="ml-2 h-5 w-5 bg-amber-500 text-white text-xs rounded-full flex items-center justify-center font-semibold flex-shrink-0">
-                                        {conv.unreadCount > 9 ? "9+" : conv.unreadCount}
+                                        {conv.unreadCount > 9
+                                          ? "9+"
+                                          : conv.unreadCount}
                                       </span>
                                     )}
                                   </div>
@@ -1189,7 +1266,9 @@ export function Header() {
                                   </p>
                                   {conv.lastMessageAt && (
                                     <p className="text-xs text-gray-400 mt-0.5">
-                                      {new Date(conv.lastMessageAt).toLocaleDateString()}
+                                      {new Date(
+                                        conv.lastMessageAt,
+                                      ).toLocaleDateString()}
                                     </p>
                                   )}
                                 </div>
@@ -1202,7 +1281,10 @@ export function Header() {
                     )}
                   </ScrollArea>
                   <div className="border-t p-3">
-                    <Link href={getMessagesPath()} onClick={() => setMessagesPopoverOpen(false)}>
+                    <Link
+                      href={getMessagesPath()}
+                      onClick={() => setMessagesPopoverOpen(false)}
+                    >
                       <Button variant="outline" className="w-full">
                         View All Messages
                       </Button>

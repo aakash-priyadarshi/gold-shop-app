@@ -1,27 +1,36 @@
 "use client";
 
-import { useAuth } from "@/hooks/useAuth";
-import { chatApi } from "@/lib/api";
-import { useChatPopup } from "@/contexts/ChatPopupContext";
-import { useChatSocket, type ChatSocketMessage, type ViolationWarning } from "@/hooks/useChatSocket";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useChatPopup } from "@/contexts/ChatPopupContext";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  useChatSocket,
+  type ChatSocketMessage,
+  type ViolationWarning,
+} from "@/hooks/useChatSocket";
+import { chatApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle,
   ArrowLeft,
+  ExternalLink,
+  File,
+  Image as ImageIcon,
+  Loader2,
+  Lock,
   MessageSquare,
   Minus,
+  Paperclip,
   Send,
-  X,
   Shield,
-  Lock,
-  Loader2,
+  Video,
   Wifi,
   WifiOff,
+  X,
 } from "lucide-react";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /* ────────────────────────────────────────────────────────────
    Types
@@ -50,7 +59,12 @@ interface Message {
   hasViolation: boolean;
   isSystem: boolean;
   createdAt: string;
+  attachmentUrl?: string;
+  attachmentType?: string;
 }
+
+const CLOUDFLARE_UPLOAD_URL =
+  process.env.NEXT_PUBLIC_CDN_UPLOAD_URL || "https://images.orivraa.com/upload";
 
 /* ────────────────────────────────────────────────────────────
    Widget
@@ -75,11 +89,20 @@ export function ChatPopupWidget() {
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [sending, setSending] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [violationAlert, setViolationAlert] = useState<ViolationWarning | null>(null);
+  const [violationAlert, setViolationAlert] = useState<ViolationWarning | null>(
+    null,
+  );
   const [typingUser, setTypingUser] = useState<string | null>(null);
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [attachmentPreview, setAttachmentPreview] = useState<string | null>(
+    null,
+  );
+  const [uploading, setUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevConvRef = useRef<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isShopkeeper = user?.role === "SHOPKEEPER";
   const shopId = user?.shop?.id;
@@ -128,6 +151,7 @@ export function ChatPopupWidget() {
     sendMessage: wsSendMessage,
     sendTyping,
     markRead: wsMarkRead,
+    checkOnline,
   } = useChatSocket({
     onNewMessage: handleNewMessage,
     onMessageBlocked: handleMessageBlocked,
@@ -139,7 +163,9 @@ export function ChatPopupWidget() {
     if (!user) return;
     setLoadingConvs(true);
     try {
-      const res = await chatApi.listConversations(isShopkeeper ? shopId : undefined);
+      const res = await chatApi.listConversations(
+        isShopkeeper ? shopId : undefined,
+      );
       const convs: Conversation[] = res.data || [];
       setConversations(convs);
       updateUnreadCount(convs);
@@ -154,7 +180,9 @@ export function ChatPopupWidget() {
   const loadConversationsQuiet = useCallback(async () => {
     if (!user) return;
     try {
-      const res = await chatApi.listConversations(isShopkeeper ? shopId : undefined);
+      const res = await chatApi.listConversations(
+        isShopkeeper ? shopId : undefined,
+      );
       const convs: Conversation[] = res.data || [];
       setConversations(convs);
       updateUnreadCount(convs);
@@ -174,6 +202,107 @@ export function ChatPopupWidget() {
     setUnreadCount(unread);
   };
 
+  /* ── Online presence check ── */
+  useEffect(() => {
+    if (!connected || conversations.length === 0) return;
+    // Gather the other party's user IDs from conversations
+    const otherUserIds = conversations.map((c) =>
+      isShopkeeper ? c.buyerId : c.shopId,
+    );
+    const uniqueIds = Array.from(new Set(otherUserIds)).filter(Boolean);
+    if (uniqueIds.length === 0) return;
+
+    checkOnline(uniqueIds).then((onlineIds) => {
+      setOnlineUsers(new Set(onlineIds));
+    });
+
+    // Re-check every 30s
+    const interval = setInterval(() => {
+      checkOnline(uniqueIds).then((onlineIds) => {
+        setOnlineUsers(new Set(onlineIds));
+      });
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [connected, conversations, isShopkeeper, checkOnline]);
+
+  /* ── File attachment handler ── */
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate type
+    const allowedImages = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const allowedVideos = ["video/mp4", "video/webm"];
+    const allowedDocs = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+    const isImage = allowedImages.includes(file.type);
+    const isVideo = allowedVideos.includes(file.type);
+    const isDoc = allowedDocs.includes(file.type);
+
+    if (!isImage && !isVideo && !isDoc) {
+      alert("Only images (JPG, PNG, WebP, GIF), videos (MP4, WebM up to 10s), and documents (PDF, DOC) are allowed.");
+      return;
+    }
+
+    // Validate size (images: 10MB, videos: 25MB, docs: 15MB)
+    const maxSize = isVideo ? 25 * 1024 * 1024 : isDoc ? 15 * 1024 * 1024 : 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert(`File too large. Max: ${maxSize / 1024 / 1024}MB`);
+      return;
+    }
+
+    setAttachmentFile(file);
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onload = (ev) => setAttachmentPreview(ev.target?.result as string);
+      reader.readAsDataURL(file);
+    } else if (isVideo) {
+      setAttachmentPreview("video");
+    } else {
+      setAttachmentPreview("document");
+    }
+
+    // Reset the input so the same file can be selected again
+    e.target.value = "";
+  };
+
+  const clearAttachment = () => {
+    setAttachmentFile(null);
+    setAttachmentPreview(null);
+  };
+
+  const uploadFile = async (file: File): Promise<{ url: string; type: string } | null> => {
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(CLOUDFLARE_UPLOAD_URL, {
+        method: "POST",
+        headers: { "X-Upload-Type": "chat" },
+        body: formData,
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || "Upload failed");
+
+      const isVideo = file.type.startsWith("video/");
+      const isDoc =
+        file.type === "application/pdf" ||
+        file.type.includes("msword") ||
+        file.type.includes("wordprocessingml");
+      const attachmentType = isVideo ? "video" : isDoc ? "document" : "image";
+      return { url: data.url, type: attachmentType };
+    } catch (err) {
+      console.error("Upload failed:", err);
+      alert("Failed to upload file. Please try again.");
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
   /* ── Load messages for active conversation ── */
   const loadMessages = useCallback(async (convId: string) => {
     setLoadingMsgs(true);
@@ -190,18 +319,38 @@ export function ChatPopupWidget() {
 
   /* ── Send message: prefer WebSocket, fallback to HTTP ── */
   const handleSend = async () => {
-    if (!newMessage.trim() || !activeConversationId) return;
-    const content = newMessage;
+    if ((!newMessage.trim() && !attachmentFile) || !activeConversationId) return;
+    const content = newMessage || (attachmentFile ? `[${attachmentFile.type.startsWith("video") ? "Video" : attachmentFile.type.startsWith("image") ? "Photo" : "Document"}]` : "");
     setNewMessage("");
     setSending(true);
 
+    let attachmentUrl: string | undefined;
+    let attachmentType: string | undefined;
+
+    // Upload attachment first if present
+    if (attachmentFile) {
+      const uploadResult = await uploadFile(attachmentFile);
+      if (!uploadResult) {
+        setSending(false);
+        return;
+      }
+      attachmentUrl = uploadResult.url;
+      attachmentType = uploadResult.type;
+      clearAttachment();
+    }
+
     // Try WebSocket first (instant, no HTTP round-trip)
-    const sentViaWs = connected && wsSendMessage(activeConversationId, content);
+    const sentViaWs =
+      connected && wsSendMessage(activeConversationId, content, attachmentUrl, attachmentType);
 
     if (!sentViaWs) {
       // Fallback to HTTP
       try {
-        const res = await chatApi.sendMessage(activeConversationId, { content });
+        const res = await chatApi.sendMessage(activeConversationId, {
+          content,
+          attachmentUrl,
+          attachmentType,
+        });
         // Check if the response indicates a blocked message
         if (res.data?.blocked) {
           setViolationAlert({
@@ -252,7 +401,16 @@ export function ChatPopupWidget() {
       joinConversation(activeConversationId);
       if (connected) wsMarkRead(activeConversationId);
     }
-  }, [activeConversationId, isOpen, isMinimized, connected, joinConversation, leaveConversation, loadMessages, wsMarkRead]);
+  }, [
+    activeConversationId,
+    isOpen,
+    isMinimized,
+    connected,
+    joinConversation,
+    leaveConversation,
+    loadMessages,
+    wsMarkRead,
+  ]);
 
   /* ── Slow poll as fallback (60s) — only if WebSocket is NOT connected ── */
   useEffect(() => {
@@ -271,7 +429,15 @@ export function ChatPopupWidget() {
       connected ? 60000 : 15000,
     );
     return () => clearInterval(interval);
-  }, [user, connected, activeConversationId, isOpen, isMinimized, loadConversationsQuiet, loadMessages]);
+  }, [
+    user,
+    connected,
+    activeConversationId,
+    isOpen,
+    isMinimized,
+    loadConversationsQuiet,
+    loadMessages,
+  ]);
 
   /* ── Typing indicator on input ── */
   const handleInputChange = (value: string) => {
@@ -286,7 +452,10 @@ export function ChatPopupWidget() {
   /* ── Resolve display name for a conversation ── */
   const getConvName = (conv: Conversation) => {
     if (isShopkeeper) {
-      return `${conv.buyer?.firstName || ""} ${conv.buyer?.lastName || ""}`.trim() || "Customer";
+      return (
+        `${conv.buyer?.firstName || ""} ${conv.buyer?.lastName || ""}`.trim() ||
+        "Customer"
+      );
     }
     return conv.shop?.shopName || "Shop";
   };
@@ -340,7 +509,10 @@ export function ChatPopupWidget() {
         <div className="flex items-center gap-2 min-w-0">
           {activeConversationId && (
             <button
-              onClick={() => { setViolationAlert(null); openChatList(); }}
+              onClick={() => {
+                setViolationAlert(null);
+                openChatList();
+              }}
               className="p-1 rounded-lg hover:bg-white/20 transition"
               aria-label="Back to conversations"
             >
@@ -351,14 +523,35 @@ export function ChatPopupWidget() {
           <span className="font-semibold text-sm truncate">
             {activeConversationId ? getConvName(activeConv!) : "Messages"}
           </span>
-          {/* Connection indicator */}
-          {activeConversationId && (
-            connected
-              ? <Wifi className="h-3 w-3 text-green-200 flex-shrink-0" />
-              : <WifiOff className="h-3 w-3 text-red-200 flex-shrink-0" />
-          )}
+          {/* Online / Connection indicator */}
+          {activeConversationId && activeConv && (() => {
+            const otherId = isShopkeeper ? activeConv.buyerId : activeConv.shopId;
+            const isOnline = onlineUsers.has(otherId);
+            return isOnline ? (
+              <span className="flex items-center gap-1 flex-shrink-0">
+                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-[10px] text-green-200">Online</span>
+              </span>
+            ) : (
+              connected ? (
+                <span className="text-[10px] text-white/50 flex-shrink-0">Offline</span>
+              ) : (
+                <WifiOff className="h-3 w-3 text-red-200 flex-shrink-0" />
+              )
+            );
+          })()}
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
+          {/* View full messages page */}
+          {activeConversationId && (
+            <a
+              href={`/dashboard/${user?.role === "SHOPKEEPER" ? "shop" : user?.role === "ADMIN" ? "admin" : user?.role === "SALES" ? "sales" : "customer"}/messages`}
+              className="p-1.5 rounded-lg hover:bg-white/20 transition"
+              title="View all messages"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          )}
           <button
             onClick={minimizeChat}
             className="p-1.5 rounded-lg hover:bg-white/20 transition"
@@ -380,6 +573,14 @@ export function ChatPopupWidget() {
       {!activeConversationId ? (
         /* ── Conversation List ── */
         <ScrollArea className="flex-1">
+          {/* See full messages link */}
+          <a
+            href={`/dashboard/${user?.role === "SHOPKEEPER" ? "shop" : user?.role === "ADMIN" ? "admin" : user?.role === "SALES" ? "sales" : "customer"}/messages`}
+            className="flex items-center justify-center gap-1.5 px-3 py-2 border-b text-xs text-gold-600 hover:bg-gold-50 transition font-medium"
+          >
+            <ExternalLink className="h-3 w-3" />
+            See full messages page
+          </a>
           {loadingConvs ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
@@ -387,7 +588,9 @@ export function ChatPopupWidget() {
           ) : conversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
               <MessageSquare className="h-10 w-10 text-gray-300 mb-3" />
-              <p className="text-sm font-medium text-gray-500">No conversations yet</p>
+              <p className="text-sm font-medium text-gray-500">
+                No conversations yet
+              </p>
               <p className="text-xs text-gray-400 mt-1">
                 Start a conversation from an order or shop page
               </p>
@@ -396,7 +599,10 @@ export function ChatPopupWidget() {
             <div className="divide-y divide-gray-100">
               {conversations.map((conv) => {
                 const lastMsg = conv.messages?.[0];
-                const isUnread = lastMsg && !lastMsg.isRead && lastMsg.senderRole !== user?.role;
+                const isUnread =
+                  lastMsg &&
+                  !lastMsg.isRead &&
+                  lastMsg.senderRole !== user?.role;
                 return (
                   <button
                     key={conv.id}
@@ -406,24 +612,55 @@ export function ChatPopupWidget() {
                       isUnread && "bg-gold-50/50",
                     )}
                   >
-                    {/* Avatar circle */}
-                    <div className="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-gold-100 to-gold-200 flex items-center justify-center text-gold-700 text-xs font-bold">
-                      {getConvName(conv).charAt(0).toUpperCase()}
+                    {/* Avatar circle with online indicator */}
+                    <div className="relative flex-shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold-100 to-gold-200 flex items-center justify-center text-gold-700 text-xs font-bold">
+                        {getConvName(conv).charAt(0).toUpperCase()}
+                      </div>
+                      {onlineUsers.has(isShopkeeper ? conv.buyerId : conv.shopId) && (
+                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <span className={cn("text-sm truncate", isUnread ? "font-semibold text-gray-900" : "font-medium text-gray-700")}>
+                        <span
+                          className={cn(
+                            "text-sm truncate",
+                            isUnread
+                              ? "font-semibold text-gray-900"
+                              : "font-medium text-gray-700",
+                          )}
+                        >
                           {getConvName(conv)}
                         </span>
-                        {conv.status === "LOCKED" && <Lock className="h-3 w-3 text-red-500 flex-shrink-0" />}
+                        {conv.status === "LOCKED" && (
+                          <Lock className="h-3 w-3 text-red-500 flex-shrink-0" />
+                        )}
                       </div>
                       {lastMsg && (
-                        <p className={cn("text-xs truncate mt-0.5", isUnread ? "text-gray-700 font-medium" : "text-gray-500")}>
+                        <p
+                          className={cn(
+                            "text-xs truncate mt-0.5",
+                            isUnread
+                              ? "text-gray-700 font-medium"
+                              : "text-gray-500",
+                          )}
+                        >
                           {lastMsg.content}
                         </p>
                       )}
                       <span className="text-[10px] text-gray-400 mt-0.5 block">
-                        {conv.updatedAt ? new Date(conv.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}
+                        {conv.updatedAt
+                          ? new Date(conv.updatedAt).toLocaleDateString(
+                              undefined,
+                              {
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              },
+                            )
+                          : ""}
                       </span>
                     </div>
                     {isUnread && (
@@ -445,48 +682,57 @@ export function ChatPopupWidget() {
           </div>
 
           {/* Violation warning banner */}
-          {violationAlert && violationAlert.conversationId === activeConversationId && (
-            <div className="px-3 py-2.5 bg-red-50 border-b border-red-200 flex-shrink-0 animate-in slide-in-from-top-2 duration-200">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-red-800">Message Blocked</p>
-                  <p className="text-[11px] text-red-700 mt-0.5 leading-relaxed">{violationAlert.warning}</p>
-                  {violationAlert.strikeCount > 0 && (
-                    <div className="flex items-center gap-1.5 mt-1.5">
-                      <span className="text-[10px] font-semibold text-red-800">
-                        Warnings: {violationAlert.strikeCount}/3
-                      </span>
-                      <div className="flex gap-0.5">
-                        {[1, 2, 3].map((i) => (
-                          <div
-                            key={i}
-                            className={cn(
-                              "w-4 h-1.5 rounded-full",
-                              violationAlert.strikeCount >= i
-                                ? i === 3 ? "bg-red-600" : i === 2 ? "bg-orange-500" : "bg-yellow-500"
-                                : "bg-gray-200",
-                            )}
-                          />
-                        ))}
+          {violationAlert &&
+            violationAlert.conversationId === activeConversationId && (
+              <div className="px-3 py-2.5 bg-red-50 border-b border-red-200 flex-shrink-0 animate-in slide-in-from-top-2 duration-200">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-red-800">
+                      Message Blocked
+                    </p>
+                    <p className="text-[11px] text-red-700 mt-0.5 leading-relaxed">
+                      {violationAlert.warning}
+                    </p>
+                    {violationAlert.strikeCount > 0 && (
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <span className="text-[10px] font-semibold text-red-800">
+                          Warnings: {violationAlert.strikeCount}/3
+                        </span>
+                        <div className="flex gap-0.5">
+                          {[1, 2, 3].map((i) => (
+                            <div
+                              key={i}
+                              className={cn(
+                                "w-4 h-1.5 rounded-full",
+                                violationAlert.strikeCount >= i
+                                  ? i === 3
+                                    ? "bg-red-600"
+                                    : i === 2
+                                      ? "bg-orange-500"
+                                      : "bg-yellow-500"
+                                  : "bg-gray-200",
+                              )}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-[10px] text-red-600">
+                          {violationAlert.strikeCount >= 3
+                            ? "Account suspended"
+                            : `${3 - violationAlert.strikeCount} remaining`}
+                        </span>
                       </div>
-                      <span className="text-[10px] text-red-600">
-                        {violationAlert.strikeCount >= 3
-                          ? "Account suspended"
-                          : `${3 - violationAlert.strikeCount} remaining`}
-                      </span>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setViolationAlert(null)}
+                    className="text-red-400 hover:text-red-600 p-0.5"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => setViolationAlert(null)}
-                  className="text-red-400 hover:text-red-600 p-0.5"
-                >
-                  <X className="h-3 w-3" />
-                </button>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Messages */}
           <ScrollArea className="flex-1 px-3 py-2">
@@ -501,7 +747,11 @@ export function ChatPopupWidget() {
                     key={msg.id}
                     className={cn(
                       "flex",
-                      msg.isSystem ? "justify-center" : msg.senderId === user?.id ? "justify-end" : "justify-start",
+                      msg.isSystem
+                        ? "justify-center"
+                        : msg.senderId === user?.id
+                          ? "justify-end"
+                          : "justify-start",
                     )}
                   >
                     {msg.isSystem ? (
@@ -518,12 +768,54 @@ export function ChatPopupWidget() {
                           msg.hasViolation && "ring-2 ring-yellow-400",
                         )}
                       >
+                        {/* Attachment rendering */}
+                        {msg.attachmentUrl && (
+                          <div className="mb-1.5">
+                            {msg.attachmentType === "image" ? (
+                              <a href={msg.attachmentUrl} target="_blank" rel="noopener noreferrer">
+                                <img
+                                  src={msg.attachmentUrl}
+                                  alt="Shared image"
+                                  className="max-w-full max-h-48 rounded-lg object-cover cursor-pointer hover:opacity-90 transition"
+                                />
+                              </a>
+                            ) : msg.attachmentType === "video" ? (
+                              <video
+                                src={msg.attachmentUrl}
+                                controls
+                                className="max-w-full max-h-48 rounded-lg"
+                                preload="metadata"
+                              />
+                            ) : (
+                              <a
+                                href={msg.attachmentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={cn(
+                                  "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium",
+                                  msg.senderId === user?.id
+                                    ? "bg-white/20 text-white hover:bg-white/30"
+                                    : "bg-gray-200 text-gray-700 hover:bg-gray-300",
+                                )}
+                              >
+                                <File className="h-4 w-4" />
+                                Document
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            )}
+                          </div>
+                        )}
                         <p className="break-words">{msg.content}</p>
                         {msg.hasViolation && (
-                          <p className="text-[10px] mt-1 opacity-75">⚠️ Contact info removed</p>
+                          <p className="text-[10px] mt-1 opacity-75">
+                            ⚠️ Contact info removed
+                          </p>
                         )}
                         <span className="text-[10px] opacity-60 mt-1 block">
-                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          {new Date(msg.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
                         </span>
                       </div>
                     )}
@@ -534,9 +826,18 @@ export function ChatPopupWidget() {
                   <div className="flex justify-start">
                     <div className="bg-gray-100 px-3 py-2 rounded-2xl rounded-bl-md">
                       <div className="flex gap-1">
-                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                        <span
+                          className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "0ms" }}
+                        />
+                        <span
+                          className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "150ms" }}
+                        />
+                        <span
+                          className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "300ms" }}
+                        />
                       </div>
                     </div>
                   </div>
@@ -553,27 +854,77 @@ export function ChatPopupWidget() {
               Conversation locked — contact support
             </div>
           ) : (
-            <div className="px-3 py-2.5 border-t flex gap-2 flex-shrink-0 bg-white">
-              <Input
-                value={newMessage}
-                onChange={(e) => handleInputChange(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-                placeholder="Type a message…"
-                disabled={sending}
-                className="text-sm h-9 rounded-xl"
-              />
-              <Button
-                onClick={handleSend}
-                disabled={sending || !newMessage.trim()}
-                size="sm"
-                className="h-9 w-9 p-0 rounded-xl bg-gold-500 hover:bg-gold-600"
-              >
-                {sending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
+            <div className="px-3 py-2.5 border-t flex-shrink-0 bg-white space-y-2">
+              {/* Attachment preview */}
+              {attachmentPreview && (
+                <div className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 rounded-lg">
+                  {attachmentPreview.startsWith("data:image") ? (
+                    <img
+                      src={attachmentPreview}
+                      alt="Preview"
+                      className="w-10 h-10 rounded object-cover"
+                    />
+                  ) : attachmentPreview === "video" ? (
+                    <div className="w-10 h-10 rounded bg-blue-100 flex items-center justify-center">
+                      <Video className="h-5 w-5 text-blue-600" />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 rounded bg-orange-100 flex items-center justify-center">
+                      <File className="h-5 w-5 text-orange-600" />
+                    </div>
+                  )}
+                  <span className="text-xs text-gray-600 truncate flex-1">
+                    {attachmentFile?.name}
+                  </span>
+                  <button
+                    onClick={clearAttachment}
+                    className="p-1 hover:bg-gray-200 rounded"
+                  >
+                    <X className="h-3 w-3 text-gray-500" />
+                  </button>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={sending || uploading}
+                  className="h-9 w-9 flex items-center justify-center rounded-xl border border-gray-200 hover:bg-gray-50 transition text-gray-500 hover:text-gray-700 flex-shrink-0"
+                  title="Attach file"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </button>
+                <Input
+                  value={newMessage}
+                  onChange={(e) => handleInputChange(e.target.value)}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && !e.shiftKey && handleSend()
+                  }
+                  placeholder="Type a message…"
+                  disabled={sending || uploading}
+                  className="text-sm h-9 rounded-xl"
+                />
+                <Button
+                  onClick={handleSend}
+                  disabled={(sending || uploading) || (!newMessage.trim() && !attachmentFile)}
+                  size="sm"
+                  className="h-9 w-9 p-0 rounded-xl bg-gold-500 hover:bg-gold-600"
+                >
+                  {sending || uploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
           )}
         </>

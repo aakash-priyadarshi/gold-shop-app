@@ -1,16 +1,28 @@
-'use client';
+"use client";
 
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { CustomerGuard } from '@/components/auth/RouteGuard';
-import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { MessageSquare, Send, ArrowLeft, Shield, Lock, AlertTriangle, X, Wifi, WifiOff } from 'lucide-react';
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { chatApi } from '@/lib/api';
-import { useChatSocket, type ChatSocketMessage, type ViolationWarning } from '@/hooks/useChatSocket';
-import Link from 'next/link';
+import { CustomerGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  useChatSocket,
+  type ChatSocketMessage,
+  type ViolationWarning,
+} from "@/hooks/useChatSocket";
+import { chatApi } from "@/lib/api";
+import {
+  AlertTriangle,
+  Lock,
+  MessageSquare,
+  Send,
+  Shield,
+  Wifi,
+  WifiOff,
+  X,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface Conversation {
   id: string;
@@ -46,12 +58,16 @@ interface Message {
 export default function CustomerMessagesPage() {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+  const [selectedConversation, setSelectedConversation] = useState<
+    string | null
+  >(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
+  const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [violationAlert, setViolationAlert] = useState<ViolationWarning | null>(null);
+  const [violationAlert, setViolationAlert] = useState<ViolationWarning | null>(
+    null,
+  );
   const [typingUser, setTypingUser] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevConvRef = useRef<string | null>(null);
@@ -60,7 +76,11 @@ export default function CustomerMessagesPage() {
   const handleNewMessage = useCallback(
     (msg: ChatSocketMessage) => {
       if (msg.conversationId === selectedConversation) {
-        setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg as unknown as Message]));
+        setMessages((prev) =>
+          prev.some((m) => m.id === msg.id)
+            ? prev
+            : [...prev, msg as unknown as Message],
+        );
       }
       loadConversationsQuiet();
     },
@@ -83,8 +103,18 @@ export default function CustomerMessagesPage() {
     [user?.id],
   );
 
-  const { connected, joinConversation, leaveConversation, sendMessage: wsSendMessage, sendTyping, markRead: wsMarkRead } =
-    useChatSocket({ onNewMessage: handleNewMessage, onMessageBlocked: handleMessageBlocked, onTyping: handleTyping });
+  const {
+    connected,
+    joinConversation,
+    leaveConversation,
+    sendMessage: wsSendMessage,
+    sendTyping,
+    markRead: wsMarkRead,
+  } = useChatSocket({
+    onNewMessage: handleNewMessage,
+    onMessageBlocked: handleMessageBlocked,
+    onTyping: handleTyping,
+  });
 
   useEffect(() => {
     loadConversations();
@@ -104,15 +134,18 @@ export default function CustomerMessagesPage() {
   }, [selectedConversation, connected]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   /* ── Slow fallback polling ── */
   useEffect(() => {
-    const interval = setInterval(() => {
-      loadConversationsQuiet();
-      if (selectedConversation) loadMessages(selectedConversation);
-    }, connected ? 60000 : 15000);
+    const interval = setInterval(
+      () => {
+        loadConversationsQuiet();
+        if (selectedConversation) loadMessages(selectedConversation);
+      },
+      connected ? 60000 : 15000,
+    );
     return () => clearInterval(interval);
   }, [connected, selectedConversation]);
 
@@ -121,7 +154,7 @@ export default function CustomerMessagesPage() {
       const res = await chatApi.listConversations();
       setConversations(res.data);
     } catch (e) {
-      console.error('Failed to load conversations', e);
+      console.error("Failed to load conversations", e);
     } finally {
       setLoading(false);
     }
@@ -131,7 +164,9 @@ export default function CustomerMessagesPage() {
     try {
       const res = await chatApi.listConversations();
       setConversations(res.data);
-    } catch { /* silent */ }
+    } catch {
+      /* silent */
+    }
   }
 
   async function loadMessages(conversationId: string) {
@@ -140,29 +175,39 @@ export default function CustomerMessagesPage() {
       setMessages(res.data.messages);
       chatApi.markAsRead(conversationId);
     } catch (e) {
-      console.error('Failed to load messages', e);
+      console.error("Failed to load messages", e);
     }
   }
 
   async function handleSend() {
     if (!newMessage.trim() || !selectedConversation) return;
     const content = newMessage;
-    setNewMessage('');
+    setNewMessage("");
     setSending(true);
 
     const sentViaWs = connected && wsSendMessage(selectedConversation, content);
     if (!sentViaWs) {
       try {
-        const res = await chatApi.sendMessage(selectedConversation, { content });
+        const res = await chatApi.sendMessage(selectedConversation, {
+          content,
+        });
         if (res.data?.blocked) {
-          setViolationAlert({ warning: res.data.warning, strikeCount: res.data.strikeCount, conversationId: selectedConversation });
+          setViolationAlert({
+            warning: res.data.warning,
+            strikeCount: res.data.strikeCount,
+            conversationId: selectedConversation,
+          });
           setTimeout(() => setViolationAlert(null), 15000);
         } else {
           await loadMessages(selectedConversation);
         }
       } catch (e: any) {
-        const msg = e?.response?.data?.message || 'Failed to send message';
-        setViolationAlert({ warning: msg, strikeCount: 0, conversationId: selectedConversation });
+        const msg = e?.response?.data?.message || "Failed to send message";
+        setViolationAlert({
+          warning: msg,
+          strikeCount: 0,
+          conversationId: selectedConversation,
+        });
         setTimeout(() => setViolationAlert(null), 10000);
       }
     }
@@ -171,7 +216,8 @@ export default function CustomerMessagesPage() {
 
   function handleInputChange(value: string) {
     setNewMessage(value);
-    if (selectedConversation && connected) sendTyping(selectedConversation, true);
+    if (selectedConversation && connected)
+      sendTyping(selectedConversation, true);
   }
 
   const selectedConv = conversations.find((c) => c.id === selectedConversation);
@@ -184,9 +230,13 @@ export default function CustomerMessagesPage() {
             <MessageSquare className="h-6 w-6" />
             <h1 className="text-2xl font-bold">Messages</h1>
             {connected ? (
-              <span className="flex items-center gap-1 text-xs text-green-600"><Wifi className="h-3 w-3" /> Live</span>
+              <span className="flex items-center gap-1 text-xs text-green-600">
+                <Wifi className="h-3 w-3" /> Live
+              </span>
             ) : (
-              <span className="flex items-center gap-1 text-xs text-gray-400"><WifiOff className="h-3 w-3" /> Polling</span>
+              <span className="flex items-center gap-1 text-xs text-gray-400">
+                <WifiOff className="h-3 w-3" /> Polling
+              </span>
             )}
           </div>
 
@@ -209,12 +259,12 @@ export default function CustomerMessagesPage() {
                     key={conv.id}
                     onClick={() => setSelectedConversation(conv.id)}
                     className={`w-full p-3 text-left border-b hover:bg-muted/50 transition ${
-                      selectedConversation === conv.id ? 'bg-muted' : ''
+                      selectedConversation === conv.id ? "bg-muted" : ""
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-medium">{conv.shop.shopName}</span>
-                      {conv.status === 'LOCKED' && (
+                      {conv.status === "LOCKED" && (
                         <Lock className="h-4 w-4 text-destructive" />
                       )}
                     </div>
@@ -242,8 +292,10 @@ export default function CustomerMessagesPage() {
                   {/* Header */}
                   <div className="p-3 border-b flex items-center justify-between">
                     <div>
-                      <h3 className="font-medium">{selectedConv?.shop.shopName}</h3>
-                      {selectedConv?.status === 'LOCKED' && (
+                      <h3 className="font-medium">
+                        {selectedConv?.shop.shopName}
+                      </h3>
+                      {selectedConv?.status === "LOCKED" && (
                         <Badge variant="destructive" className="text-xs">
                           <Lock className="h-3 w-3 mr-1" />
                           Locked — Policy violation
@@ -257,44 +309,56 @@ export default function CustomerMessagesPage() {
                   </div>
 
                   {/* Violation warning banner */}
-                  {violationAlert && violationAlert.conversationId === selectedConversation && (
-                    <div className="px-4 py-3 bg-red-50 border-b border-red-200">
-                      <div className="flex items-start gap-2">
-                        <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-red-800">⚠️ Message Blocked</p>
-                          <p className="text-sm text-red-700 mt-1">{violationAlert.warning}</p>
-                          {violationAlert.strikeCount > 0 && (
-                            <div className="flex items-center gap-2 mt-2">
-                              <span className="text-xs font-semibold text-red-800">
-                                Warnings: {violationAlert.strikeCount}/3
-                              </span>
-                              <div className="flex gap-1">
-                                {[1, 2, 3].map((i) => (
-                                  <div
-                                    key={i}
-                                    className={`w-6 h-2 rounded-full ${
-                                      violationAlert.strikeCount >= i
-                                        ? i === 3 ? 'bg-red-600' : i === 2 ? 'bg-orange-500' : 'bg-yellow-500'
-                                        : 'bg-gray-200'
-                                    }`}
-                                  />
-                                ))}
+                  {violationAlert &&
+                    violationAlert.conversationId === selectedConversation && (
+                      <div className="px-4 py-3 bg-red-50 border-b border-red-200">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-red-800">
+                              ⚠️ Message Blocked
+                            </p>
+                            <p className="text-sm text-red-700 mt-1">
+                              {violationAlert.warning}
+                            </p>
+                            {violationAlert.strikeCount > 0 && (
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className="text-xs font-semibold text-red-800">
+                                  Warnings: {violationAlert.strikeCount}/3
+                                </span>
+                                <div className="flex gap-1">
+                                  {[1, 2, 3].map((i) => (
+                                    <div
+                                      key={i}
+                                      className={`w-6 h-2 rounded-full ${
+                                        violationAlert.strikeCount >= i
+                                          ? i === 3
+                                            ? "bg-red-600"
+                                            : i === 2
+                                              ? "bg-orange-500"
+                                              : "bg-yellow-500"
+                                          : "bg-gray-200"
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                                <span className="text-xs text-red-600">
+                                  {violationAlert.strikeCount >= 3
+                                    ? "Account suspended!"
+                                    : `${3 - violationAlert.strikeCount} warning(s) remaining before account suspension`}
+                                </span>
                               </div>
-                              <span className="text-xs text-red-600">
-                                {violationAlert.strikeCount >= 3
-                                  ? 'Account suspended!'
-                                  : `${3 - violationAlert.strikeCount} warning(s) remaining before account suspension`}
-                              </span>
-                            </div>
-                          )}
+                            )}
+                          </div>
+                          <button
+                            onClick={() => setViolationAlert(null)}
+                            className="text-red-400 hover:text-red-600"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
                         </div>
-                        <button onClick={() => setViolationAlert(null)} className="text-red-400 hover:text-red-600">
-                          <X className="h-4 w-4" />
-                        </button>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Messages */}
                   <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -303,10 +367,10 @@ export default function CustomerMessagesPage() {
                         key={msg.id}
                         className={`flex ${
                           msg.isSystem
-                            ? 'justify-center'
+                            ? "justify-center"
                             : msg.senderId === user?.id
-                            ? 'justify-end'
-                            : 'justify-start'
+                              ? "justify-end"
+                              : "justify-start"
                         }`}
                       >
                         {msg.isSystem ? (
@@ -317,9 +381,9 @@ export default function CustomerMessagesPage() {
                           <div
                             className={`max-w-[70%] px-3 py-2 rounded-lg ${
                               msg.senderId === user?.id
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted'
-                            } ${msg.hasViolation ? 'border-2 border-yellow-500' : ''}`}
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted"
+                            } ${msg.hasViolation ? "border-2 border-yellow-500" : ""}`}
                           >
                             <p className="text-sm">{msg.content}</p>
                             {msg.hasViolation && (
@@ -339,9 +403,18 @@ export default function CustomerMessagesPage() {
                       <div className="flex justify-start">
                         <div className="bg-muted px-3 py-2 rounded-lg">
                           <div className="flex gap-1">
-                            <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                            <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                            <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                            <span
+                              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                              style={{ animationDelay: "0ms" }}
+                            />
+                            <span
+                              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                              style={{ animationDelay: "150ms" }}
+                            />
+                            <span
+                              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                              style={{ animationDelay: "300ms" }}
+                            />
                           </div>
                         </div>
                       </div>
@@ -350,20 +423,26 @@ export default function CustomerMessagesPage() {
                   </div>
 
                   {/* Input */}
-                  {selectedConv?.status === 'LOCKED' ? (
+                  {selectedConv?.status === "LOCKED" ? (
                     <div className="p-3 border-t bg-muted text-center text-sm text-muted-foreground">
-                      This conversation is locked. Contact support for assistance.
+                      This conversation is locked. Contact support for
+                      assistance.
                     </div>
                   ) : (
                     <div className="p-3 border-t flex gap-2">
                       <Input
                         value={newMessage}
                         onChange={(e) => handleInputChange(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+                        onKeyDown={(e) =>
+                          e.key === "Enter" && !e.shiftKey && handleSend()
+                        }
                         placeholder="Type a message..."
                         disabled={sending}
                       />
-                      <Button onClick={handleSend} disabled={sending || !newMessage.trim()}>
+                      <Button
+                        onClick={handleSend}
+                        disabled={sending || !newMessage.trim()}
+                      >
                         <Send className="h-4 w-4" />
                       </Button>
                     </div>
