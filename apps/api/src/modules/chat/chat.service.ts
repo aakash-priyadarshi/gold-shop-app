@@ -652,26 +652,26 @@ export class ChatService {
 
   // ─── Admin: unblock user (reset violations enforcement) ───
   async unblockUser(userId: string, adminId: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { shops: { select: { id: true } } },
+    });
     if (!user) throw new NotFoundException("User not found");
 
-    // Re-activate user account
-    if (user.status === "SUSPENDED") {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { status: "ACTIVE" },
-      });
-    }
+    // ── Critical DB updates (always succeed together) ──
+    // 1. Re-activate user account
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { status: "ACTIVE" },
+    });
 
-    // Remove shop hold if shopkeeper
-    if (user.role === "SHOPKEEPER") {
-      await this.prisma.shop.updateMany({
-        where: { userId, isOnHold: true },
-        data: { isOnHold: false, holdReason: null },
-      });
-    }
+    // 2. Remove shop hold for ALL shops owned by this user
+    await this.prisma.shop.updateMany({
+      where: { userId },
+      data: { isOnHold: false, holdReason: null },
+    });
 
-    // Reactivate locked conversations
+    // 3. Reactivate locked conversations
     await this.prisma.conversation.updateMany({
       where: {
         OR: [{ buyerId: userId }, { shop: { userId } }],
@@ -680,28 +680,37 @@ export class ChatService {
       data: { status: ConversationStatus.ACTIVE },
     });
 
-    await this.audit.log({
-      userId: adminId,
-      actorType: "ADMIN",
-      action: "USER_UNBLOCKED",
-      resourceType: "User",
-      resourceId: userId,
-      metadata: { previousStatus: user.status, role: user.role },
-    });
+    this.logger.log(`USER UNBLOCKED: user=${userId} by admin=${adminId} (previous status: ${user.status})`);
 
-    await this.notifications.create({
-      userId,
-      type: "SYSTEM_ALERT",
-      titleKey: "account.reactivated.title",
-      titleParams: {},
-      bodyKey: "account.reactivated.body",
-      bodyParams: {},
-      referenceType: "User",
-      referenceId: userId,
-      channels: ["IN_APP", "EMAIL"],
-    });
+    // ── Non-critical: audit & notification (don't block or fail the response) ──
+    try {
+      await this.audit.log({
+        userId: adminId,
+        actorType: "ADMIN",
+        action: "USER_UNBLOCKED",
+        resourceType: "User",
+        resourceId: userId,
+        metadata: { previousStatus: user.status, role: user.role },
+      });
+    } catch (e) {
+      this.logger.warn(`Failed to log audit for unblock user=${userId}: ${e}`);
+    }
 
-    this.logger.log(`USER UNBLOCKED: user=${userId} by admin=${adminId}`);
+    try {
+      await this.notifications.create({
+        userId,
+        type: "SYSTEM_ALERT",
+        titleKey: "account.reactivated.title",
+        titleParams: {},
+        bodyKey: "account.reactivated.body",
+        bodyParams: {},
+        referenceType: "User",
+        referenceId: userId,
+        channels: ["IN_APP", "EMAIL"],
+      });
+    } catch (e) {
+      this.logger.warn(`Failed to send notification for unblock user=${userId}: ${e}`);
+    }
 
     return { success: true, userId };
   }
