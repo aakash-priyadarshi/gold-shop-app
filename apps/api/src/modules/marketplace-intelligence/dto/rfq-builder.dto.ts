@@ -50,7 +50,8 @@ export class AiRfqBuilderResponse {
     sizeValue?: string;
   }>;
   confidence: number; // 0-100
-  reasoning: string; // Why the AI chose these specs
+  reasoning: string; // Why the AI chose these specs (internal)
+  conversationalMessage: string; // Friendly message to show the user
   suggestions: string[]; // Additional tips
   missingInfo?: string[]; // What's missing for better results
 }

@@ -478,6 +478,7 @@ export default function CreateRfqPage() {
   const [aiResult, setAiResult] = useState<{
     confidence: number;
     reasoning: string;
+    conversationalMessage: string;
     suggestions: string[];
     missingInfo?: string[];
     isGuest?: boolean;
@@ -2166,6 +2167,7 @@ export default function CreateRfqPage() {
         setAiResult({
           confidence: 0,
           reasoning: data.reasoning,
+          conversationalMessage: data.conversationalMessage || data.reasoning,
           suggestions: data.suggestions || [],
           missingInfo: [],
           isGuest: true,
@@ -2335,33 +2337,39 @@ export default function CreateRfqPage() {
         }
 
         // ─── Step 1: Weight ───
+        // Always fill weight — use WEIGHT_GUIDANCE average if AI didn't provide one
+        const WEIGHT_DEFAULTS: Record<string, number> = {
+          RING: 3, NECKLACE: 12, BRACELET: 10, EARRING: 3, PENDANT: 4,
+          BANGLE: 15, CHAIN: 12, ANKLET: 5, BROOCH: 10, TIE_PIN: 5,
+          CUFFLINKS: 8, NOSE_PIN: 0.5, MANGALSUTRA: 15, MAANG_TIKKA: 5, OTHER: 8,
+        };
+
         if (data.weightCategory) {
           updateFormData("weightCategory", data.weightCategory);
+        } else {
+          // Derive weight category from weight
+          const w = data.estimatedWeight || WEIGHT_DEFAULTS[data.jewelleryType || "OTHER"] || 8;
+          updateFormData("weightCategory", w < 5 ? "LIGHT" : w <= 15 ? "MEDIUM" : "HEAVY");
         }
+
         if (data.estimatedWeight) {
           updateFormData("estimatedWeight", String(data.estimatedWeight));
+        } else {
+          // Fallback: use average weight for the jewellery type
+          const defaultWeight = WEIGHT_DEFAULTS[data.jewelleryType || "OTHER"] || 8;
+          updateFormData("estimatedWeight", String(defaultWeight));
         }
 
         // ─── Step 1: Surface Finish ───
-        if (data.surfaceFinish) {
-          // Validate surface finish against known values
-          const validFinishes = [
-            "HIGH_POLISH",
-            "MATTE",
-            "BRUSHED",
-            "SATIN",
-            "HAMMERED",
-            "SANDBLASTED",
-            "FLORENTINE",
-            "BARK_TEXTURE",
-            "DIAMOND_CUT",
-            "ENGRAVED",
-          ];
-          const finish = validFinishes.includes(data.surfaceFinish)
-            ? data.surfaceFinish
-            : "HIGH_POLISH";
-          updateFormData("surfaceFinish", finish);
-        }
+        // Always fill surface finish (default to HIGH_POLISH)
+        const validFinishes = [
+          "HIGH_POLISH", "MATTE", "BRUSHED", "SATIN", "HAMMERED",
+          "SANDBLASTED", "FLORENTINE", "BARK_TEXTURE", "DIAMOND_CUT", "ENGRAVED",
+        ];
+        const finish = data.surfaceFinish && validFinishes.includes(data.surfaceFinish)
+          ? data.surfaceFinish
+          : "HIGH_POLISH";
+        updateFormData("surfaceFinish", finish);
 
         // ─── Step 2: Description ───
         if (data.description) {
@@ -2426,6 +2434,7 @@ export default function CreateRfqPage() {
       setAiResult({
         confidence: data.confidence,
         reasoning: data.reasoning,
+        conversationalMessage: data.conversationalMessage || data.reasoning,
         suggestions: data.suggestions || [],
         missingInfo: data.missingInfo || [],
         isGuest: data.isGuest || false,
@@ -3009,7 +3018,7 @@ export default function CreateRfqPage() {
                                   Guest limit reached
                                 </div>
                                 <p className="text-gray-600 text-xs">
-                                  {aiResult.reasoning}
+                                  {aiResult.conversationalMessage}
                                 </p>
                                 <a
                                   href="/auth/login?redirect=/rfq/create"
@@ -3026,7 +3035,7 @@ export default function CreateRfqPage() {
                                   Could not understand your request
                                 </div>
                                 <p className="text-gray-600 text-xs">
-                                  {aiResult.reasoning}
+                                  {aiResult.conversationalMessage}
                                 </p>
                                 {aiResult.suggestions.length > 0 && (
                                   <div className="text-xs text-gray-500 space-y-1">
@@ -3042,51 +3051,38 @@ export default function CreateRfqPage() {
                                 )}
                               </div>
                             ) : (
-                              /* Normal result (possibly with missing info) */
+                              /* Normal result — conversational AI message */
                               <>
-                                <div className="flex items-center justify-between">
-                                  <span
-                                    className={`font-medium flex items-center gap-1 ${
-                                      aiResult.confidence >= 70
-                                        ? "text-green-700"
-                                        : aiResult.confidence >= 40
-                                          ? "text-yellow-700"
-                                          : "text-orange-600"
-                                    }`}
-                                  >
-                                    <Check className="h-4 w-4" />
-                                    {aiResult.confidence >= 70
-                                      ? "Form filled — high confidence"
-                                      : aiResult.confidence >= 40
-                                        ? "Form filled — review the fields below"
-                                        : "Partial fill — please add more details"}
-                                  </span>
-                                  <Badge
-                                    variant="outline"
-                                    className={
-                                      aiResult.confidence >= 70
-                                        ? "border-green-300 text-green-700"
-                                        : aiResult.confidence >= 40
-                                          ? "border-yellow-300 text-yellow-700"
-                                          : "border-orange-300 text-orange-700"
-                                    }
-                                  >
-                                    {aiResult.confidence}% match
-                                  </Badge>
+                                <div className="flex items-start gap-2">
+                                  <Sparkles className="h-4 w-4 text-gold-500 mt-0.5 shrink-0" />
+                                  <p className="text-gray-700 text-sm leading-relaxed">
+                                    {aiResult.conversationalMessage}
+                                  </p>
                                 </div>
-                                <p className="text-gray-600 text-xs">
-                                  {aiResult.reasoning}
-                                </p>
 
-                                {/* Missing info indicators */}
+                                {/* Live pricing note — shown after calculator loads */}
+                                {priceEstimate && priceEstimate.total > 0 && (
+                                  <div className="text-xs bg-gold-50 border border-gold-200 rounded p-2 flex items-start gap-1.5">
+                                    <span className="text-gold-700">
+                                      Based on current market rates, the estimated price for this comes to around{" "}
+                                      <strong>{currencyInfo?.symbol || "Rs."}{priceEstimate.total.toLocaleString()}</strong>
+                                      {priceEstimate.breakdown?.weightGrams ? (
+                                        <> ({priceEstimate.breakdown.weightGrams}g at {currencyInfo?.symbol || "Rs."}{priceEstimate.breakdown.ratePerGram.toLocaleString()}/g + {priceEstimate.breakdown.makingChargePercent}% making charge)</>
+                                      ) : null}
+                                      . You can adjust the weight or karat to change the price.
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Missing info — shown as friendly suggestion */}
                                 {aiResult.missingInfo &&
                                   aiResult.missingInfo.length > 0 && (
                                     <div className="text-xs bg-amber-50 border border-amber-200 rounded p-2">
                                       <span className="font-medium text-amber-800">
-                                        Add these for better matches:{" "}
+                                        Tip:{" "}
                                       </span>
                                       <span className="text-amber-700">
-                                        {aiResult.missingInfo.join(" • ")}
+                                        Adding {aiResult.missingInfo.join(", ")} would help sellers give you better quotes.
                                       </span>
                                     </div>
                                   )}

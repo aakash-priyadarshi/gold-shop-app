@@ -165,7 +165,9 @@ export class AiRfqBuilderService {
   }
 
   private buildPrompt(dto: AiRfqBuilderDto, marketContext: string): string {
-    return `You are a jewellery expert assistant for an online marketplace. Convert the customer's natural language description into a structured RFQ (Request for Quote) specification.
+    return `You are a friendly jewellery expert assistant for an online marketplace. Your job is to convert the customer's natural language description into a structured RFQ (Request for Quote) specification.
+
+CRITICAL: Assume the customer is a complete beginner who gives very vague input. You MUST fill ALL fields with sensible defaults even if the customer only says something like "I want a bracelet" or "gold ring". Never leave weight, build method, or sub-options empty.
 
 Customer Description: "${dto.description}"
 ${dto.budgetHint ? `Budget Hint: "${dto.budgetHint}"` : ""}
@@ -198,6 +200,23 @@ IMPORTANT: The form has 4 Build Methods with SPECIFIC metal configuration rules:
   - chainStyle: "ROPE", "FIGARO", "CURB", "BOX", "SNAKE", "SINGAPORE", "FRANCO", "WHEAT", "MARINER", "HERRINGBONE", "BYZANTINE", "HOLLOW_BANGLE", "LASER_CUT", "MACHINE_WOVEN"
   - Use ONLY when customer requests machine-made chains/necklaces/bracelets
 
+**WEIGHT DEFAULTS** — When the customer does NOT specify weight, you MUST use the average/typical weight for that jewellery type:
+  - RING: avg 3g (women's 1-3g, men's 4-7g)
+  - NECKLACE: avg 12g (simple chains 5-10g, with pendant 10-20g, statement 30g+)
+  - BRACELET: avg 10g (delicate 5-8g, tennis 10-15g, chunky 15-25g)
+  - EARRING: avg 3g per pair (studs 0.5-2g, hoops 1-3g, statement 4-8g)
+  - PENDANT: avg 4g (small 1-3g, medium 3-6g, large 8-15g, excludes chain)
+  - BANGLE: avg 15g (thin 8-12g, medium 15-20g, broad 25-40g)
+  - CHAIN: avg 12g (18" light 5-10g, 24" medium 15-25g)
+  - ANKLET: avg 5g (simple 2-4g, with charms 5-10g)
+  - BROOCH: avg 10g (small 5-8g, medium 10-15g, elaborate 15-25g)
+  - TIE_PIN: avg 5g (simple 3-5g, decorative 5-8g)
+  - CUFFLINKS: avg 8g per pair (simple 5-8g, ornate 10-15g)
+  - NOSE_PIN: avg 0.5g (studs 0.3-0.5g, rings 0.5-1g, decorative up to 2g)
+  - MANGALSUTRA: avg 15g (short 10-15g, medium 15-20g, traditional 25-40g)
+  - MAANG_TIKKA: avg 5g (simple 3-5g, medium 5-8g, bridal 8-15g)
+  ALWAYS set estimatedWeight and weightCategory even when the customer doesn't mention weight!
+
 Respond with a JSON object matching this exact structure:
 {
   "jewelleryType": one of [${this.JEWELLERY_TYPES.join(", ")}],
@@ -208,9 +227,9 @@ Respond with a JSON object matching this exact structure:
   "methodBConfig": { "baseMetal": "GOLD"|"SILVER", "karat": "22K"|"18K"|"14K"|"10K", "alloyFamily": "YELLOW_GOLD"|"WHITE_GOLD"|"ROSE_GOLD"|"GREEN_GOLD" } or null,
   "methodCConfig": { "baseMetal": "BRASS"|"COPPER"|"BRONZE"|"STAINLESS_STEEL_316L", "platingType": "GOLD_PLATED"|"ROSE_GOLD_PLATED"|"RHODIUM_PLATED", "platingTier": "STANDARD" } or null,
   "methodDConfig": { "purity": "22K"|"18K"|"14K"|"SILVER_925", "chainStyle": "ROPE"|"FIGARO"|"CURB"|"BOX"|"SNAKE"|etc. } or null,
-  "weightCategory": one of [${this.WEIGHT_CATEGORIES.join(", ")}] or null,
-  "estimatedWeight": number in grams or null,
-  "surfaceFinish": "HIGH_POLISH"|"MATTE"|"BRUSHED"|"SATIN"|"HAMMERED"|"SANDBLASTED"|"FLORENTINE"|"DIAMOND_CUT"|"ENGRAVED" or null,
+  "weightCategory": one of [${this.WEIGHT_CATEGORIES.join(", ")}] — ALWAYS fill this, never null,
+  "estimatedWeight": number in grams — ALWAYS fill this, never null (use the defaults above),
+  "surfaceFinish": "HIGH_POLISH"|"MATTE"|"BRUSHED"|"SATIN"|"HAMMERED"|"SANDBLASTED"|"FLORENTINE"|"DIAMOND_CUT"|"ENGRAVED" — default "HIGH_POLISH",
   "budgetMinNpr": number or null (in NPR),
   "budgetMaxNpr": number or null (in NPR),
   "description": string describing the design/appearance the customer wants,
@@ -218,7 +237,8 @@ Respond with a JSON object matching this exact structure:
   "deadline": "YYYY-MM-DD" date string or null (if customer mentions when they need it),
   "gemstones": [{ "stoneType": "DIAMOND_NATURAL|RUBY|SAPPHIRE|EMERALD|PEARL|AMETHYST|TOPAZ|GARNET|OPAL|TURQUOISE|CZ", "shape": "ROUND|OVAL|PRINCESS|CUSHION|PEAR|MARQUISE|EMERALD_CUT|HEART|ASSCHER|RADIANT|BAGUETTE", "count": number, "settingStyle": "PRONG|BEZEL|PAVE|CHANNEL|TENSION|FLUSH|HALO|CLUSTER|BAR|INVISIBLE", "color": "string or null", "clarity": "string or null", "sizeValue": "string mm or null" }] or [],
   "confidence": number 0-100,
-  "reasoning": string explaining your choices AND any assumptions,
+  "reasoning": string explaining your choices AND any assumptions (internal, not shown to user),
+  "conversationalMessage": string — A FRIENDLY, conversational message to the user explaining what you filled and why. Write as if you're chatting with a friend. Examples: "It looks like you want a silver bracelet! Since you didn't mention a weight, I've set it to 10g which is the average for bracelets. I went with Sterling Silver (925) and a high polish finish. Feel free to adjust anything!" or "Got it — a gold ring! I've selected 22K yellow gold at 3g (typical for women's rings) with a polished finish. You might want to add your budget so sellers can give you accurate quotes.",
   "suggestions": string[],
   "missingInfo": string[]
 }
@@ -237,13 +257,26 @@ CRITICAL RULES:
 
 3. **When buildMethod is METHOD_D**: MUST include methodDConfig AND jewelleryType must be CHAIN/NECKLACE/BRACELET/BANGLE/ANKLET
 
-4. **Ambiguous/Incomplete Inputs**:
-   - Very short/vague (e.g. "ring", "gold"): confidence 15-30, fill defaults, list missing info
-   - Gibberish: jewelleryType="OTHER", confidence 5-10, helpful suggestions
-   - Partial (e.g. "gold ring"): confidence 40-60, fill defaults, explain assumptions
-   - Well-specified: confidence 70-95, optimization tips
+4. **ALWAYS FILL EVERYTHING**: Even for vague inputs like "ring" or "bracelet":
+   - ALWAYS choose a buildMethod and fill its sub-config (methodBConfig/methodCConfig/methodDConfig)
+   - ALWAYS fill estimatedWeight using the defaults above
+   - ALWAYS fill weightCategory (LIGHT/MEDIUM/HEAVY)
+   - ALWAYS fill surfaceFinish (default HIGH_POLISH)
+   - ALWAYS fill a description based on what you understand
+   - Confidence can be low (15-30) for vague inputs, but still fill all fields
 
-5. **Always provide methodBConfig when buildMethod=METHOD_B, even if defaulting**
+5. **Gibberish handling**: If the input is complete nonsense, set confidence 5-10 and jewelleryType="OTHER", but STILL fill defaults
+
+6. **conversationalMessage RULES**:
+   - Write as if you're casually talking to the user, like a helpful friend
+   - Mention what you selected and WHY (especially for assumed defaults)
+   - If you assumed the weight, explain: "since you didn't mention weight, I set it to Xg — that's typical for [type]"
+   - If you assumed the metal, explain: "I went with [metal] since that's the most popular choice"
+   - Keep it 2-4 sentences. Warm, helpful, not robotic
+   - Do NOT mention confidence percentages or technical terms like "METHOD_B"
+   - Use friendly names: "precious metal alloy" → "22K gold", "METHOD_B" → just describe the metal
+
+7. **Always provide methodBConfig when buildMethod=METHOD_B, even if defaulting**
 
 Budget conversions: 1 USD ≈ 133 NPR, 1 INR ≈ 1.6 NPR, 1 AED ≈ 36 NPR, 1 GBP ≈ 170 NPR
 For "gold ring" without karat, default to 22K in NP/IN markets, 18K in western markets.
@@ -310,7 +343,7 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
       methodDConfig: parsed.methodDConfig || undefined,
       weightCategory,
       estimatedWeight: parsed.estimatedWeight || undefined,
-      surfaceFinish: parsed.surfaceFinish || undefined,
+      surfaceFinish: parsed.surfaceFinish || "HIGH_POLISH",
       budgetMinNpr: parsed.budgetMinNpr || undefined,
       budgetMaxNpr: parsed.budgetMaxNpr || undefined,
       description: parsed.description || "",
@@ -319,6 +352,9 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
       gemstones: Array.isArray(parsed.gemstones) ? parsed.gemstones : [],
       confidence: Math.max(0, Math.min(100, parsed.confidence || 50)),
       reasoning: parsed.reasoning || "Generated from your description",
+      conversationalMessage:
+        parsed.conversationalMessage ||
+        `I've filled in the form based on your description. Feel free to adjust anything!`,
       suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
       missingInfo: Array.isArray(parsed.missingInfo) ? parsed.missingInfo : [],
     };
@@ -357,6 +393,8 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
         confidence: 5,
         reasoning:
           "I couldn't identify a jewellery request from your description. Please describe what kind of jewellery you'd like to create.",
+        conversationalMessage:
+          "Hmm, I couldn't quite understand what you're looking for. Could you describe the jewellery you want? For example, try something like \"I want a gold ring\" or \"silver bracelet for daily wear\".",
         suggestions: [
           "Try: 'I want a gold ring for my wedding'",
           "Try: '22K gold necklace around 15 grams, budget 50-80K'",
@@ -503,7 +541,8 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
     }
 
     // Check for weight/occasion
-    if (!/\d+\s*(g|gram|gm)/i.test(desc)) {
+    const hasExplicitWeight = /\d+\s*(g|gram|gm)/i.test(desc);
+    if (!hasExplicitWeight) {
       missingInfo.push("preferred weight in grams");
     }
     if (
@@ -513,6 +552,16 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
     ) {
       missingInfo.push("occasion (wedding, daily wear, gift, etc.)");
     }
+
+    // Always set weight — use default for the jewellery type if not specified
+    const defaultWeight = this.getDefaultWeight(jewelleryType);
+    let estimatedWeight = defaultWeight;
+    if (hasExplicitWeight) {
+      const weightMatch = desc.match(/(\d+(?:\.\d+)?)\s*(g|gram|gm)/i);
+      if (weightMatch) estimatedWeight = parseFloat(weightMatch[1]);
+    }
+    const weightCategory =
+      estimatedWeight < 5 ? "LIGHT" : estimatedWeight <= 15 ? "MEDIUM" : "HEAVY";
 
     // Determine confidence based on completeness
     const detectedCount = [
@@ -536,6 +585,15 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
       );
     }
 
+    // Build conversational message
+    const typeName = jewelleryType !== "OTHER" ? jewelleryType.toLowerCase().replace("_", " ") : "jewellery piece";
+    const metalName = material.replace(/_/g, " ").toLowerCase();
+    let conversationalMessage = `Got it — a ${metalName} ${typeName}! `;
+    if (!hasExplicitWeight) {
+      conversationalMessage += `Since you didn't mention a weight, I've set it to ${estimatedWeight}g which is typical for ${typeName}s. `;
+    }
+    conversationalMessage += `I went with a polished finish. You can adjust any of these details below!`;
+
     return {
       jewelleryType,
       buildMethod,
@@ -543,7 +601,8 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
       methodBConfig,
       methodCConfig,
       methodDConfig,
-      weightCategory: undefined,
+      weightCategory,
+      estimatedWeight,
       surfaceFinish: "HIGH_POLISH",
       budgetMinNpr,
       budgetMaxNpr,
@@ -555,6 +614,7 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
         missingInfo.length > 0
           ? `Parsed using keyword matching (AI was unavailable). I assumed ${material.replace("_", " ")} and ${buildMethod === "METHOD_A" ? "handcrafted" : "standard casting"} method. Missing details: ${missingInfo.join(", ")}.`
           : `Parsed using keyword matching (AI was unavailable). Detected ${jewelleryType.toLowerCase()} in ${material.replace("_", " ")}.`,
+      conversationalMessage,
       suggestions,
       missingInfo,
     };
