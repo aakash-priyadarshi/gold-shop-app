@@ -480,11 +480,10 @@ function RateBox({ label, value, symbol, color = "amber" }: RateBoxProps) {
   };
 
   return (
-    <div className="bg-white/60 rounded px-2 py-1">
-      <span className={colorClasses[color]}>{label}:</span>{" "}
-      <span className="font-semibold">
-        {symbol}{" "}
-        {value?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ||
+    <div className="bg-white/60 rounded px-2 py-1 flex items-center justify-between gap-1">
+      <span className={`${colorClasses[color]} whitespace-nowrap`}>{label}</span>
+      <span className="font-semibold whitespace-nowrap">
+        {symbol}{value?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ||
           "N/A"}
       </span>
     </div>
@@ -523,10 +522,10 @@ function EstimateDisplay({ estimate, currencySymbol }: EstimateDisplayProps) {
       {/* Line Items */}
       <div className="space-y-1 text-sm">
         {estimate.lineItems.map((item, i) => (
-          <div key={i} className="flex justify-between items-start">
+          <div key={i} className="flex justify-between items-start gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="text-muted-foreground truncate max-w-[70%] cursor-help">
+                <span className="text-muted-foreground truncate min-w-0 flex-1 cursor-help text-xs">
                   {item.label}
                 </span>
               </TooltipTrigger>
@@ -536,9 +535,8 @@ function EstimateDisplay({ estimate, currencySymbol }: EstimateDisplayProps) {
                 </TooltipContent>
               )}
             </Tooltip>
-            <span className="font-medium">
-              {currencySymbol}{" "}
-              {item.amount.toLocaleString(undefined, {
+            <span className="font-medium whitespace-nowrap flex-shrink-0">
+              {currencySymbol}{item.amount.toLocaleString(undefined, {
                 maximumFractionDigits: 0,
               })}
             </span>
@@ -551,9 +549,8 @@ function EstimateDisplay({ estimate, currencySymbol }: EstimateDisplayProps) {
         <div className="pt-2 border-t space-y-1 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Subtotal</span>
-            <span>
-              {currencySymbol}{" "}
-              {estimate.subtotal.toLocaleString(undefined, {
+            <span className="whitespace-nowrap">
+              {currencySymbol}{estimate.subtotal.toLocaleString(undefined, {
                 maximumFractionDigits: 0,
               })}
             </span>
@@ -561,19 +558,17 @@ function EstimateDisplay({ estimate, currencySymbol }: EstimateDisplayProps) {
           {estimate.taxAmount > 0 && (
             <div className="flex justify-between text-muted-foreground">
               <span>Tax ({(estimate.taxRate * 100).toFixed(0)}%)</span>
-              <span>
-                {currencySymbol}{" "}
-                {estimate.taxAmount.toLocaleString(undefined, {
+              <span className="whitespace-nowrap">
+                {currencySymbol}{estimate.taxAmount.toLocaleString(undefined, {
                   maximumFractionDigits: 0,
                 })}
               </span>
             </div>
           )}
-          <div className="flex justify-between font-bold text-lg pt-1 border-t">
+          <div className="flex justify-between font-bold text-base pt-1 border-t">
             <span>Total</span>
-            <span className="text-green-600">
-              {currencySymbol}{" "}
-              {estimate.total.toLocaleString(undefined, {
+            <span className="text-green-600 whitespace-nowrap">
+              {currencySymbol}{estimate.total.toLocaleString(undefined, {
                 maximumFractionDigits: 0,
               })}
             </span>

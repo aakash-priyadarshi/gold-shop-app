@@ -3016,7 +3016,7 @@ export default function CreateRfqPage() {
 
             {/* 3-Column Layout: Left Pricing | Center Form | Right Metal Rates */}
             {step < 4 && (
-              <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr_280px] gap-6 xl:items-start">
+              <div className="grid grid-cols-1 xl:grid-cols-[340px_1fr_340px] gap-6 xl:items-start">
                 {/* Left: Live Calculator */}
                 <div className="hidden xl:block xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto scrollbar-thin">
                   <LivePricingPanel
@@ -5009,127 +5009,182 @@ export default function CreateRfqPage() {
 
                 {/* Right: Live Metal Prices */}
                 <div className="hidden xl:block xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto scrollbar-thin">
-                  <div className="bg-gradient-to-br from-slate-50 to-gray-50 border border-slate-200 rounded-lg p-4 space-y-4">
+                  <div className="bg-gradient-to-br from-slate-50 to-gray-50 border border-slate-200 rounded-lg p-4 space-y-3">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-semibold text-slate-800 flex items-center gap-2">
+                      <h4 className="font-semibold text-slate-800 flex items-center gap-2 text-sm">
                         <TrendingUp className="h-4 w-4" />
-                        Live Metal Prices
+                        Today&apos;s Metal Prices
                       </h4>
                       {marketRates?.cache && (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
                           marketRates.cache === "fresh"
                             ? "bg-green-100 text-green-700"
                             : "bg-yellow-100 text-yellow-700"
                         }`}>
-                          {marketRates.cache === "fresh" ? "Live" : "Cached"}
+                          {marketRates.cache === "fresh" ? "● Live" : "● Cached"}
                         </span>
                       )}
                     </div>
 
                     {marketRatesLoading ? (
-                      <div className="flex items-center justify-center py-6">
-                        <Loader2 className="h-4 w-4 animate-spin text-slate-500" />
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
                         <span className="ml-2 text-xs text-slate-500">Loading rates...</span>
                       </div>
                     ) : marketRates ? (
                       <div className="space-y-3">
-                        {/* Gold */}
+                        {/* Selected Metal Highlight */}
+                        {(() => {
+                          // Determine which metal key is selected
+                          const selectedKey =
+                            formData.buildMethod === "METHOD_A"
+                              ? formData.metalType === "GOLD" ? "GOLD_24K"
+                                : formData.metalType === "SILVER" ? "SILVER_999"
+                                : formData.metalType === "PLATINUM" ? "PLATINUM_PT950"
+                                : null
+                              : formData.buildMethod === "METHOD_B"
+                              ? formData.alloyConfig?.baseMetal === "GOLD"
+                                ? `GOLD_${formData.alloyConfig.karat || "22K"}`
+                                : formData.alloyConfig?.baseMetal === "SILVER" ? "SILVER_925"
+                                : null
+                              : formData.buildMethod === "METHOD_D"
+                              ? formData.alloyConfig?.karat ? `GOLD_${formData.alloyConfig.karat}` : "GOLD_22K"
+                              : null;
+
+                          const selectedPrice = selectedKey
+                            ? marketRates.metals[selectedKey as keyof typeof marketRates.metals]
+                            : null;
+
+                          const selectedLabel = selectedKey
+                            ? selectedKey.replace("_", " ").replace("GOLD ", "Gold ").replace("SILVER ", "Silver ").replace("PLATINUM ", "Platinum ")
+                            : null;
+
+                          if (selectedPrice && selectedLabel) {
+                            return (
+                              <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-lg p-3">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-[10px] font-semibold text-amber-600 uppercase tracking-wide">Your Selection</span>
+                                  <span className="text-[10px] text-amber-500">per gram</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-amber-900">{selectedLabel}</span>
+                                  <span className="text-lg font-bold text-amber-900 whitespace-nowrap">
+                                    {currencyInfo.symbol}{Math.round(selectedPrice).toLocaleString()}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+
+                        {/* Gold Rates */}
                         <div>
-                          <p className="text-xs font-medium text-amber-700 mb-1.5">Gold (per gram)</p>
-                          <div className="space-y-1">
+                          <p className="text-[11px] font-semibold text-amber-700 mb-1 uppercase tracking-wide">Gold <span className="font-normal text-amber-500">/ gram</span></p>
+                          <div className="space-y-0.5">
                             {[
-                              { label: "24K (99.9%)", key: "GOLD_24K" },
+                              { label: "24K Pure", key: "GOLD_24K" },
                               { label: "22K", key: "GOLD_22K" },
                               { label: "18K", key: "GOLD_18K" },
                               { label: "14K", key: "GOLD_14K" },
                               { label: "10K", key: "GOLD_10K" },
-                            ].map(({ label, key }) => (
-                              <div key={key} className="flex justify-between items-center bg-white/70 rounded px-2 py-1 text-xs">
-                                <span className="text-muted-foreground">{label}</span>
-                                <span className="font-mono font-semibold text-amber-800">
-                                  {currencyInfo.symbol}
-                                  {Math.round(marketRates.metals[key as keyof typeof marketRates.metals] || 0).toLocaleString()}
-                                </span>
-                              </div>
-                            ))}
+                            ].map(({ label, key }) => {
+                              const isSelected =
+                                (formData.buildMethod === "METHOD_A" && formData.metalType === "GOLD" && key === "GOLD_24K") ||
+                                (formData.buildMethod === "METHOD_B" && formData.alloyConfig?.baseMetal === "GOLD" && key === `GOLD_${formData.alloyConfig.karat}`) ||
+                                (formData.buildMethod === "METHOD_D" && key === `GOLD_${formData.alloyConfig?.karat || "22K"}`);
+                              return (
+                                <div key={key} className={`flex items-center justify-between rounded px-2 py-1 text-xs ${
+                                  isSelected ? "bg-amber-100 border border-amber-300" : "bg-white/70"
+                                }`}>
+                                  <span className={isSelected ? "font-semibold text-amber-900" : "text-muted-foreground"}>{label}</span>
+                                  <span className={`font-mono font-semibold whitespace-nowrap ${isSelected ? "text-amber-900" : "text-amber-700"}`}>
+                                    {currencyInfo.symbol}{Math.round(marketRates.metals[key as keyof typeof marketRates.metals] || 0).toLocaleString()}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
 
-                        {/* Silver */}
+                        {/* Silver Rates */}
                         <div>
-                          <p className="text-xs font-medium text-gray-600 mb-1.5">Silver (per gram)</p>
-                          <div className="space-y-1">
+                          <p className="text-[11px] font-semibold text-gray-600 mb-1 uppercase tracking-wide">Silver <span className="font-normal text-gray-400">/ gram</span></p>
+                          <div className="space-y-0.5">
                             {[
-                              { label: "999 (Fine)", key: "SILVER_999" },
-                              { label: "925 (Sterling)", key: "SILVER_925" },
-                            ].map(({ label, key }) => (
-                              <div key={key} className="flex justify-between items-center bg-white/70 rounded px-2 py-1 text-xs">
-                                <span className="text-muted-foreground">{label}</span>
-                                <span className="font-mono font-semibold text-gray-700">
-                                  {currencyInfo.symbol}
-                                  {Math.round(marketRates.metals[key as keyof typeof marketRates.metals] || 0).toLocaleString()}
-                                </span>
-                              </div>
-                            ))}
+                              { label: "999 Fine", key: "SILVER_999" },
+                              { label: "925 Sterling", key: "SILVER_925" },
+                            ].map(({ label, key }) => {
+                              const isSelected =
+                                (formData.buildMethod === "METHOD_A" && formData.metalType === "SILVER" && key === "SILVER_999") ||
+                                (formData.buildMethod === "METHOD_B" && formData.alloyConfig?.baseMetal === "SILVER" && key === "SILVER_925");
+                              return (
+                                <div key={key} className={`flex items-center justify-between rounded px-2 py-1 text-xs ${
+                                  isSelected ? "bg-gray-100 border border-gray-300" : "bg-white/70"
+                                }`}>
+                                  <span className={isSelected ? "font-semibold text-gray-900" : "text-muted-foreground"}>{label}</span>
+                                  <span className={`font-mono font-semibold whitespace-nowrap ${isSelected ? "text-gray-900" : "text-gray-600"}`}>
+                                    {currencyInfo.symbol}{Math.round(marketRates.metals[key as keyof typeof marketRates.metals] || 0).toLocaleString()}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
 
-                        {/* Platinum */}
+                        {/* Platinum Rates */}
                         <div>
-                          <p className="text-xs font-medium text-slate-600 mb-1.5">Platinum (per gram)</p>
-                          <div className="space-y-1">
+                          <p className="text-[11px] font-semibold text-slate-600 mb-1 uppercase tracking-wide">Platinum <span className="font-normal text-slate-400">/ gram</span></p>
+                          <div className="space-y-0.5">
                             {[
                               { label: "PT950", key: "PLATINUM_PT950" },
                               { label: "PT900", key: "PLATINUM_PT900" },
-                            ].map(({ label, key }) => (
-                              <div key={key} className="flex justify-between items-center bg-white/70 rounded px-2 py-1 text-xs">
-                                <span className="text-muted-foreground">{label}</span>
-                                <span className="font-mono font-semibold text-slate-700">
-                                  {currencyInfo.symbol}
-                                  {Math.round(marketRates.metals[key as keyof typeof marketRates.metals] || 0).toLocaleString()}
-                                </span>
-                              </div>
-                            ))}
+                            ].map(({ label, key }) => {
+                              const isSelected = formData.buildMethod === "METHOD_A" && formData.metalType === "PLATINUM" && key === "PLATINUM_PT950";
+                              return (
+                                <div key={key} className={`flex items-center justify-between rounded px-2 py-1 text-xs ${
+                                  isSelected ? "bg-slate-100 border border-slate-300" : "bg-white/70"
+                                }`}>
+                                  <span className={isSelected ? "font-semibold text-slate-900" : "text-muted-foreground"}>{label}</span>
+                                  <span className={`font-mono font-semibold whitespace-nowrap ${isSelected ? "text-slate-900" : "text-slate-600"}`}>
+                                    {currencyInfo.symbol}{Math.round(marketRates.metals[key as keyof typeof marketRates.metals] || 0).toLocaleString()}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
 
-                        {/* Palladium */}
+                        {/* Palladium Rate */}
                         <div>
-                          <p className="text-xs font-medium text-blue-600 mb-1.5">Palladium (per gram)</p>
-                          <div className="space-y-1">
-                            <div className="flex justify-between items-center bg-white/70 rounded px-2 py-1 text-xs">
+                          <p className="text-[11px] font-semibold text-blue-600 mb-1 uppercase tracking-wide">Palladium <span className="font-normal text-blue-400">/ gram</span></p>
+                          <div className="space-y-0.5">
+                            <div className="flex items-center justify-between bg-white/70 rounded px-2 py-1 text-xs">
                               <span className="text-muted-foreground">PD950</span>
-                              <span className="font-mono font-semibold text-blue-700">
-                                {currencyInfo.symbol}
-                                {Math.round(marketRates.metals.PALLADIUM_PD950 || 0).toLocaleString()}
+                              <span className="font-mono font-semibold text-blue-700 whitespace-nowrap">
+                                {currencyInfo.symbol}{Math.round(marketRates.metals.PALLADIUM_PD950 || 0).toLocaleString()}
                               </span>
                             </div>
                           </div>
                         </div>
 
-                        {/* FX Rate */}
-                        {marketRates.fx && marketRates.currency !== "USD" && (
-                          <div className="border-t pt-2">
-                            <p className="text-xs font-medium text-slate-600 mb-1">Exchange Rate</p>
-                            <div className="flex justify-between items-center bg-white/70 rounded px-2 py-1 text-xs">
-                              <span className="text-muted-foreground">{marketRates.fx.pair}</span>
-                              <span className="font-mono font-semibold">{marketRates.fx.rate.toFixed(2)}</span>
-                            </div>
-                          </div>
-                        )}
-
                         {/* Last updated */}
                         {marketRates.updatedAt && (
-                          <p className="text-[10px] text-muted-foreground flex items-center gap-1 pt-1">
-                            <Clock className="h-2.5 w-2.5" />
-                            Updated: {new Date(marketRates.updatedAt).toLocaleTimeString()}
-                          </p>
+                          <div className="border-t pt-2 mt-1">
+                            <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-2.5 w-2.5" />
+                              Updated {new Date(marketRates.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
                         )}
                       </div>
                     ) : (
-                      <p className="text-xs text-muted-foreground">
-                        Select your location to see live metal prices.
-                      </p>
+                      <div className="text-center py-6">
+                        <TrendingUp className="h-6 w-6 text-slate-300 mx-auto mb-2" />
+                        <p className="text-xs text-muted-foreground">
+                          Select your location to see live metal prices.
+                        </p>
+                      </div>
                     )}
                   </div>
                 </div>
