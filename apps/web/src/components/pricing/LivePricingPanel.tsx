@@ -481,9 +481,12 @@ function RateBox({ label, value, symbol, color = "amber" }: RateBoxProps) {
 
   return (
     <div className="bg-white/60 rounded px-2 py-1 flex items-center justify-between gap-1">
-      <span className={`${colorClasses[color]} whitespace-nowrap`}>{label}</span>
+      <span className={`${colorClasses[color]} whitespace-nowrap`}>
+        {label}
+      </span>
       <span className="font-semibold whitespace-nowrap">
-        {symbol}{value?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ||
+        {symbol}
+        {value?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ||
           "N/A"}
       </span>
     </div>
@@ -536,7 +539,8 @@ function EstimateDisplay({ estimate, currencySymbol }: EstimateDisplayProps) {
               )}
             </Tooltip>
             <span className="font-medium whitespace-nowrap flex-shrink-0">
-              {currencySymbol}{item.amount.toLocaleString(undefined, {
+              {currencySymbol}
+              {item.amount.toLocaleString(undefined, {
                 maximumFractionDigits: 0,
               })}
             </span>
@@ -550,7 +554,8 @@ function EstimateDisplay({ estimate, currencySymbol }: EstimateDisplayProps) {
           <div className="flex justify-between">
             <span className="text-muted-foreground">Subtotal</span>
             <span className="whitespace-nowrap">
-              {currencySymbol}{estimate.subtotal.toLocaleString(undefined, {
+              {currencySymbol}
+              {estimate.subtotal.toLocaleString(undefined, {
                 maximumFractionDigits: 0,
               })}
             </span>
@@ -559,7 +564,8 @@ function EstimateDisplay({ estimate, currencySymbol }: EstimateDisplayProps) {
             <div className="flex justify-between text-muted-foreground">
               <span>Tax ({(estimate.taxRate * 100).toFixed(0)}%)</span>
               <span className="whitespace-nowrap">
-                {currencySymbol}{estimate.taxAmount.toLocaleString(undefined, {
+                {currencySymbol}
+                {estimate.taxAmount.toLocaleString(undefined, {
                   maximumFractionDigits: 0,
                 })}
               </span>
@@ -568,7 +574,8 @@ function EstimateDisplay({ estimate, currencySymbol }: EstimateDisplayProps) {
           <div className="flex justify-between font-bold text-base pt-1 border-t">
             <span>Total</span>
             <span className="text-green-600 whitespace-nowrap">
-              {currencySymbol}{estimate.total.toLocaleString(undefined, {
+              {currencySymbol}
+              {estimate.total.toLocaleString(undefined, {
                 maximumFractionDigits: 0,
               })}
             </span>

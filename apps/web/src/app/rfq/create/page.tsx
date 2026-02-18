@@ -2896,8 +2896,8 @@ export default function CreateRfqPage() {
     return (
       <div className="flex min-h-screen flex-col">
         <Header />
-        <main className="flex-1 bg-gray-50 py-8">
-          <div className="container mx-auto px-4 max-w-3xl">
+        <main className="flex-1 bg-gray-50 py-4 sm:py-8">
+          <div className="container mx-auto px-3 sm:px-6 max-w-7xl">
             <div className="animate-pulse space-y-6">
               {/* Progress skeleton */}
               <div className="flex items-center justify-between mb-8">
@@ -2975,15 +2975,15 @@ export default function CreateRfqPage() {
       <div className="flex min-h-screen flex-col">
         <Header />
 
-        <main className="flex-1 bg-gray-50 py-8">
-          <div className="container mx-auto px-4 max-w-7xl">
+        <main className="flex-1 bg-gray-50 py-4 sm:py-8">
+          <div className="container mx-auto px-3 sm:px-6 max-w-7xl">
             {/* Progress Steps */}
-            <div className="mb-8">
+            <div className="mb-6 sm:mb-8">
               <div className="flex items-center justify-between">
                 {[1, 2, 3, 4].map((s) => (
                   <div key={s} className="flex items-center">
                     <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
+                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold text-sm sm:text-base ${
                         step >= s
                           ? s === 4 && step === 4
                             ? "bg-green-500 text-white"
@@ -3006,7 +3006,7 @@ export default function CreateRfqPage() {
                     </span>
                     {s < 4 && (
                       <div
-                        className={`w-12 sm:w-16 h-1 mx-2 ${step > s ? "bg-gold-500" : "bg-gray-200"}`}
+                        className={`w-8 sm:w-12 md:w-16 h-1 mx-1 sm:mx-2 ${step > s ? "bg-gold-500" : "bg-gray-200"}`}
                       />
                     )}
                   </div>
@@ -3016,7 +3016,7 @@ export default function CreateRfqPage() {
 
             {/* 3-Column Layout: Left Pricing | Center Form | Right Metal Rates */}
             {step < 4 && (
-              <div className="grid grid-cols-1 xl:grid-cols-[340px_1fr_340px] gap-6 xl:items-start">
+              <div className="grid grid-cols-1 xl:grid-cols-[340px_1fr_340px] gap-4 xl:gap-6 xl:items-start">
                 {/* Left: Live Calculator */}
                 <div className="hidden xl:block xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto scrollbar-thin">
                   <LivePricingPanel
@@ -3031,7 +3031,6 @@ export default function CreateRfqPage() {
 
                 {/* Center: Form Content */}
                 <div className="min-w-0">
-
                   {/* Mobile-only LivePricingPanel (hidden on xl where sidebars show) */}
                   <div className="xl:hidden mb-6">
                     <LivePricingPanel
@@ -3044,1968 +3043,2103 @@ export default function CreateRfqPage() {
                     />
                   </div>
 
-            {/* Step 1: Basic Information */}
-            {step === 1 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Gem className="h-6 w-6 text-gold-500" />
-                    What would you like to create?
-                  </CardTitle>
-                  <CardDescription>
-                    Tell us the basic details of your custom jewellery piece
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* AI RFQ Builder Assistant */}
-                  <div className="rounded-lg border border-gold-200 bg-gradient-to-r from-gold-50 to-amber-50 p-4">
-                    <button
-                      type="button"
-                      onClick={() => setShowAiAssistant(!showAiAssistant)}
-                      className="flex items-center justify-between w-full text-left"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-gold-600" />
-                        <span className="font-medium text-gold-800">
-                          Describe what you want — AI fills the form
-                        </span>
-                      </div>
-                      {showAiAssistant ? (
-                        <ChevronUp className="h-4 w-4 text-gold-600" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4 text-gold-600" />
-                      )}
-                    </button>
-
-                    {showAiAssistant && (
-                      <div className="mt-3 space-y-3">
-                        <div className="flex gap-2">
-                          <Textarea
-                            placeholder='e.g. "I want a 22k gold necklace for my wedding, budget around 2 lakh" or "Simple silver ring with small diamond, under 15k"'
-                            value={aiInput}
-                            onChange={(e) => setAiInput(e.target.value)}
-                            className="min-h-[60px] bg-white text-sm"
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && !e.shiftKey) {
-                                e.preventDefault();
-                                handleAiBuild();
-                              }
-                            }}
-                          />
-                          <Button
+                  {/* Step 1: Basic Information */}
+                  {step === 1 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Gem className="h-6 w-6 text-gold-500" />
+                          What would you like to create?
+                        </CardTitle>
+                        <CardDescription>
+                          Tell us the basic details of your custom jewellery
+                          piece
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {/* AI RFQ Builder Assistant */}
+                        <div className="rounded-lg border border-gold-200 bg-gradient-to-r from-gold-50 to-amber-50 p-4">
+                          <button
                             type="button"
-                            onClick={handleAiBuild}
-                            disabled={aiLoading || !aiInput.trim()}
-                            className="bg-gold-600 hover:bg-gold-700 text-white shrink-0 self-end"
+                            onClick={() => setShowAiAssistant(!showAiAssistant)}
+                            className="flex items-center justify-between w-full text-left"
                           >
-                            {aiLoading ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="h-5 w-5 text-gold-600" />
+                              <span className="font-medium text-gold-800">
+                                Describe what you want — AI fills the form
+                              </span>
+                            </div>
+                            {showAiAssistant ? (
+                              <ChevronUp className="h-4 w-4 text-gold-600" />
                             ) : (
-                              <>
-                                <Sparkles className="h-4 w-4 mr-1" />
-                                Fill
-                              </>
+                              <ChevronDown className="h-4 w-4 text-gold-600" />
                             )}
-                          </Button>
+                          </button>
+
+                          {showAiAssistant && (
+                            <div className="mt-3 space-y-3">
+                              <div className="flex flex-col sm:flex-row gap-2">
+                                <Textarea
+                                  placeholder='e.g. "I want a 22k gold necklace for my wedding, budget around 2 lakh" or "Simple silver ring with small diamond, under 15k"'
+                                  value={aiInput}
+                                  onChange={(e) => setAiInput(e.target.value)}
+                                  className="min-h-[100px] sm:min-h-[80px] bg-white text-sm flex-1 resize-y"
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" && !e.shiftKey) {
+                                      e.preventDefault();
+                                      handleAiBuild();
+                                    }
+                                  }}
+                                />
+                                <Button
+                                  type="button"
+                                  onClick={handleAiBuild}
+                                  disabled={aiLoading || !aiInput.trim()}
+                                  className="bg-gold-600 hover:bg-gold-700 text-white shrink-0 self-stretch sm:self-end"
+                                >
+                                  {aiLoading ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <Sparkles className="h-4 w-4 mr-1" />
+                                      Fill
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+
+                              {aiError && (
+                                <div className="text-sm text-red-600 flex items-center gap-1">
+                                  <AlertCircle className="h-3 w-3" />
+                                  {aiError}
+                                </div>
+                              )}
+
+                              {aiResult && (
+                                <div className="rounded-md bg-white p-3 text-sm space-y-2 border border-gold-100">
+                                  {aiResult.guestLimitReached ? (
+                                    /* Guest rate limit reached */
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-1 text-amber-700 font-medium">
+                                        <AlertCircle className="h-4 w-4" />
+                                        Guest limit reached
+                                      </div>
+                                      <p className="text-gray-600 text-xs">
+                                        {aiResult.conversationalMessage}
+                                      </p>
+                                      <a
+                                        href="/auth/login?redirect=/rfq/create"
+                                        className="inline-flex items-center gap-1 text-xs bg-gold-600 text-white px-3 py-1.5 rounded-md hover:bg-gold-700 transition-colors"
+                                      >
+                                        Sign in for unlimited AI access →
+                                      </a>
+                                    </div>
+                                  ) : aiResult.confidence <= 10 ? (
+                                    /* Gibberish/non-jewellery input */
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-1 text-red-600 font-medium">
+                                        <AlertCircle className="h-4 w-4" />
+                                        Could not understand your request
+                                      </div>
+                                      <p className="text-gray-600 text-xs">
+                                        {aiResult.conversationalMessage}
+                                      </p>
+                                      {aiResult.suggestions.length > 0 && (
+                                        <div className="text-xs text-gray-500 space-y-1">
+                                          <span className="font-medium">
+                                            Try something like:
+                                          </span>
+                                          <ul className="list-disc list-inside space-y-0.5 text-gray-600">
+                                            {aiResult.suggestions.map(
+                                              (s, i) => (
+                                                <li key={i}>{s}</li>
+                                              ),
+                                            )}
+                                          </ul>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    /* Normal result — conversational AI message */
+                                    <>
+                                      <div className="flex items-start gap-2">
+                                        <Sparkles className="h-4 w-4 text-gold-500 mt-0.5 shrink-0" />
+                                        <p className="text-gray-700 text-sm leading-relaxed">
+                                          {aiResult.conversationalMessage}
+                                        </p>
+                                      </div>
+
+                                      {/* Live pricing note — shown after calculator loads */}
+                                      {priceEstimate &&
+                                        priceEstimate.total > 0 && (
+                                          <div className="text-xs bg-gold-50 border border-gold-200 rounded p-2 flex items-start gap-1.5">
+                                            <span className="text-gold-700">
+                                              Based on current market rates, the
+                                              estimated price for this comes to
+                                              around{" "}
+                                              <strong>
+                                                {currencyInfo?.symbol || "Rs."}
+                                                {priceEstimate.total.toLocaleString()}
+                                              </strong>
+                                              {priceEstimate.breakdown
+                                                ?.weightGrams ? (
+                                                <>
+                                                  {" "}
+                                                  (
+                                                  {
+                                                    priceEstimate.breakdown
+                                                      .weightGrams
+                                                  }
+                                                  g at{" "}
+                                                  {currencyInfo?.symbol ||
+                                                    "Rs."}
+                                                  {priceEstimate.breakdown.ratePerGram.toLocaleString()}
+                                                  /g +{" "}
+                                                  {
+                                                    priceEstimate.breakdown
+                                                      .makingChargePercent
+                                                  }
+                                                  % making charge)
+                                                </>
+                                              ) : null}
+                                              . You can adjust the weight or
+                                              karat to change the price.
+                                            </span>
+                                          </div>
+                                        )}
+
+                                      {/* Missing info — shown as friendly suggestion */}
+                                      {aiResult.missingInfo &&
+                                        aiResult.missingInfo.length > 0 && (
+                                          <div className="text-xs bg-amber-50 border border-amber-200 rounded p-2">
+                                            <span className="font-medium text-amber-800">
+                                              Tip:{" "}
+                                            </span>
+                                            <span className="text-amber-700">
+                                              Adding{" "}
+                                              {aiResult.missingInfo.join(", ")}{" "}
+                                              would help sellers give you better
+                                              quotes.
+                                            </span>
+                                          </div>
+                                        )}
+
+                                      {aiResult.suggestions.length > 0 && (
+                                        <div className="text-xs text-gray-500">
+                                          <span className="font-medium">
+                                            Tips:{" "}
+                                          </span>
+                                          {aiResult.suggestions.join(" • ")}
+                                        </div>
+                                      )}
+
+                                      {/* Guest prompt: encourage login for full features */}
+                                      {aiResult.isGuest && (
+                                        <div className="text-xs bg-blue-50 border border-blue-200 rounded p-2 flex items-center justify-between">
+                                          <span className="text-blue-800">
+                                            ✨ Sign in to submit this to sellers
+                                            and get real quotes
+                                          </span>
+                                          <a
+                                            href="/auth/login?redirect=/rfq/create"
+                                            className="text-blue-700 font-medium underline hover:text-blue-900 whitespace-nowrap ml-2"
+                                          >
+                                            Sign in →
+                                          </a>
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              )}
+
+                              <p className="text-xs text-gold-600/70">
+                                You can always adjust the fields below after AI
+                                fills them.
+                              </p>
+                            </div>
+                          )}
                         </div>
 
-                        {aiError && (
-                          <div className="text-sm text-red-600 flex items-center gap-1">
-                            <AlertCircle className="h-3 w-3" />
-                            {aiError}
-                          </div>
-                        )}
-
-                        {aiResult && (
-                          <div className="rounded-md bg-white p-3 text-sm space-y-2 border border-gold-100">
-                            {aiResult.guestLimitReached ? (
-                              /* Guest rate limit reached */
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-1 text-amber-700 font-medium">
-                                  <AlertCircle className="h-4 w-4" />
-                                  Guest limit reached
-                                </div>
-                                <p className="text-gray-600 text-xs">
-                                  {aiResult.conversationalMessage}
-                                </p>
-                                <a
-                                  href="/auth/login?redirect=/rfq/create"
-                                  className="inline-flex items-center gap-1 text-xs bg-gold-600 text-white px-3 py-1.5 rounded-md hover:bg-gold-700 transition-colors"
-                                >
-                                  Sign in for unlimited AI access →
-                                </a>
-                              </div>
-                            ) : aiResult.confidence <= 10 ? (
-                              /* Gibberish/non-jewellery input */
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-1 text-red-600 font-medium">
-                                  <AlertCircle className="h-4 w-4" />
-                                  Could not understand your request
-                                </div>
-                                <p className="text-gray-600 text-xs">
-                                  {aiResult.conversationalMessage}
-                                </p>
-                                {aiResult.suggestions.length > 0 && (
-                                  <div className="text-xs text-gray-500 space-y-1">
-                                    <span className="font-medium">
-                                      Try something like:
-                                    </span>
-                                    <ul className="list-disc list-inside space-y-0.5 text-gray-600">
-                                      {aiResult.suggestions.map((s, i) => (
-                                        <li key={i}>{s}</li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              /* Normal result — conversational AI message */
-                              <>
-                                <div className="flex items-start gap-2">
-                                  <Sparkles className="h-4 w-4 text-gold-500 mt-0.5 shrink-0" />
-                                  <p className="text-gray-700 text-sm leading-relaxed">
-                                    {aiResult.conversationalMessage}
-                                  </p>
-                                </div>
-
-                                {/* Live pricing note — shown after calculator loads */}
-                                {priceEstimate && priceEstimate.total > 0 && (
-                                  <div className="text-xs bg-gold-50 border border-gold-200 rounded p-2 flex items-start gap-1.5">
-                                    <span className="text-gold-700">
-                                      Based on current market rates, the
-                                      estimated price for this comes to around{" "}
-                                      <strong>
-                                        {currencyInfo?.symbol || "Rs."}
-                                        {priceEstimate.total.toLocaleString()}
-                                      </strong>
-                                      {priceEstimate.breakdown?.weightGrams ? (
-                                        <>
-                                          {" "}
-                                          ({priceEstimate.breakdown.weightGrams}
-                                          g at {currencyInfo?.symbol || "Rs."}
-                                          {priceEstimate.breakdown.ratePerGram.toLocaleString()}
-                                          /g +{" "}
-                                          {
-                                            priceEstimate.breakdown
-                                              .makingChargePercent
-                                          }
-                                          % making charge)
-                                        </>
-                                      ) : null}
-                                      . You can adjust the weight or karat to
-                                      change the price.
-                                    </span>
-                                  </div>
-                                )}
-
-                                {/* Missing info — shown as friendly suggestion */}
-                                {aiResult.missingInfo &&
-                                  aiResult.missingInfo.length > 0 && (
-                                    <div className="text-xs bg-amber-50 border border-amber-200 rounded p-2">
-                                      <span className="font-medium text-amber-800">
-                                        Tip:{" "}
-                                      </span>
-                                      <span className="text-amber-700">
-                                        Adding {aiResult.missingInfo.join(", ")}{" "}
-                                        would help sellers give you better
-                                        quotes.
-                                      </span>
-                                    </div>
-                                  )}
-
-                                {aiResult.suggestions.length > 0 && (
-                                  <div className="text-xs text-gray-500">
-                                    <span className="font-medium">Tips: </span>
-                                    {aiResult.suggestions.join(" • ")}
-                                  </div>
-                                )}
-
-                                {/* Guest prompt: encourage login for full features */}
-                                {aiResult.isGuest && (
-                                  <div className="text-xs bg-blue-50 border border-blue-200 rounded p-2 flex items-center justify-between">
-                                    <span className="text-blue-800">
-                                      ✨ Sign in to submit this to sellers and
-                                      get real quotes
-                                    </span>
-                                    <a
-                                      href="/auth/login?redirect=/rfq/create"
-                                      className="text-blue-700 font-medium underline hover:text-blue-900 whitespace-nowrap ml-2"
-                                    >
-                                      Sign in →
-                                    </a>
-                                  </div>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        )}
-
-                        <p className="text-xs text-gold-600/70">
-                          You can always adjust the fields below after AI fills
-                          them.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Jewellery Type *</Label>
-                    <Select
-                      value={formData.jewelleryType}
-                      onValueChange={(v: string) => {
-                        updateFormData("jewelleryType", v);
-                        updateFormData("templateId", ""); // Reset template
-                        setHoveredType(null);
-                        // Reset build method if it's METHOD_D and new jewelry type doesn't support it
-                        if (
-                          formData.buildMethod === "METHOD_D" &&
-                          !METHOD_D_SUPPORTED_TYPES.includes(v)
-                        ) {
-                          updateFormData("buildMethod", "");
-                        }
-                      }}
-                      onOpenChange={(open) => {
-                        if (!open) setHoveredType(null);
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select jewellery type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {JEWELLERY_TYPES.map((type) => (
-                          <SelectItem
-                            key={type.value}
-                            value={type.value}
-                            onMouseEnter={(e) => {
-                              if (JEWELLERY_TYPE_IMAGES[type.value]) {
-                                const rect =
-                                  e.currentTarget.getBoundingClientRect();
-                                setHoverPos({
-                                  top: rect.top,
-                                  left: rect.right + 8,
-                                });
-                                setHoveredType(type.value);
+                        <div className="space-y-2">
+                          <Label>Jewellery Type *</Label>
+                          <Select
+                            value={formData.jewelleryType}
+                            onValueChange={(v: string) => {
+                              updateFormData("jewelleryType", v);
+                              updateFormData("templateId", ""); // Reset template
+                              setHoveredType(null);
+                              // Reset build method if it's METHOD_D and new jewelry type doesn't support it
+                              if (
+                                formData.buildMethod === "METHOD_D" &&
+                                !METHOD_D_SUPPORTED_TYPES.includes(v)
+                              ) {
+                                updateFormData("buildMethod", "");
                               }
                             }}
-                            onMouseLeave={() => setHoveredType(null)}
+                            onOpenChange={(open) => {
+                              if (!open) setHoveredType(null);
+                            }}
                           >
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {/* Fixed-position hover preview - renders outside Select portal */}
-                    {hoveredType && JEWELLERY_TYPE_IMAGES[hoveredType] && (
-                      <div
-                        className="fixed z-[100] pointer-events-none"
-                        style={{
-                          top: hoverPos.top,
-                          left: hoverPos.left,
-                        }}
-                      >
-                        <div className="w-40 rounded-md border bg-white shadow-lg overflow-hidden -translate-y-1/4">
-                          <img
-                            src={JEWELLERY_TYPE_IMAGES[hoveredType]}
-                            alt={
-                              JEWELLERY_TYPES.find(
-                                (t) => t.value === hoveredType,
-                              )?.label || ""
-                            }
-                            className="w-full h-32 object-cover"
-                          />
-                          <p className="text-xs p-2 text-center font-medium">
-                            {
-                              JEWELLERY_TYPES.find(
-                                (t) => t.value === hoveredType,
-                              )?.label
-                            }
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Template Selector - shows when jewellery type is selected */}
-                  {formData.jewelleryType && templates.length > 0 && (
-                    <div className="space-y-2">
-                      <Label>Choose a Template (Optional)</Label>
-                      <Select
-                        value={formData.templateId}
-                        onValueChange={(v: string) =>
-                          updateFormData("templateId", v)
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a template for pre-defined specs" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="custom">
-                            Custom (No template)
-                          </SelectItem>
-                          {templates.map((t) => (
-                            <SelectItem key={t.id} value={t.id}>
-                              {t.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-gray-500">
-                        Templates provide pre-defined weight ranges and
-                        recommended materials
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Weight Category Slider - shows when template is selected */}
-                  {hasRealTemplate && (
-                    <div className="space-y-3">
-                      <Label>Weight Category *</Label>
-                      <div className="flex gap-2">
-                        {WEIGHT_CATEGORIES.map((cat) => {
-                          const template = templates.find(
-                            (t) => t.id === formData.templateId,
-                          );
-                          const weight = template
-                            ? cat.value === "LIGHT"
-                              ? template.lightWeightGrams
-                              : cat.value === "MEDIUM"
-                                ? template.mediumWeightGrams
-                                : template.heavyWeightGrams
-                            : 0;
-                          return (
-                            <Button
-                              key={cat.value}
-                              type="button"
-                              variant={
-                                formData.weightCategory === cat.value
-                                  ? "default"
-                                  : "outline"
-                              }
-                              className={`flex-1 flex-col h-auto py-3 ${
-                                formData.weightCategory === cat.value
-                                  ? "gold-gradient text-white"
-                                  : ""
-                              }`}
-                              onClick={() =>
-                                updateFormData("weightCategory", cat.value)
-                              }
-                            >
-                              <span className="font-semibold">{cat.label}</span>
-                              <span className="text-xs opacity-80">
-                                {formatWeight(weight)}
-                              </span>
-                            </Button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Manual weight input when no template */}
-                  {!hasRealTemplate && (
-                    <div className="space-y-2">
-                      <Label>Estimated Weight ({weightUnitSymbol})</Label>
-                      {/* Weight guidance message */}
-                      {formData.jewelleryType &&
-                        WEIGHT_GUIDANCE[formData.jewelleryType] && (
-                          <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
-                            <p className="text-sm text-amber-800">
-                              <span className="font-medium">
-                                💡 Typical weight for{" "}
-                                {JEWELLERY_TYPES.find(
-                                  (t) => t.value === formData.jewelleryType,
-                                )?.label || formData.jewelleryType}
-                                :{" "}
-                              </span>
-                              <span className="font-semibold">
-                                {WEIGHT_GUIDANCE[formData.jewelleryType].range}
-                              </span>
-                            </p>
-                            <p className="text-xs text-amber-700 mt-1">
-                              {WEIGHT_GUIDANCE[formData.jewelleryType].note}
-                            </p>
-                          </div>
-                        )}
-                      <Input
-                        type="number"
-                        step="0.1"
-                        placeholder={
-                          displayWeightUnit === "GRAM"
-                            ? "e.g., 10.5"
-                            : "e.g., 1.0"
-                        }
-                        value={formData.estimatedWeight}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                          updateFormData("estimatedWeight", e.target.value)
-                        }
-                      />
-                      {/* Weight unit selector */}
-                      {supportedWeightUnits.length > 1 && (
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className="text-xs text-gray-500">Unit:</span>
-                          <Select
-                            value={displayWeightUnit}
-                            onValueChange={(v) =>
-                              setDisplayWeightUnit(v as WeightUnit)
-                            }
-                          >
-                            <SelectTrigger className="h-7 w-24 text-xs">
-                              <SelectValue />
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select jewellery type" />
                             </SelectTrigger>
                             <SelectContent>
-                              {supportedWeightUnits.map((unit) => (
+                              {JEWELLERY_TYPES.map((type) => (
                                 <SelectItem
-                                  key={unit}
-                                  value={unit}
-                                  className="text-xs"
+                                  key={type.value}
+                                  value={type.value}
+                                  onMouseEnter={(e) => {
+                                    if (JEWELLERY_TYPE_IMAGES[type.value]) {
+                                      const rect =
+                                        e.currentTarget.getBoundingClientRect();
+                                      setHoverPos({
+                                        top: rect.top,
+                                        left: rect.right + 8,
+                                      });
+                                      setHoveredType(type.value);
+                                    }
+                                  }}
+                                  onMouseLeave={() => setHoveredType(null)}
                                 >
-                                  {WEIGHT_UNIT_SYMBOLS[unit as WeightUnit]}
+                                  {type.label}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Build Method Selection */}
-                  <div className="space-y-3">
-                    <Label>Build Method *</Label>
-                    <div className="space-y-2">
-                      {BUILD_METHODS.filter((method) => {
-                        // Method D is only available for specific jewelry types
-                        if (method.value === "METHOD_D") {
-                          return METHOD_D_SUPPORTED_TYPES.includes(
-                            formData.jewelleryType,
-                          );
-                        }
-                        return true;
-                      }).map((method) => (
-                        <Tooltip key={method.value}>
-                          <TooltipTrigger asChild>
-                            <div
-                              className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                                formData.buildMethod === method.value
-                                  ? "border-gold-500 bg-gold-50"
-                                  : "border-gray-200 hover:border-gray-300"
-                              }`}
-                              onClick={() => {
-                                updateFormData("buildMethod", method.value);
-                                updateFormData("metalType", ""); // Reset metal
-                                // Reset method-specific configs
-                                if (method.value === "METHOD_B") {
-                                  updateFormData("alloyConfig", {
-                                    baseMetal: "GOLD",
-                                    karat: "18K",
-                                    alloyFamily: null,
-                                    recipePreset: null,
-                                  });
-                                } else if (method.value === "METHOD_C") {
-                                  updateFormData("methodCConfig", {
-                                    baseMetal: null,
-                                    platingType: null,
-                                    platingTier: "STANDARD",
-                                  });
-                                } else if (method.value === "METHOD_D") {
-                                  // For Method D, default to 22K gold since that's most common for Italian chains
-                                  updateFormData("metalType", "GOLD_22K");
-                                }
-                                if (method.value !== "METHOD_C") {
-                                  updateFormData("addGoldPlating", false);
-                                }
-                              }}
-                            >
-                              <div className="flex items-start gap-3">
-                                <div
-                                  className={`w-4 h-4 mt-0.5 rounded-full border-2 ${
-                                    formData.buildMethod === method.value
-                                      ? "border-gold-500 bg-gold-500"
-                                      : "border-gray-300"
-                                  }`}
-                                >
-                                  {formData.buildMethod === method.value && (
-                                    <Check className="h-3 w-3 text-white" />
-                                  )}
-                                </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <p className="font-medium">
-                                      {method.label}
-                                    </p>
-                                    <Info className="h-4 w-4 text-gray-400" />
-                                  </div>
-                                  <p className="text-sm text-gray-500">
-                                    {method.description}
+                          {/* Fixed-position hover preview - renders outside Select portal */}
+                          {hoveredType &&
+                            JEWELLERY_TYPE_IMAGES[hoveredType] && (
+                              <div
+                                className="fixed z-[100] pointer-events-none"
+                                style={{
+                                  top: hoverPos.top,
+                                  left: hoverPos.left,
+                                }}
+                              >
+                                <div className="w-40 rounded-md border bg-white shadow-lg overflow-hidden -translate-y-1/4">
+                                  <img
+                                    src={JEWELLERY_TYPE_IMAGES[hoveredType]}
+                                    alt={
+                                      JEWELLERY_TYPES.find(
+                                        (t) => t.value === hoveredType,
+                                      )?.label || ""
+                                    }
+                                    className="w-full h-32 object-cover"
+                                  />
+                                  <p className="text-xs p-2 text-center font-medium">
+                                    {
+                                      JEWELLERY_TYPES.find(
+                                        (t) => t.value === hoveredType,
+                                      )?.label
+                                    }
                                   </p>
-                                  {method.value === "METHOD_C" && (
-                                    <Badge
-                                      variant="outline"
-                                      className="mt-1 text-amber-600 border-amber-300"
-                                    >
-                                      <AlertTriangle className="h-3 w-3 mr-1" />
-                                      Not solid gold. Plated/Coated.
-                                    </Badge>
-                                  )}
-                                  {method.value === "METHOD_D" && (
-                                    <Badge
-                                      variant="outline"
-                                      className="mt-1 text-blue-600 border-blue-300"
-                                    >
-                                      <Sparkles className="h-3 w-3 mr-1" />
-                                      Lighter weight, intricate patterns
-                                    </Badge>
-                                  )}
                                 </div>
                               </div>
+                            )}
+                        </div>
+
+                        {/* Template Selector - shows when jewellery type is selected */}
+                        {formData.jewelleryType && templates.length > 0 && (
+                          <div className="space-y-2">
+                            <Label>Choose a Template (Optional)</Label>
+                            <Select
+                              value={formData.templateId}
+                              onValueChange={(v: string) =>
+                                updateFormData("templateId", v)
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a template for pre-defined specs" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="custom">
+                                  Custom (No template)
+                                </SelectItem>
+                                {templates.map((t) => (
+                                  <SelectItem key={t.id} value={t.id}>
+                                    {t.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-gray-500">
+                              Templates provide pre-defined weight ranges and
+                              recommended materials
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Weight Category Slider - shows when template is selected */}
+                        {hasRealTemplate && (
+                          <div className="space-y-3">
+                            <Label>Weight Category *</Label>
+                            <div className="flex gap-2">
+                              {WEIGHT_CATEGORIES.map((cat) => {
+                                const template = templates.find(
+                                  (t) => t.id === formData.templateId,
+                                );
+                                const weight = template
+                                  ? cat.value === "LIGHT"
+                                    ? template.lightWeightGrams
+                                    : cat.value === "MEDIUM"
+                                      ? template.mediumWeightGrams
+                                      : template.heavyWeightGrams
+                                  : 0;
+                                return (
+                                  <Button
+                                    key={cat.value}
+                                    type="button"
+                                    variant={
+                                      formData.weightCategory === cat.value
+                                        ? "default"
+                                        : "outline"
+                                    }
+                                    className={`flex-1 flex-col h-auto py-3 ${
+                                      formData.weightCategory === cat.value
+                                        ? "gold-gradient text-white"
+                                        : ""
+                                    }`}
+                                    onClick={() =>
+                                      updateFormData(
+                                        "weightCategory",
+                                        cat.value,
+                                      )
+                                    }
+                                  >
+                                    <span className="font-semibold">
+                                      {cat.label}
+                                    </span>
+                                    <span className="text-xs opacity-80">
+                                      {formatWeight(weight)}
+                                    </span>
+                                  </Button>
+                                );
+                              })}
                             </div>
-                          </TooltipTrigger>
-                          <TooltipContent side="right" className="max-w-sm p-4">
-                            <div className="space-y-2">
-                              <p className="font-semibold">{method.label}</p>
-                              {method.tooltip && (
-                                <div className="text-xs space-y-1">
-                                  <p>
-                                    <strong>What:</strong> {method.tooltip.what}
+                          </div>
+                        )}
+
+                        {/* Manual weight input when no template */}
+                        {!hasRealTemplate && (
+                          <div className="space-y-2">
+                            <Label>Estimated Weight ({weightUnitSymbol})</Label>
+                            {/* Weight guidance message */}
+                            {formData.jewelleryType &&
+                              WEIGHT_GUIDANCE[formData.jewelleryType] && (
+                                <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+                                  <p className="text-sm text-amber-800">
+                                    <span className="font-medium">
+                                      💡 Typical weight for{" "}
+                                      {JEWELLERY_TYPES.find(
+                                        (t) =>
+                                          t.value === formData.jewelleryType,
+                                      )?.label || formData.jewelleryType}
+                                      :{" "}
+                                    </span>
+                                    <span className="font-semibold">
+                                      {
+                                        WEIGHT_GUIDANCE[formData.jewelleryType]
+                                          .range
+                                      }
+                                    </span>
                                   </p>
-                                  <p>
-                                    <strong>Durability:</strong>{" "}
-                                    {method.tooltip.durability}
+                                  <p className="text-xs text-amber-700 mt-1">
+                                    {
+                                      WEIGHT_GUIDANCE[formData.jewelleryType]
+                                        .note
+                                    }
                                   </p>
-                                  <p>
-                                    <strong>Best for:</strong>{" "}
-                                    {method.tooltip.bestFor}
-                                  </p>
-                                  {method.tooltip.care && (
-                                    <p>
-                                      <strong>Care:</strong>{" "}
-                                      {method.tooltip.care}
-                                    </p>
-                                  )}
-                                  {method.tooltip.warning && (
-                                    <p className="text-amber-600">
-                                      {method.tooltip.warning}
-                                    </p>
-                                  )}
-                                  {method.tooltip.styles && (
-                                    <p>
-                                      <strong>Styles:</strong>{" "}
-                                      {method.tooltip.styles}
-                                    </p>
-                                  )}
-                                  {method.tooltip.advantage && (
-                                    <p>
-                                      <strong>Advantage:</strong>{" "}
-                                      {method.tooltip.advantage}
-                                    </p>
-                                  )}
                                 </div>
                               )}
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Method A: Traditional Metal Selection */}
-                  {formData.buildMethod === "METHOD_A" && (
-                    <div className="space-y-2">
-                      <Label>Metal Type *</Label>
-                      <Select
-                        value={formData.metalType}
-                        onValueChange={(v: string) =>
-                          updateFormData("metalType", v)
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select metal type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getAvailableMetals().map((type) => (
-                            <SelectItem key={type.id} value={type.id}>
-                              {type.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {/* Method B: Alloy Builder */}
-                  {formData.buildMethod === "METHOD_B" && (
-                    <AlloyBuilder
-                      value={formData.alloyConfig}
-                      onChange={(config) =>
-                        updateFormData("alloyConfig", config)
-                      }
-                      weightGrams={parseFloat(formData.estimatedWeight) || 5}
-                      marketRates={marketRates?.metals || {}}
-                      currencySymbol={currencyInfo.symbol}
-                    />
-                  )}
-
-                  {/* Method C: Base Metal + Required Plating */}
-                  {formData.buildMethod === "METHOD_C" && (
-                    <MethodCSelector
-                      value={formData.methodCConfig}
-                      onChange={(config) =>
-                        updateFormData("methodCConfig", config)
-                      }
-                      weightGrams={parseFloat(formData.estimatedWeight) || 5}
-                      currencySymbol={currencyInfo.symbol}
-                      selectedCurrency={currency}
-                      exchangeRate={marketRates?.fx?.rate || 144}
-                    />
-                  )}
-
-                  {/* Method D: Italian Machine Made Options */}
-                  {formData.buildMethod === "METHOD_D" && (
-                    <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-blue-600" />
-                        <h4 className="font-medium text-blue-900">
-                          Italian Machine Made Options
-                        </h4>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Metal Purity *</Label>
-                        <Select
-                          value={formData.methodDConfig.purity}
-                          onValueChange={(v: string) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              methodDConfig: {
-                                ...prev.methodDConfig,
-                                purity: v,
-                              },
-                              metalType:
-                                v === "SILVER_925" ? "SILVER_925" : `GOLD_${v}`,
-                            }))
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select metal purity" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="22K">
-                              <div className="flex flex-col">
-                                <span>22K Gold (91.7%)</span>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              placeholder={
+                                displayWeightUnit === "GRAM"
+                                  ? "e.g., 10.5"
+                                  : "e.g., 1.0"
+                              }
+                              value={formData.estimatedWeight}
+                              onChange={(
+                                e: React.ChangeEvent<HTMLInputElement>,
+                              ) =>
+                                updateFormData(
+                                  "estimatedWeight",
+                                  e.target.value,
+                                )
+                              }
+                            />
+                            {/* Weight unit selector */}
+                            {supportedWeightUnits.length > 1 && (
+                              <div className="flex items-center gap-2 mt-2">
                                 <span className="text-xs text-gray-500">
-                                  Most popular for hollow chains
+                                  Unit:
                                 </span>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="18K">
-                              <div className="flex flex-col">
-                                <span>18K Gold (75%)</span>
-                                <span className="text-xs text-gray-500">
-                                  Stronger, variety of colors
-                                </span>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="14K">
-                              <div className="flex flex-col">
-                                <span>14K Gold (58.3%)</span>
-                                <span className="text-xs text-gray-500">
-                                  More durable, lighter color
-                                </span>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="SILVER_925">
-                              <div className="flex flex-col">
-                                <span>Sterling Silver 925</span>
-                                <span className="text-xs text-gray-500">
-                                  Italian silver chains
-                                </span>
-                              </div>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Chain/Pattern Style *</Label>
-                        <Select
-                          value={formData.methodDConfig.chainStyle}
-                          onValueChange={(v: string) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              methodDConfig: {
-                                ...prev.methodDConfig,
-                                chainStyle: v,
-                              },
-                            }))
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select chain/pattern style" />
-                          </SelectTrigger>
-                          <SelectContent className="max-h-[400px]">
-                            {(
-                              Object.entries(CHAIN_STYLE_OPTIONS) as [
-                                ChainStyleType,
-                                (typeof CHAIN_STYLE_OPTIONS)[ChainStyleType],
-                              ][]
-                            ).map(([key, style]) => (
-                              <SelectItem key={key} value={key}>
-                                <div className="flex flex-col py-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium">
-                                      {style.label}
-                                    </span>
-                                    <Badge
-                                      variant="outline"
-                                      className="text-xs"
-                                    >
-                                      +{style.makingChargePercent}%
-                                    </Badge>
-                                    {style.hollowDiscount >= 0.4 && (
-                                      <Badge
-                                        variant="secondary"
-                                        className="text-xs text-green-700"
+                                <Select
+                                  value={displayWeightUnit}
+                                  onValueChange={(v) =>
+                                    setDisplayWeightUnit(v as WeightUnit)
+                                  }
+                                >
+                                  <SelectTrigger className="h-7 w-24 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {supportedWeightUnits.map((unit) => (
+                                      <SelectItem
+                                        key={unit}
+                                        value={unit}
+                                        className="text-xs"
                                       >
-                                        ~
-                                        {Math.round(style.hollowDiscount * 100)}
-                                        % lighter
-                                      </Badge>
+                                        {
+                                          WEIGHT_UNIT_SYMBOLS[
+                                            unit as WeightUnit
+                                          ]
+                                        }
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Build Method Selection */}
+                        <div className="space-y-3">
+                          <Label>Build Method *</Label>
+                          <div className="space-y-2">
+                            {BUILD_METHODS.filter((method) => {
+                              // Method D is only available for specific jewelry types
+                              if (method.value === "METHOD_D") {
+                                return METHOD_D_SUPPORTED_TYPES.includes(
+                                  formData.jewelleryType,
+                                );
+                              }
+                              return true;
+                            }).map((method) => (
+                              <Tooltip key={method.value}>
+                                <TooltipTrigger asChild>
+                                  <div
+                                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                                      formData.buildMethod === method.value
+                                        ? "border-gold-500 bg-gold-50"
+                                        : "border-gray-200 hover:border-gray-300"
+                                    }`}
+                                    onClick={() => {
+                                      updateFormData(
+                                        "buildMethod",
+                                        method.value,
+                                      );
+                                      updateFormData("metalType", ""); // Reset metal
+                                      // Reset method-specific configs
+                                      if (method.value === "METHOD_B") {
+                                        updateFormData("alloyConfig", {
+                                          baseMetal: "GOLD",
+                                          karat: "18K",
+                                          alloyFamily: null,
+                                          recipePreset: null,
+                                        });
+                                      } else if (method.value === "METHOD_C") {
+                                        updateFormData("methodCConfig", {
+                                          baseMetal: null,
+                                          platingType: null,
+                                          platingTier: "STANDARD",
+                                        });
+                                      } else if (method.value === "METHOD_D") {
+                                        // For Method D, default to 22K gold since that's most common for Italian chains
+                                        updateFormData("metalType", "GOLD_22K");
+                                      }
+                                      if (method.value !== "METHOD_C") {
+                                        updateFormData("addGoldPlating", false);
+                                      }
+                                    }}
+                                  >
+                                    <div className="flex items-start gap-3">
+                                      <div
+                                        className={`w-4 h-4 mt-0.5 rounded-full border-2 ${
+                                          formData.buildMethod === method.value
+                                            ? "border-gold-500 bg-gold-500"
+                                            : "border-gray-300"
+                                        }`}
+                                      >
+                                        {formData.buildMethod ===
+                                          method.value && (
+                                          <Check className="h-3 w-3 text-white" />
+                                        )}
+                                      </div>
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                          <p className="font-medium">
+                                            {method.label}
+                                          </p>
+                                          <Info className="h-4 w-4 text-gray-400" />
+                                        </div>
+                                        <p className="text-sm text-gray-500">
+                                          {method.description}
+                                        </p>
+                                        {method.value === "METHOD_C" && (
+                                          <Badge
+                                            variant="outline"
+                                            className="mt-1 text-amber-600 border-amber-300"
+                                          >
+                                            <AlertTriangle className="h-3 w-3 mr-1" />
+                                            Not solid gold. Plated/Coated.
+                                          </Badge>
+                                        )}
+                                        {method.value === "METHOD_D" && (
+                                          <Badge
+                                            variant="outline"
+                                            className="mt-1 text-blue-600 border-blue-300"
+                                          >
+                                            <Sparkles className="h-3 w-3 mr-1" />
+                                            Lighter weight, intricate patterns
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent
+                                  side="right"
+                                  className="max-w-sm p-4"
+                                >
+                                  <div className="space-y-2">
+                                    <p className="font-semibold">
+                                      {method.label}
+                                    </p>
+                                    {method.tooltip && (
+                                      <div className="text-xs space-y-1">
+                                        <p>
+                                          <strong>What:</strong>{" "}
+                                          {method.tooltip.what}
+                                        </p>
+                                        <p>
+                                          <strong>Durability:</strong>{" "}
+                                          {method.tooltip.durability}
+                                        </p>
+                                        <p>
+                                          <strong>Best for:</strong>{" "}
+                                          {method.tooltip.bestFor}
+                                        </p>
+                                        {method.tooltip.care && (
+                                          <p>
+                                            <strong>Care:</strong>{" "}
+                                            {method.tooltip.care}
+                                          </p>
+                                        )}
+                                        {method.tooltip.warning && (
+                                          <p className="text-amber-600">
+                                            {method.tooltip.warning}
+                                          </p>
+                                        )}
+                                        {method.tooltip.styles && (
+                                          <p>
+                                            <strong>Styles:</strong>{" "}
+                                            {method.tooltip.styles}
+                                          </p>
+                                        )}
+                                        {method.tooltip.advantage && (
+                                          <p>
+                                            <strong>Advantage:</strong>{" "}
+                                            {method.tooltip.advantage}
+                                          </p>
+                                        )}
+                                      </div>
                                     )}
                                   </div>
-                                  <span className="text-xs text-gray-500 line-clamp-2">
-                                    {style.description}
-                                  </span>
-                                </div>
-                              </SelectItem>
+                                </TooltipContent>
+                              </Tooltip>
                             ))}
-                          </SelectContent>
-                        </Select>
+                          </div>
+                        </div>
 
-                        {/* Show selected style details */}
-                        {formData.methodDConfig.chainStyle &&
-                          CHAIN_STYLE_OPTIONS[
-                            formData.methodDConfig.chainStyle as ChainStyleType
-                          ] && (
-                            <div className="bg-white p-3 rounded border border-blue-200 text-sm">
-                              <div className="font-medium text-blue-900 mb-2">
-                                {
-                                  CHAIN_STYLE_OPTIONS[
-                                    formData.methodDConfig
-                                      .chainStyle as ChainStyleType
-                                  ].label
+                        {/* Method A: Traditional Metal Selection */}
+                        {formData.buildMethod === "METHOD_A" && (
+                          <div className="space-y-2">
+                            <Label>Metal Type *</Label>
+                            <Select
+                              value={formData.metalType}
+                              onValueChange={(v: string) =>
+                                updateFormData("metalType", v)
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select metal type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {getAvailableMetals().map((type) => (
+                                  <SelectItem key={type.id} value={type.id}>
+                                    {type.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+
+                        {/* Method B: Alloy Builder */}
+                        {formData.buildMethod === "METHOD_B" && (
+                          <AlloyBuilder
+                            value={formData.alloyConfig}
+                            onChange={(config) =>
+                              updateFormData("alloyConfig", config)
+                            }
+                            weightGrams={
+                              parseFloat(formData.estimatedWeight) || 5
+                            }
+                            marketRates={marketRates?.metals || {}}
+                            currencySymbol={currencyInfo.symbol}
+                          />
+                        )}
+
+                        {/* Method C: Base Metal + Required Plating */}
+                        {formData.buildMethod === "METHOD_C" && (
+                          <MethodCSelector
+                            value={formData.methodCConfig}
+                            onChange={(config) =>
+                              updateFormData("methodCConfig", config)
+                            }
+                            weightGrams={
+                              parseFloat(formData.estimatedWeight) || 5
+                            }
+                            currencySymbol={currencyInfo.symbol}
+                            selectedCurrency={currency}
+                            exchangeRate={marketRates?.fx?.rate || 144}
+                          />
+                        )}
+
+                        {/* Method D: Italian Machine Made Options */}
+                        {formData.buildMethod === "METHOD_D" && (
+                          <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="h-5 w-5 text-blue-600" />
+                              <h4 className="font-medium text-blue-900">
+                                Italian Machine Made Options
+                              </h4>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label>Metal Purity *</Label>
+                              <Select
+                                value={formData.methodDConfig.purity}
+                                onValueChange={(v: string) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    methodDConfig: {
+                                      ...prev.methodDConfig,
+                                      purity: v,
+                                    },
+                                    metalType:
+                                      v === "SILVER_925"
+                                        ? "SILVER_925"
+                                        : `GOLD_${v}`,
+                                  }))
                                 }
-                              </div>
-                              <div className="text-xs text-gray-600 space-y-1">
-                                <p>
-                                  <strong>What it is:</strong>{" "}
-                                  {
-                                    CHAIN_STYLE_OPTIONS[
-                                      formData.methodDConfig
-                                        .chainStyle as ChainStyleType
-                                    ].description
-                                  }
-                                </p>
-                                <p>
-                                  <strong>How it looks:</strong>{" "}
-                                  {
-                                    CHAIN_STYLE_OPTIONS[
-                                      formData.methodDConfig
-                                        .chainStyle as ChainStyleType
-                                    ].howItLooks
-                                  }
-                                </p>
-                                <div className="flex gap-4 mt-2 pt-2 border-t">
-                                  <div>
-                                    <span className="text-gray-500">
-                                      Making Charge:
-                                    </span>
-                                    <span className="ml-1 font-medium text-amber-700">
-                                      +
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select metal purity" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="22K">
+                                    <div className="flex flex-col">
+                                      <span>22K Gold (91.7%)</span>
+                                      <span className="text-xs text-gray-500">
+                                        Most popular for hollow chains
+                                      </span>
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="18K">
+                                    <div className="flex flex-col">
+                                      <span>18K Gold (75%)</span>
+                                      <span className="text-xs text-gray-500">
+                                        Stronger, variety of colors
+                                      </span>
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="14K">
+                                    <div className="flex flex-col">
+                                      <span>14K Gold (58.3%)</span>
+                                      <span className="text-xs text-gray-500">
+                                        More durable, lighter color
+                                      </span>
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="SILVER_925">
+                                    <div className="flex flex-col">
+                                      <span>Sterling Silver 925</span>
+                                      <span className="text-xs text-gray-500">
+                                        Italian silver chains
+                                      </span>
+                                    </div>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label>Chain/Pattern Style *</Label>
+                              <Select
+                                value={formData.methodDConfig.chainStyle}
+                                onValueChange={(v: string) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    methodDConfig: {
+                                      ...prev.methodDConfig,
+                                      chainStyle: v,
+                                    },
+                                  }))
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select chain/pattern style" />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-[400px]">
+                                  {(
+                                    Object.entries(CHAIN_STYLE_OPTIONS) as [
+                                      ChainStyleType,
+                                      (typeof CHAIN_STYLE_OPTIONS)[ChainStyleType],
+                                    ][]
+                                  ).map(([key, style]) => (
+                                    <SelectItem key={key} value={key}>
+                                      <div className="flex flex-col py-1">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-medium">
+                                            {style.label}
+                                          </span>
+                                          <Badge
+                                            variant="outline"
+                                            className="text-xs"
+                                          >
+                                            +{style.makingChargePercent}%
+                                          </Badge>
+                                          {style.hollowDiscount >= 0.4 && (
+                                            <Badge
+                                              variant="secondary"
+                                              className="text-xs text-green-700"
+                                            >
+                                              ~
+                                              {Math.round(
+                                                style.hollowDiscount * 100,
+                                              )}
+                                              % lighter
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <span className="text-xs text-gray-500 line-clamp-2">
+                                          {style.description}
+                                        </span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+
+                              {/* Show selected style details */}
+                              {formData.methodDConfig.chainStyle &&
+                                CHAIN_STYLE_OPTIONS[
+                                  formData.methodDConfig
+                                    .chainStyle as ChainStyleType
+                                ] && (
+                                  <div className="bg-white p-3 rounded border border-blue-200 text-sm">
+                                    <div className="font-medium text-blue-900 mb-2">
                                       {
                                         CHAIN_STYLE_OPTIONS[
                                           formData.methodDConfig
                                             .chainStyle as ChainStyleType
-                                        ].makingChargePercent
+                                        ].label
                                       }
-                                      %
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-500">
-                                      Weight Savings:
-                                    </span>
-                                    <span className="ml-1 font-medium text-green-700">
-                                      ~
-                                      {Math.round(
-                                        CHAIN_STYLE_OPTIONS[
-                                          formData.methodDConfig
-                                            .chainStyle as ChainStyleType
-                                        ].hollowDiscount * 100,
-                                      )}
-                                      % hollow
-                                    </span>
-                                  </div>
-                                </div>
-                                {CHAIN_STYLE_OPTIONS[
-                                  formData.methodDConfig
-                                    .chainStyle as ChainStyleType
-                                ].minWeight && (
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    Min. recommended weight:{" "}
-                                    {
-                                      CHAIN_STYLE_OPTIONS[
+                                    </div>
+                                    <div className="text-xs text-gray-600 space-y-1">
+                                      <p>
+                                        <strong>What it is:</strong>{" "}
+                                        {
+                                          CHAIN_STYLE_OPTIONS[
+                                            formData.methodDConfig
+                                              .chainStyle as ChainStyleType
+                                          ].description
+                                        }
+                                      </p>
+                                      <p>
+                                        <strong>How it looks:</strong>{" "}
+                                        {
+                                          CHAIN_STYLE_OPTIONS[
+                                            formData.methodDConfig
+                                              .chainStyle as ChainStyleType
+                                          ].howItLooks
+                                        }
+                                      </p>
+                                      <div className="flex gap-4 mt-2 pt-2 border-t">
+                                        <div>
+                                          <span className="text-gray-500">
+                                            Making Charge:
+                                          </span>
+                                          <span className="ml-1 font-medium text-amber-700">
+                                            +
+                                            {
+                                              CHAIN_STYLE_OPTIONS[
+                                                formData.methodDConfig
+                                                  .chainStyle as ChainStyleType
+                                              ].makingChargePercent
+                                            }
+                                            %
+                                          </span>
+                                        </div>
+                                        <div>
+                                          <span className="text-gray-500">
+                                            Weight Savings:
+                                          </span>
+                                          <span className="ml-1 font-medium text-green-700">
+                                            ~
+                                            {Math.round(
+                                              CHAIN_STYLE_OPTIONS[
+                                                formData.methodDConfig
+                                                  .chainStyle as ChainStyleType
+                                              ].hollowDiscount * 100,
+                                            )}
+                                            % hollow
+                                          </span>
+                                        </div>
+                                      </div>
+                                      {CHAIN_STYLE_OPTIONS[
                                         formData.methodDConfig
                                           .chainStyle as ChainStyleType
-                                      ].minWeight
-                                    }
-                                    g
+                                      ].minWeight && (
+                                        <p className="text-xs text-gray-500 mt-1">
+                                          Min. recommended weight:{" "}
+                                          {
+                                            CHAIN_STYLE_OPTIONS[
+                                              formData.methodDConfig
+                                                .chainStyle as ChainStyleType
+                                            ].minWeight
+                                          }
+                                          g
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                            </div>
+
+                            <div className="bg-white p-3 rounded border text-sm text-blue-900">
+                              <div className="flex items-start gap-2">
+                                <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                <div>
+                                  <p className="font-medium">
+                                    About Italian Machine Made
                                   </p>
+                                  <ul className="text-xs mt-1 space-y-1 text-gray-600">
+                                    <li>
+                                      • High-precision automated manufacturing
+                                    </li>
+                                    <li>
+                                      • Hollow/semi-hollow for lighter weight
+                                    </li>
+                                    <li>• Consistent quality and patterns</li>
+                                    <li>
+                                      • Diamond-cut facets for extra sparkle
+                                    </li>
+                                    <li>
+                                      • Price based on actual gold weight used
+                                    </li>
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          <Label>Surface Finish</Label>
+                          <Select
+                            value={formData.surfaceFinish}
+                            onValueChange={(v: string) =>
+                              updateFormData("surfaceFinish", v)
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select finish type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {surfaceFinishes.length > 0 ? (
+                                surfaceFinishes.map((type) => (
+                                  <Tooltip key={type.id}>
+                                    <TooltipTrigger asChild>
+                                      <div>
+                                        <SelectItem value={type.id}>
+                                          {type.name}
+                                        </SelectItem>
+                                      </div>
+                                    </TooltipTrigger>
+                                    {SURFACE_FINISH_IMAGES[type.id] && (
+                                      <TooltipContent
+                                        side="right"
+                                        className="p-0 overflow-hidden"
+                                      >
+                                        <div className="w-44">
+                                          <img
+                                            src={
+                                              SURFACE_FINISH_IMAGES[type.id]
+                                                .image
+                                            }
+                                            alt={type.name}
+                                            className="w-full h-32 object-cover"
+                                          />
+                                          <div className="p-2 bg-white">
+                                            <p className="text-xs font-medium">
+                                              {type.name}
+                                            </p>
+                                            <p className="text-xs text-gray-500 mt-0.5">
+                                              {
+                                                SURFACE_FINISH_IMAGES[type.id]
+                                                  .description
+                                              }
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </TooltipContent>
+                                    )}
+                                  </Tooltip>
+                                ))
+                              ) : (
+                                <>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div>
+                                        <SelectItem value="POLISHED">
+                                          High Polish / Mirror Finish
+                                        </SelectItem>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="right"
+                                      className="p-0 overflow-hidden"
+                                    >
+                                      <div className="w-44">
+                                        <img
+                                          src={
+                                            SURFACE_FINISH_IMAGES.POLISHED.image
+                                          }
+                                          alt="Polished"
+                                          className="w-full h-32 object-cover"
+                                        />
+                                        <div className="p-2 bg-white">
+                                          <p className="text-xs font-medium">
+                                            High Polish
+                                          </p>
+                                          <p className="text-xs text-gray-500 mt-0.5">
+                                            {
+                                              SURFACE_FINISH_IMAGES.POLISHED
+                                                .description
+                                            }
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div>
+                                        <SelectItem value="MATTE">
+                                          Matte / Brushed Finish
+                                        </SelectItem>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="right"
+                                      className="p-0 overflow-hidden"
+                                    >
+                                      <div className="w-44">
+                                        <img
+                                          src={
+                                            SURFACE_FINISH_IMAGES.MATTE.image
+                                          }
+                                          alt="Matte"
+                                          className="w-full h-32 object-cover"
+                                        />
+                                        <div className="p-2 bg-white">
+                                          <p className="text-xs font-medium">
+                                            Matte / Brushed
+                                          </p>
+                                          <p className="text-xs text-gray-500 mt-0.5">
+                                            {
+                                              SURFACE_FINISH_IMAGES.MATTE
+                                                .description
+                                            }
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div>
+                                        <SelectItem value="SATIN">
+                                          Satin Finish
+                                        </SelectItem>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="right"
+                                      className="p-0 overflow-hidden"
+                                    >
+                                      <div className="w-44">
+                                        <img
+                                          src={
+                                            SURFACE_FINISH_IMAGES.SATIN.image
+                                          }
+                                          alt="Satin"
+                                          className="w-full h-32 object-cover"
+                                        />
+                                        <div className="p-2 bg-white">
+                                          <p className="text-xs font-medium">
+                                            Satin Finish
+                                          </p>
+                                          <p className="text-xs text-gray-500 mt-0.5">
+                                            {
+                                              SURFACE_FINISH_IMAGES.SATIN
+                                                .description
+                                            }
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div>
+                                        <SelectItem value="HAMMERED">
+                                          Hammered Texture
+                                        </SelectItem>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="right"
+                                      className="p-0 overflow-hidden"
+                                    >
+                                      <div className="w-44">
+                                        <img
+                                          src={
+                                            SURFACE_FINISH_IMAGES.HAMMERED.image
+                                          }
+                                          alt="Hammered"
+                                          className="w-full h-32 object-cover"
+                                        />
+                                        <div className="p-2 bg-white">
+                                          <p className="text-xs font-medium">
+                                            Hammered Texture
+                                          </p>
+                                          <p className="text-xs text-gray-500 mt-0.5">
+                                            {
+                                              SURFACE_FINISH_IMAGES.HAMMERED
+                                                .description
+                                            }
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div>
+                                        <SelectItem value="SANDBLAST">
+                                          Sandblasted
+                                        </SelectItem>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="right"
+                                      className="p-0 overflow-hidden"
+                                    >
+                                      <div className="w-44">
+                                        <img
+                                          src={
+                                            SURFACE_FINISH_IMAGES.SANDBLAST
+                                              .image
+                                          }
+                                          alt="Sandblasted"
+                                          className="w-full h-32 object-cover"
+                                        />
+                                        <div className="p-2 bg-white">
+                                          <p className="text-xs font-medium">
+                                            Sandblasted
+                                          </p>
+                                          <p className="text-xs text-gray-500 mt-0.5">
+                                            {
+                                              SURFACE_FINISH_IMAGES.SANDBLAST
+                                                .description
+                                            }
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div>
+                                        <SelectItem value="ANTIQUE">
+                                          Antique / Oxidized
+                                        </SelectItem>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="right"
+                                      className="p-0 overflow-hidden"
+                                    >
+                                      <div className="w-44">
+                                        <img
+                                          src={
+                                            SURFACE_FINISH_IMAGES.ANTIQUE.image
+                                          }
+                                          alt="Antique"
+                                          className="w-full h-32 object-cover"
+                                        />
+                                        <div className="p-2 bg-white">
+                                          <p className="text-xs font-medium">
+                                            Antique / Oxidized
+                                          </p>
+                                          <p className="text-xs text-gray-500 mt-0.5">
+                                            {
+                                              SURFACE_FINISH_IMAGES.ANTIQUE
+                                                .description
+                                            }
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-3">
+                          <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                          <div className="text-sm text-blue-700">
+                            <p className="font-medium mb-1">How it works</p>
+                            <p>
+                              After submitting your request, multiple verified
+                              jewellers will review your requirements and send
+                              you competitive quotes. You can compare offers and
+                              choose the best one.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Composition Validation Warnings/Errors */}
+                        {formData.buildMethod === "METHOD_B" &&
+                          (compositionValidation.errors.length > 0 ||
+                            compositionValidation.warnings.length > 0) && (
+                            <div className="space-y-2">
+                              {compositionValidation.errors.map((err, idx) => (
+                                <div
+                                  key={`err-${idx}`}
+                                  className="bg-red-50 border border-red-200 rounded-lg p-3 flex gap-2"
+                                >
+                                  <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
+                                  <p className="text-sm text-red-700">{err}</p>
+                                </div>
+                              ))}
+                              {compositionValidation.warnings.map(
+                                (warn, idx) => (
+                                  <div
+                                    key={`warn-${idx}`}
+                                    className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2"
+                                  >
+                                    <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                                    <p className="text-sm text-amber-700">
+                                      {warn}
+                                    </p>
+                                  </div>
+                                ),
+                              )}
+                            </div>
+                          )}
+
+                        <div className="flex justify-end">
+                          <Button
+                            onClick={() => {
+                              setStep(2);
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }}
+                            disabled={!canProceedToStep2}
+                            className="gold-gradient text-white"
+                          >
+                            Continue
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Step 2: Design Details */}
+                  {step === 2 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Design Details</CardTitle>
+                        <CardDescription>
+                          Describe your design vision and specifications
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {/* Show weight info if template selected */}
+                        {hasRealTemplate && (
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <p className="text-sm text-gray-600">
+                              <span className="font-medium">Template:</span>{" "}
+                              {
+                                templates.find(
+                                  (t) => t.id === formData.templateId,
+                                )?.name
+                              }
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              <span className="font-medium">
+                                Weight ({formData.weightCategory}):
+                              </span>{" "}
+                              {formatWeight(getWeightFromTemplate())}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Manual weight input shown only if no template */}
+                        {!hasRealTemplate && (
+                          <div className="space-y-2">
+                            <Label>
+                              Estimated Weight ({weightUnitSymbol}) *
+                            </Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              placeholder={
+                                displayWeightUnit === "GRAM"
+                                  ? "e.g., 10.5"
+                                  : "e.g., 1.0"
+                              }
+                              value={formData.estimatedWeight}
+                              onChange={(
+                                e: React.ChangeEvent<HTMLInputElement>,
+                              ) =>
+                                updateFormData(
+                                  "estimatedWeight",
+                                  e.target.value,
+                                )
+                              }
+                            />
+                            <p className="text-xs text-gray-500">
+                              An approximate weight helps jewellers provide
+                              accurate quotes
+                            </p>
+                            {/* Weight unit selector */}
+                            {supportedWeightUnits.length > 1 && (
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className="text-xs text-gray-500">
+                                  Unit:
+                                </span>
+                                <Select
+                                  value={displayWeightUnit}
+                                  onValueChange={(v) =>
+                                    setDisplayWeightUnit(v as WeightUnit)
+                                  }
+                                >
+                                  <SelectTrigger className="h-7 w-24 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {supportedWeightUnits.map((unit) => (
+                                      <SelectItem
+                                        key={unit}
+                                        value={unit}
+                                        className="text-xs"
+                                      >
+                                        {
+                                          WEIGHT_UNIT_SYMBOLS[
+                                            unit as WeightUnit
+                                          ]
+                                        }
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          <Label>Description *</Label>
+                          <Textarea
+                            rows={4}
+                            placeholder="Describe the design you're envisioning. Include style (traditional, modern, minimalist), patterns or motifs (floral, geometric, filigree), dimensions, and any specific details. This description helps our AI create a preview and helps sellers understand exactly what you want to craft."
+                            value={formData.description}
+                            onChange={(
+                              e: React.ChangeEvent<HTMLTextAreaElement>,
+                            ) => updateFormData("description", e.target.value)}
+                          />
+                        </div>
+
+                        {/* Gemstones Section */}
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <Label>Include Gemstones?</Label>
+                            <div className="flex gap-2">
+                              <Badge
+                                variant={
+                                  formData.hasGemstones ? "default" : "outline"
+                                }
+                                className="cursor-pointer"
+                                onClick={() =>
+                                  updateFormData("hasGemstones", true)
+                                }
+                              >
+                                Yes
+                              </Badge>
+                              <Badge
+                                variant={
+                                  !formData.hasGemstones ? "default" : "outline"
+                                }
+                                className="cursor-pointer"
+                                onClick={() => {
+                                  updateFormData("hasGemstones", false);
+                                  updateFormData("gemstonesV2", []);
+                                  updateFormData("gemstones", []);
+                                }}
+                              >
+                                No
+                              </Badge>
+                            </div>
+                          </div>
+
+                          {formData.hasGemstones && (
+                            <GemstoneEditorV2
+                              gemstones={formData.gemstonesV2}
+                              onChange={(gems) =>
+                                updateFormData("gemstonesV2", gems)
+                              }
+                              currencySymbol={currencyInfo.symbol}
+                              selectedCurrency={currency}
+                              exchangeRate={marketRates?.fx?.rate || 144}
+                            />
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Reference Images (Optional)</Label>
+                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
+                            <input
+                              ref={fileInputRef}
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              onChange={handleReferenceImageUpload}
+                              className="hidden"
+                              id="rfq-image-upload"
+                              disabled={isUploadingImage}
+                            />
+                            <label
+                              htmlFor="rfq-image-upload"
+                              className="cursor-pointer block"
+                            >
+                              {isUploadingImage ? (
+                                <div className="flex flex-col items-center gap-2">
+                                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                  <p className="text-sm text-gray-600">
+                                    Uploading... {uploadProgress}%
+                                  </p>
+                                  <div className="w-full max-w-xs h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full bg-primary transition-all duration-300"
+                                      style={{ width: `${uploadProgress}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                                  <p className="text-sm text-gray-600 mb-2">
+                                    Upload images of designs you like
+                                  </p>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    asChild
+                                  >
+                                    <span>Browse Files</span>
+                                  </Button>
+                                  <p className="text-xs text-gray-400 mt-2">
+                                    PNG, JPG, WebP up to 10MB each
+                                  </p>
+                                </>
+                              )}
+                            </label>
+                          </div>
+
+                          {/* Preview uploaded images */}
+                          {formData.referenceImages.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              {formData.referenceImages.map((url, idx) => (
+                                <div key={idx} className="relative group">
+                                  <img
+                                    src={getImageUrl(url, "thumbnail")}
+                                    alt={`Reference ${idx + 1}`}
+                                    className="w-20 h-20 object-cover rounded-lg border"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => removeReferenceImage(url)}
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Special Instructions</Label>
+                          <Textarea
+                            rows={2}
+                            placeholder="Any other requirements or preferences..."
+                            value={formData.specialInstructions}
+                            onChange={(
+                              e: React.ChangeEvent<HTMLTextAreaElement>,
+                            ) =>
+                              updateFormData(
+                                "specialInstructions",
+                                e.target.value,
+                              )
+                            }
+                          />
+                        </div>
+
+                        <div className="flex justify-between">
+                          <Button variant="outline" onClick={() => setStep(1)}>
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Back
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              setStep(3);
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }}
+                            disabled={!canProceedToStep3}
+                            className="gold-gradient text-white"
+                          >
+                            Continue
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Step 3: Budget & Timeline */}
+                  {step === 3 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Budget & Timeline</CardTitle>
+                        <CardDescription>
+                          Set your budget range and preferred delivery date
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {/* Similar Designs Suggestions */}
+                        {(loadingSimilarDesigns ||
+                          similarDesigns.length > 0) && (
+                          <div className="space-y-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="h-5 w-5 text-purple-600" />
+                              <div>
+                                <h3 className="font-medium text-purple-900">
+                                  It seems you&apos;re designing a{" "}
+                                  {JEWELLERY_TYPES.find(
+                                    (t) => t.value === formData.jewelleryType,
+                                  )?.label || formData.jewelleryType}
+                                </h3>
+                                <p className="text-sm text-purple-700">
+                                  We have some great designs you might like!
+                                </p>
+                              </div>
+                            </div>
+
+                            {loadingSimilarDesigns ? (
+                              <div className="flex items-center justify-center py-4">
+                                <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                                <span className="ml-2 text-sm text-purple-600">
+                                  Finding similar designs...
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                                {similarDesigns.slice(0, 5).map((design) => (
+                                  <button
+                                    key={design.id}
+                                    type="button"
+                                    onClick={() =>
+                                      handleSelectSimilarDesign(design)
+                                    }
+                                    className="group relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-purple-400 transition-all cursor-pointer"
+                                  >
+                                    <img
+                                      src={design.imageUrl}
+                                      alt={`${design.jewelryType} design`}
+                                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <div className="absolute bottom-1 left-1 right-1">
+                                        <p className="text-[10px] text-white font-medium truncate">
+                                          Click to use as reference
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </button>
+                                ))}
+                                {/* See More Thumbnail */}
+                                <Link
+                                  href={`/designs?jewelryType=${formData.jewelleryType}&sort=popular`}
+                                  className="group relative aspect-square rounded-lg overflow-hidden bg-purple-100 hover:bg-purple-200 transition-colors flex flex-col items-center justify-center border-2 border-dashed border-purple-300 hover:border-purple-400"
+                                >
+                                  <ArrowRight className="h-6 w-6 text-purple-600 group-hover:translate-x-1 transition-transform" />
+                                  <span className="text-xs text-purple-700 font-medium mt-1">
+                                    See More
+                                  </span>
+                                </Link>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* AI Design Preview Section - At top of Step 3 */}
+                        <div className="space-y-4 p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg border border-amber-200">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="h-5 w-5 text-amber-600" />
+                              <Label className="text-base font-medium">
+                                AI Design Preview
+                              </Label>
+                            </div>
+                            {designId && (
+                              <Badge variant="outline" className="text-xs">
+                                Design #{designId.slice(0, 8)}
+                              </Badge>
+                            )}
+                          </div>
+
+                          <p className="text-sm text-gray-600">
+                            Generate an AI visualization of your custom jewelry
+                            design based on all your specifications.
+                            {fromDesign &&
+                              " This design was selected from the gallery."}
+                          </p>
+
+                          {/* Sign-in / Phone Verification Required Notice - Check sign-in FIRST */}
+                          {(!isLoggedIn || !isPhoneVerified) && (
+                            <div
+                              className={`border rounded-lg p-3 flex items-start gap-2 ${
+                                !isLoggedIn
+                                  ? "bg-blue-50 border-blue-200"
+                                  : "bg-amber-100 border-amber-300"
+                              }`}
+                            >
+                              {!isLoggedIn ? (
+                                <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                              ) : (
+                                <Phone className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                              )}
+                              <div>
+                                <p
+                                  className={`text-sm font-medium ${
+                                    !isLoggedIn
+                                      ? "text-blue-800"
+                                      : "text-amber-800"
+                                  }`}
+                                >
+                                  {!isLoggedIn
+                                    ? "Sign In Required"
+                                    : "Phone Verification Required"}
+                                </p>
+                                <p
+                                  className={`text-sm mt-1 ${
+                                    !isLoggedIn
+                                      ? "text-blue-700"
+                                      : "text-amber-700"
+                                  }`}
+                                >
+                                  {!isLoggedIn
+                                    ? "Sign in to generate AI design previews and submit your custom jewelry request."
+                                    : "Verify your phone number to generate AI design previews. This helps us prevent spam and ensures a quality experience."}
+                                </p>
+                                {!isLoggedIn ? (
+                                  <Link
+                                    href="/auth/login?redirect=/rfq/create"
+                                    className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 mt-2"
+                                  >
+                                    Sign in now
+                                    <ArrowRight className="h-4 w-4" />
+                                  </Link>
+                                ) : (
+                                  <Link
+                                    href="/dashboard/customer"
+                                    className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 hover:text-amber-800 mt-2"
+                                  >
+                                    Verify phone in profile
+                                    <ArrowRight className="h-4 w-4" />
+                                  </Link>
                                 )}
                               </div>
                             </div>
                           )}
-                      </div>
 
-                      <div className="bg-white p-3 rounded border text-sm text-blue-900">
-                        <div className="flex items-start gap-2">
-                          <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                          <div>
-                            <p className="font-medium">
-                              About Italian Machine Made
-                            </p>
-                            <ul className="text-xs mt-1 space-y-1 text-gray-600">
-                              <li>• High-precision automated manufacturing</li>
-                              <li>• Hollow/semi-hollow for lighter weight</li>
-                              <li>• Consistent quality and patterns</li>
-                              <li>• Diamond-cut facets for extra sparkle</li>
-                              <li>• Price based on actual gold weight used</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <Label>Surface Finish</Label>
-                    <Select
-                      value={formData.surfaceFinish}
-                      onValueChange={(v: string) =>
-                        updateFormData("surfaceFinish", v)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select finish type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {surfaceFinishes.length > 0 ? (
-                          surfaceFinishes.map((type) => (
-                            <Tooltip key={type.id}>
-                              <TooltipTrigger asChild>
-                                <div>
-                                  <SelectItem value={type.id}>
-                                    {type.name}
-                                  </SelectItem>
-                                </div>
-                              </TooltipTrigger>
-                              {SURFACE_FINISH_IMAGES[type.id] && (
-                                <TooltipContent
-                                  side="right"
-                                  className="p-0 overflow-hidden"
+                          {/* Preview Image Display */}
+                          {designPreviewUrl ? (
+                            <div className="relative w-full max-w-sm mx-auto">
+                              <img
+                                src={designPreviewUrl}
+                                alt={
+                                  fromDesign
+                                    ? "Selected Design"
+                                    : "AI Generated Design Preview"
+                                }
+                                className="w-full rounded-lg shadow-md border"
+                              />
+                              {/* Badge - Top Right: Different for selected vs generated */}
+                              <div className="absolute top-2 right-2">
+                                <Badge
+                                  className={
+                                    fromDesign && !generatingPreview
+                                      ? "bg-purple-500 text-white"
+                                      : "bg-amber-500 text-white"
+                                  }
                                 >
-                                  <div className="w-44">
-                                    <img
-                                      src={SURFACE_FINISH_IMAGES[type.id].image}
-                                      alt={type.name}
-                                      className="w-full h-32 object-cover"
-                                    />
-                                    <div className="p-2 bg-white">
-                                      <p className="text-xs font-medium">
-                                        {type.name}
-                                      </p>
-                                      <p className="text-xs text-gray-500 mt-0.5">
-                                        {
-                                          SURFACE_FINISH_IMAGES[type.id]
-                                            .description
-                                        }
-                                      </p>
-                                    </div>
-                                  </div>
+                                  <Sparkles className="h-3 w-3 mr-1" />
+                                  {fromDesign && !generatingPreview
+                                    ? "Selected Design"
+                                    : "AI Generated"}
+                                </Badge>
+                              </div>
+                              {/* Orivraa Logo Watermark - Bottom Right */}
+                              <div className="absolute bottom-2 right-2 bg-white/80 backdrop-blur-sm rounded-md px-2 py-1 shadow-sm">
+                                <div className="flex items-center gap-1">
+                                  <img
+                                    src="/brand/orivraa-icon.svg"
+                                    alt="Orivraa"
+                                    className="h-4 w-4"
+                                  />
+                                  <span className="text-xs font-semibold text-gray-700">
+                                    Orivraa
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-full max-w-sm mx-auto aspect-square bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400">
+                              <ImageIcon className="h-12 w-12 mb-2" />
+                              <p className="text-sm">
+                                Preview will appear here
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Customization Feedback Field - Show when preview exists */}
+                          {designPreviewUrl && (
+                            <div className="w-full max-w-sm mx-auto space-y-2">
+                              <Label className="text-sm text-gray-600">
+                                {fromDesign
+                                  ? "Want to customize this design? Describe your changes:"
+                                  : "Don't like the AI design? Describe what you'd like to change:"}
+                              </Label>
+                              <Textarea
+                                rows={2}
+                                placeholder="e.g., Make it more traditional, add more detail, make the band thinner..."
+                                value={regenerationFeedback}
+                                onChange={(
+                                  e: React.ChangeEvent<HTMLTextAreaElement>,
+                                ) => setRegenerationFeedback(e.target.value)}
+                                className="text-sm"
+                              />
+                            </div>
+                          )}
+
+                          {/* Generate Button - Disabled if not signed in or phone not verified */}
+                          <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-block">
+                                  <Button
+                                    type="button"
+                                    onClick={generatePreview}
+                                    disabled={
+                                      generatingPreview ||
+                                      !formData.jewelleryType ||
+                                      !hasValidMetalSelection() ||
+                                      !isLoggedIn ||
+                                      !isPhoneVerified
+                                    }
+                                    className={`bg-amber-600 hover:bg-amber-700 text-white ${
+                                      !isLoggedIn || !isPhoneVerified
+                                        ? "opacity-50 cursor-not-allowed"
+                                        : ""
+                                    }`}
+                                  >
+                                    {generatingPreview ? (
+                                      <>
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        Generating... (10-15s)
+                                      </>
+                                    ) : designPreviewUrl ? (
+                                      <>
+                                        <Sparkles className="h-4 w-4 mr-2" />
+                                        Regenerate Preview
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Sparkles className="h-4 w-4 mr-2" />
+                                        Generate Preview
+                                      </>
+                                    )}
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              {(!isLoggedIn || !isPhoneVerified) && (
+                                <TooltipContent side="top" className="max-w-xs">
+                                  <p>
+                                    {!isLoggedIn
+                                      ? "Sign in to generate AI design previews"
+                                      : "Verify your phone number to generate AI design previews"}
+                                  </p>
                                 </TooltipContent>
                               )}
                             </Tooltip>
-                          ))
-                        ) : (
-                          <>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div>
-                                  <SelectItem value="POLISHED">
-                                    High Polish / Mirror Finish
-                                  </SelectItem>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent
-                                side="right"
-                                className="p-0 overflow-hidden"
-                              >
-                                <div className="w-44">
-                                  <img
-                                    src={SURFACE_FINISH_IMAGES.POLISHED.image}
-                                    alt="Polished"
-                                    className="w-full h-32 object-cover"
-                                  />
-                                  <div className="p-2 bg-white">
-                                    <p className="text-xs font-medium">
-                                      High Polish
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-0.5">
-                                      {
-                                        SURFACE_FINISH_IMAGES.POLISHED
-                                          .description
-                                      }
-                                    </p>
-                                  </div>
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div>
-                                  <SelectItem value="MATTE">
-                                    Matte / Brushed Finish
-                                  </SelectItem>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent
-                                side="right"
-                                className="p-0 overflow-hidden"
-                              >
-                                <div className="w-44">
-                                  <img
-                                    src={SURFACE_FINISH_IMAGES.MATTE.image}
-                                    alt="Matte"
-                                    className="w-full h-32 object-cover"
-                                  />
-                                  <div className="p-2 bg-white">
-                                    <p className="text-xs font-medium">
-                                      Matte / Brushed
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-0.5">
-                                      {SURFACE_FINISH_IMAGES.MATTE.description}
-                                    </p>
-                                  </div>
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div>
-                                  <SelectItem value="SATIN">
-                                    Satin Finish
-                                  </SelectItem>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent
-                                side="right"
-                                className="p-0 overflow-hidden"
-                              >
-                                <div className="w-44">
-                                  <img
-                                    src={SURFACE_FINISH_IMAGES.SATIN.image}
-                                    alt="Satin"
-                                    className="w-full h-32 object-cover"
-                                  />
-                                  <div className="p-2 bg-white">
-                                    <p className="text-xs font-medium">
-                                      Satin Finish
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-0.5">
-                                      {SURFACE_FINISH_IMAGES.SATIN.description}
-                                    </p>
-                                  </div>
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div>
-                                  <SelectItem value="HAMMERED">
-                                    Hammered Texture
-                                  </SelectItem>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent
-                                side="right"
-                                className="p-0 overflow-hidden"
-                              >
-                                <div className="w-44">
-                                  <img
-                                    src={SURFACE_FINISH_IMAGES.HAMMERED.image}
-                                    alt="Hammered"
-                                    className="w-full h-32 object-cover"
-                                  />
-                                  <div className="p-2 bg-white">
-                                    <p className="text-xs font-medium">
-                                      Hammered Texture
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-0.5">
-                                      {
-                                        SURFACE_FINISH_IMAGES.HAMMERED
-                                          .description
-                                      }
-                                    </p>
-                                  </div>
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div>
-                                  <SelectItem value="SANDBLAST">
-                                    Sandblasted
-                                  </SelectItem>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent
-                                side="right"
-                                className="p-0 overflow-hidden"
-                              >
-                                <div className="w-44">
-                                  <img
-                                    src={SURFACE_FINISH_IMAGES.SANDBLAST.image}
-                                    alt="Sandblasted"
-                                    className="w-full h-32 object-cover"
-                                  />
-                                  <div className="p-2 bg-white">
-                                    <p className="text-xs font-medium">
-                                      Sandblasted
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-0.5">
-                                      {
-                                        SURFACE_FINISH_IMAGES.SANDBLAST
-                                          .description
-                                      }
-                                    </p>
-                                  </div>
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div>
-                                  <SelectItem value="ANTIQUE">
-                                    Antique / Oxidized
-                                  </SelectItem>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent
-                                side="right"
-                                className="p-0 overflow-hidden"
-                              >
-                                <div className="w-44">
-                                  <img
-                                    src={SURFACE_FINISH_IMAGES.ANTIQUE.image}
-                                    alt="Antique"
-                                    className="w-full h-32 object-cover"
-                                  />
-                                  <div className="p-2 bg-white">
-                                    <p className="text-xs font-medium">
-                                      Antique / Oxidized
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-0.5">
-                                      {
-                                        SURFACE_FINISH_IMAGES.ANTIQUE
-                                          .description
-                                      }
-                                    </p>
-                                  </div>
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          </>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-3">
-                    <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm text-blue-700">
-                      <p className="font-medium mb-1">How it works</p>
-                      <p>
-                        After submitting your request, multiple verified
-                        jewellers will review your requirements and send you
-                        competitive quotes. You can compare offers and choose
-                        the best one.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Composition Validation Warnings/Errors */}
-                  {formData.buildMethod === "METHOD_B" &&
-                    (compositionValidation.errors.length > 0 ||
-                      compositionValidation.warnings.length > 0) && (
-                      <div className="space-y-2">
-                        {compositionValidation.errors.map((err, idx) => (
-                          <div
-                            key={`err-${idx}`}
-                            className="bg-red-50 border border-red-200 rounded-lg p-3 flex gap-2"
-                          >
-                            <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
-                            <p className="text-sm text-red-700">{err}</p>
                           </div>
-                        ))}
-                        {compositionValidation.warnings.map((warn, idx) => (
-                          <div
-                            key={`warn-${idx}`}
-                            className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2"
-                          >
-                            <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                            <p className="text-sm text-amber-700">{warn}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
 
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={() => {
-                        setStep(2);
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                      disabled={!canProceedToStep2}
-                      className="gold-gradient text-white"
-                    >
-                      Continue
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Step 2: Design Details */}
-            {step === 2 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Design Details</CardTitle>
-                  <CardDescription>
-                    Describe your design vision and specifications
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Show weight info if template selected */}
-                  {hasRealTemplate && (
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">Template:</span>{" "}
-                        {
-                          templates.find((t) => t.id === formData.templateId)
-                            ?.name
-                        }
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">
-                          Weight ({formData.weightCategory}):
-                        </span>{" "}
-                        {formatWeight(getWeightFromTemplate())}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Manual weight input shown only if no template */}
-                  {!hasRealTemplate && (
-                    <div className="space-y-2">
-                      <Label>Estimated Weight ({weightUnitSymbol}) *</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        placeholder={
-                          displayWeightUnit === "GRAM"
-                            ? "e.g., 10.5"
-                            : "e.g., 1.0"
-                        }
-                        value={formData.estimatedWeight}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                          updateFormData("estimatedWeight", e.target.value)
-                        }
-                      />
-                      <p className="text-xs text-gray-500">
-                        An approximate weight helps jewellers provide accurate
-                        quotes
-                      </p>
-                      {/* Weight unit selector */}
-                      {supportedWeightUnits.length > 1 && (
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className="text-xs text-gray-500">Unit:</span>
-                          <Select
-                            value={displayWeightUnit}
-                            onValueChange={(v) =>
-                              setDisplayWeightUnit(v as WeightUnit)
-                            }
-                          >
-                            <SelectTrigger className="h-7 w-24 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {supportedWeightUnits.map((unit) => (
-                                <SelectItem
-                                  key={unit}
-                                  value={unit}
-                                  className="text-xs"
-                                >
-                                  {WEIGHT_UNIT_SYMBOLS[unit as WeightUnit]}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <Label>Description *</Label>
-                    <Textarea
-                      rows={4}
-                      placeholder="Describe the design you're envisioning. Include style (traditional, modern, minimalist), patterns or motifs (floral, geometric, filigree), dimensions, and any specific details. This description helps our AI create a preview and helps sellers understand exactly what you want to craft."
-                      value={formData.description}
-                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                        updateFormData("description", e.target.value)
-                      }
-                    />
-                  </div>
-
-                  {/* Gemstones Section */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label>Include Gemstones?</Label>
-                      <div className="flex gap-2">
-                        <Badge
-                          variant={
-                            formData.hasGemstones ? "default" : "outline"
-                          }
-                          className="cursor-pointer"
-                          onClick={() => updateFormData("hasGemstones", true)}
-                        >
-                          Yes
-                        </Badge>
-                        <Badge
-                          variant={
-                            !formData.hasGemstones ? "default" : "outline"
-                          }
-                          className="cursor-pointer"
-                          onClick={() => {
-                            updateFormData("hasGemstones", false);
-                            updateFormData("gemstonesV2", []);
-                            updateFormData("gemstones", []);
-                          }}
-                        >
-                          No
-                        </Badge>
-                      </div>
-                    </div>
-
-                    {formData.hasGemstones && (
-                      <GemstoneEditorV2
-                        gemstones={formData.gemstonesV2}
-                        onChange={(gems) => updateFormData("gemstonesV2", gems)}
-                        currencySymbol={currencyInfo.symbol}
-                        selectedCurrency={currency}
-                        exchangeRate={marketRates?.fx?.rate || 144}
-                      />
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Reference Images (Optional)</Label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleReferenceImageUpload}
-                        className="hidden"
-                        id="rfq-image-upload"
-                        disabled={isUploadingImage}
-                      />
-                      <label
-                        htmlFor="rfq-image-upload"
-                        className="cursor-pointer block"
-                      >
-                        {isUploadingImage ? (
-                          <div className="flex flex-col items-center gap-2">
-                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                            <p className="text-sm text-gray-600">
-                              Uploading... {uploadProgress}%
-                            </p>
-                            <div className="w-full max-w-xs h-2 bg-gray-200 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-primary transition-all duration-300"
-                                style={{ width: `${uploadProgress}%` }}
+                          {/* Share to Gallery Checkbox */}
+                          {isLoggedIn && isPhoneVerified && (
+                            <div className="flex items-center justify-center gap-2 pt-2 border-t border-amber-200">
+                              <input
+                                type="checkbox"
+                                id="share-to-gallery"
+                                checked={shareToGallery}
+                                onChange={(e) =>
+                                  setShareToGallery(e.target.checked)
+                                }
+                                className="h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded"
                               />
+                              <label
+                                htmlFor="share-to-gallery"
+                                className="text-sm text-gray-600"
+                              >
+                                Share this design to the{" "}
+                                <a
+                                  href="/designs"
+                                  target="_blank"
+                                  className="text-amber-600 hover:underline"
+                                >
+                                  Design Gallery
+                                </a>{" "}
+                                to inspire others
+                              </label>
+                            </div>
+                          )}
+
+                          {isLoggedIn &&
+                            isPhoneVerified &&
+                            (!formData.jewelleryType ||
+                              !formData.metalType) && (
+                              <p className="text-xs text-gray-500 text-center">
+                                Complete jewelry type and metal selection to
+                                enable preview generation
+                              </p>
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Minimum Budget ({currency}) *</Label>
+                            <Input
+                              type="number"
+                              placeholder="e.g., 50000"
+                              value={formData.budgetMin}
+                              onChange={(
+                                e: React.ChangeEvent<HTMLInputElement>,
+                              ) => updateFormData("budgetMin", e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Maximum Budget ({currency}) *</Label>
+                            <Input
+                              type="number"
+                              placeholder="e.g., 100000"
+                              value={formData.budgetMax}
+                              onChange={(
+                                e: React.ChangeEvent<HTMLInputElement>,
+                              ) => updateFormData("budgetMax", e.target.value)}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Price estimate comparison */}
+
+                        {/* Budget warning if estimate exceeds budget */}
+                        {priceEstimate &&
+                          priceEstimate.total != null &&
+                          (priceEstimate.total || 0) >
+                            parseFloat(formData.budgetMax || "0") &&
+                          formData.budgetMax && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2">
+                              <AlertTriangle className="h-4 w-4 text-amber-600" />
+                              <p className="text-sm text-amber-700">
+                                Estimated price exceeds your maximum budget.
+                                Consider adjusting specifications or budget.
+                              </p>
+                            </div>
+                          )}
+
+                        <div className="space-y-2">
+                          <Label>Preferred Deadline</Label>
+                          <Input
+                            type="date"
+                            value={formData.deadline}
+                            onChange={(
+                              e: React.ChangeEvent<HTMLInputElement>,
+                            ) => updateFormData("deadline", e.target.value)}
+                            min={minDate}
+                          />
+                          <p className="text-xs text-gray-500">
+                            Leave empty if you&apos;re flexible on timing
+                          </p>
+                        </div>
+
+                        {/* Summary */}
+                        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                          <h4 className="font-semibold">Request Summary</h4>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <span className="text-gray-500">Type:</span>
+                            <span>
+                              {
+                                JEWELLERY_TYPES.find(
+                                  (t) => t.value === formData.jewelleryType,
+                                )?.label
+                              }
+                            </span>
+
+                            {hasRealTemplate && (
+                              <>
+                                <span className="text-gray-500">Template:</span>
+                                <span>
+                                  {
+                                    templates.find(
+                                      (t) => t.id === formData.templateId,
+                                    )?.name
+                                  }
+                                </span>
+                              </>
+                            )}
+
+                            <span className="text-gray-500">Build Method:</span>
+                            <span>
+                              {
+                                BUILD_METHODS.find(
+                                  (m) => m.value === formData.buildMethod,
+                                )?.label.split(":")[1]
+                              }
+                            </span>
+
+                            <span className="text-gray-500">Metal:</span>
+                            <span>
+                              {
+                                getAvailableMetals().find(
+                                  (t) => t.id === formData.metalType,
+                                )?.name
+                              }
+                            </span>
+
+                            <span className="text-gray-500">Weight:</span>
+                            <span>
+                              {hasRealTemplate
+                                ? `${getWeightFromTemplate()}g (${formData.weightCategory})`
+                                : `${formData.estimatedWeight}g`}
+                            </span>
+
+                            {formData.surfaceFinish && (
+                              <>
+                                <span className="text-gray-500">Finish:</span>
+                                <span>
+                                  {formData.surfaceFinish.replace("_", " ")}
+                                </span>
+                              </>
+                            )}
+
+                            {formData.addGoldPlating && (
+                              <>
+                                <span className="text-gray-500">Plating:</span>
+                                <span>
+                                  {formData.platingType.replace("_", " ")} (
+                                  {formData.platingTier})
+                                </span>
+                              </>
+                            )}
+
+                            {formData.gemstones.length > 0 && (
+                              <>
+                                <span className="text-gray-500">
+                                  Gemstones:
+                                </span>
+                                <span>
+                                  {formData.gemstones.length} stone type(s)
+                                </span>
+                              </>
+                            )}
+
+                            <span className="text-gray-500">Budget:</span>
+                            <span>
+                              {currencyInfo.symbol} {formData.budgetMin} -{" "}
+                              {formData.budgetMax}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Method C warning */}
+                        {formData.buildMethod === "METHOD_C" && (
+                          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2">
+                            <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                            <p className="text-sm text-amber-700">
+                              <strong>Note:</strong> This piece uses base metal
+                              with plating/coating. It is not solid gold and
+                              will be labeled accordingly.
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Verification status notice */}
+                        {step === 3 && !canSubmitOrder && (
+                          <div
+                            className={`border rounded-lg p-4 flex gap-3 ${
+                              !isLoggedIn
+                                ? "bg-blue-50 border-blue-200"
+                                : "bg-amber-50 border-amber-200"
+                            }`}
+                          >
+                            {!isLoggedIn ? (
+                              <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                            ) : !isPhoneVerified ? (
+                              <Phone className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                            ) : (
+                              <ShieldCheck className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                            )}
+                            <div className="flex-1">
+                              <p
+                                className={`font-medium text-sm ${
+                                  !isLoggedIn
+                                    ? "text-blue-800"
+                                    : "text-amber-800"
+                                }`}
+                              >
+                                {!isLoggedIn
+                                  ? "Sign in to Submit"
+                                  : !isPhoneVerified
+                                    ? "Phone Verification Required"
+                                    : "KYC Verification Required"}
+                              </p>
+                              <p
+                                className={`text-sm mt-1 ${
+                                  !isLoggedIn
+                                    ? "text-blue-700"
+                                    : "text-amber-700"
+                                }`}
+                              >
+                                {submitBlockReason}
+                              </p>
+                              {!isLoggedIn ? (
+                                <Link
+                                  href="/auth/login?redirect=/rfq/create"
+                                  className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 mt-2"
+                                >
+                                  Sign in now
+                                  <ArrowRight className="h-4 w-4" />
+                                </Link>
+                              ) : !isPhoneVerified ? (
+                                <Link
+                                  href="/dashboard/customer"
+                                  className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 hover:text-amber-800 mt-2"
+                                >
+                                  Verify phone in profile
+                                  <ArrowRight className="h-4 w-4" />
+                                </Link>
+                              ) : isSeller && !isShopVerified ? (
+                                <Link
+                                  href="/dashboard/shop/verification"
+                                  className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 hover:text-amber-800 mt-2"
+                                >
+                                  Complete KYC verification
+                                  <ArrowRight className="h-4 w-4" />
+                                </Link>
+                              ) : null}
                             </div>
                           </div>
-                        ) : (
-                          <>
-                            <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                            <p className="text-sm text-gray-600 mb-2">
-                              Upload images of designs you like
-                            </p>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              asChild
-                            >
-                              <span>Browse Files</span>
-                            </Button>
-                            <p className="text-xs text-gray-400 mt-2">
-                              PNG, JPG, WebP up to 10MB each
-                            </p>
-                          </>
                         )}
-                      </label>
-                    </div>
 
-                    {/* Preview uploaded images */}
-                    {formData.referenceImages.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-3">
-                        {formData.referenceImages.map((url, idx) => (
-                          <div key={idx} className="relative group">
-                            <img
-                              src={getImageUrl(url, "thumbnail")}
-                              alt={`Reference ${idx + 1}`}
-                              className="w-20 h-20 object-cover rounded-lg border"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeReferenceImage(url)}
-                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
+                        {error && (
+                          <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+                            {error}
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Special Instructions</Label>
-                    <Textarea
-                      rows={2}
-                      placeholder="Any other requirements or preferences..."
-                      value={formData.specialInstructions}
-                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                        updateFormData("specialInstructions", e.target.value)
-                      }
-                    />
-                  </div>
-
-                  <div className="flex justify-between">
-                    <Button variant="outline" onClick={() => setStep(1)}>
-                      <ArrowLeft className="mr-2 h-4 w-4" />
-                      Back
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setStep(3);
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                      disabled={!canProceedToStep3}
-                      className="gold-gradient text-white"
-                    >
-                      Continue
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Step 3: Budget & Timeline */}
-            {step === 3 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Budget & Timeline</CardTitle>
-                  <CardDescription>
-                    Set your budget range and preferred delivery date
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Similar Designs Suggestions */}
-                  {(loadingSimilarDesigns || similarDesigns.length > 0) && (
-                    <div className="space-y-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-purple-600" />
-                        <div>
-                          <h3 className="font-medium text-purple-900">
-                            It seems you&apos;re designing a{" "}
-                            {JEWELLERY_TYPES.find(
-                              (t) => t.value === formData.jewelleryType,
-                            )?.label || formData.jewelleryType}
-                          </h3>
-                          <p className="text-sm text-purple-700">
-                            We have some great designs you might like!
-                          </p>
-                        </div>
-                      </div>
-
-                      {loadingSimilarDesigns ? (
-                        <div className="flex items-center justify-center py-4">
-                          <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
-                          <span className="ml-2 text-sm text-purple-600">
-                            Finding similar designs...
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-                          {similarDesigns.slice(0, 5).map((design) => (
-                            <button
-                              key={design.id}
-                              type="button"
-                              onClick={() => handleSelectSimilarDesign(design)}
-                              className="group relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-purple-400 transition-all cursor-pointer"
-                            >
-                              <img
-                                src={design.imageUrl}
-                                alt={`${design.jewelryType} design`}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                                <div className="absolute bottom-1 left-1 right-1">
-                                  <p className="text-[10px] text-white font-medium truncate">
-                                    Click to use as reference
-                                  </p>
-                                </div>
-                              </div>
-                            </button>
-                          ))}
-                          {/* See More Thumbnail */}
-                          <Link
-                            href={`/designs?jewelryType=${formData.jewelleryType}&sort=popular`}
-                            className="group relative aspect-square rounded-lg overflow-hidden bg-purple-100 hover:bg-purple-200 transition-colors flex flex-col items-center justify-center border-2 border-dashed border-purple-300 hover:border-purple-400"
-                          >
-                            <ArrowRight className="h-6 w-6 text-purple-600 group-hover:translate-x-1 transition-transform" />
-                            <span className="text-xs text-purple-700 font-medium mt-1">
-                              See More
-                            </span>
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* AI Design Preview Section - At top of Step 3 */}
-                  <div className="space-y-4 p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg border border-amber-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-amber-600" />
-                        <Label className="text-base font-medium">
-                          AI Design Preview
-                        </Label>
-                      </div>
-                      {designId && (
-                        <Badge variant="outline" className="text-xs">
-                          Design #{designId.slice(0, 8)}
-                        </Badge>
-                      )}
-                    </div>
-
-                    <p className="text-sm text-gray-600">
-                      Generate an AI visualization of your custom jewelry design
-                      based on all your specifications.
-                      {fromDesign &&
-                        " This design was selected from the gallery."}
-                    </p>
-
-                    {/* Sign-in / Phone Verification Required Notice - Check sign-in FIRST */}
-                    {(!isLoggedIn || !isPhoneVerified) && (
-                      <div
-                        className={`border rounded-lg p-3 flex items-start gap-2 ${
-                          !isLoggedIn
-                            ? "bg-blue-50 border-blue-200"
-                            : "bg-amber-100 border-amber-300"
-                        }`}
-                      >
-                        {!isLoggedIn ? (
-                          <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                        ) : (
-                          <Phone className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                         )}
-                        <div>
-                          <p
-                            className={`text-sm font-medium ${
-                              !isLoggedIn ? "text-blue-800" : "text-amber-800"
-                            }`}
-                          >
-                            {!isLoggedIn
-                              ? "Sign In Required"
-                              : "Phone Verification Required"}
-                          </p>
-                          <p
-                            className={`text-sm mt-1 ${
-                              !isLoggedIn ? "text-blue-700" : "text-amber-700"
-                            }`}
-                          >
-                            {!isLoggedIn
-                              ? "Sign in to generate AI design previews and submit your custom jewelry request."
-                              : "Verify your phone number to generate AI design previews. This helps us prevent spam and ensures a quality experience."}
-                          </p>
-                          {!isLoggedIn ? (
-                            <Link
-                              href="/auth/login?redirect=/rfq/create"
-                              className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 mt-2"
-                            >
-                              Sign in now
-                              <ArrowRight className="h-4 w-4" />
-                            </Link>
+
+                        <div className="flex justify-between">
+                          <Button variant="outline" onClick={() => setStep(2)}>
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Back
+                          </Button>
+
+                          {/* Submit button with tooltip for disabled state */}
+                          {!canSubmit && submitBlockReason ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-block">
+                                  <Button
+                                    disabled
+                                    className="gold-gradient text-white pointer-events-none opacity-50"
+                                  >
+                                    Submit Request
+                                    <ArrowRight className="ml-2 h-4 w-4" />
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs">
+                                <p>{submitBlockReason}</p>
+                              </TooltipContent>
+                            </Tooltip>
                           ) : (
-                            <Link
-                              href="/dashboard/customer"
-                              className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 hover:text-amber-800 mt-2"
-                            >
-                              Verify phone in profile
-                              <ArrowRight className="h-4 w-4" />
-                            </Link>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Preview Image Display */}
-                    {designPreviewUrl ? (
-                      <div className="relative w-full max-w-sm mx-auto">
-                        <img
-                          src={designPreviewUrl}
-                          alt={
-                            fromDesign
-                              ? "Selected Design"
-                              : "AI Generated Design Preview"
-                          }
-                          className="w-full rounded-lg shadow-md border"
-                        />
-                        {/* Badge - Top Right: Different for selected vs generated */}
-                        <div className="absolute top-2 right-2">
-                          <Badge
-                            className={
-                              fromDesign && !generatingPreview
-                                ? "bg-purple-500 text-white"
-                                : "bg-amber-500 text-white"
-                            }
-                          >
-                            <Sparkles className="h-3 w-3 mr-1" />
-                            {fromDesign && !generatingPreview
-                              ? "Selected Design"
-                              : "AI Generated"}
-                          </Badge>
-                        </div>
-                        {/* Orivraa Logo Watermark - Bottom Right */}
-                        <div className="absolute bottom-2 right-2 bg-white/80 backdrop-blur-sm rounded-md px-2 py-1 shadow-sm">
-                          <div className="flex items-center gap-1">
-                            <img
-                              src="/brand/orivraa-icon.svg"
-                              alt="Orivraa"
-                              className="h-4 w-4"
-                            />
-                            <span className="text-xs font-semibold text-gray-700">
-                              Orivraa
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="w-full max-w-sm mx-auto aspect-square bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400">
-                        <ImageIcon className="h-12 w-12 mb-2" />
-                        <p className="text-sm">Preview will appear here</p>
-                      </div>
-                    )}
-
-                    {/* Customization Feedback Field - Show when preview exists */}
-                    {designPreviewUrl && (
-                      <div className="w-full max-w-sm mx-auto space-y-2">
-                        <Label className="text-sm text-gray-600">
-                          {fromDesign
-                            ? "Want to customize this design? Describe your changes:"
-                            : "Don't like the AI design? Describe what you'd like to change:"}
-                        </Label>
-                        <Textarea
-                          rows={2}
-                          placeholder="e.g., Make it more traditional, add more detail, make the band thinner..."
-                          value={regenerationFeedback}
-                          onChange={(
-                            e: React.ChangeEvent<HTMLTextAreaElement>,
-                          ) => setRegenerationFeedback(e.target.value)}
-                          className="text-sm"
-                        />
-                      </div>
-                    )}
-
-                    {/* Generate Button - Disabled if not signed in or phone not verified */}
-                    <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="inline-block">
                             <Button
-                              type="button"
-                              onClick={generatePreview}
-                              disabled={
-                                generatingPreview ||
-                                !formData.jewelleryType ||
-                                !hasValidMetalSelection() ||
-                                !isLoggedIn ||
-                                !isPhoneVerified
-                              }
-                              className={`bg-amber-600 hover:bg-amber-700 text-white ${
-                                !isLoggedIn || !isPhoneVerified
-                                  ? "opacity-50 cursor-not-allowed"
-                                  : ""
-                              }`}
+                              onClick={handleSubmit}
+                              disabled={!canSubmit || loading}
+                              className="gold-gradient text-white"
                             >
-                              {generatingPreview ? (
+                              {loading ? (
                                 <>
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  Generating... (10-15s)
-                                </>
-                              ) : designPreviewUrl ? (
-                                <>
-                                  <Sparkles className="h-4 w-4 mr-2" />
-                                  Regenerate Preview
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Submitting...
                                 </>
                               ) : (
                                 <>
-                                  <Sparkles className="h-4 w-4 mr-2" />
-                                  Generate Preview
+                                  Submit Request
+                                  <ArrowRight className="ml-2 h-4 w-4" />
                                 </>
                               )}
                             </Button>
-                          </span>
-                        </TooltipTrigger>
-                        {(!isLoggedIn || !isPhoneVerified) && (
-                          <TooltipContent side="top" className="max-w-xs">
-                            <p>
-                              {!isLoggedIn
-                                ? "Sign in to generate AI design previews"
-                                : "Verify your phone number to generate AI design previews"}
-                            </p>
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    </div>
-
-                    {/* Share to Gallery Checkbox */}
-                    {isLoggedIn && isPhoneVerified && (
-                      <div className="flex items-center justify-center gap-2 pt-2 border-t border-amber-200">
-                        <input
-                          type="checkbox"
-                          id="share-to-gallery"
-                          checked={shareToGallery}
-                          onChange={(e) => setShareToGallery(e.target.checked)}
-                          className="h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded"
-                        />
-                        <label
-                          htmlFor="share-to-gallery"
-                          className="text-sm text-gray-600"
-                        >
-                          Share this design to the{" "}
-                          <a
-                            href="/designs"
-                            target="_blank"
-                            className="text-amber-600 hover:underline"
-                          >
-                            Design Gallery
-                          </a>{" "}
-                          to inspire others
-                        </label>
-                      </div>
-                    )}
-
-                    {isLoggedIn &&
-                      isPhoneVerified &&
-                      (!formData.jewelleryType || !formData.metalType) && (
-                        <p className="text-xs text-gray-500 text-center">
-                          Complete jewelry type and metal selection to enable
-                          preview generation
-                        </p>
-                      )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Minimum Budget ({currency}) *</Label>
-                      <Input
-                        type="number"
-                        placeholder="e.g., 50000"
-                        value={formData.budgetMin}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                          updateFormData("budgetMin", e.target.value)
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Maximum Budget ({currency}) *</Label>
-                      <Input
-                        type="number"
-                        placeholder="e.g., 100000"
-                        value={formData.budgetMax}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                          updateFormData("budgetMax", e.target.value)
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  {/* Price estimate comparison */}
-
-                  {/* Budget warning if estimate exceeds budget */}
-                  {priceEstimate &&
-                    priceEstimate.total != null &&
-                    (priceEstimate.total || 0) >
-                      parseFloat(formData.budgetMax || "0") &&
-                    formData.budgetMax && (
-                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 text-amber-600" />
-                        <p className="text-sm text-amber-700">
-                          Estimated price exceeds your maximum budget. Consider
-                          adjusting specifications or budget.
-                        </p>
-                      </div>
-                    )}
-
-                  <div className="space-y-2">
-                    <Label>Preferred Deadline</Label>
-                    <Input
-                      type="date"
-                      value={formData.deadline}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        updateFormData("deadline", e.target.value)
-                      }
-                      min={minDate}
-                    />
-                    <p className="text-xs text-gray-500">
-                      Leave empty if you&apos;re flexible on timing
-                    </p>
-                  </div>
-
-                  {/* Summary */}
-                  <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                    <h4 className="font-semibold">Request Summary</h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <span className="text-gray-500">Type:</span>
-                      <span>
-                        {
-                          JEWELLERY_TYPES.find(
-                            (t) => t.value === formData.jewelleryType,
-                          )?.label
-                        }
-                      </span>
-
-                      {hasRealTemplate && (
-                        <>
-                          <span className="text-gray-500">Template:</span>
-                          <span>
-                            {
-                              templates.find(
-                                (t) => t.id === formData.templateId,
-                              )?.name
-                            }
-                          </span>
-                        </>
-                      )}
-
-                      <span className="text-gray-500">Build Method:</span>
-                      <span>
-                        {
-                          BUILD_METHODS.find(
-                            (m) => m.value === formData.buildMethod,
-                          )?.label.split(":")[1]
-                        }
-                      </span>
-
-                      <span className="text-gray-500">Metal:</span>
-                      <span>
-                        {
-                          getAvailableMetals().find(
-                            (t) => t.id === formData.metalType,
-                          )?.name
-                        }
-                      </span>
-
-                      <span className="text-gray-500">Weight:</span>
-                      <span>
-                        {hasRealTemplate
-                          ? `${getWeightFromTemplate()}g (${formData.weightCategory})`
-                          : `${formData.estimatedWeight}g`}
-                      </span>
-
-                      {formData.surfaceFinish && (
-                        <>
-                          <span className="text-gray-500">Finish:</span>
-                          <span>
-                            {formData.surfaceFinish.replace("_", " ")}
-                          </span>
-                        </>
-                      )}
-
-                      {formData.addGoldPlating && (
-                        <>
-                          <span className="text-gray-500">Plating:</span>
-                          <span>
-                            {formData.platingType.replace("_", " ")} (
-                            {formData.platingTier})
-                          </span>
-                        </>
-                      )}
-
-                      {formData.gemstones.length > 0 && (
-                        <>
-                          <span className="text-gray-500">Gemstones:</span>
-                          <span>{formData.gemstones.length} stone type(s)</span>
-                        </>
-                      )}
-
-                      <span className="text-gray-500">Budget:</span>
-                      <span>
-                        {currencyInfo.symbol} {formData.budgetMin} -{" "}
-                        {formData.budgetMax}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Method C warning */}
-                  {formData.buildMethod === "METHOD_C" && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2">
-                      <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0" />
-                      <p className="text-sm text-amber-700">
-                        <strong>Note:</strong> This piece uses base metal with
-                        plating/coating. It is not solid gold and will be
-                        labeled accordingly.
-                      </p>
-                    </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
                   )}
-
-                  {/* Verification status notice */}
-                  {step === 3 && !canSubmitOrder && (
-                    <div
-                      className={`border rounded-lg p-4 flex gap-3 ${
-                        !isLoggedIn
-                          ? "bg-blue-50 border-blue-200"
-                          : "bg-amber-50 border-amber-200"
-                      }`}
-                    >
-                      {!isLoggedIn ? (
-                        <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                      ) : !isPhoneVerified ? (
-                        <Phone className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                      ) : (
-                        <ShieldCheck className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                      )}
-                      <div className="flex-1">
-                        <p
-                          className={`font-medium text-sm ${
-                            !isLoggedIn ? "text-blue-800" : "text-amber-800"
-                          }`}
-                        >
-                          {!isLoggedIn
-                            ? "Sign in to Submit"
-                            : !isPhoneVerified
-                              ? "Phone Verification Required"
-                              : "KYC Verification Required"}
-                        </p>
-                        <p
-                          className={`text-sm mt-1 ${
-                            !isLoggedIn ? "text-blue-700" : "text-amber-700"
-                          }`}
-                        >
-                          {submitBlockReason}
-                        </p>
-                        {!isLoggedIn ? (
-                          <Link
-                            href="/auth/login?redirect=/rfq/create"
-                            className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 mt-2"
-                          >
-                            Sign in now
-                            <ArrowRight className="h-4 w-4" />
-                          </Link>
-                        ) : !isPhoneVerified ? (
-                          <Link
-                            href="/dashboard/customer"
-                            className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 hover:text-amber-800 mt-2"
-                          >
-                            Verify phone in profile
-                            <ArrowRight className="h-4 w-4" />
-                          </Link>
-                        ) : isSeller && !isShopVerified ? (
-                          <Link
-                            href="/dashboard/shop/verification"
-                            className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 hover:text-amber-800 mt-2"
-                          >
-                            Complete KYC verification
-                            <ArrowRight className="h-4 w-4" />
-                          </Link>
-                        ) : null}
-                      </div>
-                    </div>
-                  )}
-
-                  {error && (
-                    <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
-                      {error}
-                    </div>
-                  )}
-
-                  <div className="flex justify-between">
-                    <Button variant="outline" onClick={() => setStep(2)}>
-                      <ArrowLeft className="mr-2 h-4 w-4" />
-                      Back
-                    </Button>
-
-                    {/* Submit button with tooltip for disabled state */}
-                    {!canSubmit && submitBlockReason ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="inline-block">
-                            <Button
-                              disabled
-                              className="gold-gradient text-white pointer-events-none opacity-50"
-                            >
-                              Submit Request
-                              <ArrowRight className="ml-2 h-4 w-4" />
-                            </Button>
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs">
-                          <p>{submitBlockReason}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : (
-                      <Button
-                        onClick={handleSubmit}
-                        disabled={!canSubmit || loading}
-                        className="gold-gradient text-white"
-                      >
-                        {loading ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Submitting...
-                          </>
-                        ) : (
-                          <>
-                            Submit Request
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                          </>
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-                </div>{/* end Center column */}
+                </div>
+                {/* end Center column */}
 
                 {/* Right: Live Metal Prices */}
                 <div className="hidden xl:block xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto scrollbar-thin">
@@ -5016,12 +5150,16 @@ export default function CreateRfqPage() {
                         Today&apos;s Metal Prices
                       </h4>
                       {marketRates?.cache && (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                          marketRates.cache === "fresh"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-yellow-100 text-yellow-700"
-                        }`}>
-                          {marketRates.cache === "fresh" ? "● Live" : "● Cached"}
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                            marketRates.cache === "fresh"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-yellow-100 text-yellow-700"
+                          }`}
+                        >
+                          {marketRates.cache === "fresh"
+                            ? "● Live"
+                            : "● Cached"}
                         </span>
                       )}
                     </div>
@@ -5029,7 +5167,9 @@ export default function CreateRfqPage() {
                     {marketRatesLoading ? (
                       <div className="flex items-center justify-center py-8">
                         <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
-                        <span className="ml-2 text-xs text-slate-500">Loading rates...</span>
+                        <span className="ml-2 text-xs text-slate-500">
+                          Loading rates...
+                        </span>
                       </div>
                     ) : marketRates ? (
                       <div className="space-y-3">
@@ -5038,38 +5178,57 @@ export default function CreateRfqPage() {
                           // Determine which metal key is selected
                           const selectedKey =
                             formData.buildMethod === "METHOD_A"
-                              ? formData.metalType === "GOLD" ? "GOLD_24K"
-                                : formData.metalType === "SILVER" ? "SILVER_999"
-                                : formData.metalType === "PLATINUM" ? "PLATINUM_PT950"
-                                : null
+                              ? formData.metalType === "GOLD"
+                                ? "GOLD_24K"
+                                : formData.metalType === "SILVER"
+                                  ? "SILVER_999"
+                                  : formData.metalType === "PLATINUM"
+                                    ? "PLATINUM_PT950"
+                                    : null
                               : formData.buildMethod === "METHOD_B"
-                              ? formData.alloyConfig?.baseMetal === "GOLD"
-                                ? `GOLD_${formData.alloyConfig.karat || "22K"}`
-                                : formData.alloyConfig?.baseMetal === "SILVER" ? "SILVER_925"
-                                : null
-                              : formData.buildMethod === "METHOD_D"
-                              ? formData.alloyConfig?.karat ? `GOLD_${formData.alloyConfig.karat}` : "GOLD_22K"
-                              : null;
+                                ? formData.alloyConfig?.baseMetal === "GOLD"
+                                  ? `GOLD_${formData.alloyConfig.karat || "22K"}`
+                                  : formData.alloyConfig?.baseMetal === "SILVER"
+                                    ? "SILVER_925"
+                                    : null
+                                : formData.buildMethod === "METHOD_D"
+                                  ? formData.alloyConfig?.karat
+                                    ? `GOLD_${formData.alloyConfig.karat}`
+                                    : "GOLD_22K"
+                                  : null;
 
                           const selectedPrice = selectedKey
-                            ? marketRates.metals[selectedKey as keyof typeof marketRates.metals]
+                            ? marketRates.metals[
+                                selectedKey as keyof typeof marketRates.metals
+                              ]
                             : null;
 
                           const selectedLabel = selectedKey
-                            ? selectedKey.replace("_", " ").replace("GOLD ", "Gold ").replace("SILVER ", "Silver ").replace("PLATINUM ", "Platinum ")
+                            ? selectedKey
+                                .replace("_", " ")
+                                .replace("GOLD ", "Gold ")
+                                .replace("SILVER ", "Silver ")
+                                .replace("PLATINUM ", "Platinum ")
                             : null;
 
                           if (selectedPrice && selectedLabel) {
                             return (
                               <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-lg p-3">
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-[10px] font-semibold text-amber-600 uppercase tracking-wide">Your Selection</span>
-                                  <span className="text-[10px] text-amber-500">per gram</span>
+                                  <span className="text-[10px] font-semibold text-amber-600 uppercase tracking-wide">
+                                    Your Selection
+                                  </span>
+                                  <span className="text-[10px] text-amber-500">
+                                    per gram
+                                  </span>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                  <span className="text-sm font-medium text-amber-900">{selectedLabel}</span>
+                                  <span className="text-sm font-medium text-amber-900">
+                                    {selectedLabel}
+                                  </span>
                                   <span className="text-lg font-bold text-amber-900 whitespace-nowrap">
-                                    {currencyInfo.symbol}{Math.round(selectedPrice).toLocaleString()}
+                                    {currencyInfo.symbol}
+                                    {Math.round(selectedPrice).toLocaleString()}
                                   </span>
                                 </div>
                               </div>
@@ -5080,7 +5239,12 @@ export default function CreateRfqPage() {
 
                         {/* Gold Rates */}
                         <div>
-                          <p className="text-[11px] font-semibold text-amber-700 mb-1 uppercase tracking-wide">Gold <span className="font-normal text-amber-500">/ gram</span></p>
+                          <p className="text-[11px] font-semibold text-amber-700 mb-1 uppercase tracking-wide">
+                            Gold{" "}
+                            <span className="font-normal text-amber-500">
+                              / gram
+                            </span>
+                          </p>
                           <div className="space-y-0.5">
                             {[
                               { label: "24K Pure", key: "GOLD_24K" },
@@ -5090,16 +5254,43 @@ export default function CreateRfqPage() {
                               { label: "10K", key: "GOLD_10K" },
                             ].map(({ label, key }) => {
                               const isSelected =
-                                (formData.buildMethod === "METHOD_A" && formData.metalType === "GOLD" && key === "GOLD_24K") ||
-                                (formData.buildMethod === "METHOD_B" && formData.alloyConfig?.baseMetal === "GOLD" && key === `GOLD_${formData.alloyConfig.karat}`) ||
-                                (formData.buildMethod === "METHOD_D" && key === `GOLD_${formData.alloyConfig?.karat || "22K"}`);
+                                (formData.buildMethod === "METHOD_A" &&
+                                  formData.metalType === "GOLD" &&
+                                  key === "GOLD_24K") ||
+                                (formData.buildMethod === "METHOD_B" &&
+                                  formData.alloyConfig?.baseMetal === "GOLD" &&
+                                  key ===
+                                    `GOLD_${formData.alloyConfig.karat}`) ||
+                                (formData.buildMethod === "METHOD_D" &&
+                                  key ===
+                                    `GOLD_${formData.alloyConfig?.karat || "22K"}`);
                               return (
-                                <div key={key} className={`flex items-center justify-between rounded px-2 py-1 text-xs ${
-                                  isSelected ? "bg-amber-100 border border-amber-300" : "bg-white/70"
-                                }`}>
-                                  <span className={isSelected ? "font-semibold text-amber-900" : "text-muted-foreground"}>{label}</span>
-                                  <span className={`font-mono font-semibold whitespace-nowrap ${isSelected ? "text-amber-900" : "text-amber-700"}`}>
-                                    {currencyInfo.symbol}{Math.round(marketRates.metals[key as keyof typeof marketRates.metals] || 0).toLocaleString()}
+                                <div
+                                  key={key}
+                                  className={`flex items-center justify-between rounded px-2 py-1 text-xs ${
+                                    isSelected
+                                      ? "bg-amber-100 border border-amber-300"
+                                      : "bg-white/70"
+                                  }`}
+                                >
+                                  <span
+                                    className={
+                                      isSelected
+                                        ? "font-semibold text-amber-900"
+                                        : "text-muted-foreground"
+                                    }
+                                  >
+                                    {label}
+                                  </span>
+                                  <span
+                                    className={`font-mono font-semibold whitespace-nowrap ${isSelected ? "text-amber-900" : "text-amber-700"}`}
+                                  >
+                                    {currencyInfo.symbol}
+                                    {Math.round(
+                                      marketRates.metals[
+                                        key as keyof typeof marketRates.metals
+                                      ] || 0,
+                                    ).toLocaleString()}
                                   </span>
                                 </div>
                               );
@@ -5109,22 +5300,52 @@ export default function CreateRfqPage() {
 
                         {/* Silver Rates */}
                         <div>
-                          <p className="text-[11px] font-semibold text-gray-600 mb-1 uppercase tracking-wide">Silver <span className="font-normal text-gray-400">/ gram</span></p>
+                          <p className="text-[11px] font-semibold text-gray-600 mb-1 uppercase tracking-wide">
+                            Silver{" "}
+                            <span className="font-normal text-gray-400">
+                              / gram
+                            </span>
+                          </p>
                           <div className="space-y-0.5">
                             {[
                               { label: "999 Fine", key: "SILVER_999" },
                               { label: "925 Sterling", key: "SILVER_925" },
                             ].map(({ label, key }) => {
                               const isSelected =
-                                (formData.buildMethod === "METHOD_A" && formData.metalType === "SILVER" && key === "SILVER_999") ||
-                                (formData.buildMethod === "METHOD_B" && formData.alloyConfig?.baseMetal === "SILVER" && key === "SILVER_925");
+                                (formData.buildMethod === "METHOD_A" &&
+                                  formData.metalType === "SILVER" &&
+                                  key === "SILVER_999") ||
+                                (formData.buildMethod === "METHOD_B" &&
+                                  formData.alloyConfig?.baseMetal ===
+                                    "SILVER" &&
+                                  key === "SILVER_925");
                               return (
-                                <div key={key} className={`flex items-center justify-between rounded px-2 py-1 text-xs ${
-                                  isSelected ? "bg-gray-100 border border-gray-300" : "bg-white/70"
-                                }`}>
-                                  <span className={isSelected ? "font-semibold text-gray-900" : "text-muted-foreground"}>{label}</span>
-                                  <span className={`font-mono font-semibold whitespace-nowrap ${isSelected ? "text-gray-900" : "text-gray-600"}`}>
-                                    {currencyInfo.symbol}{Math.round(marketRates.metals[key as keyof typeof marketRates.metals] || 0).toLocaleString()}
+                                <div
+                                  key={key}
+                                  className={`flex items-center justify-between rounded px-2 py-1 text-xs ${
+                                    isSelected
+                                      ? "bg-gray-100 border border-gray-300"
+                                      : "bg-white/70"
+                                  }`}
+                                >
+                                  <span
+                                    className={
+                                      isSelected
+                                        ? "font-semibold text-gray-900"
+                                        : "text-muted-foreground"
+                                    }
+                                  >
+                                    {label}
+                                  </span>
+                                  <span
+                                    className={`font-mono font-semibold whitespace-nowrap ${isSelected ? "text-gray-900" : "text-gray-600"}`}
+                                  >
+                                    {currencyInfo.symbol}
+                                    {Math.round(
+                                      marketRates.metals[
+                                        key as keyof typeof marketRates.metals
+                                      ] || 0,
+                                    ).toLocaleString()}
                                   </span>
                                 </div>
                               );
@@ -5134,20 +5355,48 @@ export default function CreateRfqPage() {
 
                         {/* Platinum Rates */}
                         <div>
-                          <p className="text-[11px] font-semibold text-slate-600 mb-1 uppercase tracking-wide">Platinum <span className="font-normal text-slate-400">/ gram</span></p>
+                          <p className="text-[11px] font-semibold text-slate-600 mb-1 uppercase tracking-wide">
+                            Platinum{" "}
+                            <span className="font-normal text-slate-400">
+                              / gram
+                            </span>
+                          </p>
                           <div className="space-y-0.5">
                             {[
                               { label: "PT950", key: "PLATINUM_PT950" },
                               { label: "PT900", key: "PLATINUM_PT900" },
                             ].map(({ label, key }) => {
-                              const isSelected = formData.buildMethod === "METHOD_A" && formData.metalType === "PLATINUM" && key === "PLATINUM_PT950";
+                              const isSelected =
+                                formData.buildMethod === "METHOD_A" &&
+                                formData.metalType === "PLATINUM" &&
+                                key === "PLATINUM_PT950";
                               return (
-                                <div key={key} className={`flex items-center justify-between rounded px-2 py-1 text-xs ${
-                                  isSelected ? "bg-slate-100 border border-slate-300" : "bg-white/70"
-                                }`}>
-                                  <span className={isSelected ? "font-semibold text-slate-900" : "text-muted-foreground"}>{label}</span>
-                                  <span className={`font-mono font-semibold whitespace-nowrap ${isSelected ? "text-slate-900" : "text-slate-600"}`}>
-                                    {currencyInfo.symbol}{Math.round(marketRates.metals[key as keyof typeof marketRates.metals] || 0).toLocaleString()}
+                                <div
+                                  key={key}
+                                  className={`flex items-center justify-between rounded px-2 py-1 text-xs ${
+                                    isSelected
+                                      ? "bg-slate-100 border border-slate-300"
+                                      : "bg-white/70"
+                                  }`}
+                                >
+                                  <span
+                                    className={
+                                      isSelected
+                                        ? "font-semibold text-slate-900"
+                                        : "text-muted-foreground"
+                                    }
+                                  >
+                                    {label}
+                                  </span>
+                                  <span
+                                    className={`font-mono font-semibold whitespace-nowrap ${isSelected ? "text-slate-900" : "text-slate-600"}`}
+                                  >
+                                    {currencyInfo.symbol}
+                                    {Math.round(
+                                      marketRates.metals[
+                                        key as keyof typeof marketRates.metals
+                                      ] || 0,
+                                    ).toLocaleString()}
                                   </span>
                                 </div>
                               );
@@ -5157,12 +5406,22 @@ export default function CreateRfqPage() {
 
                         {/* Palladium Rate */}
                         <div>
-                          <p className="text-[11px] font-semibold text-blue-600 mb-1 uppercase tracking-wide">Palladium <span className="font-normal text-blue-400">/ gram</span></p>
+                          <p className="text-[11px] font-semibold text-blue-600 mb-1 uppercase tracking-wide">
+                            Palladium{" "}
+                            <span className="font-normal text-blue-400">
+                              / gram
+                            </span>
+                          </p>
                           <div className="space-y-0.5">
                             <div className="flex items-center justify-between bg-white/70 rounded px-2 py-1 text-xs">
-                              <span className="text-muted-foreground">PD950</span>
+                              <span className="text-muted-foreground">
+                                PD950
+                              </span>
                               <span className="font-mono font-semibold text-blue-700 whitespace-nowrap">
-                                {currencyInfo.symbol}{Math.round(marketRates.metals.PALLADIUM_PD950 || 0).toLocaleString()}
+                                {currencyInfo.symbol}
+                                {Math.round(
+                                  marketRates.metals.PALLADIUM_PD950 || 0,
+                                ).toLocaleString()}
                               </span>
                             </div>
                           </div>
@@ -5173,7 +5432,13 @@ export default function CreateRfqPage() {
                           <div className="border-t pt-2 mt-1">
                             <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                               <Clock className="h-2.5 w-2.5" />
-                              Updated {new Date(marketRates.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              Updated{" "}
+                              {new Date(
+                                marketRates.updatedAt,
+                              ).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
                             </p>
                           </div>
                         )}
