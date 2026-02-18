@@ -3020,7 +3020,7 @@ export default function CreateRfqPage() {
             {step < 4 && (
               <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr_340px] gap-4 xl:gap-6 xl:items-start">
                 {/* Left: Live Metal Prices */}
-                <div className="hidden xl:block xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto scrollbar-thin">
+                <div className="hidden xl:block xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto scrollbar-thin">
                   <div className="bg-gradient-to-br from-slate-50 to-gray-50 border border-slate-200 rounded-lg p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <h4 className="font-semibold text-slate-800 flex items-center gap-2 text-sm">
@@ -5177,20 +5177,92 @@ export default function CreateRfqPage() {
 
                         {/* Price estimate comparison */}
 
-                        {/* Budget warning if estimate exceeds budget */}
-                        {priceEstimate &&
-                          priceEstimate.total != null &&
-                          (priceEstimate.total || 0) >
-                            parseFloat(formData.budgetMax || "0") &&
-                          formData.budgetMax && (
-                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2">
-                              <AlertTriangle className="h-4 w-4 text-amber-600" />
-                              <p className="text-sm text-amber-700">
-                                Estimated price exceeds your maximum budget.
-                                Consider adjusting specifications or budget.
-                              </p>
-                            </div>
-                          )}
+                        {/* Budget feasibility checker — rules-first warning */}
+                        {(() => {
+                          const estimatedTotal = liveEstimate?.total || priceEstimate?.total || 0;
+                          const maxBudget = parseFloat(formData.budgetMax || "0");
+                          const minBudget = parseFloat(formData.budgetMin || "0");
+
+                          if (!formData.budgetMax || maxBudget <= 0 || estimatedTotal <= 0) return null;
+
+                          const overBudgetPct = Math.round(((estimatedTotal - maxBudget) / maxBudget) * 100);
+                          const underBudgetPct = Math.round(((maxBudget - estimatedTotal) / estimatedTotal) * 100);
+
+                          // Budget is too low — estimated price exceeds max budget
+                          if (estimatedTotal > maxBudget) {
+                            const suggestions: string[] = [];
+                            const weight = getWeightFromTemplate();
+
+                            // Suggest reducing weight
+                            if (weight > 2) {
+                              const targetWeight = Math.round(weight * (maxBudget / estimatedTotal) * 10) / 10;
+                              suggestions.push(`Reduce weight to ~${targetWeight}g`);
+                            }
+
+                            // Suggest lower purity
+                            if (formData.buildMethod === "METHOD_A" && formData.metalType === "GOLD") {
+                              suggestions.push("Switch to a lower karat (e.g., 18K or 14K)");
+                            } else if (formData.buildMethod === "METHOD_B" && formData.alloyConfig?.karat === "22K") {
+                              suggestions.push("Try 18K alloy instead of 22K");
+                            }
+
+                            // Suggest removing gemstones
+                            if (formData.gemstonesV2.length > 0 || formData.gemstones.length > 0) {
+                              suggestions.push("Remove or reduce gemstones");
+                            }
+
+                            return (
+                              <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-2">
+                                <div className="flex items-start gap-2">
+                                  <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
+                                  <div className="space-y-1 min-w-0">
+                                    <p className="text-sm font-semibold text-red-800">
+                                      Budget too low — estimated cost is {currencyInfo.symbol}{Math.round(estimatedTotal).toLocaleString()} ({overBudgetPct}% over your max of {currencyInfo.symbol}{Math.round(maxBudget).toLocaleString()})
+                                    </p>
+                                    <p className="text-xs text-red-700">
+                                      Sellers are unlikely to offer at this price. Adjust your specs or increase budget.
+                                    </p>
+                                    {suggestions.length > 0 && (
+                                      <div className="mt-2 pt-2 border-t border-red-200">
+                                        <p className="text-xs font-medium text-red-700 mb-1">Suggestions to fit your budget:</p>
+                                        <ul className="text-xs text-red-600 space-y-0.5 list-disc list-inside">
+                                          {suggestions.map((s, i) => <li key={i}>{s}</li>)}
+                                          <li>Increase max budget to at least {currencyInfo.symbol}{Math.round(estimatedTotal * 1.05).toLocaleString()}</li>
+                                        </ul>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          // Budget is way higher than estimate — may get poor offers
+                          if (minBudget > 0 && minBudget > estimatedTotal * 1.5) {
+                            return (
+                              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+                                <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                                <p className="text-sm text-blue-700">
+                                  Your minimum budget ({currencyInfo.symbol}{Math.round(minBudget).toLocaleString()}) is {underBudgetPct}% above the estimated cost ({currencyInfo.symbol}{Math.round(estimatedTotal).toLocaleString()}). You can lower your budget range for better-matched offers.
+                                </p>
+                              </div>
+                            );
+                          }
+
+                          // Budget looks ok — show green confirmation
+                          if (estimatedTotal > 0 && maxBudget >= estimatedTotal) {
+                            return (
+                              <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2">
+                                <Check className="h-4 w-4 text-green-600 shrink-0" />
+                                <p className="text-sm text-green-700">
+                                  Budget looks good — estimated cost ({currencyInfo.symbol}{Math.round(estimatedTotal).toLocaleString()}) is within your budget range.
+                                </p>
+                              </div>
+                            );
+                          }
+
+                          return null;
+                        })()}
 
                         <div className="space-y-2">
                           <Label>Preferred Deadline</Label>
@@ -5445,7 +5517,7 @@ export default function CreateRfqPage() {
                 {/* end Center column */}
 
                 {/* Right: Live Calculator */}
-                <div className="hidden xl:block xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto scrollbar-thin">
+                <div className="hidden xl:block xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto scrollbar-thin">
                   <LivePricingPanel
                     buildMethod={formData.buildMethod as BuildMethod}
                     formData={buildLivePricingFormData()}
@@ -5460,7 +5532,7 @@ export default function CreateRfqPage() {
 
             {/* Step 4: Seller Matching (Post-Submission) */}
             {step === 4 && submittedRfqId && (
-              <div className="space-y-6">
+              <div className="space-y-6 max-w-3xl mx-auto">
                 {/* Congratulations Card */}
                 <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
                   <CardContent className="pt-6">
