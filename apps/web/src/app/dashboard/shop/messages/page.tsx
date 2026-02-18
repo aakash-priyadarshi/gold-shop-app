@@ -81,17 +81,20 @@ export default function ShopMessagesPage() {
     [selectedConversation],
   );
 
-  const handleMessageBlocked = useCallback((data: ViolationWarning) => {
-    setViolationAlert(data);
-    setSending(false);
-    if (data.strikeCount >= 3) {
-      refreshUser().then(() => {
-        setTimeout(() => window.location.reload(), 2000);
-      });
-      return;
-    }
-    setTimeout(() => setViolationAlert(null), 15000);
-  }, [refreshUser]);
+  const handleMessageBlocked = useCallback(
+    (data: ViolationWarning) => {
+      setViolationAlert(data);
+      setSending(false);
+      if (data.strikeCount >= 3) {
+        refreshUser().then(() => {
+          setTimeout(() => window.location.reload(), 2000);
+        });
+        return;
+      }
+      setTimeout(() => setViolationAlert(null), 15000);
+    },
+    [refreshUser],
+  );
 
   const handleTyping = useCallback(
     (data: { userId: string; isTyping: boolean }) => {

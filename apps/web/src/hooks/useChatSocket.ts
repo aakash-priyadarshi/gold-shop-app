@@ -186,8 +186,7 @@ export function useChatSocket({
         if (resolved) return;
         resolved = true;
         // Handle both plain ACK format { online: [...] } and legacy { data: { online: [...] } }
-        const online =
-          response?.online || response?.data?.online || [];
+        const online = response?.online || response?.data?.online || [];
         resolve(online);
       });
       // Timeout fallback

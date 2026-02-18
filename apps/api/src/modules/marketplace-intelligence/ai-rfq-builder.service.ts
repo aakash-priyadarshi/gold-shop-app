@@ -394,7 +394,7 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
         reasoning:
           "I couldn't identify a jewellery request from your description. Please describe what kind of jewellery you'd like to create.",
         conversationalMessage:
-          "Hmm, I couldn't quite understand what you're looking for. Could you describe the jewellery you want? For example, try something like \"I want a gold ring\" or \"silver bracelet for daily wear\".",
+          'Hmm, I couldn\'t quite understand what you\'re looking for. Could you describe the jewellery you want? For example, try something like "I want a gold ring" or "silver bracelet for daily wear".',
         suggestions: [
           "Try: 'I want a gold ring for my wedding'",
           "Try: '22K gold necklace around 15 grams, budget 50-80K'",
@@ -561,7 +561,11 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
       if (weightMatch) estimatedWeight = parseFloat(weightMatch[1]);
     }
     const weightCategory =
-      estimatedWeight < 5 ? "LIGHT" : estimatedWeight <= 15 ? "MEDIUM" : "HEAVY";
+      estimatedWeight < 5
+        ? "LIGHT"
+        : estimatedWeight <= 15
+          ? "MEDIUM"
+          : "HEAVY";
 
     // Determine confidence based on completeness
     const detectedCount = [
@@ -586,7 +590,10 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
     }
 
     // Build conversational message
-    const typeName = jewelleryType !== "OTHER" ? jewelleryType.toLowerCase().replace("_", " ") : "jewellery piece";
+    const typeName =
+      jewelleryType !== "OTHER"
+        ? jewelleryType.toLowerCase().replace("_", " ")
+        : "jewellery piece";
     const metalName = material.replace(/_/g, " ").toLowerCase();
     let conversationalMessage = `Got it — a ${metalName} ${typeName}! `;
     if (!hasExplicitWeight) {
