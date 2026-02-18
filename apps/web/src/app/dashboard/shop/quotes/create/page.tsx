@@ -424,13 +424,17 @@ export default function CreateShopQuotePage() {
 
   // Auto-calculated estimate from the pricing engine
   const autoEstimate = useMemo(() => {
-    if (!marketRates) return null;
-    const request = buildEstimateRequest();
-    request.marketRates = {
-      metals: marketRates.metals,
-      fx: marketRates.fx,
-    };
-    return calculateEstimate(request);
+    try {
+      if (!marketRates) return null;
+      const request = buildEstimateRequest();
+      request.marketRates = {
+        metals: marketRates.metals,
+        fx: marketRates.fx,
+      };
+      return calculateEstimate(request);
+    } catch {
+      return null;
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     formData.buildMethod,
@@ -1396,7 +1400,7 @@ export default function CreateShopQuotePage() {
                     <div>
                       <Label>Design Description</Label>
                       <Textarea
-                        placeholder="Describe the design — e.g., '22K gold solitaire ring with floral engraving'. This helps AI generate a better preview."
+                        placeholder="The more detailed you describe, the better the AI preview & pricing. e.g. 'Heavy 22K gold bridal choker necklace with temple motifs, matte antique finish, set with rubies and emeralds in kundan style, around 45g'."
                         value={formData.description}
                         onChange={(e) =>
                           setFormData((prev) => ({
