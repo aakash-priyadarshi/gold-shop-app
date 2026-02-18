@@ -178,12 +178,12 @@ export function AlloyBuilder({
                 key={metal.value}
                 type="button"
                 variant={value.baseMetal === metal.value ? 'default' : 'outline'}
-                className={`h-auto py-3 ${value.baseMetal === metal.value ? 'gold-gradient text-white' : ''}`}
+                className={`h-auto py-3 w-full overflow-hidden ${value.baseMetal === metal.value ? 'gold-gradient text-white' : ''}`}
                 onClick={() => updateBaseMetal(metal.value as BasePreciousMetal)}
               >
-                <div className="text-left">
-                  <div className="font-medium">{metal.label}</div>
-                  <div className="text-xs opacity-80">{metal.description}</div>
+                <div className="text-left min-w-0">
+                  <div className="font-medium truncate">{metal.label}</div>
+                  <div className="text-xs opacity-80 truncate">{metal.description}</div>
                 </div>
               </Button>
             ))}
@@ -208,17 +208,17 @@ export function AlloyBuilder({
                 </TooltipContent>
               </Tooltip>
             </Label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {GOLD_KARATS_METHOD_B.map((karat) => (
                 <Tooltip key={karat.value}>
                   <TooltipTrigger asChild>
                     <Button
                       type="button"
                       variant={value.karat === karat.value ? 'default' : 'outline'}
-                      className={value.karat === karat.value ? 'bg-amber-500 hover:bg-amber-600 text-white' : ''}
+                      className={`w-full text-center whitespace-nowrap text-sm px-2 ${value.karat === karat.value ? 'bg-amber-500 hover:bg-amber-600 text-white' : ''}`}
                       onClick={() => updateKarat(karat.value as GoldKarat)}
                     >
-                      {karat.label.split(' ')[0]}
+                      {karat.value} ({(karat.purity * 100).toFixed(karat.purity * 100 % 1 === 0 ? 0 : 1)}%)
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -247,12 +247,12 @@ export function AlloyBuilder({
                     <Button
                       type="button"
                       variant={value.silverPurity === purity.value ? 'default' : 'outline'}
-                      className={`h-auto py-3 ${value.silverPurity === purity.value ? 'bg-gray-500 hover:bg-gray-600 text-white' : ''}`}
+                      className={`h-auto py-3 w-full overflow-hidden ${value.silverPurity === purity.value ? 'bg-gray-500 hover:bg-gray-600 text-white' : ''}`}
                       onClick={() => updateSilverPurity(purity.value as 'STERLING_925' | 'ARGENTIUM_935')}
                     >
-                      <div className="text-left">
-                        <div className="font-medium text-sm">{purity.label.split(' (')[0]}</div>
-                        <div className="text-xs opacity-80">{purity.label.split(' (')[1]?.replace(')', '')}</div>
+                      <div className="text-left min-w-0">
+                        <div className="font-medium text-sm truncate">{purity.label.split(' (')[0]}</div>
+                        <div className="text-xs opacity-80 truncate">{purity.label.split(' (')[1]?.replace(')', '')}</div>
                       </div>
                     </Button>
                   </TooltipTrigger>
@@ -272,14 +272,14 @@ export function AlloyBuilder({
               Step 3: Alloy Family
               <span className="text-red-500">*</span>
             </Label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {availableFamilies.map((family) => (
                 <Tooltip key={family.value}>
                   <TooltipTrigger asChild>
                     <Button
                       type="button"
                       variant={value.alloyFamily === family.value ? 'default' : 'outline'}
-                      className={`h-auto py-3 relative ${value.alloyFamily === family.value ? '' : ''}`}
+                      className={`h-auto py-2.5 px-3 relative overflow-hidden w-full ${value.alloyFamily === family.value ? '' : ''}`}
                       style={{
                         backgroundColor: value.alloyFamily === family.value ? family.colorHex : undefined,
                         color: value.alloyFamily === family.value ? 'white' : undefined,
@@ -287,12 +287,12 @@ export function AlloyBuilder({
                       }}
                       onClick={() => updateFamily(family.value as AlloyFamily)}
                     >
-                      <div className="text-left">
-                        <div className="font-medium">{family.label}</div>
-                        <div className="text-xs opacity-80">{family.description}</div>
+                      <div className="text-left min-w-0 w-full pr-5">
+                        <div className="font-medium text-sm truncate">{family.label}</div>
+                        <div className="text-xs opacity-80 truncate">{family.description}</div>
                       </div>
                       <div 
-                        className="absolute right-2 top-2 w-4 h-4 rounded-full border-2 border-white shadow"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-white shadow flex-shrink-0"
                         style={{ backgroundColor: family.colorHex }}
                       />
                     </Button>
@@ -380,26 +380,30 @@ export function AlloyBuilder({
               <Sparkles className="h-4 w-4 text-amber-500" />
               <span className="font-medium text-amber-800">Metal Cost Preview</span>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="text-muted-foreground">
-                {value.baseMetal === 'GOLD' ? `${value.karat} Gold` : 
-                 value.silverPurity === 'STERLING_925' ? 'Sterling Silver' : 'Argentium Silver'} 
-                ({weightGrams}g @ {currencySymbol}{marketRate.toLocaleString()}/g):
-              </div>
-              <div className="text-right font-medium">
-                {currencySymbol} {baseCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            <div className="space-y-1.5 text-sm">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground truncate min-w-0">
+                  {value.baseMetal === 'GOLD' ? `${value.karat} Gold` : 
+                   value.silverPurity === 'STERLING_925' ? 'Sterling Silver' : 'Argentium Silver'} 
+                  ({weightGrams}g @ {currencySymbol}{marketRate.toLocaleString()}/g)
+                </span>
+                <span className="font-medium whitespace-nowrap flex-shrink-0">
+                  {currencySymbol}{baseCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </span>
               </div>
               {selectedRecipe && selectedRecipe.priceMultiplier > 1 && (
-                <>
-                  <div className="text-muted-foreground">Alloy premium ({((selectedRecipe.priceMultiplier - 1) * 100).toFixed(0)}%):</div>
-                  <div className="text-right font-medium text-amber-600">
-                    +{currencySymbol} {((baseCost * selectedRecipe.priceMultiplier) - baseCost).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  </div>
-                </>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">Alloy premium ({((selectedRecipe.priceMultiplier - 1) * 100).toFixed(0)}%)</span>
+                  <span className="font-medium text-amber-600 whitespace-nowrap flex-shrink-0">
+                    +{currencySymbol}{((baseCost * selectedRecipe.priceMultiplier) - baseCost).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </span>
+                </div>
               )}
-              <div className="text-amber-800 font-medium border-t pt-1">Total metal:</div>
-              <div className="text-right font-bold text-amber-900 border-t pt-1">
-                {currencySymbol} {totalEstimate.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              <div className="flex items-center justify-between gap-2 border-t pt-1.5">
+                <span className="text-amber-800 font-medium">Total metal</span>
+                <span className="font-bold text-amber-900 whitespace-nowrap">
+                  {currencySymbol}{totalEstimate.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </span>
               </div>
             </div>
           </div>
