@@ -14,7 +14,12 @@ import { usePathname } from "next/navigation";
  */
 
 const ALLOWED_PATHS = ["/help", "/platform-guidelines"];
-const ALLOWED_PATH_PREFIXES = ["/dashboard/customer/support", "/dashboard/shop/support", "/dashboard/admin/support", "/dashboard/sales/support"];
+const ALLOWED_PATH_PREFIXES = [
+  "/dashboard/customer/support",
+  "/dashboard/shop/support",
+  "/dashboard/admin/support",
+  "/dashboard/sales/support",
+];
 
 function isAllowedPage(pathname: string | null): boolean {
   if (!pathname) return false;

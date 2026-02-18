@@ -1,7 +1,5 @@
 "use client";
 
-import data from "@emoji-mart/data";
-import Picker from "@emoji-mart/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -14,6 +12,8 @@ import {
 } from "@/hooks/useChatSocket";
 import { chatApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import data from "@emoji-mart/data";
+import Picker from "@emoji-mart/react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -193,26 +193,35 @@ export function ChatPopupWidget() {
       // Also refresh conversation list for accurate sidebar/unread counts
       loadConversationsQuiet();
     },
-    [activeConversationId, isOpen, isMinimized, user?.id, loadConversationsQuiet],
+    [
+      activeConversationId,
+      isOpen,
+      isMinimized,
+      user?.id,
+      loadConversationsQuiet,
+    ],
   );
 
-  const handleMessageBlocked = useCallback((data: ViolationWarning) => {
-    setViolationAlert(data);
-    setSending(false);
+  const handleMessageBlocked = useCallback(
+    (data: ViolationWarning) => {
+      setViolationAlert(data);
+      setSending(false);
 
-    // 3rd strike — account has been suspended
-    // Refresh user profile so SuspendedOverlay activates, then reload the page
-    if (data.strikeCount >= 3) {
-      refreshUser().then(() => {
-        // Small delay so the user sees the final warning before the overlay appears
-        setTimeout(() => window.location.reload(), 2000);
-      });
-      return;
-    }
+      // 3rd strike — account has been suspended
+      // Refresh user profile so SuspendedOverlay activates, then reload the page
+      if (data.strikeCount >= 3) {
+        refreshUser().then(() => {
+          // Small delay so the user sees the final warning before the overlay appears
+          setTimeout(() => window.location.reload(), 2000);
+        });
+        return;
+      }
 
-    // Auto-dismiss after 15s for non-suspension violations
-    setTimeout(() => setViolationAlert(null), 15000);
-  }, [refreshUser]);
+      // Auto-dismiss after 15s for non-suspension violations
+      setTimeout(() => setViolationAlert(null), 15000);
+    },
+    [refreshUser],
+  );
 
   const handleTypingEvent = useCallback(
     (data: { userId: string; isTyping: boolean }) => {
@@ -246,7 +255,7 @@ export function ChatPopupWidget() {
     if (!connected || conversations.length === 0) return;
     // Gather the other party's user IDs from conversations
     const otherUserIds = conversations.map((c) =>
-      isShopkeeper ? c.buyerId : (c.shop?.userId || c.shopId),
+      isShopkeeper ? c.buyerId : c.shop?.userId || c.shopId,
     );
     const uniqueIds = Array.from(new Set(otherUserIds)).filter(Boolean);
     if (uniqueIds.length === 0) return;
@@ -272,7 +281,9 @@ export function ChatPopupWidget() {
     } else if (type === "video") {
       setFileAccept("video/mp4,video/webm");
     } else {
-      setFileAccept("application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      setFileAccept(
+        "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      );
     }
     // Need to wait a tick so the accept attribute updates
     setTimeout(() => fileInputRef.current?.click(), 50);
@@ -290,7 +301,9 @@ export function ChatPopupWidget() {
       file.type.includes("wordprocessingml");
 
     if (!isImage && !isVideo && !isDoc) {
-      alert("Only images (JPG, PNG, WebP, GIF), videos (MP4, WebM), and documents (PDF, DOC) are allowed.");
+      alert(
+        "Only images (JPG, PNG, WebP, GIF), videos (MP4, WebM), and documents (PDF, DOC) are allowed.",
+      );
       return;
     }
 
@@ -332,7 +345,8 @@ export function ChatPopupWidget() {
       setAttachmentFile(file);
       if (isImage) {
         const reader = new FileReader();
-        reader.onload = (ev) => setAttachmentPreview(ev.target?.result as string);
+        reader.onload = (ev) =>
+          setAttachmentPreview(ev.target?.result as string);
         reader.readAsDataURL(file);
       } else {
         setAttachmentPreview("document");
@@ -564,10 +578,16 @@ export function ChatPopupWidget() {
   /* ── Close menus on outside click ── */
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(e.target as Node)
+      ) {
         setShowEmojiPicker(false);
       }
-      if (attachMenuRef.current && !attachMenuRef.current.contains(e.target as Node)) {
+      if (
+        attachMenuRef.current &&
+        !attachMenuRef.current.contains(e.target as Node)
+      ) {
         setShowAttachMenu(false);
       }
     };
@@ -649,7 +669,7 @@ export function ChatPopupWidget() {
             (() => {
               const otherId = isShopkeeper
                 ? activeConv.buyerId
-                : (activeConv.shop?.userId || activeConv.shopId);
+                : activeConv.shop?.userId || activeConv.shopId;
               const isOnline = onlineUsers.has(otherId);
               return isOnline ? (
                 <span className="flex items-center gap-1 flex-shrink-0">
@@ -742,7 +762,9 @@ export function ChatPopupWidget() {
                         {getConvName(conv).charAt(0).toUpperCase()}
                       </div>
                       {onlineUsers.has(
-                        isShopkeeper ? conv.buyerId : (conv.shop?.userId || conv.shopId),
+                        isShopkeeper
+                          ? conv.buyerId
+                          : conv.shop?.userId || conv.shopId,
                       ) && (
                         <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white" />
                       )}
@@ -1008,7 +1030,9 @@ export function ChatPopupWidget() {
                       {attachmentFile?.name}
                     </span>
                     <span className="text-[10px] text-gray-400">
-                      {attachmentFile ? `${(attachmentFile.size / 1024 / 1024).toFixed(1)} MB` : ""}
+                      {attachmentFile
+                        ? `${(attachmentFile.size / 1024 / 1024).toFixed(1)} MB`
+                        : ""}
                     </span>
                   </div>
                   <button
@@ -1054,7 +1078,9 @@ export function ChatPopupWidget() {
                     <ImageIcon className="h-4 w-4 text-green-600" />
                     <div>
                       <span className="font-medium">Photo</span>
-                      <span className="text-[10px] text-gray-400 block">Max 2 MB</span>
+                      <span className="text-[10px] text-gray-400 block">
+                        Max 2 MB
+                      </span>
                     </div>
                   </button>
                   <button
@@ -1064,7 +1090,9 @@ export function ChatPopupWidget() {
                     <Video className="h-4 w-4 text-blue-600" />
                     <div>
                       <span className="font-medium">Video</span>
-                      <span className="text-[10px] text-gray-400 block">Max 30s, 10 MB</span>
+                      <span className="text-[10px] text-gray-400 block">
+                        Max 30s, 10 MB
+                      </span>
                     </div>
                   </button>
                   <button
@@ -1074,7 +1102,9 @@ export function ChatPopupWidget() {
                     <FileText className="h-4 w-4 text-orange-600" />
                     <div>
                       <span className="font-medium">Document</span>
-                      <span className="text-[10px] text-gray-400 block">PDF, DOC — Max 5 MB</span>
+                      <span className="text-[10px] text-gray-400 block">
+                        PDF, DOC — Max 5 MB
+                      </span>
                     </div>
                   </button>
                 </div>
@@ -1092,7 +1122,10 @@ export function ChatPopupWidget() {
               <div className="flex items-center gap-1.5">
                 {/* Emoji button */}
                 <button
-                  onClick={() => { setShowEmojiPicker(!showEmojiPicker); setShowAttachMenu(false); }}
+                  onClick={() => {
+                    setShowEmojiPicker(!showEmojiPicker);
+                    setShowAttachMenu(false);
+                  }}
                   disabled={sending || uploading}
                   className="h-9 w-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition text-gray-500 hover:text-gray-700 flex-shrink-0"
                   title="Emoji"
@@ -1101,7 +1134,10 @@ export function ChatPopupWidget() {
                 </button>
                 {/* Attach button */}
                 <button
-                  onClick={() => { setShowAttachMenu(!showAttachMenu); setShowEmojiPicker(false); }}
+                  onClick={() => {
+                    setShowAttachMenu(!showAttachMenu);
+                    setShowEmojiPicker(false);
+                  }}
                   disabled={sending || uploading}
                   className="h-9 w-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition text-gray-500 hover:text-gray-700 flex-shrink-0"
                   title="Attach file"
@@ -1115,7 +1151,10 @@ export function ChatPopupWidget() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) handleSend();
                   }}
-                  onFocus={() => { setShowEmojiPicker(false); setShowAttachMenu(false); }}
+                  onFocus={() => {
+                    setShowEmojiPicker(false);
+                    setShowAttachMenu(false);
+                  }}
                   placeholder="Type a message…"
                   disabled={sending || uploading}
                   className="text-sm h-9 rounded-xl flex-1 min-w-0"

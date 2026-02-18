@@ -475,7 +475,10 @@ export default function CreateShopQuotePage() {
           jewelryType: formData.jewelleryType,
           buildMethod: formData.buildMethod,
           metalType: formData.metalType,
-          surfaceFinish: formData.surfaceFinish || (formData.composition as any)?.surfaceFinish || "",
+          surfaceFinish:
+            formData.surfaceFinish ||
+            (formData.composition as any)?.surfaceFinish ||
+            "",
           additionalSpecs: {
             description: [
               formData.description,
@@ -488,12 +491,18 @@ export default function CreateShopQuotePage() {
                   : formData.buildMethod === "METHOD_C"
                     ? `${formData.methodCConfig.platingType.replace(/_/g, " ").toLowerCase()} on ${formData.methodCConfig.baseMetal.toLowerCase()}`
                     : "",
-              formData.targetTotalWeightG ? `weighing approximately ${formData.targetTotalWeightG}g` : "",
-              formData.surfaceFinish ? `with ${formData.surfaceFinish.replace(/_/g, " ").toLowerCase()} finish` : "",
-              formData.hasGemstones && formData.gemstonesV2.length > 0
-                ? `with ${formData.gemstonesV2.map(g => `${g.count}x ${g.stoneType.replace(/_/g, " ").toLowerCase()}`).join(", ")}`
+              formData.targetTotalWeightG
+                ? `weighing approximately ${formData.targetTotalWeightG}g`
                 : "",
-            ].filter(Boolean).join(". "),
+              formData.surfaceFinish
+                ? `with ${formData.surfaceFinish.replace(/_/g, " ").toLowerCase()} finish`
+                : "",
+              formData.hasGemstones && formData.gemstonesV2.length > 0
+                ? `with ${formData.gemstonesV2.map((g) => `${g.count}x ${g.stoneType.replace(/_/g, " ").toLowerCase()}`).join(", ")}`
+                : "",
+            ]
+              .filter(Boolean)
+              .join(". "),
             regenerationFeedback: regenerationFeedback || undefined,
           },
           shareToGallery: false,
@@ -522,10 +531,18 @@ export default function CreateShopQuotePage() {
 
   const calculateTotal = () => {
     // Use manual overrides if provided, otherwise fall back to auto-estimate
-    const metal = parseFloat(formData.metalCostOverride) || autoEstimate?.metalCost || 0;
-    const making = parseFloat(formData.makingChargeOverride) || autoEstimate?.makingCharge || 0;
-    const gemstone = parseFloat(formData.gemstoneCostOverride) || autoEstimate?.gemstoneCost || 0;
-    const finish = parseFloat(formData.finishCostOverride) || autoEstimate?.finishCost || 0;
+    const metal =
+      parseFloat(formData.metalCostOverride) || autoEstimate?.metalCost || 0;
+    const making =
+      parseFloat(formData.makingChargeOverride) ||
+      autoEstimate?.makingCharge ||
+      0;
+    const gemstone =
+      parseFloat(formData.gemstoneCostOverride) ||
+      autoEstimate?.gemstoneCost ||
+      0;
+    const finish =
+      parseFloat(formData.finishCostOverride) || autoEstimate?.finishCost || 0;
     const subtotal = metal + making + gemstone + finish;
     const tax = subtotal * taxRate;
     return { subtotal, tax, total: subtotal + tax };
@@ -913,7 +930,7 @@ export default function CreateShopQuotePage() {
 
           {/* Step 2: Jewellery + Live Pricing */}
           {step === 2 && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:items-start">
               <div className="lg:col-span-2 space-y-6">
                 <Card>
                   <CardHeader>
@@ -1355,7 +1372,9 @@ export default function CreateShopQuotePage() {
                       <Label>Gemstones</Label>
                       <div className="flex items-center gap-3 mt-2 mb-3">
                         <Badge
-                          variant={formData.hasGemstones ? "default" : "outline"}
+                          variant={
+                            formData.hasGemstones ? "default" : "outline"
+                          }
                           className="cursor-pointer"
                           onClick={() =>
                             setFormData((prev) => ({
@@ -1367,7 +1386,9 @@ export default function CreateShopQuotePage() {
                           Yes
                         </Badge>
                         <Badge
-                          variant={!formData.hasGemstones ? "default" : "outline"}
+                          variant={
+                            !formData.hasGemstones ? "default" : "outline"
+                          }
                           className="cursor-pointer"
                           onClick={() =>
                             setFormData((prev) => ({
@@ -1565,8 +1586,8 @@ export default function CreateShopQuotePage() {
                 </Card>
               </div>
 
-              {/* Right: Pricing sidebar */}
-              <div className="space-y-4">
+              {/* Right: Pricing sidebar — sticky so it follows scroll */}
+              <div className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto space-y-4 scrollbar-thin">
                 <LivePricingPanel
                   buildMethod={formData.buildMethod}
                   formData={buildEstimateRequest()}
@@ -1581,7 +1602,7 @@ export default function CreateShopQuotePage() {
 
           {/* Step 3: Final Pricing */}
           {step === 3 && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:items-start">
               <div className="lg:col-span-2">
                 <Card>
                   <CardHeader>
@@ -1631,13 +1652,20 @@ export default function CreateShopQuotePage() {
                             Metal Cost ({currencySymbol})
                             {autoEstimate && (
                               <span className="text-xs text-muted-foreground ml-1">
-                                Auto: {Math.round(autoEstimate.metalCost).toLocaleString()}
+                                Auto:{" "}
+                                {Math.round(
+                                  autoEstimate.metalCost,
+                                ).toLocaleString()}
                               </span>
                             )}
                           </Label>
                           <Input
                             type="number"
-                            placeholder={autoEstimate ? String(Math.round(autoEstimate.metalCost)) : "0"}
+                            placeholder={
+                              autoEstimate
+                                ? String(Math.round(autoEstimate.metalCost))
+                                : "0"
+                            }
                             value={formData.metalCostOverride}
                             onChange={(e) =>
                               setFormData((prev) => ({
@@ -1652,13 +1680,20 @@ export default function CreateShopQuotePage() {
                             Making Charge ({currencySymbol})
                             {autoEstimate && (
                               <span className="text-xs text-muted-foreground ml-1">
-                                Auto: {Math.round(autoEstimate.makingCharge).toLocaleString()}
+                                Auto:{" "}
+                                {Math.round(
+                                  autoEstimate.makingCharge,
+                                ).toLocaleString()}
                               </span>
                             )}
                           </Label>
                           <Input
                             type="number"
-                            placeholder={autoEstimate ? String(Math.round(autoEstimate.makingCharge)) : "0"}
+                            placeholder={
+                              autoEstimate
+                                ? String(Math.round(autoEstimate.makingCharge))
+                                : "0"
+                            }
                             value={formData.makingChargeOverride}
                             onChange={(e) =>
                               setFormData((prev) => ({
@@ -1673,13 +1708,20 @@ export default function CreateShopQuotePage() {
                             Gemstone Cost ({currencySymbol})
                             {autoEstimate && (
                               <span className="text-xs text-muted-foreground ml-1">
-                                Auto: {Math.round(autoEstimate.gemstoneCost).toLocaleString()}
+                                Auto:{" "}
+                                {Math.round(
+                                  autoEstimate.gemstoneCost,
+                                ).toLocaleString()}
                               </span>
                             )}
                           </Label>
                           <Input
                             type="number"
-                            placeholder={autoEstimate ? String(Math.round(autoEstimate.gemstoneCost)) : "0"}
+                            placeholder={
+                              autoEstimate
+                                ? String(Math.round(autoEstimate.gemstoneCost))
+                                : "0"
+                            }
                             value={formData.gemstoneCostOverride}
                             onChange={(e) =>
                               setFormData((prev) => ({
@@ -1694,13 +1736,20 @@ export default function CreateShopQuotePage() {
                             Finish Cost ({currencySymbol})
                             {autoEstimate && (
                               <span className="text-xs text-muted-foreground ml-1">
-                                Auto: {Math.round(autoEstimate.finishCost).toLocaleString()}
+                                Auto:{" "}
+                                {Math.round(
+                                  autoEstimate.finishCost,
+                                ).toLocaleString()}
                               </span>
                             )}
                           </Label>
                           <Input
                             type="number"
-                            placeholder={autoEstimate ? String(Math.round(autoEstimate.finishCost)) : "0"}
+                            placeholder={
+                              autoEstimate
+                                ? String(Math.round(autoEstimate.finishCost))
+                                : "0"
+                            }
                             value={formData.finishCostOverride}
                             onChange={(e) =>
                               setFormData((prev) => ({
@@ -1770,7 +1819,7 @@ export default function CreateShopQuotePage() {
                   </CardContent>
                 </Card>
               </div>
-              <div className="space-y-4">
+              <div className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto space-y-4 scrollbar-thin">
                 <LivePricingPanel
                   buildMethod={formData.buildMethod}
                   formData={buildEstimateRequest()}

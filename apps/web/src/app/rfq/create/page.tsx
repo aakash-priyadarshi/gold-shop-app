@@ -2339,36 +2339,64 @@ export default function CreateRfqPage() {
         // ─── Step 1: Weight ───
         // Always fill weight — use WEIGHT_GUIDANCE average if AI didn't provide one
         const WEIGHT_DEFAULTS: Record<string, number> = {
-          RING: 3, NECKLACE: 12, BRACELET: 10, EARRING: 3, PENDANT: 4,
-          BANGLE: 15, CHAIN: 12, ANKLET: 5, BROOCH: 10, TIE_PIN: 5,
-          CUFFLINKS: 8, NOSE_PIN: 0.5, MANGALSUTRA: 15, MAANG_TIKKA: 5, OTHER: 8,
+          RING: 3,
+          NECKLACE: 12,
+          BRACELET: 10,
+          EARRING: 3,
+          PENDANT: 4,
+          BANGLE: 15,
+          CHAIN: 12,
+          ANKLET: 5,
+          BROOCH: 10,
+          TIE_PIN: 5,
+          CUFFLINKS: 8,
+          NOSE_PIN: 0.5,
+          MANGALSUTRA: 15,
+          MAANG_TIKKA: 5,
+          OTHER: 8,
         };
 
         if (data.weightCategory) {
           updateFormData("weightCategory", data.weightCategory);
         } else {
           // Derive weight category from weight
-          const w = data.estimatedWeight || WEIGHT_DEFAULTS[data.jewelleryType || "OTHER"] || 8;
-          updateFormData("weightCategory", w < 5 ? "LIGHT" : w <= 15 ? "MEDIUM" : "HEAVY");
+          const w =
+            data.estimatedWeight ||
+            WEIGHT_DEFAULTS[data.jewelleryType || "OTHER"] ||
+            8;
+          updateFormData(
+            "weightCategory",
+            w < 5 ? "LIGHT" : w <= 15 ? "MEDIUM" : "HEAVY",
+          );
         }
 
         if (data.estimatedWeight) {
           updateFormData("estimatedWeight", String(data.estimatedWeight));
         } else {
           // Fallback: use average weight for the jewellery type
-          const defaultWeight = WEIGHT_DEFAULTS[data.jewelleryType || "OTHER"] || 8;
+          const defaultWeight =
+            WEIGHT_DEFAULTS[data.jewelleryType || "OTHER"] || 8;
           updateFormData("estimatedWeight", String(defaultWeight));
         }
 
         // ─── Step 1: Surface Finish ───
         // Always fill surface finish (default to HIGH_POLISH)
         const validFinishes = [
-          "HIGH_POLISH", "MATTE", "BRUSHED", "SATIN", "HAMMERED",
-          "SANDBLASTED", "FLORENTINE", "BARK_TEXTURE", "DIAMOND_CUT", "ENGRAVED",
+          "HIGH_POLISH",
+          "MATTE",
+          "BRUSHED",
+          "SATIN",
+          "HAMMERED",
+          "SANDBLASTED",
+          "FLORENTINE",
+          "BARK_TEXTURE",
+          "DIAMOND_CUT",
+          "ENGRAVED",
         ];
-        const finish = data.surfaceFinish && validFinishes.includes(data.surfaceFinish)
-          ? data.surfaceFinish
-          : "HIGH_POLISH";
+        const finish =
+          data.surfaceFinish && validFinishes.includes(data.surfaceFinish)
+            ? data.surfaceFinish
+            : "HIGH_POLISH";
         updateFormData("surfaceFinish", finish);
 
         // ─── Step 2: Description ───
@@ -3064,12 +3092,28 @@ export default function CreateRfqPage() {
                                 {priceEstimate && priceEstimate.total > 0 && (
                                   <div className="text-xs bg-gold-50 border border-gold-200 rounded p-2 flex items-start gap-1.5">
                                     <span className="text-gold-700">
-                                      Based on current market rates, the estimated price for this comes to around{" "}
-                                      <strong>{currencyInfo?.symbol || "Rs."}{priceEstimate.total.toLocaleString()}</strong>
+                                      Based on current market rates, the
+                                      estimated price for this comes to around{" "}
+                                      <strong>
+                                        {currencyInfo?.symbol || "Rs."}
+                                        {priceEstimate.total.toLocaleString()}
+                                      </strong>
                                       {priceEstimate.breakdown?.weightGrams ? (
-                                        <> ({priceEstimate.breakdown.weightGrams}g at {currencyInfo?.symbol || "Rs."}{priceEstimate.breakdown.ratePerGram.toLocaleString()}/g + {priceEstimate.breakdown.makingChargePercent}% making charge)</>
+                                        <>
+                                          {" "}
+                                          ({priceEstimate.breakdown.weightGrams}
+                                          g at {currencyInfo?.symbol || "Rs."}
+                                          {priceEstimate.breakdown.ratePerGram.toLocaleString()}
+                                          /g +{" "}
+                                          {
+                                            priceEstimate.breakdown
+                                              .makingChargePercent
+                                          }
+                                          % making charge)
+                                        </>
                                       ) : null}
-                                      . You can adjust the weight or karat to change the price.
+                                      . You can adjust the weight or karat to
+                                      change the price.
                                     </span>
                                   </div>
                                 )}
@@ -3082,7 +3126,9 @@ export default function CreateRfqPage() {
                                         Tip:{" "}
                                       </span>
                                       <span className="text-amber-700">
-                                        Adding {aiResult.missingInfo.join(", ")} would help sellers give you better quotes.
+                                        Adding {aiResult.missingInfo.join(", ")}{" "}
+                                        would help sellers give you better
+                                        quotes.
                                       </span>
                                     </div>
                                   )}
