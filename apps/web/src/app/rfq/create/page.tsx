@@ -84,7 +84,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 // Alert Dialog for resume draft prompt
 import {
@@ -2897,7 +2897,7 @@ export default function CreateRfqPage() {
       <div className="flex min-h-screen flex-col">
         <Header />
         <main className="flex-1 bg-gray-50 py-4 sm:py-8">
-          <div className="container mx-auto px-3 sm:px-6 max-w-7xl">
+          <div className="container mx-auto px-3 sm:px-6 max-w-[1440px]">
             <div className="animate-pulse space-y-6">
               {/* Progress skeleton */}
               <div className="flex items-center justify-between mb-8">
@@ -2976,47 +2976,49 @@ export default function CreateRfqPage() {
         <Header />
 
         <main className="flex-1 bg-gray-50 py-4 sm:py-8">
-          <div className="container mx-auto px-3 sm:px-6 max-w-7xl">
+          <div className="container mx-auto px-3 sm:px-6 max-w-[1440px]">
             {/* Progress Steps */}
             <div className="mb-6 sm:mb-8">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center">
                 {[1, 2, 3, 4].map((s) => (
-                  <div key={s} className="flex items-center">
-                    <div
-                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold text-sm sm:text-base ${
-                        step >= s
-                          ? s === 4 && step === 4
-                            ? "bg-green-500 text-white"
-                            : "bg-gold-500 text-white"
-                          : "bg-gray-200 text-gray-500"
-                      }`}
-                    >
-                      {step > s ? <Check className="h-5 w-5" /> : s}
+                  <Fragment key={s}>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div
+                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold text-sm sm:text-base ${
+                          step >= s
+                            ? s === 4 && step === 4
+                              ? "bg-green-500 text-white"
+                              : "bg-gold-500 text-white"
+                            : "bg-gray-200 text-gray-500"
+                        }`}
+                      >
+                        {step > s ? <Check className="h-5 w-5" /> : s}
+                      </div>
+                      <span
+                        className={`hidden sm:inline text-sm font-medium whitespace-nowrap ${step >= s ? "text-gray-900" : "text-gray-500"}`}
+                      >
+                        {s === 1
+                          ? "Basic Info"
+                          : s === 2
+                            ? "Design Details"
+                            : s === 3
+                              ? "Budget & Timeline"
+                              : "Find Sellers"}
+                      </span>
                     </div>
-                    <span
-                      className={`ml-2 hidden sm:inline ${step >= s ? "text-gray-900" : "text-gray-500"}`}
-                    >
-                      {s === 1
-                        ? "Basic Info"
-                        : s === 2
-                          ? "Design Details"
-                          : s === 3
-                            ? "Budget & Timeline"
-                            : "Find Sellers"}
-                    </span>
                     {s < 4 && (
                       <div
-                        className={`w-8 sm:w-12 md:w-16 h-1 mx-1 sm:mx-2 ${step > s ? "bg-gold-500" : "bg-gray-200"}`}
+                        className={`flex-1 h-1 mx-2 sm:mx-3 rounded-full ${step > s ? "bg-gold-500" : "bg-gray-200"}`}
                       />
                     )}
-                  </div>
+                  </Fragment>
                 ))}
               </div>
             </div>
 
             {/* 3-Column Layout: Left Metal Rates | Center Form | Right Calculator */}
             {step < 4 && (
-              <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr_280px] gap-4 xl:gap-6 xl:items-start">
+              <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr_340px] gap-4 xl:gap-6 xl:items-start">
                 {/* Left: Live Metal Prices */}
                 <div className="hidden xl:block xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto scrollbar-thin">
                   <div className="bg-gradient-to-br from-slate-50 to-gray-50 border border-slate-200 rounded-lg p-4 space-y-3">
