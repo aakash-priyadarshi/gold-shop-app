@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
+import { DynamicFooter } from '@/components/layout/DynamicFooter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -204,14 +204,14 @@ export default function ShopPage() {
     <div className="flex min-h-screen flex-col">
       <Header />
       
-      <main className="flex-1 bg-gray-50">
+      <main className="flex-1 bg-gray-50 dark:bg-gray-950">
         {/* Page Header */}
-        <section className="bg-gradient-to-r from-gold-50 to-amber-50 border-b">
+        <section className="bg-gradient-to-r from-gold-50 to-amber-50 dark:from-gray-900 dark:to-gray-900 border-b">
           <div className="container mx-auto px-4 py-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
               Browse Jewellery
             </h1>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-300">
               Discover exquisite pieces from verified local artisans
             </p>
           </div>
@@ -219,7 +219,7 @@ export default function ShopPage() {
 
         {/* Recommendations Section */}
         {recommendedItems.length > 0 && (
-          <section className="bg-white border-b py-6">
+          <section className="bg-white dark:bg-gray-900 border-b dark:border-gray-800 py-6">
             <div className="container mx-auto px-4">
               <div className="flex items-center gap-2 mb-4">
                 <Sparkles className="h-5 w-5 text-gold-500" />
@@ -255,7 +255,7 @@ export default function ShopPage() {
         )}
 
         {/* Filters Bar */}
-        <section className="bg-white border-b sticky top-0 z-10 shadow-sm">
+        <section className="bg-white dark:bg-gray-900 border-b dark:border-gray-800 sticky top-0 z-10 shadow-sm">
           <div className="container mx-auto px-4 py-4">
             <div className="flex flex-wrap gap-3 items-center">
               {/* Search */}
@@ -424,10 +424,10 @@ export default function ShopPage() {
             ) : filteredItems.length === 0 ? (
               <div className="text-center py-20">
                 <Gem className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                   No items found
                 </h3>
-                <p className="text-gray-600 mb-6">
+                <p className="text-gray-600 dark:text-gray-300 mb-6">
                   Try adjusting your filters or search query
                 </p>
                 <Button onClick={clearFilters}>
@@ -475,20 +475,20 @@ export default function ShopPage() {
                           {item.jewelleryType?.replace(/_/g, ' ')}
                         </Badge>
                       </div>
-                      <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1">
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-1 line-clamp-1">
                         {item.nameEn}
                       </h3>
-                      <p className="text-sm text-gray-500 mb-2">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
                         {item.shop?.shopName || 'Unknown Shop'}
                         {item.shop?.city && ` • ${item.shop.city}`}
                       </p>
                       <div className="flex items-center gap-1 mb-2">
                         <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm text-gray-600">
+                        <span className="text-sm text-gray-600 dark:text-gray-300">
                           {item.shop?.ratingAvg?.toFixed(1) || '4.8'}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
                         Weight: {item.totalWeightGrams}g
                       </p>
                     </CardContent>
@@ -513,7 +513,7 @@ export default function ShopPage() {
         </section>
       </main>
 
-      <Footer />
+      <DynamicFooter />
     </div>
   );
 }

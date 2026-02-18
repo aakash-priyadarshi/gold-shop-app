@@ -1,6 +1,6 @@
 "use client";
 
-import { Footer } from "@/components/layout/footer";
+import { DynamicFooter } from '@/components/layout/DynamicFooter';
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -246,7 +246,7 @@ export default function ProductDetailPage() {
         <main className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-gold-600" />
         </main>
-        <Footer />
+        <DynamicFooter />
       </div>
     );
   }
@@ -264,7 +264,7 @@ export default function ProductDetailPage() {
             </Link>
           </div>
         </main>
-        <Footer />
+        <DynamicFooter />
       </div>
     );
   }
@@ -275,13 +275,13 @@ export default function ProductDetailPage() {
 
       <main className="flex-1 bg-gray-50">
         {/* Breadcrumb */}
-        <div className="bg-white border-b">
+        <div className="bg-white dark:bg-gray-900 border-b">
           <div className="container mx-auto px-4 py-3">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => router.back()}
-              className="text-gray-600"
+              className="text-gray-600 dark:text-gray-300"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Shop
@@ -294,7 +294,7 @@ export default function ProductDetailPage() {
             {/* Image Gallery */}
             <div className="space-y-4">
               {/* Main Image */}
-              <div className="relative aspect-square bg-white rounded-2xl overflow-hidden shadow-lg">
+              <div className="relative aspect-square bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-lg">
                 {item.images?.[currentImageIndex] ? (
                   <img
                     src={getImageUrl(item.images[currentImageIndex])}
@@ -312,7 +312,7 @@ export default function ProductDetailPage() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-white dark:bg-gray-900/80 hover:bg-white dark:bg-gray-900"
                       onClick={() =>
                         setCurrentImageIndex((prev) =>
                           prev === 0 ? item.images.length - 1 : prev - 1,
@@ -324,7 +324,7 @@ export default function ProductDetailPage() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-white dark:bg-gray-900/80 hover:bg-white dark:bg-gray-900"
                       onClick={() =>
                         setCurrentImageIndex((prev) =>
                           prev === item.images.length - 1 ? 0 : prev + 1,
@@ -378,11 +378,11 @@ export default function ProductDetailPage() {
                     </Badge>
                   )}
                 </div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                   {item.nameEn}
                 </h1>
                 {item.nameNe && (
-                  <p className="text-lg text-gray-600">{item.nameNe}</p>
+                  <p className="text-lg text-gray-600 dark:text-gray-300">{item.nameNe}</p>
                 )}
               </div>
 
@@ -400,16 +400,16 @@ export default function ProductDetailPage() {
                     />
                   ))}
                 </div>
-                <span className="text-gray-600">4.0 (24 reviews)</span>
+                <span className="text-gray-600 dark:text-gray-300">4.0 (24 reviews)</span>
               </div>
 
               {/* Price */}
               <div className="bg-gold-50 rounded-xl p-4">
-                <p className="text-sm text-gray-600 mb-1">Price</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Price</p>
                 <p className="text-3xl font-bold text-gold-600">
                   {formatPrice(item.totalPriceNpr)}
                 </p>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   Weight: {item.totalWeightGrams}g | {getMetalInfo().metal}{" "}
                   {getMetalInfo().purity}
                 </p>
@@ -419,7 +419,7 @@ export default function ProductDetailPage() {
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                    <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
                       {item.shop.logoUrl ? (
                         <img
                           src={item.shop.logoUrl}
@@ -440,7 +440,7 @@ export default function ProductDetailPage() {
                         )}
                       </div>
                       {item.shop.city && (
-                        <p className="text-sm text-gray-500 flex items-center gap-1">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
                           <MapPin className="h-3 w-3" />
                           {item.shop.city}
                         </p>
@@ -458,7 +458,7 @@ export default function ProductDetailPage() {
               {/* Quantity & Actions */}
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <span className="text-gray-600">Quantity:</span>
+                  <span className="text-gray-600 dark:text-gray-300">Quantity:</span>
                   <div className="flex items-center gap-2">
                     <Button
                       size="icon"
@@ -480,7 +480,7 @@ export default function ProductDetailPage() {
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
                     {item.stockQuantity} available
                   </span>
                 </div>
@@ -512,15 +512,15 @@ export default function ProductDetailPage() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <Shield className="h-6 w-6 mx-auto text-green-600 mb-1" />
-                  <p className="text-xs text-gray-600">Certified Purity</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">Certified Purity</p>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <Truck className="h-6 w-6 mx-auto text-blue-600 mb-1" />
-                  <p className="text-xs text-gray-600">Secure Delivery</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">Secure Delivery</p>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <Phone className="h-6 w-6 mx-auto text-gold-600 mb-1" />
-                  <p className="text-xs text-gray-600">Support</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">Support</p>
                 </div>
               </div>
             </div>
@@ -572,36 +572,36 @@ export default function ProductDetailPage() {
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900">
+                          <p className="text-2xl font-bold text-gray-900 dark:text-white">
                             {getMetalInfo().purity || "N/A"}
                           </p>
-                          <p className="text-sm text-gray-500">Karatage</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Karatage</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900">
+                          <p className="text-2xl font-bold text-gray-900 dark:text-white">
                             {getMetalColor()}
                           </p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
                             Material Colour
                           </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900">
+                          <p className="text-2xl font-bold text-gray-900 dark:text-white">
                             {item.totalWeightGrams}g
                           </p>
-                          <p className="text-sm text-gray-500">Gross Weight</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Gross Weight</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900">
+                          <p className="text-2xl font-bold text-gray-900 dark:text-white">
                             {getMetalInfo().metal || "Gold"}
                           </p>
-                          <p className="text-sm text-gray-500">Metal</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Metal</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900">
+                          <p className="text-2xl font-bold text-gray-900 dark:text-white">
                             {item.size || "Standard"}
                           </p>
-                          <p className="text-sm text-gray-500">Size</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Size</p>
                         </div>
                       </div>
                     </CardContent>
@@ -630,60 +630,60 @@ export default function ProductDetailPage() {
                           >
                             {gem.clarity && (
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-gray-900">
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
                                   {gem.clarity}
                                 </p>
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
                                   {gem.type} Clarity
                                 </p>
                               </div>
                             )}
                             {gem.color && (
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-gray-900">
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
                                   {gem.color}
                                 </p>
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
                                   {gem.type} Color
                                 </p>
                               </div>
                             )}
                             {gem.count && (
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-gray-900">
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
                                   {String(gem.count).padStart(2, "0")}
                                 </p>
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
                                   No Of {gem.type}s
                                 </p>
                               </div>
                             )}
                             {gem.setting && (
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-gray-900">
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
                                   {gem.setting}
                                 </p>
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
                                   {gem.type} Setting
                                 </p>
                               </div>
                             )}
                             {gem.cut && (
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-gray-900">
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
                                   {gem.cut}
                                 </p>
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
                                   {gem.type} Shape
                                 </p>
                               </div>
                             )}
                             {gem.caratWeight && (
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-gray-900">
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
                                   {gem.caratWeight} ct
                                 </p>
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
                                   Carat Weight
                                 </p>
                               </div>
@@ -709,38 +709,38 @@ export default function ProductDetailPage() {
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900 capitalize">
+                          <p className="text-2xl font-bold text-gray-900 dark:text-white capitalize">
                             {item.jewelleryType
                               ?.replace(/_/g, " ")
                               .toLowerCase() || "Jewellery"}
                           </p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
                             Jewellery Type
                           </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900">
+                          <p className="text-2xl font-bold text-gray-900 dark:text-white">
                             {item.shop.shopName}
                           </p>
-                          <p className="text-sm text-gray-500">Brand</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Brand</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900">
+                          <p className="text-2xl font-bold text-gray-900 dark:text-white">
                             {item.collection || "Classic"}
                           </p>
-                          <p className="text-sm text-gray-500">Collection</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Collection</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900 capitalize">
+                          <p className="text-2xl font-bold text-gray-900 dark:text-white capitalize">
                             {item.gender || "Unisex"}
                           </p>
-                          <p className="text-sm text-gray-500">Gender</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Gender</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900 capitalize">
+                          <p className="text-2xl font-bold text-gray-900 dark:text-white capitalize">
                             {item.occasion || "All Occasions"}
                           </p>
-                          <p className="text-sm text-gray-500">Occasion</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Occasion</p>
                         </div>
                       </div>
                     </CardContent>
@@ -766,7 +766,7 @@ export default function ProductDetailPage() {
                             <p className="font-semibold text-lg">
                               {getBuildMethodInfo(item.buildMethod).label}
                             </p>
-                            <p className="text-gray-600 mt-1">
+                            <p className="text-gray-600 dark:text-gray-300 mt-1">
                               {getBuildMethodInfo(item.buildMethod).description}
                             </p>
                           </div>
@@ -784,19 +784,19 @@ export default function ProductDetailPage() {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b bg-gray-50">
-                          <th className="text-left p-4 text-sm font-medium text-gray-500">
+                          <th className="text-left p-4 text-sm font-medium text-gray-500 dark:text-gray-400">
                             PRODUCT DETAILS
                           </th>
-                          <th className="text-center p-4 text-sm font-medium text-gray-500">
+                          <th className="text-center p-4 text-sm font-medium text-gray-500 dark:text-gray-400">
                             RATE
                           </th>
-                          <th className="text-center p-4 text-sm font-medium text-gray-500">
+                          <th className="text-center p-4 text-sm font-medium text-gray-500 dark:text-gray-400">
                             WEIGHT
                           </th>
-                          <th className="text-center p-4 text-sm font-medium text-gray-500">
+                          <th className="text-center p-4 text-sm font-medium text-gray-500 dark:text-gray-400">
                             DISCOUNT
                           </th>
-                          <th className="text-right p-4 text-sm font-medium text-gray-500">
+                          <th className="text-right p-4 text-sm font-medium text-gray-500 dark:text-gray-400">
                             VALUE
                           </th>
                         </tr>
@@ -811,7 +811,7 @@ export default function ProductDetailPage() {
                                 <p className="font-medium">
                                   {getMetalColor()} {getMetalInfo().metal}
                                 </p>
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
                                   {getMetalInfo().purity}
                                 </p>
                               </div>
@@ -880,7 +880,7 @@ export default function ProductDetailPage() {
                           <td className="text-center p-4">-</td>
                           <td className="text-center p-4 font-medium">
                             {item.totalWeightGrams}g<br />
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-gray-500 dark:text-gray-400">
                               Gross Wt.
                             </span>
                           </td>
@@ -988,18 +988,18 @@ export default function ProductDetailPage() {
                 <Card>
                   <CardContent className="p-6">
                     <div className="flex items-center gap-2 mb-4">
-                      <Info className="h-5 w-5 text-gray-500" />
+                      <Info className="h-5 w-5 text-gray-500 dark:text-gray-400" />
                       <h3 className="text-lg font-semibold">
                         Product Description
                       </h3>
                     </div>
                     <div className="prose max-w-none">
-                      <p className="text-gray-600 leading-relaxed">
+                      <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
                         {item.descriptionEn ||
                           `This beautiful ${item.jewelleryType?.replace(/_/g, " ").toLowerCase() || "piece"} is crafted with ${getMetalInfo().purity || ""} ${getMetalInfo().metal || "precious metal"}, weighing ${item.totalWeightGrams}g. ${getBuildMethodInfo(item.buildMethod).description}`}
                       </p>
                       {item.descriptionNe && (
-                        <p className="text-gray-600 leading-relaxed mt-4 border-t pt-4">
+                        <p className="text-gray-600 dark:text-gray-300 leading-relaxed mt-4 border-t pt-4">
                           {item.descriptionNe}
                         </p>
                       )}
@@ -1011,22 +1011,22 @@ export default function ProductDetailPage() {
                         Why Choose This Product?
                       </h4>
                       <ul className="space-y-2">
-                        <li className="flex items-center gap-2 text-gray-600">
+                        <li className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                           <Shield className="h-4 w-4 text-green-600" />
                           <span>BIS Hallmarked for assured purity</span>
                         </li>
-                        <li className="flex items-center gap-2 text-gray-600">
+                        <li className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                           <Sparkles className="h-4 w-4 text-gold-600" />
                           <span>
                             {getBuildMethodInfo(item.buildMethod).label}{" "}
                             craftsmanship
                           </span>
                         </li>
-                        <li className="flex items-center gap-2 text-gray-600">
+                        <li className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                           <Truck className="h-4 w-4 text-blue-600" />
                           <span>Insured delivery to your doorstep</span>
                         </li>
-                        <li className="flex items-center gap-2 text-gray-600">
+                        <li className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                           <Phone className="h-4 w-4 text-purple-600" />
                           <span>Lifetime maintenance support</span>
                         </li>
@@ -1037,10 +1037,10 @@ export default function ProductDetailPage() {
               </TabsContent>
 
               <TabsContent value="reviews" className="mt-6">
-                <div className="bg-white rounded-xl p-6 text-center">
+                <div className="bg-white dark:bg-gray-900 rounded-xl p-6 text-center">
                   <Star className="h-12 w-12 mx-auto text-gray-300 mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No reviews yet</h3>
-                  <p className="text-gray-500">
+                  <p className="text-gray-500 dark:text-gray-400">
                     Be the first to review this product
                   </p>
                 </div>
@@ -1050,7 +1050,7 @@ export default function ProductDetailPage() {
         </div>
       </main>
 
-      <Footer />
+      <DynamicFooter />
     </div>
   );
 }

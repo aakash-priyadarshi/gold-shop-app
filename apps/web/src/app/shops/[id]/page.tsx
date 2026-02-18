@@ -1,6 +1,6 @@
 "use client";
 
-import { Footer } from "@/components/layout/footer";
+import { DynamicFooter } from '@/components/layout/DynamicFooter';
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -141,7 +141,7 @@ const JEWELLERY_TYPES = [
 ];
 
 const TIER_COLORS: Record<string, string> = {
-  STANDARD: "bg-gray-100 text-gray-700",
+  STANDARD: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200",
   SILVER: "bg-slate-100 text-slate-700",
   GOLD: "bg-amber-100 text-amber-700",
   ELITE: "bg-purple-100 text-purple-700",
@@ -442,7 +442,7 @@ export default function ShopDetailPage() {
             <span>Loading shop details...</span>
           </div>
         </main>
-        <Footer />
+        <DynamicFooter />
       </div>
     );
   }
@@ -467,7 +467,7 @@ export default function ShopDetailPage() {
             </CardContent>
           </Card>
         </main>
-        <Footer />
+        <DynamicFooter />
       </div>
     );
   }
@@ -475,7 +475,7 @@ export default function ShopDetailPage() {
   const currency = getCurrency();
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950">
       <Header />
 
       <main className="flex-1">
@@ -528,7 +528,7 @@ export default function ShopDetailPage() {
 
             <div className="flex flex-col md:flex-row md:items-end gap-6">
               {/* Profile Image */}
-              <div className="h-28 w-28 rounded-xl border-4 border-white bg-white shadow-lg flex items-center justify-center overflow-hidden">
+              <div className="h-28 w-28 rounded-xl border-4 border-white bg-white dark:bg-gray-900 shadow-lg flex items-center justify-center overflow-hidden">
                 {shop.profileImage ? (
                   <img
                     src={shop.profileImage}
@@ -553,7 +553,7 @@ export default function ShopDetailPage() {
                   )}
                   {shop.sellerTier && shop.sellerTier !== "STANDARD" && (
                     <Badge
-                      className={TIER_COLORS[shop.sellerTier] || "bg-gray-100"}
+                      className={TIER_COLORS[shop.sellerTier] || "bg-gray-100 dark:bg-gray-800"}
                     >
                       {shop.sellerTier === "ELITE"
                         ? "👑"
@@ -754,7 +754,7 @@ export default function ShopDetailPage() {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                    className="bg-white dark:bg-gray-900/10 border-white/30 text-white hover:bg-white dark:bg-gray-900/20"
                     onClick={handleMessageShop}
                     disabled={startingChat}
                   >
@@ -772,7 +772,7 @@ export default function ShopDetailPage() {
                     <Button
                       size="lg"
                       variant="outline"
-                      className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                      className="bg-white dark:bg-gray-900/10 border-white/30 text-white hover:bg-white dark:bg-gray-900/20"
                     >
                       <PhoneIcon className="h-5 w-5 mr-2" />
                       Call Now
@@ -819,7 +819,7 @@ export default function ShopDetailPage() {
                           key={product.id}
                           className="overflow-hidden hover:shadow-lg transition-shadow"
                         >
-                          <div className="aspect-square bg-gray-100 relative">
+                          <div className="aspect-square bg-gray-100 dark:bg-gray-800 relative">
                             {product.images?.[0] ? (
                               <img
                                 src={product.images[0]}
@@ -831,7 +831,7 @@ export default function ShopDetailPage() {
                                 <Package className="h-12 w-12 text-gray-300" />
                               </div>
                             )}
-                            <Badge className="absolute top-2 right-2 bg-white/90 text-gray-900">
+                            <Badge className="absolute top-2 right-2 bg-white dark:bg-gray-900/90 text-gray-900 dark:text-white">
                               {product.jewelleryType?.replace(/_/g, " ")}
                             </Badge>
                           </div>
@@ -1246,7 +1246,7 @@ export default function ShopDetailPage() {
         </div>
       </main>
 
-      <Footer />
+      <DynamicFooter />
     </div>
   );
 }

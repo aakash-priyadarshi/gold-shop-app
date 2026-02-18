@@ -433,6 +433,28 @@ export const platformConfigApi = {
   update: (data: Record<string, number>) => api.patch("/platform-config", data),
 };
 
+// Market Config Admin API
+export const marketConfigApi = {
+  list: () => api.get("/market/admin/list"),
+  update: (countryCode: string, data: Record<string, any>) =>
+    api.patch(`/market/admin/${countryCode}`, data),
+  seed: () => api.get("/market/admin/seed"),
+};
+
+// Static Pages CMS API
+export const pagesApi = {
+  // Public
+  getBySlug: (slug: string) => api.get(`/pages/${slug}`),
+  // Admin
+  list: () => api.get("/pages/admin/list"),
+  create: (data: { slug: string; title: string; content: string; metaDescription?: string; isPublished?: boolean }) =>
+    api.post("/pages/admin", data),
+  update: (id: string, data: Record<string, any>) =>
+    api.patch(`/pages/admin/${id}`, data),
+  delete: (id: string) => api.delete(`/pages/admin/${id}`),
+  seed: () => api.get("/pages/admin/seed"),
+};
+
 // Seller Performance API
 export const sellerPerformanceApi = {
   getMyDashboard: (targetTier?: string) =>

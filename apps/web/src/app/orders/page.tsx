@@ -1,6 +1,6 @@
 "use client";
 
-import { Footer } from "@/components/layout/footer";
+import { DynamicFooter } from '@/components/layout/DynamicFooter';
 import { Header } from "@/components/layout/header";
 import {
   MiniOrderStepper,
@@ -199,7 +199,7 @@ function MyOrdersPageContent() {
         <main className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
         </main>
-        <Footer />
+        <DynamicFooter />
       </div>
     );
   }
@@ -297,7 +297,7 @@ function MyOrdersPageContent() {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                 No orders found
               </h3>
-              <p className="text-gray-500 mb-4">
+              <p className="text-gray-500 dark:text-gray-400 mb-4">
                 {searchQuery || statusFilter !== "all" || typeFilter !== "all"
                   ? "Try adjusting your filters"
                   : "You haven't placed any orders yet"}
@@ -346,7 +346,7 @@ function MyOrdersPageContent() {
                             <div className="flex-1">
                               {/* Order number and type */}
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-mono text-sm text-gray-500">
+                                <span className="font-mono text-sm text-gray-500 dark:text-gray-400">
                                   #{order.orderNumber}
                                 </span>
                                 <Badge variant="secondary" className="text-xs">
@@ -362,13 +362,13 @@ function MyOrdersPageContent() {
                               </h3>
 
                               {/* Shop */}
-                              <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
+                              <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mt-1">
                                 <Store className="h-4 w-4" />
                                 {order.shop.shopName}
                               </div>
 
                               {/* Date and price */}
-                              <div className="flex items-center gap-4 text-sm text-gray-500 mt-2">
+                              <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mt-2">
                                 <span className="flex items-center gap-1">
                                   <CalendarIcon className="h-4 w-4" />
                                   {formatDate(order.createdAt)}
@@ -405,7 +405,7 @@ function MyOrdersPageContent() {
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between mt-6">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               Showing {orders.length} of {totalOrders} orders
             </p>
             <div className="flex gap-2">
@@ -455,7 +455,7 @@ function MyOrdersPageContent() {
         )}
       </main>
 
-      <Footer />
+      <DynamicFooter />
     </div>
   );
 }

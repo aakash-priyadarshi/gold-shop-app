@@ -1,5 +1,7 @@
 "use client";
 
+import { Header } from '@/components/layout/header';
+import { DynamicFooter } from '@/components/layout/DynamicFooter';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -318,14 +320,15 @@ export default function ShopsPage() {
           />,
         );
       } else {
-        stars.push(<StarIcon key={i} className="h-4 w-4 text-gray-300" />);
+        stars.push(<StarIcon key={i} className="h-4 w-4 text-gray-300 dark:text-gray-600" />);
       }
     }
     return stars;
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <Header />
       {/* Hero Section */}
       <div className="bg-gradient-to-br from-amber-600 to-amber-800 text-white py-16">
         <div className="container mx-auto px-4 text-center">
@@ -343,7 +346,7 @@ export default function ShopsPage() {
               <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
                 placeholder="Search by shop name, city, or description..."
-                className="pl-12 pr-4 h-14 text-lg rounded-xl bg-white text-gray-900 border-0 shadow-lg"
+                className="pl-12 pr-4 h-14 text-lg rounded-xl bg-white text-gray-900 dark:text-white border-0 shadow-lg"
                 value={filters.search}
                 onChange={(e) =>
                   setFilters((prev) => ({ ...prev, search: e.target.value }))
@@ -379,16 +382,16 @@ export default function ShopsPage() {
                 variant="ghost"
                 size="sm"
                 onClick={clearFilters}
-                className="text-gray-500"
+                className="text-gray-500 dark:text-gray-400"
               >
                 <XMarkIcon className="h-4 w-4 mr-1" />
                 Clear all
               </Button>
             )}
           </div>
-          <p className="text-gray-500">
+          <p className="text-gray-500 dark:text-gray-400">
             Showing{" "}
-            <span className="font-semibold text-gray-900">
+            <span className="font-semibold text-gray-900 dark:text-white">
               {filteredShops.length}
             </span>{" "}
             verified sellers
@@ -402,7 +405,7 @@ export default function ShopsPage() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {/* Country Filter */}
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5 block">
                     Country
                   </label>
                   <Select
@@ -434,7 +437,7 @@ export default function ShopsPage() {
 
                 {/* State Filter */}
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5 block">
                     State/Province
                   </label>
                   <Select
@@ -460,7 +463,7 @@ export default function ShopsPage() {
 
                 {/* City Filter */}
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5 block">
                     City
                   </label>
                   <Input
@@ -474,7 +477,7 @@ export default function ShopsPage() {
 
                 {/* Verified Filter */}
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5 block">
                     Verification
                   </label>
                   <Select
@@ -513,11 +516,11 @@ export default function ShopsPage() {
         ) : filteredShops.length === 0 ? (
           <Card>
             <CardContent className="py-16 text-center">
-              <BuildingStorefrontIcon className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              <BuildingStorefrontIcon className="h-16 w-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                 No sellers found
               </h3>
-              <p className="text-gray-500 mb-4">
+              <p className="text-gray-500 dark:text-gray-400 mb-4">
                 Try adjusting your filters or search terms
               </p>
               {hasActiveFilters && (
@@ -562,7 +565,7 @@ export default function ShopsPage() {
                 </CardHeader>
                 <CardContent className="pt-0 space-y-3">
                   {shop.description && (
-                    <p className="text-sm text-gray-600 line-clamp-2">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 dark:text-gray-600 line-clamp-2">
                       {shop.description}
                     </p>
                   )}
@@ -573,17 +576,17 @@ export default function ShopsPage() {
                       <div className="flex items-center">
                         {renderStars(shop.averageRating)}
                       </div>
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
                         {shop.averageRating.toFixed(1)}
                       </span>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
                         ({shop.totalRatings} reviews)
                       </span>
                     </div>
                   )}
 
                   {/* Location Details */}
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
                     {shop.state && <span>{shop.state}, </span>}
                     {shop.address}
                   </div>
@@ -635,7 +638,7 @@ export default function ShopsPage() {
         {/* Location Summary */}
         {!isLoading && filteredShops.length > 0 && (
           <div className="mt-12">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
               Sellers by Location
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -655,7 +658,7 @@ export default function ShopsPage() {
                           key={state}
                           className="flex items-center justify-between text-sm"
                         >
-                          <span className="text-gray-600">{state}</span>
+                          <span className="text-gray-600 dark:text-gray-300 dark:text-gray-600">{state}</span>
                           <Badge variant="secondary">
                             {stateShops.length} sellers
                           </Badge>
@@ -669,6 +672,4 @@ export default function ShopsPage() {
           </div>
         )}
       </div>
-    </div>
-  );
-}
+      <DynamicFooter />

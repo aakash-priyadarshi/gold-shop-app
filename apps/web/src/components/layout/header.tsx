@@ -385,7 +385,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-xl border-b border-gray-100 safe-area-top">
+    <header className="sticky top-0 z-50 w-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 safe-area-top">
       <nav className="container mx-auto flex h-14 lg:h-16 items-center justify-between px-4">
         {/* Mobile Menu Button */}
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -396,7 +396,7 @@ export function Header() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-[300px] p-0">
-            <SheetHeader className="p-4 border-b border-gray-100">
+            <SheetHeader className="p-4 border-b border-gray-100 dark:border-gray-800">
               <SheetTitle className="flex items-center gap-2">
                 <BrandLogo variant="icon" size="sm" />
                 <span className="font-bold text-lg">{BRAND.name}</span>
@@ -409,10 +409,10 @@ export function Header() {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-700 hover:bg-gray-100 transition-colors touch-target"
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors touch-target"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <item.icon className="h-5 w-5 text-gray-400" />
+                    <item.icon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                     {item.name}
                   </Link>
                 ))}
@@ -420,8 +420,8 @@ export function Header() {
 
               {/* Mobile Preferences */}
               {mounted && (
-                <div className="p-4 border-t border-gray-100 space-y-3">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-1">
+                <div className="p-4 border-t border-gray-100 dark:border-gray-800 space-y-3">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-1">
                     Preferences
                   </p>
                   <div className="grid grid-cols-2 gap-2">
@@ -508,7 +508,7 @@ export function Header() {
               )}
 
               {/* Mobile Auth Actions */}
-              <div className="p-4 border-t border-gray-100 space-y-2">
+              <div className="p-4 border-t border-gray-100 dark:border-gray-800 space-y-2">
                 {mounted && isAuthenticated && user ? (
                   <>
                     {/* Role-specific quick actions for mobile */}
@@ -529,7 +529,7 @@ export function Header() {
                     ))}
                     <Button
                       variant="ghost"
-                      className="w-full h-12 justify-start rounded-xl text-base text-red-600 hover:bg-red-50"
+                      className="w-full h-12 justify-start rounded-xl text-base text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950"
                       onClick={() => logout()}
                     >
                       <ArrowRightOnRectangleIcon className="mr-3 h-5 w-5" />
@@ -581,7 +581,7 @@ export function Header() {
             <Link
               key={item.name}
               href={item.href}
-              className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
             >
               {item.name}
             </Link>
@@ -597,7 +597,7 @@ export function Header() {
                 value={language}
                 onValueChange={(v) => setLanguage(v as Language)}
               >
-                <SelectTrigger className="w-[100px] h-9 text-xs rounded-lg border-gray-200">
+                <SelectTrigger className="w-[100px] h-9 text-xs rounded-lg border-gray-200 dark:border-gray-700">
                   <GlobeAltIcon className="h-3 w-3 mr-1 text-gray-400" />
                   <SelectValue />
                 </SelectTrigger>
@@ -615,7 +615,7 @@ export function Header() {
                 value={currency}
                 onValueChange={(v) => setCurrency(v as CurrencyCode)}
               >
-                <SelectTrigger className="w-[90px] h-9 text-xs rounded-lg border-gray-200">
+                <SelectTrigger className="w-[90px] h-9 text-xs rounded-lg border-gray-200 dark:border-gray-700">
                   <CurrencyDollarIcon className="h-3 w-3 mr-1 text-gray-400" />
                   <SelectValue />
                 </SelectTrigger>
@@ -637,7 +637,7 @@ export function Header() {
                 value={country}
                 onValueChange={(v) => setCountry(v as CountryCode)}
               >
-                <SelectTrigger className="w-[90px] h-9 text-xs rounded-lg border-gray-200">
+                <SelectTrigger className="w-[90px] h-9 text-xs rounded-lg border-gray-200 dark:border-gray-700">
                   <MapPinIcon className="h-3 w-3 mr-1 text-gray-400" />
                   <SelectValue>
                     <span className="flex items-center gap-1">
@@ -684,7 +684,7 @@ export function Header() {
         {/* Desktop Auth/User Menu */}
         <div className="hidden lg:flex items-center gap-2">
           {!mounted || authLoading ? (
-            <div className="w-9 h-9 bg-gray-100 rounded-lg animate-pulse" />
+            <div className="w-9 h-9 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
           ) : isAuthenticated && user ? (
             <TooltipProvider delayDuration={200}>
               {/* Dashboard Popover */}
@@ -715,8 +715,8 @@ export function Header() {
                         href="/dashboard/customer"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <Squares2X2Icon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <Squares2X2Icon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">Dashboard</span>
                         </div>
                       </Link>
@@ -724,8 +724,8 @@ export function Header() {
                         href="/dashboard/customer/orders"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <ShoppingCartIcon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <ShoppingCartIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">My Orders</span>
                         </div>
                       </Link>
@@ -733,8 +733,8 @@ export function Header() {
                         href="/dashboard/customer/rfqs"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <ClipboardDocumentListIcon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <ClipboardDocumentListIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">My RFQs</span>
                         </div>
                       </Link>
@@ -742,8 +742,8 @@ export function Header() {
                         href="/dashboard/customer/wishlist"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <HeartIcon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <HeartIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">Wishlist</span>
                         </div>
                       </Link>
@@ -751,18 +751,18 @@ export function Header() {
                         href="/dashboard/customer/payments"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <CreditCardIcon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <CreditCardIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">Payments</span>
                         </div>
                       </Link>
-                      <div className="border-t my-1" />
+                      <div className="border-t dark:border-gray-800 my-1" />
                       <Link
                         href="/dashboard/customer/settings"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <Cog6ToothIcon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <Cog6ToothIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">Settings</span>
                         </div>
                       </Link>
@@ -796,8 +796,8 @@ export function Header() {
                         href="/dashboard/shop"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <Squares2X2Icon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <Squares2X2Icon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">Dashboard</span>
                         </div>
                       </Link>
@@ -805,8 +805,8 @@ export function Header() {
                         href="/dashboard/shop/orders"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <ShoppingCartIcon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <ShoppingCartIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">Orders</span>
                         </div>
                       </Link>
@@ -814,8 +814,8 @@ export function Header() {
                         href="/dashboard/shop/products"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <CubeIcon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <CubeIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">Products</span>
                         </div>
                       </Link>
@@ -823,8 +823,8 @@ export function Header() {
                         href="/dashboard/shop/rfqs"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <ClipboardDocumentListIcon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <ClipboardDocumentListIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">RFQ Requests</span>
                         </div>
                       </Link>
@@ -832,8 +832,8 @@ export function Header() {
                         href="/dashboard/shop/customers"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <UserIcon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <UserIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">Customers</span>
                         </div>
                       </Link>
@@ -841,18 +841,18 @@ export function Header() {
                         href="/dashboard/shop/analytics"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <SparklesIcon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <SparklesIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">Analytics</span>
                         </div>
                       </Link>
-                      <div className="border-t my-1" />
+                      <div className="border-t dark:border-gray-800 my-1" />
                       <Link
                         href="/dashboard/shop/settings"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <Cog6ToothIcon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <Cog6ToothIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">Settings</span>
                         </div>
                       </Link>
@@ -886,8 +886,8 @@ export function Header() {
                         href="/dashboard/admin"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <ShieldCheckIcon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <ShieldCheckIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">Admin Panel</span>
                         </div>
                       </Link>
@@ -895,8 +895,8 @@ export function Header() {
                         href="/dashboard/admin/orders"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <ClipboardDocumentListIcon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <ClipboardDocumentListIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">All Orders</span>
                         </div>
                       </Link>
@@ -904,8 +904,8 @@ export function Header() {
                         href="/dashboard/admin/shops"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <BuildingStorefrontIcon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <BuildingStorefrontIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">Shops & CRM</span>
                         </div>
                       </Link>
@@ -913,8 +913,8 @@ export function Header() {
                         href="/dashboard/admin/users"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <UserIcon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <UserIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">Users</span>
                         </div>
                       </Link>
@@ -922,18 +922,18 @@ export function Header() {
                         href="/dashboard/admin/verifications"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <DocumentTextIcon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <DocumentTextIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">KYC & Verification</span>
                         </div>
                       </Link>
-                      <div className="border-t my-1" />
+                      <div className="border-t dark:border-gray-800 my-1" />
                       <Link
                         href="/dashboard/admin/settings"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <Cog6ToothIcon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <Cog6ToothIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">Settings</span>
                         </div>
                       </Link>
@@ -967,8 +967,8 @@ export function Header() {
                         href="/dashboard/sales"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <Squares2X2Icon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <Squares2X2Icon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">Dashboard</span>
                         </div>
                       </Link>
@@ -976,8 +976,8 @@ export function Header() {
                         href="/dashboard/sales/shops"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <BuildingStorefrontIcon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <BuildingStorefrontIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">Shops & CRM</span>
                         </div>
                       </Link>
@@ -985,18 +985,18 @@ export function Header() {
                         href="/dashboard/sales/orders"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <ClipboardDocumentListIcon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <ClipboardDocumentListIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">Orders</span>
                         </div>
                       </Link>
-                      <div className="border-t my-1" />
+                      <div className="border-t dark:border-gray-800 my-1" />
                       <Link
                         href="/dashboard/sales/profile"
                         onClick={() => setDashboardPopoverOpen(false)}
                       >
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                          <UserIcon className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <UserIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm">Profile</span>
                         </div>
                       </Link>
@@ -1078,7 +1078,7 @@ export function Header() {
                               href={`/dashboard/customer/orders/${order.id}`}
                               onClick={() => setOrdersPopoverOpen(false)}
                             >
-                              <div className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors">
+                              <div className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center justify-between">
                                     <p className="text-sm font-medium truncate">
@@ -1242,7 +1242,7 @@ export function Header() {
                               href={`${getMessagesPath()}?conversation=${conv.id}`}
                               onClick={() => setMessagesPopoverOpen(false)}
                             >
-                              <div className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors">
+                              <div className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                                 <div className="h-9 w-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
                                   <ChatBubbleLeftRightIcon className="h-4 w-4 text-amber-600" />
                                 </div>
@@ -1347,9 +1347,9 @@ export function Header() {
                         {items.slice(0, 5).map((item) => (
                           <div
                             key={item.id}
-                            className="flex items-center gap-3 p-3 hover:bg-gray-50"
+                            className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800"
                           >
-                            <div className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                            <div className="w-14 h-14 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center overflow-hidden">
                               {item.product.image ? (
                                 <img
                                   src={item.product.image}
@@ -1469,8 +1469,8 @@ export function Header() {
                           return (
                             <div
                               key={notif.id}
-                              className={`p-3 hover:bg-gray-50 cursor-pointer ${
-                                !notif.isRead ? "bg-blue-50/50" : ""
+                              className={`p-3 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer ${
+                                !notif.isRead ? "bg-blue-50/50 dark:bg-blue-900/20" : ""
                               }`}
                             >
                               <div className="flex items-start gap-2">

@@ -2159,6 +2159,25 @@ model TicketMessage {
   @@index([ticketId, createdAt])
 }
 
+// ============================================
+// Static Pages - CMS for footer/info pages
+// ============================================
+
+model StaticPage {
+  id              String    @id @default(uuid())
+  slug            String    @unique // e.g. "privacy", "terms", "refund"
+  title           String
+  content         String    @db.Text // Rich HTML content
+  metaDescription String?
+  isPublished     Boolean   @default(false)
+  sortOrder       Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([slug])
+  @@index([isPublished])
+}
+
 enum TicketType {
   ACCOUNT_SUSPENSION  // suspended account appeal
   LOGIN_ISSUE         // can't login
