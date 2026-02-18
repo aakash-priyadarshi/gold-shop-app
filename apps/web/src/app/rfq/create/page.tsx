@@ -3017,7 +3017,6 @@ export default function CreateRfqPage() {
             </div>
 
             {/* 3-Column Layout: Left Metal Rates | Center Form | Right Calculator */}
-            {step < 4 && (
               <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr_340px] gap-4 xl:gap-6 xl:items-start">
                 {/* Left: Live Metal Prices */}
                 <div className="hidden xl:block xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto scrollbar-thin">
@@ -5502,37 +5501,9 @@ export default function CreateRfqPage() {
                     </Card>
                   )}
 
-                  {/* Mobile-only LivePricingPanel (hidden on xl where sidebars show) */}
-                  <div className="xl:hidden mt-6">
-                    <LivePricingPanel
-                      buildMethod={formData.buildMethod as BuildMethod}
-                      formData={buildLivePricingFormData()}
-                      marketRates={marketRates}
-                      marketRatesLoading={marketRatesLoading}
-                      marketRatesWarning={marketRatesWarning}
-                      currencySymbol={currencyInfo.symbol}
-                    />
-                  </div>
-                </div>
-                {/* end Center column */}
-
-                {/* Right: Live Calculator */}
-                <div className="hidden xl:block xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto scrollbar-thin">
-                  <LivePricingPanel
-                    buildMethod={formData.buildMethod as BuildMethod}
-                    formData={buildLivePricingFormData()}
-                    marketRates={marketRates}
-                    marketRatesLoading={marketRatesLoading}
-                    marketRatesWarning={marketRatesWarning}
-                    currencySymbol={currencyInfo.symbol}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Step 4: Seller Matching (Post-Submission) */}
-            {step === 4 && submittedRfqId && (
-              <div className="space-y-6 max-w-3xl mx-auto">
+                  {/* Step 4: Seller Matching (Post-Submission) */}
+                  {step === 4 && submittedRfqId && (
+                    <div className="space-y-6">
                 {/* Congratulations Card */}
                 <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
                   <CardContent className="pt-6">
@@ -6562,8 +6533,35 @@ export default function CreateRfqPage() {
                     </div>
                   </CardContent>
                 </Card>
+                    </div>
+                  )}
+
+                  {/* Mobile-only LivePricingPanel (hidden on xl where sidebars show) */}
+                  <div className="xl:hidden mt-6">
+                    <LivePricingPanel
+                      buildMethod={formData.buildMethod as BuildMethod}
+                      formData={buildLivePricingFormData()}
+                      marketRates={marketRates}
+                      marketRatesLoading={marketRatesLoading}
+                      marketRatesWarning={marketRatesWarning}
+                      currencySymbol={currencyInfo.symbol}
+                    />
+                  </div>
+                </div>
+                {/* end Center column */}
+
+                {/* Right: Live Calculator */}
+                <div className="hidden xl:block xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto scrollbar-thin">
+                  <LivePricingPanel
+                    buildMethod={formData.buildMethod as BuildMethod}
+                    formData={buildLivePricingFormData()}
+                    marketRates={marketRates}
+                    marketRatesLoading={marketRatesLoading}
+                    marketRatesWarning={marketRatesWarning}
+                    currencySymbol={currencyInfo.symbol}
+                  />
+                </div>
               </div>
-            )}
           </div>
         </main>
 
