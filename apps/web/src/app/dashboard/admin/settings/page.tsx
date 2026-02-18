@@ -1,6 +1,8 @@
 "use client";
 
 import { AdminTaxRulesPanel } from "@/components/admin/AdminTaxRulesPanel";
+import { MarketConfigTab } from "@/components/admin/MarketConfigTab";
+import { PagesManagerTab } from "@/components/admin/PagesManagerTab";
 import { AdminGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +36,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { adminApi, platformConfigApi } from "@/lib/api";
+import { adminApi, platformConfigApi, marketConfigApi } from "@/lib/api";
 import {
   AlertTriangle,
   Award,
@@ -43,6 +45,7 @@ import {
   CheckCircle2,
   Database,
   DollarSign,
+  FileText,
   Globe,
   KeyRound,
   Loader2,
@@ -133,6 +136,8 @@ export default function AdminSettingsPage() {
     { id: "operations", label: "Operations", icon: RefreshCw },
     { id: "email", label: "Email & AI", icon: Mail },
     { id: "tax", label: "Tax Rules", icon: Percent },
+    { id: "market", label: "Market Config", icon: Globe },
+    { id: "pages", label: "CMS Pages", icon: FileText },
   ];
 
   // Fetch platform config on mount
@@ -2185,6 +2190,14 @@ export default function AdminSettingsPage() {
                     </CardContent>
                   </Card>
                 </div>
+              )}
+
+              {activeTab === "market" && (
+                <MarketConfigTab />
+              )}
+
+              {activeTab === "pages" && (
+                <PagesManagerTab />
               )}
             </div>
           </div>

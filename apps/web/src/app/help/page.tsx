@@ -1,5 +1,6 @@
 "use client";
 
+import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -378,6 +379,7 @@ export default function HelpPage() {
           />
         </DialogContent>
       </Dialog>
+      <DynamicFooter />
     </div>
   );
 }

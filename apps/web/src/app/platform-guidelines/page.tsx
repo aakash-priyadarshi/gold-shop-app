@@ -1,6 +1,7 @@
 "use client";
 
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { BRAND } from "@/config/brand";
 import {
   AlertTriangle,
@@ -17,9 +18,9 @@ import Link from "next/link";
 
 export default function PlatformGuidelinesPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gold-50/20">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gold-50/20 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100">
+      <header className="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 dark:border-gray-800">
         <div className="max-w-4xl mx-auto flex items-center justify-between px-4 py-3">
           <Link href="/" className="flex items-center gap-2">
             <BrandLogo variant="icon" size="sm" />
@@ -27,7 +28,7 @@ export default function PlatformGuidelinesPage() {
           </Link>
           <Link
             href="/"
-            className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 transition"
+            className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white transition"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Home
@@ -41,14 +42,14 @@ export default function PlatformGuidelinesPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 text-white mb-4">
             <BookOpen className="h-8 w-8" />
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">
             Platform Guidelines
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
             Rules and policies to ensure a safe, fair, and trusted marketplace
             for all users.
           </p>
-          <p className="text-base text-gray-500 mt-2">
+          <p className="text-base text-gray-500 dark:text-gray-400 mt-2">
             प्लेटफ़ॉर्म गाइडलाइन्स — सभी यूज़र्स के लिए एक सुरक्षित और भरोसेमंद
             बाज़ार सुनिश्चित करने के नियम
           </p>
@@ -56,7 +57,7 @@ export default function PlatformGuidelinesPage() {
 
         {/* ── Section: Contact Sharing Policy ── */}
         <section className="mb-10">
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 md:p-8">
+          <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-2xl p-6 md:p-8">
             <div className="flex items-center gap-3 mb-4">
               <AlertTriangle className="h-6 w-6 text-red-600" />
               <h2 className="text-xl font-bold text-red-900">
@@ -64,13 +65,13 @@ export default function PlatformGuidelinesPage() {
               </h2>
             </div>
 
-            <p className="text-gray-800 mb-4">
+            <p className="text-gray-800 dark:text-gray-100 mb-4">
               To protect both buyers and sellers, all communication and
               transactions must happen through our platform. Sharing personal
               contact information is <strong>strictly prohibited</strong> and
               will result in account suspension.
             </p>
-            <p className="text-gray-700 mb-6">
+            <p className="text-gray-700 dark:text-gray-200 mb-6">
               खरीदारों और विक्रेताओं दोनों की सुरक्षा के लिए, सभी बातचीत और
               लेन-देन हमारे प्लेटफ़ॉर्म के ज़रिये ही होने चाहिए। व्यक्तिगत
               संपर्क जानकारी शेयर करना <strong>सख्त मना है</strong> और इससे
@@ -125,12 +126,12 @@ export default function PlatformGuidelinesPage() {
               ].map((item, i) => (
                 <div
                   key={i}
-                  className="flex items-start gap-2.5 bg-white/60 rounded-xl p-3"
+                  className="flex items-start gap-2.5 bg-white/60 dark:bg-gray-800/60 rounded-xl p-3"
                 >
                   <item.icon className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-sm text-gray-800">{item.en}</p>
-                    <p className="text-xs text-gray-500">{item.hi}</p>
+                    <p className="text-sm text-gray-800 dark:text-gray-100">{item.en}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{item.hi}</p>
                   </div>
                 </div>
               ))}
@@ -138,7 +139,7 @@ export default function PlatformGuidelinesPage() {
 
             {/* Warning system */}
             <div className="bg-white rounded-xl border border-red-100 p-5">
-              <h3 className="font-semibold text-gray-900 mb-3">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
                 ⚡ Warning System / चेतावनी प्रणाली
               </h3>
               <div className="space-y-3">
@@ -147,10 +148,10 @@ export default function PlatformGuidelinesPage() {
                     1
                   </span>
                   <div>
-                    <p className="text-sm text-gray-800 font-medium">
+                    <p className="text-sm text-gray-800 dark:text-gray-100 font-medium">
                       1st Warning — Message blocked
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       पहली चेतावनी — मैसेज ब्लॉक किया गया
                     </p>
                   </div>
@@ -160,10 +161,10 @@ export default function PlatformGuidelinesPage() {
                     2
                   </span>
                   <div>
-                    <p className="text-sm text-gray-800 font-medium">
+                    <p className="text-sm text-gray-800 dark:text-gray-100 font-medium">
                       2nd Warning — Final warning, admin notified
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       दूसरी चेतावनी — अंतिम चेतावनी, एडमिन को सूचित किया गया
                     </p>
                   </div>
@@ -173,10 +174,10 @@ export default function PlatformGuidelinesPage() {
                     3
                   </span>
                   <div>
-                    <p className="text-sm text-gray-800 font-medium">
+                    <p className="text-sm text-gray-800 dark:text-gray-100 font-medium">
                       3rd Violation — Account suspended permanently
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       तीसरा उल्लंघन — अकाउंट स्थायी रूप से सस्पेंड
                     </p>
                   </div>
@@ -188,7 +189,7 @@ export default function PlatformGuidelinesPage() {
 
         {/* ── Section: What IS allowed ── */}
         <section className="mb-10">
-          <div className="bg-green-50 border border-green-200 rounded-2xl p-6 md:p-8">
+          <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-2xl p-6 md:p-8">
             <div className="flex items-center gap-3 mb-4">
               <CheckCircle className="h-6 w-6 text-green-600" />
               <h2 className="text-xl font-bold text-green-900">
@@ -224,12 +225,12 @@ export default function PlatformGuidelinesPage() {
               ].map((item, i) => (
                 <div
                   key={i}
-                  className="flex items-start gap-2.5 bg-white/60 rounded-xl p-3"
+                  className="flex items-start gap-2.5 bg-white/60 dark:bg-gray-800/60 rounded-xl p-3"
                 >
                   <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-sm text-gray-800">{item.en}</p>
-                    <p className="text-xs text-gray-500">{item.hi}</p>
+                    <p className="text-sm text-gray-800 dark:text-gray-100">{item.en}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{item.hi}</p>
                   </div>
                 </div>
               ))}
@@ -239,7 +240,7 @@ export default function PlatformGuidelinesPage() {
 
         {/* ── Section: Why these rules exist ── */}
         <section className="mb-10">
-          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 md:p-8">
+          <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-2xl p-6 md:p-8">
             <div className="flex items-center gap-3 mb-4">
               <Shield className="h-6 w-6 text-blue-600" />
               <h2 className="text-xl font-bold text-blue-900">
@@ -267,12 +268,12 @@ export default function PlatformGuidelinesPage() {
               ].map((item, i) => (
                 <div
                   key={i}
-                  className="flex items-start gap-2.5 bg-white/60 rounded-xl p-3"
+                  className="flex items-start gap-2.5 bg-white/60 dark:bg-gray-800/60 rounded-xl p-3"
                 >
                   <Shield className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-sm text-gray-800">{item.en}</p>
-                    <p className="text-xs text-gray-500">{item.hi}</p>
+                    <p className="text-sm text-gray-800 dark:text-gray-100">{item.en}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{item.hi}</p>
                   </div>
                 </div>
               ))}
@@ -282,16 +283,16 @@ export default function PlatformGuidelinesPage() {
 
         {/* ── Section: General Marketplace Rules ── */}
         <section className="mb-10">
-          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 md:p-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
+          <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 md:p-8">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
               📋 General Marketplace Rules / सामान्य बाज़ार नियम
             </h2>
             <div className="space-y-4">
               <div>
-                <h3 className="font-semibold text-gray-800 mb-2">
+                <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">
                   For Buyers / खरीदारों के लिए
                 </h3>
-                <ul className="space-y-1.5 text-sm text-gray-700">
+                <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-200">
                   <li>
                     • Be respectful in all communications / सभी बातचीत में
                     सम्मानजनक रहें
@@ -311,10 +312,10 @@ export default function PlatformGuidelinesPage() {
                 </ul>
               </div>
               <div>
-                <h3 className="font-semibold text-gray-800 mb-2">
+                <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">
                   For Sellers / विक्रेताओं के लिए
                 </h3>
-                <ul className="space-y-1.5 text-sm text-gray-700">
+                <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-200">
                   <li>
                     • List products with accurate descriptions and images / सही
                     विवरण और तस्वीरों के साथ प्रॉडक्ट लिस्ट करें
@@ -343,7 +344,7 @@ export default function PlatformGuidelinesPage() {
 
         {/* ── Need Help? ── */}
         <section className="text-center mb-8">
-          <p className="text-gray-600 mb-3">
+          <p className="text-gray-600 dark:text-gray-300 mb-3">
             Have questions or need help? / सवाल हैं या मदद चाहिए?
           </p>
           <div className="flex flex-wrap justify-center gap-3">
@@ -356,7 +357,7 @@ export default function PlatformGuidelinesPage() {
             </Link>
             <Link
               href="/"
-              className="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-200 bg-white text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-50 transition"
+              className="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-200 bg-white text-gray-700 dark:text-gray-200 rounded-xl font-medium text-sm hover:bg-gray-50 transition"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to Home
@@ -365,10 +366,7 @@ export default function PlatformGuidelinesPage() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-100 py-6 text-center text-xs text-gray-400">
-        © {new Date().getFullYear()} {BRAND.name}. All rights reserved.
-      </footer>
+      <DynamicFooter />
     </div>
   );
 }

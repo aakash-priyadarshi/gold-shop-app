@@ -1,6 +1,6 @@
 "use client";
 
-import { Footer } from "@/components/layout/footer";
+import { DynamicFooter } from '@/components/layout/DynamicFooter';
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -277,7 +277,7 @@ export default function CartPage() {
         <main className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin" />
         </main>
-        <Footer />
+        <DynamicFooter />
       </div>
     );
   }
@@ -300,7 +300,7 @@ export default function CartPage() {
             </CardContent>
           </Card>
         </main>
-        <Footer />
+        <DynamicFooter />
       </div>
     );
   }
@@ -308,7 +308,7 @@ export default function CartPage() {
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950">
       <Header />
 
       <main className="flex-1 container mx-auto px-4 py-8">
@@ -376,7 +376,7 @@ export default function CartPage() {
                           ))}
                         </div>
                         {estimate.customsInfo && (
-                          <div className="mt-2 p-2 bg-white rounded text-xs">
+                          <div className="mt-2 p-2 bg-white dark:bg-gray-900 rounded text-xs">
                             <div className="flex items-start gap-1">
                               <ExclamationTriangleIcon className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
                               <p className="text-amber-700">
@@ -395,7 +395,7 @@ export default function CartPage() {
                         key={item.id}
                         className="flex gap-4 py-3 border-b last:border-0"
                       >
-                        <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                        <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden flex-shrink-0">
                           {item.product.image ? (
                             <img
                               src={item.product.image}
@@ -799,7 +799,7 @@ export default function CartPage() {
         </div>
       </main>
 
-      <Footer />
+      <DynamicFooter />
     </div>
   );
 }

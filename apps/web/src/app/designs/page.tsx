@@ -1,6 +1,6 @@
 "use client";
 
-import { Footer } from "@/components/layout/footer";
+import { DynamicFooter } from '@/components/layout/DynamicFooter';
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -294,7 +294,7 @@ export default function DesignGalleryPage() {
       )}
       onClick={() => openDesignDetail(design)}
     >
-      <div className="relative aspect-square bg-gray-100">
+      <div className="relative aspect-square bg-gray-100 dark:bg-gray-800">
         {design.imageUrl ? (
           <Image
             src={design.imageUrl}
@@ -319,7 +319,7 @@ export default function DesignGalleryPage() {
                 width={14}
                 height={14}
               />
-              <span className="text-[10px] font-semibold text-gray-700">
+              <span className="text-[10px] font-semibold text-gray-700 dark:text-gray-200">
                 Orivraa
               </span>
             </div>
@@ -355,7 +355,7 @@ export default function DesignGalleryPage() {
                 "h-5 w-5 transition-colors",
                 design.isLikedByUser
                   ? "fill-red-500 text-red-500"
-                  : "text-gray-600",
+                  : "text-gray-600 dark:text-gray-300",
               )}
             />
           )}
@@ -562,10 +562,10 @@ export default function DesignGalleryPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {[...Array(8)].map((_, i) => (
               <Card key={i} className="overflow-hidden">
-                <div className="aspect-square bg-gray-100 animate-pulse" />
+                <div className="aspect-square bg-gray-100 dark:bg-gray-800 animate-pulse" />
                 <CardContent className="p-3">
-                  <div className="h-4 bg-gray-100 rounded animate-pulse mb-2" />
-                  <div className="h-3 bg-gray-100 rounded animate-pulse w-2/3" />
+                  <div className="h-4 bg-gray-100 dark:bg-gray-800 rounded animate-pulse mb-2" />
+                  <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded animate-pulse w-2/3" />
                 </CardContent>
               </Card>
             ))}
@@ -650,7 +650,7 @@ export default function DesignGalleryPage() {
 
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Image */}
-                <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                <div className="relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
                   {selectedDesign.imageUrl ? (
                     <Image
                       src={selectedDesign.imageUrl}
@@ -673,7 +673,7 @@ export default function DesignGalleryPage() {
                           width={16}
                           height={16}
                         />
-                        <span className="text-xs font-semibold text-gray-700">
+                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">
                           Orivraa
                         </span>
                       </div>
@@ -688,7 +688,7 @@ export default function DesignGalleryPage() {
                     const desc = selectedDesign.additionalSpecs?.description;
                     return desc ? (
                       <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg p-4 border border-amber-200">
-                        <p className="text-sm text-gray-700 leading-relaxed italic">
+                        <p className="text-sm text-gray-700 dark:text-gray-200 leading-relaxed italic">
                           &ldquo;{String(desc)}&rdquo;
                         </p>
                       </div>
@@ -852,7 +852,7 @@ export default function DesignGalleryPage() {
         </DialogContent>
       </Dialog>
 
-      <Footer />
+      <DynamicFooter />
     </div>
   );
 }

@@ -25,6 +25,7 @@ import { MaterialsModule } from "./modules/materials/materials.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { OffersModule } from "./modules/offers/offers.module";
 import { OrdersModule } from "./modules/orders/orders.module";
+import { PagesModule } from "./modules/pages/pages.module";
 import { PaymentsModule } from "./modules/payments/payments.module";
 import { PlatformConfigModule } from "./modules/platform-config/platform-config.module";
 import { PricingModule } from "./modules/pricing/pricing.module";
@@ -83,6 +84,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     RfqModule,
     OffersModule,
     OrdersModule,
+    PagesModule,
     InvoicesModule,
     PaymentsModule,
     NotificationsModule,

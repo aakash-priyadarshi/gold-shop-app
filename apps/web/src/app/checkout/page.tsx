@@ -1,6 +1,6 @@
 "use client";
 
-import { Footer } from "@/components/layout/footer";
+import { DynamicFooter } from '@/components/layout/DynamicFooter';
 import { Header } from "@/components/layout/header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -439,7 +439,7 @@ function CheckoutPageContent() {
         <main className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
         </main>
-        <Footer />
+        <DynamicFooter />
       </div>
     );
   }
@@ -500,7 +500,7 @@ function CheckoutPageContent() {
             </CardFooter>
           </Card>
         </main>
-        <Footer />
+        <DynamicFooter />
       </div>
     );
   }
@@ -525,7 +525,7 @@ function CheckoutPageContent() {
                 className={`flex items-center gap-2 ${
                   step === "address"
                     ? "text-amber-600 font-semibold"
-                    : "text-gray-500"
+                    : "text-gray-500 dark:text-gray-400"
                 }`}
               >
                 <div
@@ -544,7 +544,7 @@ function CheckoutPageContent() {
                 className={`flex items-center gap-2 ${
                   step === "payment"
                     ? "text-amber-600 font-semibold"
-                    : "text-gray-500"
+                    : "text-gray-500 dark:text-gray-400"
                 }`}
               >
                 <div
@@ -607,15 +607,15 @@ function CheckoutPageContent() {
                             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                               {address.fullName}
                             </p>
-                            <p className="text-sm text-gray-500 dark:text-gray-500">
+                            <p className="text-sm text-gray-500 dark:text-gray-500 dark:text-gray-400">
                               {address.addressLine1}
                               {address.addressLine2 &&
                                 `, ${address.addressLine2}`}
                             </p>
-                            <p className="text-sm text-gray-500 dark:text-gray-500">
+                            <p className="text-sm text-gray-500 dark:text-gray-500 dark:text-gray-400">
                               {address.city}, {address.state} {address.pincode}
                             </p>
-                            <p className="text-sm text-gray-500 dark:text-gray-500 flex items-center gap-1">
+                            <p className="text-sm text-gray-500 dark:text-gray-500 dark:text-gray-400 flex items-center gap-1">
                               <FlagImage
                                 code={address.country as FlagCode}
                                 size={14}
@@ -627,7 +627,7 @@ function CheckoutPageContent() {
                       ))}
                     </RadioGroup>
                   ) : (
-                    <div className="text-center py-8 text-gray-500">
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                       <MapPinIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                       <p>No saved addresses</p>
                       <p className="text-sm">Add an address to continue</p>
@@ -748,7 +748,7 @@ function CheckoutPageContent() {
                   )}
 
                   {/* Security note */}
-                  <div className="flex items-center gap-2 text-sm text-gray-500 mt-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-4">
                     <ShieldCheckIcon className="h-4 w-4" />
                     <span>
                       Your payment information is secure and encrypted
@@ -810,7 +810,7 @@ function CheckoutPageContent() {
                         <p className="text-sm font-medium truncate">
                           {item.product.name}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
                           Qty: {item.quantity}
                         </p>
                       </div>
@@ -826,15 +826,15 @@ function CheckoutPageContent() {
                 {/* Totals */}
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Subtotal</span>
+                    <span className="text-gray-500 dark:text-gray-400">Subtotal</span>
                     <span>{formatPrice(subtotal)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">{taxLabel}</span>
+                    <span className="text-gray-500 dark:text-gray-400">{taxLabel}</span>
                     <span>{formatPrice(tax)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Shipping</span>
+                    <span className="text-gray-500 dark:text-gray-400">Shipping</span>
                     <span className="text-emerald-600">Free</span>
                   </div>
                   <Separator />
@@ -851,7 +851,7 @@ function CheckoutPageContent() {
                       <TruckIcon className="h-4 w-4" />
                       <span>Delivering to {selectedAddress.city}</span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Estimated delivery: 3-7 business days
                     </p>
                   </div>
@@ -1031,7 +1031,7 @@ function CheckoutPageContent() {
         </DialogContent>
       </Dialog>
 
-      <Footer />
+      <DynamicFooter />
     </div>
   );
 }

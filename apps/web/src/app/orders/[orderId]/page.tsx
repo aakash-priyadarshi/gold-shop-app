@@ -1,6 +1,6 @@
 "use client";
 
-import { Footer } from "@/components/layout/footer";
+import { DynamicFooter } from '@/components/layout/DynamicFooter';
 import { Header } from "@/components/layout/header";
 import {
   OrderStatusBadge,
@@ -210,7 +210,7 @@ export default function OrderTrackingPage() {
       case "CANCELLED":
         return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
       default:
-        return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
+        return "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
     }
   };
 
@@ -246,7 +246,7 @@ export default function OrderTrackingPage() {
         <main className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
         </main>
-        <Footer />
+        <DynamicFooter />
       </div>
     );
   }
@@ -284,7 +284,7 @@ export default function OrderTrackingPage() {
             </CardFooter>
           </Card>
         </main>
-        <Footer />
+        <DynamicFooter />
       </div>
     );
   }
@@ -397,12 +397,12 @@ export default function OrderTrackingPage() {
                       <div className="flex-1">
                         <h3 className="font-medium">{productName}</h3>
                         {order.productSnapshot.sku && (
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
                             SKU: {order.productSnapshot.sku}
                           </p>
                         )}
                         {order.productSnapshot.quantity && (
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
                             Qty: {order.productSnapshot.quantity}
                           </p>
                         )}
@@ -422,7 +422,7 @@ export default function OrderTrackingPage() {
                         <Store className="h-5 w-5 text-amber-600" />
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Sold by</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Sold by</p>
                         <p className="font-medium">{order.shop.shopName}</p>
                       </div>
                     </div>
@@ -450,7 +450,7 @@ export default function OrderTrackingPage() {
                             <div className="flex-1 pb-4">
                               <p className="font-medium">{milestone.title}</p>
                               {milestone.description && (
-                                <p className="text-sm text-gray-500 mt-1">
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                                   {milestone.description}
                                 </p>
                               )}
@@ -474,7 +474,7 @@ export default function OrderTrackingPage() {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-8 text-gray-500">
+                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                         <ClockIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                         <p>No timeline updates yet</p>
                         <p className="text-sm">
@@ -503,22 +503,22 @@ export default function OrderTrackingPage() {
                           <p className="font-medium">
                             {order.shippingAddress.fullName}
                           </p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
                             {order.shippingAddress.addressLine1}
                             {order.shippingAddress.addressLine2 && (
                               <>, {order.shippingAddress.addressLine2}</>
                             )}
                           </p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
                             {order.shippingAddress.city},{" "}
                             {order.shippingAddress.state}{" "}
                             {order.shippingAddress.pincode}
                           </p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
                             {order.shippingAddress.country}
                           </p>
                           {order.shippingAddress.phone && (
-                            <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                            <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-1">
                               <PhoneIcon className="h-4 w-4" />
                               {order.shippingAddress.phone}
                             </p>
@@ -539,7 +539,7 @@ export default function OrderTrackingPage() {
                             {order.trackingNumber}
                           </p>
                         ) : (
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
                             Tracking information will be available once your
                             order ships
                           </p>
@@ -553,7 +553,7 @@ export default function OrderTrackingPage() {
                         <CalendarIcon className="h-5 w-5 text-gray-400 mt-0.5" />
                         <div>
                           <p className="font-medium">Estimated Delivery</p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
                             {formatDate(order.estimatedDelivery)}
                           </p>
                         </div>
@@ -567,7 +567,7 @@ export default function OrderTrackingPage() {
                           <p className="font-medium text-emerald-600">
                             Delivered
                           </p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
                             {formatDate(order.actualDelivery)}
                           </p>
                         </div>
@@ -591,7 +591,7 @@ export default function OrderTrackingPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-500">Status</span>
+                  <span className="text-gray-500 dark:text-gray-400">Status</span>
                   <Badge className={getPaymentStatusColor(order.paymentStatus)}>
                     {order.paidAtShopRequested
                       ? "Pay at Shop"
@@ -618,7 +618,7 @@ export default function OrderTrackingPage() {
 
                 {order.paymentMethod && (
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-500">Method</span>
+                    <span className="text-gray-500 dark:text-gray-400">Method</span>
                     <span className="capitalize">
                       {order.paymentMethod.toLowerCase().replace("_", " ")}
                     </span>
@@ -629,15 +629,15 @@ export default function OrderTrackingPage() {
 
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Subtotal</span>
+                    <span className="text-gray-500 dark:text-gray-400">Subtotal</span>
                     <span>{formatPrice(order.subtotalNpr)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Tax</span>
+                    <span className="text-gray-500 dark:text-gray-400">Tax</span>
                     <span>{formatPrice(order.taxNpr)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Shipping</span>
+                    <span className="text-gray-500 dark:text-gray-400">Shipping</span>
                     <span>
                       {order.shippingNpr === 0
                         ? "Free"
@@ -703,7 +703,7 @@ export default function OrderTrackingPage() {
         </div>
       </main>
 
-      <Footer />
+      <DynamicFooter />
     </div>
   );
 }
