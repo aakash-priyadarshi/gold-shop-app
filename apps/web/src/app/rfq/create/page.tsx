@@ -78,6 +78,7 @@ import {
   ShoppingBag,
   Sparkles,
   Star,
+  TrendingUp,
   Upload,
   X,
 } from "lucide-react";
@@ -2840,6 +2841,55 @@ export default function CreateRfqPage() {
   const canSubmit = formDataComplete && canSubmitOrder;
   const submitBlockReason = getSubmitBlockReason();
 
+  // Helper: build the formData prop for LivePricingPanel (reused across steps)
+  const buildLivePricingFormData = (): EstimateRequest => ({
+    buildMethod: formData.buildMethod as BuildMethod,
+    jewelleryType: formData.jewelleryType,
+    country,
+    currency,
+    methodA:
+      formData.buildMethod === "METHOD_A"
+        ? { metal: formData.metalType, weightGrams: getWeightFromTemplate() }
+        : undefined,
+    methodB:
+      formData.buildMethod === "METHOD_B"
+        ? {
+            baseMetal: formData.alloyConfig.baseMetal as "GOLD" | "SILVER",
+            karat: formData.alloyConfig.karat,
+            alloyFamily: formData.alloyConfig.alloyFamily,
+            recipePresetId: formData.alloyConfig.recipePresetId,
+            weightGrams: getWeightFromTemplate(),
+          }
+        : undefined,
+    methodC:
+      formData.buildMethod === "METHOD_C"
+        ? {
+            baseMetal: formData.methodCConfig.baseMetal,
+            platingType: formData.methodCConfig.platingType,
+            platingTier: formData.methodCConfig.platingTier,
+            weightGrams: getWeightFromTemplate(),
+          }
+        : undefined,
+    gemstones: formData.gemstonesV2.map((g) => ({
+      presetId: g.presetId,
+      stoneType: g.stoneType,
+      shape: g.shape,
+      sizeValue: g.sizeValue,
+      sizeUnit: g.sizeUnit,
+      color: g.color,
+      clarity: g.clarity,
+      cut: g.cut,
+      settingStyle: g.settingStyle,
+      count: g.count,
+    })),
+    surfaceFinish: formData.surfaceFinish
+      ? { finishType: formData.surfaceFinish }
+      : undefined,
+    marketRates: marketRates
+      ? { metals: marketRates.metals, fx: marketRates.fx }
+      : undefined,
+  });
+
   // Show loading skeleton until client-side hydration is complete
   // This prevents hydration mismatch errors that break React interactivity
   if (!mounted) {
@@ -2926,7 +2976,7 @@ export default function CreateRfqPage() {
         <Header />
 
         <main className="flex-1 bg-gray-50 py-8">
-          <div className="container mx-auto px-4 max-w-3xl">
+          <div className="container mx-auto px-4 max-w-7xl">
             {/* Progress Steps */}
             <div className="mb-8">
               <div className="flex items-center justify-between">
@@ -2963,6 +3013,36 @@ export default function CreateRfqPage() {
                 ))}
               </div>
             </div>
+
+            {/* 3-Column Layout: Left Pricing | Center Form | Right Metal Rates */}
+            {step < 4 && (
+              <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr_280px] gap-6 xl:items-start">
+                {/* Left: Live Calculator */}
+                <div className="hidden xl:block xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto scrollbar-thin">
+                  <LivePricingPanel
+                    buildMethod={formData.buildMethod as BuildMethod}
+                    formData={buildLivePricingFormData()}
+                    marketRates={marketRates}
+                    marketRatesLoading={marketRatesLoading}
+                    marketRatesWarning={marketRatesWarning}
+                    currencySymbol={currencyInfo.symbol}
+                  />
+                </div>
+
+                {/* Center: Form Content */}
+                <div className="min-w-0">
+
+                  {/* Mobile-only LivePricingPanel (hidden on xl where sidebars show) */}
+                  <div className="xl:hidden mb-6">
+                    <LivePricingPanel
+                      buildMethod={formData.buildMethod as BuildMethod}
+                      formData={buildLivePricingFormData()}
+                      marketRates={marketRates}
+                      marketRatesLoading={marketRatesLoading}
+                      marketRatesWarning={marketRatesWarning}
+                      currencySymbol={currencyInfo.symbol}
+                    />
+                  </div>
 
             {/* Step 1: Basic Information */}
             {step === 1 && (
@@ -4049,73 +4129,6 @@ export default function CreateRfqPage() {
                     </Select>
                   </div>
 
-                  {/* Live Pricing Panel - Method-Aware */}
-                  <LivePricingPanel
-                    buildMethod={formData.buildMethod as BuildMethod}
-                    formData={{
-                      buildMethod: formData.buildMethod as BuildMethod,
-                      jewelleryType: formData.jewelleryType,
-                      country,
-                      currency,
-                      methodA:
-                        formData.buildMethod === "METHOD_A"
-                          ? {
-                              metal: formData.metalType,
-                              weightGrams: getWeightFromTemplate(),
-                            }
-                          : undefined,
-                      methodB:
-                        formData.buildMethod === "METHOD_B"
-                          ? {
-                              baseMetal: formData.alloyConfig.baseMetal as
-                                | "GOLD"
-                                | "SILVER",
-                              karat: formData.alloyConfig.karat,
-                              alloyFamily: formData.alloyConfig.alloyFamily,
-                              recipePresetId:
-                                formData.alloyConfig.recipePresetId,
-                              weightGrams: getWeightFromTemplate(),
-                            }
-                          : undefined,
-                      methodC:
-                        formData.buildMethod === "METHOD_C"
-                          ? {
-                              baseMetal: formData.methodCConfig.baseMetal,
-                              platingType: formData.methodCConfig.platingType,
-                              platingTier: formData.methodCConfig.platingTier,
-                              weightGrams: getWeightFromTemplate(),
-                            }
-                          : undefined,
-                      gemstones: formData.gemstonesV2.map((g) => ({
-                        presetId: g.presetId,
-                        stoneType: g.stoneType,
-                        shape: g.shape,
-                        sizeValue: g.sizeValue,
-                        sizeUnit: g.sizeUnit,
-                        color: g.color,
-                        clarity: g.clarity,
-                        cut: g.cut,
-                        settingStyle: g.settingStyle,
-                        count: g.count,
-                      })),
-                      surfaceFinish: formData.surfaceFinish
-                        ? {
-                            finishType: formData.surfaceFinish,
-                          }
-                        : undefined,
-                      marketRates: marketRates
-                        ? {
-                            metals: marketRates.metals,
-                            fx: marketRates.fx,
-                          }
-                        : undefined,
-                    }}
-                    marketRates={marketRates}
-                    marketRatesLoading={marketRatesLoading}
-                    marketRatesWarning={marketRatesWarning}
-                    currencySymbol={currencyInfo.symbol}
-                  />
-
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-3">
                     <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
                     <div className="text-sm text-blue-700">
@@ -4391,73 +4404,6 @@ export default function CreateRfqPage() {
                       }
                     />
                   </div>
-
-                  {/* Live Pricing Panel - Same as Step 1 */}
-                  <LivePricingPanel
-                    buildMethod={formData.buildMethod as BuildMethod}
-                    formData={{
-                      buildMethod: formData.buildMethod as BuildMethod,
-                      jewelleryType: formData.jewelleryType,
-                      country,
-                      currency,
-                      methodA:
-                        formData.buildMethod === "METHOD_A"
-                          ? {
-                              metal: formData.metalType,
-                              weightGrams: getWeightFromTemplate(),
-                            }
-                          : undefined,
-                      methodB:
-                        formData.buildMethod === "METHOD_B"
-                          ? {
-                              baseMetal: formData.alloyConfig.baseMetal as
-                                | "GOLD"
-                                | "SILVER",
-                              karat: formData.alloyConfig.karat,
-                              alloyFamily: formData.alloyConfig.alloyFamily,
-                              recipePresetId:
-                                formData.alloyConfig.recipePresetId,
-                              weightGrams: getWeightFromTemplate(),
-                            }
-                          : undefined,
-                      methodC:
-                        formData.buildMethod === "METHOD_C"
-                          ? {
-                              baseMetal: formData.methodCConfig.baseMetal,
-                              platingType: formData.methodCConfig.platingType,
-                              platingTier: formData.methodCConfig.platingTier,
-                              weightGrams: getWeightFromTemplate(),
-                            }
-                          : undefined,
-                      gemstones: formData.gemstonesV2.map((g) => ({
-                        presetId: g.presetId,
-                        stoneType: g.stoneType,
-                        shape: g.shape,
-                        sizeValue: g.sizeValue,
-                        sizeUnit: g.sizeUnit,
-                        color: g.color,
-                        clarity: g.clarity,
-                        cut: g.cut,
-                        settingStyle: g.settingStyle,
-                        count: g.count,
-                      })),
-                      surfaceFinish: formData.surfaceFinish
-                        ? {
-                            finishType: formData.surfaceFinish,
-                          }
-                        : undefined,
-                      marketRates: marketRates
-                        ? {
-                            metals: marketRates.metals,
-                            fx: marketRates.fx,
-                          }
-                        : undefined,
-                    }}
-                    marketRates={marketRates}
-                    marketRatesLoading={marketRatesLoading}
-                    marketRatesWarning={marketRatesWarning}
-                    currencySymbol={currencyInfo.symbol}
-                  />
 
                   <div className="flex justify-between">
                     <Button variant="outline" onClick={() => setStep(1)}>
@@ -4813,72 +4759,6 @@ export default function CreateRfqPage() {
                   </div>
 
                   {/* Price estimate comparison */}
-                  {/* Live Pricing Panel */}
-                  <LivePricingPanel
-                    buildMethod={formData.buildMethod as BuildMethod}
-                    formData={{
-                      buildMethod: formData.buildMethod as BuildMethod,
-                      jewelleryType: formData.jewelleryType,
-                      country,
-                      currency,
-                      methodA:
-                        formData.buildMethod === "METHOD_A"
-                          ? {
-                              metal: formData.metalType,
-                              weightGrams: getWeightFromTemplate(),
-                            }
-                          : undefined,
-                      methodB:
-                        formData.buildMethod === "METHOD_B"
-                          ? {
-                              baseMetal: formData.alloyConfig.baseMetal as
-                                | "GOLD"
-                                | "SILVER",
-                              karat: formData.alloyConfig.karat,
-                              alloyFamily: formData.alloyConfig.alloyFamily,
-                              recipePresetId:
-                                formData.alloyConfig.recipePresetId,
-                              weightGrams: getWeightFromTemplate(),
-                            }
-                          : undefined,
-                      methodC:
-                        formData.buildMethod === "METHOD_C"
-                          ? {
-                              baseMetal: formData.methodCConfig.baseMetal,
-                              platingType: formData.methodCConfig.platingType,
-                              platingTier: formData.methodCConfig.platingTier,
-                              weightGrams: getWeightFromTemplate(),
-                            }
-                          : undefined,
-                      gemstones: formData.gemstonesV2.map((g) => ({
-                        presetId: g.presetId,
-                        stoneType: g.stoneType,
-                        shape: g.shape,
-                        sizeValue: g.sizeValue,
-                        sizeUnit: g.sizeUnit,
-                        color: g.color,
-                        clarity: g.clarity,
-                        cut: g.cut,
-                        settingStyle: g.settingStyle,
-                        count: g.count,
-                      })),
-                      surfaceFinish: formData.surfaceFinish
-                        ? {
-                            finishType: formData.surfaceFinish,
-                          }
-                        : undefined,
-                      marketRates: marketRates
-                        ? {
-                            metals: marketRates.metals,
-                            fx: marketRates.fx,
-                          }
-                        : undefined,
-                    }}
-                    marketRates={marketRates}
-                    marketRatesLoading={marketRatesLoading}
-                    marketRatesWarning={marketRatesWarning}
-                    currencySymbol={currencyInfo.symbol}
-                  />
 
                   {/* Budget warning if estimate exceeds budget */}
                   {priceEstimate &&
@@ -5123,6 +5003,137 @@ export default function CreateRfqPage() {
                   </div>
                 </CardContent>
               </Card>
+            )}
+
+                </div>{/* end Center column */}
+
+                {/* Right: Live Metal Prices */}
+                <div className="hidden xl:block xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto scrollbar-thin">
+                  <div className="bg-gradient-to-br from-slate-50 to-gray-50 border border-slate-200 rounded-lg p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-slate-800 flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4" />
+                        Live Metal Prices
+                      </h4>
+                      {marketRates?.cache && (
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                          marketRates.cache === "fresh"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-yellow-100 text-yellow-700"
+                        }`}>
+                          {marketRates.cache === "fresh" ? "Live" : "Cached"}
+                        </span>
+                      )}
+                    </div>
+
+                    {marketRatesLoading ? (
+                      <div className="flex items-center justify-center py-6">
+                        <Loader2 className="h-4 w-4 animate-spin text-slate-500" />
+                        <span className="ml-2 text-xs text-slate-500">Loading rates...</span>
+                      </div>
+                    ) : marketRates ? (
+                      <div className="space-y-3">
+                        {/* Gold */}
+                        <div>
+                          <p className="text-xs font-medium text-amber-700 mb-1.5">Gold (per gram)</p>
+                          <div className="space-y-1">
+                            {[
+                              { label: "24K (99.9%)", key: "GOLD_24K" },
+                              { label: "22K", key: "GOLD_22K" },
+                              { label: "18K", key: "GOLD_18K" },
+                              { label: "14K", key: "GOLD_14K" },
+                              { label: "10K", key: "GOLD_10K" },
+                            ].map(({ label, key }) => (
+                              <div key={key} className="flex justify-between items-center bg-white/70 rounded px-2 py-1 text-xs">
+                                <span className="text-muted-foreground">{label}</span>
+                                <span className="font-mono font-semibold text-amber-800">
+                                  {currencyInfo.symbol}
+                                  {Math.round(marketRates.metals[key as keyof typeof marketRates.metals] || 0).toLocaleString()}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Silver */}
+                        <div>
+                          <p className="text-xs font-medium text-gray-600 mb-1.5">Silver (per gram)</p>
+                          <div className="space-y-1">
+                            {[
+                              { label: "999 (Fine)", key: "SILVER_999" },
+                              { label: "925 (Sterling)", key: "SILVER_925" },
+                            ].map(({ label, key }) => (
+                              <div key={key} className="flex justify-between items-center bg-white/70 rounded px-2 py-1 text-xs">
+                                <span className="text-muted-foreground">{label}</span>
+                                <span className="font-mono font-semibold text-gray-700">
+                                  {currencyInfo.symbol}
+                                  {Math.round(marketRates.metals[key as keyof typeof marketRates.metals] || 0).toLocaleString()}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Platinum */}
+                        <div>
+                          <p className="text-xs font-medium text-slate-600 mb-1.5">Platinum (per gram)</p>
+                          <div className="space-y-1">
+                            {[
+                              { label: "PT950", key: "PLATINUM_PT950" },
+                              { label: "PT900", key: "PLATINUM_PT900" },
+                            ].map(({ label, key }) => (
+                              <div key={key} className="flex justify-between items-center bg-white/70 rounded px-2 py-1 text-xs">
+                                <span className="text-muted-foreground">{label}</span>
+                                <span className="font-mono font-semibold text-slate-700">
+                                  {currencyInfo.symbol}
+                                  {Math.round(marketRates.metals[key as keyof typeof marketRates.metals] || 0).toLocaleString()}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Palladium */}
+                        <div>
+                          <p className="text-xs font-medium text-blue-600 mb-1.5">Palladium (per gram)</p>
+                          <div className="space-y-1">
+                            <div className="flex justify-between items-center bg-white/70 rounded px-2 py-1 text-xs">
+                              <span className="text-muted-foreground">PD950</span>
+                              <span className="font-mono font-semibold text-blue-700">
+                                {currencyInfo.symbol}
+                                {Math.round(marketRates.metals.PALLADIUM_PD950 || 0).toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* FX Rate */}
+                        {marketRates.fx && marketRates.currency !== "USD" && (
+                          <div className="border-t pt-2">
+                            <p className="text-xs font-medium text-slate-600 mb-1">Exchange Rate</p>
+                            <div className="flex justify-between items-center bg-white/70 rounded px-2 py-1 text-xs">
+                              <span className="text-muted-foreground">{marketRates.fx.pair}</span>
+                              <span className="font-mono font-semibold">{marketRates.fx.rate.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Last updated */}
+                        {marketRates.updatedAt && (
+                          <p className="text-[10px] text-muted-foreground flex items-center gap-1 pt-1">
+                            <Clock className="h-2.5 w-2.5" />
+                            Updated: {new Date(marketRates.updatedAt).toLocaleTimeString()}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Select your location to see live metal prices.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* Step 4: Seller Matching (Post-Submission) */}
