@@ -673,3 +673,6 @@ export default function ShopsPage() {
         )}
       </div>
       <DynamicFooter />
+    </div>
+  );
+}
