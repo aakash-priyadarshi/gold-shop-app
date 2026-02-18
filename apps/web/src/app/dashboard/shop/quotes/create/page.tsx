@@ -2,6 +2,10 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import {
+  GemstoneEditorV2,
+  type GemstoneEntry as GemstoneEntryV2,
+} from "@/components/pricing/GemstoneEditorV2";
 import { LivePricingPanel } from "@/components/pricing/LivePricingPanel";
 import { WeighingScalePanel } from "@/components/scale/WeighingScalePanel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -48,9 +52,10 @@ import type {
   PlatingTierC,
   PlatingTypeC,
 } from "@/lib/pricing/base-metal-constants";
-import type {
-  BuildMethod,
-  EstimateRequest,
+import {
+  calculateEstimate,
+  type BuildMethod,
+  type EstimateRequest,
 } from "@/lib/pricing/calculate-estimate";
 import {
   AlertCircle,
@@ -68,7 +73,7 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const API_URL = getApiUrl();
 
@@ -245,6 +250,10 @@ export default function CreateShopQuotePage() {
       platingTier: "STANDARD",
     },
     methodDConfig: { purity: "18K", chainStyle: "" },
+    hasGemstones: false,
+    gemstonesV2: [] as GemstoneEntryV2[],
+    surfaceFinish: "",
+    description: "",
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -343,11 +352,12 @@ export default function CreateShopQuotePage() {
 
   const buildEstimateRequest = (): EstimateRequest => {
     const weight = parseFloat(formData.targetTotalWeightG) || 0;
-    return {
+    const request: EstimateRequest = {
       buildMethod: formData.buildMethod,
       jewelleryType: formData.jewelleryType,
       country: shopCountry,
       currency: currencyCode,
+      makingChargePercent: 12,
       methodA:
         formData.buildMethod === "METHOD_A"
           ? { metal: formData.metalType, weightGrams: weight }
@@ -385,7 +395,58 @@ export default function CreateShopQuotePage() {
             }
           : undefined,
     };
+
+    // Add gemstones if any
+    if (formData.hasGemstones && formData.gemstonesV2.length > 0) {
+      request.gemstones = formData.gemstonesV2
+        .filter((g) => g.stoneType)
+        .map((g) => ({
+          presetId: g.presetId,
+          stoneType: g.stoneType,
+          shape: g.shape,
+          sizeValue: g.sizeValue,
+          sizeUnit: g.sizeUnit,
+          color: g.color,
+          clarity: g.clarity,
+          cut: g.cut,
+          settingStyle: g.settingStyle,
+          count: g.count,
+        }));
+    }
+
+    // Add surface finish
+    if (formData.surfaceFinish) {
+      request.surfaceFinish = { finishType: formData.surfaceFinish };
+    }
+
+    return request;
   };
+
+  // Auto-calculated estimate from the pricing engine
+  const autoEstimate = useMemo(() => {
+    if (!marketRates) return null;
+    const request = buildEstimateRequest();
+    request.marketRates = {
+      metals: marketRates.metals,
+      fx: marketRates.fx,
+    };
+    return calculateEstimate(request);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    formData.buildMethod,
+    formData.jewelleryType,
+    formData.metalType,
+    formData.targetTotalWeightG,
+    formData.alloyConfig,
+    formData.methodCConfig,
+    formData.methodDConfig,
+    formData.hasGemstones,
+    formData.gemstonesV2,
+    formData.surfaceFinish,
+    marketRates,
+    shopCountry,
+    currencyCode,
+  ]);
 
   const handleGenerateDesign = async () => {
     if (!formData.jewelleryType) {
@@ -410,11 +471,25 @@ export default function CreateShopQuotePage() {
           jewelryType: formData.jewelleryType,
           buildMethod: formData.buildMethod,
           metalType: formData.metalType,
-          surfaceFinish: (formData.composition as any)?.surfaceFinish || "",
+          surfaceFinish: formData.surfaceFinish || (formData.composition as any)?.surfaceFinish || "",
           additionalSpecs: {
-            description:
-              formData.specialInstructions ||
+            description: [
+              formData.description,
+              formData.specialInstructions,
               `A ${getJewelleryTypeLabel(formData.jewelleryType)}`,
+              formData.buildMethod === "METHOD_B" && formData.alloyConfig?.karat
+                ? `made in ${formData.alloyConfig.karat} ${formData.alloyConfig.alloyFamily?.replace("_", " ").toLowerCase() || "gold"}`
+                : formData.buildMethod === "METHOD_A"
+                  ? `made in ${formData.metalType.replace(/_/g, " ").toLowerCase()}`
+                  : formData.buildMethod === "METHOD_C"
+                    ? `${formData.methodCConfig.platingType.replace(/_/g, " ").toLowerCase()} on ${formData.methodCConfig.baseMetal.toLowerCase()}`
+                    : "",
+              formData.targetTotalWeightG ? `weighing approximately ${formData.targetTotalWeightG}g` : "",
+              formData.surfaceFinish ? `with ${formData.surfaceFinish.replace(/_/g, " ").toLowerCase()} finish` : "",
+              formData.hasGemstones && formData.gemstonesV2.length > 0
+                ? `with ${formData.gemstonesV2.map(g => `${g.count}x ${g.stoneType.replace(/_/g, " ").toLowerCase()}`).join(", ")}`
+                : "",
+            ].filter(Boolean).join(". "),
             regenerationFeedback: regenerationFeedback || undefined,
           },
           shareToGallery: false,
@@ -442,10 +517,11 @@ export default function CreateShopQuotePage() {
   };
 
   const calculateTotal = () => {
-    const metal = parseFloat(formData.metalCostOverride) || 0;
-    const making = parseFloat(formData.makingChargeOverride) || 0;
-    const gemstone = parseFloat(formData.gemstoneCostOverride) || 0;
-    const finish = parseFloat(formData.finishCostOverride) || 0;
+    // Use manual overrides if provided, otherwise fall back to auto-estimate
+    const metal = parseFloat(formData.metalCostOverride) || autoEstimate?.metalCost || 0;
+    const making = parseFloat(formData.makingChargeOverride) || autoEstimate?.makingCharge || 0;
+    const gemstone = parseFloat(formData.gemstoneCostOverride) || autoEstimate?.gemstoneCost || 0;
+    const finish = parseFloat(formData.finishCostOverride) || autoEstimate?.finishCost || 0;
     const subtotal = metal + making + gemstone + finish;
     const tax = subtotal * taxRate;
     return { subtotal, tax, total: subtotal + tax };
@@ -1248,13 +1324,14 @@ export default function CreateShopQuotePage() {
                               onClick={() =>
                                 setFormData((prev) => ({
                                   ...prev,
+                                  surfaceFinish: key,
                                   composition: {
                                     ...prev.composition,
                                     surfaceFinish: key,
                                   },
                                 }))
                               }
-                              className={`relative p-2 rounded-lg border-2 transition-all text-center ${(formData.composition as any)?.surfaceFinish === key ? "border-amber-500 bg-amber-50" : "border-gray-200 hover:border-gray-300"}`}
+                              className={`relative p-2 rounded-lg border-2 transition-all text-center ${formData.surfaceFinish === key ? "border-amber-500 bg-amber-50" : "border-gray-200 hover:border-gray-300"}`}
                             >
                               <img
                                 src={info.image}
@@ -1267,6 +1344,68 @@ export default function CreateShopQuotePage() {
                             </button>
                           ))}
                       </div>
+                    </div>
+
+                    {/* Gemstones */}
+                    <div>
+                      <Label>Gemstones</Label>
+                      <div className="flex items-center gap-3 mt-2 mb-3">
+                        <Badge
+                          variant={formData.hasGemstones ? "default" : "outline"}
+                          className="cursor-pointer"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              hasGemstones: true,
+                            }))
+                          }
+                        >
+                          Yes
+                        </Badge>
+                        <Badge
+                          variant={!formData.hasGemstones ? "default" : "outline"}
+                          className="cursor-pointer"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              hasGemstones: false,
+                              gemstonesV2: [],
+                            }))
+                          }
+                        >
+                          No
+                        </Badge>
+                      </div>
+                      {formData.hasGemstones && (
+                        <GemstoneEditorV2
+                          gemstones={formData.gemstonesV2}
+                          onChange={(gems) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              gemstonesV2: gems,
+                            }))
+                          }
+                          currencySymbol={currencySymbol}
+                          selectedCurrency={currencyCode}
+                          exchangeRate={marketRates?.fx?.rate || 144}
+                        />
+                      )}
+                    </div>
+
+                    {/* Description for the piece */}
+                    <div>
+                      <Label>Design Description</Label>
+                      <Textarea
+                        placeholder="Describe the design — e.g., '22K gold solitaire ring with floral engraving'. This helps AI generate a better preview."
+                        value={formData.description}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            description: e.target.value,
+                          }))
+                        }
+                        rows={2}
+                      />
                     </div>
 
                     {/* AI Design Preview */}
@@ -1448,68 +1587,127 @@ export default function CreateShopQuotePage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      The live panel shows market estimates. Enter your actual
-                      prices below:
-                    </p>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Metal Cost ({currencySymbol})</Label>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          value={formData.metalCostOverride}
-                          onChange={(e) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              metalCostOverride: e.target.value,
-                            }))
-                          }
-                        />
+                    {/* Auto-Calculated Breakdown */}
+                    {autoEstimate ? (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground mb-2">
+                          Calculated from your selections & live market rates
+                        </p>
+
+                        {autoEstimate.lineItems.map((item, idx) => (
+                          <div
+                            key={idx}
+                            className="flex justify-between text-sm py-1 border-b border-dashed last:border-0"
+                          >
+                            <span className="text-muted-foreground">
+                              {item.label}
+                            </span>
+                            <span className="font-medium">
+                              {currencySymbol}{" "}
+                              {Math.round(item.amount).toLocaleString()}
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                      <div>
-                        <Label>Making Charge ({currencySymbol})</Label>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          value={formData.makingChargeOverride}
-                          onChange={(e) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              makingChargeOverride: e.target.value,
-                            }))
-                          }
-                        />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Select metal, weight, and build method in Step 2 to see
+                        auto-calculated pricing.
+                      </p>
+                    )}
+
+                    {/* Manual Override Section */}
+                    <details className="group">
+                      <summary className="cursor-pointer text-sm font-medium text-amber-700 hover:text-amber-800">
+                        Override individual costs manually
+                      </summary>
+                      <div className="grid grid-cols-2 gap-4 mt-3">
+                        <div>
+                          <Label>
+                            Metal Cost ({currencySymbol})
+                            {autoEstimate && (
+                              <span className="text-xs text-muted-foreground ml-1">
+                                Auto: {Math.round(autoEstimate.metalCost).toLocaleString()}
+                              </span>
+                            )}
+                          </Label>
+                          <Input
+                            type="number"
+                            placeholder={autoEstimate ? String(Math.round(autoEstimate.metalCost)) : "0"}
+                            value={formData.metalCostOverride}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                metalCostOverride: e.target.value,
+                              }))
+                            }
+                          />
+                        </div>
+                        <div>
+                          <Label>
+                            Making Charge ({currencySymbol})
+                            {autoEstimate && (
+                              <span className="text-xs text-muted-foreground ml-1">
+                                Auto: {Math.round(autoEstimate.makingCharge).toLocaleString()}
+                              </span>
+                            )}
+                          </Label>
+                          <Input
+                            type="number"
+                            placeholder={autoEstimate ? String(Math.round(autoEstimate.makingCharge)) : "0"}
+                            value={formData.makingChargeOverride}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                makingChargeOverride: e.target.value,
+                              }))
+                            }
+                          />
+                        </div>
+                        <div>
+                          <Label>
+                            Gemstone Cost ({currencySymbol})
+                            {autoEstimate && (
+                              <span className="text-xs text-muted-foreground ml-1">
+                                Auto: {Math.round(autoEstimate.gemstoneCost).toLocaleString()}
+                              </span>
+                            )}
+                          </Label>
+                          <Input
+                            type="number"
+                            placeholder={autoEstimate ? String(Math.round(autoEstimate.gemstoneCost)) : "0"}
+                            value={formData.gemstoneCostOverride}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                gemstoneCostOverride: e.target.value,
+                              }))
+                            }
+                          />
+                        </div>
+                        <div>
+                          <Label>
+                            Finish Cost ({currencySymbol})
+                            {autoEstimate && (
+                              <span className="text-xs text-muted-foreground ml-1">
+                                Auto: {Math.round(autoEstimate.finishCost).toLocaleString()}
+                              </span>
+                            )}
+                          </Label>
+                          <Input
+                            type="number"
+                            placeholder={autoEstimate ? String(Math.round(autoEstimate.finishCost)) : "0"}
+                            value={formData.finishCostOverride}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                finishCostOverride: e.target.value,
+                              }))
+                            }
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <Label>Gemstone Cost ({currencySymbol})</Label>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          value={formData.gemstoneCostOverride}
-                          onChange={(e) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              gemstoneCostOverride: e.target.value,
-                            }))
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label>Finish Cost ({currencySymbol})</Label>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          value={formData.finishCostOverride}
-                          onChange={(e) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              finishCostOverride: e.target.value,
-                            }))
-                          }
-                        />
-                      </div>
-                    </div>
+                    </details>
                     <div className="bg-amber-50 rounded-lg p-4 space-y-2">
                       <div className="flex justify-between text-sm">
                         <span>Subtotal</span>
