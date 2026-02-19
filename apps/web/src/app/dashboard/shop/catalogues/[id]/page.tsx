@@ -456,7 +456,7 @@ export default function CatalogueDetailPage() {
                       {item.images?.[0] ? (
                         <img
                           src={item.images[0]}
-                          alt={item.title}
+                          alt={item.nameEn || item.title}
                           className="w-10 h-10 rounded-lg object-cover"
                         />
                       ) : (
@@ -464,10 +464,10 @@ export default function CatalogueDetailPage() {
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {item.title}
+                          {item.nameEn || item.title}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {item.metal} · NPR {item.totalPriceNpr?.toLocaleString() || "N/A"}
+                          {item.jewelleryType || item.metal} · NPR {item.totalPriceNpr?.toLocaleString() || "N/A"}
                         </div>
                       </div>
                       <button

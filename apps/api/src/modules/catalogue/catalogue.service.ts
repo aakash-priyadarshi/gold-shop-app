@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { CatalogueMode, InventoryVisibility } from "@prisma/client";
-import * as bcrypt from "bcrypt";
+import * as bcrypt from "bcryptjs";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { AddCatalogueItemDto } from "./dto/add-item.dto";
@@ -25,6 +25,46 @@ export class CatalogueService {
     private prisma: PrismaService,
     private auditService: AuditService,
   ) {}
+
+  // ─── Field mapping helpers (Prisma → API contract) ─────────────────
+  private mapVariant(v: any) {
+    return { id: v.id, size: v.sizeLabel, stock: v.stock, additionalPriceNpr: v.priceOverride };
+  }
+
+  private mapInventoryItem(inv: any) {
+    return {
+      id: inv.id,
+      title: inv.nameEn,
+      titleNe: inv.nameNe,
+      metal: inv.jewelleryType,
+      purity: inv.buildMethod,
+      images: inv.images,
+      totalPriceNpr: inv.totalPriceNpr,
+      weightGrams: inv.totalWeightGrams,
+      status: inv.status,
+      visibility: inv.visibility,
+      jewelleryType: inv.jewelleryType,
+      variants: inv.variants?.map((v: any) => this.mapVariant(v)),
+    };
+  }
+
+  private mapCatalogueItem(item: any) {
+    return {
+      ...item,
+      inventoryItem: item.inventoryItem ? this.mapInventoryItem(item.inventoryItem) : undefined,
+    };
+  }
+
+  private mapShop(shop: any) {
+    return {
+      id: shop.id,
+      name: shop.shopName,
+      nameNe: shop.shopNameNe,
+      logo: shop.profileImage,
+      city: shop.city,
+      slug: shop.slug,
+    };
+  }
 
   // ─── Slug Generation ───────────────────────────────────────────────
   private generateSlug(name: string): string {
@@ -133,7 +173,10 @@ export class CatalogueService {
       },
     });
     if (!catalogue) throw new NotFoundException("Catalogue not found");
-    return catalogue;
+    return {
+      ...catalogue,
+      items: catalogue.items.map((item: any) => this.mapCatalogueItem(item)),
+    };
   }
 
   async update(id: string, shopId: string, userId: string, dto: UpdateCatalogueDto) {
@@ -247,7 +290,7 @@ export class CatalogueService {
       },
     });
 
-    return item;
+    return this.mapCatalogueItem(item);
   }
 
   async updateItem(
@@ -310,6 +353,7 @@ export class CatalogueService {
             id: true,
             shopName: true,
             shopNameNe: true,
+            slug: true,
             profileImage: true,
             city: true,
           },
@@ -334,7 +378,7 @@ export class CatalogueService {
       description: catalogue.description,
       mode: catalogue.mode,
       requiresPassword: !!catalogue.passwordHash,
-      shop: catalogue.shop,
+      shop: this.mapShop(catalogue.shop),
       expiresAt: catalogue.expiresAt,
     };
   }
@@ -417,20 +461,24 @@ export class CatalogueService {
       },
     });
 
-    return items.map((item: any) => ({
-      id: item.id,
-      inventoryItemId: item.inventoryItemId,
-      sortOrder: item.sortOrder,
-      overridePrice: item.overridePrice,
-      inventoryItem: {
-        ...item.inventoryItem,
-        sizesAvailable: item.inventoryItem.variants
-          ?.filter((v: any) => v.stock > 0)
-          .map((v: any) => v.sizeLabel)
-          .filter(Boolean),
-        hasStock: item.inventoryItem.variants?.some((v: any) => v.stock > 0) ?? true,
-      },
-    }));
+    return items.map((item: any) => {
+      const mapped = this.mapInventoryItem(item.inventoryItem);
+      return {
+        id: item.id,
+        inventoryItemId: item.inventoryItemId,
+        sortOrder: item.sortOrder,
+        overridePrice: item.overridePrice,
+        isHidden: item.isHidden,
+        inventoryItem: {
+          ...mapped,
+          sizesAvailable: mapped.variants
+            ?.filter((v: any) => v.stock > 0)
+            .map((v: any) => v.size)
+            .filter(Boolean),
+          hasStock: mapped.variants?.some((v: any) => v.stock > 0) ?? true,
+        },
+      };
+    });
   }
 
   async recordView(slug: string, ip: string, userAgent?: string, referrer?: string) {

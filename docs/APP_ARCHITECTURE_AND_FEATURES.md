@@ -51,12 +51,12 @@ flowchart LR
 
 - Uses Next.js App Router under `apps/web/src/app`.
 - Main route areas (folder-level):
-  - Public pages: `about/`, `shops/`, `shop/`, `rfq/`, `designs/`, `cart/`, `checkout/`, `orders/`, `notifications/`, `auth/`, `help/`, `platform-guidelines/`.
+  - Public pages: `about/`, `shops/`, `shop/`, `rfq/`, `designs/`, `cart/`, `checkout/`, `orders/`, `notifications/`, `auth/`, `help/`, `platform-guidelines/`, `c/` (public catalogues).
   - Dashboards: `dashboard/customer/*`, `dashboard/shop/*`, `dashboard/admin/*`, `dashboard/sales/*`, `dashboard/support/*`.
 
 Dashboard route map (folder inventory):
 - Customer dashboard (`apps/web/src/app/dashboard/customer`): `orders/`, `payments/`, `rfqs/`, `settings/`, `wishlist/`, `messages/`, `refunds/`.
-- Shop dashboard (`apps/web/src/app/dashboard/shop`): `analytics/`, `commissions/`, `customers/`, `engagement/`, `inventory/`, `invoices/`, `orders/`, `pricing/`, `products/`, `profile/`, `quotes/`, `rfqs/`, `settings/`, `shop-profile/`, `tools/`, `messages/`, `variants/`.
+- Shop dashboard (`apps/web/src/app/dashboard/shop`): `analytics/`, `catalogues/`, `commissions/`, `customers/`, `engagement/`, `inventory/`, `invoices/`, `orders/`, `pricing/`, `products/`, `profile/`, `quotes/`, `rfqs/`, `settings/`, `shop-profile/`, `tools/`, `messages/`, `variants/`.
 - Admin dashboard (`apps/web/src/app/dashboard/admin`): `shops/`, `users/`, `verifications/`, `orders/`, `commissions/`, `intelligence/`, `reports/`, `settings/`, `profile/`, `support/`, `chat-monitoring/`, `refunds/`, `messages/`.
 - Sales dashboard (`apps/web/src/app/dashboard/sales`): `shops/`, `orders/`, `messages/`, `profile/`.
 - Support dashboard (`apps/web/src/app/dashboard/support`): `tickets/`, `page.tsx` (overview).
@@ -103,6 +103,7 @@ Backend module inventory (`apps/api/src/modules/*`):
 - `refunds`: metal-only refund policy enforcement, eligibility checks, refund lifecycle (request → approve/reject → process), commission reversal
 - `support`: internal operations dashboard aggregating pending refunds, flagged conversations, KYC queue, and order monitoring; **ticket system** (SupportTicket + TicketMessage models, real-time WebSocket `/support` namespace, claim/resolve/close lifecycle, internal notes, auto-priority); **AI chatbot** (Gemini Flash 2.0 for public help queries with escalation to tickets)
 - `product-variants`: size variant management for rings/bangles/bracelets with SKU-level stock, price overrides, and standardised size charts
+- `catalogue`: seller catalogue system — shareable product catalogues with showroom mode, password protection, walk-in RFQ creation, analytics, and chat integration (product cards, catalogue links, showroom sessions)
 
 ### Images (Cloudflare Worker + R2)
 
@@ -183,6 +184,15 @@ Core domain aggregates (high-level):
 **Product variants**
 - `ProductVariant`: per-`InventoryItem` size/SKU entries with independent stock counts and optional price overrides
 - `SizeChart`: standardised reference data per jewellery type and sizing system (US, UK, EU, Indian, JP)
+
+**Seller Catalogues**
+- `Catalogue`: shop-owned catalogue with name, slug (globally unique), description, mode (`NORMAL`/`SHOWROOM`), `passwordHash` (bcrypt), `isPublic`, `expiresAt`, soft-delete via `deletedAt`
+- `CatalogueItem`: junction linking `Catalogue` ↔ `InventoryItem` with `sortOrder`, optional `overridePrice`, `isHidden` flag
+- `CatalogueViewEvent`: lightweight analytics — `catalogueId`, `viewedAt`, `viewerIpHash` (sha256, no raw IP), `userAgent`, `referrer`, `count`; deduplicated by (catalogue + ipHash + hour bucket)
+- `ShowroomSession`: conversation-linked item selection — `conversationId`, `shopId`, `status` (ACTIVE/COMPLETED/ARCHIVED), `items` (JSON array)
+- `InventoryVisibility` enum added to `InventoryItem`: `PUBLIC` (default, shown everywhere), `CATALOGUE_ONLY` (hidden from marketplace, visible in catalogues), `HIDDEN` (not visible anywhere publicly)
+- `RfqSource` enum added to `RfqRequest`: `ONLINE` (default), `WALK_IN`; plus `createdByShopId` and `walkInMeta` (JSON) fields
+- `MessageType` enum extended: `TEXT`, `ATTACHMENT`, `SYSTEM`, `PRODUCT_CARD`, `CATALOGUE_LINK`, `SHOWROOM_SESSION`, `RFQ_ACTION`; `Message.payload` (JSON) for structured card data; `Message.isSystemGenerated` flag
 
 **Support & Tickets**
 - `SupportTicket`: id, ticketNumber (unique, `TKT-XXXXX`), userId?, guestEmail?, guestName?, type (TicketType), subject, description, status (TicketStatus, default OPEN), priority (TicketPriority, default MEDIUM), assigneeId?, claimedAt?, orderId?, conversationId?, resolvedAt?, closedAt?, resolutionNote?, timestamps; indexed on userId, assigneeId, status, type, priority, createdAt, ticketNumber
@@ -312,6 +322,36 @@ Instead of logging suspended users out:
 - `validateOrderTransition(from, to)` and `validateRefundTransition(from, to)` throw `BadRequestException` on illegal transitions.
 - Terminal states: `CANCELLED`, `REFUNDED`, `EXPIRED` (order); `PROCESSED` (refund).
 
+### 4.13 Seller Catalogue system
+
+**Catalogue lifecycle**:
+1. Seller creates a catalogue (name, description, mode, optional password, optional expiry) → slug auto-generated (`slugify(name)-XXXXX`).
+2. Seller adds items from shop inventory. Items can be reordered, hidden, or given override prices.
+3. Catalogue is shared via link (`/c/<slug>`) or QR code.
+4. Public visitors can view items, request quotes (login required), or message the shop (login required).
+5. Showroom Mode provides a full-screen swipe-friendly UI for tablet/mobile product presentation.
+6. Staff can create Walk-in RFQs from Showroom Mode — 3-step inline modal (select items → request details → customer info).
+
+**Password protection**:
+- Optional bcrypt-hashed password. Unlock issues short-lived HMAC token (30 min, `X-Catalogue-Token` header).
+- Password change invalidates old tokens via password-version (`pv`) mismatch.
+
+**Walk-in RFQ flow** (staff only, no customer login required):
+1. Staff opens catalogue in Showroom Mode → selects items into session.
+2. Clicks "Create Walk-in RFQ" → 3-step modal:
+   - Step 1: Confirm items, select variant sizes, set quantities.
+   - Step 2: Jewellery type, budget range, timeline, notes, measurements.
+   - Step 3: Internal customer info (name, phone, notes) — privacy-protected, never shown to buyers.
+3. Submit → `POST /api/rfq/walk-in` → creates `RfqRequest` with `source=WALK_IN`, `walkInMeta` JSON.
+
+**Chat integration**:
+- Sellers can share catalogues (`CATALOGUE_LINK` message), individual products (`PRODUCT_CARD` message), create showroom sessions, and initiate walk-in RFQs from chat.
+- Rich message cards render in customer chat with "Open Catalogue" / "View Details" CTAs.
+- System-generated messages bypass PII detection.
+
+**Analytics**:
+- View events tracked with deduplicated IP hashing. Dashboard shows total views, unique viewers, and 7-day trend.
+
 ## 5) Feature inventory (by role)
 
 ### Customers
@@ -325,6 +365,7 @@ Instead of logging suspended users out:
 - In-app messaging with shops (contact info blocked, 3-strike system)
 - Request refunds on delivered metal-only orders within 7-day window
 - Select product sizes (rings, bangles, etc.) with variant-level stock visibility
+- **Public catalogues**: browse shop catalogues via shareable links, unlock password-protected catalogues, request quotes, message shop; view rich product cards in chat
 
 ### Shopkeepers (Sellers)
 
@@ -338,6 +379,7 @@ Instead of logging suspended users out:
 - Commissions and analytics areas
 - In-app messaging with customers (contact info blocked, 3-strike system — account suspended on 3rd violation)
 - Size variant management: enable sizes, create/edit/delete variants, manage per-size stock and price overrides
+- **Seller Catalogues**: create/manage multiple catalogues per shop; add inventory items with sort order, override prices, hidden flags; share via link/QR; showroom mode for walk-in presentation; password protection with expiry; create walk-in RFQs (3-step modal: items → details → customer info); view analytics (views, unique visitors); share catalogues and products as rich cards in chat
 
 ### Admin
 
@@ -453,6 +495,44 @@ WebSocket gateway: namespace `/support`, events: `joinTicket`, `leaveTicket`, `t
 |--------|------|------|-------------|
 | GET | `/size-charts/:jewelleryType` | Public | Get size chart for jewellery type |
 
+### Catalogues — Seller Management (`/api/catalogues`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/catalogues` | SHOPKEEPER | Create catalogue (name, mode, password, expiry) |
+| GET | `/catalogues/my` | SHOPKEEPER | List my shop's catalogues (paginated) |
+| GET | `/catalogues/:id` | SHOPKEEPER | Get catalogue with items and inventory details |
+| PATCH | `/catalogues/:id` | SHOPKEEPER | Update catalogue settings |
+| DELETE | `/catalogues/:id` | SHOPKEEPER | Soft-delete catalogue |
+| POST | `/catalogues/:id/items` | SHOPKEEPER | Add inventory item to catalogue |
+| DELETE | `/catalogues/:id/items/:itemId` | SHOPKEEPER | Remove item from catalogue |
+| PATCH | `/catalogues/:id/items/:itemId` | SHOPKEEPER | Update item (sortOrder, overridePrice, isHidden) |
+| POST | `/catalogues/:id/items/reorder` | SHOPKEEPER | Bulk reorder items (atomic transaction) |
+| GET | `/catalogues/:id/analytics` | SHOPKEEPER | View analytics (total views, unique viewers, 7-day trend) |
+| PATCH | `/inventory/:itemId/visibility` | SHOPKEEPER | Set inventory item visibility (PUBLIC, CATALOGUE_ONLY, HIDDEN) |
+
+### Catalogues — Public (`/api/public/catalogues`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/public/catalogues/:slug` | Public | Get catalogue metadata + shop branding |
+| POST | `/public/catalogues/:slug/unlock` | Public | Unlock password-protected catalogue (returns HMAC token) |
+| GET | `/public/catalogues/:slug/items` | Public* | Get catalogue items (*requires `X-Catalogue-Token` if password-protected) |
+| POST | `/public/catalogues/:slug/view` | Public | Record view event (rate-limited, IP hash dedupe) |
+| POST | `/public/catalogues/:slug/request-quote` | CUSTOMER | Request quote from catalogue items |
+| POST | `/public/catalogues/:slug/message-shop` | CUSTOMER | Open conversation with shop about catalogue |
+
+### Walk-in RFQ (`/api/rfq`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/rfq/walk-in` | SHOPKEEPER | Create walk-in RFQ from catalogue items |
+| GET | `/rfq/shop-requests?source=WALK_IN` | SHOPKEEPER | Filter RFQs by source (WALK_IN / ONLINE) |
+
+### Chat Catalogue Integration (`/api/chat`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/chat/conversations/:id/share-catalogue` | SHOPKEEPER | Share catalogue link in conversation |
+| POST | `/chat/conversations/:id/share-products` | SHOPKEEPER | Share product cards in conversation |
+| POST | `/chat/conversations/:id/walk-in-rfq` | SHOPKEEPER | Create walk-in RFQ from chat |
+
 ## 7) Operations & CI/CD notes
 
 - CI/CD guidance is documented in `docs/CI-CD-PIPELINE.md`.
@@ -469,6 +549,8 @@ Backend (`apps/api`):
 - `NODE_ENV`
 - `PREFER_IPV4` (optional; helps Windows DNS behavior)
 - `GEMINI_API_KEY` (Google AI — used by `ContactMaskingService` for Gemini Flash deep scan and image analysis)
+- `CATALOGUE_TOKEN_SECRET` (HMAC secret for password-protected catalogue tokens)
+- `IP_HASH_SALT` (salt for hashing viewer IPs in catalogue analytics)
 
 Frontend (`apps/web`):
 - `NEXT_PUBLIC_IMAGE_WORKER_URL` (defaults to `https://images.orivraa.com`)
@@ -576,5 +658,72 @@ Worker (`cloudflare-worker`):
 
 **Schema changes**: `SupportTicket`, `TicketMessage` models; `TicketType`, `TicketStatus`, `TicketPriority` enums; 6 new `NotificationType` values; User relations for tickets.
 
+### 2026-02-20 — Seller Catalogue feature
+
+**New module: Catalogue** (26+ files, full end-to-end implementation)
+
+**Prisma schema changes**:
+- Added `Catalogue`, `CatalogueItem`, `CatalogueViewEvent`, `ShowroomSession` models.
+- Added `InventoryVisibility` enum (`PUBLIC`, `CATALOGUE_ONLY`, `HIDDEN`) to `InventoryItem`.
+- Added `RfqSource` enum (`ONLINE`, `WALK_IN`) + `createdByShopId`, `walkInMeta` fields to `RfqRequest`.
+- Extended `MessageType` enum with `PRODUCT_CARD`, `CATALOGUE_LINK`, `SHOWROOM_SESSION`, `RFQ_ACTION`.
+- Added `Message.payload` (Json?), `Message.isSystemGenerated` (Boolean).
+
+**Backend — NestJS `catalogue` module**:
+- `catalogue.module.ts`, `catalogue.controller.ts` (11 seller endpoints), `catalogue.public.controller.ts` (6 public endpoints), `catalogue.service.ts`.
+- DTOs: `create-catalogue.dto.ts`, `update-catalogue.dto.ts`, `add-item.dto.ts`, `reorder-items.dto.ts`, `unlock-catalogue.dto.ts`.
+- `catalogue.token.ts`: HMAC token generation/verification for password-protected catalogues.
+- Field mapping transform layer: backend Prisma fields (nameEn, shopName, jewelleryType, etc.) mapped to API contract names (title, name, metal, etc.) in service response methods.
+- Analytics: view recording with IP hash deduplication.
+- RBAC: SHOPKEEPER for seller endpoints, public for view endpoints, CUSTOMER for quote/message endpoints.
+- Audit logging for all create/update/delete operations.
+
+**Backend — RFQ walk-in support**:
+- `POST /api/rfq/walk-in`: seller-only endpoint for creating walk-in RFQs.
+- `CreateCatalogueWalkInRfqDto`: items, jewellery type, budget, deadline, measurements, walk-in customer info.
+- Source filter on `GET /api/rfq/shop-requests?source=WALK_IN|ONLINE`.
+- Privacy filtering: `walkInMeta.customerPhone` stripped for non-staff roles.
+
+**Backend — Chat catalogue integration**:
+- `POST /chat/conversations/:id/share-catalogue`: share catalogue link as rich card.
+- `POST /chat/conversations/:id/share-products`: share product cards.
+- `POST /chat/conversations/:id/walk-in-rfq`: create walk-in RFQ from chat.
+- System-generated messages bypass PII detection.
+
+**Frontend — Seller dashboard catalogue pages**:
+- `/dashboard/shop/catalogues/page.tsx`: list catalogues with stats (items count, views, mode, public/private).
+- `/dashboard/shop/catalogues/new/page.tsx`: create catalogue form.
+- `/dashboard/shop/catalogues/[id]/page.tsx`: manage catalogue — edit settings, share link + QR, add/remove items from inventory, toggle hidden, analytics dashboard.
+- "Catalogues" navigation item added to shop dashboard sidebar.
+
+**Frontend — Public catalogue view**:
+- `/c/[slug]/page.tsx`: public catalogue page with shop branding, item grid, variant sizes, price display.
+- Password gate: unlock form → stores token in localStorage → sends via `X-Catalogue-Token` header.
+- Showroom Mode: full-screen swipe carousel, session management (add/remove items), session sidebar.
+- Normal Mode: responsive grid with item cards, variant chips, price display.
+- "Request Quote" (sends all visible items), "Message Shop" CTAs (both require login).
+- Staff floating "Open Showroom" button when owner is viewing.
+
+**Frontend — Walk-in RFQ inline modal** (3-step):
+- Step 1: Confirm items, select variant sizes, adjust quantities.
+- Step 2: Jewellery type, budget range, timeline, notes, measurements (ring, wrist, chain, bangle).
+- Step 3: Walk-in customer info (name, phone, notes) with privacy disclaimer.
+- Submit calls `POST /api/rfq/walk-in` → success toast + redirect to RFQ list.
+
+**Frontend — RFQ walk-in filter**:
+- Filter pills [All] [Online] [Walk-in] on `/dashboard/shop/rfqs`.
+- "Walk-in" badge and "Created from Catalogue: <slug>" tag on RFQ cards.
+
+**Frontend — Chat integration**:
+- `RichMessageCard` component renders `PRODUCT_CARD`, `CATALOGUE_LINK`, `SHOWROOM_SESSION`, `RFQ_ACTION` messages.
+- Chat API client methods: `shareCatalogue`, `shareProducts`, `createWalkInRfq`.
+
+**Bug fixes applied in this release**:
+- Fixed `Cannot find module 'bcrypt'` Railway crash: `catalogue.service.ts` and `two-factor.service.ts` imported native `bcrypt` instead of `bcryptjs`.
+- Fixed field mapping mismatches: backend transform layer maps Prisma field names to frontend API contract names.
+- Fixed `handleRequestQuote` sending empty body: now sends all visible catalogue items.
+- Fixed manage page inventory search using wrong field names: uses fallback (`nameEn || title`).
+
+**New env vars**: `CATALOGUE_TOKEN_SECRET`, `IP_HASH_SALT`.
 
 
