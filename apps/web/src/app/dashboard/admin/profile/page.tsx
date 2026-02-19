@@ -1,15 +1,17 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { AdminGuard } from '@/components/auth/RouteGuard';
-import { AppearanceSettings } from '@/components/settings/AppearanceSettings';
-import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { AdminGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -18,60 +20,67 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { otpApi, usersApi } from "@/lib/api";
 import {
-  User,
+  CheckCircle,
+  Key,
+  Loader2,
+  Lock,
   Mail,
   Phone,
-  Lock,
   Shield,
-  CheckCircle,
-  AlertCircle,
-  Loader2,
-  Key,
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { usersApi, otpApi } from '@/lib/api';
+  User,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 export default function AdminProfilePage() {
   const { user, refreshUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
   });
 
   // Password change state
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
   const [changingPassword, setChangingPassword] = useState(false);
 
   // OTP verification state
   const [otpDialogOpen, setOtpDialogOpen] = useState(false);
-  const [otpType, setOtpType] = useState<'EMAIL_VERIFICATION' | 'PHONE_VERIFICATION'>('EMAIL_VERIFICATION');
-  const [otpCode, setOtpCode] = useState('');
+  const [otpType, setOtpType] = useState<
+    "EMAIL_VERIFICATION" | "PHONE_VERIFICATION"
+  >("EMAIL_VERIFICATION");
+  const [otpCode, setOtpCode] = useState("");
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
 
   // Password recovery state
   const [recoveryDialogOpen, setRecoveryDialogOpen] = useState(false);
-  const [recoveryMethod, setRecoveryMethod] = useState<'email' | 'phone'>('email');
-  const [recoveryTarget, setRecoveryTarget] = useState('');
+  const [recoveryMethod, setRecoveryMethod] = useState<"email" | "phone">(
+    "email",
+  );
+  const [recoveryTarget, setRecoveryTarget] = useState("");
   const [sendingRecovery, setSendingRecovery] = useState(false);
 
   useEffect(() => {
     if (user) {
       setProfileData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        email: user.email || '',
-        phone: user.phone || '',
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        email: user.email || "",
+        phone: user.phone || "",
       });
     }
   }, [user]);
@@ -86,14 +95,15 @@ export default function AdminProfilePage() {
       });
       await refreshUser();
       toast({
-        title: 'Profile Updated',
-        description: 'Your profile has been updated successfully.',
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully.",
       });
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Update Failed',
-        description: error.response?.data?.message || 'Could not update profile.',
+        variant: "destructive",
+        title: "Update Failed",
+        description:
+          error.response?.data?.message || "Could not update profile.",
       });
     } finally {
       setLoading(false);
@@ -103,18 +113,18 @@ export default function AdminProfilePage() {
   const handleChangePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast({
-        variant: 'destructive',
-        title: 'Passwords Do Not Match',
-        description: 'Please ensure both passwords are the same.',
+        variant: "destructive",
+        title: "Passwords Do Not Match",
+        description: "Please ensure both passwords are the same.",
       });
       return;
     }
 
     if (passwordData.newPassword.length < 8) {
       toast({
-        variant: 'destructive',
-        title: 'Password Too Short',
-        description: 'Password must be at least 8 characters.',
+        variant: "destructive",
+        title: "Password Too Short",
+        description: "Password must be at least 8 characters.",
       });
       return;
     }
@@ -126,37 +136,44 @@ export default function AdminProfilePage() {
         newPassword: passwordData.newPassword,
       });
       toast({
-        title: 'Password Changed',
-        description: 'Your password has been updated successfully.',
+        title: "Password Changed",
+        description: "Your password has been updated successfully.",
       });
       setPasswordDialogOpen(false);
-      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Change Failed',
-        description: error.response?.data?.message || 'Could not change password.',
+        variant: "destructive",
+        title: "Change Failed",
+        description:
+          error.response?.data?.message || "Could not change password.",
       });
     } finally {
       setChangingPassword(false);
     }
   };
 
-  const handleSendOtp = async (type: 'EMAIL_VERIFICATION' | 'PHONE_VERIFICATION') => {
+  const handleSendOtp = async (
+    type: "EMAIL_VERIFICATION" | "PHONE_VERIFICATION",
+  ) => {
     setSendingOtp(true);
     try {
       const result = await otpApi.send(type);
       toast({
-        title: 'OTP Sent',
+        title: "OTP Sent",
         description: result.data.message,
       });
       setOtpType(type);
       setOtpDialogOpen(true);
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Send Failed',
-        description: error.response?.data?.message || 'Could not send OTP.',
+        variant: "destructive",
+        title: "Send Failed",
+        description: error.response?.data?.message || "Could not send OTP.",
       });
     } finally {
       setSendingOtp(false);
@@ -166,9 +183,9 @@ export default function AdminProfilePage() {
   const handleVerifyOtp = async () => {
     if (otpCode.length !== 6) {
       toast({
-        variant: 'destructive',
-        title: 'Invalid Code',
-        description: 'Please enter a 6-digit code.',
+        variant: "destructive",
+        title: "Invalid Code",
+        description: "Please enter a 6-digit code.",
       });
       return;
     }
@@ -178,16 +195,16 @@ export default function AdminProfilePage() {
       await otpApi.verify(otpType, otpCode);
       await refreshUser();
       toast({
-        title: 'Verification Successful',
-        description: `Your ${otpType === 'EMAIL_VERIFICATION' ? 'email' : 'phone'} has been verified.`,
+        title: "Verification Successful",
+        description: `Your ${otpType === "EMAIL_VERIFICATION" ? "email" : "phone"} has been verified.`,
       });
       setOtpDialogOpen(false);
-      setOtpCode('');
+      setOtpCode("");
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Verification Failed',
-        description: error.response?.data?.message || 'Invalid OTP code.',
+        variant: "destructive",
+        title: "Verification Failed",
+        description: error.response?.data?.message || "Invalid OTP code.",
       });
     } finally {
       setVerifyingOtp(false);
@@ -197,17 +214,18 @@ export default function AdminProfilePage() {
   const handleSendRecovery = async () => {
     setSendingRecovery(true);
     try {
-      await otpApi.send('PASSWORD_RESET');
+      await otpApi.send("PASSWORD_RESET");
       toast({
-        title: 'Recovery Code Sent',
+        title: "Recovery Code Sent",
         description: `A recovery code has been sent to your ${recoveryMethod}.`,
       });
       setRecoveryDialogOpen(false);
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Send Failed',
-        description: error.response?.data?.message || 'Could not send recovery code.',
+        variant: "destructive",
+        title: "Send Failed",
+        description:
+          error.response?.data?.message || "Could not send recovery code.",
       });
     } finally {
       setSendingRecovery(false);
@@ -243,7 +261,12 @@ export default function AdminProfilePage() {
                   <Input
                     id="firstName"
                     value={profileData.firstName}
-                    onChange={(e) => setProfileData(prev => ({ ...prev, firstName: e.target.value }))}
+                    onChange={(e) =>
+                      setProfileData((prev) => ({
+                        ...prev,
+                        firstName: e.target.value,
+                      }))
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -251,7 +274,12 @@ export default function AdminProfilePage() {
                   <Input
                     id="lastName"
                     value={profileData.lastName}
-                    onChange={(e) => setProfileData(prev => ({ ...prev, lastName: e.target.value }))}
+                    onChange={(e) =>
+                      setProfileData((prev) => ({
+                        ...prev,
+                        lastName: e.target.value,
+                      }))
+                    }
                   />
                 </div>
               </div>
@@ -271,17 +299,23 @@ export default function AdminProfilePage() {
                       Verified
                     </Badge>
                   ) : (
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       variant="outline"
-                      onClick={() => handleSendOtp('EMAIL_VERIFICATION')}
+                      onClick={() => handleSendOtp("EMAIL_VERIFICATION")}
                       disabled={sendingOtp}
                     >
-                      {sendingOtp ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verify'}
+                      {sendingOtp ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Verify"
+                      )}
                     </Button>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">Email cannot be changed</p>
+                <p className="text-xs text-muted-foreground">
+                  Email cannot be changed
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
@@ -290,7 +324,12 @@ export default function AdminProfilePage() {
                     id="phone"
                     type="tel"
                     value={profileData.phone}
-                    onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
+                    onChange={(e) =>
+                      setProfileData((prev) => ({
+                        ...prev,
+                        phone: e.target.value,
+                      }))
+                    }
                     placeholder="+977 98XXXXXXXX"
                     className="flex-1"
                   />
@@ -300,19 +339,25 @@ export default function AdminProfilePage() {
                       Verified
                     </Badge>
                   ) : user?.phone ? (
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       variant="outline"
-                      onClick={() => handleSendOtp('PHONE_VERIFICATION')}
+                      onClick={() => handleSendOtp("PHONE_VERIFICATION")}
                       disabled={sendingOtp}
                     >
-                      {sendingOtp ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verify'}
+                      {sendingOtp ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Verify"
+                      )}
                     </Button>
                   ) : null}
                 </div>
               </div>
               <Button onClick={handleSaveProfile} disabled={loading}>
-                {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                {loading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : null}
                 Save Changes
               </Button>
             </CardContent>
@@ -335,10 +380,15 @@ export default function AdminProfilePage() {
                   <Lock className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="font-medium">Password</p>
-                    <p className="text-sm text-muted-foreground">Change your account password</p>
+                    <p className="text-sm text-muted-foreground">
+                      Change your account password
+                    </p>
                   </div>
                 </div>
-                <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+                <Dialog
+                  open={passwordDialogOpen}
+                  onOpenChange={setPasswordDialogOpen}
+                >
                   <DialogTrigger asChild>
                     <Button variant="outline">Change Password</Button>
                   </DialogTrigger>
@@ -355,7 +405,12 @@ export default function AdminProfilePage() {
                         <Input
                           type="password"
                           value={passwordData.currentPassword}
-                          onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                          onChange={(e) =>
+                            setPasswordData((prev) => ({
+                              ...prev,
+                              currentPassword: e.target.value,
+                            }))
+                          }
                         />
                       </div>
                       <div className="space-y-2">
@@ -363,7 +418,12 @@ export default function AdminProfilePage() {
                         <Input
                           type="password"
                           value={passwordData.newPassword}
-                          onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                          onChange={(e) =>
+                            setPasswordData((prev) => ({
+                              ...prev,
+                              newPassword: e.target.value,
+                            }))
+                          }
                         />
                       </div>
                       <div className="space-y-2">
@@ -371,16 +431,29 @@ export default function AdminProfilePage() {
                         <Input
                           type="password"
                           value={passwordData.confirmPassword}
-                          onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                          onChange={(e) =>
+                            setPasswordData((prev) => ({
+                              ...prev,
+                              confirmPassword: e.target.value,
+                            }))
+                          }
                         />
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setPasswordDialogOpen(false)}>
+                      <Button
+                        variant="outline"
+                        onClick={() => setPasswordDialogOpen(false)}
+                      >
                         Cancel
                       </Button>
-                      <Button onClick={handleChangePassword} disabled={changingPassword}>
-                        {changingPassword && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      <Button
+                        onClick={handleChangePassword}
+                        disabled={changingPassword}
+                      >
+                        {changingPassword && (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        )}
                         Change Password
                       </Button>
                     </DialogFooter>
@@ -393,10 +466,15 @@ export default function AdminProfilePage() {
                   <Key className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="font-medium">Password Recovery</p>
-                    <p className="text-sm text-muted-foreground">Recover password via email or phone</p>
+                    <p className="text-sm text-muted-foreground">
+                      Recover password via email or phone
+                    </p>
                   </div>
                 </div>
-                <Dialog open={recoveryDialogOpen} onOpenChange={setRecoveryDialogOpen}>
+                <Dialog
+                  open={recoveryDialogOpen}
+                  onOpenChange={setRecoveryDialogOpen}
+                >
                   <DialogTrigger asChild>
                     <Button variant="outline">Setup Recovery</Button>
                   </DialogTrigger>
@@ -404,16 +482,19 @@ export default function AdminProfilePage() {
                     <DialogHeader>
                       <DialogTitle>Password Recovery</DialogTitle>
                       <DialogDescription>
-                        Choose how you want to recover your password if you forget it.
+                        Choose how you want to recover your password if you
+                        forget it.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                       <div className="space-y-3">
-                        <div 
+                        <div
                           className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                            recoveryMethod === 'email' ? 'border-gold-500 bg-gold-50' : ''
+                            recoveryMethod === "email"
+                              ? "border-gold-500 bg-gold-50"
+                              : ""
                           }`}
-                          onClick={() => setRecoveryMethod('email')}
+                          onClick={() => setRecoveryMethod("email")}
                         >
                           <div className="flex items-center gap-3">
                             <Mail className="h-5 w-5" />
@@ -425,18 +506,24 @@ export default function AdminProfilePage() {
                             </div>
                           </div>
                         </div>
-                        <div 
+                        <div
                           className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                            recoveryMethod === 'phone' ? 'border-gold-500 bg-gold-50' : ''
-                          } ${!user?.phone ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          onClick={() => user?.phone && setRecoveryMethod('phone')}
+                            recoveryMethod === "phone"
+                              ? "border-gold-500 bg-gold-50"
+                              : ""
+                          } ${!user?.phone ? "opacity-50 cursor-not-allowed" : ""}`}
+                          onClick={() =>
+                            user?.phone && setRecoveryMethod("phone")
+                          }
                         >
                           <div className="flex items-center gap-3">
                             <Phone className="h-5 w-5" />
                             <div>
                               <p className="font-medium">Phone Recovery</p>
                               <p className="text-sm text-muted-foreground">
-                                {user?.phone ? `Send recovery code to ${user.phone}` : 'Add phone number first'}
+                                {user?.phone
+                                  ? `Send recovery code to ${user.phone}`
+                                  : "Add phone number first"}
                               </p>
                             </div>
                           </div>
@@ -444,11 +531,19 @@ export default function AdminProfilePage() {
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setRecoveryDialogOpen(false)}>
+                      <Button
+                        variant="outline"
+                        onClick={() => setRecoveryDialogOpen(false)}
+                      >
                         Cancel
                       </Button>
-                      <Button onClick={handleSendRecovery} disabled={sendingRecovery}>
-                        {sendingRecovery && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      <Button
+                        onClick={handleSendRecovery}
+                        disabled={sendingRecovery}
+                      >
+                        {sendingRecovery && (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        )}
                         Send Recovery Code
                       </Button>
                     </DialogFooter>
@@ -489,28 +584,36 @@ export default function AdminProfilePage() {
             <DialogHeader>
               <DialogTitle>Enter Verification Code</DialogTitle>
               <DialogDescription>
-                We sent a 6-digit code to your {otpType === 'EMAIL_VERIFICATION' ? 'email' : 'phone'}.
+                We sent a 6-digit code to your{" "}
+                {otpType === "EMAIL_VERIFICATION" ? "email" : "phone"}.
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
               <Input
                 placeholder="000000"
                 value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                onChange={(e) =>
+                  setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                }
                 className="text-center text-2xl tracking-widest"
                 maxLength={6}
               />
             </div>
             <DialogFooter>
-              <Button 
-                variant="link" 
+              <Button
+                variant="link"
                 onClick={() => handleSendOtp(otpType)}
                 disabled={sendingOtp}
               >
                 Resend Code
               </Button>
-              <Button onClick={handleVerifyOtp} disabled={verifyingOtp || otpCode.length !== 6}>
-                {verifyingOtp && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              <Button
+                onClick={handleVerifyOtp}
+                disabled={verifyingOtp || otpCode.length !== 6}
+              >
+                {verifyingOtp && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
                 Verify
               </Button>
             </DialogFooter>

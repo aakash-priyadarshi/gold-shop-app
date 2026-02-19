@@ -778,7 +778,8 @@ export default function AdminSettingsPage() {
                           {
                             tier: "Standard",
                             key: "making_charge_cap_standard",
-                            color: "bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600",
+                            color:
+                              "bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600",
                             default: 15,
                           },
                           {
@@ -790,7 +791,8 @@ export default function AdminSettingsPage() {
                           {
                             tier: "Gold",
                             key: "making_charge_cap_gold",
-                            color: "bg-yellow-50 dark:bg-yellow-950/30 border-yellow-400",
+                            color:
+                              "bg-yellow-50 dark:bg-yellow-950/30 border-yellow-400",
                             default: 22,
                           },
                           {

@@ -917,25 +917,33 @@ export default function CreateInvoicePage() {
                   <Label>Tax Rates ({countryTax.taxName})</Label>
                   <div className="grid grid-cols-2 gap-2 mt-1">
                     <div className="flex items-center justify-between px-3 py-1.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 rounded text-xs">
-                      <span className="text-amber-700 dark:text-amber-300">Metal</span>
+                      <span className="text-amber-700 dark:text-amber-300">
+                        Metal
+                      </span>
                       <span className="font-medium">
                         {(countryTax.rates.PRECIOUS_METAL * 100).toFixed(1)}%
                       </span>
                     </div>
                     <div className="flex items-center justify-between px-3 py-1.5 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 rounded text-xs">
-                      <span className="text-purple-700 dark:text-purple-300">Gemstone</span>
+                      <span className="text-purple-700 dark:text-purple-300">
+                        Gemstone
+                      </span>
                       <span className="font-medium">
                         {(countryTax.rates.GEMSTONE * 100).toFixed(1)}%
                       </span>
                     </div>
                     <div className="flex items-center justify-between px-3 py-1.5 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 rounded text-xs">
-                      <span className="text-blue-700 dark:text-blue-300">Making</span>
+                      <span className="text-blue-700 dark:text-blue-300">
+                        Making
+                      </span>
                       <span className="font-medium">
                         {(countryTax.rates.MAKING_CHARGE * 100).toFixed(1)}%
                       </span>
                     </div>
                     <div className="flex items-center justify-between px-3 py-1.5 bg-green-50 dark:bg-green-950/30 border border-green-200 rounded text-xs">
-                      <span className="text-green-700 dark:text-green-300">Finish</span>
+                      <span className="text-green-700 dark:text-green-300">
+                        Finish
+                      </span>
                       <span className="font-medium">
                         {(countryTax.rates.FINISH * 100).toFixed(1)}%
                       </span>

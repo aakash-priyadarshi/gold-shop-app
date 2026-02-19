@@ -626,7 +626,10 @@ export default function ShopPublicProfilePage() {
                             violation
                           </p>
                           {aboutViolations.map((v, i) => (
-                            <p key={i} className="text-xs text-red-700 dark:text-red-300">
+                            <p
+                              key={i}
+                              className="text-xs text-red-700 dark:text-red-300"
+                            >
                               • {v}
                             </p>
                           ))}

@@ -1,13 +1,17 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { ShopGuard } from '@/components/auth/RouteGuard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
+import { ShopGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -15,18 +19,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import {
-  DollarSign,
-  Percent,
-  Save,
-  Loader2,
-  Settings,
-  RefreshCw,
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import api from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
+} from "@/components/ui/table";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import api from "@/lib/api";
+import { DollarSign, Loader2, Percent, Save, Settings } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface ShopPricing {
   defaultMakingChargePercent: number;
@@ -40,22 +38,24 @@ interface ShopPricing {
 }
 
 const defaultMetals = [
-  { metalType: 'GOLD', purity: '24K', label: 'Gold 24K' },
-  { metalType: 'GOLD', purity: '22K', label: 'Gold 22K' },
-  { metalType: 'GOLD', purity: '18K', label: 'Gold 18K' },
-  { metalType: 'SILVER', purity: '999', label: 'Silver 999' },
-  { metalType: 'SILVER', purity: '925', label: 'Silver 925' },
-  { metalType: 'PLATINUM', purity: '950', label: 'Platinum 950' },
+  { metalType: "GOLD", purity: "24K", label: "Gold 24K" },
+  { metalType: "GOLD", purity: "22K", label: "Gold 22K" },
+  { metalType: "GOLD", purity: "18K", label: "Gold 18K" },
+  { metalType: "SILVER", purity: "999", label: "Silver 999" },
+  { metalType: "SILVER", purity: "925", label: "Silver 925" },
+  { metalType: "PLATINUM", purity: "950", label: "Platinum 950" },
 ];
 
 export default function ShopPricingPage() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  
-  const [defaultMakingCharge, setDefaultMakingCharge] = useState('10');
-  const [defaultMargin, setDefaultMargin] = useState('2');
-  const [overrides, setOverrides] = useState<Record<string, { making: string; margin: string }>>({});
+
+  const [defaultMakingCharge, setDefaultMakingCharge] = useState("10");
+  const [defaultMargin, setDefaultMargin] = useState("2");
+  const [overrides, setOverrides] = useState<
+    Record<string, { making: string; margin: string }>
+  >({});
 
   useEffect(() => {
     if (user?.shop?.id) {
@@ -66,34 +66,35 @@ export default function ShopPricingPage() {
   const loadPricing = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/shops/my-shop');
+      const response = await api.get("/shops/my-shop");
       const shop = response.data;
-      
+
       if (shop.defaultMakingChargePercent) {
         setDefaultMakingCharge(shop.defaultMakingChargePercent.toString());
       }
       if (shop.defaultMarginPercent) {
         setDefaultMargin(shop.defaultMarginPercent.toString());
       }
-      
+
       // Load metal overrides if they exist
       if (shop.metalRates) {
-        const overrideMap: Record<string, { making: string; margin: string }> = {};
+        const overrideMap: Record<string, { making: string; margin: string }> =
+          {};
         shop.metalRates.forEach((rate: any) => {
           const key = `${rate.metalType}_${rate.purity}`;
           overrideMap[key] = {
-            making: rate.makingChargePercent?.toString() || '',
-            margin: rate.marginPercent?.toString() || '',
+            making: rate.makingChargePercent?.toString() || "",
+            margin: rate.marginPercent?.toString() || "",
           };
         });
         setOverrides(overrideMap);
       }
     } catch (error) {
-      console.error('Failed to load pricing:', error);
+      console.error("Failed to load pricing:", error);
       toast({
-        variant: 'destructive',
-        title: 'Failed to load pricing',
-        description: 'Could not fetch pricing settings',
+        variant: "destructive",
+        title: "Failed to load pricing",
+        description: "Could not fetch pricing settings",
       });
     } finally {
       setIsLoading(false);
@@ -103,8 +104,8 @@ export default function ShopPricingPage() {
   const handleOverrideChange = (
     metalType: string,
     purity: string,
-    field: 'making' | 'margin',
-    value: string
+    field: "making" | "margin",
+    value: string,
   ) => {
     const key = `${metalType}_${purity}`;
     setOverrides((prev) => ({
@@ -129,7 +130,7 @@ export default function ShopPricingPage() {
       const metalRates = Object.entries(overrides)
         .filter(([_, values]) => values.making || values.margin)
         .map(([key, values]) => {
-          const [metalType, purity] = key.split('_');
+          const [metalType, purity] = key.split("_");
           return {
             metalType,
             purity,
@@ -139,18 +140,20 @@ export default function ShopPricingPage() {
         });
 
       if (metalRates.length > 0) {
-        await api.patch(`/api/shops/${user?.shop?.id}/metal-rates`, { metalRates });
+        await api.patch(`/api/shops/${user?.shop?.id}/metal-rates`, {
+          metalRates,
+        });
       }
 
       toast({
-        title: 'Settings Saved',
-        description: 'Your pricing settings have been updated',
+        title: "Settings Saved",
+        description: "Your pricing settings have been updated",
       });
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Save Failed',
-        description: error.response?.data?.message || 'Could not save settings',
+        variant: "destructive",
+        title: "Save Failed",
+        description: error.response?.data?.message || "Could not save settings",
       });
     } finally {
       setIsSaving(false);
@@ -209,7 +212,9 @@ export default function ShopPricingPage() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="defaultMaking">Default Making Charge (%)</Label>
+                  <Label htmlFor="defaultMaking">
+                    Default Making Charge (%)
+                  </Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="defaultMaking"
@@ -258,7 +263,8 @@ export default function ShopPricingPage() {
                 Metal-Specific Overrides
               </CardTitle>
               <CardDescription>
-                Set custom rates for specific metals. Leave blank to use defaults.
+                Set custom rates for specific metals. Leave blank to use
+                defaults.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -274,13 +280,19 @@ export default function ShopPricingPage() {
                 <TableBody>
                   {defaultMetals.map((metal) => {
                     const key = `${metal.metalType}_${metal.purity}`;
-                    const override = overrides[key] || { making: '', margin: '' };
-                    const effectiveMaking = override.making || defaultMakingCharge;
+                    const override = overrides[key] || {
+                      making: "",
+                      margin: "",
+                    };
+                    const effectiveMaking =
+                      override.making || defaultMakingCharge;
                     const effectiveMargin = override.margin || defaultMargin;
-                    
+
                     return (
                       <TableRow key={key}>
-                        <TableCell className="font-medium">{metal.label}</TableCell>
+                        <TableCell className="font-medium">
+                          {metal.label}
+                        </TableCell>
                         <TableCell>
                           <Input
                             type="number"
@@ -290,7 +302,12 @@ export default function ShopPricingPage() {
                             placeholder={defaultMakingCharge}
                             value={override.making}
                             onChange={(e) =>
-                              handleOverrideChange(metal.metalType, metal.purity, 'making', e.target.value)
+                              handleOverrideChange(
+                                metal.metalType,
+                                metal.purity,
+                                "making",
+                                e.target.value,
+                              )
                             }
                             className="w-24"
                           />
@@ -304,7 +321,12 @@ export default function ShopPricingPage() {
                             placeholder={defaultMargin}
                             value={override.margin}
                             onChange={(e) =>
-                              handleOverrideChange(metal.metalType, metal.purity, 'margin', e.target.value)
+                              handleOverrideChange(
+                                metal.metalType,
+                                metal.purity,
+                                "margin",
+                                e.target.value,
+                              )
                             }
                             className="w-24"
                           />
@@ -325,16 +347,21 @@ export default function ShopPricingPage() {
           {/* Info Card */}
           <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/50">
             <CardContent className="p-4">
-              <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">How Pricing Works</h4>
+              <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">
+                How Pricing Works
+              </h4>
               <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
                 <li>
-                  <strong>Making Charge:</strong> Percentage added to metal value for craftsmanship
+                  <strong>Making Charge:</strong> Percentage added to metal
+                  value for craftsmanship
                 </li>
                 <li>
-                  <strong>Margin:</strong> Your profit margin on the base metal price
+                  <strong>Margin:</strong> Your profit margin on the base metal
+                  price
                 </li>
                 <li>
-                  Final Price = Metal Value × (1 + Margin%) + (Metal Value × Making Charge%)
+                  Final Price = Metal Value × (1 + Margin%) + (Metal Value ×
+                  Making Charge%)
                 </li>
                 <li>
                   Taxes are calculated separately based on the customer's region

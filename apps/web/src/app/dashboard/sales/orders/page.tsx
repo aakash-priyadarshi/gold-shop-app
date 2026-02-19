@@ -146,7 +146,9 @@ export default function SalesOrdersPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Orders</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                Orders
+              </h1>
               <p className="text-gray-500 dark:text-gray-400 mt-1">
                 View and track all orders ({totalOrders} total)
               </p>
@@ -204,12 +206,16 @@ export default function SalesOrdersPage() {
               {loading ? (
                 <div className="flex items-center justify-center py-16">
                   <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                  <span className="ml-2 text-gray-500 dark:text-gray-400">Loading orders...</span>
+                  <span className="ml-2 text-gray-500 dark:text-gray-400">
+                    Loading orders...
+                  </span>
                 </div>
               ) : orders.length === 0 ? (
                 <div className="text-center py-16">
                   <ShoppingCart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 dark:text-gray-400">No orders found</p>
+                  <p className="text-gray-500 dark:text-gray-400">
+                    No orders found
+                  </p>
                 </div>
               ) : (
                 <Table>

@@ -1473,7 +1473,9 @@ export function Header() {
                             <div
                               key={notif.id}
                               className={`p-3 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer ${
-                                !notif.isRead ? "bg-blue-50/50 dark:bg-blue-900/20" : ""
+                                !notif.isRead
+                                  ? "bg-blue-50/50 dark:bg-blue-900/20"
+                                  : ""
                               }`}
                             >
                               <div className="flex items-start gap-2">

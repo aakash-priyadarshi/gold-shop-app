@@ -270,7 +270,8 @@ export default function ShopRfqsPage() {
                         <TableCell>
                           <Badge
                             className={
-                              statusColors[rfq.status] || "bg-gray-100 dark:bg-gray-800"
+                              statusColors[rfq.status] ||
+                              "bg-gray-100 dark:bg-gray-800"
                             }
                           >
                             {getStatusIcon(rfq.status)}

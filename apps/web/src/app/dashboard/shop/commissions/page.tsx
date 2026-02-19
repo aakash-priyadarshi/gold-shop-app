@@ -186,7 +186,9 @@ export default function ShopCommissionsPage() {
                       return (
                         <TableRow
                           key={commission.id}
-                          className={isOverdue ? "bg-red-50 dark:bg-red-950/30" : ""}
+                          className={
+                            isOverdue ? "bg-red-50 dark:bg-red-950/30" : ""
+                          }
                         >
                           <TableCell>
                             <div className="font-medium">

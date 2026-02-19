@@ -5429,7 +5429,9 @@ export default function CreateRfqPage() {
                           <div className="flex-1">
                             <p
                               className={`font-medium text-sm ${
-                                !isLoggedIn ? "text-blue-800 dark:text-blue-200" : "text-amber-800 dark:text-amber-200"
+                                !isLoggedIn
+                                  ? "text-blue-800 dark:text-blue-200"
+                                  : "text-amber-800 dark:text-amber-200"
                               }`}
                             >
                               {!isLoggedIn
@@ -5440,7 +5442,9 @@ export default function CreateRfqPage() {
                             </p>
                             <p
                               className={`text-sm mt-1 ${
-                                !isLoggedIn ? "text-blue-700 dark:text-blue-300" : "text-amber-700 dark:text-amber-300"
+                                !isLoggedIn
+                                  ? "text-blue-700 dark:text-blue-300"
+                                  : "text-amber-700 dark:text-amber-300"
                               }`}
                             >
                               {submitBlockReason}
@@ -6293,7 +6297,8 @@ export default function CreateRfqPage() {
                                     sellerGroups?.nearYou?.label || "Near You",
                                   color: "text-green-700 dark:text-green-300",
                                   bgColor: "bg-green-50 dark:bg-green-950/30",
-                                  borderColor: "border-green-200 dark:border-green-800/50",
+                                  borderColor:
+                                    "border-green-200 dark:border-green-800/50",
                                 },
                                 same_state: {
                                   icon: "🏛️",
@@ -6302,7 +6307,8 @@ export default function CreateRfqPage() {
                                     "Same State",
                                   color: "text-blue-700 dark:text-blue-300",
                                   bgColor: "bg-blue-50 dark:bg-blue-950/30",
-                                  borderColor: "border-blue-200 dark:border-blue-800/50",
+                                  borderColor:
+                                    "border-blue-200 dark:border-blue-800/50",
                                 },
                                 same_country: {
                                   icon: "🇮🇳",
@@ -6311,7 +6317,8 @@ export default function CreateRfqPage() {
                                     "Same Country",
                                   color: "text-amber-700 dark:text-amber-300",
                                   bgColor: "bg-amber-50 dark:bg-amber-950/30",
-                                  borderColor: "border-amber-200 dark:border-amber-800/50",
+                                  borderColor:
+                                    "border-amber-200 dark:border-amber-800/50",
                                 },
                                 other: {
                                   icon: "🌍",
@@ -6320,7 +6327,8 @@ export default function CreateRfqPage() {
                                     "International",
                                   color: "text-purple-700 dark:text-purple-300",
                                   bgColor: "bg-purple-50 dark:bg-purple-950/30",
-                                  borderColor: "border-purple-200 dark:border-purple-800/50",
+                                  borderColor:
+                                    "border-purple-200 dark:border-purple-800/50",
                                 },
                               };
 

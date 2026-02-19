@@ -1,36 +1,42 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { CustomerGuard } from '@/components/auth/RouteGuard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { CustomerGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
+import { toast } from "@/hooks/use-toast";
+import api from "@/lib/api";
 import {
-  CreditCard,
-  Plus,
-  Trash2,
-  Loader2,
-  Wallet,
-  Smartphone,
   Building,
-  Shield,
   Check,
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import api from '@/lib/api';
+  CreditCard,
+  Loader2,
+  Plus,
+  Shield,
+  Smartphone,
+  Trash2,
+  Wallet,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface PaymentMethod {
   id: string;
-  type: 'card' | 'bank' | 'esewa' | 'khalti' | 'imepay';
+  type: "card" | "bank" | "esewa" | "khalti" | "imepay";
   label: string;
   lastFour?: string;
   expiryMonth?: number;
@@ -42,11 +48,11 @@ interface PaymentMethod {
 }
 
 const paymentTypes = [
-  { value: 'card', label: 'Credit/Debit Card', icon: CreditCard },
-  { value: 'bank', label: 'Bank Account', icon: Building },
-  { value: 'esewa', label: 'eSewa', icon: Smartphone },
-  { value: 'khalti', label: 'Khalti', icon: Wallet },
-  { value: 'imepay', label: 'IME Pay', icon: Smartphone },
+  { value: "card", label: "Credit/Debit Card", icon: CreditCard },
+  { value: "bank", label: "Bank Account", icon: Building },
+  { value: "esewa", label: "eSewa", icon: Smartphone },
+  { value: "khalti", label: "Khalti", icon: Wallet },
+  { value: "imepay", label: "IME Pay", icon: Smartphone },
 ];
 
 export default function PaymentMethodsPage() {
@@ -54,21 +60,21 @@ export default function PaymentMethodsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
-  
+
   const [newMethod, setNewMethod] = useState({
-    type: 'esewa' as 'card' | 'bank' | 'esewa' | 'khalti' | 'imepay',
-    label: '',
+    type: "esewa" as "card" | "bank" | "esewa" | "khalti" | "imepay",
+    label: "",
     // Card fields
-    cardNumber: '',
-    expiryMonth: '',
-    expiryYear: '',
-    cvv: '',
+    cardNumber: "",
+    expiryMonth: "",
+    expiryYear: "",
+    cvv: "",
     // Bank fields
-    bankName: '',
-    accountNumber: '',
-    accountHolderName: '',
+    bankName: "",
+    accountNumber: "",
+    accountHolderName: "",
     // Mobile wallet fields
-    mobileNumber: '',
+    mobileNumber: "",
   });
 
   useEffect(() => {
@@ -78,11 +84,11 @@ export default function PaymentMethodsPage() {
   const loadPaymentMethods = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/users/me/payment-methods');
+      const response = await api.get("/users/me/payment-methods");
       setPaymentMethods(response.data || []);
     } catch (error) {
       // API might not exist yet - show empty state
-      console.error('Failed to load payment methods:', error);
+      console.error("Failed to load payment methods:", error);
       setPaymentMethods([]);
     } finally {
       setIsLoading(false);
@@ -97,11 +103,11 @@ export default function PaymentMethodsPage() {
         label: newMethod.label || getDefaultLabel(newMethod.type),
       };
 
-      if (newMethod.type === 'card') {
+      if (newMethod.type === "card") {
         payload.lastFour = newMethod.cardNumber.slice(-4);
         payload.expiryMonth = parseInt(newMethod.expiryMonth);
         payload.expiryYear = parseInt(newMethod.expiryYear);
-      } else if (newMethod.type === 'bank') {
+      } else if (newMethod.type === "bank") {
         payload.bankName = newMethod.bankName;
         payload.accountNumber = newMethod.accountNumber;
       } else {
@@ -109,21 +115,22 @@ export default function PaymentMethodsPage() {
         payload.mobileNumber = newMethod.mobileNumber;
       }
 
-      const response = await api.post('/users/me/payment-methods', payload);
+      const response = await api.post("/users/me/payment-methods", payload);
       setPaymentMethods([...paymentMethods, response.data]);
-      
+
       toast({
-        title: 'Payment Method Added',
-        description: 'Your payment method has been saved',
+        title: "Payment Method Added",
+        description: "Your payment method has been saved",
       });
 
       setShowAddForm(false);
       resetForm();
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Failed to add payment method',
-        description: error.response?.data?.message || 'Could not save payment method',
+        variant: "destructive",
+        title: "Failed to add payment method",
+        description:
+          error.response?.data?.message || "Could not save payment method",
       });
     } finally {
       setIsSaving(false);
@@ -133,16 +140,17 @@ export default function PaymentMethodsPage() {
   const deletePaymentMethod = async (id: string) => {
     try {
       await api.delete(`/users/me/payment-methods/${id}`);
-      setPaymentMethods(paymentMethods.filter(pm => pm.id !== id));
+      setPaymentMethods(paymentMethods.filter((pm) => pm.id !== id));
       toast({
-        title: 'Payment Method Removed',
-        description: 'The payment method has been deleted',
+        title: "Payment Method Removed",
+        description: "The payment method has been deleted",
       });
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Delete Failed',
-        description: error.response?.data?.message || 'Could not delete payment method',
+        variant: "destructive",
+        title: "Delete Failed",
+        description:
+          error.response?.data?.message || "Could not delete payment method",
       });
     }
   };
@@ -150,50 +158,54 @@ export default function PaymentMethodsPage() {
   const setDefaultPaymentMethod = async (id: string) => {
     try {
       await api.patch(`/users/me/payment-methods/${id}/default`);
-      setPaymentMethods(paymentMethods.map(pm => ({ ...pm, isDefault: pm.id === id })));
+      setPaymentMethods(
+        paymentMethods.map((pm) => ({ ...pm, isDefault: pm.id === id })),
+      );
       toast({
-        title: 'Default Payment Method Updated',
-        description: 'Your default payment method has been set',
+        title: "Default Payment Method Updated",
+        description: "Your default payment method has been set",
       });
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Update Failed',
-        description: error.response?.data?.message || 'Could not set default payment method',
+        variant: "destructive",
+        title: "Update Failed",
+        description:
+          error.response?.data?.message ||
+          "Could not set default payment method",
       });
     }
   };
 
   const getDefaultLabel = (type: string) => {
-    const typeInfo = paymentTypes.find(t => t.value === type);
-    return typeInfo?.label || 'Payment Method';
+    const typeInfo = paymentTypes.find((t) => t.value === type);
+    return typeInfo?.label || "Payment Method";
   };
 
   const resetForm = () => {
     setNewMethod({
-      type: 'esewa',
-      label: '',
-      cardNumber: '',
-      expiryMonth: '',
-      expiryYear: '',
-      cvv: '',
-      bankName: '',
-      accountNumber: '',
-      accountHolderName: '',
-      mobileNumber: '',
+      type: "esewa",
+      label: "",
+      cardNumber: "",
+      expiryMonth: "",
+      expiryYear: "",
+      cvv: "",
+      bankName: "",
+      accountNumber: "",
+      accountHolderName: "",
+      mobileNumber: "",
     });
   };
 
   const getPaymentMethodIcon = (type: string) => {
-    const typeInfo = paymentTypes.find(t => t.value === type);
+    const typeInfo = paymentTypes.find((t) => t.value === type);
     const Icon = typeInfo?.icon || CreditCard;
     return <Icon className="h-5 w-5" />;
   };
 
   const getPaymentMethodDisplay = (method: PaymentMethod) => {
-    if (method.type === 'card') {
+    if (method.type === "card") {
       return `•••• ${method.lastFour}`;
-    } else if (method.type === 'bank') {
+    } else if (method.type === "bank") {
       return `${method.bankName} - ••••${method.accountNumber?.slice(-4)}`;
     } else {
       return method.mobileNumber;
@@ -237,10 +249,12 @@ export default function PaymentMethodsPage() {
               <div className="flex items-start gap-3">
                 <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
                 <div>
-                  <h3 className="font-medium text-blue-900 dark:text-blue-100">Your payment information is secure</h3>
+                  <h3 className="font-medium text-blue-900 dark:text-blue-100">
+                    Your payment information is secure
+                  </h3>
                   <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                    We use industry-standard encryption to protect your payment details. 
-                    Card numbers are never stored on our servers.
+                    We use industry-standard encryption to protect your payment
+                    details. Card numbers are never stored on our servers.
                   </p>
                 </div>
               </div>
@@ -267,15 +281,22 @@ export default function PaymentMethodsPage() {
                         <button
                           key={type.value}
                           type="button"
-                          onClick={() => setNewMethod({ ...newMethod, type: type.value as any })}
+                          onClick={() =>
+                            setNewMethod({
+                              ...newMethod,
+                              type: type.value as any,
+                            })
+                          }
                           className={`flex flex-col items-center gap-2 p-3 rounded-lg border transition-colors ${
                             newMethod.type === type.value
-                            ? 'border-gold-500 bg-gold-50 text-gold-700 dark:bg-gold-950/30 dark:text-gold-300'
-                            : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'
+                              ? "border-gold-500 bg-gold-50 text-gold-700 dark:bg-gold-950/30 dark:text-gold-300"
+                              : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
                           }`}
                         >
                           <Icon className="h-5 w-5" />
-                          <span className="text-xs font-medium">{type.label}</span>
+                          <span className="text-xs font-medium">
+                            {type.label}
+                          </span>
                         </button>
                       );
                     })}
@@ -283,13 +304,20 @@ export default function PaymentMethodsPage() {
                 </div>
 
                 {/* Card Fields */}
-                {newMethod.type === 'card' && (
+                {newMethod.type === "card" && (
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label>Card Number</Label>
                       <Input
                         value={newMethod.cardNumber}
-                        onChange={(e) => setNewMethod({ ...newMethod, cardNumber: e.target.value.replace(/\D/g, '').slice(0, 16) })}
+                        onChange={(e) =>
+                          setNewMethod({
+                            ...newMethod,
+                            cardNumber: e.target.value
+                              .replace(/\D/g, "")
+                              .slice(0, 16),
+                          })
+                        }
                         placeholder="1234 5678 9012 3456"
                         maxLength={19}
                       />
@@ -299,15 +327,20 @@ export default function PaymentMethodsPage() {
                         <Label>Expiry Month</Label>
                         <Select
                           value={newMethod.expiryMonth}
-                          onValueChange={(value) => setNewMethod({ ...newMethod, expiryMonth: value })}
+                          onValueChange={(value) =>
+                            setNewMethod({ ...newMethod, expiryMonth: value })
+                          }
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="MM" />
                           </SelectTrigger>
                           <SelectContent>
                             {Array.from({ length: 12 }, (_, i) => (
-                              <SelectItem key={i + 1} value={String(i + 1).padStart(2, '0')}>
-                                {String(i + 1).padStart(2, '0')}
+                              <SelectItem
+                                key={i + 1}
+                                value={String(i + 1).padStart(2, "0")}
+                              >
+                                {String(i + 1).padStart(2, "0")}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -317,7 +350,9 @@ export default function PaymentMethodsPage() {
                         <Label>Expiry Year</Label>
                         <Select
                           value={newMethod.expiryYear}
-                          onValueChange={(value) => setNewMethod({ ...newMethod, expiryYear: value })}
+                          onValueChange={(value) =>
+                            setNewMethod({ ...newMethod, expiryYear: value })
+                          }
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="YY" />
@@ -339,7 +374,14 @@ export default function PaymentMethodsPage() {
                         <Input
                           type="password"
                           value={newMethod.cvv}
-                          onChange={(e) => setNewMethod({ ...newMethod, cvv: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                          onChange={(e) =>
+                            setNewMethod({
+                              ...newMethod,
+                              cvv: e.target.value
+                                .replace(/\D/g, "")
+                                .slice(0, 4),
+                            })
+                          }
                           placeholder="123"
                           maxLength={4}
                         />
@@ -349,13 +391,18 @@ export default function PaymentMethodsPage() {
                 )}
 
                 {/* Bank Account Fields */}
-                {newMethod.type === 'bank' && (
+                {newMethod.type === "bank" && (
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label>Bank Name</Label>
                       <Input
                         value={newMethod.bankName}
-                        onChange={(e) => setNewMethod({ ...newMethod, bankName: e.target.value })}
+                        onChange={(e) =>
+                          setNewMethod({
+                            ...newMethod,
+                            bankName: e.target.value,
+                          })
+                        }
                         placeholder="e.g., Nepal Bank Limited"
                       />
                     </div>
@@ -363,7 +410,12 @@ export default function PaymentMethodsPage() {
                       <Label>Account Holder Name</Label>
                       <Input
                         value={newMethod.accountHolderName}
-                        onChange={(e) => setNewMethod({ ...newMethod, accountHolderName: e.target.value })}
+                        onChange={(e) =>
+                          setNewMethod({
+                            ...newMethod,
+                            accountHolderName: e.target.value,
+                          })
+                        }
                         placeholder="As shown on bank account"
                       />
                     </div>
@@ -371,7 +423,12 @@ export default function PaymentMethodsPage() {
                       <Label>Account Number</Label>
                       <Input
                         value={newMethod.accountNumber}
-                        onChange={(e) => setNewMethod({ ...newMethod, accountNumber: e.target.value })}
+                        onChange={(e) =>
+                          setNewMethod({
+                            ...newMethod,
+                            accountNumber: e.target.value,
+                          })
+                        }
                         placeholder="Your bank account number"
                       />
                     </div>
@@ -379,17 +436,23 @@ export default function PaymentMethodsPage() {
                 )}
 
                 {/* Mobile Wallet Fields */}
-                {['esewa', 'khalti', 'imepay'].includes(newMethod.type) && (
+                {["esewa", "khalti", "imepay"].includes(newMethod.type) && (
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label>Mobile Number</Label>
                       <Input
                         value={newMethod.mobileNumber}
-                        onChange={(e) => setNewMethod({ ...newMethod, mobileNumber: e.target.value })}
+                        onChange={(e) =>
+                          setNewMethod({
+                            ...newMethod,
+                            mobileNumber: e.target.value,
+                          })
+                        }
                         placeholder="+977 98XXXXXXXX"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Enter the mobile number linked to your {getDefaultLabel(newMethod.type)} account
+                        Enter the mobile number linked to your{" "}
+                        {getDefaultLabel(newMethod.type)} account
                       </p>
                     </div>
                   </div>
@@ -400,7 +463,9 @@ export default function PaymentMethodsPage() {
                   <Label>Label (Optional)</Label>
                   <Input
                     value={newMethod.label}
-                    onChange={(e) => setNewMethod({ ...newMethod, label: e.target.value })}
+                    onChange={(e) =>
+                      setNewMethod({ ...newMethod, label: e.target.value })
+                    }
                     placeholder={`e.g., Personal ${getDefaultLabel(newMethod.type)}`}
                   />
                 </div>
@@ -448,7 +513,9 @@ export default function PaymentMethodsPage() {
                   <div className="rounded-full bg-muted p-6 mx-auto w-fit mb-4">
                     <Wallet className="h-12 w-12 text-muted-foreground" />
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">No payment methods saved</h3>
+                  <h3 className="text-lg font-semibold mb-2">
+                    No payment methods saved
+                  </h3>
                   <p className="text-muted-foreground mb-6">
                     Add a payment method to speed up your checkout process
                   </p>
@@ -465,11 +532,15 @@ export default function PaymentMethodsPage() {
                     <div
                       key={method.id}
                       className={`flex items-center justify-between p-4 rounded-lg border ${
-                        method.isDefault ? 'border-gold-500 bg-gold-50 dark:bg-gold-950/30' : 'border-gray-200 dark:border-gray-700'
+                        method.isDefault
+                          ? "border-gold-500 bg-gold-50 dark:bg-gold-950/30"
+                          : "border-gray-200 dark:border-gray-700"
                       }`}
                     >
                       <div className="flex items-center gap-4">
-                        <div className={`p-2 rounded-full ${method.isDefault ? 'bg-gold-100' : 'bg-muted'}`}>
+                        <div
+                          className={`p-2 rounded-full ${method.isDefault ? "bg-gold-100" : "bg-muted"}`}
+                        >
                           {getPaymentMethodIcon(method.type)}
                         </div>
                         <div>
@@ -485,11 +556,15 @@ export default function PaymentMethodsPage() {
                           <p className="text-sm text-muted-foreground">
                             {getPaymentMethodDisplay(method)}
                           </p>
-                          {method.type === 'card' && method.expiryMonth && method.expiryYear && (
-                            <p className="text-xs text-muted-foreground">
-                              Expires {String(method.expiryMonth).padStart(2, '0')}/{method.expiryYear}
-                            </p>
-                          )}
+                          {method.type === "card" &&
+                            method.expiryMonth &&
+                            method.expiryYear && (
+                              <p className="text-xs text-muted-foreground">
+                                Expires{" "}
+                                {String(method.expiryMonth).padStart(2, "0")}/
+                                {method.expiryYear}
+                              </p>
+                            )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">

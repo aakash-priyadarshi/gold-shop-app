@@ -1,8 +1,8 @@
 "use client";
 
+import { ThemeSyncProvider } from "@/components/ThemeSyncProvider";
 import { CartProvider } from "@/contexts/CartContext";
 import { ChatPopupProvider } from "@/contexts/ChatPopupContext";
-import { ThemeSyncProvider } from "@/components/ThemeSyncProvider";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { MarketProvider, useMarket } from "@/hooks/useMarket";
 import {

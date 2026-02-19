@@ -248,7 +248,9 @@ export default function ShopDashboard() {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{stat.title}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {stat.title}
+                      </p>
                       <p className="text-2xl font-bold mt-1">{stat.value}</p>
                     </div>
                     <div
@@ -351,7 +353,10 @@ export default function ShopDashboard() {
               <CardContent>
                 <div className="space-y-4">
                   {rfqRequests.map((rfq) => (
-                    <div key={rfq.id} className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                    <div
+                      key={rfq.id}
+                      className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
+                    >
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="font-medium">{rfq.customer}</p>

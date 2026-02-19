@@ -319,7 +319,9 @@ function GemstoneCardV2({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Gem className="h-4 w-4 text-purple-500 dark:text-purple-400" />
-          <span className="font-medium text-sm dark:text-gray-100">Stone #{index + 1}</span>
+          <span className="font-medium text-sm dark:text-gray-100">
+            Stone #{index + 1}
+          </span>
           {isUsingPreset && (
             <Badge
               variant="secondary"
@@ -350,7 +352,11 @@ function GemstoneCardV2({
           value={gemstone.presetId || "custom"}
           onValueChange={onPresetSelect}
         >
-          <SelectTrigger className={isUsingPreset ? "border-purple-400 dark:border-purple-600" : ""}>
+          <SelectTrigger
+            className={
+              isUsingPreset ? "border-purple-400 dark:border-purple-600" : ""
+            }
+          >
             <SelectValue placeholder="Choose preset or customize..." />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
@@ -721,7 +727,9 @@ function GemstonePriceBreakdownDisplay({
   if (gemstone.presetId && gemstone.estimatedPrice) {
     return (
       <div className="pt-2 border-t dark:border-gray-700 flex justify-between items-center text-sm bg-green-50 dark:bg-green-950/30 -mx-4 -mb-4 px-4 py-3 rounded-b-lg">
-        <span className="text-green-700 dark:text-green-300">Preset price:</span>
+        <span className="text-green-700 dark:text-green-300">
+          Preset price:
+        </span>
         <span className="font-bold text-green-800 dark:text-green-200">
           {currencySymbol}{" "}
           {Math.round(gemstone.estimatedPrice * exchangeRate).toLocaleString()}{" "}
@@ -792,7 +800,9 @@ function GemstonePriceBreakdownDisplay({
             </div>
 
             {/* Size */}
-            <div className="text-gray-600 dark:text-gray-400">Size ({breakdown.sizeLabel}):</div>
+            <div className="text-gray-600 dark:text-gray-400">
+              Size ({breakdown.sizeLabel}):
+            </div>
             <div className="text-right font-medium">
               {formatMultiplier(breakdown.sizeMultiplier)}
             </div>
@@ -828,7 +838,9 @@ function GemstonePriceBreakdownDisplay({
             {/* Cut */}
             {breakdown.cutMultiplier !== 1 && (
               <>
-                <div className="text-gray-600 dark:text-gray-400">Cut ({breakdown.cutLabel}):</div>
+                <div className="text-gray-600 dark:text-gray-400">
+                  Cut ({breakdown.cutLabel}):
+                </div>
                 <div
                   className={`text-right font-medium ${breakdown.cutMultiplier > 1 ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400"}`}
                 >
@@ -874,7 +886,9 @@ function GemstonePriceBreakdownDisplay({
             {/* Quantity */}
             {breakdown.count > 1 && (
               <>
-                <div className="text-gray-600 dark:text-gray-400">× Quantity:</div>
+                <div className="text-gray-600 dark:text-gray-400">
+                  × Quantity:
+                </div>
                 <div className="text-right font-medium">
                   {breakdown.count} stones
                 </div>
@@ -884,7 +898,9 @@ function GemstonePriceBreakdownDisplay({
 
           {/* Grand Total */}
           <div className="flex justify-between items-center pt-2 border-t border-green-300 dark:border-green-800/50">
-            <span className="font-semibold text-green-800 dark:text-green-200">Total:</span>
+            <span className="font-semibold text-green-800 dark:text-green-200">
+              Total:
+            </span>
             <span className="font-bold text-lg text-green-900 dark:text-green-100">
               {formatPrice(breakdown.grandTotal)}
             </span>
