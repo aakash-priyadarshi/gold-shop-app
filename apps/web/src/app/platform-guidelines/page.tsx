@@ -130,8 +130,12 @@ export default function PlatformGuidelinesPage() {
                 >
                   <item.icon className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-sm text-gray-800 dark:text-gray-100">{item.en}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{item.hi}</p>
+                    <p className="text-sm text-gray-800 dark:text-gray-100">
+                      {item.en}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {item.hi}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -229,8 +233,12 @@ export default function PlatformGuidelinesPage() {
                 >
                   <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-sm text-gray-800 dark:text-gray-100">{item.en}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{item.hi}</p>
+                    <p className="text-sm text-gray-800 dark:text-gray-100">
+                      {item.en}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {item.hi}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -272,8 +280,12 @@ export default function PlatformGuidelinesPage() {
                 >
                   <Shield className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-sm text-gray-800 dark:text-gray-100">{item.en}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{item.hi}</p>
+                    <p className="text-sm text-gray-800 dark:text-gray-100">
+                      {item.en}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {item.hi}
+                    </p>
                   </div>
                 </div>
               ))}

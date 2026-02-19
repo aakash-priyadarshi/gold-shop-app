@@ -28,7 +28,7 @@ export function StaticPageView({ slug }: { slug: string }) {
         setError(
           err?.response?.status === 404
             ? "This page has not been published yet."
-            : "Failed to load page content."
+            : "Failed to load page content.",
         );
       } finally {
         setLoading(false);

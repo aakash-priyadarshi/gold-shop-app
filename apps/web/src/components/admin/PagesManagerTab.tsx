@@ -25,6 +25,7 @@ import { toast } from "@/hooks/use-toast";
 import { pagesApi } from "@/lib/api";
 import {
   Edit,
+  ExternalLink,
   Eye,
   FileText,
   Loader2,
@@ -32,7 +33,6 @@ import {
   RefreshCw,
   Save,
   Trash2,
-  ExternalLink,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -158,8 +158,7 @@ export function PagesManagerTab() {
       toast({
         variant: "destructive",
         title: "Save Failed",
-        description:
-          error?.response?.data?.message || "Could not save page.",
+        description: error?.response?.data?.message || "Could not save page.",
       });
     } finally {
       setSaving(false);
@@ -254,10 +253,7 @@ export function PagesManagerTab() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold">{page.title}</span>
-                      <Badge
-                        variant="outline"
-                        className="text-xs font-mono"
-                      >
+                      <Badge variant="outline" className="text-xs font-mono">
                         /{page.slug}
                       </Badge>
                       {page.isPublished ? (
@@ -279,16 +275,11 @@ export function PagesManagerTab() {
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground mt-1">
-                      Updated{" "}
-                      {new Date(page.updatedAt).toLocaleDateString()}
+                      Updated {new Date(page.updatedAt).toLocaleDateString()}
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      asChild
-                    >
+                    <Button variant="ghost" size="icon" asChild>
                       <a
                         href={`/${page.slug}`}
                         target="_blank"
@@ -325,7 +316,9 @@ export function PagesManagerTab() {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingPage.isNew ? "Create New Page" : `Edit: ${editingPage.title}`}
+              {editingPage.isNew
+                ? "Create New Page"
+                : `Edit: ${editingPage.title}`}
             </DialogTitle>
             <DialogDescription>
               {editingPage.isNew
@@ -394,8 +387,8 @@ export function PagesManagerTab() {
               />
               <p className="text-xs text-muted-foreground">
                 Use HTML tags: &lt;h1&gt;, &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;,
-                &lt;ol&gt;, &lt;li&gt;, &lt;strong&gt;, &lt;em&gt;,
-                &lt;a href=&quot;...&quot;&gt;, &lt;img src=&quot;...&quot;&gt;
+                &lt;ol&gt;, &lt;li&gt;, &lt;strong&gt;, &lt;em&gt;, &lt;a
+                href=&quot;...&quot;&gt;, &lt;img src=&quot;...&quot;&gt;
               </p>
             </div>
 
@@ -445,10 +438,7 @@ export function PagesManagerTab() {
           </div>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setEditDialogOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
               Cancel
             </Button>
             <Button onClick={handleSave} disabled={saving}>

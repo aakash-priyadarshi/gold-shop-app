@@ -36,7 +36,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { adminApi, platformConfigApi, marketConfigApi } from "@/lib/api";
+import { adminApi, platformConfigApi } from "@/lib/api";
 import {
   AlertTriangle,
   Award,
@@ -2192,13 +2192,9 @@ export default function AdminSettingsPage() {
                 </div>
               )}
 
-              {activeTab === "market" && (
-                <MarketConfigTab />
-              )}
+              {activeTab === "market" && <MarketConfigTab />}
 
-              {activeTab === "pages" && (
-                <PagesManagerTab />
-              )}
+              {activeTab === "pages" && <PagesManagerTab />}
             </div>
           </div>
         </div>

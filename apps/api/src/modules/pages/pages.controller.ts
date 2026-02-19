@@ -1,21 +1,21 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Delete,
-  Param,
   Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
   UseGuards,
-} from '@nestjs/common';
-import { PagesService } from './pages.service';
-import { CreatePageDto, UpdatePageDto } from './dto/page.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '@prisma/client';
+} from "@nestjs/common";
+import { UserRole } from "@prisma/client";
+import { Roles } from "../auth/decorators/roles.decorator";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RolesGuard } from "../auth/guards/roles.guard";
+import { CreatePageDto, UpdatePageDto } from "./dto/page.dto";
+import { PagesService } from "./pages.service";
 
-@Controller('pages')
+@Controller("pages")
 export class PagesController {
   constructor(private readonly pagesService: PagesService) {}
 
@@ -23,7 +23,7 @@ export class PagesController {
    * Seed default pages (Admin only)
    * GET /api/pages/admin/seed
    */
-  @Get('admin/seed')
+  @Get("admin/seed")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   async seed() {
@@ -34,7 +34,7 @@ export class PagesController {
    * List all pages (Admin only)
    * GET /api/pages/admin/list
    */
-  @Get('admin/list')
+  @Get("admin/list")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   async listAll() {
@@ -45,7 +45,7 @@ export class PagesController {
    * Create a new page (Admin only)
    * POST /api/pages/admin
    */
-  @Post('admin')
+  @Post("admin")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   async create(@Body() dto: CreatePageDto) {
@@ -56,10 +56,10 @@ export class PagesController {
    * Update a page (Admin only)
    * PATCH /api/pages/admin/:id
    */
-  @Patch('admin/:id')
+  @Patch("admin/:id")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  async update(@Param('id') id: string, @Body() dto: UpdatePageDto) {
+  async update(@Param("id") id: string, @Body() dto: UpdatePageDto) {
     return this.pagesService.update(id, dto);
   }
 
@@ -67,10 +67,10 @@ export class PagesController {
    * Delete a page (Admin only)
    * DELETE /api/pages/admin/:id
    */
-  @Delete('admin/:id')
+  @Delete("admin/:id")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  async delete(@Param('id') id: string) {
+  async delete(@Param("id") id: string) {
     return this.pagesService.delete(id);
   }
 
@@ -78,8 +78,8 @@ export class PagesController {
    * Get a published page by slug (public)
    * GET /api/pages/:slug
    */
-  @Get(':slug')
-  async getBySlug(@Param('slug') slug: string) {
+  @Get(":slug")
+  async getBySlug(@Param("slug") slug: string) {
     return this.pagesService.getBySlug(slug);
   }
 }

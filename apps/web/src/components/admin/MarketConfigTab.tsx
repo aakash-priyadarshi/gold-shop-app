@@ -24,16 +24,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { marketConfigApi } from "@/lib/api";
 import {
-  CheckCircle2,
   Edit,
   Globe,
   Loader2,
-  MapPin,
-  Phone,
   Mail,
-  Save,
-  RefreshCw,
+  MapPin,
   MessageSquare,
+  Phone,
+  RefreshCw,
+  Save,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -171,8 +170,8 @@ export function MarketConfigTab() {
                 Market Configurations
               </CardTitle>
               <CardDescription>
-                Manage country-specific settings, contact info, and pricing
-                for each market region.
+                Manage country-specific settings, contact info, and pricing for
+                each market region.
               </CardDescription>
             </div>
             <div className="flex gap-2">
@@ -219,7 +218,10 @@ export function MarketConfigTab() {
                           {config.countryName}
                         </span>
                         {config.isActive ? (
-                          <Badge variant="default" className="text-xs bg-green-600">
+                          <Badge
+                            variant="default"
+                            className="text-xs bg-green-600"
+                          >
                             Active
                           </Badge>
                         ) : (
@@ -246,10 +248,10 @@ export function MarketConfigTab() {
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
                         <span>Currency: {config.defaultCurrency}</span>
-                        <span>Tax: {config.taxPercentage}% ({config.taxName})</span>
                         <span>
-                          Multiplier: {config.priceMultiplier}x
+                          Tax: {config.taxPercentage}% ({config.taxName})
                         </span>
+                        <span>Multiplier: {config.priceMultiplier}x</span>
                         {config.codEnabled && (
                           <Badge variant="outline" className="text-xs">
                             COD
@@ -493,10 +495,7 @@ export function MarketConfigTab() {
           )}
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setEditDialogOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
               Cancel
             </Button>
             <Button onClick={handleSave} disabled={saving}>
