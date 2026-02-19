@@ -1,19 +1,26 @@
+import { headers } from "next/headers";
 import { HeroSection } from "@/components/home/HeroSection";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { BRAND } from "@/config/brand";
+import { resolveHeroVideo } from "@/lib/geo";
 import { Gem, ShieldCheck, Truck } from "lucide-react";
 import Link from "next/link";
 
 export default function HomePage() {
+  // Server-side country detection via Cloudflare CF-IPCountry header
+  const headersList = headers();
+  const country = headersList.get("cf-ipcountry");
+  const { videoSrc } = resolveHeroVideo(country);
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
 
       <main className="flex-1">
-        {/* Dynamic Hero Section */}
-        <HeroSection />
+        {/* Dynamic Hero Section with geo-based video */}
+        <HeroSection videoSrc={videoSrc} />
 
         {/* Features Section */}
         <section className="py-12 lg:py-20 bg-white dark:bg-gray-900">

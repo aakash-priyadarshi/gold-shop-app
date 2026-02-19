@@ -173,6 +173,12 @@ export default {
         return handleServe(key, env, corsHeaders);
       }
 
+      // Serve videos from /vid/ path (hero videos, etc.)
+      if (path.startsWith("/vid/")) {
+        const key = path.substring(1); // Remove leading slash → "vid/filename.mp4"
+        return handleServe(key, env, corsHeaders);
+      }
+
       // Serve images from root path (e.g., /product/123.jpg)
       if (
         path.startsWith("/product/") ||
