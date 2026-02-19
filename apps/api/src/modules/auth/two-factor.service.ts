@@ -173,7 +173,7 @@ export class TwoFactorService {
 
     // Verify password (basic check - should use bcrypt compare)
     // Note: In production, use proper password verification
-    const bcrypt = require('bcrypt');
+    const bcrypt = require('bcryptjs');
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid password');
