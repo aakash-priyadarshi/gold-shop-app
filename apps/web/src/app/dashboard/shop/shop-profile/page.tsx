@@ -113,9 +113,9 @@ const TIER_META: Record<
   STANDARD: {
     label: "Standard",
     icon: Shield,
-    color: "text-gray-600",
-    bg: "bg-gray-100",
-    border: "border-gray-300",
+    color: "text-gray-600 dark:text-gray-400",
+    bg: "bg-gray-100 dark:bg-gray-800",
+    border: "border-gray-300 dark:border-gray-600",
   },
   SILVER: {
     label: "Silver",
@@ -127,15 +127,15 @@ const TIER_META: Record<
   GOLD: {
     label: "Gold",
     icon: Award,
-    color: "text-yellow-700",
-    bg: "bg-yellow-50",
+    color: "text-yellow-700 dark:text-yellow-300",
+    bg: "bg-yellow-50 dark:bg-yellow-950/30",
     border: "border-yellow-400",
   },
   ELITE: {
     label: "Elite",
     icon: Crown,
-    color: "text-purple-700",
-    bg: "bg-purple-50",
+    color: "text-purple-700 dark:text-purple-300",
+    bg: "bg-purple-50 dark:bg-purple-950/30",
     border: "border-purple-400",
   },
 };
@@ -620,13 +620,13 @@ export default function ShopPublicProfilePage() {
                       )}
 
                       {aboutViolations.length > 0 && (
-                        <div className="rounded-md bg-red-50 border border-red-200 p-3 space-y-1">
-                          <p className="text-sm font-medium text-red-800 flex items-center gap-1">
+                        <div className="rounded-md bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 p-3 space-y-1">
+                          <p className="text-sm font-medium text-red-800 dark:text-red-200 flex items-center gap-1">
                             <AlertTriangle className="h-4 w-4" /> Content policy
                             violation
                           </p>
                           {aboutViolations.map((v, i) => (
-                            <p key={i} className="text-xs text-red-700">
+                            <p key={i} className="text-xs text-red-700 dark:text-red-300">
                               • {v}
                             </p>
                           ))}
@@ -763,8 +763,8 @@ export default function ShopPublicProfilePage() {
                                   key={key}
                                   className={`flex items-center justify-between rounded-lg px-4 py-3 border ${
                                     criterion.met
-                                      ? "bg-green-50 border-green-200"
-                                      : "bg-amber-50 border-amber-200"
+                                      ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800/50"
+                                      : "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50"
                                   }`}
                                 >
                                   <div className="flex items-center gap-2">

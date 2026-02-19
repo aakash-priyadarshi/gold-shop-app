@@ -328,7 +328,7 @@ export default function ShopAnalyticsPage() {
                         <span className="text-muted-foreground">Response Rate</span>
                         <span className="font-medium">{(analytics?.rfqs?.responseRate || 0).toFixed(1)}%</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                         <div 
                           className="bg-blue-600 h-2 rounded-full" 
                           style={{ width: `${analytics?.rfqs?.responseRate || 0}%` }}
@@ -340,7 +340,7 @@ export default function ShopAnalyticsPage() {
                         <span className="text-muted-foreground">Win Rate</span>
                         <span className="font-medium">{(analytics?.rfqs?.winRate || 0).toFixed(1)}%</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                         <div 
                           className="bg-green-600 h-2 rounded-full" 
                           style={{ width: `${analytics?.rfqs?.winRate || 0}%` }}

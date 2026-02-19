@@ -186,11 +186,11 @@ export default function IntelligenceDashboardPage() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <Brain className="h-7 w-7 text-purple-600" />
                 Marketplace Intelligence
               </h1>
-              <p className="text-gray-500 mt-1">
+              <p className="text-gray-500 dark:text-gray-400 mt-1">
                 AI phase tracking, data insights, and anomaly detection
               </p>
             </div>
@@ -213,7 +213,7 @@ export default function IntelligenceDashboardPage() {
               <CardContent className="py-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-white/60">
+                    <div className="p-2 rounded-full bg-white/60 dark:bg-[#161B22]/60">
                       <Zap className="h-5 w-5" />
                     </div>
                     <div>
@@ -275,7 +275,7 @@ export default function IntelligenceDashboardPage() {
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-500">Total Insights</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Total Insights</p>
                         <p className="text-2xl font-bold">
                           {dashboard.overview.totalInsights}
                         </p>
@@ -288,7 +288,7 @@ export default function IntelligenceDashboardPage() {
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-500">Avg Offer Price</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Avg Offer Price</p>
                         <p className="text-2xl font-bold">
                           {dashboard.averages.avgOfferPrice
                             ? `NPR ${Math.round(dashboard.averages.avgOfferPrice).toLocaleString()}`
@@ -303,7 +303,7 @@ export default function IntelligenceDashboardPage() {
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
                           Avg Making Charge
                         </p>
                         <p className="text-2xl font-bold">
@@ -320,7 +320,7 @@ export default function IntelligenceDashboardPage() {
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-500">Avg Offers/RFQ</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Avg Offers/RFQ</p>
                         <p className="text-2xl font-bold">
                           {dashboard.averages.avgOffersPerRfq
                             ? dashboard.averages.avgOffersPerRfq.toFixed(1)
@@ -351,7 +351,7 @@ export default function IntelligenceDashboardPage() {
                             className="flex items-center justify-between"
                           >
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-gray-500 w-4">
+                              <span className="text-sm font-medium text-gray-500 dark:text-gray-400 w-4">
                                 {idx + 1}.
                               </span>
                               <span className="font-medium">
@@ -359,7 +359,7 @@ export default function IntelligenceDashboardPage() {
                               </span>
                             </div>
                             <div className="flex items-center gap-3">
-                              <span className="text-sm text-gray-500">
+                              <span className="text-sm text-gray-500 dark:text-gray-400">
                                 {item._count.id} RFQs
                               </span>
                               {item._avg.avgOfferPrice && (
@@ -479,7 +479,7 @@ export default function IntelligenceDashboardPage() {
                   {milestone.actionItems &&
                     (milestone.actionItems as any[]).length > 0 && (
                       <CardContent>
-                        <p className="text-xs font-semibold text-gray-500 mb-2 uppercase">
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase">
                           Action Items
                         </p>
                         <div className="space-y-2">
@@ -487,7 +487,7 @@ export default function IntelligenceDashboardPage() {
                             (action: any, idx: number) => (
                               <div
                                 key={idx}
-                                className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-gray-50"
+                                className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800/50"
                               >
                                 <div className="flex items-center gap-2">
                                   {action.status === "completed" ? (
@@ -495,10 +495,10 @@ export default function IntelligenceDashboardPage() {
                                   ) : action.status === "skipped" ? (
                                     <XCircle className="h-4 w-4 text-gray-400" />
                                   ) : (
-                                    <div className="h-4 w-4 border-2 border-gray-300 rounded" />
+                                    <div className="h-4 w-4 border-2 border-gray-300 dark:border-gray-600 rounded" />
                                   )}
                                   <span
-                                    className={`text-sm ${action.status === "completed" ? "text-green-700 line-through" : action.status === "skipped" ? "text-gray-400 line-through" : "text-gray-700"}`}
+                                    className={`text-sm ${action.status === "completed" ? "text-green-700 dark:text-green-300 line-through" : action.status === "skipped" ? "text-gray-400 line-through" : "text-gray-700 dark:text-gray-300"}`}
                                   >
                                     {action.action}
                                   </span>
@@ -554,7 +554,7 @@ export default function IntelligenceDashboardPage() {
                 <Card>
                   <CardContent className="py-12 text-center">
                     <Shield className="h-12 w-12 text-green-400 mx-auto mb-3" />
-                    <p className="text-lg font-medium text-gray-700">
+                    <p className="text-lg font-medium text-gray-700 dark:text-gray-300">
                       No unreviewed anomalies
                     </p>
                     <p className="text-sm text-gray-400 mt-1">
@@ -579,7 +579,7 @@ export default function IntelligenceDashboardPage() {
                               {anomaly.anomalyType.replace(/_/g, " ")}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
                             Expected:{" "}
                             <span className="font-medium">
                               {Math.round(
@@ -656,7 +656,7 @@ export default function IntelligenceDashboardPage() {
                               .replace(/([A-Z])/g, " $1")
                               .replace(/^./, (s) => s.toUpperCase())}
                           </p>
-                          <p className="text-sm text-gray-500 mt-1">
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                             {cap.description}
                           </p>
                           <Badge variant="outline" className="mt-2">

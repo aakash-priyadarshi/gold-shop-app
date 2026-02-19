@@ -3499,11 +3499,11 @@ export default function CreateRfqPage() {
                                     {/* Missing info — shown as friendly suggestion */}
                                     {aiResult.missingInfo &&
                                       aiResult.missingInfo.length > 0 && (
-                                        <div className="text-xs bg-amber-50 border border-amber-200 rounded p-2">
-                                          <span className="font-medium text-amber-800">
+                                        <div className="text-xs bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded p-2">
+                                          <span className="font-medium text-amber-800 dark:text-amber-200">
                                             Tip:{" "}
                                           </span>
-                                          <span className="text-amber-700">
+                                          <span className="text-amber-700 dark:text-amber-300">
                                             Adding{" "}
                                             {aiResult.missingInfo.join(", ")}{" "}
                                             would help sellers give you better
@@ -3523,14 +3523,14 @@ export default function CreateRfqPage() {
 
                                     {/* Guest prompt: encourage login for full features */}
                                     {aiResult.isGuest && (
-                                      <div className="text-xs bg-blue-50 border border-blue-200 rounded p-2 flex items-center justify-between">
-                                        <span className="text-blue-800">
+                                      <div className="text-xs bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 rounded p-2 flex items-center justify-between">
+                                        <span className="text-blue-800 dark:text-blue-200">
                                           ✨ Sign in to submit this to sellers
                                           and get real quotes
                                         </span>
                                         <a
                                           href="/auth/login?redirect=/rfq/create"
-                                          className="text-blue-700 font-medium underline hover:text-blue-900 whitespace-nowrap ml-2"
+                                          className="text-blue-700 dark:text-blue-300 font-medium underline hover:text-blue-900 dark:hover:text-blue-100 whitespace-nowrap ml-2"
                                         >
                                           Sign in →
                                         </a>
@@ -3711,8 +3711,8 @@ export default function CreateRfqPage() {
                           {/* Weight guidance message */}
                           {formData.jewelleryType &&
                             WEIGHT_GUIDANCE[formData.jewelleryType] && (
-                              <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
-                                <p className="text-sm text-amber-800">
+                              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-md p-3">
+                                <p className="text-sm text-amber-800 dark:text-amber-200">
                                   <span className="font-medium">
                                     💡 Typical weight for{" "}
                                     {JEWELLERY_TYPES.find(
@@ -3727,7 +3727,7 @@ export default function CreateRfqPage() {
                                     }
                                   </span>
                                 </p>
-                                <p className="text-xs text-amber-700 mt-1">
+                                <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
                                   {WEIGHT_GUIDANCE[formData.jewelleryType].note}
                                 </p>
                               </div>
@@ -3797,7 +3797,7 @@ export default function CreateRfqPage() {
                                 <div
                                   className={`p-4 border rounded-lg cursor-pointer transition-colors ${
                                     formData.buildMethod === method.value
-                                      ? "border-gold-500 bg-gold-50"
+                                      ? "border-gold-500 bg-gold-50 dark:bg-gold-950/30 dark:border-gold-500/60"
                                       : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
                                   }`}
                                   onClick={() => {
@@ -3982,10 +3982,10 @@ export default function CreateRfqPage() {
 
                       {/* Method D: Italian Machine Made Options */}
                       {formData.buildMethod === "METHOD_D" && (
-                        <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800/50">
                           <div className="flex items-center gap-2">
-                            <Sparkles className="h-5 w-5 text-blue-600" />
-                            <h4 className="font-medium text-blue-900">
+                            <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                            <h4 className="font-medium text-blue-900 dark:text-blue-200">
                               Italian Machine Made Options
                             </h4>
                           </div>
@@ -4479,9 +4479,9 @@ export default function CreateRfqPage() {
                         </Select>
                       </div>
 
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-3">
-                        <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                        <div className="text-sm text-blue-700">
+                      <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4 flex gap-3">
+                        <Info className="h-5 w-5 text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                        <div className="text-sm text-blue-700 dark:text-blue-300">
                           <p className="font-medium mb-1">How it works</p>
                           <p>
                             After submitting your request, multiple verified
@@ -4500,19 +4500,19 @@ export default function CreateRfqPage() {
                             {compositionValidation.errors.map((err, idx) => (
                               <div
                                 key={`err-${idx}`}
-                                className="bg-red-50 border border-red-200 rounded-lg p-3 flex gap-2"
+                                className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-lg p-3 flex gap-2"
                               >
-                                <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
-                                <p className="text-sm text-red-700">{err}</p>
+                                <AlertTriangle className="h-4 w-4 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                                <p className="text-sm text-red-700 dark:text-red-300">{err}</p>
                               </div>
                             ))}
                             {compositionValidation.warnings.map((warn, idx) => (
                               <div
                                 key={`warn-${idx}`}
-                                className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2"
+                                className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg p-3 flex gap-2"
                               >
-                                <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                                <p className="text-sm text-amber-700">{warn}</p>
+                                <AlertTriangle className="h-4 w-4 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                                <p className="text-sm text-amber-700 dark:text-amber-300">{warn}</p>
                               </div>
                             ))}
                           </div>
@@ -4547,7 +4547,7 @@ export default function CreateRfqPage() {
                     <CardContent className="space-y-6">
                       {/* Show weight info if template selected */}
                       {hasRealTemplate && (
-                        <div className="bg-gray-50 p-4 rounded-lg">
+                        <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
                           <p className="text-sm text-gray-600 dark:text-gray-300">
                             <span className="font-medium">Template:</span>{" "}
                             {
@@ -5193,11 +5193,11 @@ export default function CreateRfqPage() {
                           }
 
                           return (
-                            <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-2">
+                            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-lg p-4 space-y-2">
                               <div className="flex items-start gap-2">
-                                <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
+                                <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
                                 <div className="space-y-1 min-w-0">
-                                  <p className="text-sm font-semibold text-red-800">
+                                  <p className="text-sm font-semibold text-red-800 dark:text-red-200">
                                     Budget too low — estimated cost is{" "}
                                     {currencyInfo.symbol}
                                     {Math.round(
@@ -5207,16 +5207,16 @@ export default function CreateRfqPage() {
                                     {currencyInfo.symbol}
                                     {Math.round(maxBudget).toLocaleString()})
                                   </p>
-                                  <p className="text-xs text-red-700">
+                                  <p className="text-xs text-red-700 dark:text-red-300">
                                     Sellers are unlikely to offer at this price.
                                     Adjust your specs or increase budget.
                                   </p>
                                   {suggestions.length > 0 && (
-                                    <div className="mt-2 pt-2 border-t border-red-200">
-                                      <p className="text-xs font-medium text-red-700 mb-1">
+                                    <div className="mt-2 pt-2 border-t border-red-200 dark:border-red-800/50">
+                                      <p className="text-xs font-medium text-red-700 dark:text-red-300 mb-1">
                                         Suggestions to fit your budget:
                                       </p>
-                                      <ul className="text-xs text-red-600 space-y-0.5 list-disc list-inside">
+                                      <ul className="text-xs text-red-600 dark:text-red-400 space-y-0.5 list-disc list-inside">
                                         {suggestions.map((s, i) => (
                                           <li key={i}>{s}</li>
                                         ))}
@@ -5239,9 +5239,9 @@ export default function CreateRfqPage() {
                         // Budget is way higher than estimate — may get poor offers
                         if (minBudget > 0 && minBudget > estimatedTotal * 1.5) {
                           return (
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
-                              <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
-                              <p className="text-sm text-blue-700">
+                            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 rounded-lg p-3 flex items-start gap-2">
+                              <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                              <p className="text-sm text-blue-700 dark:text-blue-300">
                                 Your minimum budget ({currencyInfo.symbol}
                                 {Math.round(minBudget).toLocaleString()}) is{" "}
                                 {underBudgetPct}% above the estimated cost (
@@ -5257,9 +5257,9 @@ export default function CreateRfqPage() {
                         // Budget looks ok — show green confirmation
                         if (estimatedTotal > 0 && maxBudget >= estimatedTotal) {
                           return (
-                            <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2">
-                              <Check className="h-4 w-4 text-green-600 shrink-0" />
-                              <p className="text-sm text-green-700">
+                            <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800/50 rounded-lg p-3 flex items-center gap-2">
+                              <Check className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
+                              <p className="text-sm text-green-700 dark:text-green-300">
                                 Budget looks good — estimated cost (
                                 {currencyInfo.symbol}
                                 {Math.round(estimatedTotal).toLocaleString()})
@@ -5288,8 +5288,8 @@ export default function CreateRfqPage() {
                       </div>
 
                       {/* Summary */}
-                      <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                        <h4 className="font-semibold">Request Summary</h4>
+                      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-3">
+                        <h4 className="font-semibold dark:text-gray-100">Request Summary</h4>
                         <div className="grid grid-cols-2 gap-2 text-sm">
                           <span className="text-gray-500 dark:text-gray-400">
                             Type:
@@ -5394,9 +5394,9 @@ export default function CreateRfqPage() {
 
                       {/* Method C warning */}
                       {formData.buildMethod === "METHOD_C" && (
-                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2">
-                          <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0" />
-                          <p className="text-sm text-amber-700">
+                        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg p-3 flex gap-2">
+                          <AlertTriangle className="h-5 w-5 text-amber-500 dark:text-amber-400 flex-shrink-0" />
+                          <p className="text-sm text-amber-700 dark:text-amber-300">
                             <strong>Note:</strong> This piece uses base metal
                             with plating/coating. It is not solid gold and will
                             be labeled accordingly.
@@ -5409,14 +5409,14 @@ export default function CreateRfqPage() {
                         <div
                           className={`border rounded-lg p-4 flex gap-3 ${
                             !isLoggedIn
-                              ? "bg-blue-50 border-blue-200"
-                              : "bg-amber-50 border-amber-200"
+                              ? "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/50"
+                              : "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50"
                           }`}
                         >
                           {!isLoggedIn ? (
-                            <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                            <Info className="h-5 w-5 text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                           ) : !isPhoneVerified ? (
-                            <Phone className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                            <Phone className="h-5 w-5 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                           ) : (
                             <ShieldCheck className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
                           )}
@@ -5469,7 +5469,7 @@ export default function CreateRfqPage() {
                       )}
 
                       {error && (
-                        <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+                        <div className="bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm border border-transparent dark:border-red-800/50">
                           {error}
                         </div>
                       )}
@@ -5526,19 +5526,19 @@ export default function CreateRfqPage() {
                 {step === 4 && submittedRfqId && (
                   <div className="space-y-6">
                     {/* Congratulations Card */}
-                    <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
+                    <Card className="border-green-200 dark:border-green-800/50 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30">
                       <CardContent className="pt-6">
                         <div className="text-center mb-6">
-                          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
-                            <Check className="h-8 w-8 text-green-600" />
+                          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/40 mb-4">
+                            <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
                           </div>
                           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                             {congratsMessage}
                           </h2>
                           <p className="text-gray-600 dark:text-gray-300">
                             Your request ID:{" "}
-                            <code className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                              {submittedRfqId.slice(0, 8)}...
+                            <code className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-sm">
+                              {submittedRfqId}
                             </code>
                           </p>
                         </div>
@@ -5654,7 +5654,7 @@ export default function CreateRfqPage() {
                     </Card>
 
                     {/* Delivery Address Selection */}
-                    <Card className="border-blue-200 bg-blue-50/30">
+                    <Card className="border-blue-200 dark:border-blue-800/50 bg-blue-50/30 dark:bg-blue-950/20">
                       <CardHeader className="pb-3">
                         <CardTitle className="flex items-center gap-2 text-lg">
                           <MapPin className="h-5 w-5 text-blue-500" />
@@ -5672,14 +5672,14 @@ export default function CreateRfqPage() {
                             <span>Loading your addresses...</span>
                           </div>
                         ) : deliveryAddresses.length === 0 ? (
-                          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg p-4">
                             <div className="flex items-start gap-3">
-                              <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />
+                              <AlertCircle className="h-5 w-5 text-amber-500 dark:text-amber-400 mt-0.5" />
                               <div>
-                                <h4 className="font-medium text-amber-800">
+                                <h4 className="font-medium text-amber-800 dark:text-amber-200">
                                   No delivery address set
                                 </h4>
-                                <p className="text-sm text-amber-700 mt-1">
+                                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
                                   Add a delivery address to see sellers in your
                                   area first. You can still browse all sellers
                                   below.
@@ -5707,7 +5707,7 @@ export default function CreateRfqPage() {
                                   onClick={() => setSelectedAddressId(addr.id)}
                                   className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
                                     selectedAddressId === addr.id
-                                      ? "border-blue-500 bg-blue-50"
+                                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30"
                                       : "border-gray-200 dark:border-gray-700 hover:border-gray-300 bg-white dark:bg-gray-900"
                                   }`}
                                 >
@@ -5857,7 +5857,7 @@ export default function CreateRfqPage() {
 
                         {/* Advanced Filters Panel */}
                         {showAdvancedFilters && (
-                          <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
+                          <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border dark:border-gray-700">
                             {/* Include International Sellers Toggle */}
                             <div className="mb-4 pb-3 border-b">
                               <label className="flex items-center gap-3 cursor-pointer">
@@ -6111,14 +6111,14 @@ export default function CreateRfqPage() {
 
                         {/* Auto-international fallback banner */}
                         {autoInternational && matchingSellers.length > 0 && (
-                          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2">
+                          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 rounded-lg flex items-start gap-2">
                             <span className="text-lg">🌍</span>
                             <div>
-                              <p className="text-sm font-medium text-blue-800">
+                              <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
                                 No sellers found in your country — showing
                                 international sellers
                               </p>
-                              <p className="text-xs text-blue-600 mt-0.5">
+                              <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
                                 {matchingSellers.length} international seller
                                 {matchingSellers.length !== 1 ? "s" : ""}{" "}
                                 available. Toggle &quot;Include international
@@ -6144,11 +6144,11 @@ export default function CreateRfqPage() {
                             </h3>
                             <div className="text-sm text-gray-500 dark:text-gray-400 space-y-2 max-w-md mx-auto">
                               {sellerDiagnostics && (
-                                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3 text-left">
-                                  <p className="font-medium text-amber-800 mb-1 text-xs">
+                                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg p-3 mb-3 text-left">
+                                  <p className="font-medium text-amber-800 dark:text-amber-200 mb-1 text-xs">
                                     🔍 Diagnostics
                                   </p>
-                                  <ul className="text-xs text-amber-700 space-y-0.5">
+                                  <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-0.5">
                                     <li>
                                       Total shops:{" "}
                                       {sellerDiagnostics.totalShops} | Active &
@@ -6381,10 +6381,10 @@ export default function CreateRfqPage() {
                                   <div
                                     className={`border rounded-lg p-4 hover:shadow-md transition-shadow ${
                                       seller.locationMatch === "same_city"
-                                        ? "border-green-200 bg-green-50/50"
+                                        ? "border-green-200 dark:border-green-800/50 bg-green-50/50 dark:bg-green-950/20"
                                         : isInternational
-                                          ? "border-orange-200 bg-orange-50/30"
-                                          : ""
+                                          ? "border-orange-200 dark:border-orange-800/50 bg-orange-50/30 dark:bg-orange-950/20"
+                                          : "dark:border-gray-700"
                                     }`}
                                   >
                                     <div className="flex items-start justify-between">
@@ -6413,18 +6413,18 @@ export default function CreateRfqPage() {
                                             )}
                                           {seller.locationMatch ===
                                             "same_city" && (
-                                            <Badge className="bg-green-100 text-green-700 text-xs">
+                                            <Badge className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-xs">
                                               Same City
                                             </Badge>
                                           )}
                                           {seller.locationMatch ===
                                             "same_state" && (
-                                            <Badge className="bg-blue-100 text-blue-700 text-xs">
+                                            <Badge className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs">
                                               Same State
                                             </Badge>
                                           )}
                                           {isInternational && (
-                                            <Badge className="bg-orange-100 text-orange-700 text-xs">
+                                            <Badge className="bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 text-xs">
                                               🌍 International
                                             </Badge>
                                           )}
@@ -6715,11 +6715,11 @@ export default function CreateRfqPage() {
                         const grandTotal = subtotal + taxAmount;
                         const sym = currencyInfo?.symbol || "Rs.";
                         return (
-                          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg mb-3">
-                            <p className="text-sm font-semibold text-amber-900 mb-2">
+                          <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg mb-3">
+                            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 mb-2">
                               Order Price Summary
                             </p>
-                            <div className="space-y-1 text-sm text-amber-800">
+                            <div className="space-y-1 text-sm text-amber-800 dark:text-amber-300">
                               <div className="flex justify-between">
                                 <span>Material Cost</span>
                                 <span>

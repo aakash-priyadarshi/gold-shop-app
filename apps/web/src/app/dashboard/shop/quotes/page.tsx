@@ -90,32 +90,32 @@ const statusConfig: Record<
 > = {
   QUOTED: {
     label: "Quoted",
-    color: "bg-amber-100 text-amber-700",
+    color: "bg-amber-100 text-amber-700 dark:text-amber-300",
     icon: Clock,
   },
   CONFIRMED: {
     label: "Confirmed",
-    color: "bg-blue-100 text-blue-700",
+    color: "bg-blue-100 text-blue-700 dark:text-blue-300",
     icon: CheckCircle,
   },
   IN_PROGRESS: {
     label: "In Progress",
-    color: "bg-purple-100 text-purple-700",
+    color: "bg-purple-100 text-purple-700 dark:text-purple-300",
     icon: Play,
   },
   READY: {
     label: "Ready",
-    color: "bg-green-100 text-green-700",
+    color: "bg-green-100 text-green-700 dark:text-green-300",
     icon: Package,
   },
   COMPLETED: {
     label: "Completed",
-    color: "bg-green-100 text-green-700",
+    color: "bg-green-100 text-green-700 dark:text-green-300",
     icon: CheckCircle,
   },
   CANCELLED: {
     label: "Cancelled",
-    color: "bg-red-100 text-red-700",
+    color: "bg-red-100 text-red-700 dark:text-red-300",
     icon: XCircle,
   },
 };

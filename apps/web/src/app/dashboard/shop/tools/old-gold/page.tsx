@@ -156,7 +156,7 @@ export default function OldGoldExchangePage() {
           </div>
 
           {/* Current Gold Rate */}
-          <Card className="bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200">
+          <Card className="bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200 dark:from-amber-950/30 dark:to-yellow-950/30 dark:border-amber-800/50">
             <CardContent className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
                 <Coins className="h-8 w-8 text-amber-500" />
@@ -178,9 +178,9 @@ export default function OldGoldExchangePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Old Gold Section */}
-            <Card className="border-red-200">
-              <CardHeader className="bg-red-50/50 rounded-t-lg">
-                <CardTitle className="text-red-700 flex items-center gap-2">
+            <Card className="border-red-200 dark:border-red-800/50">
+              <CardHeader className="bg-red-50/50 dark:bg-red-950/30 rounded-t-lg">
+                <CardTitle className="text-red-700 dark:text-red-300 flex items-center gap-2">
                   <Scale className="h-5 w-5" /> Customer's Old Gold
                 </CardTitle>
                 <CardDescription>Gold being exchanged/sold</CardDescription>
@@ -261,9 +261,9 @@ export default function OldGoldExchangePage() {
             </Card>
 
             {/* New Item Section */}
-            <Card className="border-green-200">
-              <CardHeader className="bg-green-50/50 rounded-t-lg">
-                <CardTitle className="text-green-700 flex items-center gap-2">
+            <Card className="border-green-200 dark:border-green-800/50">
+              <CardHeader className="bg-green-50/50 dark:bg-green-950/30 rounded-t-lg">
+                <CardTitle className="text-green-700 dark:text-green-300 flex items-center gap-2">
                   <TrendingUp className="h-5 w-5" /> New Jewellery
                 </CardTitle>
                 <CardDescription>Item being purchased</CardDescription>
@@ -345,7 +345,7 @@ export default function OldGoldExchangePage() {
 
           {/* Exchange Summary */}
           {(oldWeightG > 0 || newWeightG > 0) && (
-            <Card className="border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50">
+            <Card className="border-2 border-amber-300 dark:border-amber-600 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30">
               <CardHeader>
                 <CardTitle className="text-center text-xl">
                   Exchange Summary

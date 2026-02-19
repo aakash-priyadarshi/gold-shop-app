@@ -1362,7 +1362,7 @@ export default function ShopInventoryPage() {
                                 className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${
                                   isSelected
                                     ? "border-primary bg-primary/5"
-                                    : "hover:border-gray-300"
+                                    : "hover:border-gray-300 dark:hover:border-gray-600"
                                 }`}
                                 onClick={() => toggleGemstone(gemstone.id)}
                               >
@@ -1571,7 +1571,7 @@ export default function ShopInventoryPage() {
                                 className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
                                   isSelected
                                     ? "border-primary bg-primary/5"
-                                    : "hover:border-gray-300"
+                                    : "hover:border-gray-300 dark:hover:border-gray-600"
                                 }`}
                                 onClick={() => toggleJewelleryType(type)}
                               >
@@ -1655,7 +1655,7 @@ export default function ShopInventoryPage() {
                           className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-all ${
                             isSelected
                               ? "border-primary bg-primary/5"
-                              : "hover:border-gray-300"
+                              : "hover:border-gray-300 dark:hover:border-gray-600"
                           }`}
                           onClick={() => toggleAlloy(alloy.value)}
                         >
@@ -1712,7 +1712,7 @@ export default function ShopInventoryPage() {
                           className={`p-4 rounded-lg border transition-all ${
                             isSelected
                               ? "border-primary bg-primary/5"
-                              : "hover:border-gray-300"
+                              : "hover:border-gray-300 dark:hover:border-gray-600"
                           }`}
                         >
                           <div
@@ -1810,7 +1810,7 @@ export default function ShopInventoryPage() {
                           className={`p-4 rounded-lg border transition-all ${
                             isSelected
                               ? "border-primary bg-primary/5"
-                              : "hover:border-gray-300"
+                              : "hover:border-gray-300 dark:hover:border-gray-600"
                           }`}
                         >
                           <div
@@ -1906,7 +1906,7 @@ export default function ShopInventoryPage() {
                           className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-all ${
                             isSelected
                               ? "border-primary bg-primary/5"
-                              : "hover:border-gray-300"
+                              : "hover:border-gray-300 dark:hover:border-gray-600"
                           }`}
                           onClick={() => toggleBuildMethod(method.value)}
                         >
@@ -1982,7 +1982,7 @@ export default function ShopInventoryPage() {
                                 className={`p-3 rounded-lg border transition-all ${
                                   isSelected
                                     ? "border-primary bg-primary/5"
-                                    : "hover:border-gray-300"
+                                    : "hover:border-gray-300 dark:hover:border-gray-600"
                                 }`}
                               >
                                 <div

@@ -198,10 +198,10 @@ export function GemstoneEditorV2({
       <div className="space-y-4">
         {/* Popular Presets Quick Select */}
         {gemstones.length === 0 && (
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 border border-purple-200 dark:border-purple-800/50 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="h-4 w-4 text-purple-500" />
-              <span className="text-sm font-medium text-purple-800">
+              <Sparkles className="h-4 w-4 text-purple-500 dark:text-purple-400" />
+              <span className="text-sm font-medium text-purple-800 dark:text-purple-200">
                 Popular Choices
               </span>
             </div>
@@ -210,7 +210,7 @@ export function GemstoneEditorV2({
                 <Badge
                   key={preset.id}
                   variant="outline"
-                  className="cursor-pointer hover:bg-purple-100 hover:border-purple-400"
+                  className="cursor-pointer hover:bg-purple-100 dark:hover:bg-purple-900/40 hover:border-purple-400 dark:hover:border-purple-600"
                   onClick={() => {
                     const newGem = {
                       ...createNewGemstone(),
@@ -249,7 +249,7 @@ export function GemstoneEditorV2({
         <Button
           type="button"
           variant="outline"
-          className="w-full border-dashed border-purple-300 hover:border-purple-500 hover:bg-purple-50"
+          className="w-full border-dashed border-purple-300 dark:border-purple-700 hover:border-purple-500 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950/30"
           onClick={addGemstone}
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -258,11 +258,11 @@ export function GemstoneEditorV2({
 
         {/* Total Cost */}
         {gemstones.length > 0 && totalCost > 0 && (
-          <div className="bg-purple-50 rounded-lg p-3 flex justify-between items-center">
-            <span className="text-sm font-medium text-purple-800">
+          <div className="bg-purple-50 dark:bg-purple-950/30 rounded-lg p-3 flex justify-between items-center">
+            <span className="text-sm font-medium text-purple-800 dark:text-purple-200">
               Total Gemstone Cost:
             </span>
-            <span className="text-lg font-bold text-purple-900">
+            <span className="text-lg font-bold text-purple-900 dark:text-purple-100">
               {currencySymbol}{" "}
               {Math.round(totalCost * nprToSelectedRate).toLocaleString()}
             </span>
@@ -313,17 +313,17 @@ function GemstoneCardV2({
 
   return (
     <div
-      className={`border rounded-lg p-4 bg-white space-y-4 ${isUsingPreset ? "border-purple-300 bg-purple-50/30" : ""}`}
+      className={`border dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800/50 space-y-4 ${isUsingPreset ? "border-purple-300 dark:border-purple-700 bg-purple-50/30 dark:bg-purple-950/20" : ""}`}
     >
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Gem className="h-4 w-4 text-purple-500" />
-          <span className="font-medium text-sm">Stone #{index + 1}</span>
+          <Gem className="h-4 w-4 text-purple-500 dark:text-purple-400" />
+          <span className="font-medium text-sm dark:text-gray-100">Stone #{index + 1}</span>
           {isUsingPreset && (
             <Badge
               variant="secondary"
-              className="text-xs bg-purple-100 text-purple-700"
+              className="text-xs bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300"
             >
               Preset
             </Badge>
@@ -333,7 +333,7 @@ function GemstoneCardV2({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+          className="h-8 w-8 text-red-500 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30"
           onClick={onRemove}
         >
           <Trash2 className="h-4 w-4" />
@@ -350,7 +350,7 @@ function GemstoneCardV2({
           value={gemstone.presetId || "custom"}
           onValueChange={onPresetSelect}
         >
-          <SelectTrigger className={isUsingPreset ? "border-purple-400" : ""}>
+          <SelectTrigger className={isUsingPreset ? "border-purple-400 dark:border-purple-600" : ""}>
             <SelectValue placeholder="Choose preset or customize..." />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
@@ -361,7 +361,7 @@ function GemstoneCardV2({
             </SelectItem>
 
             {/* Group by category */}
-            <div className="px-2 py-1 text-xs font-semibold text-purple-600 bg-purple-50">
+            <div className="px-2 py-1 text-xs font-semibold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/30">
               💎 Diamonds
             </div>
             {ALL_GEMSTONE_PRESETS.filter((p) =>
@@ -370,7 +370,7 @@ function GemstoneCardV2({
               <SelectItem key={preset.id} value={preset.id}>
                 <div className="flex items-center justify-between w-full gap-2">
                   <span>{preset.name}</span>
-                  <span className="text-xs text-green-600 font-medium">
+                  <span className="text-xs text-green-600 dark:text-green-400 font-medium">
                     {currencySymbol}
                     {Math.round(
                       preset.estimatedPriceNpr * exchangeRate,
@@ -380,7 +380,7 @@ function GemstoneCardV2({
               </SelectItem>
             ))}
 
-            <div className="px-2 py-1 text-xs font-semibold text-pink-600 bg-pink-50">
+            <div className="px-2 py-1 text-xs font-semibold text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/30">
               ✨ Moissanite
             </div>
             {ALL_GEMSTONE_PRESETS.filter(
@@ -389,7 +389,7 @@ function GemstoneCardV2({
               <SelectItem key={preset.id} value={preset.id}>
                 <div className="flex items-center justify-between w-full gap-2">
                   <span>{preset.name}</span>
-                  <span className="text-xs text-green-600 font-medium">
+                  <span className="text-xs text-green-600 dark:text-green-400 font-medium">
                     {currencySymbol}
                     {Math.round(
                       preset.estimatedPriceNpr * exchangeRate,
@@ -399,7 +399,7 @@ function GemstoneCardV2({
               </SelectItem>
             ))}
 
-            <div className="px-2 py-1 text-xs font-semibold text-red-600 bg-red-50">
+            <div className="px-2 py-1 text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30">
               ❤️ Colored Gems
             </div>
             {ALL_GEMSTONE_PRESETS.filter((p) =>
@@ -408,7 +408,7 @@ function GemstoneCardV2({
               <SelectItem key={preset.id} value={preset.id}>
                 <div className="flex items-center justify-between w-full gap-2">
                   <span>{preset.name}</span>
-                  <span className="text-xs text-green-600 font-medium">
+                  <span className="text-xs text-green-600 dark:text-green-400 font-medium">
                     {currencySymbol}
                     {Math.round(
                       preset.estimatedPriceNpr * exchangeRate,
@@ -418,7 +418,7 @@ function GemstoneCardV2({
               </SelectItem>
             ))}
 
-            <div className="px-2 py-1 text-xs font-semibold text-amber-600 bg-amber-50">
+            <div className="px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30">
               💰 Budget-Friendly
             </div>
             {ALL_GEMSTONE_PRESETS.filter((p) =>
@@ -434,7 +434,7 @@ function GemstoneCardV2({
               <SelectItem key={preset.id} value={preset.id}>
                 <div className="flex items-center justify-between w-full gap-2">
                   <span>{preset.name}</span>
-                  <span className="text-xs text-green-600 font-medium">
+                  <span className="text-xs text-green-600 dark:text-green-400 font-medium">
                     {currencySymbol}
                     {Math.round(
                       preset.estimatedPriceNpr * exchangeRate,
@@ -720,9 +720,9 @@ function GemstonePriceBreakdownDisplay({
   // If using preset, show preset price
   if (gemstone.presetId && gemstone.estimatedPrice) {
     return (
-      <div className="pt-2 border-t flex justify-between items-center text-sm bg-green-50 -mx-4 -mb-4 px-4 py-3 rounded-b-lg">
-        <span className="text-green-700">Preset price:</span>
-        <span className="font-bold text-green-800">
+      <div className="pt-2 border-t dark:border-gray-700 flex justify-between items-center text-sm bg-green-50 dark:bg-green-950/30 -mx-4 -mb-4 px-4 py-3 rounded-b-lg">
+        <span className="text-green-700 dark:text-green-300">Preset price:</span>
+        <span className="font-bold text-green-800 dark:text-green-200">
           {currencySymbol}{" "}
           {Math.round(gemstone.estimatedPrice * exchangeRate).toLocaleString()}{" "}
           × {gemstone.count} = {currencySymbol}{" "}
@@ -762,29 +762,29 @@ function GemstonePriceBreakdownDisplay({
   };
 
   return (
-    <div className="pt-2 border-t bg-green-50 -mx-4 -mb-4 px-4 py-3 rounded-b-lg">
+    <div className="pt-2 border-t dark:border-gray-700 bg-green-50 dark:bg-green-950/30 -mx-4 -mb-4 px-4 py-3 rounded-b-lg">
       {/* Total with expand toggle */}
       <div
         className="flex justify-between items-center cursor-pointer"
         onClick={() => setShowBreakdown(!showBreakdown)}
       >
-        <span className="text-green-700 flex items-center gap-1">
+        <span className="text-green-700 dark:text-green-300 flex items-center gap-1">
           Estimated stone cost:
           <Badge variant="outline" className="text-xs ml-1">
             {showBreakdown ? "▼ Hide details" : "▶ Show details"}
           </Badge>
         </span>
-        <span className="font-bold text-green-800">
+        <span className="font-bold text-green-800 dark:text-green-200">
           {formatPrice(breakdown.grandTotal)}
         </span>
       </div>
 
       {/* Detailed breakdown */}
       {showBreakdown && (
-        <div className="mt-3 pt-3 border-t border-green-200 text-xs space-y-2">
+        <div className="mt-3 pt-3 border-t border-green-200 dark:border-green-800/50 text-xs space-y-2">
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
             {/* Base Price */}
-            <div className="text-gray-600">
+            <div className="text-gray-600 dark:text-gray-400">
               Base ({breakdown.basePriceLabel}):
             </div>
             <div className="text-right font-medium">
@@ -792,7 +792,7 @@ function GemstonePriceBreakdownDisplay({
             </div>
 
             {/* Size */}
-            <div className="text-gray-600">Size ({breakdown.sizeLabel}):</div>
+            <div className="text-gray-600 dark:text-gray-400">Size ({breakdown.sizeLabel}):</div>
             <div className="text-right font-medium">
               {formatMultiplier(breakdown.sizeMultiplier)}
             </div>
@@ -800,11 +800,11 @@ function GemstonePriceBreakdownDisplay({
             {/* Color */}
             {breakdown.colorMultiplier !== 1 && (
               <>
-                <div className="text-gray-600">
+                <div className="text-gray-600 dark:text-gray-400">
                   Color ({breakdown.colorLabel}):
                 </div>
                 <div
-                  className={`text-right font-medium ${breakdown.colorMultiplier > 1 ? "text-amber-600" : "text-green-600"}`}
+                  className={`text-right font-medium ${breakdown.colorMultiplier > 1 ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400"}`}
                 >
                   {formatMultiplier(breakdown.colorMultiplier)}
                 </div>
@@ -814,11 +814,11 @@ function GemstonePriceBreakdownDisplay({
             {/* Clarity */}
             {breakdown.clarityMultiplier !== 1 && (
               <>
-                <div className="text-gray-600">
+                <div className="text-gray-600 dark:text-gray-400">
                   Clarity ({breakdown.clarityLabel}):
                 </div>
                 <div
-                  className={`text-right font-medium ${breakdown.clarityMultiplier > 1 ? "text-amber-600" : "text-green-600"}`}
+                  className={`text-right font-medium ${breakdown.clarityMultiplier > 1 ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400"}`}
                 >
                   {formatMultiplier(breakdown.clarityMultiplier)}
                 </div>
@@ -828,9 +828,9 @@ function GemstonePriceBreakdownDisplay({
             {/* Cut */}
             {breakdown.cutMultiplier !== 1 && (
               <>
-                <div className="text-gray-600">Cut ({breakdown.cutLabel}):</div>
+                <div className="text-gray-600 dark:text-gray-400">Cut ({breakdown.cutLabel}):</div>
                 <div
-                  className={`text-right font-medium ${breakdown.cutMultiplier > 1 ? "text-amber-600" : "text-green-600"}`}
+                  className={`text-right font-medium ${breakdown.cutMultiplier > 1 ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400"}`}
                 >
                   {formatMultiplier(breakdown.cutMultiplier)}
                 </div>
@@ -840,11 +840,11 @@ function GemstonePriceBreakdownDisplay({
             {/* Shape */}
             {breakdown.shapeMultiplier !== 1 && (
               <>
-                <div className="text-gray-600">
+                <div className="text-gray-600 dark:text-gray-400">
                   Shape ({breakdown.shapeLabel}):
                 </div>
                 <div
-                  className={`text-right font-medium ${breakdown.shapeMultiplier > 1 ? "text-amber-600" : "text-green-600"}`}
+                  className={`text-right font-medium ${breakdown.shapeMultiplier > 1 ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400"}`}
                 >
                   {formatMultiplier(breakdown.shapeMultiplier)}
                 </div>
@@ -852,17 +852,17 @@ function GemstonePriceBreakdownDisplay({
             )}
 
             {/* Per stone total */}
-            <div className="text-gray-800 font-medium pt-1 border-t border-green-200">
+            <div className="text-gray-800 dark:text-gray-200 font-medium pt-1 border-t border-green-200 dark:border-green-800/50">
               Per stone:
             </div>
-            <div className="text-right font-bold text-green-800 pt-1 border-t border-green-200">
+            <div className="text-right font-bold text-green-800 dark:text-green-200 pt-1 border-t border-green-200 dark:border-green-800/50">
               {formatPrice(breakdown.totalPerStone)}
             </div>
 
             {/* Setting */}
             {breakdown.settingCost > 0 && (
               <>
-                <div className="text-gray-600">
+                <div className="text-gray-600 dark:text-gray-400">
                   + {breakdown.settingLabel} setting:
                 </div>
                 <div className="text-right font-medium">
@@ -874,7 +874,7 @@ function GemstonePriceBreakdownDisplay({
             {/* Quantity */}
             {breakdown.count > 1 && (
               <>
-                <div className="text-gray-600">× Quantity:</div>
+                <div className="text-gray-600 dark:text-gray-400">× Quantity:</div>
                 <div className="text-right font-medium">
                   {breakdown.count} stones
                 </div>
@@ -883,9 +883,9 @@ function GemstonePriceBreakdownDisplay({
           </div>
 
           {/* Grand Total */}
-          <div className="flex justify-between items-center pt-2 border-t border-green-300">
-            <span className="font-semibold text-green-800">Total:</span>
-            <span className="font-bold text-lg text-green-900">
+          <div className="flex justify-between items-center pt-2 border-t border-green-300 dark:border-green-800/50">
+            <span className="font-semibold text-green-800 dark:text-green-200">Total:</span>
+            <span className="font-bold text-lg text-green-900 dark:text-green-100">
               {formatPrice(breakdown.grandTotal)}
             </span>
           </div>

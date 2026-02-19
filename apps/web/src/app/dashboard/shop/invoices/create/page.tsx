@@ -862,7 +862,7 @@ export default function CreateInvoicePage() {
                     {shopQuotes.map((quote: any) => (
                       <div
                         key={quote.id}
-                        className="flex items-center justify-between p-3 bg-white rounded-lg border hover:border-amber-300 cursor-pointer transition-colors"
+                        className="flex items-center justify-between p-3 bg-white dark:bg-[#161B22] rounded-lg border hover:border-amber-300 cursor-pointer transition-colors"
                         onClick={() => handleImportQuote(quote)}
                       >
                         <div>
@@ -916,26 +916,26 @@ export default function CreateInvoicePage() {
                 <div>
                   <Label>Tax Rates ({countryTax.taxName})</Label>
                   <div className="grid grid-cols-2 gap-2 mt-1">
-                    <div className="flex items-center justify-between px-3 py-1.5 bg-amber-50 border border-amber-200 rounded text-xs">
-                      <span className="text-amber-700">Metal</span>
+                    <div className="flex items-center justify-between px-3 py-1.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 rounded text-xs">
+                      <span className="text-amber-700 dark:text-amber-300">Metal</span>
                       <span className="font-medium">
                         {(countryTax.rates.PRECIOUS_METAL * 100).toFixed(1)}%
                       </span>
                     </div>
-                    <div className="flex items-center justify-between px-3 py-1.5 bg-purple-50 border border-purple-200 rounded text-xs">
-                      <span className="text-purple-700">Gemstone</span>
+                    <div className="flex items-center justify-between px-3 py-1.5 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 rounded text-xs">
+                      <span className="text-purple-700 dark:text-purple-300">Gemstone</span>
                       <span className="font-medium">
                         {(countryTax.rates.GEMSTONE * 100).toFixed(1)}%
                       </span>
                     </div>
-                    <div className="flex items-center justify-between px-3 py-1.5 bg-blue-50 border border-blue-200 rounded text-xs">
-                      <span className="text-blue-700">Making</span>
+                    <div className="flex items-center justify-between px-3 py-1.5 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 rounded text-xs">
+                      <span className="text-blue-700 dark:text-blue-300">Making</span>
                       <span className="font-medium">
                         {(countryTax.rates.MAKING_CHARGE * 100).toFixed(1)}%
                       </span>
                     </div>
-                    <div className="flex items-center justify-between px-3 py-1.5 bg-green-50 border border-green-200 rounded text-xs">
-                      <span className="text-green-700">Finish</span>
+                    <div className="flex items-center justify-between px-3 py-1.5 bg-green-50 dark:bg-green-950/30 border border-green-200 rounded text-xs">
+                      <span className="text-green-700 dark:text-green-300">Finish</span>
                       <span className="font-medium">
                         {(countryTax.rates.FINISH * 100).toFixed(1)}%
                       </span>
@@ -995,18 +995,18 @@ export default function CreateInvoicePage() {
                     )}
                   </div>
                   {showSuggestions && customerSuggestions.length > 0 && (
-                    <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    <div className="absolute z-50 w-full mt-1 bg-white dark:bg-[#161B22] border rounded-lg shadow-lg max-h-60 overflow-y-auto">
                       {customerSuggestions.map((cust) => (
                         <div
                           key={cust.id}
-                          className="flex items-center justify-between px-3 py-2.5 hover:bg-amber-50 cursor-pointer border-b last:border-b-0 transition-colors"
+                          className="flex items-center justify-between px-3 py-2.5 hover:bg-amber-50 dark:hover:bg-amber-950/30 cursor-pointer border-b last:border-b-0 transition-colors"
                           onClick={() => handleSelectCustomer(cust)}
                         >
                           <div>
                             <p className="text-sm font-medium flex items-center gap-1.5">
                               {cust.name}
                               {cust.isRegistered && (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700 dark:text-blue-300 border border-blue-200">
                                   Registered
                                 </span>
                               )}
@@ -1136,7 +1136,7 @@ export default function CreateInvoicePage() {
                           </option>
                         ))}
                       </select>
-                      <div className="w-40 h-10 px-3 flex items-center justify-end text-sm font-semibold bg-gray-50 border rounded-md">
+                      <div className="w-40 h-10 px-3 flex items-center justify-end text-sm font-semibold bg-gray-50 dark:bg-gray-800/50 border rounded-md">
                         {currencySymbol} {itemAmount.toLocaleString()}
                       </div>
                       <Button
@@ -1168,7 +1168,7 @@ export default function CreateInvoicePage() {
 
                     {/* Expanded details */}
                     {expandedItems.has(idx) && (
-                      <div className="p-3 pt-2 border-t bg-white space-y-3">
+                      <div className="p-3 pt-2 border-t bg-white dark:bg-[#161B22] space-y-3">
                         {/* Quantity */}
                         <div className="grid grid-cols-4 gap-3">
                           <div>
@@ -1202,7 +1202,7 @@ export default function CreateInvoicePage() {
 
                         {/* Metal details */}
                         <div>
-                          <p className="text-xs font-semibold text-amber-700 mb-2">
+                          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-2">
                             Metal Details
                           </p>
                           <div className="grid grid-cols-3 gap-3">
@@ -1239,7 +1239,7 @@ export default function CreateInvoicePage() {
                                   }
                                   className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-full border transition-colors ${
                                     scaleItemIdx === idx
-                                      ? "bg-amber-100 border-amber-400 text-amber-700"
+                                      ? "bg-amber-100 border-amber-400 text-amber-700 dark:text-amber-300"
                                       : "bg-muted border-border text-muted-foreground hover:bg-accent"
                                   }`}
                                 >
@@ -1304,7 +1304,7 @@ export default function CreateInvoicePage() {
                         {/* Gemstones (multiple) */}
                         <div>
                           <div className="flex items-center justify-between mb-2">
-                            <p className="text-xs font-semibold text-purple-700">
+                            <p className="text-xs font-semibold text-purple-700 dark:text-purple-300">
                               Gemstones{" "}
                               {item.gemstones.length > 0 &&
                                 `(${item.gemstones.length})`}
@@ -1329,10 +1329,10 @@ export default function CreateInvoicePage() {
                           {item.gemstones.map((gem, gIdx) => (
                             <div
                               key={gIdx}
-                              className="border rounded p-2 mb-2 bg-purple-50/30"
+                              className="border rounded p-2 mb-2 bg-purple-50/30 dark:bg-purple-950/30"
                             >
                               <div className="flex items-center justify-between mb-1.5">
-                                <span className="text-xs font-medium text-purple-600">
+                                <span className="text-xs font-medium text-purple-600 dark:text-purple-400">
                                   Gemstone #{gIdx + 1}
                                 </span>
                                 <Button
@@ -1518,7 +1518,7 @@ export default function CreateInvoicePage() {
                                 = {currencySymbol} {itemAmount.toLocaleString()}
                               </span>
                             </div>
-                            <div className="flex gap-4 text-xs text-blue-600 flex-wrap">
+                            <div className="flex gap-4 text-xs text-blue-600 dark:text-blue-400 flex-wrap">
                               <span>
                                 Metal tax:{" "}
                                 {(
@@ -1584,7 +1584,7 @@ export default function CreateInvoicePage() {
 
                   {/* Making Charge — pill toggle */}
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-blue-600 w-28 flex-shrink-0">
+                    <span className="text-sm text-blue-600 dark:text-blue-400 w-28 flex-shrink-0">
                       Making Charge
                     </span>
                     <ModeToggle
@@ -1667,7 +1667,7 @@ export default function CreateInvoicePage() {
 
                   {/* Discount — pill toggle */}
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-green-600 w-28 flex-shrink-0">
+                    <span className="text-sm text-green-600 dark:text-green-400 w-28 flex-shrink-0">
                       Discount
                     </span>
                     <ModeToggle
@@ -1685,7 +1685,7 @@ export default function CreateInvoicePage() {
                       placeholder="0"
                     />
                     {discountAmount > 0 && (
-                      <span className="text-sm text-green-600 ml-auto">
+                      <span className="text-sm text-green-600 dark:text-green-400 ml-auto">
                         -{currencySymbol} {discountAmount.toLocaleString()}
                       </span>
                     )}
@@ -1694,7 +1694,7 @@ export default function CreateInvoicePage() {
                   <Separator />
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total</span>
-                    <span className="text-amber-600">
+                    <span className="text-amber-600 dark:text-amber-400">
                       {currencySymbol}{" "}
                       {total.toLocaleString(undefined, {
                         minimumFractionDigits: 2,
@@ -1710,7 +1710,7 @@ export default function CreateInvoicePage() {
                         type="checkbox"
                         checked={showConverter}
                         onChange={(e) => setShowConverter(e.target.checked)}
-                        className="rounded border-gray-300"
+                        className="rounded border-gray-300 dark:border-gray-600"
                       />
                       <span className="text-xs text-muted-foreground">
                         Show total in a different currency
@@ -1718,7 +1718,7 @@ export default function CreateInvoicePage() {
                     </label>
 
                     {showConverter && (
-                      <div className="mt-2 p-3 bg-gray-50 rounded-lg border space-y-2">
+                      <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border space-y-2">
                         <div className="flex items-center gap-2">
                           <Label className="text-xs w-24 flex-shrink-0">
                             Convert to
@@ -1766,7 +1766,7 @@ export default function CreateInvoicePage() {
                               {convertAmount(1, convertToCurrency).toFixed(4)}{" "}
                               {convertToCurrency}
                             </span>
-                            <span className="font-bold text-lg text-amber-600">
+                            <span className="font-bold text-lg text-amber-600 dark:text-amber-400">
                               {convertedSymbol}{" "}
                               {convertedTotal.toLocaleString(undefined, {
                                 minimumFractionDigits: 2,

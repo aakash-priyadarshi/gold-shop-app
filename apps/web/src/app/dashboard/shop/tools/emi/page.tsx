@@ -155,7 +155,7 @@ export default function EMICalculatorPage() {
 
             {/* Result */}
             <div className="space-y-4">
-              <Card className="bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200">
+              <Card className="bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200 dark:from-amber-950/30 dark:to-yellow-950/30 dark:border-amber-800/50">
                 <CardContent className="p-6 text-center">
                   <p className="text-sm text-muted-foreground mb-1">
                     Monthly EMI
@@ -236,7 +236,7 @@ export default function EMICalculatorPage() {
                       {schedule.map((row) => (
                         <tr
                           key={row.month}
-                          className="border-b hover:bg-gray-50"
+                          className="border-b hover:bg-gray-50 dark:hover:bg-gray-800/50"
                         >
                           <td className="p-2">{row.month}</td>
                           <td className="text-right p-2">

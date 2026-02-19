@@ -621,7 +621,7 @@ export function ChatPopupWidget() {
       >
         <MessageSquare className="h-6 w-6" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1 text-xs font-bold text-white bg-red-500 rounded-full ring-2 ring-white">
+          <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1 text-xs font-bold text-white bg-red-500 rounded-full ring-2 ring-white dark:ring-[#161B22]">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
@@ -637,9 +637,9 @@ export function ChatPopupWidget() {
       className={cn(
         "fixed bottom-6 right-6 z-50",
         "w-[370px] h-[520px]",
-        "bg-white rounded-2xl",
-        "border border-gray-200",
-        "shadow-2xl shadow-black/15",
+        "bg-white dark:bg-[#161B22] rounded-2xl",
+        "border border-gray-200 dark:border-gray-700",
+        "shadow-2xl shadow-black/15 dark:shadow-black/40",
         "flex flex-col overflow-hidden",
         "animate-in slide-in-from-bottom-4 fade-in duration-200",
       )}
@@ -720,7 +720,7 @@ export function ChatPopupWidget() {
           {/* See full messages link */}
           <a
             href={`/dashboard/${user?.role === "SHOPKEEPER" ? "shop" : user?.role === "ADMIN" ? "admin" : user?.role === "SALES" ? "sales" : "customer"}/messages`}
-            className="flex items-center justify-center gap-1.5 px-3 py-2 border-b text-xs text-gold-600 hover:bg-gold-50 transition font-medium"
+            className="flex items-center justify-center gap-1.5 px-3 py-2 border-b dark:border-gray-700 text-xs text-gold-600 dark:text-gold-400 hover:bg-gold-50 dark:hover:bg-gold-900/20 transition font-medium"
           >
             <ExternalLink className="h-3 w-3" />
             See full messages page
@@ -731,8 +731,8 @@ export function ChatPopupWidget() {
             </div>
           ) : conversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-              <MessageSquare className="h-10 w-10 text-gray-300 mb-3" />
-              <p className="text-sm font-medium text-gray-500">
+              <MessageSquare className="h-10 w-10 text-gray-300 dark:text-gray-600 mb-3" />
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
                 No conversations yet
               </p>
               <p className="text-xs text-gray-400 mt-1">
@@ -740,7 +740,7 @@ export function ChatPopupWidget() {
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-gray-100 dark:divide-gray-800">
               {conversations.map((conv) => {
                 const lastMsg = conv.messages?.[0];
                 const isUnread =
@@ -752,13 +752,13 @@ export function ChatPopupWidget() {
                     key={conv.id}
                     onClick={() => openChat(conv.id)}
                     className={cn(
-                      "w-full px-4 py-3 text-left hover:bg-gray-50 transition flex items-start gap-3",
-                      isUnread && "bg-gold-50/50",
+                      "w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition flex items-start gap-3",
+                      isUnread && "bg-gold-50/50 dark:bg-gold-900/20",
                     )}
                   >
                     {/* Avatar circle with online indicator */}
                     <div className="relative flex-shrink-0">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold-100 to-gold-200 flex items-center justify-center text-gold-700 text-xs font-bold">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold-100 to-gold-200 dark:from-gold-800 dark:to-gold-700 flex items-center justify-center text-gold-700 dark:text-gold-200 text-xs font-bold">
                         {getConvName(conv).charAt(0).toUpperCase()}
                       </div>
                       {onlineUsers.has(
@@ -766,7 +766,7 @@ export function ChatPopupWidget() {
                           ? conv.buyerId
                           : conv.shop?.userId || conv.shopId,
                       ) && (
-                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white" />
+                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-[#161B22]" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -775,8 +775,8 @@ export function ChatPopupWidget() {
                           className={cn(
                             "text-sm truncate",
                             isUnread
-                              ? "font-semibold text-gray-900"
-                              : "font-medium text-gray-700",
+                              ? "font-semibold text-gray-900 dark:text-gray-100"
+                              : "font-medium text-gray-700 dark:text-gray-300",
                           )}
                         >
                           {getConvName(conv)}
@@ -790,8 +790,8 @@ export function ChatPopupWidget() {
                           className={cn(
                             "text-xs truncate mt-0.5",
                             isUnread
-                              ? "text-gray-700 font-medium"
-                              : "text-gray-500",
+                              ? "text-gray-700 dark:text-gray-300 font-medium"
+                              : "text-gray-500 dark:text-gray-400",
                           )}
                         >
                           {lastMsg.content}
@@ -824,7 +824,7 @@ export function ChatPopupWidget() {
         /* ── Active Chat ── */
         <>
           {/* Safety banner */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border-b text-[11px] text-gray-500 flex-shrink-0">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 border-b dark:border-gray-700 text-[11px] text-gray-500 dark:text-gray-400 flex-shrink-0">
             <Shield className="h-3 w-3" />
             Messages are monitored for safety
           </div>
@@ -832,14 +832,14 @@ export function ChatPopupWidget() {
           {/* Violation warning banner */}
           {violationAlert &&
             violationAlert.conversationId === activeConversationId && (
-              <div className="px-3 py-2.5 bg-red-50 border-b border-red-200 flex-shrink-0 animate-in slide-in-from-top-2 duration-200">
+              <div className="px-3 py-2.5 bg-red-50 dark:bg-red-950/30 border-b border-red-200 dark:border-red-800/50 flex-shrink-0 animate-in slide-in-from-top-2 duration-200">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+                  <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-red-800">
+                    <p className="text-xs font-semibold text-red-800 dark:text-red-200">
                       Message Blocked
                     </p>
-                    <p className="text-[11px] text-red-700 mt-0.5 leading-relaxed">
+                    <p className="text-[11px] text-red-700 dark:text-red-300 mt-0.5 leading-relaxed">
                       {violationAlert.warning}
                     </p>
                     {violationAlert.strikeCount > 0 && (
@@ -859,7 +859,7 @@ export function ChatPopupWidget() {
                                     : i === 2
                                       ? "bg-orange-500"
                                       : "bg-yellow-500"
-                                  : "bg-gray-200",
+                                  : "bg-gray-200 dark:bg-gray-600",
                               )}
                             />
                           ))}
@@ -903,7 +903,7 @@ export function ChatPopupWidget() {
                     )}
                   >
                     {msg.isSystem ? (
-                      <div className="text-[10px] text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full">
+                      <div className="text-[10px] text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50 px-2.5 py-1 rounded-full">
                         {msg.content}
                       </div>
                     ) : (
@@ -912,7 +912,7 @@ export function ChatPopupWidget() {
                           "max-w-[80%] px-3 py-2 rounded-2xl text-sm",
                           msg.senderId === user?.id
                             ? "bg-gradient-to-br from-gold-500 to-gold-600 text-white rounded-br-md"
-                            : "bg-gray-100 text-gray-800 rounded-bl-md",
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-md",
                           msg.hasViolation && "ring-2 ring-yellow-400",
                         )}
                       >
@@ -947,7 +947,7 @@ export function ChatPopupWidget() {
                                   "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium",
                                   msg.senderId === user?.id
                                     ? "bg-white/20 text-white hover:bg-white/30"
-                                    : "bg-gray-200 text-gray-700 hover:bg-gray-300",
+                                    : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600",
                                 )}
                               >
                                 <FileText className="h-4 w-4" />
@@ -976,7 +976,7 @@ export function ChatPopupWidget() {
                 {/* Typing indicator */}
                 {typingUser && (
                   <div className="flex justify-start">
-                    <div className="bg-gray-100 px-3 py-2 rounded-2xl rounded-bl-md">
+                    <div className="bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-2xl rounded-bl-md">
                       <div className="flex gap-1">
                         <span
                           className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
@@ -1001,15 +1001,15 @@ export function ChatPopupWidget() {
 
           {/* Input */}
           {activeConv?.status === "LOCKED" ? (
-            <div className="px-3 py-2.5 border-t bg-gray-50 text-center text-xs text-gray-500 flex-shrink-0">
+            <div className="px-3 py-2.5 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-center text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
               <Lock className="h-3 w-3 inline mr-1" />
               Conversation locked — contact support
             </div>
           ) : (
-            <div className="px-3 py-2.5 border-t flex-shrink-0 bg-white space-y-2 relative">
+            <div className="px-3 py-2.5 border-t dark:border-gray-700 flex-shrink-0 bg-white dark:bg-[#161B22] space-y-2 relative">
               {/* Attachment preview */}
               {attachmentPreview && (
-                <div className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                   {attachmentPreview.startsWith("data:image") ? (
                     <img
                       src={attachmentPreview}
@@ -1017,16 +1017,16 @@ export function ChatPopupWidget() {
                       className="w-10 h-10 rounded object-cover"
                     />
                   ) : attachmentPreview === "video" ? (
-                    <div className="w-10 h-10 rounded bg-blue-100 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
                       <Video className="h-5 w-5 text-blue-600" />
                     </div>
                   ) : (
-                    <div className="w-10 h-10 rounded bg-orange-100 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center">
                       <FileText className="h-5 w-5 text-orange-600" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <span className="text-xs text-gray-600 truncate block">
+                    <span className="text-xs text-gray-600 dark:text-gray-300 truncate block">
                       {attachmentFile?.name}
                     </span>
                     <span className="text-[10px] text-gray-400">
@@ -1037,9 +1037,9 @@ export function ChatPopupWidget() {
                   </div>
                   <button
                     onClick={clearAttachment}
-                    className="p-1 hover:bg-gray-200 rounded"
+                    className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
                   >
-                    <X className="h-3 w-3 text-gray-500" />
+                    <X className="h-3 w-3 text-gray-500 dark:text-gray-400" />
                   </button>
                 </div>
               )}
@@ -1069,13 +1069,13 @@ export function ChatPopupWidget() {
               {showAttachMenu && (
                 <div
                   ref={attachMenuRef}
-                  className="absolute bottom-full left-8 mb-2 z-50 bg-white rounded-xl shadow-lg border border-gray-200 p-1.5 min-w-[140px]"
+                  className="absolute bottom-full left-8 mb-2 z-50 bg-white dark:bg-[#161B22] rounded-xl shadow-lg dark:shadow-black/40 border border-gray-200 dark:border-gray-700 p-1.5 min-w-[140px]"
                 >
                   <button
                     onClick={() => openFilePicker("image")}
-                    className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm hover:bg-gray-50 transition text-left"
+                    className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition text-left"
                   >
-                    <ImageIcon className="h-4 w-4 text-green-600" />
+                    <ImageIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
                     <div>
                       <span className="font-medium">Photo</span>
                       <span className="text-[10px] text-gray-400 block">
@@ -1085,9 +1085,9 @@ export function ChatPopupWidget() {
                   </button>
                   <button
                     onClick={() => openFilePicker("video")}
-                    className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm hover:bg-gray-50 transition text-left"
+                    className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition text-left"
                   >
-                    <Video className="h-4 w-4 text-blue-600" />
+                    <Video className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                     <div>
                       <span className="font-medium">Video</span>
                       <span className="text-[10px] text-gray-400 block">
@@ -1097,9 +1097,9 @@ export function ChatPopupWidget() {
                   </button>
                   <button
                     onClick={() => openFilePicker("document")}
-                    className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm hover:bg-gray-50 transition text-left"
+                    className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition text-left"
                   >
-                    <FileText className="h-4 w-4 text-orange-600" />
+                    <FileText className="h-4 w-4 text-orange-600 dark:text-orange-400" />
                     <div>
                       <span className="font-medium">Document</span>
                       <span className="text-[10px] text-gray-400 block">
@@ -1127,7 +1127,7 @@ export function ChatPopupWidget() {
                     setShowAttachMenu(false);
                   }}
                   disabled={sending || uploading}
-                  className="h-9 w-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition text-gray-500 hover:text-gray-700 flex-shrink-0"
+                  className="h-9 w-9 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 flex-shrink-0"
                   title="Emoji"
                 >
                   <Smile className="h-4 w-4" />
@@ -1139,7 +1139,7 @@ export function ChatPopupWidget() {
                     setShowEmojiPicker(false);
                   }}
                   disabled={sending || uploading}
-                  className="h-9 w-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition text-gray-500 hover:text-gray-700 flex-shrink-0"
+                  className="h-9 w-9 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 flex-shrink-0"
                   title="Attach file"
                 >
                   <Paperclip className="h-4 w-4" />

@@ -142,7 +142,7 @@ export default function HallmarkTrackerPage() {
 
           {/* Add Entry Form */}
           {showForm && (
-            <Card className="border-amber-200">
+            <Card className="border-amber-200 dark:border-amber-800/50">
               <CardHeader>
                 <CardTitle className="text-base">New Hallmark Entry</CardTitle>
               </CardHeader>
@@ -287,7 +287,7 @@ export default function HallmarkTrackerPage() {
                           </span>
                           <Badge variant="outline">{entry.purity}</Badge>
                           {entry.verified && (
-                            <Badge className="bg-green-100 text-green-700">
+                            <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
                               Verified
                             </Badge>
                           )}

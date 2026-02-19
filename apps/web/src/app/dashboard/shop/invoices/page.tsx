@@ -189,7 +189,7 @@ export default function InvoicesListPage() {
                       Collected
                     </span>
                   </div>
-                  <p className="text-2xl font-bold mt-1 text-green-600">
+                  <p className="text-2xl font-bold mt-1 text-green-600 dark:text-green-400">
                     {formatCurrency(stats.revenue.totalCollected)}
                   </p>
                 </CardContent>
@@ -202,7 +202,7 @@ export default function InvoicesListPage() {
                       Outstanding
                     </span>
                   </div>
-                  <p className="text-2xl font-bold mt-1 text-amber-600">
+                  <p className="text-2xl font-bold mt-1 text-amber-600 dark:text-amber-400">
                     {formatCurrency(stats.revenue.totalOutstanding)}
                   </p>
                 </CardContent>

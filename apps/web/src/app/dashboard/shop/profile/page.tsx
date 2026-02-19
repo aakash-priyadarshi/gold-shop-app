@@ -538,13 +538,13 @@ export default function ShopkeeperProfilePage() {
                       <div className="flex items-center gap-2">
                         <Label htmlFor="phone">Phone Number</Label>
                         {authUser?.phoneVerifiedAt && (
-                          <span className="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                          <span className="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950/30 px-2 py-0.5 rounded-full">
                             <CheckCircle className="h-3 w-3" />
                             Verified
                           </span>
                         )}
                         {!authUser?.phoneVerifiedAt && profile.phone && (
-                          <span className="inline-flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                          <span className="inline-flex items-center gap-1 text-xs text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-950/30 px-2 py-0.5 rounded-full">
                             <Shield className="h-3 w-3" />
                             Not Verified
                           </span>
@@ -669,7 +669,7 @@ export default function ShopkeeperProfilePage() {
                   {/* Change Password */}
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-4">
-                      <div className="p-3 bg-amber-100 rounded-full">
+                      <div className="p-3 bg-amber-100 dark:bg-amber-800 rounded-full">
                         <Key className="h-5 w-5 text-amber-600" />
                       </div>
                       <div>
@@ -766,7 +766,7 @@ export default function ShopkeeperProfilePage() {
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-4">
                       <div
-                        className={`p-3 rounded-full ${twoFactorStatus?.enabled ? "bg-green-100" : "bg-amber-100"}`}
+                        className={`p-3 rounded-full ${twoFactorStatus?.enabled ? "bg-green-100 dark:bg-green-800" : "bg-amber-100 dark:bg-amber-800"}`}
                       >
                         <Smartphone
                           className={`h-5 w-5 ${twoFactorStatus?.enabled ? "text-green-600" : "text-amber-600"}`}
@@ -923,9 +923,9 @@ export default function ShopkeeperProfilePage() {
                             ))}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-700 rounded-lg">
                           <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
-                          <p className="text-sm text-amber-800">
+                          <p className="text-sm text-amber-800 dark:text-amber-200">
                             Store these codes in a safe place. You won't be able
                             to see them again.
                           </p>

@@ -85,9 +85,9 @@ export default function AdminReportsPage() {
                         <TableCell>{r.description}</TableCell>
                         <TableCell>
                           {r.status === 'OPEN' ? (
-                            <span className="text-amber-700 flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Open</span>
+                            <span className="text-amber-700 dark:text-amber-300 flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Open</span>
                           ) : r.status === 'RESOLVED' ? (
-                            <span className="text-green-700">Resolved</span>
+                            <span className="text-green-700 dark:text-green-300">Resolved</span>
                           ) : (
                             <span className="text-muted-foreground">Closed</span>
                           )}

@@ -447,7 +447,7 @@ export default function InvoiceSettingsPage() {
                 <Label>Shop Logo</Label>
                 <div className="flex items-center gap-3 mt-1">
                   {settings.shopLogoUrl ? (
-                    <div className="relative w-16 h-16 rounded-lg border overflow-hidden flex-shrink-0 bg-white">
+                    <div className="relative w-16 h-16 rounded-lg border overflow-hidden flex-shrink-0 bg-white dark:bg-[#161B22]">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={settings.shopLogoUrl}
@@ -706,7 +706,7 @@ export default function InvoiceSettingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="bg-white rounded-lg p-6 border shadow-sm space-y-4 text-sm">
+              <div className="bg-white dark:bg-[#161B22] rounded-lg p-6 border shadow-sm space-y-4 text-sm">
                 {/* Top section */}
                 {topItems.length > 0 && (
                   <div className="space-y-1 pb-3 border-b">

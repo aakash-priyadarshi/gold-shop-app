@@ -70,16 +70,16 @@ interface Rfq {
 }
 
 const statusColors: Record<string, string> = {
-  DRAFT: "bg-gray-100 text-gray-700",
-  PENDING: "bg-amber-100 text-amber-700",
-  BROADCAST: "bg-blue-100 text-blue-700",
-  SENT_TO_SHOPS: "bg-blue-100 text-blue-700",
-  OFFERS_RECEIVED: "bg-purple-100 text-purple-700",
-  NEGOTIATING: "bg-orange-100 text-orange-700",
-  ACCEPTED: "bg-green-100 text-green-700",
-  COMPLETED: "bg-green-100 text-green-700",
-  CANCELLED: "bg-red-100 text-red-700",
-  EXPIRED: "bg-gray-100 text-gray-700",
+  DRAFT: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300",
+  PENDING: "bg-amber-100 text-amber-700 dark:text-amber-300",
+  BROADCAST: "bg-blue-100 text-blue-700 dark:text-blue-300",
+  SENT_TO_SHOPS: "bg-blue-100 text-blue-700 dark:text-blue-300",
+  OFFERS_RECEIVED: "bg-purple-100 text-purple-700 dark:text-purple-300",
+  NEGOTIATING: "bg-orange-100 text-orange-700 dark:text-orange-300",
+  ACCEPTED: "bg-green-100 text-green-700 dark:text-green-300",
+  COMPLETED: "bg-green-100 text-green-700 dark:text-green-300",
+  CANCELLED: "bg-red-100 text-red-700 dark:text-red-300",
+  EXPIRED: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300",
 };
 
 export default function ShopRfqsPage() {
@@ -172,7 +172,7 @@ export default function ShopRfqsPage() {
               {pendingCount > 0 && (
                 <Badge
                   variant="secondary"
-                  className="text-amber-700 bg-amber-100"
+                  className="text-amber-700 dark:text-amber-300 bg-amber-100"
                 >
                   {pendingCount} Pending
                 </Badge>
@@ -270,7 +270,7 @@ export default function ShopRfqsPage() {
                         <TableCell>
                           <Badge
                             className={
-                              statusColors[rfq.status] || "bg-gray-100"
+                              statusColors[rfq.status] || "bg-gray-100 dark:bg-gray-800"
                             }
                           >
                             {getStatusIcon(rfq.status)}

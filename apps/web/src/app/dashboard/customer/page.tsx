@@ -159,7 +159,7 @@ export default function CustomerDashboard() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{recentOrders.length}</p>
-                    <p className="text-sm text-gray-500">Total Orders</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Total Orders</p>
                   </div>
                 </div>
               </CardContent>
@@ -172,7 +172,7 @@ export default function CustomerDashboard() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{wishlistItems.length}</p>
-                    <p className="text-sm text-gray-500">Wishlist Items</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Wishlist Items</p>
                   </div>
                 </div>
               </CardContent>
@@ -185,7 +185,7 @@ export default function CustomerDashboard() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{rfqRequests.length}</p>
-                    <p className="text-sm text-gray-500">RFQ Requests</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">RFQ Requests</p>
                   </div>
                 </div>
               </CardContent>
@@ -198,7 +198,7 @@ export default function CustomerDashboard() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{totalSpent}</p>
-                    <p className="text-sm text-gray-500">Total Spent</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Total Spent</p>
                   </div>
                 </div>
               </CardContent>
@@ -225,7 +225,7 @@ export default function CustomerDashboard() {
                   {recentOrders.map((order) => (
                     <div
                       key={order.id}
-                      className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg"
+                      className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
                     >
                       <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
                         <Package className="h-6 w-6 text-gray-400" />
@@ -237,7 +237,7 @@ export default function CustomerDashboard() {
                             {order.status}
                           </Badge>
                         </div>
-                        <p className="text-sm text-gray-500">{order.shop}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{order.shop}</p>
                       </div>
                       <div className="text-right">
                         <p className="font-semibold">{order.amount}</p>
@@ -268,11 +268,11 @@ export default function CustomerDashboard() {
                   {wishlistItems.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
                     >
                       <div>
                         <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-gray-500">{item.shop}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{item.shop}</p>
                       </div>
                       <div className="text-right">
                         <p className="font-semibold text-gold-600">{item.price}</p>
@@ -312,14 +312,14 @@ export default function CustomerDashboard() {
                   >
                     <div>
                       <p className="font-medium">{rfq.request}</p>
-                      <p className="text-sm text-gray-500">Created: {rfq.date}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Created: {rfq.date}</p>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-right">
                         <Badge className={statusColors[rfq.status] || 'bg-gray-100'}>
                           {rfq.status}
                         </Badge>
-                        <p className="text-sm text-gray-500 mt-1">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                           {rfq.quotes} quotes received
                         </p>
                       </div>
@@ -358,7 +358,7 @@ export default function CustomerDashboard() {
                       </div>
                       <div>
                         <p className="font-medium">{shop.name}</p>
-                        <p className="text-sm text-gray-500">{shop.location}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{shop.location}</p>
                       </div>
                     </div>
                     <div className="text-right">

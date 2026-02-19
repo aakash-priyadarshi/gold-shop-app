@@ -116,17 +116,17 @@ export function SuspendedOverlay() {
 
       {/* Center lock card */}
       <div className="relative z-10 max-w-md w-full mx-4">
-        <div className="bg-white rounded-3xl shadow-2xl p-8 text-center">
+        <div className="bg-white dark:bg-[#161B22] rounded-3xl shadow-2xl p-8 text-center">
           {/* Lock icon */}
           <div className="mx-auto w-24 h-24 rounded-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center mb-6 ring-4 ring-red-100">
             <Lock className="h-12 w-12 text-red-600" />
           </div>
 
           {/* Title */}
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
             Account Suspended
           </h1>
-          <p className="text-base text-gray-500 mb-1">
+          <p className="text-base text-gray-500 dark:text-gray-400 mb-1">
             अकाउंट सस्पेंड कर दिया गया है
           </p>
 
@@ -139,16 +139,16 @@ export function SuspendedOverlay() {
           </div>
 
           {/* Explanation */}
-          <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-6 text-left">
-            <p className="text-sm text-gray-700 mb-2">
+          <div className="bg-red-50 dark:bg-red-950/30 border border-red-100 rounded-xl p-4 mb-6 text-left">
+            <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
               Your account has been suspended due to policy violations. All
               dashboard features are locked.
             </p>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               आपका अकाउंट नीति उल्लंघन के कारण सस्पेंड किया गया है। सभी डैशबोर्ड
               फीचर्स लॉक हैं।
             </p>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
               To restore access, please contact our support team or create a
               support ticket.
             </p>
@@ -172,7 +172,7 @@ export function SuspendedOverlay() {
             </Link>
             <button
               onClick={() => logout()}
-              className="w-full flex items-center justify-center gap-2 h-10 text-sm text-red-600 hover:bg-red-50 rounded-xl transition font-medium"
+              className="w-full flex items-center justify-center gap-2 h-10 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition font-medium"
             >
               <LogOut className="h-4 w-4" />
               Sign Out

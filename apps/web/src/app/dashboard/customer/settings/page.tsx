@@ -481,7 +481,7 @@ export default function CustomerSettingsPage() {
                     <Label htmlFor="profile-phone">Phone Number</Label>
                     {user?.phoneVerifiedAt &&
                       profile.phone === phoneCheckState.originalPhone && (
-                        <span className="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                        <span className="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 dark:bg-green-950/30 px-2 py-0.5 rounded-full">
                           <CheckCircle className="h-3 w-3" />
                           Verified
                         </span>
@@ -489,7 +489,7 @@ export default function CustomerSettingsPage() {
                     {!user?.phoneVerifiedAt &&
                       profile.phone &&
                       profile.phone === phoneCheckState.originalPhone && (
-                        <span className="inline-flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                        <span className="inline-flex items-center gap-1 text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded-full">
                           <Shield className="h-3 w-3" />
                           Not Verified
                         </span>

@@ -247,7 +247,7 @@ export default function AdminMessagesPage() {
                               msg.senderId === user?.id
                                 ? "bg-primary text-primary-foreground"
                                 : msg.senderRole === "SHOPKEEPER"
-                                  ? "bg-amber-50 border border-amber-200"
+                                  ? "bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50"
                                   : "bg-muted"
                             } ${msg.hasViolation ? "border-2 border-yellow-500" : ""}`}
                           >

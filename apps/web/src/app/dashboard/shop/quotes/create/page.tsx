@@ -652,14 +652,14 @@ export default function CreateShopQuotePage() {
                       ? "bg-amber-500 text-white"
                       : s < step
                         ? "bg-green-500 text-white"
-                        : "bg-gray-200 text-gray-600"
+                        : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
                   }`}
                 >
                   {s < step ? <Check className="h-4 w-4" /> : s}
                 </div>
                 {s < 3 && (
                   <div
-                    className={`w-16 h-1 ${s < step ? "bg-green-500" : "bg-gray-200"}`}
+                    className={`w-16 h-1 ${s < step ? "bg-green-500" : "bg-gray-200 dark:bg-gray-700"}`}
                   />
                 )}
               </div>
@@ -1019,7 +1019,7 @@ export default function CreateShopQuotePage() {
                                 buildMethod: method.value as BuildMethod,
                               }))
                             }
-                            className={`text-left p-3 rounded-lg border-2 transition-all ${formData.buildMethod === method.value ? "border-amber-500 bg-amber-50 shadow-sm" : "border-gray-200 hover:border-gray-300 bg-white"}`}
+                            className={`text-left p-3 rounded-lg border-2 transition-all ${formData.buildMethod === method.value ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30 shadow-sm" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-[#161B22]"}`}
                           >
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-lg">{method.icon}</span>
@@ -1352,7 +1352,7 @@ export default function CreateShopQuotePage() {
                                   },
                                 }))
                               }
-                              className={`relative p-2 rounded-lg border-2 transition-all text-center ${formData.surfaceFinish === key ? "border-amber-500 bg-amber-50" : "border-gray-200 hover:border-gray-300"}`}
+                              className={`relative p-2 rounded-lg border-2 transition-all text-center ${formData.surfaceFinish === key ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"}`}
                             >
                               <img
                                 src={info.image}
@@ -1761,7 +1761,7 @@ export default function CreateShopQuotePage() {
                         </div>
                       </div>
                     </details>
-                    <div className="bg-amber-50 rounded-lg p-4 space-y-2">
+                    <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-4 space-y-2">
                       <div className="flex justify-between text-sm">
                         <span>Subtotal</span>
                         <span>

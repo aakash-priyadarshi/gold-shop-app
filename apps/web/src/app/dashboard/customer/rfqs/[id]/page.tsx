@@ -630,8 +630,8 @@ export default function CustomerRFQDetailPage() {
 
                           {offer.status === "DECLINED" &&
                             offer.declineReason && (
-                              <div className="mb-4 p-3 bg-red-50 rounded-lg border border-red-200">
-                                <p className="text-sm text-red-700">
+                              <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200">
+                                <p className="text-sm text-red-700 dark:text-red-300">
                                   <strong>Decline Reason:</strong>{" "}
                                   {offer.declineReason}
                                 </p>

@@ -249,7 +249,7 @@ export default function CustomerRFQsPage() {
                 <CardDescription>Closed</CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                <p className="text-2xl font-bold text-gray-500">
+                <p className="text-2xl font-bold text-gray-500 dark:text-gray-400">
                   {stats.closed}
                 </p>
               </CardContent>

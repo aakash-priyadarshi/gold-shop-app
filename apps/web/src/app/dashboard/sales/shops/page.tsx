@@ -85,8 +85,8 @@ export default function SalesShopsPage() {
       <DashboardLayout>
         <div className="space-y-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Shops & CRM</h1>
-            <p className="text-gray-500 mt-1">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Shops & CRM</h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">
               Browse shops and manage seller relationships
             </p>
           </div>
@@ -129,7 +129,7 @@ export default function SalesShopsPage() {
                       <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
                     </div>
                   ) : shops.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500">
+                    <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                       No shops found
                     </div>
                   ) : (
@@ -156,7 +156,7 @@ export default function SalesShopsPage() {
                                   ? `${shop.owner.firstName} ${shop.owner.lastName}`
                                   : "—"}
                               </div>
-                              <div className="text-xs text-gray-500">
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
                                 {shop.owner?.email || ""}
                               </div>
                             </TableCell>
@@ -227,7 +227,7 @@ export default function SalesShopsPage() {
                   >
                     Previous
                   </Button>
-                  <span className="flex items-center text-sm text-gray-600">
+                  <span className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                     Page {currentPage} of {totalPages}
                   </span>
                   <Button

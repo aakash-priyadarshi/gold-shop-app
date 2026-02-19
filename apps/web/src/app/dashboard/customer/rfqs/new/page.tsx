@@ -291,11 +291,11 @@ export default function NewRFQPage() {
                 </div>
 
                 {/* Info Box */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-3">
+                <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 rounded-lg p-4 flex gap-3">
                   <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-                  <div className="text-sm text-blue-800">
+                  <div className="text-sm text-blue-800 dark:text-blue-200">
                     <p className="font-medium mb-1">What happens next?</p>
-                    <ul className="list-disc list-inside space-y-1 text-blue-700">
+                    <ul className="list-disc list-inside space-y-1 text-blue-700 dark:text-blue-300">
                       <li>Your request is sent to verified shops that work with your chosen metal</li>
                       <li>Shops will send you price quotes within 24-48 hours</li>
                       <li>You can compare offers and choose the best one</li>
@@ -307,16 +307,16 @@ export default function NewRFQPage() {
                 {/* Phone Verification Status */}
                 <div className={`rounded-lg p-4 flex items-center justify-between ${
                   isPhoneVerified 
-                    ? 'bg-green-50 border border-green-200' 
-                    : 'bg-amber-50 border border-amber-200'
+                    ? 'bg-green-50 dark:bg-green-950/30 border border-green-200' 
+                    : 'bg-amber-50 dark:bg-amber-950/30 border border-amber-200'
                 }`}>
                   <div className="flex items-center gap-3">
                     <Phone className={`h-5 w-5 ${isPhoneVerified ? 'text-green-600' : 'text-amber-600'}`} />
                     <div>
-                      <p className={`font-medium ${isPhoneVerified ? 'text-green-800' : 'text-amber-800'}`}>
+                      <p className={`font-medium ${isPhoneVerified ? 'text-green-800 dark:text-green-200' : 'text-amber-800 dark:text-amber-200'}`}>
                         {isPhoneVerified ? 'Phone Verified' : 'Phone Verification Required'}
                       </p>
-                      <p className={`text-sm ${isPhoneVerified ? 'text-green-700' : 'text-amber-700'}`}>
+                      <p className={`text-sm ${isPhoneVerified ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
                         {isPhoneVerified 
                           ? 'Your phone number is verified. You can submit requests.' 
                           : 'Verify your phone to submit quote requests to shops.'

@@ -90,12 +90,12 @@ interface InvoiceDetail {
 }
 
 const statusColors: Record<string, string> = {
-  DRAFT: "bg-gray-100 text-gray-700",
-  ISSUED: "bg-blue-100 text-blue-700",
-  PAID: "bg-green-100 text-green-700",
-  PARTIALLY_PAID: "bg-amber-100 text-amber-700",
-  OVERDUE: "bg-red-100 text-red-700",
-  VOID: "bg-gray-200 text-gray-500",
+  DRAFT: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300",
+  ISSUED: "bg-blue-100 text-blue-700 dark:text-blue-300",
+  PAID: "bg-green-100 text-green-700 dark:text-green-300",
+  PARTIALLY_PAID: "bg-amber-100 text-amber-700 dark:text-amber-300",
+  OVERDUE: "bg-red-100 text-red-700 dark:text-red-300",
+  VOID: "bg-gray-200 text-gray-500 dark:text-gray-400",
   CANCELLED: "bg-red-100 text-red-500",
 };
 
@@ -238,11 +238,11 @@ export default function InvoiceDetailPage() {
         <div className="space-y-6 max-w-4xl mx-auto">
           {/* Success banner after creation */}
           {showCreatedBanner && invoice.status !== "PAID" && (
-            <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg print:hidden">
+            <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800/50 rounded-lg print:hidden">
               <div className="flex items-center gap-3">
                 <PartyPopper className="h-5 w-5 text-green-600" />
                 <div>
-                  <p className="font-semibold text-green-800">
+                  <p className="font-semibold text-green-800 dark:text-green-200">
                     Invoice Created Successfully!
                   </p>
                   <p className="text-sm text-green-600">
@@ -288,7 +288,7 @@ export default function InvoiceDetailPage() {
                 </h1>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge
-                    className={statusColors[invoice.status] || "bg-gray-100"}
+                    className={statusColors[invoice.status] || "bg-gray-100 dark:bg-gray-800"}
                   >
                     {invoice.status.replace(/_/g, " ")}
                   </Badge>
@@ -310,7 +310,7 @@ export default function InvoiceDetailPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border-green-300 text-green-700 hover:bg-green-50"
+                    className="border-green-300 text-green-700 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-950/30"
                     onClick={() => {
                       setPaymentMethod("cash");
                       setPaymentAmount(String(invoice.balanceDue));
@@ -362,7 +362,7 @@ export default function InvoiceDetailPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Customer Info */}
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
                 <Label className="text-xs text-muted-foreground">Bill To</Label>
                 <p className="font-semibold text-lg">{invoice.customerName}</p>
                 {invoice.customerPhone && (
@@ -520,7 +520,7 @@ export default function InvoiceDetailPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              <div className="bg-gray-50 rounded-lg p-3 text-sm">
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 text-sm">
                 <div className="flex justify-between">
                   <span>Total Due</span>
                   <span className="font-bold">

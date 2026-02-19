@@ -76,7 +76,7 @@ export default function SupportDashboardPage() {
               <StatCard
                 label="Total"
                 value={ticketStats.total}
-                color="text-gray-600"
+                color="text-gray-600 dark:text-gray-400"
                 href="/dashboard/support/tickets"
               />
             </div>
@@ -98,7 +98,7 @@ export default function SupportDashboardPage() {
               <StatCard
                 label="Total Orders"
                 value={dashStats.totalOrders}
-                color="text-gray-600"
+                color="text-gray-600 dark:text-gray-400"
               />
               <StatCard
                 label="Active Chats"

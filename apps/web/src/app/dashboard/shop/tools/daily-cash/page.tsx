@@ -178,7 +178,7 @@ export default function DailyCashPage() {
           <div className="grid grid-cols-4 gap-4">
             <Card>
               <CardContent className="p-4 text-center">
-                <Banknote className="h-5 w-5 mx-auto text-gray-500 mb-1" />
+                <Banknote className="h-5 w-5 mx-auto text-gray-500 dark:text-gray-400 mb-1" />
                 <p className="text-sm text-muted-foreground">Opening</p>
                 <Input
                   type="number"
@@ -189,7 +189,7 @@ export default function DailyCashPage() {
                 />
               </CardContent>
             </Card>
-            <Card className="border-green-200">
+            <Card className="border-green-200 dark:border-green-800/50">
               <CardContent className="p-4 text-center">
                 <ArrowDown className="h-5 w-5 mx-auto text-green-500 mb-1" />
                 <p className="text-sm text-muted-foreground">Cash In</p>
@@ -198,7 +198,7 @@ export default function DailyCashPage() {
                 </p>
               </CardContent>
             </Card>
-            <Card className="border-red-200">
+            <Card className="border-red-200 dark:border-red-800/50">
               <CardContent className="p-4 text-center">
                 <ArrowUp className="h-5 w-5 mx-auto text-red-500 mb-1" />
                 <p className="text-sm text-muted-foreground">Cash Out</p>
@@ -207,7 +207,7 @@ export default function DailyCashPage() {
                 </p>
               </CardContent>
             </Card>
-            <Card className="border-amber-200 bg-amber-50/50">
+            <Card className="border-amber-200 dark:border-amber-800/50 bg-amber-50/50 dark:bg-amber-950/30">
               <CardContent className="p-4 text-center">
                 <DollarSign className="h-5 w-5 mx-auto text-amber-500 mb-1" />
                 <p className="text-sm text-muted-foreground">Closing Balance</p>
@@ -334,8 +334,8 @@ export default function DailyCashPage() {
                       key={entry.id}
                       className={`flex items-center justify-between p-3 rounded-lg border ${
                         entry.type === "IN"
-                          ? "bg-green-50/50 border-green-100"
-                          : "bg-red-50/50 border-red-100"
+                          ? "bg-green-50/50 dark:bg-green-950/30 border-green-100"
+                          : "bg-red-50/50 dark:bg-red-950/30 border-red-100"
                       }`}
                     >
                       <div className="flex items-center gap-3">
