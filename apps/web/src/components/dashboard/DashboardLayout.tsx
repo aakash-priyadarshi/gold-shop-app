@@ -47,6 +47,7 @@ import {
   Moon,
   Package,
   Receipt,
+  ScanLine,
   Search,
   Settings,
   Shield,
@@ -196,6 +197,12 @@ const navItems: NavItem[] = [
     label: "Walk-in Quotes",
     href: "/dashboard/shop/quotes",
     icon: Calculator,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "POS Basket",
+    href: "/dashboard/shop/pos",
+    icon: ScanLine,
     roles: ["SHOPKEEPER"],
   },
   {

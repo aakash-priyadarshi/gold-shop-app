@@ -31,6 +31,7 @@ import { PagesModule } from "./modules/pages/pages.module";
 import { PaymentsModule } from "./modules/payments/payments.module";
 import { PlatformConfigModule } from "./modules/platform-config/platform-config.module";
 import { PricingModule } from "./modules/pricing/pricing.module";
+import { PosModule } from "./modules/pos/pos.module";
 import { ProductVariantsModule } from "./modules/product-variants/product-variants.module";
 import { RefundsModule } from "./modules/refunds/refunds.module";
 import { RfqModule } from "./modules/rfq/rfq.module";
@@ -109,6 +110,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     RefundsModule,
     SupportModule,
     ProductVariantsModule,
+    PosModule,
   ],
   providers: [
     // Apply ThrottlerGuard globally so @Throttle() decorators are enforced

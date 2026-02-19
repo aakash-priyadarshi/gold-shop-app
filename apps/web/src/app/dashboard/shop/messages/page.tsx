@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   Lock,
   MessageSquare,
+  ScanLine,
   Send,
   Shield,
   Wifi,
@@ -24,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface Conversation {
   id: string;
@@ -53,6 +55,7 @@ interface Message {
 
 export default function ShopMessagesPage() {
   const { user, refreshUser } = useAuth();
+  const router = useRouter();
   const shopData = user?.shop;
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<
@@ -313,9 +316,25 @@ export default function ShopMessagesPage() {
                         </Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Shield className="h-3 w-3" />
-                      Anti-circumvention active
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (selectedConv) {
+                            router.push(
+                              `/dashboard/shop/pos?customerId=${selectedConv.buyer.id}&conversationId=${selectedConv.id}`,
+                            );
+                          }
+                        }}
+                      >
+                        <ScanLine className="h-3 w-3 mr-1" />
+                        Load Picks to POS
+                      </Button>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Shield className="h-3 w-3" />
+                        Anti-circumvention active
+                      </div>
                     </div>
                   </div>
 

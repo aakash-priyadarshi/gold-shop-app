@@ -4,6 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { BookingExpiryProcessor } from './processors/booking-expiry.processor';
 import { RfqExpiryProcessor } from './processors/rfq-expiry.processor';
 import { CommissionCheckProcessor } from './processors/commission-check.processor';
+import { PosExpiryProcessor } from './processors/pos-expiry.processor';
 import { JobsService } from './jobs.service';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { PrismaModule } from '../../prisma/prisma.module';
@@ -15,6 +16,7 @@ import { PrismaModule } from '../../prisma/prisma.module';
       { name: 'booking-expiry' },
       { name: 'rfq-expiry' },
       { name: 'notifications' },
+      { name: 'pos-expiry' },
     ),
     NotificationsModule,
     PrismaModule,
@@ -24,6 +26,7 @@ import { PrismaModule } from '../../prisma/prisma.module';
     BookingExpiryProcessor,
     RfqExpiryProcessor,
     CommissionCheckProcessor,
+    PosExpiryProcessor,
   ],
   exports: [JobsService, CommissionCheckProcessor],
 })
