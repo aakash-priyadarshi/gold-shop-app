@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 
 interface HeroVideoProps {
   /** Full CDN URL to the .mp4 hero video (resolved server-side). */
@@ -19,7 +19,11 @@ interface HeroVideoProps {
  *  - Fixed-height container to prevent layout shift
  *  - No hydration mismatch (videoSrc comes from the server)
  */
-export function HeroVideo({ videoSrc, poster, className = '' }: HeroVideoProps) {
+export function HeroVideo({
+  videoSrc,
+  poster,
+  className = "",
+}: HeroVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
 
@@ -33,11 +37,11 @@ export function HeroVideo({ videoSrc, poster, className = '' }: HeroVideoProps) 
     video.muted = true;
 
     // Respect prefers-reduced-motion
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     setReducedMotion(mq.matches);
 
     const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-    mq.addEventListener('change', handler);
+    mq.addEventListener("change", handler);
 
     // Start playback
     if (!mq.matches) {
@@ -46,7 +50,7 @@ export function HeroVideo({ videoSrc, poster, className = '' }: HeroVideoProps) 
       });
     }
 
-    return () => mq.removeEventListener('change', handler);
+    return () => mq.removeEventListener("change", handler);
   }, []);
 
   useEffect(() => {
