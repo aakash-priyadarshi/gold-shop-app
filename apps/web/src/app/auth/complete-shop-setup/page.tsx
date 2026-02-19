@@ -245,19 +245,19 @@ export default function CompleteShopSetupPage() {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <AuthBackground />
-        <Card className="w-full max-w-md border-0 shadow-2xl z-10">
+        <Card className="w-full max-w-md border-0 shadow-2xl z-10 bg-white/95 dark:bg-[#161B22]/95 backdrop-blur-sm">
           <CardContent className="pt-10 pb-10 text-center">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
               <CheckCircleIcon className="w-10 h-10 text-green-600" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               Shop Registered!
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
               Your shop has been submitted for approval. You'll be notified once
               it's verified.
             </p>
-            <p className="text-sm text-gray-500">Redirecting to dashboard...</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Redirecting to dashboard...</p>
           </CardContent>
         </Card>
       </div>
@@ -267,7 +267,7 @@ export default function CompleteShopSetupPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <AuthBackground />
-      <Card className="w-full max-w-lg border-0 shadow-2xl shadow-gold-500/10 bg-white/95 backdrop-blur-sm z-10">
+      <Card className="w-full max-w-lg border-0 shadow-2xl shadow-gold-500/10 bg-white/95 dark:bg-[#161B22]/95 backdrop-blur-sm z-10">
         <CardHeader className="space-y-1 text-center pb-2">
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center">
             <BuildingStorefrontIcon className="w-8 h-8 text-white" />
@@ -444,7 +444,7 @@ export default function CompleteShopSetupPage() {
               </div>
             </div>
 
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-xl p-4 text-sm text-amber-800 dark:text-amber-200">
               <strong>Note:</strong> Shop registrations require verification.
               Your account will be active after admin approval.
             </div>

@@ -205,12 +205,12 @@ function ForgotPasswordForm() {
 
   return (
     <GoldenUnveil skipIntro={true}>
-      <Card className="w-full max-w-md border-0 shadow-2xl shadow-gold-500/10 bg-white/95 backdrop-blur-sm">
+      <Card className="w-full max-w-md border-0 shadow-2xl shadow-gold-500/10 bg-white/95 dark:bg-[#161B22]/95 backdrop-blur-sm">
         {/* Step 1: Email */}
         {step === 'email' && (
           <>
             <CardHeader className="space-y-1 text-center pb-4">
-              <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-gold-100 to-gold-200 flex items-center justify-center mb-2">
+              <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-gold-100 to-gold-200 dark:from-gold-900/50 dark:to-gold-800/50 flex items-center justify-center mb-2">
                 <KeyIcon className="w-8 h-8 text-gold-600" />
               </div>
               <CardTitle className="text-2xl font-bold">Forgot password?</CardTitle>
@@ -259,7 +259,7 @@ function ForgotPasswordForm() {
                 <div className="text-center">
                   <Link
                     href="/auth/login"
-                    className="text-sm text-gray-500 hover:text-gray-700 inline-flex items-center gap-1"
+                    className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 inline-flex items-center gap-1"
                   >
                     <ArrowLeftIcon className="w-4 h-4" />
                     Back to login
@@ -274,13 +274,13 @@ function ForgotPasswordForm() {
         {step === 'otp' && (
           <>
             <CardHeader className="space-y-1 text-center pb-4">
-              <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-gold-100 to-gold-200 flex items-center justify-center mb-2">
+              <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-gold-100 to-gold-200 dark:from-gold-900/50 dark:to-gold-800/50 flex items-center justify-center mb-2">
                 <EnvelopeIcon className="w-8 h-8 text-gold-600" />
               </div>
               <CardTitle className="text-2xl font-bold">Check your email</CardTitle>
               <CardDescription className="text-base">
                 We sent a 6-digit code to<br />
-                <span className="font-medium text-gray-900">{email}</span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">{email}</span>
               </CardDescription>
             </CardHeader>
 
@@ -300,7 +300,7 @@ function ForgotPasswordForm() {
                       className={cn(
                         "w-12 h-14 text-center text-xl font-semibold rounded-xl border-2 transition-all",
                         "focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500",
-                        otpError ? "border-red-300 bg-red-50" : "border-gray-200 bg-white"
+                        otpError ? "border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30" : "border-gray-200 dark:border-gray-600 bg-white dark:bg-[#0B0C10]"
                       )}
                       autoFocus={index === 0}
                     />
@@ -323,13 +323,13 @@ function ForgotPasswordForm() {
               </Button>
 
               <div className="text-center">
-                <p className="text-sm text-gray-500 mb-2">Didn't receive the code?</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Didn't receive the code?</p>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleResendOtp}
                   disabled={resendCooldown > 0 || isLoading}
-                  className="text-gold-600 hover:text-gold-700 hover:bg-gold-50"
+                  className="text-gold-600 hover:text-gold-700 hover:bg-gold-50 dark:hover:bg-gold-950/30"
                 >
                   {resendCooldown > 0 ? (
                     <span>Resend in {resendCooldown}s</span>
@@ -346,7 +346,7 @@ function ForgotPasswordForm() {
                 <Button
                   variant="link"
                   onClick={() => setStep('email')}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 >
                   ← Use different email
                 </Button>
@@ -359,7 +359,7 @@ function ForgotPasswordForm() {
         {step === 'reset' && (
           <>
             <CardHeader className="space-y-1 text-center pb-4">
-              <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-gold-100 to-gold-200 flex items-center justify-center mb-2">
+              <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-gold-100 to-gold-200 dark:from-gold-900/50 dark:to-gold-800/50 flex items-center justify-center mb-2">
                 <LockClosedIcon className="w-8 h-8 text-gold-600" />
               </div>
               <CardTitle className="text-2xl font-bold">Set new password</CardTitle>
@@ -424,7 +424,7 @@ function ForgotPasswordForm() {
                   )}
                 </div>
 
-                <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+                <div className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg">
                   Password must contain:
                   <ul className="list-disc list-inside mt-1 space-y-0.5">
                     <li>At least 8 characters</li>
@@ -457,7 +457,7 @@ function ForgotPasswordForm() {
         {step === 'success' && (
           <>
             <CardHeader className="space-y-1 text-center pb-4">
-              <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center mb-2">
+              <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/50 dark:to-green-800/50 flex items-center justify-center mb-2">
                 <CheckCircleIcon className="w-8 h-8 text-green-600" />
               </div>
               <CardTitle className="text-2xl font-bold">Password reset!</CardTitle>
