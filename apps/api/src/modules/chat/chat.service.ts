@@ -5,7 +5,13 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
-import { ConversationStatus, InventoryVisibility, RfqSource, RfqStatus, BuildMethod } from "@prisma/client";
+import {
+  BuildMethod,
+  ConversationStatus,
+  InventoryVisibility,
+  RfqSource,
+  RfqStatus,
+} from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { NotificationsService } from "../notifications/notifications.service";
@@ -807,14 +813,22 @@ export class ChatService {
     });
     if (!conversation) throw new NotFoundException("Conversation not found");
     if (conversation.shop.userId !== userId) {
-      throw new ForbiddenException("Only the shop owner can share catalogues in this conversation");
+      throw new ForbiddenException(
+        "Only the shop owner can share catalogues in this conversation",
+      );
     }
 
     const catalogue = await this.prisma.catalogue.findUnique({
       where: { slug: catalogueSlug },
     });
-    if (!catalogue || catalogue.shopId !== conversation.shopId || catalogue.deletedAt) {
-      throw new BadRequestException("Catalogue not found or does not belong to your shop");
+    if (
+      !catalogue ||
+      catalogue.shopId !== conversation.shopId ||
+      catalogue.deletedAt
+    ) {
+      throw new BadRequestException(
+        "Catalogue not found or does not belong to your shop",
+      );
     }
 
     const message = await this.prisma.message.create({
@@ -852,7 +866,9 @@ export class ChatService {
     });
     if (!conversation) throw new NotFoundException("Conversation not found");
     if (conversation.shop.userId !== userId) {
-      throw new ForbiddenException("Only the shop owner can share products in this conversation");
+      throw new ForbiddenException(
+        "Only the shop owner can share products in this conversation",
+      );
     }
 
     // Fetch inventory items
@@ -880,9 +896,15 @@ export class ChatService {
       inventoryItemId: inv.id,
       title: inv.nameEn,
       imageUrl: (inv.images as string[])?.[0] || null,
-      priceLabel: inv.totalPriceNpr ? `NPR ${inv.totalPriceNpr.toLocaleString()}` : "Price on request",
-      sizesAvailable: inv.variants?.filter((v: any) => v.stock > 0).map((v: any) => v.sizeLabel) || [],
-      deepLink: inv.visibility === "CATALOGUE_ONLY" ? null : `/products/${inv.id}`,
+      priceLabel: inv.totalPriceNpr
+        ? `NPR ${inv.totalPriceNpr.toLocaleString()}`
+        : "Price on request",
+      sizesAvailable:
+        inv.variants
+          ?.filter((v: any) => v.stock > 0)
+          .map((v: any) => v.sizeLabel) || [],
+      deepLink:
+        inv.visibility === "CATALOGUE_ONLY" ? null : `/products/${inv.id}`,
     }));
 
     const message = await this.prisma.message.create({
@@ -926,7 +948,9 @@ export class ChatService {
     });
     if (!conversation) throw new NotFoundException("Conversation not found");
     if (conversation.shop.userId !== userId) {
-      throw new ForbiddenException("Only the shop owner can create walk-in RFQs");
+      throw new ForbiddenException(
+        "Only the shop owner can create walk-in RFQs",
+      );
     }
 
     // Validate items belong to shop and not HIDDEN
@@ -935,7 +959,9 @@ export class ChatService {
         where: { id: item.inventoryItemId, shopId },
       });
       if (!inv) {
-        throw new BadRequestException(`Item ${item.inventoryItemId} not found in your shop`);
+        throw new BadRequestException(
+          `Item ${item.inventoryItemId} not found in your shop`,
+        );
       }
       if (inv.visibility === InventoryVisibility.HIDDEN) {
         throw new BadRequestException(`Item ${inv.nameEn} is hidden`);

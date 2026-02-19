@@ -7,10 +7,9 @@ import {
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { InvoicesService } from "../invoices/invoices.service";
-import { CreatePosSessionDto } from "./dto/create-session.dto";
 import { AddItemsDto } from "./dto/add-items.dto";
-import { UpdateItemDto } from "./dto/checkout.dto";
-import { CheckoutDto } from "./dto/checkout.dto";
+import { CheckoutDto, UpdateItemDto } from "./dto/checkout.dto";
+import { CreatePosSessionDto } from "./dto/create-session.dto";
 
 const POS_SESSION_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -192,7 +191,9 @@ export class PosService {
       include: {
         items: {
           include: {
-            inventoryItem: { select: { id: true, nameEn: true, sku: true, images: true } },
+            inventoryItem: {
+              select: { id: true, nameEn: true, sku: true, images: true },
+            },
             variant: { select: { id: true, sizeLabel: true, sku: true } },
           },
         },
@@ -291,7 +292,9 @@ export class PosService {
 
     // Build invoice line items
     const lineItems = session.items.map((item) => ({
-      label: item.inventoryItem.nameEn + (item.variant ? ` (${item.variant.sizeLabel})` : ""),
+      label:
+        item.inventoryItem.nameEn +
+        (item.variant ? ` (${item.variant.sizeLabel})` : ""),
       category: "PRODUCT",
       quantity: item.qty,
       unitPrice: item.unitPrice,
@@ -382,10 +385,23 @@ export class PosService {
         items: {
           include: {
             inventoryItem: {
-              select: { id: true, nameEn: true, sku: true, images: true, totalPriceNpr: true, stockQuantity: true },
+              select: {
+                id: true,
+                nameEn: true,
+                sku: true,
+                images: true,
+                totalPriceNpr: true,
+                stockQuantity: true,
+              },
             },
             variant: {
-              select: { id: true, sizeLabel: true, sku: true, stock: true, priceOverride: true },
+              select: {
+                id: true,
+                sizeLabel: true,
+                sku: true,
+                stock: true,
+                priceOverride: true,
+              },
             },
           },
         },
@@ -408,10 +424,23 @@ export class PosService {
         items: {
           include: {
             inventoryItem: {
-              select: { id: true, nameEn: true, sku: true, images: true, totalPriceNpr: true, stockQuantity: true },
+              select: {
+                id: true,
+                nameEn: true,
+                sku: true,
+                images: true,
+                totalPriceNpr: true,
+                stockQuantity: true,
+              },
             },
             variant: {
-              select: { id: true, sizeLabel: true, sku: true, stock: true, priceOverride: true },
+              select: {
+                id: true,
+                sizeLabel: true,
+                sku: true,
+                stock: true,
+                priceOverride: true,
+              },
             },
           },
         },
@@ -548,7 +577,11 @@ export class PosService {
 
     // Upsert reservation
     const existingRes = await this.prisma.stockReservation.findFirst({
-      where: { posSessionId: sessionId, inventoryItemId, variantId: variantId || null },
+      where: {
+        posSessionId: sessionId,
+        inventoryItemId,
+        variantId: variantId || null,
+      },
     });
 
     if (existingRes) {
@@ -577,13 +610,19 @@ export class PosService {
     qty: number,
   ) {
     const reservation = await this.prisma.stockReservation.findFirst({
-      where: { posSessionId: sessionId, inventoryItemId, variantId: variantId || null },
+      where: {
+        posSessionId: sessionId,
+        inventoryItemId,
+        variantId: variantId || null,
+      },
     });
 
     if (!reservation) return;
 
     if (reservation.qty <= qty) {
-      await this.prisma.stockReservation.delete({ where: { id: reservation.id } });
+      await this.prisma.stockReservation.delete({
+        where: { id: reservation.id },
+      });
     } else {
       await this.prisma.stockReservation.update({
         where: { id: reservation.id },

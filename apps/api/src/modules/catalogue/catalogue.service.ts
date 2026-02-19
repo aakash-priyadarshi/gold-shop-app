@@ -9,15 +9,15 @@ import { CatalogueMode, InventoryVisibility } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
-import { AddCatalogueItemDto } from "./dto/add-item.dto";
-import { CreateCatalogueDto } from "./dto/create-catalogue.dto";
-import { ReorderItemsDto } from "./dto/reorder-items.dto";
-import { UpdateCatalogueDto } from "./dto/update-catalogue.dto";
 import {
   createCatalogueToken,
   hashViewerIp,
   verifyCatalogueToken,
 } from "./catalogue.token";
+import { AddCatalogueItemDto } from "./dto/add-item.dto";
+import { CreateCatalogueDto } from "./dto/create-catalogue.dto";
+import { ReorderItemsDto } from "./dto/reorder-items.dto";
+import { UpdateCatalogueDto } from "./dto/update-catalogue.dto";
 
 @Injectable()
 export class CatalogueService {
@@ -28,7 +28,12 @@ export class CatalogueService {
 
   // ─── Field mapping helpers (Prisma → API contract) ─────────────────
   private mapVariant(v: any) {
-    return { id: v.id, size: v.sizeLabel, stock: v.stock, additionalPriceNpr: v.priceOverride };
+    return {
+      id: v.id,
+      size: v.sizeLabel,
+      stock: v.stock,
+      additionalPriceNpr: v.priceOverride,
+    };
   }
 
   private mapInventoryItem(inv: any) {
@@ -51,7 +56,9 @@ export class CatalogueService {
   private mapCatalogueItem(item: any) {
     return {
       ...item,
-      inventoryItem: item.inventoryItem ? this.mapInventoryItem(item.inventoryItem) : undefined,
+      inventoryItem: item.inventoryItem
+        ? this.mapInventoryItem(item.inventoryItem)
+        : undefined,
     };
   }
 
@@ -82,7 +89,9 @@ export class CatalogueService {
   async create(shopId: string, userId: string, dto: CreateCatalogueDto) {
     let slug = this.generateSlug(dto.name);
     // Ensure unique slug
-    const existing = await this.prisma.catalogue.findUnique({ where: { slug } });
+    const existing = await this.prisma.catalogue.findUnique({
+      where: { slug },
+    });
     if (existing) {
       slug = this.generateSlug(dto.name + "-" + Date.now());
     }
@@ -179,7 +188,12 @@ export class CatalogueService {
     };
   }
 
-  async update(id: string, shopId: string, userId: string, dto: UpdateCatalogueDto) {
+  async update(
+    id: string,
+    shopId: string,
+    userId: string,
+    dto: UpdateCatalogueDto,
+  ) {
     const catalogue = await this.prisma.catalogue.findFirst({
       where: { id, shopId, deletedAt: null },
     });
@@ -243,7 +257,12 @@ export class CatalogueService {
 
   // ─── Items Management ──────────────────────────────────────────────
 
-  async addItem(catalogueId: string, shopId: string, userId: string, dto: AddCatalogueItemDto) {
+  async addItem(
+    catalogueId: string,
+    shopId: string,
+    userId: string,
+    dto: AddCatalogueItemDto,
+  ) {
     const catalogue = await this.prisma.catalogue.findFirst({
       where: { id: catalogueId, shopId, deletedAt: null },
     });
@@ -254,10 +273,14 @@ export class CatalogueService {
       where: { id: dto.inventoryItemId, shopId },
     });
     if (!inventoryItem) {
-      throw new BadRequestException("Inventory item not found or does not belong to your shop");
+      throw new BadRequestException(
+        "Inventory item not found or does not belong to your shop",
+      );
     }
     if (inventoryItem.visibility === InventoryVisibility.HIDDEN) {
-      throw new BadRequestException("Cannot add a hidden inventory item to a catalogue");
+      throw new BadRequestException(
+        "Cannot add a hidden inventory item to a catalogue",
+      );
     }
 
     // Check for duplicate
@@ -297,10 +320,18 @@ export class CatalogueService {
     catalogueId: string,
     itemId: string,
     shopId: string,
-    data: { sortOrder?: number; overridePrice?: number | null; isHidden?: boolean },
+    data: {
+      sortOrder?: number;
+      overridePrice?: number | null;
+      isHidden?: boolean;
+    },
   ) {
     const item = await this.prisma.catalogueItem.findFirst({
-      where: { id: itemId, catalogueId, catalogue: { shopId, deletedAt: null } },
+      where: {
+        id: itemId,
+        catalogueId,
+        catalogue: { shopId, deletedAt: null },
+      },
     });
     if (!item) throw new NotFoundException("Catalogue item not found");
 
@@ -316,7 +347,11 @@ export class CatalogueService {
 
   async removeItem(catalogueId: string, itemId: string, shopId: string) {
     const item = await this.prisma.catalogueItem.findFirst({
-      where: { id: itemId, catalogueId, catalogue: { shopId, deletedAt: null } },
+      where: {
+        id: itemId,
+        catalogueId,
+        catalogue: { shopId, deletedAt: null },
+      },
     });
     if (!item) throw new NotFoundException("Catalogue item not found");
 
@@ -324,7 +359,11 @@ export class CatalogueService {
     return { success: true };
   }
 
-  async reorderItems(catalogueId: string, shopId: string, dto: ReorderItemsDto) {
+  async reorderItems(
+    catalogueId: string,
+    shopId: string,
+    dto: ReorderItemsDto,
+  ) {
     const catalogue = await this.prisma.catalogue.findFirst({
       where: { id: catalogueId, shopId, deletedAt: null },
     });
@@ -419,10 +458,14 @@ export class CatalogueService {
     // If password protected, verify token
     if (catalogue.passwordHash) {
       if (!token) {
-        throw new ForbiddenException("This catalogue requires a password. Please unlock first.");
+        throw new ForbiddenException(
+          "This catalogue requires a password. Please unlock first.",
+        );
       }
       if (!verifyCatalogueToken(token, slug, catalogue.passwordHash)) {
-        throw new ForbiddenException("Invalid or expired token. Please unlock again.");
+        throw new ForbiddenException(
+          "Invalid or expired token. Please unlock again.",
+        );
       }
     }
 
@@ -481,7 +524,12 @@ export class CatalogueService {
     });
   }
 
-  async recordView(slug: string, ip: string, userAgent?: string, referrer?: string) {
+  async recordView(
+    slug: string,
+    ip: string,
+    userAgent?: string,
+    referrer?: string,
+  ) {
     const catalogue = await this.prisma.catalogue.findUnique({
       where: { slug },
       select: { id: true, deletedAt: true },
@@ -561,7 +609,13 @@ export class CatalogueService {
   ) {
     const catalogue = await this.prisma.catalogue.findUnique({
       where: { slug },
-      select: { id: true, shopId: true, name: true, deletedAt: true, isPublic: true },
+      select: {
+        id: true,
+        shopId: true,
+        name: true,
+        deletedAt: true,
+        isPublic: true,
+      },
     });
     if (!catalogue || catalogue.deletedAt || !catalogue.isPublic) {
       throw new NotFoundException("Catalogue not found");
@@ -579,7 +633,9 @@ export class CatalogueService {
     }
 
     // Create a system message with the quote request details
-    const itemSummary = items.map((i) => `${i.inventoryItemId} x${i.qty ?? 1}`).join(", ");
+    const itemSummary = items
+      .map((i) => `${i.inventoryItemId} x${i.qty ?? 1}`)
+      .join(", ");
     await this.prisma.message.create({
       data: {
         conversationId: conversation.id,

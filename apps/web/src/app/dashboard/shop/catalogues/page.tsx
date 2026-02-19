@@ -1,23 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import {
-  Plus,
-  Eye,
-  EyeOff,
-  Settings,
-  Trash2,
-  ExternalLink,
-  Copy,
-  BookOpen,
-  Monitor,
-  BarChart3,
-  Lock,
-} from "lucide-react";
-import { catalogueApi } from "@/lib/api";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { toast } from "@/hooks/use-toast";
+import { catalogueApi } from "@/lib/api";
+import {
+  BarChart3,
+  BookOpen,
+  Copy,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Lock,
+  Monitor,
+  Plus,
+  Settings,
+  Trash2,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface Catalogue {
   id: string;
@@ -61,7 +61,12 @@ export default function CataloguesPage() {
   }, [page]);
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Delete catalogue "${name}"? This action can be undone by support.`)) return;
+    if (
+      !confirm(
+        `Delete catalogue "${name}"? This action can be undone by support.`,
+      )
+    )
+      return;
     try {
       await catalogueApi.delete(id);
       toast({ title: "Catalogue deleted" });
@@ -87,7 +92,8 @@ export default function CataloguesPage() {
               Catalogues
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Create shareable product catalogues for walk-in customers and online sharing
+              Create shareable product catalogues for walk-in customers and
+              online sharing
             </p>
           </div>
           <button
@@ -116,7 +122,8 @@ export default function CataloguesPage() {
               No catalogues yet
             </h3>
             <p className="text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto">
-              Create your first catalogue to share your products with walk-in customers via QR code or link.
+              Create your first catalogue to share your products with walk-in
+              customers via QR code or link.
             </p>
             <button
               onClick={() => router.push("/dashboard/shop/catalogues/new")}
@@ -187,7 +194,9 @@ export default function CataloguesPage() {
                 {/* Actions */}
                 <div className="flex items-center gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
                   <button
-                    onClick={() => router.push(`/dashboard/shop/catalogues/${cat.id}`)}
+                    onClick={() =>
+                      router.push(`/dashboard/shop/catalogues/${cat.id}`)
+                    }
                     className="flex-1 text-center px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                   >
                     <Settings className="h-3.5 w-3.5 inline mr-1" />

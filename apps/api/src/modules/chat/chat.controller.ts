@@ -231,7 +231,8 @@ export class ChatController {
     @Param("id") conversationId: string,
     @CurrentUser("id") userId: string,
     @CurrentUser("shopId") shopId: string,
-    @Body() body: {
+    @Body()
+    body: {
       catalogueSlug?: string;
       items: { inventoryItemId: string; variantId?: string; qty?: number }[];
       jewelleryType?: string;

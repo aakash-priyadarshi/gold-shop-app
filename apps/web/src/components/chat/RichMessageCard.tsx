@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, ShoppingBag, ClipboardList, Store } from "lucide-react";
+import { ClipboardList, ExternalLink, ShoppingBag, Store } from "lucide-react";
 import Link from "next/link";
 
 /**
@@ -55,7 +55,9 @@ export function RichMessageCard({
         <div className="flex items-center gap-1.5 mb-1">
           <ShoppingBag className="h-3.5 w-3.5 text-blue-500" />
           <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
-            {products.length > 1 ? `${products.length} Products Shared` : "Product Shared"}
+            {products.length > 1
+              ? `${products.length} Products Shared`
+              : "Product Shared"}
           </span>
         </div>
         {products.slice(0, 4).map((p: any, i: number) => (
@@ -90,7 +92,9 @@ export function RichMessageCard({
           </div>
         ))}
         {products.length > 4 && (
-          <p className="text-[10px] text-gray-400">+{products.length - 4} more</p>
+          <p className="text-[10px] text-gray-400">
+            +{products.length - 4} more
+          </p>
         )}
       </div>
     );

@@ -32,7 +32,8 @@ export class CreateCatalogueDto {
   isPublic?: boolean;
 
   @ApiPropertyOptional({
-    description: "Password to protect the catalogue. Leave empty for no protection.",
+    description:
+      "Password to protect the catalogue. Leave empty for no protection.",
   })
   @IsOptional()
   @IsString()

@@ -104,7 +104,13 @@ interface WishlistItem {
 
 export default function PosPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      }
+    >
       <PosPageInner />
     </Suspense>
   );
@@ -160,10 +166,7 @@ function PosPageInner() {
 
   // ─── Create Session ───
 
-  const handleCreateSession = async (
-    cId?: string,
-    convId?: string,
-  ) => {
+  const handleCreateSession = async (cId?: string, convId?: string) => {
     setLoading(true);
     try {
       const res = await posApi.createSession({
@@ -200,7 +203,8 @@ function PosPageInner() {
     } catch (err: any) {
       toast({
         title: "Cannot load picks",
-        description: err?.response?.data?.message || "No relationship with customer",
+        description:
+          err?.response?.data?.message || "No relationship with customer",
         variant: "destructive",
       });
       setCustomerPicks([]);
@@ -302,7 +306,8 @@ function PosPageInner() {
 
   // ─── Compute Basket Totals ───
 
-  const basketSubtotal = session?.items?.reduce((sum, i) => sum + i.lineTotal, 0) || 0;
+  const basketSubtotal =
+    session?.items?.reduce((sum, i) => sum + i.lineTotal, 0) || 0;
   const basketTax = basketSubtotal * (taxRate || 0);
   const basketTotal = basketSubtotal + basketTax - (discountAmount || 0);
 
@@ -392,8 +397,7 @@ function PosPageInner() {
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <Heart className="h-4 w-4 text-pink-500" /> Customer
-                      Picks
+                      <Heart className="h-4 w-4 text-pink-500" /> Customer Picks
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -480,7 +484,9 @@ function PosPageInner() {
                 {/* Manual Add */}
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Quick Add by SKU</CardTitle>
+                    <CardTitle className="text-base">
+                      Quick Add by SKU
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <ManualAddForm
@@ -616,9 +622,7 @@ function PosPageInner() {
                                     variant="ghost"
                                     size="icon"
                                     className="h-7 w-7 text-destructive"
-                                    onClick={() =>
-                                      handleUpdateQty(item.id, 0)
-                                    }
+                                    onClick={() => handleUpdateQty(item.id, 0)}
                                   >
                                     <Trash2 className="h-3 w-3" />
                                   </Button>
@@ -722,9 +726,7 @@ function PosPageInner() {
                     type="number"
                     min="0"
                     value={discountAmount}
-                    onChange={(e) =>
-                      setDiscountAmount(Number(e.target.value))
-                    }
+                    onChange={(e) => setDiscountAmount(Number(e.target.value))}
                     placeholder="0"
                   />
                 </div>
@@ -756,10 +758,7 @@ function PosPageInner() {
               </div>
             </div>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setCheckoutOpen(false)}
-              >
+              <Button variant="outline" onClick={() => setCheckoutOpen(false)}>
                 Cancel
               </Button>
               <Button

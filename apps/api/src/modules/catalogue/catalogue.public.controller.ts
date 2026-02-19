@@ -8,13 +8,13 @@ import {
   Req,
   UseGuards,
 } from "@nestjs/common";
-import { ApiOperation, ApiTags, ApiBearerAuth } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import { Request } from "express";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
-import { Roles } from "../auth/decorators/roles.decorator";
 import { CatalogueService } from "./catalogue.service";
 import { UnlockCatalogueDto } from "./dto/unlock-catalogue.dto";
 
@@ -31,15 +31,15 @@ export class CataloguePublicController {
 
   @Post(":slug/unlock")
   @ApiOperation({ summary: "Unlock a password-protected catalogue" })
-  async unlock(
-    @Param("slug") slug: string,
-    @Body() dto: UnlockCatalogueDto,
-  ) {
+  async unlock(@Param("slug") slug: string, @Body() dto: UnlockCatalogueDto) {
     return this.catalogueService.unlockCatalogue(slug, dto.password);
   }
 
   @Get(":slug/items")
-  @ApiOperation({ summary: "Get catalogue items (requires unlock token if password-protected)" })
+  @ApiOperation({
+    summary:
+      "Get catalogue items (requires unlock token if password-protected)",
+  })
   async getItems(
     @Param("slug") slug: string,
     @Headers("x-catalogue-token") token?: string,
@@ -50,10 +50,7 @@ export class CataloguePublicController {
   @Post(":slug/view")
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @ApiOperation({ summary: "Record a catalogue view event" })
-  async recordView(
-    @Param("slug") slug: string,
-    @Req() req: Request,
-  ) {
+  async recordView(@Param("slug") slug: string, @Req() req: Request) {
     const ip =
       (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
       req.ip ||
@@ -74,7 +71,8 @@ export class CataloguePublicController {
   async requestQuote(
     @Param("slug") slug: string,
     @CurrentUser("id") userId: string,
-    @Body() body: {
+    @Body()
+    body: {
       items: { inventoryItemId: string; variantId?: string; qty?: number }[];
       notes?: string;
     },
@@ -91,7 +89,9 @@ export class CataloguePublicController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("CUSTOMER")
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Open a conversation with the shop about this catalogue" })
+  @ApiOperation({
+    summary: "Open a conversation with the shop about this catalogue",
+  })
   async messageShop(
     @Param("slug") slug: string,
     @CurrentUser("id") userId: string,
