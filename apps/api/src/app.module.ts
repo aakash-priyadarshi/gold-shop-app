@@ -10,6 +10,7 @@ import { RedisModule } from "./common/redis";
 import { AdminModule } from "./modules/admin/admin.module";
 import { AuditModule } from "./modules/audit/audit.module";
 import { AuthModule } from "./modules/auth/auth.module";
+import { CatalogueModule } from "./modules/catalogue/catalogue.module";
 import { ChatModule } from "./modules/chat/chat.module";
 import { CommissionModule } from "./modules/commission/commission.module";
 import { CustomerCrmModule } from "./modules/customer-crm/customer-crm.module";
@@ -104,6 +105,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     CustomerCrmModule,
     MarketplaceIntelligenceModule,
     ChatModule,
+    CatalogueModule,
     RefundsModule,
     SupportModule,
     ProductVariantsModule,

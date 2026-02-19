@@ -32,6 +32,8 @@ import {
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+type SourceFilter = "ALL" | "ONLINE" | "WALK_IN";
+
 interface Rfq {
   id: string;
   jewelleryType: string;
@@ -67,6 +69,11 @@ interface Rfq {
     viewedAt?: string;
     respondedAt?: string;
   }>;
+  source?: string;
+  walkInMeta?: {
+    customerName?: string;
+    catalogueSlug?: string;
+  };
 }
 
 const statusColors: Record<string, string> = {
@@ -88,17 +95,20 @@ export default function ShopRfqsPage() {
     useShopCurrency();
   const [rfqs, setRfqs] = useState<Rfq[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("ALL");
 
   useEffect(() => {
     if (user?.shop?.id) {
       loadRfqs();
     }
-  }, [user?.shop?.id]);
+  }, [user?.shop?.id, sourceFilter]);
 
   const loadRfqs = async () => {
     setIsLoading(true);
     try {
-      const response = await rfqApi.getShopRequests();
+      const params: any = {};
+      if (sourceFilter !== "ALL") params.source = sourceFilter;
+      const response = await rfqApi.getShopRequests(params);
       let rfqsArr = response.data?.rfqs || response.data || [];
       if (!Array.isArray(rfqsArr)) {
         rfqsArr = [];
@@ -163,9 +173,9 @@ export default function ShopRfqsPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Online RFQ Requests</h1>
+              <h1 className="text-2xl font-bold">RFQ Requests</h1>
               <p className="text-muted-foreground">
-                Incoming quote requests from online customers
+                Incoming quote requests from online and walk-in customers
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -184,6 +194,23 @@ export default function ShopRfqsPage() {
                 </Button>
               </Link>
             </div>
+          </div>
+
+          {/* Source filter pills */}
+          <div className="flex gap-2">
+            {(["ALL", "ONLINE", "WALK_IN"] as SourceFilter[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setSourceFilter(f)}
+                className={`px-3 py-1.5 text-sm rounded-full font-medium transition-colors ${
+                  sourceFilter === f
+                    ? "bg-gold-600 text-white"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}
+              >
+                {f === "ALL" ? "All" : f === "ONLINE" ? "Online" : "Walk-in"}
+              </button>
+            ))}
           </div>
 
           <Card>
@@ -229,8 +256,13 @@ export default function ShopRfqsPage() {
                         <TableCell>
                           <div>
                             <p className="text-sm">
-                              {rfq.customer?.firstName} {rfq.customer?.lastName}
+                              {rfq.source === "WALK_IN" && rfq.walkInMeta?.customerName
+                                ? rfq.walkInMeta.customerName
+                                : `${rfq.customer?.firstName || ""} ${rfq.customer?.lastName || ""}`}
                             </p>
+                            {rfq.source === "WALK_IN" && !rfq.walkInMeta?.customerName && (
+                              <p className="text-[10px] text-muted-foreground">Walk-in (anonymous)</p>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -268,17 +300,29 @@ export default function ShopRfqsPage() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            className={
-                              statusColors[rfq.status] ||
-                              "bg-gray-100 dark:bg-gray-800"
-                            }
-                          >
-                            {getStatusIcon(rfq.status)}
-                            <span className="ml-1">
-                              {rfq.status?.replace(/_/g, " ")}
-                            </span>
-                          </Badge>
+                          <div className="flex flex-col gap-1">
+                            <Badge
+                              className={
+                                statusColors[rfq.status] ||
+                                "bg-gray-100 dark:bg-gray-800"
+                              }
+                            >
+                              {getStatusIcon(rfq.status)}
+                              <span className="ml-1">
+                                {rfq.status?.replace(/_/g, " ")}
+                              </span>
+                            </Badge>
+                            {rfq.source === "WALK_IN" && (
+                              <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 text-[10px]">
+                                Walk-in
+                              </Badge>
+                            )}
+                            {rfq.walkInMeta?.catalogueSlug && (
+                              <span className="text-[10px] text-muted-foreground">
+                                via {rfq.walkInMeta.catalogueSlug}
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <p className="text-sm text-muted-foreground">

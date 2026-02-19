@@ -190,4 +190,64 @@ export class ChatController {
   ) {
     return this.chatService.unblockUser(userId, adminId);
   }
+
+  // ─── Catalogue & Product Sharing (Seller only) ─────────────────────
+
+  @Post("conversations/:id/share-catalogue")
+  @Roles("SHOPKEEPER")
+  @ApiOperation({ summary: "Share a catalogue link in conversation" })
+  async shareCatalogue(
+    @Param("id") conversationId: string,
+    @CurrentUser("id") userId: string,
+    @Body() body: { catalogueSlug: string; mode?: string },
+  ) {
+    return this.chatService.shareCatalogueInConversation(
+      conversationId,
+      userId,
+      body.catalogueSlug,
+      body.mode,
+    );
+  }
+
+  @Post("conversations/:id/share-products")
+  @Roles("SHOPKEEPER")
+  @ApiOperation({ summary: "Share product cards in conversation" })
+  async shareProducts(
+    @Param("id") conversationId: string,
+    @CurrentUser("id") userId: string,
+    @Body() body: { items: { inventoryItemId: string; variantId?: string }[] },
+  ) {
+    return this.chatService.shareProductsInConversation(
+      conversationId,
+      userId,
+      body.items,
+    );
+  }
+
+  @Post("conversations/:id/walk-in-rfq")
+  @Roles("SHOPKEEPER")
+  @ApiOperation({ summary: "Create a walk-in RFQ from conversation" })
+  async createWalkInRfqFromChat(
+    @Param("id") conversationId: string,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") shopId: string,
+    @Body() body: {
+      catalogueSlug?: string;
+      items: { inventoryItemId: string; variantId?: string; qty?: number }[];
+      jewelleryType?: string;
+      budgetMin?: number;
+      budgetMax?: number;
+      deadlineDays?: number;
+      notes?: string;
+      measurements?: any;
+      walkInCustomer?: { name?: string; phone?: string; notes?: string };
+    },
+  ) {
+    return this.chatService.createWalkInRfqFromChat(
+      conversationId,
+      userId,
+      shopId,
+      body,
+    );
+  }
 }

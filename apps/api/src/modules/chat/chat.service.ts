@@ -5,7 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
-import { ConversationStatus } from "@prisma/client";
+import { ConversationStatus, InventoryVisibility, RfqSource, RfqStatus, BuildMethod } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { NotificationsService } from "../notifications/notifications.service";
@@ -786,5 +786,215 @@ export class ChatService {
     if (userRole === "CUSTOMER" && conversation.buyerId !== userId) {
       throw new ForbiddenException("Access denied to this conversation");
     }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  CATALOGUE & PRODUCT SHARING
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * Share a catalogue link as a rich message in conversation
+   */
+  async shareCatalogueInConversation(
+    conversationId: string,
+    userId: string,
+    catalogueSlug: string,
+    mode?: string,
+  ) {
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: { shop: { select: { id: true, userId: true } } },
+    });
+    if (!conversation) throw new NotFoundException("Conversation not found");
+    if (conversation.shop.userId !== userId) {
+      throw new ForbiddenException("Only the shop owner can share catalogues in this conversation");
+    }
+
+    const catalogue = await this.prisma.catalogue.findUnique({
+      where: { slug: catalogueSlug },
+    });
+    if (!catalogue || catalogue.shopId !== conversation.shopId || catalogue.deletedAt) {
+      throw new BadRequestException("Catalogue not found or does not belong to your shop");
+    }
+
+    const message = await this.prisma.message.create({
+      data: {
+        conversationId,
+        senderId: userId,
+        senderRole: "SHOPKEEPER",
+        content: `Shared catalogue: ${catalogue.name}`,
+        isSystem: true,
+        isSystemGenerated: true,
+        messageType: "CATALOGUE_LINK",
+        payload: {
+          catalogueSlug: catalogue.slug,
+          catalogueName: catalogue.name,
+          url: `/c/${catalogue.slug}${mode === "SHOWROOM" ? "?mode=showroom" : ""}`,
+          mode: mode || catalogue.mode,
+        },
+      },
+    });
+
+    return { message };
+  }
+
+  /**
+   * Share product cards in conversation
+   */
+  async shareProductsInConversation(
+    conversationId: string,
+    userId: string,
+    items: { inventoryItemId: string; variantId?: string }[],
+  ) {
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: { shop: { select: { id: true, userId: true } } },
+    });
+    if (!conversation) throw new NotFoundException("Conversation not found");
+    if (conversation.shop.userId !== userId) {
+      throw new ForbiddenException("Only the shop owner can share products in this conversation");
+    }
+
+    // Fetch inventory items
+    const inventoryItems = await this.prisma.inventoryItem.findMany({
+      where: {
+        id: { in: items.map((i) => i.inventoryItemId) },
+        shopId: conversation.shopId,
+        visibility: { not: InventoryVisibility.HIDDEN },
+      },
+      select: {
+        id: true,
+        title: true,
+        images: true,
+        totalPriceNpr: true,
+        metal: true,
+        purity: true,
+        visibility: true,
+        variants: {
+          select: { id: true, size: true, stock: true },
+        },
+      },
+    });
+
+    const productCards = inventoryItems.map((inv) => ({
+      inventoryItemId: inv.id,
+      title: inv.title,
+      imageUrl: (inv.images as string[])?.[0] || null,
+      priceLabel: inv.totalPriceNpr ? `NPR ${inv.totalPriceNpr.toLocaleString()}` : "Price on request",
+      sizesAvailable: inv.variants?.filter((v) => v.stock > 0).map((v) => v.size) || [],
+      deepLink: inv.visibility === "CATALOGUE_ONLY" ? null : `/products/${inv.id}`,
+    }));
+
+    const message = await this.prisma.message.create({
+      data: {
+        conversationId,
+        senderId: userId,
+        senderRole: "SHOPKEEPER",
+        content: `Shared ${productCards.length} product(s)`,
+        isSystem: true,
+        isSystemGenerated: true,
+        messageType: "PRODUCT_CARD",
+        payload: { items: productCards },
+      },
+    });
+
+    return { message };
+  }
+
+  /**
+   * Create a walk-in RFQ from within a chat conversation
+   */
+  async createWalkInRfqFromChat(
+    conversationId: string,
+    userId: string,
+    shopId: string,
+    dto: {
+      catalogueSlug?: string;
+      items: { inventoryItemId: string; variantId?: string; qty?: number }[];
+      jewelleryType?: string;
+      budgetMin?: number;
+      budgetMax?: number;
+      deadlineDays?: number;
+      notes?: string;
+      measurements?: any;
+      walkInCustomer?: { name?: string; phone?: string; notes?: string };
+    },
+  ) {
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: { shop: { select: { id: true, userId: true } } },
+    });
+    if (!conversation) throw new NotFoundException("Conversation not found");
+    if (conversation.shop.userId !== userId) {
+      throw new ForbiddenException("Only the shop owner can create walk-in RFQs");
+    }
+
+    // Validate items belong to shop and not HIDDEN
+    for (const item of dto.items) {
+      const inv = await this.prisma.inventoryItem.findFirst({
+        where: { id: item.inventoryItemId, shopId },
+      });
+      if (!inv) {
+        throw new BadRequestException(`Item ${item.inventoryItemId} not found in your shop`);
+      }
+      if (inv.visibility === InventoryVisibility.HIDDEN) {
+        throw new BadRequestException(`Item ${inv.title} is hidden`);
+      }
+    }
+
+    const walkInMeta = {
+      customerName: dto.walkInCustomer?.name,
+      customerPhone: dto.walkInCustomer?.phone,
+      customerNotes: dto.walkInCustomer?.notes,
+      catalogueSlug: dto.catalogueSlug,
+      conversationId,
+      items: dto.items,
+      measurements: dto.measurements,
+      budgetMin: dto.budgetMin,
+      budgetMax: dto.budgetMax,
+      deadlineDays: dto.deadlineDays,
+      notes: dto.notes,
+    };
+
+    const rfq = await this.prisma.rfqRequest.create({
+      data: {
+        customerId: userId,
+        source: RfqSource.WALK_IN,
+        createdByShopId: shopId,
+        jewelleryType: (dto.jewelleryType as any) || "OTHER",
+        buildMethod: BuildMethod.METHOD_A,
+        composition: {},
+        budgetMinNpr: dto.budgetMin,
+        budgetMaxNpr: dto.budgetMax,
+        preferredDeliveryDays: dto.deadlineDays,
+        specialInstructions: dto.notes,
+        referenceImages: [],
+        walkInMeta: walkInMeta as any,
+        status: RfqStatus.SUBMITTED,
+      },
+    });
+
+    // Create system message in conversation
+    await this.prisma.message.create({
+      data: {
+        conversationId,
+        senderId: userId,
+        senderRole: "SHOPKEEPER",
+        content: `Walk-in RFQ created (${dto.items.length} item${dto.items.length > 1 ? "s" : ""})`,
+        isSystem: true,
+        isSystemGenerated: true,
+        messageType: "RFQ_ACTION",
+        payload: {
+          rfqId: rfq.id,
+          source: "WALK_IN",
+          reference: {
+            catalogueSlug: dto.catalogueSlug,
+            items: dto.items,
+          },
+        },
+      },
+    });
+
+    return { rfqId: rfq.id, message: "Walk-in RFQ created successfully" };
   }
 }

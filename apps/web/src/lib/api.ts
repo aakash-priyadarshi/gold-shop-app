@@ -151,6 +151,8 @@ export const inventoryApi = {
   getShopInventory: (shopId: string, params?: any) =>
     api.get(`/inventory/shop/${shopId}/items`, { params }),
   getStats: (shopId: string) => api.get(`/inventory/shop/${shopId}/stats`),
+  updateVisibility: (itemId: string, visibility: string) =>
+    api.patch(`/catalogues/inventory/${itemId}/visibility`, { visibility }),
 };
 
 // RFQ API
@@ -165,8 +167,52 @@ export const rfqApi = {
     api.post(`/rfq/${id}/select-offer`, { offerId }),
   getEligibleShops: (id: string, customerCity?: string) =>
     api.get(`/rfq/${id}/eligible-shops`, { params: { customerCity } }),
-  // For shopkeepers - use the correct endpoint
   getShopRequests: (params?: any) => api.get("/rfq/shop-requests", { params }),
+  createWalkInRfq: (data: any) => api.post("/rfq/walk-in", data),
+};
+
+// Catalogue API
+export const catalogueApi = {
+  // Seller CRUD
+  create: (data: any) => api.post("/catalogues", data),
+  getMyCatalogues: (params?: any) => api.get("/catalogues/my", { params }),
+  getById: (id: string) => api.get(`/catalogues/${id}`),
+  update: (id: string, data: any) => api.patch(`/catalogues/${id}`, data),
+  delete: (id: string) => api.delete(`/catalogues/${id}`),
+  // Items
+  addItem: (catalogueId: string, data: any) =>
+    api.post(`/catalogues/${catalogueId}/items`, data),
+  updateItem: (catalogueId: string, itemId: string, data: any) =>
+    api.patch(`/catalogues/${catalogueId}/items/${itemId}`, data),
+  removeItem: (catalogueId: string, itemId: string) =>
+    api.delete(`/catalogues/${catalogueId}/items/${itemId}`),
+  reorderItems: (catalogueId: string, data: any) =>
+    api.post(`/catalogues/${catalogueId}/items/reorder`, data),
+  // Analytics
+  getAnalytics: (id: string) => api.get(`/catalogues/${id}/analytics`),
+  // Public
+  getPublicCatalogue: (slug: string) => api.get(`/public/catalogues/${slug}`),
+  unlockCatalogue: (slug: string, password: string) =>
+    api.post(`/public/catalogues/${slug}/unlock`, { password }),
+  getPublicItems: (slug: string, token?: string) =>
+    api.get(`/public/catalogues/${slug}/items`, {
+      headers: token ? { "x-catalogue-token": token } : {},
+    }),
+  recordView: (slug: string) => api.post(`/public/catalogues/${slug}/view`),
+  requestQuote: (slug: string, data: any) =>
+    api.post(`/public/catalogues/${slug}/request-quote`, data),
+  messageShop: (slug: string) =>
+    api.post(`/public/catalogues/${slug}/message-shop`),
+};
+
+// Chat Catalogue Integration API
+export const chatCatalogueApi = {
+  shareCatalogue: (conversationId: string, data: { catalogueSlug: string; mode?: string }) =>
+    api.post(`/chat/conversations/${conversationId}/share-catalogue`, data),
+  shareProducts: (conversationId: string, data: { items: { inventoryItemId: string; variantId?: string }[] }) =>
+    api.post(`/chat/conversations/${conversationId}/share-products`, data),
+  createWalkInRfq: (conversationId: string, data: any) =>
+    api.post(`/chat/conversations/${conversationId}/walk-in-rfq`, data),
 };
 
 // Offers API
