@@ -30,6 +30,7 @@ import { adminApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
   Award,
+  BookOpen,
   Brain,
   Calculator,
   ChevronDown,
@@ -165,6 +166,12 @@ const navItems: NavItem[] = [
     label: "Products",
     href: "/dashboard/shop/products",
     icon: Store,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Catalogues",
+    href: "/dashboard/shop/catalogues",
+    icon: BookOpen,
     roles: ["SHOPKEEPER"],
   },
   {

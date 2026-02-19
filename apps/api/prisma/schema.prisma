@@ -262,6 +262,9 @@ model Shop {
   invoiceSettings         InvoiceSettings?
   customerNotes           CustomerNote[]       @relation("ShopCustomerNotes")
   conversations           Conversation[]       @relation("ShopConversations")
+  catalogues              Catalogue[]
+  walkInRfqs              RfqRequest[]         @relation("ShopWalkInRfqs")
+  showroomSessions        ShowroomSession[]
 
   @@index([userId])
   @@index([country, city])
@@ -362,15 +365,18 @@ model InventoryItem {
   labels           String[]
   status           InventoryStatus @default(AVAILABLE)
   stockQuantity    Int             @default(1)
-  hasSizes         Boolean         @default(false)
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  shop             Shop            @relation(fields: [shopId], references: [id])
+  hasSizes         Boolean             @default(false)
+  visibility       InventoryVisibility @default(PUBLIC)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  shop             Shop                @relation(fields: [shopId], references: [id])
   variants         ProductVariant[]
+  catalogueItems   CatalogueItem[]
 
   @@index([shopId, status])
   @@index([jewelleryType])
   @@index([buildMethod])
+  @@index([visibility])
 }
 
 // Product size variants (rings, bracelets, etc.)
@@ -421,6 +427,10 @@ model RfqRequest {
   expiresAt             DateTime?
   selectedOfferId       String?         @unique
   mandatoryLabels       String[]
+  // Walk-in RFQ support
+  source                RfqSource       @default(ONLINE)
+  createdByShopId       String?         // Shop that created this walk-in RFQ
+  walkInMeta            Json?           // { customerName?, customerPhone?, customerNotes?, catalogueSlug?, items, measurements?, budgetMin?, budgetMax?, deadlineDays? }
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
 
@@ -430,10 +440,13 @@ model RfqRequest {
   selectedOffer RfqOffer?       @relation("SelectedOffer", fields: [selectedOfferId], references: [id])
   targetedShops RfqShopTarget[]
   design        Design?         @relation(fields: [designId], references: [id])
+  createdByShop Shop?           @relation("ShopWalkInRfqs", fields: [createdByShopId], references: [id])
 
   @@index([customerId])
   @@index([status])
   @@index([designId])
+  @@index([source, createdAt])
+  @@index([createdByShopId, createdAt])
 }
 
 model RfqGemstone {
@@ -1477,6 +1490,32 @@ enum InventoryStatus {
   DISCONTINUED
 }
 
+enum InventoryVisibility {
+  PUBLIC           // Shown on marketplace + catalogues
+  CATALOGUE_ONLY   // Only in catalogues, not on public marketplace
+  HIDDEN           // Not visible anywhere publicly
+}
+
+enum CatalogueMode {
+  NORMAL
+  SHOWROOM
+}
+
+enum RfqSource {
+  ONLINE
+  WALK_IN
+}
+
+enum MessageType {
+  TEXT
+  ATTACHMENT
+  SYSTEM
+  PRODUCT_CARD
+  CATALOGUE_LINK
+  SHOWROOM_SESSION
+  RFQ_ACTION
+}
+
 enum RfqStatus {
   DRAFT
   SENT_TO_SHOPS
@@ -1607,6 +1646,11 @@ enum NotificationType {
   TICKET_MESSAGE
   TICKET_RESOLVED
   TICKET_CLOSED
+  // Catalogue
+  CATALOGUE_CREATED
+  CATALOGUE_SHARED
+  WALKIN_RFQ_CREATED
+  QUOTE_FROM_CATALOGUE
 }
 
 enum WeightCategory {
@@ -2034,21 +2078,24 @@ model Conversation {
 }
 
 model Message {
-  id              String       @id @default(uuid())
-  conversationId  String
-  senderId        String
-  senderRole      String       // CUSTOMER, SHOPKEEPER, SUPPORT, ADMIN
-  content         String
-  maskedContent   String?      // Content after masking PII
-  hasViolation    Boolean      @default(false)
-  violationType   String?      // PHONE, EMAIL, WHATSAPP, TELEGRAM, INSTAGRAM, CONTACT_PHRASE
-  attachmentUrl   String?      // R2 image/file URL
-  attachmentType  String?      // image, document
-  isRead          Boolean      @default(false)
-  readAt          DateTime?
-  isSystem        Boolean      @default(false) // System-generated messages (warnings, etc.)
-  isBlocked       Boolean      @default(false) // Blocked by moderation — not delivered to recipient
-  createdAt       DateTime     @default(now())
+  id               String       @id @default(uuid())
+  conversationId   String
+  senderId         String
+  senderRole       String       // CUSTOMER, SHOPKEEPER, SUPPORT, ADMIN
+  content          String
+  maskedContent    String?      // Content after masking PII
+  hasViolation     Boolean      @default(false)
+  violationType    String?      // PHONE, EMAIL, WHATSAPP, TELEGRAM, INSTAGRAM, CONTACT_PHRASE
+  attachmentUrl    String?      // R2 image/file URL
+  attachmentType   String?      // image, document
+  messageType      MessageType  @default(TEXT)
+  payload          Json?        // Structured payload for PRODUCT_CARD, CATALOGUE_LINK, etc.
+  isSystemGenerated Boolean     @default(false) // System-generated messages bypass PII scanning
+  isRead           Boolean      @default(false)
+  readAt           DateTime?
+  isSystem         Boolean      @default(false) // System-generated messages (warnings, etc.)
+  isBlocked        Boolean      @default(false) // Blocked by moderation — not delivered to recipient
+  createdAt        DateTime     @default(now())
 
   conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender          User         @relation("MessageSender", fields: [senderId], references: [id])
@@ -2176,6 +2223,81 @@ model StaticPage {
 
   @@index([slug])
   @@index([isPublished])
+}
+
+// ═══════════════════════════════════════════
+// SELLER CATALOGUE SYSTEM
+// ═══════════════════════════════════════════
+
+model Catalogue {
+  id            String              @id @default(cuid())
+  shopId        String
+  name          String
+  slug          String              @unique
+  description   String?
+  isPublic      Boolean             @default(true)
+  mode          CatalogueMode       @default(NORMAL)
+  passwordHash  String?             // bcrypt hash if password-protected
+  expiresAt     DateTime?
+  deletedAt     DateTime?           // soft delete
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  shop          Shop                @relation(fields: [shopId], references: [id])
+  items         CatalogueItem[]
+  viewEvents    CatalogueViewEvent[]
+
+  @@index([shopId])
+  @@index([slug])
+  @@index([shopId, deletedAt])
+}
+
+model CatalogueItem {
+  id              String        @id @default(cuid())
+  catalogueId     String
+  inventoryItemId String
+  sortOrder       Int           @default(0)
+  overridePrice   Float?        // optional override display price
+  isHidden        Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  catalogue       Catalogue     @relation(fields: [catalogueId], references: [id], onDelete: Cascade)
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+
+  @@index([catalogueId])
+  @@index([inventoryItemId])
+  @@index([catalogueId, sortOrder])
+}
+
+model CatalogueViewEvent {
+  id            String    @id @default(cuid())
+  catalogueId   String
+  viewedAt      DateTime  @default(now())
+  viewerIpHash  String?   // sha256(ip + salt); never raw IP
+  userAgent     String?
+  referrer      String?
+  count         Int       @default(1)
+
+  catalogue     Catalogue @relation(fields: [catalogueId], references: [id], onDelete: Cascade)
+
+  @@index([catalogueId, viewedAt])
+  @@index([catalogueId, viewerIpHash])
+}
+
+model ShowroomSession {
+  id              String    @id @default(cuid())
+  conversationId  String?
+  shopId          String
+  status          String    @default("ACTIVE") // ACTIVE, COMPLETED, ARCHIVED
+  items           Json      // [{ inventoryItemId, variantId?, qty? }]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  shop            Shop      @relation(fields: [shopId], references: [id])
+
+  @@index([shopId])
+  @@index([conversationId])
 }
 
 enum TicketType {

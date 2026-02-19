@@ -14,6 +14,7 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { BroadcastRfqDto } from "./dto/broadcast-rfq.dto";
+import { CreateCatalogueWalkInRfqDto } from "./dto/create-catalogue-walkin-rfq.dto";
 import { CreateRfqDto } from "./dto/create-rfq.dto";
 import { SelectOfferDto } from "./dto/select-offer.dto";
 import { RfqService } from "./rfq.service";
@@ -44,9 +45,23 @@ export class RfqController {
 
   @Get("shop-requests")
   @Roles(UserRole.SHOPKEEPER)
-  @ApiOperation({ summary: "List all RFQs received by shop" })
-  async findShopRequests(@CurrentUser("shopId") shopId: string) {
-    return this.rfqService.findAllForShop(shopId);
+  @ApiOperation({ summary: "List all RFQs received by shop (supports source filter)" })
+  async findShopRequests(
+    @CurrentUser("shopId") shopId: string,
+    @Query("source") source?: string,
+  ) {
+    return this.rfqService.findAllForShop(shopId, source);
+  }
+
+  @Post("walk-in")
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiOperation({ summary: "Create a walk-in RFQ from catalogue items (seller only)" })
+  async createWalkInRfq(
+    @CurrentUser("shopId") shopId: string,
+    @CurrentUser("id") userId: string,
+    @Body() dto: CreateCatalogueWalkInRfqDto,
+  ) {
+    return this.rfqService.createWalkInRfq(shopId, userId, dto);
   }
 
   @Get(":id")

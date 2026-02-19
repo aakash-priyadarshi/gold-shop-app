@@ -1,6 +1,7 @@
 "use client";
 
 import { CustomerGuard } from "@/components/auth/RouteGuard";
+import { RichMessageCard } from "@/components/chat/RichMessageCard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,8 @@ interface Message {
   attachmentUrl?: string;
   isSystem: boolean;
   isRead: boolean;
+  messageType?: string;
+  payload?: any;
   createdAt: string;
   sender?: { firstName: string; lastName: string; role: string };
 }
@@ -400,7 +403,10 @@ export default function CustomerMessagesPage() {
                                 : "bg-muted"
                             } ${msg.hasViolation ? "border-2 border-yellow-500" : ""}`}
                           >
-                            <p className="text-sm">{msg.content}</p>
+                            <RichMessageCard messageType={msg.messageType} payload={msg.payload} content={msg.content} />
+                            {(!msg.messageType || msg.messageType === "TEXT") && (
+                              <p className="text-sm">{msg.content}</p>
+                            )}
                             {msg.hasViolation && (
                               <p className="text-xs mt-1 opacity-75">
                                 ⚠️ Contact info removed for safety

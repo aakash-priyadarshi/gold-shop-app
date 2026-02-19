@@ -4,7 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { BuildMethod, JewelleryType, RfqStatus } from "@prisma/client";
+import { BuildMethod, InventoryVisibility, JewelleryType, RfqSource, RfqStatus } from "@prisma/client";
+import { CreateCatalogueWalkInRfqDto } from "./dto/create-catalogue-walkin-rfq.dto";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { MarketplaceIntelligenceService } from "../marketplace-intelligence/marketplace-intelligence.service";
@@ -552,24 +553,37 @@ export class RfqService {
   }
 
   /**
-   * List RFQs for a shopkeeper
+   * List RFQs for a shopkeeper (supports source filter: ONLINE | WALK_IN)
    */
-  async findAllForShop(shopId: string) {
+  async findAllForShop(shopId: string, source?: string) {
+    // Walk-in RFQs are stored differently — they have createdByShopId
+    const sourceFilter = source === "WALK_IN"
+      ? { source: RfqSource.WALK_IN, createdByShopId: shopId }
+      : source === "ONLINE"
+        ? { source: RfqSource.ONLINE, targetedShops: { some: { shopId } } }
+        : {
+            OR: [
+              { targetedShops: { some: { shopId } } },
+              { createdByShopId: shopId, source: RfqSource.WALK_IN },
+            ],
+          };
+
     return this.prisma.rfqRequest.findMany({
       where: {
-        targetedShops: {
-          some: {
-            shopId,
-          },
-        },
-        status: {
-          in: [
-            RfqStatus.SENT_TO_SHOPS,
-            RfqStatus.OFFERS_RECEIVED,
-            RfqStatus.OFFER_SELECTED,
-            RfqStatus.CONFIRMED,
-          ],
-        },
+        ...sourceFilter,
+        ...(!source || source === "ONLINE"
+          ? {
+              status: {
+                in: [
+                  RfqStatus.SENT_TO_SHOPS,
+                  RfqStatus.OFFERS_RECEIVED,
+                  RfqStatus.OFFER_SELECTED,
+                  RfqStatus.CONFIRMED,
+                  RfqStatus.SUBMITTED,
+                ],
+              },
+            }
+          : {}),
       },
       include: {
         customer: {
@@ -788,5 +802,106 @@ export class RfqService {
       paymentDeadline: result?.paymentDeadline,
       bookingFeeNpr: result?.bookingFeeNpr,
     };
+  }
+
+  /**
+   * Create a Walk-in RFQ from catalogue items (Seller/Staff only)
+   */
+  async createWalkInRfq(
+    shopId: string,
+    userId: string,
+    dto: CreateCatalogueWalkInRfqDto,
+  ) {
+    // Validate catalogue if provided
+    if (dto.catalogueSlug) {
+      const catalogue = await this.prisma.catalogue.findUnique({
+        where: { slug: dto.catalogueSlug },
+      });
+      if (!catalogue || catalogue.shopId !== shopId || catalogue.deletedAt) {
+        throw new BadRequestException(
+          "Catalogue not found or does not belong to your shop",
+        );
+      }
+    }
+
+    // Validate all inventory items belong to this shop and are not HIDDEN
+    for (const item of dto.items) {
+      const invItem = await this.prisma.inventoryItem.findFirst({
+        where: { id: item.inventoryItemId, shopId },
+      });
+      if (!invItem) {
+        throw new BadRequestException(
+          `Inventory item ${item.inventoryItemId} not found or does not belong to your shop`,
+        );
+      }
+      if (invItem.visibility === InventoryVisibility.HIDDEN) {
+        throw new BadRequestException(
+          `Inventory item ${invItem.title} is hidden and cannot be used in RFQ`,
+        );
+      }
+    }
+
+    const walkInMeta = {
+      customerName: dto.walkInCustomer?.name,
+      customerPhone: dto.walkInCustomer?.phone,
+      customerNotes: dto.walkInCustomer?.notes,
+      catalogueSlug: dto.catalogueSlug,
+      items: dto.items,
+      measurements: dto.measurements,
+      budgetMin: dto.budgetMin,
+      budgetMax: dto.budgetMax,
+      deadlineDays: dto.deadlineDays,
+      notes: dto.notes,
+    };
+
+    const rfq = await this.prisma.rfqRequest.create({
+      data: {
+        customerId: userId, // seller creates on behalf
+        source: RfqSource.WALK_IN,
+        createdByShopId: shopId,
+        jewelleryType: (dto.jewelleryType as JewelleryType) || "OTHER",
+        buildMethod: BuildMethod.METHOD_A,
+        composition: {},
+        budgetMinNpr: dto.budgetMin,
+        budgetMaxNpr: dto.budgetMax,
+        preferredDeliveryDays: dto.deadlineDays,
+        specialInstructions: dto.notes,
+        referenceImages: dto.attachments?.map((a) => a.url || a.key).filter(Boolean) || [],
+        walkInMeta: walkInMeta as any,
+        status: RfqStatus.SUBMITTED,
+      },
+    });
+
+    await this.auditService.log({
+      userId,
+      actorType: "USER",
+      action: "CREATE",
+      resourceType: "RFQ",
+      resourceId: rfq.id,
+      newValue: {
+        source: "WALK_IN",
+        shopId,
+        catalogueSlug: dto.catalogueSlug,
+        itemCount: dto.items.length,
+      },
+    });
+
+    return rfq;
+  }
+
+  /**
+   * Strip walkInMeta.customerPhone for non-staff roles
+   */
+  sanitizeRfqForRole(rfq: any, userRole: string) {
+    if (
+      rfq.walkInMeta &&
+      userRole !== "SHOPKEEPER" &&
+      userRole !== "ADMIN" &&
+      userRole !== "SUPPORT"
+    ) {
+      const { customerPhone, ...safeWalkInMeta } = rfq.walkInMeta as any;
+      return { ...rfq, walkInMeta: safeWalkInMeta };
+    }
+    return rfq;
   }
 }
