@@ -3037,8 +3037,8 @@ export default function CreateRfqPage() {
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
                           marketRates.cache === "fresh"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-yellow-100 text-yellow-700"
+                            ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"
+                            : "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300"
                         }`}
                       >
                         {marketRates.cache === "fresh" ? "● Live" : "● Cached"}
@@ -3407,11 +3407,11 @@ export default function CreateRfqPage() {
                             )}
 
                             {aiResult && (
-                              <div className="rounded-md bg-white dark:bg-gray-900 p-3 text-sm space-y-2 border border-gold-100">
+                              <div className="rounded-md bg-white dark:bg-gray-900 p-3 text-sm space-y-2 border border-gold-100 dark:border-gold-800/50">
                                 {aiResult.guestLimitReached ? (
                                   /* Guest rate limit reached */
                                   <div className="space-y-2">
-                                    <div className="flex items-center gap-1 text-amber-700 font-medium">
+                                    <div className="flex items-center gap-1 text-amber-700 dark:text-amber-300 font-medium">
                                       <AlertCircle className="h-4 w-4" />
                                       Guest limit reached
                                     </div>
@@ -3428,7 +3428,7 @@ export default function CreateRfqPage() {
                                 ) : aiResult.confidence <= 10 ? (
                                   /* Gibberish/non-jewellery input */
                                   <div className="space-y-2">
-                                    <div className="flex items-center gap-1 text-red-600 font-medium">
+                                    <div className="flex items-center gap-1 text-red-600 dark:text-red-400 font-medium">
                                       <AlertCircle className="h-4 w-4" />
                                       Could not understand your request
                                     </div>
@@ -3461,8 +3461,8 @@ export default function CreateRfqPage() {
                                     {/* Live pricing note — shown after calculator loads */}
                                     {priceEstimate &&
                                       priceEstimate.total > 0 && (
-                                        <div className="text-xs bg-gold-50 border border-gold-200 rounded p-2 flex items-start gap-1.5">
-                                          <span className="text-gold-700">
+                                        <div className="text-xs bg-gold-50 dark:bg-gold-950/30 border border-gold-200 dark:border-gold-800/50 rounded p-2 flex items-start gap-1.5">
+                                          <span className="text-gold-700 dark:text-gold-300">
                                             Based on current market rates, the
                                             estimated price for this comes to
                                             around{" "}
@@ -3852,7 +3852,7 @@ export default function CreateRfqPage() {
                                       {method.value === "METHOD_C" && (
                                         <Badge
                                           variant="outline"
-                                          className="mt-1 text-amber-600 border-amber-300"
+                                          className="mt-1 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700"
                                         >
                                           <AlertTriangle className="h-3 w-3 mr-1" />
                                           Not solid gold. Plated/Coated.
@@ -3861,7 +3861,7 @@ export default function CreateRfqPage() {
                                       {method.value === "METHOD_D" && (
                                         <Badge
                                           variant="outline"
-                                          className="mt-1 text-blue-600 border-blue-300"
+                                          className="mt-1 text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700"
                                         >
                                           <Sparkles className="h-3 w-3 mr-1" />
                                           Lighter weight, intricate patterns
@@ -4087,7 +4087,7 @@ export default function CreateRfqPage() {
                                         {style.hollowDiscount >= 0.4 && (
                                           <Badge
                                             variant="secondary"
-                                            className="text-xs text-green-700"
+                                            className="text-xs text-green-700 dark:text-green-300"
                                           >
                                             ~
                                             {Math.round(
@@ -4112,8 +4112,8 @@ export default function CreateRfqPage() {
                                 formData.methodDConfig
                                   .chainStyle as ChainStyleType
                               ] && (
-                                <div className="bg-white dark:bg-gray-900 p-3 rounded border border-blue-200 text-sm">
-                                  <div className="font-medium text-blue-900 mb-2">
+                                <div className="bg-white dark:bg-gray-900 p-3 rounded border border-blue-200 dark:border-blue-800/50 text-sm">
+                                  <div className="font-medium text-blue-900 dark:text-blue-200 mb-2">
                                     {
                                       CHAIN_STYLE_OPTIONS[
                                         formData.methodDConfig
@@ -4145,7 +4145,7 @@ export default function CreateRfqPage() {
                                         <span className="text-gray-500 dark:text-gray-400">
                                           Making Charge:
                                         </span>
-                                        <span className="ml-1 font-medium text-amber-700">
+                                        <span className="ml-1 font-medium text-amber-700 dark:text-amber-300">
                                           +
                                           {
                                             CHAIN_STYLE_OPTIONS[
@@ -4160,7 +4160,7 @@ export default function CreateRfqPage() {
                                         <span className="text-gray-500 dark:text-gray-400">
                                           Weight Savings:
                                         </span>
-                                        <span className="ml-1 font-medium text-green-700">
+                                        <span className="ml-1 font-medium text-green-700 dark:text-green-300">
                                           ~
                                           {Math.round(
                                             CHAIN_STYLE_OPTIONS[
@@ -4192,7 +4192,7 @@ export default function CreateRfqPage() {
                               )}
                           </div>
 
-                          <div className="bg-white dark:bg-gray-900 p-3 rounded border text-sm text-blue-900">
+                          <div className="bg-white dark:bg-gray-900 p-3 rounded border dark:border-blue-800/50 text-sm text-blue-900 dark:text-blue-200">
                             <div className="flex items-start gap-2">
                               <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
                               <div>
@@ -4503,7 +4503,9 @@ export default function CreateRfqPage() {
                                 className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-lg p-3 flex gap-2"
                               >
                                 <AlertTriangle className="h-4 w-4 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                                <p className="text-sm text-red-700 dark:text-red-300">{err}</p>
+                                <p className="text-sm text-red-700 dark:text-red-300">
+                                  {err}
+                                </p>
                               </div>
                             ))}
                             {compositionValidation.warnings.map((warn, idx) => (
@@ -4512,7 +4514,9 @@ export default function CreateRfqPage() {
                                 className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg p-3 flex gap-2"
                               >
                                 <AlertTriangle className="h-4 w-4 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-                                <p className="text-sm text-amber-700 dark:text-amber-300">{warn}</p>
+                                <p className="text-sm text-amber-700 dark:text-amber-300">
+                                  {warn}
+                                </p>
                               </div>
                             ))}
                           </div>
@@ -4802,17 +4806,17 @@ export default function CreateRfqPage() {
                     <CardContent className="space-y-6">
                       {/* Similar Designs Suggestions */}
                       {(loadingSimilarDesigns || similarDesigns.length > 0) && (
-                        <div className="space-y-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+                        <div className="space-y-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950/30 dark:to-indigo-950/30 rounded-lg border border-purple-200 dark:border-purple-800/50">
                           <div className="flex items-center gap-2">
-                            <Sparkles className="h-5 w-5 text-purple-600" />
+                            <Sparkles className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                             <div>
-                              <h3 className="font-medium text-purple-900">
+                              <h3 className="font-medium text-purple-900 dark:text-purple-200">
                                 It seems you&apos;re designing a{" "}
                                 {JEWELLERY_TYPES.find(
                                   (t) => t.value === formData.jewelleryType,
                                 )?.label || formData.jewelleryType}
                               </h3>
-                              <p className="text-sm text-purple-700">
+                              <p className="text-sm text-purple-700 dark:text-purple-300">
                                 We have some great designs you might like!
                               </p>
                             </div>
@@ -4820,8 +4824,8 @@ export default function CreateRfqPage() {
 
                           {loadingSimilarDesigns ? (
                             <div className="flex items-center justify-center py-4">
-                              <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
-                              <span className="ml-2 text-sm text-purple-600">
+                              <Loader2 className="h-6 w-6 animate-spin text-purple-600 dark:text-purple-400" />
+                              <span className="ml-2 text-sm text-purple-600 dark:text-purple-400">
                                 Finding similar designs...
                               </span>
                             </div>
@@ -4853,10 +4857,10 @@ export default function CreateRfqPage() {
                               {/* See More Thumbnail */}
                               <Link
                                 href={`/designs?jewelryType=${formData.jewelleryType}&sort=popular`}
-                                className="group relative aspect-square rounded-lg overflow-hidden bg-purple-100 hover:bg-purple-200 transition-colors flex flex-col items-center justify-center border-2 border-dashed border-purple-300 hover:border-purple-400"
+                                className="group relative aspect-square rounded-lg overflow-hidden bg-purple-100 dark:bg-purple-900/40 hover:bg-purple-200 dark:hover:bg-purple-900/60 transition-colors flex flex-col items-center justify-center border-2 border-dashed border-purple-300 dark:border-purple-700 hover:border-purple-400 dark:hover:border-purple-600"
                               >
-                                <ArrowRight className="h-6 w-6 text-purple-600 group-hover:translate-x-1 transition-transform" />
-                                <span className="text-xs text-purple-700 font-medium mt-1">
+                                <ArrowRight className="h-6 w-6 text-purple-600 dark:text-purple-400 group-hover:translate-x-1 transition-transform" />
+                                <span className="text-xs text-purple-700 dark:text-purple-300 font-medium mt-1">
                                   See More
                                 </span>
                               </Link>
@@ -4866,10 +4870,10 @@ export default function CreateRfqPage() {
                       )}
 
                       {/* AI Design Preview Section - At top of Step 3 */}
-                      <div className="space-y-4 p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg border border-amber-200">
+                      <div className="space-y-4 p-4 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30 rounded-lg border border-amber-200 dark:border-amber-800/50">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <Sparkles className="h-5 w-5 text-amber-600" />
+                            <Sparkles className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                             <Label className="text-base font-medium">
                               AI Design Preview
                             </Label>
@@ -4893,21 +4897,21 @@ export default function CreateRfqPage() {
                           <div
                             className={`border rounded-lg p-3 flex items-start gap-2 ${
                               !isLoggedIn
-                                ? "bg-blue-50 border-blue-200"
-                                : "bg-amber-100 border-amber-300"
+                                ? "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/50"
+                                : "bg-amber-100 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800/50"
                             }`}
                           >
                             {!isLoggedIn ? (
-                              <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                              <Info className="h-5 w-5 text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                             ) : (
-                              <Phone className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                              <Phone className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                             )}
                             <div>
                               <p
                                 className={`text-sm font-medium ${
                                   !isLoggedIn
-                                    ? "text-blue-800"
-                                    : "text-amber-800"
+                                    ? "text-blue-800 dark:text-blue-200"
+                                    : "text-amber-800 dark:text-amber-200"
                                 }`}
                               >
                                 {!isLoggedIn
@@ -4917,8 +4921,8 @@ export default function CreateRfqPage() {
                               <p
                                 className={`text-sm mt-1 ${
                                   !isLoggedIn
-                                    ? "text-blue-700"
-                                    : "text-amber-700"
+                                    ? "text-blue-700 dark:text-blue-300"
+                                    : "text-amber-700 dark:text-amber-300"
                                 }`}
                               >
                                 {!isLoggedIn
@@ -4928,7 +4932,7 @@ export default function CreateRfqPage() {
                               {!isLoggedIn ? (
                                 <Link
                                   href="/auth/login?redirect=/rfq/create"
-                                  className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 mt-2"
+                                  className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 mt-2"
                                 >
                                   Sign in now
                                   <ArrowRight className="h-4 w-4" />
@@ -4936,7 +4940,7 @@ export default function CreateRfqPage() {
                               ) : (
                                 <Link
                                   href="/dashboard/customer"
-                                  className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 hover:text-amber-800 mt-2"
+                                  className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 mt-2"
                                 >
                                   Verify phone in profile
                                   <ArrowRight className="h-4 w-4" />
@@ -5068,7 +5072,7 @@ export default function CreateRfqPage() {
 
                         {/* Share to Gallery Checkbox */}
                         {isLoggedIn && isPhoneVerified && (
-                          <div className="flex items-center justify-center gap-2 pt-2 border-t border-amber-200">
+                          <div className="flex items-center justify-center gap-2 pt-2 border-t border-amber-200 dark:border-amber-800/50">
                             <input
                               type="checkbox"
                               id="share-to-gallery"
@@ -5289,7 +5293,9 @@ export default function CreateRfqPage() {
 
                       {/* Summary */}
                       <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-3">
-                        <h4 className="font-semibold dark:text-gray-100">Request Summary</h4>
+                        <h4 className="font-semibold dark:text-gray-100">
+                          Request Summary
+                        </h4>
                         <div className="grid grid-cols-2 gap-2 text-sm">
                           <span className="text-gray-500 dark:text-gray-400">
                             Type:
@@ -5423,7 +5429,7 @@ export default function CreateRfqPage() {
                           <div className="flex-1">
                             <p
                               className={`font-medium text-sm ${
-                                !isLoggedIn ? "text-blue-800" : "text-amber-800"
+                                !isLoggedIn ? "text-blue-800 dark:text-blue-200" : "text-amber-800 dark:text-amber-200"
                               }`}
                             >
                               {!isLoggedIn
@@ -5434,7 +5440,7 @@ export default function CreateRfqPage() {
                             </p>
                             <p
                               className={`text-sm mt-1 ${
-                                !isLoggedIn ? "text-blue-700" : "text-amber-700"
+                                !isLoggedIn ? "text-blue-700 dark:text-blue-300" : "text-amber-700 dark:text-amber-300"
                               }`}
                             >
                               {submitBlockReason}
@@ -5442,7 +5448,7 @@ export default function CreateRfqPage() {
                             {!isLoggedIn ? (
                               <Link
                                 href="/auth/login?redirect=/rfq/create"
-                                className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 mt-2"
+                                className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 mt-2"
                               >
                                 Sign in now
                                 <ArrowRight className="h-4 w-4" />
@@ -5450,7 +5456,7 @@ export default function CreateRfqPage() {
                             ) : !isPhoneVerified ? (
                               <Link
                                 href="/dashboard/customer"
-                                className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 hover:text-amber-800 mt-2"
+                                className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 mt-2"
                               >
                                 Verify phone in profile
                                 <ArrowRight className="h-4 w-4" />
@@ -5458,7 +5464,7 @@ export default function CreateRfqPage() {
                             ) : isSeller && !isShopVerified ? (
                               <Link
                                 href="/dashboard/shop/verification"
-                                className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 hover:text-amber-800 mt-2"
+                                className="inline-flex items-center gap-1 text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 mt-2"
                               >
                                 Complete KYC verification
                                 <ArrowRight className="h-4 w-4" />
@@ -6285,36 +6291,36 @@ export default function CreateRfqPage() {
                                   icon: "📍",
                                   label:
                                     sellerGroups?.nearYou?.label || "Near You",
-                                  color: "text-green-700",
-                                  bgColor: "bg-green-50",
-                                  borderColor: "border-green-200",
+                                  color: "text-green-700 dark:text-green-300",
+                                  bgColor: "bg-green-50 dark:bg-green-950/30",
+                                  borderColor: "border-green-200 dark:border-green-800/50",
                                 },
                                 same_state: {
                                   icon: "🏛️",
                                   label:
                                     sellerGroups?.sameState?.label ||
                                     "Same State",
-                                  color: "text-blue-700",
-                                  bgColor: "bg-blue-50",
-                                  borderColor: "border-blue-200",
+                                  color: "text-blue-700 dark:text-blue-300",
+                                  bgColor: "bg-blue-50 dark:bg-blue-950/30",
+                                  borderColor: "border-blue-200 dark:border-blue-800/50",
                                 },
                                 same_country: {
                                   icon: "🇮🇳",
                                   label:
                                     sellerGroups?.sameCountry?.label ||
                                     "Same Country",
-                                  color: "text-amber-700",
-                                  bgColor: "bg-amber-50",
-                                  borderColor: "border-amber-200",
+                                  color: "text-amber-700 dark:text-amber-300",
+                                  bgColor: "bg-amber-50 dark:bg-amber-950/30",
+                                  borderColor: "border-amber-200 dark:border-amber-800/50",
                                 },
                                 other: {
                                   icon: "🌍",
                                   label:
                                     sellerGroups?.international?.label ||
                                     "International",
-                                  color: "text-purple-700",
-                                  bgColor: "bg-purple-50",
-                                  borderColor: "border-purple-200",
+                                  color: "text-purple-700 dark:text-purple-300",
+                                  bgColor: "bg-purple-50 dark:bg-purple-950/30",
+                                  borderColor: "border-purple-200 dark:border-purple-800/50",
                                 },
                               };
 
@@ -6468,7 +6474,7 @@ export default function CreateRfqPage() {
                                           {seller.hasCustomRate && (
                                             <Badge
                                               variant="outline"
-                                              className="text-xs text-green-600 border-green-200"
+                                              className="text-xs text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/50"
                                             >
                                               Custom Pricing
                                             </Badge>
@@ -6801,8 +6807,8 @@ export default function CreateRfqPage() {
                     </div>
 
                     {/* Flow explanation */}
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-xs text-blue-800">
+                    <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 rounded-lg">
+                      <p className="text-xs text-blue-800 dark:text-blue-200">
                         <strong>What happens next:</strong> The seller will
                         review your request and can accept, counter with a
                         different price, or decline. If they counter, you can
