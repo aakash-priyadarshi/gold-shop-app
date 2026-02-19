@@ -1,27 +1,16 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { AdminGuard } from '@/components/auth/RouteGuard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import { AdminGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -29,33 +18,69 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { toast } from "@/hooks/use-toast";
+import api from "@/lib/api";
+import { format, formatDistanceToNow } from "date-fns";
 import {
   AlertTriangle,
+  Ban,
+  Calendar,
   CheckCircle,
   Clock,
   DollarSign,
-  Search,
-  RefreshCw,
-  Store,
-  ShieldCheck,
-  ShieldOff,
-  Calendar,
   FileText,
   Loader2,
-  Ban,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  ShieldOff,
+  Store,
   Unlock,
-} from 'lucide-react';
-import api from '@/lib/api';
-import { formatDistanceToNow, format } from 'date-fns';
-import { toast } from '@/hooks/use-toast';
+} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 
 // Commission status styles
-const statusStyles: Record<string, { color: string; icon: any; label: string }> = {
-  PENDING: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Pending' },
-  OVERDUE: { color: 'bg-red-100 text-red-800', icon: AlertTriangle, label: 'Overdue' },
-  PAID: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Paid' },
-  WAIVED: { color: 'bg-gray-100 text-gray-800', icon: FileText, label: 'Waived' },
+const statusStyles: Record<
+  string,
+  { color: string; icon: any; label: string }
+> = {
+  PENDING: {
+    color: "bg-yellow-100 text-yellow-800",
+    icon: Clock,
+    label: "Pending",
+  },
+  OVERDUE: {
+    color: "bg-red-100 text-red-800",
+    icon: AlertTriangle,
+    label: "Overdue",
+  },
+  PAID: {
+    color: "bg-green-100 text-green-800",
+    icon: CheckCircle,
+    label: "Paid",
+  },
+  WAIVED: {
+    color: "bg-gray-100 text-gray-800",
+    icon: FileText,
+    label: "Waived",
+  },
 };
 
 interface CommissionLedger {
@@ -64,7 +89,7 @@ interface CommissionLedger {
   shopId: string;
   amount: number;
   currency: string;
-  status: 'PENDING' | 'OVERDUE' | 'PAID' | 'WAIVED';
+  status: "PENDING" | "OVERDUE" | "PAID" | "WAIVED";
   dueAt: string;
   paidAt?: string;
   createdAt: string;
@@ -93,13 +118,14 @@ export default function AdminCommissionsPage() {
   const [commissions, setCommissions] = useState<CommissionLedger[]>([]);
   const [stats, setStats] = useState<CommissionStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  
+
   // Modal states
-  const [selectedCommission, setSelectedCommission] = useState<CommissionLedger | null>(null);
+  const [selectedCommission, setSelectedCommission] =
+    useState<CommissionLedger | null>(null);
   const [isMarkPaidDialogOpen, setIsMarkPaidDialogOpen] = useState(false);
   const [isReleaseHoldDialogOpen, setIsReleaseHoldDialogOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -109,30 +135,30 @@ export default function AdminCommissionsPage() {
       setLoading(true);
       const params = new URLSearchParams({
         page: page.toString(),
-        limit: '20',
+        limit: "20",
       });
-      
-      if (statusFilter !== 'all') {
-        params.append('status', statusFilter);
+
+      if (statusFilter !== "all") {
+        params.append("status", statusFilter);
       }
-      
+
       if (searchQuery) {
-        params.append('search', searchQuery);
+        params.append("search", searchQuery);
       }
 
       const response = await api.get(`/commission/admin/list?${params}`);
       setCommissions(response.data.commissions || []);
       setTotalPages(response.data.totalPages || 1);
-      
+
       // Also fetch stats
-      const statsResponse = await api.get('/commission/admin/stats');
+      const statsResponse = await api.get("/commission/admin/stats");
       setStats(statsResponse.data);
     } catch (error) {
-      console.error('Failed to fetch commissions:', error);
+      console.error("Failed to fetch commissions:", error);
       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to load commissions',
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load commissions",
       });
       // Use mock data for development
       setCommissions([]);
@@ -156,23 +182,23 @@ export default function AdminCommissionsPage() {
 
   const handleMarkPaid = async () => {
     if (!selectedCommission) return;
-    
+
     setActionLoading(true);
     try {
       await api.post(`/commission/admin/${selectedCommission.id}/mark-paid`);
       toast({
-        title: 'Success',
-        description: 'Commission marked as paid',
+        title: "Success",
+        description: "Commission marked as paid",
       });
       setIsMarkPaidDialogOpen(false);
       setSelectedCommission(null);
       fetchCommissions();
     } catch (error) {
-      console.error('Failed to mark commission as paid:', error);
+      console.error("Failed to mark commission as paid:", error);
       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to mark as paid',
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to mark as paid",
       });
     } finally {
       setActionLoading(false);
@@ -181,32 +207,34 @@ export default function AdminCommissionsPage() {
 
   const handleReleaseHold = async () => {
     if (!selectedCommission?.shopId) return;
-    
+
     setActionLoading(true);
     try {
-      await api.post(`/commission/admin/shop/${selectedCommission.shopId}/release-hold`);
+      await api.post(
+        `/commission/admin/shop/${selectedCommission.shopId}/release-hold`,
+      );
       toast({
-        title: 'Success',
-        description: 'Shop hold released',
+        title: "Success",
+        description: "Shop hold released",
       });
       setIsReleaseHoldDialogOpen(false);
       setSelectedCommission(null);
       fetchCommissions();
     } catch (error) {
-      console.error('Failed to release shop hold:', error);
+      console.error("Failed to release shop hold:", error);
       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to release hold',
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to release hold",
       });
     } finally {
       setActionLoading(false);
     }
   };
 
-  const formatCurrency = (amount: number, currency: string = 'NPR') => {
-    return new Intl.NumberFormat('en-NP', {
-      style: 'currency',
+  const formatCurrency = (amount: number, currency: string = "NPR") => {
+    return new Intl.NumberFormat("en-NP", {
+      style: "currency",
       currency: currency,
       minimumFractionDigits: 2,
     }).format(amount);
@@ -219,13 +247,17 @@ export default function AdminCommissionsPage() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Commission Management</h1>
+              <h1 className="text-3xl font-bold tracking-tight">
+                Commission Management
+              </h1>
               <p className="text-muted-foreground">
                 Track and manage shopkeeper commission settlements
               </p>
             </div>
             <Button onClick={fetchCommissions} variant="outline" size="sm">
-              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
+              />
               Refresh
             </Button>
           </div>
@@ -234,50 +266,64 @@ export default function AdminCommissionsPage() {
           <div className="grid gap-4 md:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending Commissions</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Pending Commissions
+                </CardTitle>
                 <Clock className="h-4 w-4 text-yellow-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats?.totalPending || 0}</div>
+                <div className="text-2xl font-bold">
+                  {stats?.totalPending || 0}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {formatCurrency(stats?.pendingAmount || 0)} due
                 </p>
               </CardContent>
             </Card>
-            
+
             <Card className="border-red-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Overdue</CardTitle>
                 <AlertTriangle className="h-4 w-4 text-red-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-600">{stats?.totalOverdue || 0}</div>
+                <div className="text-2xl font-bold text-red-600">
+                  {stats?.totalOverdue || 0}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {formatCurrency(stats?.overdueAmount || 0)} overdue
                 </p>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Paid This Month</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Paid This Month
+                </CardTitle>
                 <CheckCircle className="h-4 w-4 text-green-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">{stats?.totalPaid || 0}</div>
+                <div className="text-2xl font-bold text-green-600">
+                  {stats?.totalPaid || 0}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {formatCurrency(stats?.paidAmount || 0)} collected
                 </p>
               </CardContent>
             </Card>
-            
+
             <Card className="border-orange-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Shops On Hold</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Shops On Hold
+                </CardTitle>
                 <ShieldOff className="h-4 w-4 text-orange-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-orange-600">{stats?.shopsOnHold || 0}</div>
+                <div className="text-2xl font-bold text-orange-600">
+                  {stats?.shopsOnHold || 0}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Due to overdue commissions
                 </p>
@@ -332,7 +378,8 @@ export default function AdminCommissionsPage() {
                   <DollarSign className="h-12 w-12 text-muted-foreground/50 mb-4" />
                   <h3 className="text-lg font-medium">No commissions found</h3>
                   <p className="text-sm text-muted-foreground">
-                    Commission entries will appear here when customers pay at shop
+                    Commission entries will appear here when customers pay at
+                    shop
                   </p>
                 </div>
               ) : (
@@ -350,30 +397,42 @@ export default function AdminCommissionsPage() {
                   </TableHeader>
                   <TableBody>
                     {commissions.map((commission) => {
-                      const style = statusStyles[commission.status] || statusStyles.PENDING;
+                      const style =
+                        statusStyles[commission.status] || statusStyles.PENDING;
                       const StatusIcon = style.icon;
-                      
+
                       return (
                         <TableRow key={commission.id}>
                           <TableCell>
                             <div className="font-medium">
-                              {commission.order?.orderNumber || commission.orderId.slice(0, 8)}
+                              {commission.order?.orderNumber ||
+                                commission.orderId.slice(0, 8)}
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              {commission.order ? formatCurrency(commission.order.totalNpr) : '-'}
+                              {commission.order
+                                ? formatCurrency(commission.order.totalNpr)
+                                : "-"}
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Store className="h-4 w-4 text-muted-foreground" />
-                              <span>{commission.shop?.businessName || 'Unknown Shop'}</span>
+                              <span>
+                                {commission.shop?.businessName ||
+                                  "Unknown Shop"}
+                              </span>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="font-medium">
-                              {formatCurrency(commission.amount, commission.currency)}
+                              {formatCurrency(
+                                commission.amount,
+                                commission.currency,
+                              )}
                             </div>
-                            <div className="text-xs text-muted-foreground">1% commission</div>
+                            <div className="text-xs text-muted-foreground">
+                              1% commission
+                            </div>
                           </TableCell>
                           <TableCell>
                             <Badge className={style.color}>
@@ -384,10 +443,17 @@ export default function AdminCommissionsPage() {
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Calendar className="h-4 w-4 text-muted-foreground" />
-                              <span>{format(new Date(commission.dueAt), 'MMM dd, yyyy')}</span>
+                              <span>
+                                {format(
+                                  new Date(commission.dueAt),
+                                  "MMM dd, yyyy",
+                                )}
+                              </span>
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {formatDistanceToNow(new Date(commission.dueAt), { addSuffix: true })}
+                              {formatDistanceToNow(new Date(commission.dueAt), {
+                                addSuffix: true,
+                              })}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -397,7 +463,10 @@ export default function AdminCommissionsPage() {
                                 On Hold
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="gap-1 text-green-600 border-green-300">
+                              <Badge
+                                variant="outline"
+                                className="gap-1 text-green-600 border-green-300"
+                              >
                                 <ShieldCheck className="h-3 w-3" />
                                 Active
                               </Badge>
@@ -405,7 +474,8 @@ export default function AdminCommissionsPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
-                              {(commission.status === 'PENDING' || commission.status === 'OVERDUE') && (
+                              {(commission.status === "PENDING" ||
+                                commission.status === "OVERDUE") && (
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -418,20 +488,21 @@ export default function AdminCommissionsPage() {
                                   Mark Paid
                                 </Button>
                               )}
-                              {commission.shop?.isOnHold && commission.status === 'PAID' && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-green-600 border-green-300"
-                                  onClick={() => {
-                                    setSelectedCommission(commission);
-                                    setIsReleaseHoldDialogOpen(true);
-                                  }}
-                                >
-                                  <Unlock className="mr-1 h-3 w-3" />
-                                  Release Hold
-                                </Button>
-                              )}
+                              {commission.shop?.isOnHold &&
+                                commission.status === "PAID" && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-green-600 border-green-300"
+                                    onClick={() => {
+                                      setSelectedCommission(commission);
+                                      setIsReleaseHoldDialogOpen(true);
+                                    }}
+                                  >
+                                    <Unlock className="mr-1 h-3 w-3" />
+                                    Release Hold
+                                  </Button>
+                                )}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -459,7 +530,9 @@ export default function AdminCommissionsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      onClick={() =>
+                        setPage((p) => Math.min(totalPages, p + 1))
+                      }
                       disabled={page === totalPages}
                     >
                       Next
@@ -471,12 +544,16 @@ export default function AdminCommissionsPage() {
           </Card>
 
           {/* Mark Paid Dialog */}
-          <Dialog open={isMarkPaidDialogOpen} onOpenChange={setIsMarkPaidDialogOpen}>
+          <Dialog
+            open={isMarkPaidDialogOpen}
+            onOpenChange={setIsMarkPaidDialogOpen}
+          >
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Mark Commission as Paid</DialogTitle>
                 <DialogDescription>
-                  Confirm that the shopkeeper has paid the commission for this order.
+                  Confirm that the shopkeeper has paid the commission for this
+                  order.
                 </DialogDescription>
               </DialogHeader>
               {selectedCommission && (
@@ -485,17 +562,25 @@ export default function AdminCommissionsPage() {
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Order:</span>
                       <span className="font-medium">
-                        {selectedCommission.order?.orderNumber || selectedCommission.orderId.slice(0, 8)}
+                        {selectedCommission.order?.orderNumber ||
+                          selectedCommission.orderId.slice(0, 8)}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Shop:</span>
-                      <span className="font-medium">{selectedCommission.shop?.businessName}</span>
+                      <span className="font-medium">
+                        {selectedCommission.shop?.businessName}
+                      </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Commission Amount:</span>
+                      <span className="text-muted-foreground">
+                        Commission Amount:
+                      </span>
                       <span className="font-bold text-green-600">
-                        {formatCurrency(selectedCommission.amount, selectedCommission.currency)}
+                        {formatCurrency(
+                          selectedCommission.amount,
+                          selectedCommission.currency,
+                        )}
                       </span>
                     </div>
                   </div>
@@ -527,12 +612,16 @@ export default function AdminCommissionsPage() {
           </Dialog>
 
           {/* Release Hold Dialog */}
-          <Dialog open={isReleaseHoldDialogOpen} onOpenChange={setIsReleaseHoldDialogOpen}>
+          <Dialog
+            open={isReleaseHoldDialogOpen}
+            onOpenChange={setIsReleaseHoldDialogOpen}
+          >
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Release Shop Hold</DialogTitle>
                 <DialogDescription>
-                  This will allow the shop to resume operations. Make sure all outstanding commissions are paid.
+                  This will allow the shop to resume operations. Make sure all
+                  outstanding commissions are paid.
                 </DialogDescription>
               </DialogHeader>
               {selectedCommission && (
@@ -540,11 +629,14 @@ export default function AdminCommissionsPage() {
                   <div className="rounded-lg border p-4 space-y-2">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Shop:</span>
-                      <span className="font-medium">{selectedCommission.shop?.businessName}</span>
+                      <span className="font-medium">
+                        {selectedCommission.shop?.businessName}
+                      </span>
                     </div>
                     {selectedCommission.shop?.holdReason && (
                       <div className="mt-2 p-2 bg-red-50 dark:bg-red-950/30 rounded text-sm text-red-700 dark:text-red-300">
-                        <strong>Hold Reason:</strong> {selectedCommission.shop.holdReason}
+                        <strong>Hold Reason:</strong>{" "}
+                        {selectedCommission.shop.holdReason}
                       </div>
                     )}
                   </div>
@@ -558,7 +650,11 @@ export default function AdminCommissionsPage() {
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleReleaseHold} disabled={actionLoading} variant="default">
+                <Button
+                  onClick={handleReleaseHold}
+                  disabled={actionLoading}
+                  variant="default"
+                >
                   {actionLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

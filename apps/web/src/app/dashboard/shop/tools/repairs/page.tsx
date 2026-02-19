@@ -62,12 +62,14 @@ const STATUS_CONFIG = {
   },
   IN_PROGRESS: {
     label: "In Progress",
-    color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
+    color:
+      "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
     icon: Settings,
   },
   READY: {
     label: "Ready",
-    color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+    color:
+      "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
     icon: CheckCircle,
   },
   DELIVERED: {

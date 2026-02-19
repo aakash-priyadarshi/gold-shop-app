@@ -1,32 +1,29 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { ShopGuard } from '@/components/auth/RouteGuard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ShopGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { shopsApi } from "@/lib/api";
 import {
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  Package,
-  Users,
-  Star,
-  Clock,
-  Loader2,
   BarChart3,
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { shopsApi } from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
+  DollarSign,
+  Loader2,
+  Package,
+  Star,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface AnalyticsData {
   period: string;
@@ -68,7 +65,7 @@ export default function ShopAnalyticsPage() {
   const { user } = useAuth();
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [period, setPeriod] = useState('30d');
+  const [period, setPeriod] = useState("30d");
 
   useEffect(() => {
     if (user?.shop?.id) {
@@ -82,11 +79,11 @@ export default function ShopAnalyticsPage() {
       const response = await shopsApi.getAnalytics({ period });
       setAnalytics(response.data);
     } catch (error) {
-      console.error('Failed to load analytics:', error);
+      console.error("Failed to load analytics:", error);
       toast({
-        variant: 'destructive',
-        title: 'Failed to load analytics',
-        description: 'Could not fetch analytics data',
+        variant: "destructive",
+        title: "Failed to load analytics",
+        description: "Could not fetch analytics data",
       });
     } finally {
       setIsLoading(false);
@@ -98,7 +95,7 @@ export default function ShopAnalyticsPage() {
   };
 
   const formatPercent = (value: number) => {
-    const sign = value >= 0 ? '+' : '';
+    const sign = value >= 0 ? "+" : "";
     return `${sign}${value.toFixed(1)}%`;
   };
 
@@ -143,7 +140,9 @@ export default function ShopAnalyticsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Revenue
+                </CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -151,15 +150,20 @@ export default function ShopAnalyticsPage() {
                   {formatCurrency(analytics?.revenue?.total || 0)}
                 </div>
                 {analytics?.revenue?.changePercent !== undefined && (
-                  <p className={`text-xs flex items-center gap-1 ${
-                    analytics.revenue.changePercent >= 0 ? 'text-green-600' : 'text-red-600'
-                  }`}>
+                  <p
+                    className={`text-xs flex items-center gap-1 ${
+                      analytics.revenue.changePercent >= 0
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
                     {analytics.revenue.changePercent >= 0 ? (
                       <TrendingUp className="h-3 w-3" />
                     ) : (
                       <TrendingDown className="h-3 w-3" />
                     )}
-                    {formatPercent(analytics.revenue.changePercent)} from previous period
+                    {formatPercent(analytics.revenue.changePercent)} from
+                    previous period
                   </p>
                 )}
               </CardContent>
@@ -167,7 +171,9 @@ export default function ShopAnalyticsPage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Orders
+                </CardTitle>
                 <Package className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -175,14 +181,17 @@ export default function ShopAnalyticsPage() {
                   {analytics?.orders?.total || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {analytics?.orders?.completed || 0} completed, {analytics?.orders?.pending || 0} pending
+                  {analytics?.orders?.completed || 0} completed,{" "}
+                  {analytics?.orders?.pending || 0} pending
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">RFQ Win Rate</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  RFQ Win Rate
+                </CardTitle>
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -190,14 +199,17 @@ export default function ShopAnalyticsPage() {
                   {(analytics?.rfqs?.winRate || 0).toFixed(1)}%
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {analytics?.rfqs?.won || 0} won of {analytics?.rfqs?.responded || 0} responses
+                  {analytics?.rfqs?.won || 0} won of{" "}
+                  {analytics?.rfqs?.responded || 0} responses
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg. Rating</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Avg. Rating
+                </CardTitle>
                 <Star className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -229,16 +241,28 @@ export default function ShopAnalyticsPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">From Direct Orders</span>
-                      <span className="font-medium">{formatCurrency(analytics?.revenue?.fromOrders || 0)}</span>
+                      <span className="text-muted-foreground">
+                        From Direct Orders
+                      </span>
+                      <span className="font-medium">
+                        {formatCurrency(analytics?.revenue?.fromOrders || 0)}
+                      </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">From Custom Orders (RFQs)</span>
-                      <span className="font-medium">{formatCurrency(analytics?.revenue?.fromCustomOrders || 0)}</span>
+                      <span className="text-muted-foreground">
+                        From Custom Orders (RFQs)
+                      </span>
+                      <span className="font-medium">
+                        {formatCurrency(
+                          analytics?.revenue?.fromCustomOrders || 0,
+                        )}
+                      </span>
                     </div>
                     <div className="border-t pt-2 flex justify-between items-center font-bold">
                       <span>Total</span>
-                      <span>{formatCurrency(analytics?.revenue?.total || 0)}</span>
+                      <span>
+                        {formatCurrency(analytics?.revenue?.total || 0)}
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
@@ -264,7 +288,9 @@ export default function ShopAnalyticsPage() {
                 <Card>
                   <CardContent className="pt-6">
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-blue-600">{analytics?.orders?.total || 0}</div>
+                      <div className="text-3xl font-bold text-blue-600">
+                        {analytics?.orders?.total || 0}
+                      </div>
                       <p className="text-muted-foreground">Total Orders</p>
                     </div>
                   </CardContent>
@@ -272,7 +298,9 @@ export default function ShopAnalyticsPage() {
                 <Card>
                   <CardContent className="pt-6">
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-green-600">{analytics?.orders?.completed || 0}</div>
+                      <div className="text-3xl font-bold text-green-600">
+                        {analytics?.orders?.completed || 0}
+                      </div>
                       <p className="text-muted-foreground">Completed</p>
                     </div>
                   </CardContent>
@@ -280,7 +308,9 @@ export default function ShopAnalyticsPage() {
                 <Card>
                   <CardContent className="pt-6">
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-amber-600">{analytics?.orders?.pending || 0}</div>
+                      <div className="text-3xl font-bold text-amber-600">
+                        {analytics?.orders?.pending || 0}
+                      </div>
                       <p className="text-muted-foreground">Pending</p>
                     </div>
                   </CardContent>
@@ -288,7 +318,9 @@ export default function ShopAnalyticsPage() {
                 <Card>
                   <CardContent className="pt-6">
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-red-600">{analytics?.orders?.cancelled || 0}</div>
+                      <div className="text-3xl font-bold text-red-600">
+                        {analytics?.orders?.cancelled || 0}
+                      </div>
                       <p className="text-muted-foreground">Cancelled</p>
                     </div>
                   </CardContent>
@@ -304,16 +336,28 @@ export default function ShopAnalyticsPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Requests Received</span>
-                      <span className="font-medium">{analytics?.rfqs?.received || 0}</span>
+                      <span className="text-muted-foreground">
+                        Requests Received
+                      </span>
+                      <span className="font-medium">
+                        {analytics?.rfqs?.received || 0}
+                      </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Responses Sent</span>
-                      <span className="font-medium">{analytics?.rfqs?.responded || 0}</span>
+                      <span className="text-muted-foreground">
+                        Responses Sent
+                      </span>
+                      <span className="font-medium">
+                        {analytics?.rfqs?.responded || 0}
+                      </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Contracts Won</span>
-                      <span className="font-medium">{analytics?.rfqs?.won || 0}</span>
+                      <span className="text-muted-foreground">
+                        Contracts Won
+                      </span>
+                      <span className="font-medium">
+                        {analytics?.rfqs?.won || 0}
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
@@ -325,24 +369,32 @@ export default function ShopAnalyticsPage() {
                   <CardContent className="space-y-4">
                     <div>
                       <div className="flex justify-between mb-1">
-                        <span className="text-muted-foreground">Response Rate</span>
-                        <span className="font-medium">{(analytics?.rfqs?.responseRate || 0).toFixed(1)}%</span>
+                        <span className="text-muted-foreground">
+                          Response Rate
+                        </span>
+                        <span className="font-medium">
+                          {(analytics?.rfqs?.responseRate || 0).toFixed(1)}%
+                        </span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full" 
-                          style={{ width: `${analytics?.rfqs?.responseRate || 0}%` }}
+                        <div
+                          className="bg-blue-600 h-2 rounded-full"
+                          style={{
+                            width: `${analytics?.rfqs?.responseRate || 0}%`,
+                          }}
                         />
                       </div>
                     </div>
                     <div>
                       <div className="flex justify-between mb-1">
                         <span className="text-muted-foreground">Win Rate</span>
-                        <span className="font-medium">{(analytics?.rfqs?.winRate || 0).toFixed(1)}%</span>
+                        <span className="font-medium">
+                          {(analytics?.rfqs?.winRate || 0).toFixed(1)}%
+                        </span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div 
-                          className="bg-green-600 h-2 rounded-full" 
+                        <div
+                          className="bg-green-600 h-2 rounded-full"
                           style={{ width: `${analytics?.rfqs?.winRate || 0}%` }}
                         />
                       </div>
@@ -357,7 +409,9 @@ export default function ShopAnalyticsPage() {
                 <Card>
                   <CardContent className="pt-6">
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-green-600">{analytics?.customerStats?.newCustomers || 0}</div>
+                      <div className="text-3xl font-bold text-green-600">
+                        {analytics?.customerStats?.newCustomers || 0}
+                      </div>
                       <p className="text-muted-foreground">New Customers</p>
                     </div>
                   </CardContent>
@@ -365,7 +419,9 @@ export default function ShopAnalyticsPage() {
                 <Card>
                   <CardContent className="pt-6">
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-blue-600">{analytics?.customerStats?.repeatCustomers || 0}</div>
+                      <div className="text-3xl font-bold text-blue-600">
+                        {analytics?.customerStats?.repeatCustomers || 0}
+                      </div>
                       <p className="text-muted-foreground">Repeat Customers</p>
                     </div>
                   </CardContent>
@@ -374,10 +430,15 @@ export default function ShopAnalyticsPage() {
                   <CardContent className="pt-6">
                     <div className="text-center">
                       <div className="text-3xl font-bold flex items-center justify-center gap-1">
-                        {(analytics?.customerStats?.averageRating || 0).toFixed(1)}
+                        {(analytics?.customerStats?.averageRating || 0).toFixed(
+                          1,
+                        )}
                         <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
                       </div>
-                      <p className="text-muted-foreground">Average Rating ({analytics?.customerStats?.totalReviews || 0} reviews)</p>
+                      <p className="text-muted-foreground">
+                        Average Rating (
+                        {analytics?.customerStats?.totalReviews || 0} reviews)
+                      </p>
                     </div>
                   </CardContent>
                 </Card>

@@ -691,7 +691,8 @@ export default function ShopProductsPage() {
                         <TableCell>
                           <Badge
                             className={
-                              statusColors[product.status] || "bg-gray-100 dark:bg-gray-800"
+                              statusColors[product.status] ||
+                              "bg-gray-100 dark:bg-gray-800"
                             }
                           >
                             {product.status}

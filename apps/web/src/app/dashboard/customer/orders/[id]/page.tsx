@@ -1,37 +1,43 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { CustomerGuard } from '@/components/auth/RouteGuard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { CustomerGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import {
+  OrderStatusBadge,
+  OrderStepper,
+  type OrderType,
+} from "@/components/orders";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "@/hooks/use-toast";
+import { useCurrencyConversion } from "@/hooks/useCurrencyConversion";
+import api from "@/lib/api";
 import {
   ArrowLeft,
-  Loader2,
-  Package,
-  Clock,
-  CheckCircle2,
-  Truck,
-  Store,
-  MapPin,
-  Phone,
-  Mail,
   Calendar,
-  DollarSign,
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import api from '@/lib/api';
-import { OrderStepper, OrderStatusBadge, type OrderType } from '@/components/orders';
-import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
+  Loader2,
+  MapPin,
+  Package,
+  Phone,
+  Store,
+  Truck,
+} from "lucide-react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface OrderDetail {
   id: string;
   orderNumber: string;
-  orderType: 'INVENTORY' | 'CUSTOM';
+  orderType: "INVENTORY" | "CUSTOM";
   status: string;
   detailedStatus: string;
   totalNpr: number;
@@ -95,13 +101,21 @@ interface OrderDetail {
   };
 }
 
-const statusSteps = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'READY', 'SHIPPED', 'DELIVERED'];
+const statusSteps = [
+  "PENDING",
+  "CONFIRMED",
+  "IN_PROGRESS",
+  "READY",
+  "SHIPPED",
+  "DELIVERED",
+];
 
 export default function CustomerOrderDetailPage() {
   const params = useParams();
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { formatWithConversion, selectedCurrency, currencySymbol } = useCurrencyConversion();
+  const { formatWithConversion, selectedCurrency, currencySymbol } =
+    useCurrencyConversion();
 
   useEffect(() => {
     if (params.id) {
@@ -115,11 +129,11 @@ export default function CustomerOrderDetailPage() {
       const response = await api.get(`/orders/${params.id}`);
       setOrder(response.data);
     } catch (error) {
-      console.error('Failed to load order:', error);
+      console.error("Failed to load order:", error);
       toast({
-        variant: 'destructive',
-        title: 'Failed to load order',
-        description: 'Could not fetch order details',
+        variant: "destructive",
+        title: "Failed to load order",
+        description: "Could not fetch order details",
       });
     } finally {
       setIsLoading(false);
@@ -128,27 +142,76 @@ export default function CustomerOrderDetailPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'PENDING':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Pending</Badge>;
-      case 'CONFIRMED':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Confirmed</Badge>;
-      case 'IN_PROGRESS':
-        return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">In Progress</Badge>;
-      case 'READY':
-        return <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">Ready</Badge>;
-      case 'SHIPPED':
-        return <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-200">Shipped</Badge>;
-      case 'DELIVERED':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Delivered</Badge>;
-      case 'CANCELLED':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Cancelled</Badge>;
+      case "PENDING":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-yellow-50 text-yellow-700 border-yellow-200"
+          >
+            Pending
+          </Badge>
+        );
+      case "CONFIRMED":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-blue-50 text-blue-700 border-blue-200"
+          >
+            Confirmed
+          </Badge>
+        );
+      case "IN_PROGRESS":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-purple-50 text-purple-700 border-purple-200"
+          >
+            In Progress
+          </Badge>
+        );
+      case "READY":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-indigo-50 text-indigo-700 border-indigo-200"
+          >
+            Ready
+          </Badge>
+        );
+      case "SHIPPED":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-cyan-50 text-cyan-700 border-cyan-200"
+          >
+            Shipped
+          </Badge>
+        );
+      case "DELIVERED":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-green-50 text-green-700 border-green-200"
+          >
+            Delivered
+          </Badge>
+        );
+      case "CANCELLED":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-red-50 text-red-700 border-red-200"
+          >
+            Cancelled
+          </Badge>
+        );
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
   const getCurrentStep = () => {
-    if (!order || order.status === 'CANCELLED') return -1;
+    if (!order || order.status === "CANCELLED") return -1;
     return statusSteps.indexOf(order.status);
   };
 
@@ -193,9 +256,11 @@ export default function CustomerOrderDetailPage() {
             </Button>
             <div className="flex-1">
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold">Order #{order.orderNumber}</h1>
+                <h1 className="text-2xl font-bold">
+                  Order #{order.orderNumber}
+                </h1>
                 <OrderStatusBadge
-                  orderType={(order.orderType || 'INVENTORY') as OrderType}
+                  orderType={(order.orderType || "INVENTORY") as OrderType}
                   currentStatus={order.detailedStatus || order.status}
                 />
               </div>
@@ -206,7 +271,7 @@ export default function CustomerOrderDetailPage() {
           </div>
 
           {/* Progress Tracker - Using new animated OrderStepper */}
-          {order.status !== 'CANCELLED' && (
+          {order.status !== "CANCELLED" && (
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle>Order Progress</CardTitle>
@@ -214,13 +279,15 @@ export default function CustomerOrderDetailPage() {
               </CardHeader>
               <CardContent className="p-6">
                 <OrderStepper
-                  orderType={(order.orderType || 'INVENTORY') as OrderType}
+                  orderType={(order.orderType || "INVENTORY") as OrderType}
                   currentStatus={order.detailedStatus || order.status}
                   statusHistory={
                     order.milestones?.map((m) => ({
                       status: m.type,
                       timestamp: m.completedAt,
-                    })) || order.statusHistory || []
+                    })) ||
+                    order.statusHistory ||
+                    []
                   }
                   orientation="horizontal"
                 />
@@ -240,10 +307,14 @@ export default function CustomerOrderDetailPage() {
               <CardContent>
                 {/* Product Info */}
                 <div className="flex gap-4 mb-6">
-                  {(order.productSnapshot?.images?.[0] || order.productSnapshot?.referenceImages?.[0]) && (
+                  {(order.productSnapshot?.images?.[0] ||
+                    order.productSnapshot?.referenceImages?.[0]) && (
                     <div className="w-24 h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                       <img
-                        src={order.productSnapshot.images?.[0] || order.productSnapshot.referenceImages?.[0]}
+                        src={
+                          order.productSnapshot.images?.[0] ||
+                          order.productSnapshot.referenceImages?.[0]
+                        }
                         alt="Product"
                         className="w-full h-full object-cover"
                       />
@@ -251,11 +322,17 @@ export default function CustomerOrderDetailPage() {
                   )}
                   <div className="flex-1 space-y-2">
                     <h3 className="font-semibold text-lg">
-                      {order.productSnapshot?.nameEn || order.productSnapshot?.jewelleryType?.replace(/_/g, ' ') || 'Order Item'}
+                      {order.productSnapshot?.nameEn ||
+                        order.productSnapshot?.jewelleryType?.replace(
+                          /_/g,
+                          " ",
+                        ) ||
+                        "Order Item"}
                     </h3>
                     {order.productSnapshot?.composition?.baseAlloy && (
                       <p className="text-sm text-muted-foreground">
-                        {order.productSnapshot.composition.baseAlloy.metal} {order.productSnapshot.composition.baseAlloy.purity}
+                        {order.productSnapshot.composition.baseAlloy.metal}{" "}
+                        {order.productSnapshot.composition.baseAlloy.purity}
                       </p>
                     )}
                     {order.productSnapshot?.totalWeightGrams && (
@@ -275,7 +352,8 @@ export default function CustomerOrderDetailPage() {
                     )}
                     {order.productSnapshot?.buildMethod && (
                       <p className="text-sm text-muted-foreground">
-                        Build: {order.productSnapshot.buildMethod.replace(/_/g, ' ')}
+                        Build:{" "}
+                        {order.productSnapshot.buildMethod.replace(/_/g, " ")}
                       </p>
                     )}
                   </div>
@@ -288,30 +366,58 @@ export default function CustomerOrderDetailPage() {
                   <div className="w-64 space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span>{formatWithConversion(order.subtotalNpr || order.totalNpr || 0, { fromCurrency: (order.displayCurrency || 'NPR') as any })}</span>
+                      <span>
+                        {formatWithConversion(
+                          order.subtotalNpr || order.totalNpr || 0,
+                          {
+                            fromCurrency: (order.displayCurrency ||
+                              "NPR") as any,
+                          },
+                        )}
+                      </span>
                     </div>
                     {order.taxNpr > 0 && (
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Tax</span>
-                        <span>{formatWithConversion(order.taxNpr, { fromCurrency: (order.displayCurrency || 'NPR') as any })}</span>
+                        <span>
+                          {formatWithConversion(order.taxNpr, {
+                            fromCurrency: (order.displayCurrency ||
+                              "NPR") as any,
+                          })}
+                        </span>
                       </div>
                     )}
                     {order.shippingNpr > 0 && (
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Shipping</span>
-                        <span>{formatWithConversion(order.shippingNpr, { fromCurrency: (order.displayCurrency || 'NPR') as any })}</span>
+                        <span>
+                          {formatWithConversion(order.shippingNpr, {
+                            fromCurrency: (order.displayCurrency ||
+                              "NPR") as any,
+                          })}
+                        </span>
                       </div>
                     )}
                     {order.discountNpr > 0 && (
                       <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
                         <span>Discount</span>
-                        <span>-{formatWithConversion(order.discountNpr, { fromCurrency: (order.displayCurrency || 'NPR') as any })}</span>
+                        <span>
+                          -
+                          {formatWithConversion(order.discountNpr, {
+                            fromCurrency: (order.displayCurrency ||
+                              "NPR") as any,
+                          })}
+                        </span>
                       </div>
                     )}
                     <Separator />
                     <div className="flex justify-between font-bold">
                       <span>Total</span>
-                      <span>{formatWithConversion(order.totalNpr || 0, { fromCurrency: (order.displayCurrency || 'NPR') as any })}</span>
+                      <span>
+                        {formatWithConversion(order.totalNpr || 0, {
+                          fromCurrency: (order.displayCurrency || "NPR") as any,
+                        })}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -330,39 +436,55 @@ export default function CustomerOrderDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div>
-                    <p className="font-medium">{order.shop?.shopName || 'Shop'}</p>
+                    <p className="font-medium">
+                      {order.shop?.shopName || "Shop"}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Shipping Address */}
-              {order.shippingAddress && Object.keys(order.shippingAddress).length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5" />
-                      Shipping Address
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-1 text-sm">
-                    {order.shippingAddress.fullName && (
-                      <p className="font-medium">{order.shippingAddress.fullName}</p>
-                    )}
-                    {order.shippingAddress.street && <p>{order.shippingAddress.street}</p>}
-                    {(order.shippingAddress.city || order.shippingAddress.state || order.shippingAddress.postalCode) && (
-                      <p>
-                        {order.shippingAddress.city}{order.shippingAddress.state ? `, ${order.shippingAddress.state}` : ''} {order.shippingAddress.postalCode}
-                      </p>
-                    )}
-                    {order.shippingAddress.country && <p>{order.shippingAddress.country}</p>}
-                    {order.shippingAddress.phone && (
-                      <p className="flex items-center gap-1 mt-2">
-                        <Phone className="h-3 w-3" /> {order.shippingAddress.phone}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
+              {order.shippingAddress &&
+                Object.keys(order.shippingAddress).length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <MapPin className="h-5 w-5" />
+                        Shipping Address
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-1 text-sm">
+                      {order.shippingAddress.fullName && (
+                        <p className="font-medium">
+                          {order.shippingAddress.fullName}
+                        </p>
+                      )}
+                      {order.shippingAddress.street && (
+                        <p>{order.shippingAddress.street}</p>
+                      )}
+                      {(order.shippingAddress.city ||
+                        order.shippingAddress.state ||
+                        order.shippingAddress.postalCode) && (
+                        <p>
+                          {order.shippingAddress.city}
+                          {order.shippingAddress.state
+                            ? `, ${order.shippingAddress.state}`
+                            : ""}{" "}
+                          {order.shippingAddress.postalCode}
+                        </p>
+                      )}
+                      {order.shippingAddress.country && (
+                        <p>{order.shippingAddress.country}</p>
+                      )}
+                      {order.shippingAddress.phone && (
+                        <p className="flex items-center gap-1 mt-2">
+                          <Phone className="h-3 w-3" />{" "}
+                          {order.shippingAddress.phone}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
 
               {/* Delivery Info */}
               <Card>
@@ -377,22 +499,29 @@ export default function CustomerOrderDetailPage() {
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <div>
-                        <p className="text-sm text-muted-foreground">Est. Delivery</p>
+                        <p className="text-sm text-muted-foreground">
+                          Est. Delivery
+                        </p>
                         <p className="font-medium">
-                          {new Date(order.estimatedDelivery).toLocaleDateString()}
+                          {new Date(
+                            order.estimatedDelivery,
+                          ).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
                   )}
                   {order.trackingNumber && (
                     <div>
-                      <p className="text-sm text-muted-foreground">Tracking Number</p>
+                      <p className="text-sm text-muted-foreground">
+                        Tracking Number
+                      </p>
                       <p className="font-mono">{order.trackingNumber}</p>
                     </div>
                   )}
                   {!order.estimatedDelivery && !order.trackingNumber && (
                     <p className="text-sm text-muted-foreground">
-                      Delivery details will be updated once the order is ready to ship.
+                      Delivery details will be updated once the order is ready
+                      to ship.
                     </p>
                   )}
                 </CardContent>

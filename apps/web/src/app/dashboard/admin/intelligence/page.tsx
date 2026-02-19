@@ -275,7 +275,9 @@ export default function IntelligenceDashboardPage() {
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Total Insights</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Total Insights
+                        </p>
                         <p className="text-2xl font-bold">
                           {dashboard.overview.totalInsights}
                         </p>
@@ -288,7 +290,9 @@ export default function IntelligenceDashboardPage() {
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Avg Offer Price</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Avg Offer Price
+                        </p>
                         <p className="text-2xl font-bold">
                           {dashboard.averages.avgOfferPrice
                             ? `NPR ${Math.round(dashboard.averages.avgOfferPrice).toLocaleString()}`
@@ -320,7 +324,9 @@ export default function IntelligenceDashboardPage() {
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Avg Offers/RFQ</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Avg Offers/RFQ
+                        </p>
                         <p className="text-2xl font-bold">
                           {dashboard.averages.avgOffersPerRfq
                             ? dashboard.averages.avgOffersPerRfq.toFixed(1)

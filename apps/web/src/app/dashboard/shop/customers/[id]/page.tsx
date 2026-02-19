@@ -39,7 +39,11 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const NOTE_CATEGORIES = [
-  { value: "GENERAL", label: "General", color: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300" },
+  {
+    value: "GENERAL",
+    label: "General",
+    color: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300",
+  },
   {
     value: "PREFERENCE",
     label: "Preference",
@@ -50,8 +54,16 @@ const NOTE_CATEGORIES = [
     label: "Follow Up",
     color: "bg-yellow-100 text-yellow-700 dark:text-yellow-300",
   },
-  { value: "COMPLAINT", label: "Complaint", color: "bg-red-100 text-red-700 dark:text-red-300" },
-  { value: "VIP", label: "VIP", color: "bg-purple-100 text-purple-700 dark:text-purple-300" },
+  {
+    value: "COMPLAINT",
+    label: "Complaint",
+    color: "bg-red-100 text-red-700 dark:text-red-300",
+  },
+  {
+    value: "VIP",
+    label: "VIP",
+    color: "bg-purple-100 text-purple-700 dark:text-purple-300",
+  },
 ];
 
 export default function CustomerProfilePage() {

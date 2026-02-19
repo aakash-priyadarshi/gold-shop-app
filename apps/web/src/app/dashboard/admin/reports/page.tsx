@@ -1,18 +1,25 @@
-'use client';
+"use client";
 
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { AdminGuard } from '@/components/auth/RouteGuard';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, FileText, AlertCircle } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import api from '@/lib/api';
-import { toast } from '@/hooks/use-toast';
+import { AdminGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { toast } from "@/hooks/use-toast";
+import api from "@/lib/api";
+import { AlertCircle, FileText, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface Report {
   id: string;
   type: string;
-  status: 'OPEN' | 'RESOLVED' | 'CLOSED';
+  status: "OPEN" | "RESOLVED" | "CLOSED";
   description: string;
   createdAt: string;
   reporter: {
@@ -33,15 +40,15 @@ export default function AdminReportsPage() {
   const loadReports = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/admin/reports');
+      const response = await api.get("/admin/reports");
       let arr = response.data.reports || response.data || [];
       if (!Array.isArray(arr)) arr = [];
       setReports(arr);
     } catch (error) {
       toast({
-        variant: 'destructive',
-        title: 'Failed to load reports',
-        description: 'Could not fetch reports',
+        variant: "destructive",
+        title: "Failed to load reports",
+        description: "Could not fetch reports",
       });
     } finally {
       setIsLoading(false);
@@ -84,18 +91,28 @@ export default function AdminReportsPage() {
                         <TableCell>{r.type}</TableCell>
                         <TableCell>{r.description}</TableCell>
                         <TableCell>
-                          {r.status === 'OPEN' ? (
-                            <span className="text-amber-700 dark:text-amber-300 flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Open</span>
-                          ) : r.status === 'RESOLVED' ? (
-                            <span className="text-green-700 dark:text-green-300">Resolved</span>
+                          {r.status === "OPEN" ? (
+                            <span className="text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" /> Open
+                            </span>
+                          ) : r.status === "RESOLVED" ? (
+                            <span className="text-green-700 dark:text-green-300">
+                              Resolved
+                            </span>
                           ) : (
-                            <span className="text-muted-foreground">Closed</span>
+                            <span className="text-muted-foreground">
+                              Closed
+                            </span>
                           )}
                         </TableCell>
                         <TableCell>
-                          <span>{r.reporter.name} ({r.reporter.email})</span>
+                          <span>
+                            {r.reporter.name} ({r.reporter.email})
+                          </span>
                         </TableCell>
-                        <TableCell>{new Date(r.createdAt).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          {new Date(r.createdAt).toLocaleDateString()}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

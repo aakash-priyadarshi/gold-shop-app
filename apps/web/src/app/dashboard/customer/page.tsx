@@ -1,24 +1,30 @@
-'use client';
+"use client";
 
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { CustomerGuard } from '@/components/auth/RouteGuard';
-import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { CustomerGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  ShoppingCart,
-  Heart,
-  Package,
-  Store,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useAuth } from "@/hooks/useAuth";
+import { ordersApi, rfqApi, shopsApi } from "@/lib/api";
+import {
   ArrowRight,
-  Star,
-  TrendingUp,
+  Heart,
   MessageSquare,
-} from 'lucide-react';
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { ordersApi, rfqApi, shopsApi } from '@/lib/api';
+  Package,
+  ShoppingCart,
+  Star,
+  Store,
+  TrendingUp,
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 interface Order {
   id: string;
@@ -53,12 +59,12 @@ interface RecommendedShop {
 }
 
 const statusColors: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  processing: 'bg-blue-100 text-blue-800',
-  shipping: 'bg-purple-100 text-purple-800',
-  delivered: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
-  quoted: 'bg-green-100 text-green-800',
+  pending: "bg-yellow-100 text-yellow-800",
+  processing: "bg-blue-100 text-blue-800",
+  shipping: "bg-purple-100 text-purple-800",
+  delivered: "bg-green-100 text-green-800",
+  cancelled: "bg-red-100 text-red-800",
+  quoted: "bg-green-100 text-green-800",
 };
 
 export default function CustomerDashboard() {
@@ -66,26 +72,37 @@ export default function CustomerDashboard() {
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
   const [rfqRequests, setRfqRequests] = useState<RFQRequest[]>([]);
-  const [recommendedShops, setRecommendedShops] = useState<RecommendedShop[]>([]);
-  const [totalSpent, setTotalSpent] = useState<string>('NPR 0');
+  const [recommendedShops, setRecommendedShops] = useState<RecommendedShop[]>(
+    [],
+  );
+  const [totalSpent, setTotalSpent] = useState<string>("NPR 0");
 
   useEffect(() => {
     if (!user) return;
 
     // Fetch recent orders
-    ordersApi.getMyOrders({ page: 1, pageSize: 3 })
-      .then(res => {
+    ordersApi
+      .getMyOrders({ page: 1, pageSize: 3 })
+      .then((res) => {
         const orders = res.data.items || res.data || [];
-        setRecentOrders(orders.map((o: any) => ({
-          id: o.id,
-          shop: o.shop?.shopName || o.shopName || 'Unknown',
-          items: o.itemsSummary || o.items?.map((i: any) => i.name).join(', ') || '',
-          amount: o.amount ? `NPR ${o.amount.toLocaleString()}` : '',
-          status: o.status,
-          date: o.createdAt ? o.createdAt.slice(0, 10) : '',
-        })));
+        setRecentOrders(
+          orders.map((o: any) => ({
+            id: o.id,
+            shop: o.shop?.shopName || o.shopName || "Unknown",
+            items:
+              o.itemsSummary ||
+              o.items?.map((i: any) => i.name).join(", ") ||
+              "",
+            amount: o.amount ? `NPR ${o.amount.toLocaleString()}` : "",
+            status: o.status,
+            date: o.createdAt ? o.createdAt.slice(0, 10) : "",
+          })),
+        );
         // Calculate total spent
-        const total = orders.reduce((sum: number, o: any) => sum + (o.amount || 0), 0);
+        const total = orders.reduce(
+          (sum: number, o: any) => sum + (o.amount || 0),
+          0,
+        );
         setTotalSpent(`NPR ${total.toLocaleString()}`);
       })
       .catch(() => setRecentOrders([]));
@@ -95,30 +112,36 @@ export default function CustomerDashboard() {
     setWishlistItems([]); // Placeholder, implement when endpoint exists
 
     // Fetch RFQ requests
-    rfqApi.getMyRequests({ page: 1, pageSize: 3 })
-      .then(res => {
+    rfqApi
+      .getMyRequests({ page: 1, pageSize: 3 })
+      .then((res) => {
         const rfqs = res.data.items || res.data || [];
-        setRfqRequests(rfqs.map((r: any) => ({
-          id: r.id,
-          request: r.request || r.title || '',
-          status: r.status,
-          quotes: r.quotesCount || r.quotes?.length || 0,
-          date: r.createdAt ? r.createdAt.slice(0, 10) : '',
-        })));
+        setRfqRequests(
+          rfqs.map((r: any) => ({
+            id: r.id,
+            request: r.request || r.title || "",
+            status: r.status,
+            quotes: r.quotesCount || r.quotes?.length || 0,
+            date: r.createdAt ? r.createdAt.slice(0, 10) : "",
+          })),
+        );
       })
       .catch(() => setRfqRequests([]));
 
     // Fetch recommended shops
-    shopsApi.getAll({ recommended: true, limit: 4 })
-      .then(res => {
+    shopsApi
+      .getAll({ recommended: true, limit: 4 })
+      .then((res) => {
         const shops = res.data.items || res.data || [];
-        setRecommendedShops(shops.map((s: any) => ({
-          id: s.id,
-          name: s.shopName || s.name,
-          location: s.city || s.location || '',
-          rating: s.rating || 0,
-          reviews: s.reviewsCount || s.reviews?.length || 0,
-        })));
+        setRecommendedShops(
+          shops.map((s: any) => ({
+            id: s.id,
+            name: s.shopName || s.name,
+            location: s.city || s.location || "",
+            rating: s.rating || 0,
+            reviews: s.reviewsCount || s.reviews?.length || 0,
+          })),
+        );
       })
       .catch(() => setRecommendedShops([]));
   }, [user]);
@@ -129,7 +152,9 @@ export default function CustomerDashboard() {
         <div className="space-y-6">
           {/* Welcome banner */}
           <div className="bg-gradient-to-r from-gold-500 to-yellow-600 rounded-xl p-6 text-white">
-            <h1 className="text-2xl font-bold">Welcome back, {user?.firstName}!</h1>
+            <h1 className="text-2xl font-bold">
+              Welcome back, {user?.firstName}!
+            </h1>
             <p className="mt-1 opacity-90">
               Discover beautiful jewellery from trusted local shops.
             </p>
@@ -140,7 +165,11 @@ export default function CustomerDashboard() {
                   Browse Shops
                 </Link>
               </Button>
-              <Button variant="outline" className="bg-white/10 border-white/20 hover:bg-white/20" asChild>
+              <Button
+                variant="outline"
+                className="bg-white/10 border-white/20 hover:bg-white/20"
+                asChild
+              >
                 <Link href="/dashboard/customer/rfq">
                   <MessageSquare className="h-4 w-4 mr-2" />
                   Request Custom Design
@@ -159,7 +188,9 @@ export default function CustomerDashboard() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{recentOrders.length}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Total Orders</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Total Orders
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -172,7 +203,9 @@ export default function CustomerDashboard() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{wishlistItems.length}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Wishlist Items</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Wishlist Items
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -185,7 +218,9 @@ export default function CustomerDashboard() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{rfqRequests.length}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">RFQ Requests</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      RFQ Requests
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -198,7 +233,9 @@ export default function CustomerDashboard() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{totalSpent}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Total Spent</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Total Spent
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -233,11 +270,17 @@ export default function CustomerDashboard() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-medium truncate">{order.items}</p>
-                          <Badge className={statusColors[order.status] || 'bg-gray-100'}>
+                          <Badge
+                            className={
+                              statusColors[order.status] || "bg-gray-100"
+                            }
+                          >
                             {order.status}
                           </Badge>
                         </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{order.shop}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {order.shop}
+                        </p>
                       </div>
                       <div className="text-right">
                         <p className="font-semibold">{order.amount}</p>
@@ -272,10 +315,14 @@ export default function CustomerDashboard() {
                     >
                       <div>
                         <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{item.shop}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {item.shop}
+                        </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-gold-600">{item.price}</p>
+                        <p className="font-semibold text-gold-600">
+                          {item.price}
+                        </p>
                         <Button size="sm" variant="link" className="h-auto p-0">
                           View item
                         </Button>
@@ -298,9 +345,7 @@ export default function CustomerDashboard() {
                 <CardDescription>Custom design inquiries</CardDescription>
               </div>
               <Button asChild>
-                <Link href="/dashboard/customer/rfq/new">
-                  Create New RFQ
-                </Link>
+                <Link href="/dashboard/customer/rfq/new">Create New RFQ</Link>
               </Button>
             </CardHeader>
             <CardContent>
@@ -312,11 +357,15 @@ export default function CustomerDashboard() {
                   >
                     <div>
                       <p className="font-medium">{rfq.request}</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Created: {rfq.date}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Created: {rfq.date}
+                      </p>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <Badge className={statusColors[rfq.status] || 'bg-gray-100'}>
+                        <Badge
+                          className={statusColors[rfq.status] || "bg-gray-100"}
+                        >
                           {rfq.status}
                         </Badge>
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -358,14 +407,18 @@ export default function CustomerDashboard() {
                       </div>
                       <div>
                         <p className="font-medium">{shop.name}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{shop.location}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {shop.location}
+                        </p>
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="flex items-center gap-1">
                         <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                         <span className="font-medium">{shop.rating}</span>
-                        <span className="text-sm text-gray-400">({shop.reviews})</span>
+                        <span className="text-sm text-gray-400">
+                          ({shop.reviews})
+                        </span>
                       </div>
                       <Button size="sm" variant="link" asChild>
                         <Link href={`/shops/${shop.id}`}>Visit shop</Link>

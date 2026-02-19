@@ -257,7 +257,9 @@ export default function CompleteShopSetupPage() {
               Your shop has been submitted for approval. You'll be notified once
               it's verified.
             </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Redirecting to dashboard...</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Redirecting to dashboard...
+            </p>
           </CardContent>
         </Card>
       </div>

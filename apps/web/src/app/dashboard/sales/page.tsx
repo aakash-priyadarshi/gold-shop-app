@@ -134,7 +134,9 @@ export default function SalesDashboardPage() {
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">{stat.title}</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {stat.title}
+                          </p>
                           <p className="text-2xl font-bold mt-1">
                             {stat.value}
                           </p>

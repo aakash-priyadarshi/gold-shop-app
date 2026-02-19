@@ -413,7 +413,9 @@ export function AlloyBuilder({
           <div className="bg-gray-50 dark:bg-gray-800/50 border dark:border-gray-700 rounded-lg p-4 space-y-2">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-              <span className="font-medium dark:text-gray-100">Silver Alloy Summary</span>
+              <span className="font-medium dark:text-gray-100">
+                Silver Alloy Summary
+              </span>
             </div>
             <p className="text-sm text-muted-foreground">
               {value.silverPurity === "STERLING_925"
@@ -520,15 +522,18 @@ function RecipeCard({
 
   const durabilityColors = {
     LOW: "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300",
-    MEDIUM: "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300",
+    MEDIUM:
+      "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300",
     HIGH: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300",
-    VERY_HIGH: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300",
+    VERY_HIGH:
+      "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300",
   };
 
   const allergyColors = {
     NONE: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300",
     LOW: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
-    MEDIUM: "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300",
+    MEDIUM:
+      "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300",
     HIGH: "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300",
   };
 
@@ -591,7 +596,9 @@ function RecipeCard({
               +{((recipe.priceMultiplier - 1) * 100).toFixed(0)}%
             </div>
           ) : (
-            <div className="text-green-600 dark:text-green-400 font-medium">Standard</div>
+            <div className="text-green-600 dark:text-green-400 font-medium">
+              Standard
+            </div>
           )}
           {premiumAmount > 0 && (
             <div className="text-xs text-muted-foreground">

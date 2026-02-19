@@ -288,7 +288,10 @@ export default function InvoiceDetailPage() {
                 </h1>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge
-                    className={statusColors[invoice.status] || "bg-gray-100 dark:bg-gray-800"}
+                    className={
+                      statusColors[invoice.status] ||
+                      "bg-gray-100 dark:bg-gray-800"
+                    }
                   >
                     {invoice.status.replace(/_/g, " ")}
                   </Badge>
