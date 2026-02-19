@@ -17,11 +17,11 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
+import { CatalogueService } from "./catalogue.service";
 import { AddCatalogueItemDto } from "./dto/add-item.dto";
 import { CreateCatalogueDto } from "./dto/create-catalogue.dto";
 import { ReorderItemsDto } from "./dto/reorder-items.dto";
 import { UpdateCatalogueDto } from "./dto/update-catalogue.dto";
-import { CatalogueService } from "./catalogue.service";
 
 @ApiTags("catalogues")
 @Controller("catalogues")
@@ -106,7 +106,12 @@ export class CatalogueController {
     @Param("id") catalogueId: string,
     @Param("itemId") itemId: string,
     @CurrentUser("shopId") shopId: string,
-    @Body() data: { sortOrder?: number; overridePrice?: number | null; isHidden?: boolean },
+    @Body()
+    data: {
+      sortOrder?: number;
+      overridePrice?: number | null;
+      isHidden?: boolean;
+    },
   ) {
     return this.catalogueService.updateItem(catalogueId, itemId, shopId, data);
   }
@@ -156,6 +161,11 @@ export class CatalogueController {
     @CurrentUser("id") userId: string,
     @Body() body: { visibility: InventoryVisibility },
   ) {
-    return this.catalogueService.updateItemVisibility(itemId, shopId, userId, body.visibility);
+    return this.catalogueService.updateItemVisibility(
+      itemId,
+      shopId,
+      userId,
+      body.visibility,
+    );
   }
 }

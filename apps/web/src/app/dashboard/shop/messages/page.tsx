@@ -24,8 +24,8 @@ import {
   WifiOff,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface Conversation {
   id: string;
@@ -414,8 +414,13 @@ export default function ShopMessagesPage() {
                                 : "bg-muted"
                             } ${msg.hasViolation ? "border-2 border-yellow-500" : ""}`}
                           >
-                            <RichMessageCard messageType={msg.messageType} payload={msg.payload} content={msg.content} />
-                            {(!msg.messageType || msg.messageType === "TEXT") && (
+                            <RichMessageCard
+                              messageType={msg.messageType}
+                              payload={msg.payload}
+                              content={msg.content}
+                            />
+                            {(!msg.messageType ||
+                              msg.messageType === "TEXT") && (
                               <p className="text-sm">{msg.content}</p>
                             )}
                             {msg.hasViolation && (

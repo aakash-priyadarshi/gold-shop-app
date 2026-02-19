@@ -1,9 +1,9 @@
+import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
-import { PosService } from "./pos.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { InvoicesService } from "../invoices/invoices.service";
-import { ForbiddenException, NotFoundException, BadRequestException } from "@nestjs/common";
+import { PosService } from "./pos.service";
 
 // Mock Prisma
 const mockPrisma = {
@@ -174,7 +174,15 @@ describe("PosService", () => {
       });
       mockPrisma.posSession.findUnique.mockResolvedValue({
         id: "sess-1",
-        items: [{ id: "si-1", qty: 2, lineTotal: 100000, inventoryItem: {}, variant: null }],
+        items: [
+          {
+            id: "si-1",
+            qty: 2,
+            lineTotal: 100000,
+            inventoryItem: {},
+            variant: null,
+          },
+        ],
       });
 
       const result = await service.addItems("shop-1", "sess-1", "user-1", {

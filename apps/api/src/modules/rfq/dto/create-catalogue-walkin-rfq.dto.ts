@@ -80,8 +80,16 @@ export class CreateCatalogueWalkInRfqDto {
 
   @ApiPropertyOptional({
     enum: [
-      "RING", "NECKLACE", "BRACELET", "BANGLE", "EARRING",
-      "PENDANT", "CHAIN", "ANKLET", "BROOCH", "OTHER",
+      "RING",
+      "NECKLACE",
+      "BRACELET",
+      "BANGLE",
+      "EARRING",
+      "PENDANT",
+      "CHAIN",
+      "ANKLET",
+      "BROOCH",
+      "OTHER",
     ],
   })
   @IsOptional()

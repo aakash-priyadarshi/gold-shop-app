@@ -256,13 +256,17 @@ export default function ShopRfqsPage() {
                         <TableCell>
                           <div>
                             <p className="text-sm">
-                              {rfq.source === "WALK_IN" && rfq.walkInMeta?.customerName
+                              {rfq.source === "WALK_IN" &&
+                              rfq.walkInMeta?.customerName
                                 ? rfq.walkInMeta.customerName
                                 : `${rfq.customer?.firstName || ""} ${rfq.customer?.lastName || ""}`}
                             </p>
-                            {rfq.source === "WALK_IN" && !rfq.walkInMeta?.customerName && (
-                              <p className="text-[10px] text-muted-foreground">Walk-in (anonymous)</p>
-                            )}
+                            {rfq.source === "WALK_IN" &&
+                              !rfq.walkInMeta?.customerName && (
+                                <p className="text-[10px] text-muted-foreground">
+                                  Walk-in (anonymous)
+                                </p>
+                              )}
                           </div>
                         </TableCell>
                         <TableCell>

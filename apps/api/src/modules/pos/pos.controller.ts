@@ -6,7 +6,6 @@ import {
   Param,
   Patch,
   Post,
-  Query,
   UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
@@ -14,10 +13,10 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
-import { PosService } from "./pos.service";
-import { CreatePosSessionDto } from "./dto/create-session.dto";
 import { AddItemsDto } from "./dto/add-items.dto";
-import { UpdateItemDto, CheckoutDto } from "./dto/checkout.dto";
+import { CheckoutDto, UpdateItemDto } from "./dto/checkout.dto";
+import { CreatePosSessionDto } from "./dto/create-session.dto";
+import { PosService } from "./pos.service";
 
 @ApiTags("pos")
 @Controller("pos")
@@ -51,7 +50,9 @@ export class PosController {
 
   @Post("session")
   @Roles("SHOPKEEPER")
-  @ApiOperation({ summary: "Create a new POS session (cancels any existing active session)" })
+  @ApiOperation({
+    summary: "Create a new POS session (cancels any existing active session)",
+  })
   async createSession(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,
@@ -92,7 +93,9 @@ export class PosController {
 
   @Post("session/:sessionId/checkout")
   @Roles("SHOPKEEPER")
-  @ApiOperation({ summary: "Checkout POS session: create invoice + decrement stock" })
+  @ApiOperation({
+    summary: "Checkout POS session: create invoice + decrement stock",
+  })
   async checkout(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,

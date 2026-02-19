@@ -1,4 +1,4 @@
-import { Processor, Process } from "@nestjs/bull";
+import { Process, Processor } from "@nestjs/bull";
 import { Injectable } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { PrismaService } from "../../../prisma/prisma.service";

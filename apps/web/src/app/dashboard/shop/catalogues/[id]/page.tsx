@@ -1,29 +1,28 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { catalogueApi, inventoryApi } from "@/lib/api";
 import {
   ArrowLeft,
-  Plus,
-  Trash2,
+  BarChart3,
+  Copy,
+  ExternalLink,
   Eye,
   EyeOff,
-  ExternalLink,
-  Copy,
-  QrCode,
   GripVertical,
-  Save,
-  Monitor,
-  BarChart3,
-  Settings,
   Link2,
+  Monitor,
+  Plus,
+  QrCode,
+  Save,
   Search,
-  X,
+  Settings,
+  Trash2,
 } from "lucide-react";
-import { catalogueApi, inventoryApi } from "@/lib/api";
-import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { useAuth } from "@/hooks/useAuth";
-import { toast } from "@/hooks/use-toast";
+import { useParams, useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 
 interface CatalogueItem {
   id: string;
@@ -137,9 +136,11 @@ export default function CatalogueDetailPage() {
         search: query,
         limit: 20,
       });
-      const existing = new Set(catalogue?.items.map((i) => i.inventoryItemId) || []);
+      const existing = new Set(
+        catalogue?.items.map((i) => i.inventoryItemId) || [],
+      );
       setAvailableItems(
-        (res.data.data || res.data || []).filter(
+        (res.data.items || res.data.data || res.data || []).filter(
           (item: any) => !existing.has(item.id) && item.visibility !== "HIDDEN",
         ),
       );
@@ -152,12 +153,18 @@ export default function CatalogueDetailPage() {
 
   const handleAddItem = async (inventoryItemId: string) => {
     try {
-      await catalogueApi.addItem(id, { inventoryItemId, sortOrder: (catalogue?.items.length || 0) });
+      await catalogueApi.addItem(id, {
+        inventoryItemId,
+        sortOrder: catalogue?.items.length || 0,
+      });
       toast({ title: "Item added!" });
       setAvailableItems(availableItems.filter((i) => i.id !== inventoryItemId));
       fetchCatalogue();
     } catch (err: any) {
-      toast({ variant: "destructive", title: err.response?.data?.message || "Failed to add item" });
+      toast({
+        variant: "destructive",
+        title: err.response?.data?.message || "Failed to add item",
+      });
     }
   };
 
@@ -187,9 +194,11 @@ export default function CatalogueDetailPage() {
       if (editForm.description !== (catalogue?.description || ""))
         data.description = editForm.description;
       if (editForm.mode !== catalogue?.mode) data.mode = editForm.mode;
-      if (editForm.isPublic !== catalogue?.isPublic) data.isPublic = editForm.isPublic;
+      if (editForm.isPublic !== catalogue?.isPublic)
+        data.isPublic = editForm.isPublic;
       if (editForm.password) data.password = editForm.password;
-      if (editForm.expiresAt) data.expiresAt = new Date(editForm.expiresAt).toISOString();
+      if (editForm.expiresAt)
+        data.expiresAt = new Date(editForm.expiresAt).toISOString();
 
       if (Object.keys(data).length === 0) {
         toast({ title: "No changes to save" });
@@ -201,7 +210,10 @@ export default function CatalogueDetailPage() {
       setShowSettings(false);
       fetchCatalogue();
     } catch (err: any) {
-      toast({ variant: "destructive", title: err.response?.data?.message || "Failed to save" });
+      toast({
+        variant: "destructive",
+        title: err.response?.data?.message || "Failed to save",
+      });
     }
   };
 
@@ -233,8 +245,11 @@ export default function CatalogueDetailPage() {
                 {catalogue.name}
               </h1>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                {catalogue.items.length} items · {catalogue._count.viewEvents} views ·{" "}
-                {catalogue.mode === "SHOWROOM" ? "Showroom Mode" : "Normal Mode"}
+                {catalogue.items.length} items · {catalogue._count.viewEvents}{" "}
+                views ·{" "}
+                {catalogue.mode === "SHOWROOM"
+                  ? "Showroom Mode"
+                  : "Normal Mode"}
               </p>
             </div>
           </div>
@@ -278,7 +293,10 @@ export default function CatalogueDetailPage() {
             <code className="flex-1 text-sm text-gray-600 dark:text-gray-400 truncate">
               {catalogueUrl}
             </code>
-            <button onClick={copyLink} className="text-gold-600 hover:text-gold-700 text-xs font-medium">
+            <button
+              onClick={copyLink}
+              className="text-gold-600 hover:text-gold-700 text-xs font-medium"
+            >
               Copy
             </button>
           </div>
@@ -287,7 +305,9 @@ export default function CatalogueDetailPage() {
         {/* QR Code Panel */}
         {showQr && (
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6 text-center">
-            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">QR Code</h3>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+              QR Code
+            </h3>
             <div className="inline-block p-4 bg-white rounded-xl">
               {/* Using a QR code API for simplicity */}
               <img
@@ -305,21 +325,31 @@ export default function CatalogueDetailPage() {
         {/* Settings Panel */}
         {showSettings && (
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white">Catalogue Settings</h3>
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+              Catalogue Settings
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Name
+                </label>
                 <input
                   value={editForm.name}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, name: e.target.value })
+                  }
                   className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mode</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Mode
+                </label>
                 <select
                   value={editForm.mode}
-                  onChange={(e) => setEditForm({ ...editForm, mode: e.target.value })}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, mode: e.target.value })
+                  }
                   className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white"
                 >
                   <option value="NORMAL">Normal</option>
@@ -327,10 +357,14 @@ export default function CatalogueDetailPage() {
                 </select>
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Description
+                </label>
                 <textarea
                   value={editForm.description}
-                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, description: e.target.value })
+                  }
                   rows={2}
                   className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white"
                 />
@@ -342,29 +376,41 @@ export default function CatalogueDetailPage() {
                 <input
                   type="text"
                   value={editForm.password}
-                  onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, password: e.target.value })
+                  }
                   placeholder="Enter new password or leave empty"
                   className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Expiry Date</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Expiry Date
+                </label>
                 <input
                   type="datetime-local"
                   value={editForm.expiresAt}
-                  onChange={(e) => setEditForm({ ...editForm, expiresAt: e.target.value })}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, expiresAt: e.target.value })
+                  }
                   className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white"
                 />
               </div>
             </div>
             <div className="flex items-center justify-between pt-2">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-700 dark:text-gray-300">Public</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  Public
+                </span>
                 <button
                   type="button"
-                  onClick={() => setEditForm({ ...editForm, isPublic: !editForm.isPublic })}
+                  onClick={() =>
+                    setEditForm({ ...editForm, isPublic: !editForm.isPublic })
+                  }
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    editForm.isPublic ? "bg-gold-600" : "bg-gray-300 dark:bg-gray-600"
+                    editForm.isPublic
+                      ? "bg-gold-600"
+                      : "bg-gray-300 dark:bg-gray-600"
                   }`}
                 >
                   <span
@@ -390,18 +436,30 @@ export default function CatalogueDetailPage() {
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center">
               <BarChart3 className="h-5 w-5 text-gold-500 mx-auto mb-1" />
-              <div className="text-xl font-bold text-gray-900 dark:text-white">{analytics.totalViews}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Total Views</div>
+              <div className="text-xl font-bold text-gray-900 dark:text-white">
+                {analytics.totalViews}
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                Total Views
+              </div>
             </div>
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center">
               <Eye className="h-5 w-5 text-blue-500 mx-auto mb-1" />
-              <div className="text-xl font-bold text-gray-900 dark:text-white">{analytics.uniqueViewers}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Unique Viewers</div>
+              <div className="text-xl font-bold text-gray-900 dark:text-white">
+                {analytics.uniqueViewers}
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                Unique Viewers
+              </div>
             </div>
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4 text-center">
               <Monitor className="h-5 w-5 text-purple-500 mx-auto mb-1" />
-              <div className="text-xl font-bold text-gray-900 dark:text-white">{catalogue.items.length}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Items</div>
+              <div className="text-xl font-bold text-gray-900 dark:text-white">
+                {catalogue.items.length}
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                Items
+              </div>
             </div>
           </div>
         )}
@@ -441,7 +499,9 @@ export default function CatalogueDetailPage() {
                 />
               </div>
               {searchLoading ? (
-                <div className="text-center py-4 text-sm text-gray-500">Searching...</div>
+                <div className="text-center py-4 text-sm text-gray-500">
+                  Searching...
+                </div>
               ) : availableItems.length === 0 ? (
                 <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
                   No items found. All inventory items may already be added.
@@ -467,7 +527,8 @@ export default function CatalogueDetailPage() {
                           {item.nameEn || item.title}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {item.jewelleryType || item.metal} · NPR {item.totalPriceNpr?.toLocaleString() || "N/A"}
+                          {item.jewelleryType || item.metal} · NPR{" "}
+                          {item.totalPriceNpr?.toLocaleString() || "N/A"}
                         </div>
                       </div>
                       <button
@@ -487,7 +548,9 @@ export default function CatalogueDetailPage() {
           {catalogue.items.length === 0 ? (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
               <p className="text-sm">No items in this catalogue yet.</p>
-              <p className="text-xs mt-1">Click &quot;Add Items&quot; to add products from your inventory.</p>
+              <p className="text-xs mt-1">
+                Click &quot;Add Items&quot; to add products from your inventory.
+              </p>
             </div>
           ) : (
             <div className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -516,7 +579,9 @@ export default function CatalogueDetailPage() {
                     <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                       <span>
                         {item.inventoryItem.metal}
-                        {item.inventoryItem.purity ? ` · ${item.inventoryItem.purity}` : ""}
+                        {item.inventoryItem.purity
+                          ? ` · ${item.inventoryItem.purity}`
+                          : ""}
                       </span>
                       {item.overridePrice ? (
                         <span className="text-gold-600 font-medium">
@@ -524,7 +589,9 @@ export default function CatalogueDetailPage() {
                         </span>
                       ) : (
                         <span>
-                          NPR {item.inventoryItem.totalPriceNpr?.toLocaleString() || "N/A"}
+                          NPR{" "}
+                          {item.inventoryItem.totalPriceNpr?.toLocaleString() ||
+                            "N/A"}
                         </span>
                       )}
                       {item.inventoryItem.visibility === "CATALOGUE_ONLY" && (

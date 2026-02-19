@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, BookOpen, Monitor, Lock, Globe } from "lucide-react";
-import { catalogueApi } from "@/lib/api";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { toast } from "@/hooks/use-toast";
+import { catalogueApi } from "@/lib/api";
+import { ArrowLeft, BookOpen, Globe, Lock, Monitor } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function NewCataloguePage() {
   const router = useRouter();
@@ -35,13 +35,17 @@ export default function NewCataloguePage() {
         isPublic: form.isPublic,
       };
       if (form.password) data.password = form.password;
-      if (form.expiresAt) data.expiresAt = new Date(form.expiresAt).toISOString();
+      if (form.expiresAt)
+        data.expiresAt = new Date(form.expiresAt).toISOString();
 
       const res = await catalogueApi.create(data);
       toast({ title: "Catalogue created!" });
       router.push(`/dashboard/shop/catalogues/${res.data.id}`);
     } catch (err: any) {
-      toast({ variant: "destructive", title: err.response?.data?.message || "Failed to create catalogue" });
+      toast({
+        variant: "destructive",
+        title: err.response?.data?.message || "Failed to create catalogue",
+      });
     } finally {
       setLoading(false);
     }
@@ -95,7 +99,9 @@ export default function NewCataloguePage() {
               </label>
               <textarea
                 value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, description: e.target.value })
+                }
                 placeholder="Brief description of this catalogue..."
                 rows={3}
                 className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-gold-500 focus:ring-1 focus:ring-gold-500"
@@ -208,7 +214,9 @@ export default function NewCataloguePage() {
               <input
                 type="datetime-local"
                 value={form.expiresAt}
-                onChange={(e) => setForm({ ...form, expiresAt: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, expiresAt: e.target.value })
+                }
                 className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-gold-500 focus:ring-1 focus:ring-gold-500"
               />
             </div>

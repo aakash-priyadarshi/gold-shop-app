@@ -45,7 +45,9 @@ export class RfqController {
 
   @Get("shop-requests")
   @Roles(UserRole.SHOPKEEPER)
-  @ApiOperation({ summary: "List all RFQs received by shop (supports source filter)" })
+  @ApiOperation({
+    summary: "List all RFQs received by shop (supports source filter)",
+  })
   async findShopRequests(
     @CurrentUser("shopId") shopId: string,
     @Query("source") source?: string,
@@ -55,7 +57,9 @@ export class RfqController {
 
   @Post("walk-in")
   @Roles(UserRole.SHOPKEEPER)
-  @ApiOperation({ summary: "Create a walk-in RFQ from catalogue items (seller only)" })
+  @ApiOperation({
+    summary: "Create a walk-in RFQ from catalogue items (seller only)",
+  })
   async createWalkInRfq(
     @CurrentUser("shopId") shopId: string,
     @CurrentUser("id") userId: string,

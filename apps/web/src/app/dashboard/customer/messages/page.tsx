@@ -403,8 +403,13 @@ export default function CustomerMessagesPage() {
                                 : "bg-muted"
                             } ${msg.hasViolation ? "border-2 border-yellow-500" : ""}`}
                           >
-                            <RichMessageCard messageType={msg.messageType} payload={msg.payload} content={msg.content} />
-                            {(!msg.messageType || msg.messageType === "TEXT") && (
+                            <RichMessageCard
+                              messageType={msg.messageType}
+                              payload={msg.payload}
+                              content={msg.content}
+                            />
+                            {(!msg.messageType ||
+                              msg.messageType === "TEXT") && (
                               <p className="text-sm">{msg.content}</p>
                             )}
                             {msg.hasViolation && (

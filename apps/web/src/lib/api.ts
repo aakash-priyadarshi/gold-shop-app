@@ -207,10 +207,14 @@ export const catalogueApi = {
 
 // Chat Catalogue Integration API
 export const chatCatalogueApi = {
-  shareCatalogue: (conversationId: string, data: { catalogueSlug: string; mode?: string }) =>
-    api.post(`/chat/conversations/${conversationId}/share-catalogue`, data),
-  shareProducts: (conversationId: string, data: { items: { inventoryItemId: string; variantId?: string }[] }) =>
-    api.post(`/chat/conversations/${conversationId}/share-products`, data),
+  shareCatalogue: (
+    conversationId: string,
+    data: { catalogueSlug: string; mode?: string },
+  ) => api.post(`/chat/conversations/${conversationId}/share-catalogue`, data),
+  shareProducts: (
+    conversationId: string,
+    data: { items: { inventoryItemId: string; variantId?: string }[] },
+  ) => api.post(`/chat/conversations/${conversationId}/share-products`, data),
   createWalkInRfq: (conversationId: string, data: any) =>
     api.post(`/chat/conversations/${conversationId}/walk-in-rfq`, data),
 };
@@ -826,8 +830,7 @@ export const posApi = {
       discountAmount?: number;
     },
   ) => api.post(`/pos/session/${sessionId}/checkout`, data),
-  cancelSession: (sessionId: string) =>
-    api.delete(`/pos/session/${sessionId}`),
+  cancelSession: (sessionId: string) => api.delete(`/pos/session/${sessionId}`),
   getSession: (sessionId: string) => api.get(`/pos/session/${sessionId}`),
 };
 

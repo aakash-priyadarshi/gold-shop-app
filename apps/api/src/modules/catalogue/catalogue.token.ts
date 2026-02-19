@@ -1,6 +1,7 @@
 import * as crypto from "crypto";
 
-const TOKEN_SECRET = process.env.CATALOGUE_TOKEN_SECRET || "catalogue-secret-change-me";
+const TOKEN_SECRET =
+  process.env.CATALOGUE_TOKEN_SECRET || "catalogue-secret-change-me";
 
 export interface CatalogueTokenPayload {
   slug: string;
@@ -8,7 +9,10 @@ export interface CatalogueTokenPayload {
   exp: number; // unix timestamp
 }
 
-export function createCatalogueToken(slug: string, passwordHash: string): string {
+export function createCatalogueToken(
+  slug: string,
+  passwordHash: string,
+): string {
   const payload: CatalogueTokenPayload = {
     slug,
     pv: passwordHash.substring(0, 10),

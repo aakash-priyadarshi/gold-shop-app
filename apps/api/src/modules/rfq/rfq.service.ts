@@ -4,14 +4,20 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { BuildMethod, InventoryVisibility, JewelleryType, RfqSource, RfqStatus } from "@prisma/client";
-import { CreateCatalogueWalkInRfqDto } from "./dto/create-catalogue-walkin-rfq.dto";
+import {
+  BuildMethod,
+  InventoryVisibility,
+  JewelleryType,
+  RfqSource,
+  RfqStatus,
+} from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { MarketplaceIntelligenceService } from "../marketplace-intelligence/marketplace-intelligence.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { ShopsService } from "../shops/shops.service";
 import { BroadcastRfqDto } from "./dto/broadcast-rfq.dto";
+import { CreateCatalogueWalkInRfqDto } from "./dto/create-catalogue-walkin-rfq.dto";
 import { CreateRfqDto } from "./dto/create-rfq.dto";
 import {
   validateComposition,
@@ -557,16 +563,17 @@ export class RfqService {
    */
   async findAllForShop(shopId: string, source?: string) {
     // Walk-in RFQs are stored differently — they have createdByShopId
-    const sourceFilter = source === "WALK_IN"
-      ? { source: RfqSource.WALK_IN, createdByShopId: shopId }
-      : source === "ONLINE"
-        ? { source: RfqSource.ONLINE, targetedShops: { some: { shopId } } }
-        : {
-            OR: [
-              { targetedShops: { some: { shopId } } },
-              { createdByShopId: shopId, source: RfqSource.WALK_IN },
-            ],
-          };
+    const sourceFilter =
+      source === "WALK_IN"
+        ? { source: RfqSource.WALK_IN, createdByShopId: shopId }
+        : source === "ONLINE"
+          ? { source: RfqSource.ONLINE, targetedShops: { some: { shopId } } }
+          : {
+              OR: [
+                { targetedShops: { some: { shopId } } },
+                { createdByShopId: shopId, source: RfqSource.WALK_IN },
+              ],
+            };
 
     return this.prisma.rfqRequest.findMany({
       where: {
@@ -866,7 +873,10 @@ export class RfqService {
         budgetMaxNpr: dto.budgetMax,
         preferredDeliveryDays: dto.deadlineDays,
         specialInstructions: dto.notes,
-        referenceImages: (dto.attachments?.map((a) => a.url || a.key).filter((x): x is string => !!x)) || [],
+        referenceImages:
+          dto.attachments
+            ?.map((a) => a.url || a.key)
+            .filter((x): x is string => !!x) || [],
         walkInMeta: walkInMeta as any,
         status: RfqStatus.SENT_TO_SHOPS,
       },
