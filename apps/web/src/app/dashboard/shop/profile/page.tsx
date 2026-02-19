@@ -2,6 +2,7 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1073,6 +1074,9 @@ export default function ShopkeeperProfilePage() {
               </Card>
             </TabsContent>
           </Tabs>
+
+          {/* Appearance */}
+          <AppearanceSettings />
         </div>
       </DashboardLayout>
     </ShopGuard>
