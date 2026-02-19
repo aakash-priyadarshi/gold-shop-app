@@ -303,7 +303,7 @@ export default function CustomerOrderDetailPage() {
                       </div>
                     )}
                     {order.discountNpr > 0 && (
-                      <div className="flex justify-between text-sm text-green-600">
+                      <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
                         <span>Discount</span>
                         <span>-{formatWithConversion(order.discountNpr, { fromCurrency: (order.displayCurrency || 'NPR') as any })}</span>
                       </div>

@@ -614,7 +614,7 @@ export default function AdminVerificationsPage() {
                                   href={value}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 underline"
+                                  className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:hover:text-blue-200 underline"
                                 >
                                   <ExternalLink className="h-3.5 w-3.5" />
                                   View Document

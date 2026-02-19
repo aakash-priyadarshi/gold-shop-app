@@ -57,27 +57,27 @@ const REPAIR_TYPES = [
 const STATUS_CONFIG = {
   RECEIVED: {
     label: "Received",
-    color: "bg-blue-100 text-blue-700",
+    color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
     icon: Clock,
   },
   IN_PROGRESS: {
     label: "In Progress",
-    color: "bg-yellow-100 text-yellow-700",
+    color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
     icon: Settings,
   },
   READY: {
     label: "Ready",
-    color: "bg-green-100 text-green-700",
+    color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
     icon: CheckCircle,
   },
   DELIVERED: {
     label: "Delivered",
-    color: "bg-gray-100 text-gray-700",
+    color: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300",
     icon: CheckCircle,
   },
   CANCELLED: {
     label: "Cancelled",
-    color: "bg-red-100 text-red-700",
+    color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
     icon: Trash2,
   },
 };
@@ -258,7 +258,7 @@ export default function RepairTrackingPage() {
             </Card>
             <Card>
               <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-gray-600">
+                <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">
                   {jobs.filter((j) => j.status === "DELIVERED").length}
                 </p>
                 <p className="text-xs text-muted-foreground">Delivered</p>
@@ -268,7 +268,7 @@ export default function RepairTrackingPage() {
 
           {/* New Job Form */}
           {showForm && (
-            <Card className="border-amber-200">
+            <Card className="border-amber-200 dark:border-amber-800/50">
               <CardHeader>
                 <CardTitle className="text-base">New Repair Job</CardTitle>
               </CardHeader>

@@ -135,17 +135,17 @@ const CUSTOM_STATUS_OPTIONS = [
 ];
 
 const statusColors: Record<string, string> = {
-  CREATED: "bg-gray-100 text-gray-700",
-  PAYMENT_PENDING: "bg-amber-100 text-amber-700",
-  PAID: "bg-blue-100 text-blue-700",
-  IN_PRODUCTION: "bg-purple-100 text-purple-700",
-  QC_PENDING: "bg-orange-100 text-orange-700",
-  QC_PASSED: "bg-teal-100 text-teal-700",
-  READY_TO_SHIP: "bg-cyan-100 text-cyan-700",
-  SHIPPED: "bg-indigo-100 text-indigo-700",
-  DELIVERED: "bg-green-100 text-green-700",
-  COMPLETED: "bg-green-100 text-green-700",
-  CANCELLED: "bg-red-100 text-red-700",
+  CREATED: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300",
+  PAYMENT_PENDING: "bg-amber-100 text-amber-700 dark:text-amber-300",
+  PAID: "bg-blue-100 text-blue-700 dark:text-blue-300",
+  IN_PRODUCTION: "bg-purple-100 text-purple-700 dark:text-purple-300",
+  QC_PENDING: "bg-orange-100 text-orange-700 dark:text-orange-300",
+  QC_PASSED: "bg-teal-100 text-teal-700 dark:text-teal-300",
+  READY_TO_SHIP: "bg-cyan-100 text-cyan-700 dark:text-cyan-300",
+  SHIPPED: "bg-indigo-100 text-indigo-700 dark:text-indigo-300",
+  DELIVERED: "bg-green-100 text-green-700 dark:text-green-300",
+  COMPLETED: "bg-green-100 text-green-700 dark:text-green-300",
+  CANCELLED: "bg-red-100 text-red-700 dark:text-red-300",
 };
 
 export default function ShopOrderDetailPage() {
@@ -451,7 +451,7 @@ export default function ShopOrderDetailPage() {
                               (url: string, idx: number) => (
                                 <div
                                   key={idx}
-                                  className="relative aspect-square rounded-lg overflow-hidden border bg-gray-50"
+                                  className="relative aspect-square rounded-lg overflow-hidden border bg-gray-50 dark:bg-gray-800/50"
                                 >
                                   <img
                                     src={url}
@@ -608,14 +608,14 @@ export default function ShopOrderDetailPage() {
 
                   {/* Commission Info */}
                   {order.commissionLedger && (
-                    <div className="mt-4 p-3 rounded-lg bg-yellow-50 border border-yellow-200">
-                      <div className="flex items-center gap-2 text-yellow-800 mb-2">
+                    <div className="mt-4 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800/50">
+                      <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200 mb-2">
                         <AlertTriangle className="h-4 w-4" />
                         <span className="font-medium text-sm">
                           Commission Due
                         </span>
                       </div>
-                      <div className="text-sm text-yellow-700">
+                      <div className="text-sm text-yellow-700 dark:text-yellow-300">
                         <p>
                           Amount: {currencySymbol}{" "}
                           {order.commissionLedger.amountNpr?.toFixed(2)}
@@ -653,8 +653,8 @@ export default function ShopOrderDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
-                      <User className="h-5 w-5 text-gray-600" />
+                    <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                      <User className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                     </div>
                     <div>
                       <p className="font-medium">
@@ -739,7 +739,7 @@ export default function ShopOrderDetailPage() {
                     <span className="font-medium">21 days from today</span>
                   </div>
                 </div>
-                <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200 text-sm text-yellow-800">
+                <div className="p-3 bg-yellow-50 dark:bg-yellow-950/30 rounded-lg border border-yellow-200 dark:border-yellow-800/50 text-sm text-yellow-800 dark:text-yellow-200">
                   <p className="font-medium flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4" />
                     Important Notice

@@ -141,11 +141,11 @@ interface KycData {
  * ═══════════════════════════════════════════════════════ */
 
 const gradeColor: Record<string, string> = {
-  A: "text-green-600 bg-green-50",
-  B: "text-blue-600 bg-blue-50",
-  C: "text-yellow-600 bg-yellow-50",
-  D: "text-orange-600 bg-orange-50",
-  F: "text-red-600 bg-red-50",
+  A: "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950/30",
+  B: "text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/30",
+  C: "text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-950/30",
+  D: "text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-950/30",
+  F: "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950/30",
 };
 
 const gradeLabel: Record<string, string> = {
@@ -179,9 +179,9 @@ const TIER_META: Record<
   STANDARD: {
     label: "Standard",
     icon: Shield,
-    color: "text-gray-600",
-    bg: "bg-gray-100",
-    border: "border-gray-300",
+    color: "text-gray-600 dark:text-gray-400",
+    bg: "bg-gray-100 dark:bg-gray-800",
+    border: "border-gray-300 dark:border-gray-600",
     gradient: "from-gray-200 to-gray-100",
     benefits: [
       "Listed in seller marketplace",
@@ -205,8 +205,8 @@ const TIER_META: Record<
   GOLD: {
     label: "Gold",
     icon: Award,
-    color: "text-yellow-700",
-    bg: "bg-yellow-50",
+    color: "text-yellow-700 dark:text-yellow-300",
+    bg: "bg-yellow-50 dark:bg-yellow-950/30",
     border: "border-yellow-400",
     gradient: "from-yellow-300 to-yellow-50",
     benefits: [
@@ -218,8 +218,8 @@ const TIER_META: Record<
   ELITE: {
     label: "Elite",
     icon: Crown,
-    color: "text-purple-700",
-    bg: "bg-purple-50",
+    color: "text-purple-700 dark:text-purple-300",
+    bg: "bg-purple-50 dark:bg-purple-950/30",
     border: "border-purple-400",
     gradient: "from-purple-300 to-purple-50",
     benefits: [
@@ -832,7 +832,7 @@ export default function ShopEngagementPage() {
               >
                 <div className="flex items-center gap-2">
                   <HelpCircle className="h-5 w-5 text-blue-600" />
-                  <span className="font-semibold text-blue-800">
+                  <span className="font-semibold text-blue-800 dark:text-blue-200">
                     How Engagement & Tiers Work
                   </span>
                 </div>
@@ -844,7 +844,7 @@ export default function ShopEngagementPage() {
               </button>
 
               {showExplainer && (
-                <div className="mt-4 space-y-4 text-sm text-blue-900">
+                <div className="mt-4 space-y-4 text-sm text-blue-900 dark:text-blue-100">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <h4 className="font-semibold flex items-center gap-1 mb-1">
@@ -889,7 +889,7 @@ export default function ShopEngagementPage() {
                               <p className={`font-semibold text-xs ${m.color}`}>
                                 {m.label}
                               </p>
-                              <ul className="text-[11px] mt-1 space-y-0.5 text-gray-700">
+                              <ul className="text-[11px] mt-1 space-y-0.5 text-gray-700 dark:text-gray-300">
                                 {m.benefits.map((b) => (
                                   <li key={b}>• {b}</li>
                                 ))}
@@ -900,7 +900,7 @@ export default function ShopEngagementPage() {
                       )}
                     </div>
                   </div>
-                  <div className="bg-blue-100/50 rounded p-2 text-xs">
+                  <div className="bg-blue-100/50 rounded p-2 text-xs dark:bg-blue-900/30">
                     <Info className="h-3 w-3 inline mr-1" />
                     <strong>Tip:</strong> Complete your KYC verification,
                     maintain a low cancellation rate, and respond to RFQs
@@ -1171,8 +1171,8 @@ export default function ShopEngagementPage() {
                                     key={key}
                                     className={`flex items-center justify-between rounded-md px-3 py-2 text-sm border ${
                                       criterion.met
-                                        ? "bg-green-50 border-green-200"
-                                        : "bg-amber-50 border-amber-200"
+                                        ? "bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800/50"
+                                        : "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800/50"
                                     }`}
                                   >
                                     <div className="flex items-center gap-2">
@@ -1500,16 +1500,16 @@ export default function ShopEngagementPage() {
             {/* ═══ KYC & VERIFICATION TAB ═══ */}
             <TabsContent value="kyc" className="space-y-4 mt-4">
               {/* Country Banner */}
-              <div className="flex items-start gap-3 p-4 rounded-lg border border-blue-200 bg-blue-50">
+              <div className="flex items-start gap-3 p-4 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800/50 dark:bg-blue-950/30">
                 <Globe className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
-                  <p className="font-medium text-blue-800">
+                  <p className="font-medium text-blue-800 dark:text-blue-200">
                     Your shop country is set to{" "}
                     <strong>{COUNTRY_NAMES[shopCountry] || shopCountry}</strong>{" "}
                     — showing {COUNTRY_NAMES[shopCountry] || shopCountry} KYC
                     requirements.
                   </p>
-                  <p className="text-sm text-blue-700 mt-0.5">
+                  <p className="text-sm text-blue-700 mt-0.5 dark:text-blue-300">
                     To change your country preference, go to{" "}
                     <Link
                       href="/dashboard/shop/settings?tab=location"
@@ -1611,7 +1611,7 @@ export default function ShopEngagementPage() {
                             )}
                           </Button>
                           {docUrl && (
-                            <span className="text-xs text-green-600 flex items-center gap-1">
+                            <span className="text-xs text-green-600 flex items-center gap-1 dark:text-green-400">
                               <CheckCircle className="h-3 w-3" />
                               Document uploaded
                             </span>
@@ -1653,9 +1653,9 @@ export default function ShopEngagementPage() {
 
                   {/* Verification Status */}
                   {kycData && !kycData.isVerified && (
-                    <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2">
+                    <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 dark:bg-amber-950/30 dark:border-amber-800/50">
                       <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                      <div className="text-xs text-amber-700">
+                      <div className="text-xs text-amber-700 dark:text-amber-300">
                         <p className="font-medium">Verification Pending</p>
                         <p>
                           Once you submit all required documents, our team will
@@ -1687,10 +1687,10 @@ export default function ShopEngagementPage() {
                         <div
                           className={`w-16 h-16 rounded-full flex items-center justify-center ${
                             onboarding.percentage >= 80
-                              ? "bg-green-50 text-green-600"
+                              ? "bg-green-50 text-green-600 dark:bg-green-950/30 dark:text-green-400"
                               : onboarding.percentage >= 50
-                                ? "bg-yellow-50 text-yellow-600"
-                                : "bg-red-50 text-red-600"
+                                ? "bg-yellow-50 text-yellow-600 dark:bg-yellow-950/30 dark:text-yellow-400"
+                                : "bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400"
                           }`}
                         >
                           <span className="text-xl font-bold">
@@ -1737,7 +1737,7 @@ export default function ShopEngagementPage() {
                                   key={step.key}
                                   className={`flex items-center gap-3 p-2 rounded-md text-sm ${
                                     step.completed
-                                      ? "bg-green-50/50"
+                                      ? "bg-green-50/50 dark:bg-green-950/30"
                                       : "bg-muted/30"
                                   }`}
                                 >

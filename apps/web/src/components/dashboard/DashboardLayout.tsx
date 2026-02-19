@@ -56,7 +56,10 @@ import {
   UserCircle,
   Users,
   Wrench,
+  Moon,
+  Sun,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -436,25 +439,25 @@ function SidebarContent({
   return (
     <div className="flex flex-col h-full">
       {/* User info */}
-      <div className="p-4 border-b border-gray-100">
+      <div className="p-4 border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center gap-3">
-          <Avatar className="h-12 w-12 ring-2 ring-gold-100">
+          <Avatar className="h-12 w-12 ring-2 ring-gold-100 dark:ring-gold-900/50">
             <AvatarImage src="" />
             <AvatarFallback className="bg-gradient-to-br from-gold-400 to-gold-600 text-white font-semibold">
               {getInitials()}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900 truncate">
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
               {user.firstName} {user.lastName}
             </p>
-            <p className="text-xs text-gray-500 truncate mb-1">{user.email}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate mb-1">{user.email}</p>
             {getRoleBadge(user.role)}
           </div>
         </div>
         {user.shop && (
-          <div className="mt-3 p-3 bg-gradient-to-r from-gold-50 to-amber-50 rounded-xl border border-gold-100">
-            <p className="text-xs text-gray-500 font-medium mb-2">
+          <div className="mt-3 p-3 bg-gradient-to-r from-gold-50 to-amber-50 dark:from-amber-950/30 dark:to-yellow-950/20 rounded-xl border border-gold-100 dark:border-amber-800/30">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2">
               Active Shop
             </p>
             <ShopSwitcher currentShopId={user.shop.id} />
@@ -489,7 +492,7 @@ function SidebarContent({
                   "flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 touch-target",
                   isActive
                     ? "bg-gradient-to-r from-gold-500 to-gold-600 text-white shadow-lg shadow-gold-500/25"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 active:scale-[0.98]",
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 active:scale-[0.98]",
                 )}
               >
                 <div className="flex items-center gap-3">
@@ -504,7 +507,7 @@ function SidebarContent({
                       "px-2 py-0.5 text-xs font-semibold rounded-full",
                       isActive
                         ? "bg-white/20 text-white"
-                        : "bg-red-100 text-red-700",
+                        : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
                     )}
                   >
                     {badgeCount}
@@ -518,13 +521,13 @@ function SidebarContent({
         {/* Scroll-down indicator */}
         {canScrollDown && (
           <div className="absolute bottom-0 left-0 right-0 pointer-events-none">
-            <div className="h-10 bg-gradient-to-t from-white to-transparent" />
+            <div className="h-10 bg-gradient-to-t from-white dark:from-card to-transparent" />
             <div className="absolute bottom-1 left-1/2 -translate-x-1/2 pointer-events-auto">
               <button
                 onClick={() =>
                   navRef.current?.scrollBy({ top: 100, behavior: "smooth" })
                 }
-                className="flex items-center gap-1 px-2 py-0.5 text-[10px] text-gray-400 hover:text-gray-600 bg-white/90 rounded-full shadow-sm border border-gray-100 transition-colors"
+                className="flex items-center gap-1 px-2 py-0.5 text-[10px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-white/90 dark:bg-gray-800/90 rounded-full shadow-sm border border-gray-100 dark:border-gray-700 transition-colors"
               >
                 <ChevronDown className="h-3 w-3" /> more
               </button>
@@ -534,18 +537,18 @@ function SidebarContent({
       </div>
 
       {/* Bottom actions */}
-      <div className="p-3 border-t border-gray-100 space-y-1">
+      <div className="p-3 border-t border-gray-100 dark:border-gray-800 space-y-1">
         <Link
           href="/"
           onClick={onNavClick}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors touch-target"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors touch-target"
         >
           <Home className="h-5 w-5" />
           <span>Browse Marketplace</span>
         </Link>
         <button
           onClick={onLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 transition-colors touch-target"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors touch-target"
         >
           <LogOut className="h-5 w-5" />
           <span>Sign out</span>
@@ -554,7 +557,7 @@ function SidebarContent({
 
       {/* Footer */}
       <div className="p-3 text-center">
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-gray-400 dark:text-gray-500">
           © {new Date().getFullYear()} {BRAND.name}
         </p>
       </div>
@@ -567,6 +570,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   // Fetch dynamic badge counts for admin
   useEffect(() => {
@@ -587,13 +594,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   if (isLoading || !user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gold-50/30">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gold-50/30 dark:from-[#0B0C10] dark:to-[#0B0C10]">
         <div className="flex flex-col items-center gap-4">
           <div className="relative">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 animate-pulse"></div>
-            <div className="absolute inset-0 w-16 h-16 rounded-2xl border-4 border-gold-200 animate-spin border-t-transparent"></div>
+            <div className="absolute inset-0 w-16 h-16 rounded-2xl border-4 border-gold-200 dark:border-gold-800 animate-spin border-t-transparent"></div>
           </div>
-          <p className="text-sm text-gray-500 font-medium">Loading...</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Loading...</p>
         </div>
       </div>
     );
@@ -624,9 +631,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gold-50/20">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gold-50/20 dark:from-[#0B0C10] dark:via-[#0B0C10] dark:to-[#0B0C10]">
       {/* Mobile Header */}
-      <header className="lg:hidden sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100 safe-area-top">
+      <header className="lg:hidden sticky top-0 z-40 bg-white/80 dark:bg-[#161B22]/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 safe-area-top">
         <div className="flex items-center justify-between h-14 px-4">
           {/* Mobile Menu Button */}
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -641,7 +648,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[280px] p-0">
-              <SheetHeader className="p-4 border-b border-gray-100">
+              <SheetHeader className="p-4 border-b border-gray-100 dark:border-gray-800">
                 <SheetTitle className="flex items-center gap-2">
                   <BrandLogo variant="icon" size="sm" />
                   <span className="font-bold text-lg">{BRAND.name}</span>
@@ -668,6 +675,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {/* Mobile Actions */}
           <div className="flex items-center gap-1">
+            {/* Mobile Theme Toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              className="touch-target text-gray-500 dark:text-gray-400"
+            >
+              {mounted && resolvedTheme === "dark" ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
+            </Button>
             <MessageDropdown />
             <NotificationDropdown />
             <DropdownMenu>
@@ -686,7 +706,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     <p className="font-medium">
                       {user.firstName} {user.lastName}
                     </p>
-                    <p className="text-xs text-gray-500">{user.email}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -703,7 +723,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="text-red-600">
+                <DropdownMenuItem onClick={logout} className="text-red-600 dark:text-red-400">
                   <LogOut className="h-4 w-4 mr-2" />
                   Sign out
                 </DropdownMenuItem>
@@ -716,9 +736,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Desktop Layout */}
       <div className="hidden lg:flex">
         {/* Desktop Sidebar */}
-        <aside className="fixed top-0 left-0 z-40 h-screen w-72 bg-white border-r border-gray-100 shadow-sm">
+        <aside className="fixed top-0 left-0 z-40 h-screen w-72 bg-white dark:bg-[#161B22] border-r border-gray-100 dark:border-gray-800 shadow-sm">
           {/* Logo */}
-          <div className="flex items-center h-16 px-6 border-b border-gray-100">
+          <div className="flex items-center h-16 px-6 border-b border-gray-100 dark:border-gray-800">
             <Link href="/" className="flex items-center gap-3">
               <BrandLogo variant="icon" size="md" />
               <span className="font-bold text-xl tracking-tight">
@@ -741,19 +761,33 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Desktop Main Content */}
         <div className="flex-1 ml-72">
           {/* Desktop Header */}
-          <header className="sticky top-0 z-30 h-16 bg-white/80 backdrop-blur-xl border-b border-gray-100 flex items-center justify-between px-6">
+          <header className="sticky top-0 z-30 h-16 bg-white/80 dark:bg-[#161B22]/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 flex items-center justify-between px-6">
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 bg-gray-100/80 rounded-xl px-4 py-2.5 w-72">
-                <Search className="h-4 w-4 text-gray-400" />
+              <div className="flex items-center gap-2 bg-gray-100/80 dark:bg-white/5 rounded-xl px-4 py-2.5 w-72">
+                <Search className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                 <input
                   type="text"
                   placeholder="Search..."
-                  className="bg-transparent border-none outline-none text-sm w-full placeholder:text-gray-400"
+                  className="bg-transparent border-none outline-none text-sm w-full placeholder:text-gray-400 dark:placeholder:text-gray-500 dark:text-gray-200"
                 />
               </div>
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Theme Toggle */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                className="rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                {mounted && resolvedTheme === "dark" ? (
+                  <Sun className="h-5 w-5" />
+                ) : (
+                  <Moon className="h-5 w-5" />
+                )}
+              </Button>
+
               <MessageDropdown />
               <NotificationDropdown />
 
@@ -761,20 +795,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="flex items-center gap-2 hover:bg-gray-100 rounded-xl"
+                    className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl"
                   >
-                    <Avatar className="h-9 w-9 ring-2 ring-gold-100">
+                    <Avatar className="h-9 w-9 ring-2 ring-gold-100 dark:ring-gold-900/50">
                       <AvatarFallback className="bg-gradient-to-br from-gold-400 to-gold-600 text-white text-sm">
                         {getInitials()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="hidden xl:block text-left">
-                      <p className="text-sm font-medium">{user.firstName}</p>
-                      <p className="text-xs text-gray-500 capitalize">
+                      <p className="text-sm font-medium dark:text-gray-200">{user.firstName}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
                         {user.role.toLowerCase()}
                       </p>
                     </div>
-                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                    <ChevronDown className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -783,7 +817,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                       <p className="font-medium">
                         {user.firstName} {user.lastName}
                       </p>
-                      <p className="text-xs text-gray-500">{user.email}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -802,7 +836,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={logout} className="text-red-600">
+                  <DropdownMenuItem onClick={logout} className="text-red-600 dark:text-red-400">
                     <LogOut className="h-4 w-4 mr-2" />
                     Sign out
                   </DropdownMenuItem>

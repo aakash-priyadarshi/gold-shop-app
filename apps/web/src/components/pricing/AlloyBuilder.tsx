@@ -399,7 +399,7 @@ export function AlloyBuilder({
                 ))}
               </div>
             ) : (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
+              <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800/50 rounded-lg p-4 text-sm text-yellow-800 dark:text-yellow-200">
                 <AlertTriangle className="h-4 w-4 inline mr-2" />
                 No recipes available for this combination. Try a different karat
                 or family.
@@ -410,10 +410,10 @@ export function AlloyBuilder({
 
         {/* Silver - simple confirmation */}
         {value.baseMetal === "SILVER" && value.silverPurity && (
-          <div className="bg-gray-50 border rounded-lg p-4 space-y-2">
+          <div className="bg-gray-50 dark:bg-gray-800/50 border dark:border-gray-700 rounded-lg p-4 space-y-2">
             <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4 text-gray-500" />
-              <span className="font-medium">Silver Alloy Summary</span>
+              <Shield className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <span className="font-medium dark:text-gray-100">Silver Alloy Summary</span>
             </div>
             <p className="text-sm text-muted-foreground">
               {value.silverPurity === "STERLING_925"
@@ -432,10 +432,10 @@ export function AlloyBuilder({
         {weightGrams > 0 &&
           marketRate > 0 &&
           (value.karat || value.silverPurity) && (
-            <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-lg p-4 space-y-2">
+            <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg p-4 space-y-2">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-amber-500" />
-                <span className="font-medium text-amber-800">
+                <Sparkles className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+                <span className="font-medium text-amber-800 dark:text-amber-200">
                   Metal Cost Preview
                 </span>
               </div>
@@ -464,7 +464,7 @@ export function AlloyBuilder({
                       {((selectedRecipe.priceMultiplier - 1) * 100).toFixed(0)}
                       %)
                     </span>
-                    <span className="font-medium text-amber-600 whitespace-nowrap flex-shrink-0">
+                    <span className="font-medium text-amber-600 dark:text-amber-400 whitespace-nowrap flex-shrink-0">
                       +{currencySymbol}
                       {(
                         baseCost * selectedRecipe.priceMultiplier -
@@ -474,10 +474,10 @@ export function AlloyBuilder({
                   </div>
                 )}
                 <div className="flex items-center justify-between gap-2 border-t pt-1.5">
-                  <span className="text-amber-800 font-medium">
+                  <span className="text-amber-800 dark:text-amber-200 font-medium">
                     Total metal
                   </span>
-                  <span className="font-bold text-amber-900 whitespace-nowrap">
+                  <span className="font-bold text-amber-900 dark:text-amber-100 whitespace-nowrap">
                     {currencySymbol}
                     {totalEstimate.toLocaleString(undefined, {
                       maximumFractionDigits: 0,
@@ -519,24 +519,24 @@ function RecipeCard({
     baseCost > 0 ? baseCost * recipe.priceMultiplier - baseCost : 0;
 
   const durabilityColors = {
-    LOW: "bg-red-100 text-red-700",
-    MEDIUM: "bg-yellow-100 text-yellow-700",
-    HIGH: "bg-green-100 text-green-700",
-    VERY_HIGH: "bg-emerald-100 text-emerald-700",
+    LOW: "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300",
+    MEDIUM: "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300",
+    HIGH: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300",
+    VERY_HIGH: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300",
   };
 
   const allergyColors = {
-    NONE: "bg-green-100 text-green-700",
-    LOW: "bg-blue-100 text-blue-700",
-    MEDIUM: "bg-yellow-100 text-yellow-700",
-    HIGH: "bg-red-100 text-red-700",
+    NONE: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300",
+    LOW: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
+    MEDIUM: "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300",
+    HIGH: "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300",
   };
 
   return (
     <div
       className={`
         border rounded-lg p-4 cursor-pointer transition-all
-        ${selected ? "border-amber-500 bg-amber-50 ring-2 ring-amber-200" : "hover:border-amber-300"}
+        ${selected ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30 ring-2 ring-amber-200 dark:ring-amber-800/50" : "hover:border-amber-300 dark:hover:border-amber-700"}
         ${isDisabled ? "opacity-50 cursor-not-allowed" : ""}
       `}
       onClick={isDisabled ? undefined : onSelect}
@@ -587,11 +587,11 @@ function RecipeCard({
         {/* Price Info */}
         <div className="text-right ml-4">
           {recipe.priceMultiplier > 1 ? (
-            <div className="text-amber-600 font-medium">
+            <div className="text-amber-600 dark:text-amber-400 font-medium">
               +{((recipe.priceMultiplier - 1) * 100).toFixed(0)}%
             </div>
           ) : (
-            <div className="text-green-600 font-medium">Standard</div>
+            <div className="text-green-600 dark:text-green-400 font-medium">Standard</div>
           )}
           {premiumAmount > 0 && (
             <div className="text-xs text-muted-foreground">
@@ -610,7 +610,7 @@ function RecipeCard({
       </p>
 
       {isDisabled && (
-        <div className="mt-2 text-xs text-red-600 flex items-center gap-1">
+        <div className="mt-2 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
           <AlertTriangle className="h-3 w-3" />
           Nickel not allowed in your region. Choose a palladium option.
         </div>

@@ -122,10 +122,10 @@ const buildMethods = [
 ];
 
 const statusColors: Record<string, string> = {
-  AVAILABLE: "bg-green-100 text-green-700",
-  SOLD: "bg-blue-100 text-blue-700",
-  RESERVED: "bg-amber-100 text-amber-700",
-  UNAVAILABLE: "bg-gray-100 text-gray-700",
+  AVAILABLE: "bg-green-100 text-green-700 dark:text-green-300",
+  SOLD: "bg-blue-100 text-blue-700 dark:text-blue-300",
+  RESERVED: "bg-amber-100 text-amber-700 dark:text-amber-300",
+  UNAVAILABLE: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300",
 };
 
 // Gemstone types (same as RFQ)
@@ -633,7 +633,7 @@ export default function ShopProductsPage() {
                       <TableRow key={product.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                            <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center">
                               {product.images?.[0] ? (
                                 <img
                                   src={getImageUrl(
@@ -691,7 +691,7 @@ export default function ShopProductsPage() {
                         <TableCell>
                           <Badge
                             className={
-                              statusColors[product.status] || "bg-gray-100"
+                              statusColors[product.status] || "bg-gray-100 dark:bg-gray-800"
                             }
                           >
                             {product.status}
@@ -1097,7 +1097,7 @@ export default function ShopProductsPage() {
               </div>
 
               {/* Total */}
-              <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Total Price</span>
                   <span className="text-xl font-bold">

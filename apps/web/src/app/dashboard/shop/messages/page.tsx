@@ -240,7 +240,7 @@ export default function ShopMessagesPage() {
             <MessageSquare className="h-6 w-6" />
             <h1 className="text-2xl font-bold">Customer Messages</h1>
             {connected ? (
-              <span className="flex items-center gap-1 text-xs text-green-600">
+              <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
                 <Wifi className="h-3 w-3" /> Live
               </span>
             ) : (
@@ -319,19 +319,19 @@ export default function ShopMessagesPage() {
                   {/* Violation warning banner */}
                   {violationAlert &&
                     violationAlert.conversationId === selectedConversation && (
-                      <div className="px-4 py-3 bg-red-50 border-b border-red-200">
+                      <div className="px-4 py-3 bg-red-50 dark:bg-red-950/30 border-b border-red-200 dark:border-red-700">
                         <div className="flex items-start gap-2">
                           <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
                           <div className="flex-1">
-                            <p className="text-sm font-semibold text-red-800">
+                            <p className="text-sm font-semibold text-red-800 dark:text-red-200">
                               ⚠️ Message Blocked
                             </p>
-                            <p className="text-sm text-red-700 mt-1">
+                            <p className="text-sm text-red-700 dark:text-red-300 mt-1">
                               {violationAlert.warning}
                             </p>
                             {violationAlert.strikeCount > 0 && (
                               <div className="flex items-center gap-2 mt-2">
-                                <span className="text-xs font-semibold text-red-800">
+                                <span className="text-xs font-semibold text-red-800 dark:text-red-200">
                                   Warnings: {violationAlert.strikeCount}/3
                                 </span>
                                 <div className="flex gap-1">
@@ -345,12 +345,12 @@ export default function ShopMessagesPage() {
                                             : i === 2
                                               ? "bg-orange-500"
                                               : "bg-yellow-500"
-                                          : "bg-gray-200"
+                                          : "bg-gray-200 dark:bg-gray-700"
                                       }`}
                                     />
                                   ))}
                                 </div>
-                                <span className="text-xs text-red-600">
+                                <span className="text-xs text-red-600 dark:text-red-400">
                                   {violationAlert.strikeCount >= 3
                                     ? "Account suspended!"
                                     : `${3 - violationAlert.strikeCount} warning(s) remaining before account suspension`}
@@ -411,15 +411,15 @@ export default function ShopMessagesPage() {
                         <div className="bg-muted px-3 py-2 rounded-lg">
                           <div className="flex gap-1">
                             <span
-                              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                              className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"
                               style={{ animationDelay: "0ms" }}
                             />
                             <span
-                              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                              className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"
                               style={{ animationDelay: "150ms" }}
                             />
                             <span
-                              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                              className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"
                               style={{ animationDelay: "300ms" }}
                             />
                           </div>

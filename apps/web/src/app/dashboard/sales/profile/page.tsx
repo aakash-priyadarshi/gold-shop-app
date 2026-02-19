@@ -64,15 +64,15 @@ export default function SalesProfilePage() {
       <DashboardLayout>
         <div className="max-w-2xl mx-auto space-y-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
-            <p className="text-gray-500 mt-1">Manage your account details</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Profile</h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">Manage your account details</p>
           </div>
 
           <Card>
             <CardHeader>
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
-                  <User className="w-6 h-6 text-yellow-700" />
+                  <User className="w-6 h-6 text-yellow-700 dark:text-yellow-300" />
                 </div>
                 <div>
                   <CardTitle>
@@ -134,15 +134,15 @@ export default function SalesProfilePage() {
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-500">Role</span>
+                <span className="text-gray-500 dark:text-gray-400">Role</span>
                 <Badge>Sales</Badge>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Status</span>
+                <span className="text-gray-500 dark:text-gray-400">Status</span>
                 <span>{user?.status || "Active"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Member since</span>
+                <span className="text-gray-500 dark:text-gray-400">Member since</span>
                 <span>
                   {user?.createdAt
                     ? new Date(user.createdAt).toLocaleDateString()
@@ -150,7 +150,7 @@ export default function SalesProfilePage() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Last login</span>
+                <span className="text-gray-500 dark:text-gray-400">Last login</span>
                 <span>
                   {user?.lastLoginAt
                     ? new Date(user.lastLoginAt).toLocaleDateString()

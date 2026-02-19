@@ -238,7 +238,7 @@ export default function AdminDashboard() {
           {/* Page header */}
           <div>
             <h1 className="text-xl lg:text-2xl font-bold">Admin Dashboard</h1>
-            <p className="text-sm lg:text-base text-gray-500">
+            <p className="text-sm lg:text-base text-gray-500 dark:text-gray-400">
               Welcome back! Here&apos;s what&apos;s happening on the platform.
             </p>
           </div>
@@ -250,7 +250,7 @@ export default function AdminDashboard() {
                 <CardContent className="p-4 lg:pt-6">
                   <div className="flex items-start lg:items-center justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs lg:text-sm text-gray-500 truncate">
+                      <p className="text-xs lg:text-sm text-gray-500 dark:text-gray-400 truncate">
                         {stat.title}
                       </p>
                       <p className="text-lg lg:text-2xl font-bold mt-1">
@@ -288,7 +288,7 @@ export default function AdminDashboard() {
                       )}
                       {stat.change}
                     </span>
-                    <span className="text-gray-500 ml-1 lg:ml-2 truncate hidden sm:inline">
+                    <span className="text-gray-500 dark:text-gray-400 ml-1 lg:ml-2 truncate hidden sm:inline">
                       {stat.description}
                     </span>
                   </div>
@@ -332,7 +332,7 @@ export default function AdminDashboard() {
                   {countryStats.map((country) => (
                     <div
                       key={country.country}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                      className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                     >
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-7 flex items-center justify-center">
@@ -415,13 +415,13 @@ export default function AdminDashboard() {
                   {pendingVerifications.map((shop) => (
                     <div
                       key={shop.id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50 rounded-xl"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl"
                     >
                       <div className="min-w-0">
                         <p className="font-medium text-sm lg:text-base truncate">
                           {shop.shopName}
                         </p>
-                        <p className="text-xs lg:text-sm text-gray-500 truncate">
+                        <p className="text-xs lg:text-sm text-gray-500 dark:text-gray-400 truncate">
                           {shop.owner} • {shop.location}
                         </p>
                       </div>
@@ -446,7 +446,7 @@ export default function AdminDashboard() {
                   {pendingVerifications.length === 0 && (
                     <div className="empty-state py-8">
                       <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
                         No pending verifications
                       </p>
                     </div>
@@ -474,7 +474,7 @@ export default function AdminDashboard() {
                   {recentActivity.map((activity) => (
                     <div
                       key={activity.id}
-                      className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors"
+                      className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl transition-colors"
                     >
                       <div
                         className={`p-2 rounded-xl shrink-0 ${
@@ -501,7 +501,7 @@ export default function AdminDashboard() {
                         <p className="text-xs lg:text-sm font-medium truncate">
                           {activity.message}
                         </p>
-                        <p className="text-xs text-gray-500 truncate">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                           {activity.user}
                         </p>
                       </div>
@@ -513,7 +513,7 @@ export default function AdminDashboard() {
                   {recentActivity.length === 0 && (
                     <div className="empty-state py-8">
                       <Clock className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
                         No recent activity
                       </p>
                     </div>

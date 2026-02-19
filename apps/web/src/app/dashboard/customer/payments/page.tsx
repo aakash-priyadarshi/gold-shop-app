@@ -232,13 +232,13 @@ export default function PaymentMethodsPage() {
           </div>
 
           {/* Security Notice */}
-          <Card className="border-blue-200 bg-blue-50">
+          <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/30">
             <CardContent className="pt-6">
               <div className="flex items-start gap-3">
                 <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
                 <div>
-                  <h3 className="font-medium text-blue-900">Your payment information is secure</h3>
-                  <p className="text-sm text-blue-700 mt-1">
+                  <h3 className="font-medium text-blue-900 dark:text-blue-100">Your payment information is secure</h3>
+                  <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
                     We use industry-standard encryption to protect your payment details. 
                     Card numbers are never stored on our servers.
                   </p>
@@ -270,8 +270,8 @@ export default function PaymentMethodsPage() {
                           onClick={() => setNewMethod({ ...newMethod, type: type.value as any })}
                           className={`flex flex-col items-center gap-2 p-3 rounded-lg border transition-colors ${
                             newMethod.type === type.value
-                              ? 'border-gold-500 bg-gold-50 text-gold-700'
-                              : 'border-gray-200 hover:border-gray-300'
+                            ? 'border-gold-500 bg-gold-50 text-gold-700 dark:bg-gold-950/30 dark:text-gold-300'
+                            : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'
                           }`}
                         >
                           <Icon className="h-5 w-5" />
@@ -465,7 +465,7 @@ export default function PaymentMethodsPage() {
                     <div
                       key={method.id}
                       className={`flex items-center justify-between p-4 rounded-lg border ${
-                        method.isDefault ? 'border-gold-500 bg-gold-50' : 'border-gray-200'
+                        method.isDefault ? 'border-gold-500 bg-gold-50 dark:bg-gold-950/30' : 'border-gray-200 dark:border-gray-700'
                       }`}
                     >
                       <div className="flex items-center gap-4">
@@ -476,7 +476,7 @@ export default function PaymentMethodsPage() {
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{method.label}</span>
                             {method.isDefault && (
-                              <span className="text-xs bg-gold-100 text-gold-800 px-2 py-0.5 rounded flex items-center gap-1">
+                              <span className="text-xs bg-gold-100 text-gold-800 dark:text-gold-200 px-2 py-0.5 rounded flex items-center gap-1">
                                 <Check className="h-3 w-3" />
                                 Default
                               </span>

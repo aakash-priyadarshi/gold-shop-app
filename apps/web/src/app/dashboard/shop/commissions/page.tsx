@@ -43,22 +43,22 @@ const statusStyles: Record<
   { color: string; icon: any; label: string }
 > = {
   PENDING: {
-    color: "bg-yellow-100 text-yellow-800",
+    color: "bg-yellow-100 text-yellow-800 dark:text-yellow-200",
     icon: Clock,
     label: "Pending",
   },
   OVERDUE: {
-    color: "bg-red-100 text-red-800",
+    color: "bg-red-100 text-red-800 dark:text-red-200",
     icon: AlertTriangle,
     label: "Overdue",
   },
   PAID: {
-    color: "bg-green-100 text-green-800",
+    color: "bg-green-100 text-green-800 dark:text-green-200",
     icon: CheckCircle,
     label: "Paid",
   },
   WAIVED: {
-    color: "bg-gray-100 text-gray-800",
+    color: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200",
     icon: DollarSign,
     label: "Waived",
   },
@@ -186,7 +186,7 @@ export default function ShopCommissionsPage() {
                       return (
                         <TableRow
                           key={commission.id}
-                          className={isOverdue ? "bg-red-50" : ""}
+                          className={isOverdue ? "bg-red-50 dark:bg-red-950/30" : ""}
                         >
                           <TableCell>
                             <div className="font-medium">

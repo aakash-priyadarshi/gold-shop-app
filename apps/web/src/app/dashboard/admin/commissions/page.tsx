@@ -543,7 +543,7 @@ export default function AdminCommissionsPage() {
                       <span className="font-medium">{selectedCommission.shop?.businessName}</span>
                     </div>
                     {selectedCommission.shop?.holdReason && (
-                      <div className="mt-2 p-2 bg-red-50 rounded text-sm text-red-700">
+                      <div className="mt-2 p-2 bg-red-50 dark:bg-red-950/30 rounded text-sm text-red-700 dark:text-red-300">
                         <strong>Hold Reason:</strong> {selectedCommission.shop.holdReason}
                       </div>
                     )}

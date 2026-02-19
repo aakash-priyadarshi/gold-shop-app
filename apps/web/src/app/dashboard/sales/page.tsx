@@ -72,7 +72,7 @@ export default function SalesDashboardPage() {
           value: stats.totalShops,
           icon: Store,
           color: "text-blue-600",
-          bg: "bg-blue-50",
+          bg: "bg-blue-50 dark:bg-blue-950/30",
           href: "/dashboard/sales/shops",
         },
         {
@@ -80,7 +80,7 @@ export default function SalesDashboardPage() {
           value: stats.totalOrders,
           icon: ShoppingCart,
           color: "text-green-600",
-          bg: "bg-green-50",
+          bg: "bg-green-50 dark:bg-green-950/30",
           href: "/dashboard/sales/orders",
         },
         {
@@ -88,7 +88,7 @@ export default function SalesDashboardPage() {
           value: stats.pendingOrders,
           icon: Clock,
           color: "text-yellow-600",
-          bg: "bg-yellow-50",
+          bg: "bg-yellow-50 dark:bg-yellow-950/30",
           href: "/dashboard/sales/orders",
         },
         {
@@ -96,7 +96,7 @@ export default function SalesDashboardPage() {
           value: stats.recentConversations,
           icon: MessageSquare,
           color: "text-purple-600",
-          bg: "bg-purple-50",
+          bg: "bg-purple-50 dark:bg-purple-950/30",
           href: "/dashboard/sales/messages",
         },
       ]
@@ -107,10 +107,10 @@ export default function SalesDashboardPage() {
       <DashboardLayout>
         <div className="space-y-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               Sales Dashboard
             </h1>
-            <p className="text-gray-500 mt-1">
+            <p className="text-gray-500 dark:text-gray-400 mt-1">
               Overview of shops, orders, and customer interactions
             </p>
           </div>
@@ -134,7 +134,7 @@ export default function SalesDashboardPage() {
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm text-gray-500">{stat.title}</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{stat.title}</p>
                           <p className="text-2xl font-bold mt-1">
                             {stat.value}
                           </p>
@@ -186,7 +186,7 @@ export default function SalesDashboardPage() {
               </CardHeader>
               <CardContent>
                 {recentOrders.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-4">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
                     No recent orders
                   </p>
                 ) : (
@@ -200,7 +200,7 @@ export default function SalesDashboardPage() {
                           <p className="font-medium">
                             {order.orderNumber || order.id.slice(0, 8)}
                           </p>
-                          <p className="text-gray-500 text-xs">
+                          <p className="text-gray-500 dark:text-gray-400 text-xs">
                             {order.shop?.shopName || "Unknown Shop"}
                           </p>
                         </div>
@@ -216,7 +216,7 @@ export default function SalesDashboardPage() {
                           >
                             {order.status}
                           </Badge>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             {order.displayCurrency || "NPR"}{" "}
                             {order.totalNpr?.toLocaleString() ||
                               order.totalAmount?.toLocaleString() ||

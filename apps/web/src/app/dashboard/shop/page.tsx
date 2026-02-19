@@ -207,7 +207,7 @@ export default function ShopDashboard() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold">Shop Dashboard</h1>
-              <p className="text-gray-500">
+              <p className="text-gray-500 dark:text-gray-400">
                 Welcome back, {user?.firstName}! Here&apos;s your shop overview.
               </p>
             </div>
@@ -228,13 +228,13 @@ export default function ShopDashboard() {
           </div>
 
           {user?.shop && !user.shop.isVerified && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+            <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
               <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
               <div>
-                <h3 className="font-medium text-yellow-800">
+                <h3 className="font-medium text-yellow-800 dark:text-yellow-200">
                   Shop Verification Pending
                 </h3>
-                <p className="text-sm text-yellow-700 mt-1">
+                <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
                   Your shop is currently under review. Some features may be
                   limited until verification is complete.
                 </p>
@@ -248,7 +248,7 @@ export default function ShopDashboard() {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-500">{stat.title}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{stat.title}</p>
                       <p className="text-2xl font-bold mt-1">{stat.value}</p>
                     </div>
                     <div
@@ -278,7 +278,7 @@ export default function ShopDashboard() {
                       <ArrowUpRight className="h-4 w-4 mr-1" />
                       {stat.change}
                     </span>
-                    <span className="text-gray-500 ml-2">
+                    <span className="text-gray-500 dark:text-gray-400 ml-2">
                       {stat.description}
                     </span>
                   </div>
@@ -306,7 +306,7 @@ export default function ShopDashboard() {
                   {recentOrders.map((order) => (
                     <div
                       key={order.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
                     >
                       <div>
                         <div className="flex items-center gap-2">
@@ -319,7 +319,7 @@ export default function ShopDashboard() {
                             {order.status}
                           </Badge>
                         </div>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
                           {order.customer} • {order.items}
                         </p>
                       </div>
@@ -351,11 +351,11 @@ export default function ShopDashboard() {
               <CardContent>
                 <div className="space-y-4">
                   {rfqRequests.map((rfq) => (
-                    <div key={rfq.id} className="p-3 bg-gray-50 rounded-lg">
+                    <div key={rfq.id} className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="font-medium">{rfq.customer}</p>
-                          <p className="text-sm text-gray-600 mt-1">
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                             {rfq.request}
                           </p>
                         </div>
@@ -389,7 +389,7 @@ export default function ShopDashboard() {
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
                         <p className="font-medium">{item.name}</p>
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
                           {item.stock} / {item.minStock} units
                         </span>
                       </div>

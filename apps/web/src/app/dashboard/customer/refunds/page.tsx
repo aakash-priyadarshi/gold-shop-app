@@ -217,7 +217,7 @@ export default function CustomerRefundsPage() {
                   <>
                     <div
                       className={`flex items-center gap-2 p-3 rounded-lg ${
-                        eligibility.eligible ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+                        eligibility.eligible ? 'bg-green-50 dark:bg-green-950/30 text-green-800 dark:text-green-200' : 'bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-200'
                       }`}
                     >
                       {eligibility.eligible ? (

@@ -39,19 +39,19 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const NOTE_CATEGORIES = [
-  { value: "GENERAL", label: "General", color: "bg-gray-100 text-gray-700" },
+  { value: "GENERAL", label: "General", color: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300" },
   {
     value: "PREFERENCE",
     label: "Preference",
-    color: "bg-blue-100 text-blue-700",
+    color: "bg-blue-100 text-blue-700 dark:text-blue-300",
   },
   {
     value: "FOLLOW_UP",
     label: "Follow Up",
-    color: "bg-yellow-100 text-yellow-700",
+    color: "bg-yellow-100 text-yellow-700 dark:text-yellow-300",
   },
-  { value: "COMPLAINT", label: "Complaint", color: "bg-red-100 text-red-700" },
-  { value: "VIP", label: "VIP", color: "bg-purple-100 text-purple-700" },
+  { value: "COMPLAINT", label: "Complaint", color: "bg-red-100 text-red-700 dark:text-red-300" },
+  { value: "VIP", label: "VIP", color: "bg-purple-100 text-purple-700 dark:text-purple-300" },
 ];
 
 export default function CustomerProfilePage() {
@@ -222,8 +222,8 @@ export default function CustomerProfilePage() {
                       variant="outline"
                       className={
                         profile.type === "REGISTERED"
-                          ? "text-green-600 border-green-200 bg-green-50"
-                          : "text-blue-600 border-blue-200 bg-blue-50"
+                          ? "text-green-600 border-green-200 dark:border-green-800/50 bg-green-50 dark:bg-green-950/30"
+                          : "text-blue-600 border-blue-200 dark:border-blue-800/50 bg-blue-50 dark:bg-blue-950/30"
                       }
                     >
                       {profile.type === "REGISTERED" ? "Registered" : "Walk-in"}
@@ -291,8 +291,8 @@ export default function CustomerProfilePage() {
                         )}
                         Message Customer
                       </Button>
-                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-1.5">
-                        <p className="text-xs font-semibold text-amber-700 flex items-center gap-1">
+                      <div className="rounded-lg border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-1.5">
+                        <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-1">
                           <Shield className="h-3.5 w-3.5" />
                           Platform Communication Policy
                         </p>
@@ -385,7 +385,7 @@ export default function CustomerProfilePage() {
                     {profile.addresses.map((addr: any, i: number) => (
                       <div
                         key={i}
-                        className="text-sm p-2 rounded border bg-gray-50"
+                        className="text-sm p-2 rounded border bg-gray-50 dark:bg-gray-800/50"
                       >
                         {addr.label && (
                           <span className="font-medium text-xs text-amber-600">
@@ -643,7 +643,7 @@ export default function CustomerProfilePage() {
                                   {stats.purchaseStats.map((ps: any) => (
                                     <div
                                       key={ps.id}
-                                      className="flex justify-between items-center p-2 rounded bg-gray-50"
+                                      className="flex justify-between items-center p-2 rounded bg-gray-50 dark:bg-gray-800/50"
                                     >
                                       <div>
                                         <span className="font-medium">

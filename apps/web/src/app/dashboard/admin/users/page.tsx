@@ -1155,7 +1155,7 @@ export default function AdminUsersPage() {
                           <TableRow key={user.id}>
                             <TableCell>
                               <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
+                                <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
                                   {getRoleIcon(user.role)}
                                 </div>
                                 <div>
@@ -1321,7 +1321,7 @@ export default function AdminUsersPage() {
 
                 <TabsContent value="profile" className="space-y-4 mt-4">
                   <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
-                    <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center">
+                    <div className="h-16 w-16 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center">
                       {getRoleIcon(selectedUser.role)}
                     </div>
                     <div>
@@ -1479,7 +1479,7 @@ export default function AdminUsersPage() {
                         >
                           <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
                             <div className="flex items-center gap-4">
-                              <div className="h-12 w-12 rounded-lg bg-white flex items-center justify-center">
+                              <div className="h-12 w-12 rounded-lg bg-white dark:bg-gray-800 flex items-center justify-center">
                                 <Store className="h-6 w-6 text-gold-600" />
                               </div>
                               <div>

@@ -960,8 +960,8 @@ export default function AdminOrdersPage() {
                               </TableCell>
                               <TableCell className="hidden md:table-cell">
                                 <div className="flex items-center gap-2">
-                                  <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
-                                    <User className="h-4 w-4 text-gray-500" />
+                                  <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                                    <User className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                                   </div>
                                   <div>
                                     <div className="font-medium text-sm">
@@ -1674,7 +1674,7 @@ export default function AdminOrdersPage() {
                                 (url, idx) => (
                                   <div
                                     key={idx}
-                                    className="relative aspect-square rounded-lg overflow-hidden border bg-gray-50"
+                                    className="relative aspect-square rounded-lg overflow-hidden border bg-gray-50 dark:bg-gray-800/50"
                                   >
                                     <img
                                       src={url}
@@ -1833,10 +1833,10 @@ export default function AdminOrdersPage() {
                       <div className="flex items-start gap-3">
                         <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
                         <div className="text-sm">
-                          <p className="font-medium text-amber-800">
+                          <p className="font-medium text-amber-800 dark:text-amber-200">
                             Important
                           </p>
-                          <p className="text-amber-700">
+                          <p className="text-amber-700 dark:text-amber-300">
                             Only mark as paid if you have verified the payment
                             through bank statement, transaction receipt, or
                             other reliable means.

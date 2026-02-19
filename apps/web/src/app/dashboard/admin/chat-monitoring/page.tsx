@@ -389,7 +389,7 @@ export default function AdminChatMonitoringPage() {
                                   key={m.id}
                                   className="text-xs bg-red-50 dark:bg-red-950/20 p-2 rounded border border-red-200 dark:border-red-900"
                                 >
-                                  <span className="font-medium text-red-700">
+                                  <span className="font-medium text-red-700 dark:text-red-300">
                                     {m.sender
                                       ? `${m.sender.firstName} ${m.sender.lastName} (${m.sender.role})`
                                       : m.senderRole}
@@ -399,7 +399,7 @@ export default function AdminChatMonitoringPage() {
                                     · {m.violationType} ·{" "}
                                     {new Date(m.createdAt).toLocaleString()}
                                   </span>
-                                  <p className="font-mono mt-0.5 text-red-800">
+                                  <p className="font-mono mt-0.5 text-red-800 dark:text-red-200">
                                     {m.content.substring(0, 100)}
                                     {m.content.length > 100 ? "…" : ""}
                                   </p>

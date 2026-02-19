@@ -778,7 +778,7 @@ export default function AdminSettingsPage() {
                           {
                             tier: "Standard",
                             key: "making_charge_cap_standard",
-                            color: "bg-gray-100 border-gray-300",
+                            color: "bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600",
                             default: 15,
                           },
                           {
@@ -790,7 +790,7 @@ export default function AdminSettingsPage() {
                           {
                             tier: "Gold",
                             key: "making_charge_cap_gold",
-                            color: "bg-yellow-50 border-yellow-400",
+                            color: "bg-yellow-50 dark:bg-yellow-950/30 border-yellow-400",
                             default: 22,
                           },
                           {
@@ -905,7 +905,7 @@ export default function AdminSettingsPage() {
                               key={code}
                               className="p-3 rounded-lg border bg-orange-50/50"
                             >
-                              <p className="text-xs font-medium text-gray-700 mb-1">
+                              <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 {label}
                               </p>
                               <div className="flex items-center gap-1">
@@ -998,7 +998,7 @@ export default function AdminSettingsPage() {
                               key={code}
                               className="p-3 rounded-lg border bg-blue-50/50"
                             >
-                              <p className="text-xs font-medium text-gray-700 mb-1">
+                              <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 {label}
                               </p>
                               <div className="flex items-center gap-1">
@@ -1103,7 +1103,7 @@ export default function AdminSettingsPage() {
                               key={code}
                               className="p-3 rounded-lg border bg-purple-50/50"
                             >
-                              <p className="text-xs font-medium text-gray-700 mb-1">
+                              <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 {label}
                               </p>
                               <div className="flex items-center gap-1">
@@ -1269,7 +1269,7 @@ export default function AdminSettingsPage() {
                       <div>
                         <div className="flex items-center gap-2 mb-4">
                           <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                          <h4 className="font-semibold text-yellow-700">
+                          <h4 className="font-semibold text-yellow-700 dark:text-yellow-300">
                             Gold Tier
                           </h4>
                           <span className="text-xs text-muted-foreground">
@@ -1409,7 +1409,7 @@ export default function AdminSettingsPage() {
                       <div>
                         <div className="flex items-center gap-2 mb-4">
                           <div className="w-3 h-3 rounded-full bg-purple-500" />
-                          <h4 className="font-semibold text-purple-700">
+                          <h4 className="font-semibold text-purple-700 dark:text-purple-300">
                             Elite Tier
                           </h4>
                           <span className="text-xs text-muted-foreground">
@@ -1547,7 +1547,7 @@ export default function AdminSettingsPage() {
                       </div>
 
                       {/* Standard Tier Info */}
-                      <div className="bg-gray-50 rounded-lg p-4 text-sm text-muted-foreground">
+                      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 text-sm text-muted-foreground">
                         <strong>Standard (default):</strong> All new sellers
                         start here. No minimum criteria — any registered seller
                         with an active shop is Standard tier. Making charge cap:{" "}

@@ -133,8 +133,8 @@ export default function CustomerDirectoryPage() {
                               variant="outline"
                               className={
                                 customer.type === "REGISTERED"
-                                  ? "text-green-600 border-green-200 bg-green-50 text-xs"
-                                  : "text-blue-600 border-blue-200 bg-blue-50 text-xs"
+                                  ? "text-green-600 border-green-200 dark:border-green-800/50 bg-green-50 dark:bg-green-950/30 text-xs"
+                                  : "text-blue-600 border-blue-200 dark:border-blue-800/50 bg-blue-50 dark:bg-blue-950/30 text-xs"
                               }
                             >
                               {customer.type === "REGISTERED"

@@ -323,10 +323,10 @@ export default function ShopPricingPage() {
           </Card>
 
           {/* Info Card */}
-          <Card className="bg-blue-50 border-blue-200">
+          <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/50">
             <CardContent className="p-4">
-              <h4 className="font-medium text-blue-800 mb-2">How Pricing Works</h4>
-              <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
+              <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">How Pricing Works</h4>
+              <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
                 <li>
                   <strong>Making Charge:</strong> Percentage added to metal value for craftsmanship
                 </li>

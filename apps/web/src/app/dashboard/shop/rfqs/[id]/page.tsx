@@ -600,7 +600,7 @@ export default function ShopRfqDetailPage() {
                   {/* Jewellery Type with Image */}
                   <div className="flex items-start gap-4">
                     {JEWELLERY_TYPE_IMAGES[rfq.jewelleryType] && (
-                      <div className="relative h-20 w-20 rounded-lg overflow-hidden border bg-gray-50 flex-shrink-0">
+                      <div className="relative h-20 w-20 rounded-lg overflow-hidden border bg-gray-50 dark:bg-gray-800/50 flex-shrink-0">
                         <img
                           src={JEWELLERY_TYPE_IMAGES[rfq.jewelleryType]}
                           alt={getJewelleryTypeLabel(rfq.jewelleryType)}
@@ -646,7 +646,7 @@ export default function ShopRfqDetailPage() {
                         </Tooltip>
                       </Label>
                       {buildMethodInfo ? (
-                        <div className="mt-2 border rounded-lg p-3 bg-gradient-to-r from-gray-50 to-white">
+                        <div className="mt-2 border rounded-lg p-3 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/50 dark:to-[#161B22]">
                           <div className="flex items-center gap-2 mb-2">
                             <span className="text-xl">
                               {buildMethodInfo.icon}
@@ -665,9 +665,9 @@ export default function ShopRfqDetailPage() {
                               ([key, val]) => (
                                 <div
                                   key={key}
-                                  className="text-xs bg-gray-50 rounded p-2"
+                                  className="text-xs bg-gray-50 dark:bg-gray-800/50 rounded p-2"
                                 >
-                                  <span className="font-medium capitalize text-gray-700">
+                                  <span className="font-medium capitalize text-gray-700 dark:text-gray-300">
                                     {key}:{" "}
                                   </span>
                                   <span className="text-muted-foreground">
@@ -803,7 +803,7 @@ export default function ShopRfqDetailPage() {
                         </Label>
                         <div className="flex items-center gap-3 mt-2">
                           {surfaceFinishInfo && (
-                            <div className="relative h-14 w-14 rounded-lg overflow-hidden border bg-gray-50 flex-shrink-0">
+                            <div className="relative h-14 w-14 rounded-lg overflow-hidden border bg-gray-50 dark:bg-gray-800/50 flex-shrink-0">
                               <img
                                 src={surfaceFinishInfo.image}
                                 alt={rfq.surfaceFinish}
@@ -833,7 +833,7 @@ export default function ShopRfqDetailPage() {
                         <Label className="text-muted-foreground text-xs">
                           Special Instructions
                         </Label>
-                        <p className="mt-1 text-sm bg-amber-50 border border-amber-200 rounded-md p-3">
+                        <p className="mt-1 text-sm bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-md p-3">
                           {rfq.specialInstructions}
                         </p>
                       </div>
@@ -853,7 +853,7 @@ export default function ShopRfqDetailPage() {
                           {rfq.gemstones.map((gem, idx) => (
                             <div
                               key={gem.id || idx}
-                              className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 p-3 rounded-lg"
+                              className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 border border-purple-100 dark:border-purple-800/50 p-3 rounded-lg"
                             >
                               <div className="flex items-center justify-between mb-1">
                                 <span className="font-semibold text-sm">
@@ -925,7 +925,7 @@ export default function ShopRfqDetailPage() {
                           {rfq.referenceImages.map((url, idx) => (
                             <div
                               key={idx}
-                              className="relative aspect-square rounded-lg overflow-hidden border bg-gray-50 group cursor-pointer"
+                              className="relative aspect-square rounded-lg overflow-hidden border bg-gray-50 dark:bg-gray-800/50 group cursor-pointer"
                               onClick={() => {
                                 setImagePreviewUrl(url);
                                 setImagePreviewOpen(true);
@@ -969,7 +969,7 @@ export default function ShopRfqDetailPage() {
                         </Label>
                         <div className="mt-2">
                           <div
-                            className="relative aspect-square max-w-[200px] rounded-lg overflow-hidden border-2 border-amber-300 bg-gray-50 cursor-pointer group"
+                            className="relative aspect-square max-w-[200px] rounded-lg overflow-hidden border-2 border-amber-300 bg-gray-50 dark:bg-gray-800/50 cursor-pointer group"
                             onClick={() => {
                               setImagePreviewUrl(aiDesignUrl);
                               setImagePreviewOpen(true);
@@ -1136,7 +1136,7 @@ export default function ShopRfqDetailPage() {
                           makingCharge ||
                           finishCost ||
                           gemstoneCost) && (
-                          <div className="bg-gray-50 p-3 rounded-md">
+                          <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-md">
                             <p className="text-sm text-muted-foreground">
                               Estimated Total
                             </p>
@@ -1289,7 +1289,7 @@ export default function ShopRfqDetailPage() {
                     {customerCounterOffers.map((counter, idx) => (
                       <div
                         key={counter.id}
-                        className="bg-white rounded-lg p-4 border border-amber-200"
+                        className="bg-white dark:bg-[#161B22] rounded-lg p-4 border border-amber-200 dark:border-amber-800/50"
                       >
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
@@ -1308,7 +1308,7 @@ export default function ShopRfqDetailPage() {
                             <Label className="text-muted-foreground text-xs">
                               Proposed Price
                             </Label>
-                            <p className="font-bold text-lg text-amber-700">
+                            <p className="font-bold text-lg text-amber-700 dark:text-amber-300">
                               Rs. {counter.totalPriceNpr?.toLocaleString() || 0}
                             </p>
                           </div>
@@ -1325,7 +1325,7 @@ export default function ShopRfqDetailPage() {
                         </div>
 
                         {counter.counterMessage && (
-                          <div className="mb-4 p-3 bg-gray-50 rounded">
+                          <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded">
                             <Label className="text-muted-foreground text-xs">
                               Customer Message
                             </Label>
@@ -1410,8 +1410,8 @@ export default function ShopRfqDetailPage() {
                           key={offer.id}
                           className={`p-3 rounded-lg border ${
                             offer.offerType === "CUSTOMER_COUNTER"
-                              ? "bg-amber-50 border-amber-200"
-                              : "bg-green-50 border-green-200"
+                              ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50"
+                              : "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800/50"
                           }`}
                         >
                           <div className="flex items-center justify-between mb-2">
@@ -1461,8 +1461,8 @@ export default function ShopRfqDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
-                      <User className="h-5 w-5 text-gray-600" />
+                    <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                      <User className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                     </div>
                     <div>
                       <p className="font-medium">
@@ -1584,8 +1584,8 @@ export default function ShopRfqDetailPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-sm text-green-800">
+              <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800/50 rounded-lg p-4">
+                <p className="text-sm text-green-800 dark:text-green-200">
                   By accepting, you agree to fulfill this order at the
                   customer's proposed price.
                 </p>
@@ -1761,11 +1761,11 @@ export default function ShopRfqDetailPage() {
                 counterMakingCharge ||
                 counterFinishCost ||
                 counterGemstoneCost) && (
-                <div className="bg-blue-50 border border-blue-200 p-3 rounded-md">
+                <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 p-3 rounded-md">
                   <p className="text-sm text-muted-foreground">
                     Estimated Total
                   </p>
-                  <p className="text-lg font-bold text-blue-700">
+                  <p className="text-lg font-bold text-blue-700 dark:text-blue-300">
                     Rs.{" "}
                     {(
                       (parseFloat(counterMetalCost) || 0) +
