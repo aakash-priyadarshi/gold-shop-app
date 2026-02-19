@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsBoolean, IsInt } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString } from "class-validator";
 
 export class CreatePageDto {
   @IsString()

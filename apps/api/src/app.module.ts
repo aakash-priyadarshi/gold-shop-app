@@ -10,6 +10,7 @@ import { RedisModule } from "./common/redis";
 import { AdminModule } from "./modules/admin/admin.module";
 import { AuditModule } from "./modules/audit/audit.module";
 import { AuthModule } from "./modules/auth/auth.module";
+import { ChatModule } from "./modules/chat/chat.module";
 import { CommissionModule } from "./modules/commission/commission.module";
 import { CustomerCrmModule } from "./modules/customer-crm/customer-crm.module";
 import { DesignsModule } from "./modules/designs/designs.module";
@@ -29,15 +30,14 @@ import { PagesModule } from "./modules/pages/pages.module";
 import { PaymentsModule } from "./modules/payments/payments.module";
 import { PlatformConfigModule } from "./modules/platform-config/platform-config.module";
 import { PricingModule } from "./modules/pricing/pricing.module";
+import { ProductVariantsModule } from "./modules/product-variants/product-variants.module";
+import { RefundsModule } from "./modules/refunds/refunds.module";
 import { RfqModule } from "./modules/rfq/rfq.module";
 import { SellerPerformanceModule } from "./modules/seller-performance/seller-performance.module";
 import { ShopQuotesModule } from "./modules/shop-quotes/shop-quotes.module";
 import { ShopsModule } from "./modules/shops/shops.module";
-import { UsersModule } from "./modules/users/users.module";
-import { ChatModule } from "./modules/chat/chat.module";
-import { RefundsModule } from "./modules/refunds/refunds.module";
 import { SupportModule } from "./modules/support/support.module";
-import { ProductVariantsModule } from "./modules/product-variants/product-variants.module";
+import { UsersModule } from "./modules/users/users.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
 @Module({

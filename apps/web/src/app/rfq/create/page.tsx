@@ -3027,9 +3027,9 @@ export default function CreateRfqPage() {
             <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr_340px] gap-4 xl:gap-6 xl:items-start">
               {/* Left: Live Metal Prices */}
               <div className="hidden xl:block xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto scrollbar-thin">
-                <div className="bg-gradient-to-br from-slate-50 to-gray-50 border border-slate-200 rounded-lg p-4 space-y-3">
+                <div className="bg-gradient-to-br from-slate-50 to-gray-50 dark:from-[#1E1E1E] dark:to-[#181818] border border-slate-200 dark:border-amber-900/30 rounded-lg p-4 space-y-3 dark:shadow-[0_0_15px_rgba(184,134,11,0.08)]">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-slate-800 flex items-center gap-2 text-sm">
+                    <h4 className="font-semibold text-slate-800 dark:text-amber-400 flex items-center gap-2 text-sm">
                       <TrendingUp className="h-4 w-4" />
                       Today&apos;s Metal Prices
                     </h4>
@@ -3048,8 +3048,8 @@ export default function CreateRfqPage() {
 
                   {marketRatesLoading ? (
                     <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
-                      <span className="ml-2 text-xs text-slate-500">
+                      <Loader2 className="h-4 w-4 animate-spin text-slate-400 dark:text-amber-500" />
+                      <span className="ml-2 text-xs text-slate-500 dark:text-gray-400">
                         Loading rates...
                       </span>
                     </div>
@@ -3094,20 +3094,20 @@ export default function CreateRfqPage() {
 
                         if (selectedPrice && selectedLabel) {
                           return (
-                            <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-lg p-3">
+                            <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/40 dark:to-yellow-950/30 border border-amber-200 dark:border-amber-700/50 rounded-lg p-3">
                               <div className="flex items-center justify-between mb-1">
-                                <span className="text-[10px] font-semibold text-amber-600 uppercase tracking-wide">
+                                <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide">
                                   Your Selection
                                 </span>
-                                <span className="text-[10px] text-amber-500">
+                                <span className="text-[10px] text-amber-500 dark:text-amber-500/70">
                                   per gram
                                 </span>
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-amber-900">
+                                <span className="text-sm font-medium text-amber-900 dark:text-amber-300">
                                   {selectedLabel}
                                 </span>
-                                <span className="text-lg font-bold text-amber-900 whitespace-nowrap">
+                                <span className="text-lg font-bold text-amber-900 dark:text-amber-200 whitespace-nowrap">
                                   {currencyInfo.symbol}
                                   {Math.round(selectedPrice).toLocaleString()}
                                 </span>
@@ -3120,9 +3120,9 @@ export default function CreateRfqPage() {
 
                       {/* Gold Rates */}
                       <div>
-                        <p className="text-[11px] font-semibold text-amber-700 mb-1 uppercase tracking-wide">
+                        <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 mb-1 uppercase tracking-wide">
                           Gold{" "}
-                          <span className="font-normal text-amber-500">
+                          <span className="font-normal text-amber-500 dark:text-amber-500/70">
                             / gram
                           </span>
                         </p>
@@ -3149,21 +3149,21 @@ export default function CreateRfqPage() {
                                 key={key}
                                 className={`flex items-center justify-between rounded px-2 py-1 text-xs ${
                                   isSelected
-                                    ? "bg-amber-100 border border-amber-300"
-                                    : "bg-white/70"
+                                    ? "bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700/50"
+                                    : "bg-white/70 dark:bg-white/5"
                                 }`}
                               >
                                 <span
                                   className={
                                     isSelected
-                                      ? "font-semibold text-amber-900"
+                                      ? "font-semibold text-amber-900 dark:text-amber-300"
                                       : "text-muted-foreground"
                                   }
                                 >
                                   {label}
                                 </span>
                                 <span
-                                  className={`font-mono font-semibold whitespace-nowrap ${isSelected ? "text-amber-900" : "text-amber-700"}`}
+                                  className={`font-mono font-semibold whitespace-nowrap ${isSelected ? "text-amber-900 dark:text-amber-200" : "text-amber-700 dark:text-amber-400"}`}
                                 >
                                   {currencyInfo.symbol}
                                   {Math.round(
@@ -3182,7 +3182,7 @@ export default function CreateRfqPage() {
                       <div>
                         <p className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1 uppercase tracking-wide">
                           Silver{" "}
-                          <span className="font-normal text-gray-400">
+                          <span className="font-normal text-gray-400 dark:text-gray-500">
                             / gram
                           </span>
                         </p>
@@ -3203,8 +3203,8 @@ export default function CreateRfqPage() {
                                 key={key}
                                 className={`flex items-center justify-between rounded px-2 py-1 text-xs ${
                                   isSelected
-                                    ? "bg-gray-100 dark:bg-gray-800 border border-gray-300"
-                                    : "bg-white/70"
+                                    ? "bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600"
+                                    : "bg-white/70 dark:bg-white/5"
                                 }`}
                               >
                                 <span
@@ -3234,9 +3234,9 @@ export default function CreateRfqPage() {
 
                       {/* Platinum Rates */}
                       <div>
-                        <p className="text-[11px] font-semibold text-slate-600 mb-1 uppercase tracking-wide">
+                        <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wide">
                           Platinum{" "}
-                          <span className="font-normal text-slate-400">
+                          <span className="font-normal text-slate-400 dark:text-slate-500">
                             / gram
                           </span>
                         </p>
@@ -3254,21 +3254,21 @@ export default function CreateRfqPage() {
                                 key={key}
                                 className={`flex items-center justify-between rounded px-2 py-1 text-xs ${
                                   isSelected
-                                    ? "bg-slate-100 border border-slate-300"
-                                    : "bg-white/70"
+                                    ? "bg-slate-100 dark:bg-slate-800/50 border border-slate-300 dark:border-slate-600"
+                                    : "bg-white/70 dark:bg-white/5"
                                 }`}
                               >
                                 <span
                                   className={
                                     isSelected
-                                      ? "font-semibold text-slate-900"
+                                      ? "font-semibold text-slate-900 dark:text-white"
                                       : "text-muted-foreground"
                                   }
                                 >
                                   {label}
                                 </span>
                                 <span
-                                  className={`font-mono font-semibold whitespace-nowrap ${isSelected ? "text-slate-900" : "text-slate-600"}`}
+                                  className={`font-mono font-semibold whitespace-nowrap ${isSelected ? "text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-300"}`}
                                 >
                                   {currencyInfo.symbol}
                                   {Math.round(
@@ -3285,16 +3285,16 @@ export default function CreateRfqPage() {
 
                       {/* Palladium Rate */}
                       <div>
-                        <p className="text-[11px] font-semibold text-blue-600 mb-1 uppercase tracking-wide">
+                        <p className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 mb-1 uppercase tracking-wide">
                           Palladium{" "}
-                          <span className="font-normal text-blue-400">
+                          <span className="font-normal text-blue-400 dark:text-blue-500">
                             / gram
                           </span>
                         </p>
                         <div className="space-y-0.5">
-                          <div className="flex items-center justify-between bg-white/70 rounded px-2 py-1 text-xs">
+                          <div className="flex items-center justify-between bg-white/70 dark:bg-white/5 rounded px-2 py-1 text-xs">
                             <span className="text-muted-foreground">PD950</span>
-                            <span className="font-mono font-semibold text-blue-700 whitespace-nowrap">
+                            <span className="font-mono font-semibold text-blue-700 dark:text-blue-300 whitespace-nowrap">
                               {currencyInfo.symbol}
                               {Math.round(
                                 marketRates.metals.PALLADIUM_PD950 || 0,
@@ -3323,7 +3323,7 @@ export default function CreateRfqPage() {
                     </div>
                   ) : (
                     <div className="text-center py-6">
-                      <TrendingUp className="h-6 w-6 text-slate-300 mx-auto mb-2" />
+                      <TrendingUp className="h-6 w-6 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
                       <p className="text-xs text-muted-foreground">
                         Select your location to see live metal prices.
                       </p>
@@ -3348,7 +3348,7 @@ export default function CreateRfqPage() {
                     </CardHeader>
                     <CardContent className="space-y-6">
                       {/* AI RFQ Builder Assistant */}
-                      <div className="rounded-lg border border-gold-200 bg-gradient-to-r from-gold-50 to-amber-50 p-4">
+                      <div className="rounded-lg border border-gold-200 dark:border-amber-800/40 bg-gradient-to-r from-gold-50 to-amber-50 dark:from-amber-950/30 dark:to-yellow-950/20 p-4">
                         <button
                           type="button"
                           onClick={() => setShowAiAssistant(!showAiAssistant)}
@@ -3356,7 +3356,7 @@ export default function CreateRfqPage() {
                         >
                           <div className="flex items-center gap-2">
                             <Sparkles className="h-5 w-5 text-gold-600" />
-                            <span className="font-medium text-gold-800">
+                            <span className="font-medium text-gold-800 dark:text-amber-400">
                               Describe what you want — AI fills the form
                             </span>
                           </div>
@@ -3374,7 +3374,7 @@ export default function CreateRfqPage() {
                                 placeholder='e.g. "I want a 22k gold necklace for my wedding, budget around 2 lakh" or "Simple silver ring with small diamond, under 15k"'
                                 value={aiInput}
                                 onChange={(e) => setAiInput(e.target.value)}
-                                className="min-h-[100px] sm:min-h-[80px] bg-white text-sm flex-1 resize-y"
+                                className="min-h-[100px] sm:min-h-[80px] bg-white dark:bg-gray-900 text-sm flex-1 resize-y"
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter" && !e.shiftKey) {
                                     e.preventDefault();
@@ -5291,7 +5291,9 @@ export default function CreateRfqPage() {
                       <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                         <h4 className="font-semibold">Request Summary</h4>
                         <div className="grid grid-cols-2 gap-2 text-sm">
-                          <span className="text-gray-500 dark:text-gray-400">Type:</span>
+                          <span className="text-gray-500 dark:text-gray-400">
+                            Type:
+                          </span>
                           <span>
                             {
                               JEWELLERY_TYPES.find(
@@ -5302,7 +5304,9 @@ export default function CreateRfqPage() {
 
                           {hasRealTemplate && (
                             <>
-                              <span className="text-gray-500 dark:text-gray-400">Template:</span>
+                              <span className="text-gray-500 dark:text-gray-400">
+                                Template:
+                              </span>
                               <span>
                                 {
                                   templates.find(
@@ -5313,7 +5317,9 @@ export default function CreateRfqPage() {
                             </>
                           )}
 
-                          <span className="text-gray-500 dark:text-gray-400">Build Method:</span>
+                          <span className="text-gray-500 dark:text-gray-400">
+                            Build Method:
+                          </span>
                           <span>
                             {
                               BUILD_METHODS.find(
@@ -5322,7 +5328,9 @@ export default function CreateRfqPage() {
                             }
                           </span>
 
-                          <span className="text-gray-500 dark:text-gray-400">Metal:</span>
+                          <span className="text-gray-500 dark:text-gray-400">
+                            Metal:
+                          </span>
                           <span>
                             {
                               getAvailableMetals().find(
@@ -5331,7 +5339,9 @@ export default function CreateRfqPage() {
                             }
                           </span>
 
-                          <span className="text-gray-500 dark:text-gray-400">Weight:</span>
+                          <span className="text-gray-500 dark:text-gray-400">
+                            Weight:
+                          </span>
                           <span>
                             {hasRealTemplate
                               ? `${getWeightFromTemplate()}g (${formData.weightCategory})`
@@ -5340,7 +5350,9 @@ export default function CreateRfqPage() {
 
                           {formData.surfaceFinish && (
                             <>
-                              <span className="text-gray-500 dark:text-gray-400">Finish:</span>
+                              <span className="text-gray-500 dark:text-gray-400">
+                                Finish:
+                              </span>
                               <span>
                                 {formData.surfaceFinish.replace("_", " ")}
                               </span>
@@ -5349,7 +5361,9 @@ export default function CreateRfqPage() {
 
                           {formData.addGoldPlating && (
                             <>
-                              <span className="text-gray-500 dark:text-gray-400">Plating:</span>
+                              <span className="text-gray-500 dark:text-gray-400">
+                                Plating:
+                              </span>
                               <span>
                                 {formData.platingType.replace("_", " ")} (
                                 {formData.platingTier})
@@ -5359,14 +5373,18 @@ export default function CreateRfqPage() {
 
                           {formData.gemstones.length > 0 && (
                             <>
-                              <span className="text-gray-500 dark:text-gray-400">Gemstones:</span>
+                              <span className="text-gray-500 dark:text-gray-400">
+                                Gemstones:
+                              </span>
                               <span>
                                 {formData.gemstones.length} stone type(s)
                               </span>
                             </>
                           )}
 
-                          <span className="text-gray-500 dark:text-gray-400">Budget:</span>
+                          <span className="text-gray-500 dark:text-gray-400">
+                            Budget:
+                          </span>
                           <span>
                             {currencyInfo.symbol} {formData.budgetMin} -{" "}
                             {formData.budgetMax}
@@ -5806,7 +5824,7 @@ export default function CreateRfqPage() {
                                 className={`px-3 py-1 rounded-full text-sm transition-colors ${
                                   sellerSortBy === sortOption
                                     ? "bg-gold-500 text-white"
-                                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:bg-gray-700"
+                                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
                                 }`}
                               >
                                 {sortOption === "location"
@@ -5825,7 +5843,7 @@ export default function CreateRfqPage() {
                             onClick={() =>
                               setShowAdvancedFilters(!showAdvancedFilters)
                             }
-                            className="ml-auto flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white transition-colors"
+                            className="ml-auto flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
                           >
                             <Settings className="h-4 w-4" />
                             Advanced Filters

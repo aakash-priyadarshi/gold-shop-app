@@ -123,10 +123,10 @@ export function LivePricingPanel({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 rounded-lg p-4 space-y-4">
+      <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-[#1E1E1E] dark:to-[#181818] border border-amber-200 dark:border-amber-900/30 rounded-lg p-4 space-y-4 dark:shadow-[0_0_15px_rgba(184,134,11,0.08)]">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h4 className="font-semibold text-amber-900 flex items-center gap-2">
+          <h4 className="font-semibold text-amber-900 dark:text-amber-400 flex items-center gap-2">
             {buildMethod === "METHOD_A" && <Gem className="h-4 w-4" />}
             {buildMethod === "METHOD_B" && <Sparkles className="h-4 w-4" />}
             {buildMethod === "METHOD_C" && <Layers className="h-4 w-4" />}
@@ -144,8 +144,8 @@ export function LivePricingPanel({
         {/* Loading State */}
         {marketRatesLoading && (
           <div className="flex items-center justify-center py-6">
-            <Loader2 className="h-5 w-5 animate-spin text-amber-600" />
-            <span className="ml-2 text-sm text-amber-700">
+            <Loader2 className="h-5 w-5 animate-spin text-amber-600 dark:text-amber-500" />
+            <span className="ml-2 text-sm text-amber-700 dark:text-amber-400">
               Loading market rates...
             </span>
           </div>
@@ -153,7 +153,7 @@ export function LivePricingPanel({
 
         {/* Warning */}
         {marketRatesWarning && (
-          <div className="bg-yellow-100 border border-yellow-300 rounded p-2 text-xs text-yellow-800 flex items-center gap-2">
+          <div className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700/50 rounded p-2 text-xs text-yellow-800 dark:text-yellow-300 flex items-center gap-2">
             <AlertCircle className="h-3 w-3" />
             {marketRatesWarning}
           </div>
@@ -178,7 +178,7 @@ export function LivePricingPanel({
 
         {/* Status Message */}
         {estimate?.status === "incomplete" && estimate.statusMessage && (
-          <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-800 flex items-start gap-2">
+          <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 rounded p-3 text-sm text-blue-800 dark:text-blue-300 flex items-start gap-2">
             <Info className="h-4 w-4 mt-0.5" />
             <span>{estimate.statusMessage}</span>
           </div>
@@ -187,7 +187,7 @@ export function LivePricingPanel({
         {/* Footer */}
         <div className="text-xs text-muted-foreground border-t pt-2 space-y-1">
           {/* Average pricing disclaimer */}
-          <div className="bg-blue-50 border border-blue-100 rounded p-2 text-blue-700 flex items-start gap-1.5">
+          <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800/50 rounded p-2 text-blue-700 dark:text-blue-300 flex items-start gap-1.5">
             <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
             <span>
               Prices shown are <strong>average market estimates</strong> and may
@@ -242,7 +242,7 @@ function MarketRatesDisplay({
         <>
           {/* Pure Gold rate */}
           <div>
-            <p className="text-xs font-medium text-amber-800 mb-1">
+            <p className="text-xs font-medium text-amber-800 dark:text-amber-400 mb-1">
               Pure Gold (per gram)
             </p>
             <div className="grid grid-cols-1 gap-1 text-xs">
@@ -256,7 +256,7 @@ function MarketRatesDisplay({
 
           {/* Pure Silver rate */}
           <div>
-            <p className="text-xs font-medium text-amber-800 mb-1">
+            <p className="text-xs font-medium text-amber-800 dark:text-amber-400 mb-1">
               Fine Silver (per gram)
             </p>
             <div className="grid grid-cols-1 gap-1 text-xs">
@@ -271,7 +271,7 @@ function MarketRatesDisplay({
 
           {/* Platinum */}
           <div>
-            <p className="text-xs font-medium text-amber-800 mb-1">
+            <p className="text-xs font-medium text-amber-800 dark:text-amber-400 mb-1">
               Platinum (per gram)
             </p>
             <div className="grid grid-cols-2 gap-1 text-xs">
@@ -291,8 +291,10 @@ function MarketRatesDisplay({
           </div>
 
           {/* Method A info */}
-          <div className="bg-white/60 rounded p-2 text-xs">
-            <p className="font-medium text-amber-700">Solid Pure Metal</p>
+          <div className="bg-white/60 dark:bg-white/5 rounded p-2 text-xs">
+            <p className="font-medium text-amber-700 dark:text-amber-400">
+              Solid Pure Metal
+            </p>
             <p className="text-muted-foreground">
               Method A uses the purest form of precious metals. For gold alloys
               (22K, 18K, etc.), use Method B.
@@ -306,7 +308,7 @@ function MarketRatesDisplay({
         <>
           {/* Gold alloy rates */}
           <div>
-            <p className="text-xs font-medium text-amber-800 mb-1">
+            <p className="text-xs font-medium text-amber-800 dark:text-amber-400 mb-1">
               Gold Alloys (per gram)
             </p>
             <div className="grid grid-cols-3 gap-1 text-xs">
@@ -335,7 +337,7 @@ function MarketRatesDisplay({
 
           {/* Silver rates */}
           <div>
-            <p className="text-xs font-medium text-amber-800 mb-1">
+            <p className="text-xs font-medium text-amber-800 dark:text-amber-400 mb-1">
               Silver (per gram)
             </p>
             <div className="grid grid-cols-2 gap-1 text-xs">
@@ -355,8 +357,10 @@ function MarketRatesDisplay({
           </div>
 
           {/* Alloy Premium Note */}
-          <div className="bg-white/60 rounded p-2 text-xs">
-            <p className="font-medium text-amber-700">+ Alloy Premium</p>
+          <div className="bg-white/60 dark:bg-white/5 rounded p-2 text-xs">
+            <p className="font-medium text-amber-700 dark:text-amber-400">
+              + Alloy Premium
+            </p>
             <p className="text-muted-foreground">
               Recipe-based premium will be added based on your alloy selection
               (e.g., Rose Gold, White Gold)
@@ -368,8 +372,8 @@ function MarketRatesDisplay({
       {/* Method C: Show plating info instead */}
       {buildMethod === "METHOD_C" && (
         <>
-          <div className="bg-white/60 rounded p-3 space-y-2">
-            <p className="text-xs font-medium text-blue-800">
+          <div className="bg-white/60 dark:bg-white/5 rounded p-3 space-y-2">
+            <p className="text-xs font-medium text-blue-800 dark:text-blue-300">
               Base Metal + Plating
             </p>
             <div className="grid grid-cols-2 gap-2 text-xs">
@@ -396,7 +400,7 @@ function MarketRatesDisplay({
         <>
           {/* Gold rates */}
           <div>
-            <p className="text-xs font-medium text-amber-800 mb-1">
+            <p className="text-xs font-medium text-amber-800 dark:text-amber-400 mb-1">
               Gold (per gram) - Hollow Construction
             </p>
             <div className="grid grid-cols-3 gap-1 text-xs">
@@ -420,7 +424,7 @@ function MarketRatesDisplay({
 
           {/* Silver rates */}
           <div>
-            <p className="text-xs font-medium text-amber-800 mb-1">
+            <p className="text-xs font-medium text-amber-800 dark:text-amber-400 mb-1">
               Silver (per gram)
             </p>
             <div className="grid grid-cols-1 gap-1 text-xs">
@@ -434,8 +438,8 @@ function MarketRatesDisplay({
           </div>
 
           {/* Method D info */}
-          <div className="bg-white/60 rounded p-3 space-y-2">
-            <p className="text-xs font-medium text-amber-700">
+          <div className="bg-white/60 dark:bg-white/5 rounded p-3 space-y-2">
+            <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
               Machine Made (Italian Style)
             </p>
             <div className="text-xs text-muted-foreground space-y-1">
@@ -474,13 +478,13 @@ interface RateBoxProps {
 
 function RateBox({ label, value, symbol, color = "amber" }: RateBoxProps) {
   const colorClasses = {
-    amber: "text-amber-600",
-    gray: "text-gray-500",
-    slate: "text-slate-500",
+    amber: "text-amber-600 dark:text-amber-400",
+    gray: "text-gray-500 dark:text-gray-400",
+    slate: "text-slate-500 dark:text-slate-400",
   };
 
   return (
-    <div className="bg-white/60 rounded px-2 py-1 flex items-center justify-between gap-1">
+    <div className="bg-white/60 dark:bg-white/5 rounded px-2 py-1 flex items-center justify-between gap-1">
       <span className={`${colorClasses[color]} whitespace-nowrap`}>
         {label}
       </span>
@@ -508,7 +512,7 @@ function EstimateDisplay({ estimate, currencySymbol }: EstimateDisplayProps) {
   }
 
   return (
-    <div className="bg-white rounded-lg p-3 space-y-2 border border-amber-100">
+    <div className="bg-white dark:bg-white/5 rounded-lg p-3 space-y-2 border border-amber-100 dark:border-amber-900/30">
       <div className="flex items-center gap-2 pb-2 border-b">
         {estimate.status === "complete" ? (
           <CheckCircle className="h-4 w-4 text-green-500" />
@@ -538,7 +542,7 @@ function EstimateDisplay({ estimate, currencySymbol }: EstimateDisplayProps) {
                 </TooltipContent>
               )}
             </Tooltip>
-            <span className="font-medium whitespace-nowrap flex-shrink-0">
+            <span className="font-medium whitespace-nowrap flex-shrink-0 dark:text-gray-200">
               {currencySymbol}
               {item.amount.toLocaleString(undefined, {
                 maximumFractionDigits: 0,
@@ -571,9 +575,9 @@ function EstimateDisplay({ estimate, currencySymbol }: EstimateDisplayProps) {
               </span>
             </div>
           )}
-          <div className="flex justify-between font-bold text-base pt-1 border-t">
+          <div className="flex justify-between font-bold text-base pt-1 border-t dark:border-gray-700">
             <span>Total</span>
-            <span className="text-green-600 whitespace-nowrap">
+            <span className="text-green-600 dark:text-green-400 whitespace-nowrap">
               {currencySymbol}
               {estimate.total.toLocaleString(undefined, {
                 maximumFractionDigits: 0,

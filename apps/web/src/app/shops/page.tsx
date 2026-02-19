@@ -1,7 +1,7 @@
 "use client";
 
-import { Header } from '@/components/layout/header';
-import { DynamicFooter } from '@/components/layout/DynamicFooter';
+import { DynamicFooter } from "@/components/layout/DynamicFooter";
+import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -320,7 +320,12 @@ export default function ShopsPage() {
           />,
         );
       } else {
-        stars.push(<StarIcon key={i} className="h-4 w-4 text-gray-300 dark:text-gray-600" />);
+        stars.push(
+          <StarIcon
+            key={i}
+            className="h-4 w-4 text-gray-300 dark:text-gray-600"
+          />,
+        );
       }
     }
     return stars;
@@ -658,7 +663,9 @@ export default function ShopsPage() {
                           key={state}
                           className="flex items-center justify-between text-sm"
                         >
-                          <span className="text-gray-600 dark:text-gray-300 dark:text-gray-600">{state}</span>
+                          <span className="text-gray-600 dark:text-gray-300 dark:text-gray-600">
+                            {state}
+                          </span>
                           <Badge variant="secondary">
                             {stateShops.length} sellers
                           </Badge>

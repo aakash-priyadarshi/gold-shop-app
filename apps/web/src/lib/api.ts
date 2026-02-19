@@ -447,8 +447,13 @@ export const pagesApi = {
   getBySlug: (slug: string) => api.get(`/pages/${slug}`),
   // Admin
   list: () => api.get("/pages/admin/list"),
-  create: (data: { slug: string; title: string; content: string; metaDescription?: string; isPublished?: boolean }) =>
-    api.post("/pages/admin", data),
+  create: (data: {
+    slug: string;
+    title: string;
+    content: string;
+    metaDescription?: string;
+    isPublished?: boolean;
+  }) => api.post("/pages/admin", data),
   update: (id: string, data: Record<string, any>) =>
     api.patch(`/pages/admin/${id}`, data),
   delete: (id: string) => api.delete(`/pages/admin/${id}`),

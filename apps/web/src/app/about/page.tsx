@@ -124,7 +124,7 @@ export default function AboutPage() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-white text-white hover:bg-white hover:text-amber-700"
+                className="border-white text-white bg-transparent hover:bg-white hover:text-amber-700"
                 asChild
               >
                 <Link href="/rfq/create">Create Custom Order</Link>
@@ -150,7 +150,9 @@ export default function AboutPage() {
                 <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
                   {stat.value}
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-300">{stat.label}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  {stat.label}
+                </div>
               </motion.div>
             ))}
           </div>
@@ -194,7 +196,7 @@ export default function AboutPage() {
       </section>
 
       {/* Our Values Section */}
-      <section className="py-16 md:py-24 bg-gray-50">
+      <section className="py-16 md:py-24 bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
@@ -225,7 +227,9 @@ export default function AboutPage() {
                         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                           {value.title}
                         </h3>
-                        <p className="text-gray-600 dark:text-gray-300">{value.description}</p>
+                        <p className="text-gray-600 dark:text-gray-300">
+                          {value.description}
+                        </p>
                       </div>
                     </div>
                   </CardContent>
@@ -265,7 +269,9 @@ export default function AboutPage() {
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                   {feature.title}
                 </h3>
-                <p className="text-gray-600 dark:text-gray-300 text-sm">{feature.description}</p>
+                <p className="text-gray-600 dark:text-gray-300 text-sm">
+                  {feature.description}
+                </p>
               </motion.div>
             ))}
           </div>
@@ -347,7 +353,9 @@ export default function AboutPage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <Card className="flex-1">
                 <CardContent className="p-6">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Email Us</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                    Email Us
+                  </h3>
                   <a
                     href="mailto:support@orivraa.com"
                     className="text-amber-600 hover:underline"
