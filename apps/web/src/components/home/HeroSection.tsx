@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { HeroVideo } from '@/components/HeroVideo';
 import { useMarket, MarketRegion } from '@/hooks/useMarket';
 import { 
   Gem, 
@@ -12,7 +13,12 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-export function HeroSection() {
+interface HeroSectionProps {
+  /** CDN URL to the geo-resolved hero video (passed from server component). */
+  videoSrc?: string;
+}
+
+export function HeroSection({ videoSrc }: HeroSectionProps) {
   const { config, selectedCountry, isLoading } = useMarket();
 
   // Default content for server rendering / loading state
@@ -32,30 +38,49 @@ export function HeroSection() {
   const badgeText = badgeTextMap[selectedCountry] || "Your Premium Jewellery Marketplace";
 
   return (
-    <section className="relative bg-gradient-to-b from-gold-50 via-amber-50/50 to-white py-12 lg:py-24 overflow-hidden">
-      {/* Decorative elements */}
-      <div className="absolute top-20 left-10 w-32 h-32 bg-gold-200 rounded-full blur-3xl opacity-40" />
-      <div className="absolute bottom-20 right-10 w-48 h-48 bg-amber-200 rounded-full blur-3xl opacity-30" />
+    <section className="relative min-h-[600px] lg:min-h-[700px] py-12 lg:py-24 overflow-hidden">
+      {/* Geo-based background video or gradient fallback */}
+      {videoSrc ? (
+        <HeroVideo videoSrc={videoSrc} />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-b from-gold-50 via-amber-50/50 to-white" />
+      )}
+
+      {/* Decorative elements (softer when video is present) */}
+      {!videoSrc && (
+        <>
+          <div className="absolute top-20 left-10 w-32 h-32 bg-gold-200 rounded-full blur-3xl opacity-40" />
+          <div className="absolute bottom-20 right-10 w-48 h-48 bg-amber-200 rounded-full blur-3xl opacity-30" />
+        </>
+      )}
       
       <div className="container mx-auto px-4 relative">
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           <div className="space-y-6 lg:space-y-8 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gold-100 rounded-full text-gold-700 text-sm font-medium">
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
+              videoSrc
+                ? 'bg-white/20 backdrop-blur-sm text-white border border-white/30'
+                : 'bg-gold-100 text-gold-700'
+            }`}>
               <Sparkles className="h-4 w-4" />
               {badgeText}
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-900 leading-tight">
+            <h1 className={`text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight ${
+              videoSrc ? 'text-white drop-shadow-lg' : 'text-gray-900'
+            }`}>
               {headline.includes('Jewellery') ? (
                 <>
                   {headline.split('Jewellery')[0]}
-                  <span className="gold-text-gradient"> Jewellery</span>
+                  <span className={videoSrc ? 'text-gold-300' : 'gold-text-gradient'}> Jewellery</span>
                   {headline.split('Jewellery')[1]}
                 </>
               ) : (
                 headline
               )}
             </h1>
-            <p className="text-base lg:text-lg text-gray-600 max-w-lg mx-auto lg:mx-0">
+            <p className={`text-base lg:text-lg max-w-lg mx-auto lg:mx-0 ${
+              videoSrc ? 'text-gray-200' : 'text-gray-600'
+            }`}>
               {subheadline}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
@@ -66,7 +91,9 @@ export function HeroSection() {
                 </Button>
               </Link>
               <Link href="/rfq/create">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto h-12 px-8 rounded-xl text-base">
+                <Button size="lg" variant="outline" className={`w-full sm:w-auto h-12 px-8 rounded-xl text-base ${
+                  videoSrc ? 'bg-transparent text-white border-white/50 hover:bg-white/10' : ''
+                }`}>
                   Custom Order
                 </Button>
               </Link>
@@ -76,27 +103,39 @@ export function HeroSection() {
           {/* Stats Card */}
           <div className="relative mt-8 lg:mt-0">
             <div className="aspect-square bg-gradient-to-br from-gold-200 to-gold-400 rounded-full opacity-20 absolute -top-10 -right-10 w-72 h-72 blur-3xl" />
-            <div className="relative bg-white rounded-2xl lg:rounded-3xl shadow-2xl shadow-gold-500/10 p-6 lg:p-8">
+            <div className={`relative rounded-2xl lg:rounded-3xl shadow-2xl p-6 lg:p-8 ${
+              videoSrc
+                ? 'bg-white/10 backdrop-blur-md border border-white/20 shadow-black/20'
+                : 'bg-white shadow-gold-500/10'
+            }`}>
               <div className="grid grid-cols-2 gap-3 lg:gap-4">
-                <div className="bg-gradient-to-br from-gold-50 to-amber-50 rounded-xl lg:rounded-2xl p-4 lg:p-6 text-center">
-                  <Gem className="h-6 w-6 lg:h-8 lg:w-8 mx-auto text-gold-600 mb-2" />
-                  <p className="text-xl lg:text-2xl font-bold text-gray-900">500+</p>
-                  <p className="text-xs lg:text-sm text-gray-600">Unique Designs</p>
+                <div className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 text-center ${
+                  videoSrc ? 'bg-white/10 backdrop-blur-sm' : 'bg-gradient-to-br from-gold-50 to-amber-50'
+                }`}>
+                  <Gem className={`h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 ${videoSrc ? 'text-gold-300' : 'text-gold-600'}`} />
+                  <p className={`text-xl lg:text-2xl font-bold ${videoSrc ? 'text-white' : 'text-gray-900'}`}>500+</p>
+                  <p className={`text-xs lg:text-sm ${videoSrc ? 'text-gray-300' : 'text-gray-600'}`}>Unique Designs</p>
                 </div>
-                <div className="bg-gradient-to-br from-gold-50 to-amber-50 rounded-xl lg:rounded-2xl p-4 lg:p-6 text-center">
-                  <ShieldCheck className="h-6 w-6 lg:h-8 lg:w-8 mx-auto text-gold-600 mb-2" />
-                  <p className="text-xl lg:text-2xl font-bold text-gray-900">100%</p>
-                  <p className="text-xs lg:text-sm text-gray-600">Certified Pure</p>
+                <div className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 text-center ${
+                  videoSrc ? 'bg-white/10 backdrop-blur-sm' : 'bg-gradient-to-br from-gold-50 to-amber-50'
+                }`}>
+                  <ShieldCheck className={`h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 ${videoSrc ? 'text-gold-300' : 'text-gold-600'}`} />
+                  <p className={`text-xl lg:text-2xl font-bold ${videoSrc ? 'text-white' : 'text-gray-900'}`}>100%</p>
+                  <p className={`text-xs lg:text-sm ${videoSrc ? 'text-gray-300' : 'text-gray-600'}`}>Certified Pure</p>
                 </div>
-                <div className="bg-gradient-to-br from-gold-50 to-amber-50 rounded-xl lg:rounded-2xl p-4 lg:p-6 text-center">
-                  <HeartHandshake className="h-6 w-6 lg:h-8 lg:w-8 mx-auto text-gold-600 mb-2" />
-                  <p className="text-xl lg:text-2xl font-bold text-gray-900">50+</p>
-                  <p className="text-xs lg:text-sm text-gray-600">Trusted Sellers</p>
+                <div className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 text-center ${
+                  videoSrc ? 'bg-white/10 backdrop-blur-sm' : 'bg-gradient-to-br from-gold-50 to-amber-50'
+                }`}>
+                  <HeartHandshake className={`h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 ${videoSrc ? 'text-gold-300' : 'text-gold-600'}`} />
+                  <p className={`text-xl lg:text-2xl font-bold ${videoSrc ? 'text-white' : 'text-gray-900'}`}>50+</p>
+                  <p className={`text-xs lg:text-sm ${videoSrc ? 'text-gray-300' : 'text-gray-600'}`}>Trusted Sellers</p>
                 </div>
-                <div className="bg-gradient-to-br from-gold-50 to-amber-50 rounded-xl lg:rounded-2xl p-4 lg:p-6 text-center">
-                  <Star className="h-6 w-6 lg:h-8 lg:w-8 mx-auto text-gold-600 mb-2" />
-                  <p className="text-xl lg:text-2xl font-bold text-gray-900">4.9</p>
-                  <p className="text-xs lg:text-sm text-gray-600">Avg. Rating</p>
+                <div className={`rounded-xl lg:rounded-2xl p-4 lg:p-6 text-center ${
+                  videoSrc ? 'bg-white/10 backdrop-blur-sm' : 'bg-gradient-to-br from-gold-50 to-amber-50'
+                }`}>
+                  <Star className={`h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 ${videoSrc ? 'text-gold-300' : 'text-gold-600'}`} />
+                  <p className={`text-xl lg:text-2xl font-bold ${videoSrc ? 'text-white' : 'text-gray-900'}`}>4.9</p>
+                  <p className={`text-xs lg:text-sm ${videoSrc ? 'text-gray-300' : 'text-gray-600'}`}>Avg. Rating</p>
                 </div>
               </div>
             </div>
