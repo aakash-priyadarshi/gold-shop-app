@@ -56,7 +56,7 @@ flowchart LR
 
 Dashboard route map (folder inventory):
 - Customer dashboard (`apps/web/src/app/dashboard/customer`): `orders/`, `payments/`, `rfqs/`, `settings/`, `wishlist/`, `messages/`, `refunds/`.
-- Shop dashboard (`apps/web/src/app/dashboard/shop`): `analytics/`, `catalogues/`, `commissions/`, `customers/`, `engagement/`, `inventory/`, `invoices/`, `orders/`, `pricing/`, `products/`, `profile/`, `quotes/`, `rfqs/`, `settings/`, `shop-profile/`, `tools/`, `messages/`, `variants/`.
+- Shop dashboard (`apps/web/src/app/dashboard/shop`): `analytics/`, `catalogues/`, `commissions/`, `customers/`, `engagement/`, `inventory/`, `invoices/`, `orders/`, `pos/`, `pricing/`, `products/`, `profile/`, `quotes/`, `rfqs/`, `settings/`, `shop-profile/`, `tools/`, `messages/`, `variants/`.
 - Admin dashboard (`apps/web/src/app/dashboard/admin`): `shops/`, `users/`, `verifications/`, `orders/`, `commissions/`, `intelligence/`, `reports/`, `settings/`, `profile/`, `support/`, `chat-monitoring/`, `refunds/`, `messages/`.
 - Sales dashboard (`apps/web/src/app/dashboard/sales`): `shops/`, `orders/`, `messages/`, `profile/`.
 - Support dashboard (`apps/web/src/app/dashboard/support`): `tickets/`, `page.tsx` (overview).
@@ -104,6 +104,7 @@ Backend module inventory (`apps/api/src/modules/*`):
 - `support`: internal operations dashboard aggregating pending refunds, flagged conversations, KYC queue, and order monitoring; **ticket system** (SupportTicket + TicketMessage models, real-time WebSocket `/support` namespace, claim/resolve/close lifecycle, internal notes, auto-priority); **AI chatbot** (Gemini Flash 2.0 for public help queries with escalation to tickets)
 - `product-variants`: size variant management for rings/bangles/bracelets with SKU-level stock, price overrides, and standardised size charts
 - `catalogue`: seller catalogue system — shareable product catalogues with showroom mode, password protection, walk-in RFQ creation, analytics, and chat integration (product cards, catalogue links, showroom sessions)
+- `pos`: POS basket from customer likes/picks — session-based basket with stock reservations, checkout-to-invoice, 30-min expiry via Bull cron
 
 ### Images (Cloudflare Worker + R2)
 
@@ -726,4 +727,50 @@ Worker (`cloudflare-worker`):
 
 **New env vars**: `CATALOGUE_TOKEN_SECRET`, `IP_HASH_SALT`.
 
+---
+
+### 4.14 POS Basket (from Customer Likes/Picks)
+
+**Purpose**: Allows shopkeepers to build a point-of-sale basket from items a customer has liked/wishlisted, then checkout to create an invoice and decrement stock in one flow.
+
+**Data models** (Prisma):
+- `WishlistItem`: `userId` + `inventoryItemId` (unique constraint), customer's liked items
+- `PosSession`: time-limited basket (30 min) per shop — `shopId`, `customerId?`, `conversationId?`, `status` (`ACTIVE`/`CHECKED_OUT`/`CANCELLED`/`EXPIRED`), `expiresAt`
+- `PosSessionItem`: line items in session — `inventoryItemId`, `variantId?`, `qty`, `unitPrice` (locked at add-time), `lineTotal`
+- `StockReservation`: soft reservation per session — `inventoryItemId`, `variantId?`, `qty`, `expiresAt`; prevents overselling across concurrent sessions
+- `PosSessionStatus` enum: `ACTIVE`, `CHECKED_OUT`, `CANCELLED`, `EXPIRED`
+- `NotificationType` extended: `POS_SESSION_CREATED`, `POS_CHECKOUT_COMPLETED`
+
+**Backend** (`apps/api/src/modules/pos/`):
+- `PosModule` → `PosController` + `PosService`
+- Endpoints (all `@Roles("SHOPKEEPER")`):
+  - `GET /pos/customer-picks/:customerId` — returns wishlist items belonging to this shop (relationship-gated: requires conversation or order)
+  - `GET /pos/session/active` — get current active POS session
+  - `POST /pos/session` — create session (auto-cancels any existing active session)
+  - `POST /pos/session/:id/items` — add items to basket (reserves stock)
+  - `PATCH /pos/session/:id/items/:itemId` — update qty (qty=0 removes)
+  - `POST /pos/session/:id/checkout` — create invoice via `InvoicesService`, decrement stock, release reservations
+  - `DELETE /pos/session/:id` — cancel session, release reservations
+- Stock reservation: separate `StockReservation` table, not fields on `ProductVariant`; aggregated check before each add; released on checkout/cancel/expire
+- Price locking: `unitPrice` captured at add-time from `InventoryItem.totalPriceNpr` or `ProductVariant.priceOverride`
+
+**Background job** (`apps/api/src/modules/jobs/processors/pos-expiry.processor.ts`):
+- Cron: every 5 minutes, finds `ACTIVE` sessions past `expiresAt`, releases reservations, marks `EXPIRED`
+- Also available as Bull job (`pos-expiry` queue, `expire-sessions` process)
+
+**Frontend** (`apps/web/src/app/dashboard/shop/pos/page.tsx`):
+- Customer picker → loads wishlist items via `GET /pos/customer-picks/:id`
+- Basket panel with qty +/- controls, variant display, running totals
+- Checkout dialog: customer name, phone, email, tax rate, discount, notes → creates invoice
+- Auto-session from chat: URL params `?customerId=...&conversationId=...` auto-create session and load picks
+- Nav item: "POS Basket" with `ScanLine` icon in shopkeeper sidebar (after "Walk-in Quotes")
+
+**Chat integration** (`apps/web/src/app/dashboard/shop/messages/page.tsx`):
+- "Load Picks to POS" button in conversation header → navigates to `/dashboard/shop/pos?customerId=...&conversationId=...`
+
+**Tests** (`apps/api/src/modules/pos/pos.spec.ts`):
+- Relationship gating (ForbiddenException when no conversation/order)
+- Stock reservation conflicts (BadRequestException on insufficient stock)
+- Checkout flow (invoice creation, stock decrement, reservation cleanup)
+- Session cancellation and expiry cleanup
 

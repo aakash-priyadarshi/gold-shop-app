@@ -802,4 +802,33 @@ export const variantsApi = {
     }),
 };
 
+// ─── POS API ───
+export const posApi = {
+  getCustomerPicks: (customerId: string) =>
+    api.get(`/pos/customer-picks/${customerId}`),
+  getActiveSession: () => api.get("/pos/session/active"),
+  createSession: (data: { customerId?: string; conversationId?: string }) =>
+    api.post("/pos/session", data),
+  addItems: (
+    sessionId: string,
+    items: Array<{ inventoryItemId: string; variantId?: string; qty: number }>,
+  ) => api.post(`/pos/session/${sessionId}/items`, { items }),
+  updateItem: (sessionId: string, itemId: string, qty: number) =>
+    api.patch(`/pos/session/${sessionId}/items/${itemId}`, { qty }),
+  checkout: (
+    sessionId: string,
+    data: {
+      customerName: string;
+      customerPhone?: string;
+      customerEmail?: string;
+      notes?: string;
+      taxRate?: number;
+      discountAmount?: number;
+    },
+  ) => api.post(`/pos/session/${sessionId}/checkout`, data),
+  cancelSession: (sessionId: string) =>
+    api.delete(`/pos/session/${sessionId}`),
+  getSession: (sessionId: string) => api.get(`/pos/session/${sessionId}`),
+};
+
 export default api;
