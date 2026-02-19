@@ -864,24 +864,24 @@ export class ChatService {
       },
       select: {
         id: true,
-        title: true,
+        nameEn: true,
         images: true,
         totalPriceNpr: true,
-        metal: true,
-        purity: true,
+        jewelleryType: true,
+        buildMethod: true,
         visibility: true,
         variants: {
-          select: { id: true, size: true, stock: true },
+          select: { id: true, sizeLabel: true, stock: true },
         },
       },
     });
 
-    const productCards = inventoryItems.map((inv) => ({
+    const productCards = inventoryItems.map((inv: any) => ({
       inventoryItemId: inv.id,
-      title: inv.title,
+      title: inv.nameEn,
       imageUrl: (inv.images as string[])?.[0] || null,
       priceLabel: inv.totalPriceNpr ? `NPR ${inv.totalPriceNpr.toLocaleString()}` : "Price on request",
-      sizesAvailable: inv.variants?.filter((v) => v.stock > 0).map((v) => v.size) || [],
+      sizesAvailable: inv.variants?.filter((v: any) => v.stock > 0).map((v: any) => v.sizeLabel) || [],
       deepLink: inv.visibility === "CATALOGUE_ONLY" ? null : `/products/${inv.id}`,
     }));
 
@@ -938,7 +938,7 @@ export class ChatService {
         throw new BadRequestException(`Item ${item.inventoryItemId} not found in your shop`);
       }
       if (inv.visibility === InventoryVisibility.HIDDEN) {
-        throw new BadRequestException(`Item ${inv.title} is hidden`);
+        throw new BadRequestException(`Item ${inv.nameEn} is hidden`);
       }
     }
 
@@ -970,7 +970,7 @@ export class ChatService {
         specialInstructions: dto.notes,
         referenceImages: [],
         walkInMeta: walkInMeta as any,
-        status: RfqStatus.SUBMITTED,
+        status: RfqStatus.SENT_TO_SHOPS,
       },
     });
 

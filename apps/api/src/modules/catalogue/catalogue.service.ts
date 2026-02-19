@@ -109,10 +109,10 @@ export class CatalogueService {
             inventoryItem: {
               select: {
                 id: true,
-                title: true,
-                titleNe: true,
-                metal: true,
-                purity: true,
+                nameEn: true,
+                nameNe: true,
+                jewelleryType: true,
+                buildMethod: true,
                 images: true,
                 totalPriceNpr: true,
                 status: true,
@@ -120,9 +120,9 @@ export class CatalogueService {
                 variants: {
                   select: {
                     id: true,
-                    size: true,
+                    sizeLabel: true,
                     stock: true,
-                    additionalPriceNpr: true,
+                    priceOverride: true,
                   },
                 },
               },
@@ -237,9 +237,9 @@ export class CatalogueService {
         inventoryItem: {
           select: {
             id: true,
-            title: true,
-            metal: true,
-            purity: true,
+            nameEn: true,
+            jewelleryType: true,
+            buildMethod: true,
             images: true,
             totalPriceNpr: true,
           },
@@ -310,7 +310,7 @@ export class CatalogueService {
             id: true,
             shopName: true,
             shopNameNe: true,
-            logo: true,
+            profileImage: true,
             city: true,
           },
         },
@@ -395,22 +395,21 @@ export class CatalogueService {
         inventoryItem: {
           select: {
             id: true,
-            title: true,
-            titleNe: true,
-            metal: true,
-            purity: true,
+            nameEn: true,
+            nameNe: true,
+            jewelleryType: true,
+            buildMethod: true,
             images: true,
             totalPriceNpr: true,
-            weightGrams: true,
+            totalWeightGrams: true,
             status: true,
             visibility: true,
-            jewelleryType: true,
             variants: {
               select: {
                 id: true,
-                size: true,
+                sizeLabel: true,
                 stock: true,
-                additionalPriceNpr: true,
+                priceOverride: true,
               },
             },
           },
@@ -418,7 +417,7 @@ export class CatalogueService {
       },
     });
 
-    return items.map((item) => ({
+    return items.map((item: any) => ({
       id: item.id,
       inventoryItemId: item.inventoryItemId,
       sortOrder: item.sortOrder,
@@ -426,10 +425,10 @@ export class CatalogueService {
       inventoryItem: {
         ...item.inventoryItem,
         sizesAvailable: item.inventoryItem.variants
-          ?.filter((v) => v.stock > 0)
-          .map((v) => v.size)
+          ?.filter((v: any) => v.stock > 0)
+          .map((v: any) => v.sizeLabel)
           .filter(Boolean),
-        hasStock: item.inventoryItem.variants?.some((v) => v.stock > 0) ?? true,
+        hasStock: item.inventoryItem.variants?.some((v: any) => v.stock > 0) ?? true,
       },
     }));
   }
@@ -520,30 +519,39 @@ export class CatalogueService {
       throw new NotFoundException("Catalogue not found");
     }
 
-    // Create a ShopQuote or store as metadata
-    // Using the ShopQuote model if available, otherwise creating an RFQ-like quote
-    const quote = await this.prisma.shopQuote.create({
+    // Find or create conversation between customer and shop
+    let conversation = await this.prisma.conversation.findFirst({
+      where: { buyerId: userId, shopId: catalogue.shopId },
+    });
+
+    if (!conversation) {
+      conversation = await this.prisma.conversation.create({
+        data: { buyerId: userId, shopId: catalogue.shopId },
+      });
+    }
+
+    // Create a system message with the quote request details
+    const itemSummary = items.map((i) => `${i.inventoryItemId} x${i.qty ?? 1}`).join(", ");
+    await this.prisma.message.create({
       data: {
-        shopId: catalogue.shopId,
-        customerId: userId,
-        quoteNumber: `CQ-${Date.now().toString(36).toUpperCase()}`,
-        items: items.map((i) => ({
-          inventoryItemId: i.inventoryItemId,
-          variantId: i.variantId,
-          quantity: i.qty ?? 1,
-        })),
-        metadata: {
-          source: "CATALOGUE",
-          slug,
+        conversationId: conversation.id,
+        senderId: userId,
+        senderRole: "CUSTOMER",
+        content: `Quote request from catalogue "${catalogue.name}": ${items.length} item(s)${notes ? `. Notes: ${notes}` : ""}`,
+        isSystem: false,
+        isSystemGenerated: true,
+        messageType: "RFQ_ACTION",
+        payload: {
+          type: "CATALOGUE_QUOTE_REQUEST",
+          catalogueSlug: slug,
           catalogueName: catalogue.name,
-          selectedItems: items,
+          items,
+          notes,
         },
-        status: "DRAFT",
-        totalAmount: 0,
       },
     });
 
-    return { quoteId: quote.id };
+    return { conversationId: conversation.id };
   }
 
   async messageShopFromCatalogue(slug: string, userId: string) {

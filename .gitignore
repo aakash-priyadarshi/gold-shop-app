@@ -32,14 +32,21 @@ credentials/
 **/secrets/
 **/credentials/
 
-# API keys and tokens (common patterns)
+# API keys and tokens (common patterns — files only, not .ts source)
 *apikey*
 *api_key*
 *secret*
 *.secret
 *token*
-!*.token.ts  # Allow TypeScript token files
-!**/token/   # Allow token directories in code
+!*.ts
+!*.tsx
+!*.js
+!*.jsx
+!**/*.ts
+!**/*.tsx
+!**/*.js
+!**/*.jsx
+!**/token/
 
 # Railway/Vercel deployment secrets
 railway.json

@@ -579,7 +579,7 @@ export class RfqService {
                   RfqStatus.OFFERS_RECEIVED,
                   RfqStatus.OFFER_SELECTED,
                   RfqStatus.CONFIRMED,
-                  RfqStatus.SUBMITTED,
+                  RfqStatus.SENT_TO_SHOPS,
                 ],
               },
             }
@@ -836,7 +836,7 @@ export class RfqService {
       }
       if (invItem.visibility === InventoryVisibility.HIDDEN) {
         throw new BadRequestException(
-          `Inventory item ${invItem.title} is hidden and cannot be used in RFQ`,
+          `Inventory item ${invItem.nameEn} is hidden and cannot be used in RFQ`,
         );
       }
     }
@@ -866,9 +866,9 @@ export class RfqService {
         budgetMaxNpr: dto.budgetMax,
         preferredDeliveryDays: dto.deadlineDays,
         specialInstructions: dto.notes,
-        referenceImages: dto.attachments?.map((a) => a.url || a.key).filter(Boolean) || [],
+        referenceImages: (dto.attachments?.map((a) => a.url || a.key).filter((x): x is string => !!x)) || [],
         walkInMeta: walkInMeta as any,
-        status: RfqStatus.SUBMITTED,
+        status: RfqStatus.SENT_TO_SHOPS,
       },
     });
 
