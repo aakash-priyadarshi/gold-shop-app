@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { AdminGuard } from '@/components/auth/RouteGuard';
+import { AppearanceSettings } from '@/components/settings/AppearanceSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -478,6 +479,9 @@ export default function AdminProfilePage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Appearance */}
+        <AppearanceSettings />
 
         {/* OTP Verification Dialog */}
         <Dialog open={otpDialogOpen} onOpenChange={setOtpDialogOpen}>

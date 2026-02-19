@@ -327,7 +327,10 @@ export function Header() {
 
   // Toggle theme between light/dark using next-themes
   const toggleTheme = () => {
-    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+    const newTheme = resolvedTheme === "dark" ? "light" : "dark";
+    setTheme(newTheme);
+    // Persist to server if authenticated
+    (window as any).__saveThemeToServer?.(newTheme);
   };
 
   // Determine current icon based on resolved theme

@@ -2,6 +2,7 @@
 
 import { CartProvider } from "@/contexts/CartContext";
 import { ChatPopupProvider } from "@/contexts/ChatPopupContext";
+import { ThemeSyncProvider } from "@/components/ThemeSyncProvider";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { MarketProvider, useMarket } from "@/hooks/useMarket";
 import {
@@ -156,13 +157,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <AuthProvider>
-            <CartProvider>
-              <MarketProvider>
-                <ChatPopupProvider>
-                  <MarketPreferencesSync>{children}</MarketPreferencesSync>
-                </ChatPopupProvider>
-              </MarketProvider>
-            </CartProvider>
+            <ThemeSyncProvider>
+              <CartProvider>
+                <MarketProvider>
+                  <ChatPopupProvider>
+                    <MarketPreferencesSync>{children}</MarketPreferencesSync>
+                  </ChatPopupProvider>
+                </MarketProvider>
+              </CartProvider>
+            </ThemeSyncProvider>
           </AuthProvider>
         </ThemeProvider>
       </QueryClientProvider>

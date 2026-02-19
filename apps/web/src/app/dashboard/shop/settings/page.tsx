@@ -2,6 +2,7 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -1057,6 +1058,9 @@ export default function ShopSettingsPage() {
               </Card>
             </TabsContent>
           </Tabs>
+
+          {/* Appearance */}
+          <AppearanceSettings />
         </div>
       </DashboardLayout>
     </ShopGuard>

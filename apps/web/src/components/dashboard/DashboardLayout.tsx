@@ -43,6 +43,7 @@ import {
   LogOut,
   Menu,
   MessageSquare,
+  Moon,
   Package,
   Receipt,
   Search,
@@ -51,13 +52,12 @@ import {
   ShieldAlert,
   ShoppingCart,
   Store,
+  Sun,
   Ticket,
   TrendingUp,
   UserCircle,
   Users,
   Wrench,
-  Moon,
-  Sun,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
@@ -451,7 +451,9 @@ function SidebarContent({
             <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
               {user.firstName} {user.lastName}
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate mb-1">{user.email}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate mb-1">
+              {user.email}
+            </p>
             {getRoleBadge(user.role)}
           </div>
         </div>
@@ -573,7 +575,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Fetch dynamic badge counts for admin
   useEffect(() => {
@@ -600,7 +604,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 animate-pulse"></div>
             <div className="absolute inset-0 w-16 h-16 rounded-2xl border-4 border-gold-200 dark:border-gold-800 animate-spin border-t-transparent"></div>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Loading...</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+            Loading...
+          </p>
         </div>
       </div>
     );
@@ -679,7 +685,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              onClick={() => {
+                const newTheme = resolvedTheme === "dark" ? "light" : "dark";
+                setTheme(newTheme);
+                (window as any).__saveThemeToServer?.(newTheme);
+              }}
               className="touch-target text-gray-500 dark:text-gray-400"
             >
               {mounted && resolvedTheme === "dark" ? (
@@ -706,7 +716,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     <p className="font-medium">
                       {user.firstName} {user.lastName}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {user.email}
+                    </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -723,7 +735,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="text-red-600 dark:text-red-400">
+                <DropdownMenuItem
+                  onClick={logout}
+                  className="text-red-600 dark:text-red-400"
+                >
                   <LogOut className="h-4 w-4 mr-2" />
                   Sign out
                 </DropdownMenuItem>
@@ -778,7 +793,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                onClick={() => {
+                  const newTheme = resolvedTheme === "dark" ? "light" : "dark";
+                  setTheme(newTheme);
+                  (window as any).__saveThemeToServer?.(newTheme);
+                }}
                 className="rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
               >
                 {mounted && resolvedTheme === "dark" ? (
@@ -803,7 +822,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                       </AvatarFallback>
                     </Avatar>
                     <div className="hidden xl:block text-left">
-                      <p className="text-sm font-medium dark:text-gray-200">{user.firstName}</p>
+                      <p className="text-sm font-medium dark:text-gray-200">
+                        {user.firstName}
+                      </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
                         {user.role.toLowerCase()}
                       </p>
@@ -817,7 +838,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                       <p className="font-medium">
                         {user.firstName} {user.lastName}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {user.email}
+                      </p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -836,7 +859,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={logout} className="text-red-600 dark:text-red-400">
+                  <DropdownMenuItem
+                    onClick={logout}
+                    className="text-red-600 dark:text-red-400"
+                  >
                     <LogOut className="h-4 w-4 mr-2" />
                     Sign out
                   </DropdownMenuItem>
