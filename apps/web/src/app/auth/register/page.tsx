@@ -576,9 +576,9 @@ function RegisterForm() {
         skipIntro={true}
         onAnimationComplete={handleAnimationComplete}
       >
-        <Card className="w-full max-w-md border-0 shadow-2xl shadow-gold-500/10 bg-white/95 backdrop-blur-sm">
+        <Card className="w-full max-w-md border-0 shadow-2xl shadow-gold-500/10 bg-white/95 dark:bg-[#161B22]/95 backdrop-blur-sm">
           <CardHeader className="space-y-1 text-center pb-4">
-            <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-gold-100 to-gold-200 flex items-center justify-center mb-2">
+            <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-gold-100 to-gold-200 dark:from-gold-900/50 dark:to-gold-800/50 flex items-center justify-center mb-2">
               <EnvelopeIcon className="w-8 h-8 text-gold-600" />
             </div>
             <CardTitle className="text-2xl font-bold">
@@ -587,7 +587,7 @@ function RegisterForm() {
             <CardDescription className="text-base">
               We've sent a 6-digit code to
               <br />
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-gray-900 dark:text-gray-100">
                 {registrationData.email}
               </span>
             </CardDescription>
@@ -613,8 +613,8 @@ function RegisterForm() {
                       "w-12 h-14 text-center text-xl font-semibold rounded-xl border-2 transition-all",
                       "focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500",
                       otpError
-                        ? "border-red-300 bg-red-50"
-                        : "border-gray-200 bg-white",
+                        ? "border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30"
+                        : "border-gray-200 dark:border-gray-600 bg-white dark:bg-[#0B0C10]",
                     )}
                     autoFocus={index === 0}
                   />
@@ -650,7 +650,7 @@ function RegisterForm() {
 
             {/* Resend Code */}
             <div className="text-center">
-              <p className="text-sm text-gray-500 mb-2">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
                 Didn't receive the code?
               </p>
               <Button
@@ -658,7 +658,7 @@ function RegisterForm() {
                 size="sm"
                 onClick={handleResendOtp}
                 disabled={resendCooldown > 0}
-                className="text-gold-600 hover:text-gold-700 hover:bg-gold-50"
+                className="text-gold-600 hover:text-gold-700 hover:bg-gold-50 dark:hover:bg-gold-950/30"
               >
                 {resendCooldown > 0 ? (
                   <span className="flex items-center gap-1">
@@ -683,7 +683,7 @@ function RegisterForm() {
                   setOtpCode(["", "", "", "", "", ""]);
                   setOtpError("");
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 ← Back to registration
               </Button>
@@ -699,7 +699,7 @@ function RegisterForm() {
       skipIntro={hasVisited}
       onAnimationComplete={handleAnimationComplete}
     >
-      <Card className="w-full max-w-lg border-0 shadow-2xl shadow-gold-500/10 bg-white/95 backdrop-blur-sm login-form-item">
+      <Card className="w-full max-w-lg border-0 shadow-2xl shadow-gold-500/10 bg-white/95 dark:bg-[#161B22]/95 backdrop-blur-sm login-form-item">
         <CardHeader className="space-y-1 text-center pb-2">
           <CardTitle className="text-2xl font-bold">
             Create an account
@@ -714,17 +714,17 @@ function RegisterForm() {
             value={activeTab}
             onValueChange={(v) => setActiveTab(v as "customer" | "shopkeeper")}
           >
-            <TabsList className="grid w-full grid-cols-2 mb-6 h-12 rounded-xl p-1 bg-gray-100">
+            <TabsList className="grid w-full grid-cols-2 mb-6 h-12 rounded-xl p-1 bg-gray-100 dark:bg-gray-800">
               <TabsTrigger
                 value="customer"
-                className="flex items-center gap-2 rounded-lg data-[state=active]:shadow-sm data-[state=active]:bg-white"
+                className="flex items-center gap-2 rounded-lg data-[state=active]:shadow-sm data-[state=active]:bg-white dark:data-[state=active]:bg-[#0B0C10]"
               >
                 <UserIcon className="h-4 w-4" />
                 Customer
               </TabsTrigger>
               <TabsTrigger
                 value="shopkeeper"
-                className="flex items-center gap-2 rounded-lg data-[state=active]:shadow-sm data-[state=active]:bg-white"
+                className="flex items-center gap-2 rounded-lg data-[state=active]:shadow-sm data-[state=active]:bg-white dark:data-[state=active]:bg-[#0B0C10]"
               >
                 <BuildingStorefrontIcon className="h-4 w-4" />
                 Seller
@@ -732,7 +732,7 @@ function RegisterForm() {
             </TabsList>
 
             {error && (
-              <div className="flex items-center gap-3 p-4 mb-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm animate-slideUp">
+              <div className="flex items-center gap-3 p-4 mb-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-xl text-red-700 dark:text-red-300 text-sm animate-slideUp">
                 <ExclamationCircleIcon className="h-5 w-5 shrink-0" />
                 <span>{error}</span>
               </div>
@@ -1037,10 +1037,10 @@ function RegisterForm() {
                 {/* Google OAuth for Customer */}
                 <div className="relative my-4">
                   <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-gray-200" />
+                    <span className="w-full border-t border-gray-200 dark:border-gray-700" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-white px-2 text-gray-500">
+                    <span className="bg-white dark:bg-[#161B22] px-2 text-gray-500 dark:text-gray-400">
                       Or continue with
                     </span>
                   </div>
@@ -1049,7 +1049,7 @@ function RegisterForm() {
                   type="button"
                   variant="outline"
                   onClick={() => googleLogin("CUSTOMER", "register")}
-                  className="w-full h-11 rounded-xl border-gray-200 hover:bg-gray-50 flex items-center justify-center gap-3"
+                  className="w-full h-11 rounded-xl border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center justify-center gap-3"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path
@@ -1080,8 +1080,8 @@ function RegisterForm() {
                 onSubmit={shopkeeperForm.handleSubmit(onShopkeeperSubmit)}
                 className="space-y-4"
               >
-                <div className="border-b pb-4 mb-4">
-                  <h3 className="font-semibold text-sm text-gray-500 uppercase tracking-wider mb-3">
+                <div className="border-b dark:border-gray-700 pb-4 mb-4">
+                  <h3 className="font-semibold text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
                     Personal Details
                   </h3>
                   <div className="grid grid-cols-2 gap-4">
@@ -1302,7 +1302,7 @@ function RegisterForm() {
                 </div>
 
                 <div>
-                  <h3 className="font-semibold text-sm text-gray-500 uppercase tracking-wider mb-3">
+                  <h3 className="font-semibold text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
                     Shop Details
                   </h3>
                   <div className="space-y-4">
@@ -1408,7 +1408,7 @@ function RegisterForm() {
                   </div>
                 </div>
 
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800 flex items-start gap-3">
+                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-xl p-4 text-sm text-amber-800 dark:text-amber-200 flex items-start gap-3">
                   <InformationCircleIcon className="h-5 w-5 shrink-0 mt-0.5 text-amber-500" />
                   <div>
                     <strong>Note:</strong> Shop registrations require
@@ -1502,10 +1502,10 @@ function RegisterForm() {
                 {/* Google OAuth for Shopkeeper */}
                 <div className="relative my-4">
                   <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-gray-200" />
+                    <span className="w-full border-t border-gray-200 dark:border-gray-700" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-white px-2 text-gray-500">
+                    <span className="bg-white dark:bg-[#161B22] px-2 text-gray-500 dark:text-gray-400">
                       Or continue with
                     </span>
                   </div>
@@ -1514,7 +1514,7 @@ function RegisterForm() {
                   type="button"
                   variant="outline"
                   onClick={() => googleLogin("SHOPKEEPER", "register")}
-                  className="w-full h-11 rounded-xl border-gray-200 hover:bg-gray-50 flex items-center justify-center gap-3"
+                  className="w-full h-11 rounded-xl border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center justify-center gap-3"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path
