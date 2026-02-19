@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 interface HeroVideoProps {
   /** Full CDN URL to the .mp4 hero video (resolved server-side). */
@@ -18,59 +18,88 @@ interface HeroVideoProps {
  *  - prefers-reduced-motion: pauses video, shows poster
  *  - Fixed-height container to prevent layout shift
  *  - No hydration mismatch (videoSrc comes from the server)
+ *  - React.memo to survive parent re-renders (useMarket state changes)
+ *  - Auto-restart on unexpected pause events
  */
-export function HeroVideo({
+function HeroVideoInner({
   videoSrc,
   poster,
   className = "",
 }: HeroVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const intentionalPause = useRef(false);
 
-  // React has a known bug where `muted` JSX prop doesn't apply to the DOM.
-  // We must set it imperatively via ref, then trigger play().
-  useEffect(() => {
+  // Check prefers-reduced-motion once on mount (no state — avoids re-render)
+  const reducedMotionRef = useRef(false);
+  const [, forceRender] = useState(0);
+
+  const ensurePlaying = useCallback(() => {
     const video = videoRef.current;
-    if (!video) return;
-
-    // Always ensure muted is set
+    if (!video || reducedMotionRef.current || intentionalPause.current) return;
     video.muted = true;
-
-    // Respect prefers-reduced-motion
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(mq.matches);
-
-    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-    mq.addEventListener("change", handler);
-
-    // Start playback
-    if (!mq.matches) {
-      video.play().catch(() => {
-        // Autoplay blocked — silently ignore (poster will show)
-      });
+    if (video.paused) {
+      video.play().catch(() => {});
     }
-
-    return () => mq.removeEventListener("change", handler);
   }, []);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
+    // Imperatively set muted (React JSX bug)
     video.muted = true;
-    if (reducedMotion) {
-      video.pause();
-    } else {
-      video.play().catch(() => {});
+
+    // Prefers-reduced-motion
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    reducedMotionRef.current = mq.matches;
+
+    const motionHandler = (e: MediaQueryListEvent) => {
+      reducedMotionRef.current = e.matches;
+      intentionalPause.current = e.matches;
+      if (e.matches) {
+        video.pause();
+      } else {
+        ensurePlaying();
+      }
+      forceRender((n) => n + 1);
+    };
+    mq.addEventListener("change", motionHandler);
+
+    // Auto-restart: whenever the browser pauses (e.g. React re-render,
+    // layout reflow, or resource contention), resume playback immediately.
+    const pauseHandler = () => {
+      if (!reducedMotionRef.current && !intentionalPause.current) {
+        // Small delay to avoid tight loop with browser's own pause/play cycle
+        setTimeout(ensurePlaying, 50);
+      }
+    };
+    video.addEventListener("pause", pauseHandler);
+
+    // Also listen for when the video has enough data to play
+    const canPlayHandler = () => ensurePlaying();
+    video.addEventListener("canplay", canPlayHandler);
+
+    // Kick off initial playback
+    if (!mq.matches) {
+      ensurePlaying();
     }
-  }, [reducedMotion]);
+
+    // Failsafe: periodically check video is playing (covers edge cases)
+    const interval = setInterval(ensurePlaying, 2000);
+
+    return () => {
+      mq.removeEventListener("change", motionHandler);
+      video.removeEventListener("pause", pauseHandler);
+      video.removeEventListener("canplay", canPlayHandler);
+      clearInterval(interval);
+    };
+  }, [ensurePlaying]);
 
   return (
     <div
       className={`absolute inset-0 overflow-hidden ${className}`}
       aria-hidden="true"
     >
-      {/* Video element — muted set via ref due to React bug */}
       <video
         ref={videoRef}
         className="absolute inset-0 h-full w-full object-cover"
@@ -88,3 +117,7 @@ export function HeroVideo({
     </div>
   );
 }
+
+// React.memo prevents re-renders from parent useMarket state changes
+// (HeroSection re-renders on country detection but videoSrc never changes)
+export const HeroVideo = React.memo(HeroVideoInner);
