@@ -170,13 +170,13 @@ export default {
       // Support both /images/key and /key formats
       if (path.startsWith("/images/")) {
         const key = path.replace("/images/", "");
-        return handleServe(key, env, corsHeaders);
+        return handleServe(key, env, corsHeaders, request);
       }
 
       // Serve videos from /vid/ path (hero videos, etc.)
       if (path.startsWith("/vid/")) {
         const key = path.substring(1); // Remove leading slash → "vid/filename.mp4"
-        return handleServe(key, env, corsHeaders);
+        return handleServe(key, env, corsHeaders, request);
       }
 
       // Serve images from root path (e.g., /product/123.jpg)
@@ -189,7 +189,7 @@ export default {
         path.startsWith("/chat/")
       ) {
         const key = path.substring(1); // Remove leading slash
-        return handleServe(key, env, corsHeaders);
+        return handleServe(key, env, corsHeaders, request);
       }
 
       return new Response(JSON.stringify({ error: "Not Found" }), {
@@ -452,8 +452,25 @@ async function handleServe(
   key: string,
   env: Env,
   corsHeaders: HeadersInit,
+  request?: Request,
 ): Promise<Response> {
-  const object = await env.IMAGES_BUCKET.get(key);
+  // Parse Range header for video/audio streaming support
+  const rangeHeader = request?.headers.get("Range");
+  let r2Options: R2GetOptions | undefined;
+
+  if (rangeHeader) {
+    // Parse "bytes=START-END" (END is optional)
+    const match = rangeHeader.match(/bytes=(\d+)-(\d*)/);
+    if (match) {
+      const start = parseInt(match[1], 10);
+      const end = match[2] ? parseInt(match[2], 10) : undefined;
+      r2Options = {
+        range: end !== undefined ? { offset: start, length: end - start + 1 } : { offset: start },
+      };
+    }
+  }
+
+  const object = await env.IMAGES_BUCKET.get(key, r2Options);
 
   if (!object) {
     return new Response(JSON.stringify({ error: "Not found" }), {
@@ -466,11 +483,28 @@ async function handleServe(
   object.writeHttpMetadata(headers);
   headers.set("ETag", object.httpEtag);
   headers.set("Cache-Control", "public, max-age=31536000");
+  headers.set("Accept-Ranges", "bytes");
 
   // Add CORS headers
-  Object.entries(corsHeaders).forEach(([key, value]) => {
-    headers.set(key, value as string);
+  Object.entries(corsHeaders).forEach(([k, v]) => {
+    headers.set(k, v as string);
   });
+
+  // If this was a Range request, return 206 Partial Content
+  if (rangeHeader && r2Options?.range) {
+    const range = r2Options.range as { offset: number; length?: number };
+    const start = range.offset;
+    const totalSize = object.size;
+    // R2 returns the range body; calculate actual end
+    const end = range.length !== undefined
+      ? Math.min(start + range.length - 1, totalSize - 1)
+      : totalSize - 1;
+
+    headers.set("Content-Range", `bytes ${start}-${end}/${totalSize}`);
+    headers.set("Content-Length", String(end - start + 1));
+
+    return new Response(object.body, { status: 206, headers });
+  }
 
   return new Response(object.body, { headers });
 }

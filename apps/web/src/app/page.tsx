@@ -1,4 +1,3 @@
-import { headers } from "next/headers";
 import { HeroSection } from "@/components/home/HeroSection";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
@@ -6,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { BRAND } from "@/config/brand";
 import { resolveHeroVideo } from "@/lib/geo";
 import { Gem, ShieldCheck, Truck } from "lucide-react";
+import { headers } from "next/headers";
 import Link from "next/link";
 
 export default function HomePage() {
