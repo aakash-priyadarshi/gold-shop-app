@@ -2,6 +2,7 @@
 
 import { CustomerGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -1148,6 +1149,9 @@ export default function CustomerSettingsPage() {
               </Button>
             </CardContent>
           </Card>
+
+          {/* Appearance */}
+          <AppearanceSettings />
         </div>
       </DashboardLayout>
     </CustomerGuard>

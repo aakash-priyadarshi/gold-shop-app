@@ -2,6 +2,7 @@
 
 import { SalesGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -64,8 +65,12 @@ export default function SalesProfilePage() {
       <DashboardLayout>
         <div className="max-w-2xl mx-auto space-y-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Profile</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1">Manage your account details</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              Profile
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">
+              Manage your account details
+            </p>
           </div>
 
           <Card>
@@ -142,7 +147,9 @@ export default function SalesProfilePage() {
                 <span>{user?.status || "Active"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Member since</span>
+                <span className="text-gray-500 dark:text-gray-400">
+                  Member since
+                </span>
                 <span>
                   {user?.createdAt
                     ? new Date(user.createdAt).toLocaleDateString()
@@ -150,7 +157,9 @@ export default function SalesProfilePage() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Last login</span>
+                <span className="text-gray-500 dark:text-gray-400">
+                  Last login
+                </span>
                 <span>
                   {user?.lastLoginAt
                     ? new Date(user.lastLoginAt).toLocaleDateString()
@@ -159,6 +168,9 @@ export default function SalesProfilePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Appearance */}
+          <AppearanceSettings />
         </div>
       </DashboardLayout>
     </SalesGuard>
