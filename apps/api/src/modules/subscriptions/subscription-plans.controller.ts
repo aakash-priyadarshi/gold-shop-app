@@ -10,13 +10,13 @@ import {
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
+import { AuditService } from "../audit/audit.service";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
-import { AuditService } from "../audit/audit.service";
-import { SubscriptionPlansService } from "./subscription-plans.service";
 import { CreatePlanDto, UpdatePlanDto } from "./dto";
+import { SubscriptionPlansService } from "./subscription-plans.service";
 
 @ApiTags("subscription-plans")
 @Controller("subscription-plans")
@@ -41,10 +41,7 @@ export class SubscriptionPlansController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Create subscription plan (admin)" })
-  async create(
-    @Body() dto: CreatePlanDto,
-    @CurrentUser("id") adminId: string,
-  ) {
+  async create(@Body() dto: CreatePlanDto, @CurrentUser("id") adminId: string) {
     const plan = await this.plansService.createPlan(dto);
 
     await this.auditService.log({

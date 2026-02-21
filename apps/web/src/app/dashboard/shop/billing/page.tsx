@@ -12,21 +12,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/hooks/use-toast";
 import {
+  aiCreditsApi,
   sellerSubscriptionsApi,
   subscriptionPlansApi,
-  aiCreditsApi,
 } from "@/lib/api";
-import {
-  ArrowRight,
-  CalendarDays,
-  CreditCard,
-  Crown,
-  Sparkles,
-  Zap,
-} from "lucide-react";
+import { ArrowRight, Crown, Sparkles, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
-import { toast } from "@/hooks/use-toast";
 
 // ─── Types ───────────────────────────────────────
 
@@ -145,10 +138,18 @@ function CurrentPlanTab() {
         reason: reason || undefined,
         immediate: false,
       });
-      toast({ title: "Success", description: "Subscription will be cancelled at the end of the billing period" });
+      toast({
+        title: "Success",
+        description:
+          "Subscription will be cancelled at the end of the billing period",
+      });
       fetchData();
     } catch {
-      toast({ title: "Error", description: "Failed to cancel subscription", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to cancel subscription",
+        variant: "destructive",
+      });
     }
   };
 
@@ -208,7 +209,9 @@ function CurrentPlanTab() {
               <div>
                 <p className="text-sm text-muted-foreground">AI Credits/mo</p>
                 <p className="text-lg font-semibold">
-                  {sub.plan.includesAi ? sub.plan.monthlyAiCredits : "Not included"}
+                  {sub.plan.includesAi
+                    ? sub.plan.monthlyAiCredits
+                    : "Not included"}
                 </p>
               </div>
               <div>
@@ -299,7 +302,11 @@ function AiCreditsTab() {
         setBalance(balRes.data.balance);
         setLedger(ledRes.data);
       } catch {
-        toast({ title: "Error", description: "Failed to load credit information", variant: "destructive" });
+        toast({
+          title: "Error",
+          description: "Failed to load credit information",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
@@ -408,7 +415,11 @@ function AvailablePlansTab() {
         const res = await subscriptionPlansApi.getAvailable("");
         setPlans(res.data);
       } catch {
-        toast({ title: "Error", description: "Failed to load available plans", variant: "destructive" });
+        toast({
+          title: "Error",
+          description: "Failed to load available plans",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
@@ -431,7 +442,12 @@ function AvailablePlansTab() {
         toast({ title: "Success", description: "Subscription activated!" });
       }
     } catch (err: any) {
-      toast({ title: "Error", description: err?.response?.data?.message || "Failed to subscribe to plan", variant: "destructive" });
+      toast({
+        title: "Error",
+        description:
+          err?.response?.data?.message || "Failed to subscribe to plan",
+        variant: "destructive",
+      });
     } finally {
       setSubscribing(null);
     }

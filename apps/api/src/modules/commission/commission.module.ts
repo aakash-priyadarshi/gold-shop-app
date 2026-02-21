@@ -1,9 +1,9 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { CommissionController } from './commission.controller';
-import { CommissionService } from './commission.service';
-import { PrismaModule } from '../../prisma/prisma.module';
-import { SubscriptionPlansModule } from '../subscriptions/subscription-plans.module';
+import { Module } from "@nestjs/common";
+import { ConfigModule } from "@nestjs/config";
+import { PrismaModule } from "../../prisma/prisma.module";
+import { SubscriptionPlansModule } from "../subscriptions/subscription-plans.module";
+import { CommissionController } from "./commission.controller";
+import { CommissionService } from "./commission.service";
 
 @Module({
   imports: [ConfigModule, PrismaModule, SubscriptionPlansModule],

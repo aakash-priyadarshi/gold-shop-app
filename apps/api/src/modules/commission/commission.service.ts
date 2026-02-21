@@ -37,11 +37,16 @@ export class CommissionService {
     let commissionRate: number;
     try {
       const plan = await this.plansService.getActiveShopPlan(order.shopId);
-      commissionRate = plan ? plan.commissionPercent / 100 : (await this.platformConfig.getPlatformCommissionRate()) / 100;
+      commissionRate = plan
+        ? plan.commissionPercent / 100
+        : (await this.platformConfig.getPlatformCommissionRate()) / 100;
     } catch {
       // Fallback to platform-wide rate if plan lookup fails
-      commissionRate = (await this.platformConfig.getPlatformCommissionRate()) / 100;
-      this.logger.warn(`Plan lookup failed for shop ${order.shopId}, using platform default rate`);
+      commissionRate =
+        (await this.platformConfig.getPlatformCommissionRate()) / 100;
+      this.logger.warn(
+        `Plan lookup failed for shop ${order.shopId}, using platform default rate`,
+      );
     }
     const commissionAmount = order.totalNpr * commissionRate;
 

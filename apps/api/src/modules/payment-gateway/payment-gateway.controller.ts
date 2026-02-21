@@ -9,11 +9,11 @@ import {
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
+import { AuditService } from "../audit/audit.service";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
-import { AuditService } from "../audit/audit.service";
 import { PaymentGatewayService } from "./payment-gateway.service";
 
 @ApiTags("payment-gateway")
@@ -96,9 +96,7 @@ export class PaymentGatewayController {
     await this.auditService.log({
       userId: adminId,
       actorType: "ADMIN",
-      action: isEnabled
-        ? "ENABLE_PAYMENT_GATEWAY"
-        : "DISABLE_PAYMENT_GATEWAY",
+      action: isEnabled ? "ENABLE_PAYMENT_GATEWAY" : "DISABLE_PAYMENT_GATEWAY",
       resourceType: "PaymentGatewayConfig",
       resourceId: id,
       newValue: { isEnabled, gatewayName: config.gatewayName },

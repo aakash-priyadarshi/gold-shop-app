@@ -1,6 +1,6 @@
 # Gold Shop App — Architecture & Feature Inventory
 
-_Last updated: 2026-02-18_
+_Last updated: 2026-02-22_
 
 This document is a code-informed overview of the system architecture and the major product features implemented in this repository.
 
@@ -56,8 +56,8 @@ flowchart LR
 
 Dashboard route map (folder inventory):
 - Customer dashboard (`apps/web/src/app/dashboard/customer`): `orders/`, `payments/`, `rfqs/`, `settings/`, `wishlist/`, `messages/`, `refunds/`.
-- Shop dashboard (`apps/web/src/app/dashboard/shop`): `analytics/`, `catalogues/`, `commissions/`, `customers/`, `engagement/`, `inventory/`, `invoices/`, `orders/`, `pos/`, `pricing/`, `products/`, `profile/`, `quotes/`, `rfqs/`, `settings/`, `shop-profile/`, `tools/`, `messages/`, `variants/`.
-- Admin dashboard (`apps/web/src/app/dashboard/admin`): `shops/`, `users/`, `verifications/`, `orders/`, `commissions/`, `intelligence/`, `reports/`, `settings/`, `profile/`, `support/`, `chat-monitoring/`, `refunds/`, `messages/`.
+- Shop dashboard (`apps/web/src/app/dashboard/shop`): `analytics/`, `billing/`, `catalogues/`, `commissions/`, `customers/`, `engagement/`, `inventory/`, `invoices/`, `orders/`, `pos/`, `pricing/`, `products/`, `profile/`, `quotes/`, `rfqs/`, `settings/`, `shop-profile/`, `tools/`, `messages/`, `variants/`.
+- Admin dashboard (`apps/web/src/app/dashboard/admin`): `billing/`, `shops/`, `users/`, `verifications/`, `orders/`, `commissions/`, `intelligence/`, `reports/`, `settings/`, `profile/`, `support/`, `chat-monitoring/`, `refunds/`, `messages/`.
 - Sales dashboard (`apps/web/src/app/dashboard/sales`): `shops/`, `orders/`, `messages/`, `profile/`.
 - Support dashboard (`apps/web/src/app/dashboard/support`): `tickets/`, `page.tsx` (overview).
 
@@ -105,6 +105,9 @@ Backend module inventory (`apps/api/src/modules/*`):
 - `product-variants`: size variant management for rings/bangles/bracelets with SKU-level stock, price overrides, and standardised size charts
 - `catalogue`: seller catalogue system — shareable product catalogues with showroom mode, password protection, walk-in RFQ creation, analytics, and chat integration (product cards, catalogue links, showroom sessions)
 - `pos`: POS basket from customer likes/picks — session-based basket with stock reservations, checkout-to-invoice, 30-min expiry via Bull cron
+- `subscriptions`: admin-configurable subscription plans (FREE/PRO/ENTERPRISE per country in local currency), seller subscription lifecycle (subscribe/cancel/activate/renew), Stripe webhook integration, plan-based commission rates
+- `ai-credits`: atomic AI credit debit/refund with `SELECT FOR UPDATE`, Redis idempotency + rate limiting (20/hr, 100/day), monthly grant with rollover cap logic, admin adjustments
+- `payment-gateway`: multi-gateway routing (Stripe/Razorpay) with priority-based country selection, `envKeyLabel` pattern (secrets never stored in DB), admin gateway config CRUD
 
 ### Images (Cloudflare Worker + R2)
 
@@ -198,6 +201,15 @@ Core domain aggregates (high-level):
 **Support & Tickets**
 - `SupportTicket`: id, ticketNumber (unique, `TKT-XXXXX`), userId?, guestEmail?, guestName?, type (TicketType), subject, description, status (TicketStatus, default OPEN), priority (TicketPriority, default MEDIUM), assigneeId?, claimedAt?, orderId?, conversationId?, resolvedAt?, closedAt?, resolutionNote?, timestamps; indexed on userId, assigneeId, status, type, priority, createdAt, ticketNumber
 - `TicketMessage`: id, ticketId, senderId?, senderRole (string: CUSTOMER/SUPPORT/ADMIN/SYSTEM/GUEST/AI_BOT), senderName?, content, attachmentUrl?, attachmentType?, isInternal (bool, default false — staff-only notes), timestamps; indexed on ticketId, senderId
+
+**Subscription & billing**
+- `SubscriptionPlan`: admin-configurable per-country plans. Fields: name+country (@@unique), displayName, description, country (MarketRegion), currency (CurrencyCode), monthlyPrice, annualPrice, catalogueLimit (null=unlimited), commissionPercent, includesAi, monthlyAiCredits, rolloverCap, extraCreditPrice, overageBehavior (BLOCK|AUTO_CHARGE), features (JSON — feature flags like prioritySupport, analytics, apiAccess, whiteLabel), isActive, sortOrder. Indexed on [country, isActive] and [isActive, sortOrder].
+- `SellerSubscription`: shopId + planId, status (SubscriptionStatus: ACTIVE, PAST_DUE, CANCELLED, EXPIRED, TRIALING), billingCycle (MONTHLY|ANNUAL), currentPeriodStart/End, autoRenew, stripeCustomerId/SubscriptionId (optional), cancellationReason. Indexed on [shopId, status].
+- `SubscriptionPayment`: per-period payment tracking with gateway info, amount, currency, PaymentStatus.
+- `AiCreditLedger`: immutable credit transaction ledger. Fields: userId, shopId, action (CreditAction: GRANT, DEBIT, REFUND, EXPIRE, ADMIN_ADJUST, OVERAGE), amount, balanceBefore, balanceAfter, reason, referenceId, idempotencyKey (@unique). Indexed on [userId, action, createdAt].
+- `PaymentGatewayConfig`: per-gateway routing config. Fields: gatewayName (@unique), displayName, isEnabled, envKeyLabel (string reference to env var — never the actual secret), webhookEndpoint, supportedCountries (MarketRegion[]), supportedMethods (PaymentMethod[]), priority (Int). Indexed on [isEnabled, priority].
+- User model additions: `aiCreditsBalance` (Int, default 0), `aiCreditsGrantedAt` (DateTime?).
+- New enums: `SubscriptionStatus`, `CreditAction`, `OverageBehavior`, `CurrencyCode` (NPR, INR, AED, GBP, USD, EUR).
 
 Enums represent key business states and supported options, e.g. `OrderStatus`, `DetailedOrderStatus` (includes `REFUND_REQUESTED`), `PaymentMethod`, `PaymentStatusEnum`, `RfqStatus`, `OfferStatus`, `RefundStatus`, `ConversationStatus`, `CommissionStatus` (includes `REVERSED`), `NotificationType` (includes `NEW_MESSAGE`, `CONVERSATION_LOCKED`, `REFUND_REQUESTED`, `REFUND_APPROVED`, `REFUND_REJECTED`, `REFUND_PROCESSED`, `TICKET_CREATED`, `TICKET_CLAIMED`, `TICKET_UPDATED`, `TICKET_MESSAGE`, `TICKET_RESOLVED`, `TICKET_CLOSED`), `UserRole` (ADMIN, SHOPKEEPER, CUSTOMER, SUPPORT, SALES), `TicketType` (ACCOUNT_SUSPENSION, LOGIN_ISSUE, PASSWORD_RECOVERY, HACKED_ACCOUNT, ORDER_ISSUE, REFUND_ISSUE, PAYMENT_ISSUE, PRODUCT_ISSUE, SHIPPING_ISSUE, SELLER_COMPLAINT, BUYER_COMPLAINT, PLATFORM_BUG, FEATURE_REQUEST, KYC_VERIFICATION, OTHER), `TicketStatus` (OPEN, CLAIMED, IN_PROGRESS, WAITING_USER, RESOLVED, CLOSED), `TicketPriority` (LOW, MEDIUM, HIGH, URGENT), and multiple material/finish/gem enums.
 
@@ -353,6 +365,40 @@ Instead of logging suspended users out:
 **Analytics**:
 - View events tracked with deduplicated IP hashing. Dashboard shows total views, unique viewers, and 7-day trend.
 
+### 4.14 Subscription & billing system
+
+**Three-tier plan model** (all configurable from Admin Billing dashboard):
+- **FREE**: 20-item catalogue limit, 5% commission, no AI credits. Available in all 6 markets.
+- **PRO**: 200-item catalogue, 3% commission, 50 AI credits/month with 100 rollover cap. Priced in local currency (e.g. NPR 1,999/mo, INR 999/mo, USD 35/mo, GBP 29/mo, AED 99/mo, EUR 29/mo).
+- **ENTERPRISE**: Unlimited catalogue, 1.5% commission, 500 AI credits/month, AUTO_CHARGE overage, dedicated support, API access, white-label. Priced per-country (e.g. NPR 9,999/mo, USD 199/mo).
+- Admin can create/update/disable plans anytime; all pricing, commission rates, features, and AI credit allocations are fully configurable per country.
+
+**Seller subscription lifecycle**:
+1. Seller picks a plan from the Billing page → `POST /seller-subscriptions/subscribe`.
+2. FREE plans activate immediately. Paid plans create a Stripe payment intent → seller completes payment.
+3. Stripe webhook (`payment_intent.succeeded`) activates the subscription.
+4. Commission rate is automatically read from the seller's active plan (fallback to platform default 5%).
+5. At period end: auto-renew creates new payment, or subscription expires if `autoRenew=false`.
+6. Admin can override any seller's plan, manually activate subscriptions, or view MRR stats.
+
+**AI credit system** (server-authoritative):
+- Credits granted monthly via Bull cron job. Rollover cap enforced — excess credits expire.
+- Debit uses `SELECT FOR UPDATE` in Prisma `$transaction` for atomicity.
+- Redis idempotency keys (24h TTL) + DB unique constraint on `idempotencyKey` prevent double-debit.
+- Rate limiting: 20 ops/hour, 100 ops/day per user via Redis counters.
+- Admin can manually adjust credits (add/remove) with audit trail.
+
+**Payment gateway routing**:
+- `PaymentGatewayConfig` table stores per-gateway metadata (supported countries, payment methods, priority).
+- Gateway secrets stored as `envKeyLabel` references (e.g. `"STRIPE_SECRET_KEY"`) — actual secrets read from `process.env` at runtime; **never stored in the database**.
+- Priority-based selection per country: highest-priority enabled gateway for the seller's region is used.
+- Stripe and Razorpay adapters with graceful fallback when keys not configured.
+
+**Security boundaries**:
+- All money/credit/commission logic is server-authoritative. Client cannot set rates, amounts, or balances.
+- All admin mutations are audit-logged via `AuditService`.
+- Stripe webhooks verified via `constructEvent` with raw body + signature.
+
 ## 5) Feature inventory (by role)
 
 ### Customers
@@ -381,6 +427,7 @@ Instead of logging suspended users out:
 - In-app messaging with customers (contact info blocked, 3-strike system — account suspended on 3rd violation)
 - Size variant management: enable sizes, create/edit/delete variants, manage per-size stock and price overrides
 - **Seller Catalogues**: create/manage multiple catalogues per shop; add inventory items with sort order, override prices, hidden flags; share via link/QR; showroom mode for walk-in presentation; password protection with expiry; create walk-in RFQs (3-step modal: items → details → customer info); view analytics (views, unique visitors); share catalogues and products as rich cards in chat
+- **Billing**: view current subscription plan, AI credit balance + transaction ledger, browse and subscribe to available plans, cancel subscription
 
 ### Admin
 
@@ -394,6 +441,7 @@ Instead of logging suspended users out:
 - Chat monitoring: violation stats, per-user violation history with strike meter, view original blocked messages, unblock suspended users, unlock locked conversations; tabbed UI with stat cards
 - Refund management: review/approve/reject/process refund requests, commission reversal
 - Messages: full admin messaging page to view/respond in all conversations
+- **Billing & Plans**: 4-tab admin dashboard — (1) Plans: create/update/toggle subscription plans per country with local-currency pricing, commission rates, AI credit allocations, feature flags; (2) Subscriptions: view all seller subscriptions, MRR stats, status breakdown; (3) AI Credits: system-wide credit stats (granted/used/refunded/in-circulation), trigger monthly grant; (4) Payment Gateways: enable/disable gateways, view env key labels and supported countries
 
 ### Sales
 
@@ -534,6 +582,48 @@ WebSocket gateway: namespace `/support`, events: `joinTicket`, `leaveTicket`, `t
 | POST | `/chat/conversations/:id/share-products` | SHOPKEEPER | Share product cards in conversation |
 | POST | `/chat/conversations/:id/walk-in-rfq` | SHOPKEEPER | Create walk-in RFQ from chat |
 
+### Subscription Plans (`/api/subscription-plans`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/subscription-plans/available?country=NP` | Public | List active plans for a country |
+| GET | `/subscription-plans` | ADMIN | List all plans (filterable by country, isActive) |
+| GET | `/subscription-plans/:id` | ADMIN | Get plan details |
+| POST | `/subscription-plans` | ADMIN | Create plan (audit-logged) |
+| PATCH | `/subscription-plans/:id` | ADMIN | Update plan fields (audit-logged) |
+| PATCH | `/subscription-plans/:id/toggle` | ADMIN | Enable/disable plan (audit-logged) |
+
+### Seller Subscriptions (`/api/seller-subscriptions`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/seller-subscriptions/subscribe` | SHOPKEEPER | Subscribe to a plan (FREE=instant, paid=Stripe intent) |
+| POST | `/seller-subscriptions/:id/cancel` | SHOPKEEPER | Cancel subscription (at period end or immediately) |
+| GET | `/seller-subscriptions/my-subscription` | SHOPKEEPER | Get current active subscription |
+| GET | `/seller-subscriptions/my-history` | SHOPKEEPER | Get subscription history |
+| GET | `/seller-subscriptions/admin/all` | ADMIN | List all subscriptions (paginated, filterable) |
+| POST | `/seller-subscriptions/admin/override` | ADMIN | Override seller's plan (audit-logged) |
+| POST | `/seller-subscriptions/admin/:id/activate` | ADMIN | Manually activate a subscription |
+| GET | `/seller-subscriptions/admin/stats` | ADMIN | MRR, status breakdown, plan distribution |
+| POST | `/seller-subscriptions/webhooks/stripe` | Stripe (sig-verified) | Stripe webhook handler |
+
+### AI Credits (`/api/ai-credits`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/ai-credits/balance` | JWT | Get current credit balance |
+| GET | `/ai-credits/ledger` | JWT | Get credit transaction history |
+| GET | `/ai-credits/admin/user/:userId` | ADMIN | Get user's credit balance |
+| GET | `/ai-credits/admin/user/:userId/ledger` | ADMIN | Get user's credit ledger |
+| POST | `/ai-credits/admin/adjust` | ADMIN | Admin credit adjustment (audit-logged) |
+| POST | `/ai-credits/admin/monthly-grant` | ADMIN | Trigger monthly credit grant for all subscribers |
+| GET | `/ai-credits/admin/stats` | ADMIN | System-wide credit stats |
+
+### Payment Gateways (`/api/payment-gateways`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/payment-gateways/configs` | ADMIN | List all gateway configs |
+| GET | `/payment-gateways/configs/:id` | ADMIN | Get gateway config details |
+| POST | `/payment-gateways/configs` | ADMIN | Upsert gateway config (audit-logged) |
+| PATCH | `/payment-gateways/configs/:id/toggle` | ADMIN | Enable/disable gateway (audit-logged) |
+
 ## 7) Operations & CI/CD notes
 
 - CI/CD guidance is documented in `docs/CI-CD-PIPELINE.md`.
@@ -552,6 +642,9 @@ Backend (`apps/api`):
 - `GEMINI_API_KEY` (Google AI — used by `ContactMaskingService` for Gemini Flash deep scan and image analysis)
 - `CATALOGUE_TOKEN_SECRET` (HMAC secret for password-protected catalogue tokens)
 - `IP_HASH_SALT` (salt for hashing viewer IPs in catalogue analytics)
+- `STRIPE_SECRET_KEY` (Stripe API secret — used by seller subscriptions and payment gateway; gracefully mocked when absent)
+- `STRIPE_WEBHOOK_SECRET` (Stripe webhook signature verification)
+- `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` (Razorpay gateway — optional, for IN/NP markets)
 
 Frontend (`apps/web`):
 - `NEXT_PUBLIC_IMAGE_WORKER_URL` (defaults to `https://images.orivraa.com`)
@@ -563,6 +656,33 @@ Worker (`cloudflare-worker`):
 ---
 
 ## 9) Changelog
+
+### 2026-02-22 — Subscription & billing system
+
+**New backend modules** — `SubscriptionPlansModule`, `SellerSubscriptionsModule`, `AiCreditsModule`, `PaymentGatewayModule`
+
+**Schema additions** — five new models:
+- `SubscriptionPlan` — tier/country/currency/price/features/limits; fully admin-configurable
+- `SellerSubscription` — links Shop→Plan with lifecycle (`ACTIVE`, `PAST_DUE`, `CANCELLED`, `EXPIRED`)
+- `AiCreditBalance` / `AiCreditTransaction` — credit wallet with ledger tracking per user
+- `PaymentGatewayConfig` — multi-gateway support (Stripe, Razorpay, eSewa, FonePay) per country
+
+**Multi-country, multi-currency support** — plans seeded for 6 regions:
+- Nepal (NPR), India (INR), UAE (AED), UK (GBP), USA (USD), EU (EUR)
+- 3 tiers per region: FREE, PRO, ENTERPRISE — 18 plans total
+- Local currency pricing, admin can create/edit/toggle plans per country
+
+**Commission integration** — `CommissionsService` now checks active subscription tier; PRO sellers get reduced commission rates, ENTERPRISE sellers get further discounts.
+
+**AI credit system** — monthly credit grants based on plan tier (FREE=50, PRO=500, ENTERPRISE=2000); admin can adjust credits manually; all mutations audit-logged with `AiCreditTransaction` ledger.
+
+**Stripe integration** — `PaymentIntent` flow for paid subscriptions; webhook handler for `payment_intent.succeeded` / `customer.subscription.deleted`; signature-verified; graceful fallback when Stripe keys not configured.
+
+**Frontend** — new pages:
+- `/shop/dashboard/billing` — current plan, credit balance, usage graph, plan comparison, history
+- `/admin/dashboard/billing` — 4-tab admin panel (Plans, Subscriptions, Credits, Gateways)
+
+---
 
 ### 2026-02-17 — Chat moderation rework & bug fixes
 
