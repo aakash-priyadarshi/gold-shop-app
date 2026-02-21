@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../../prisma/prisma.service";
 
 @Injectable()
@@ -160,7 +157,11 @@ export class ReportsService {
     };
   }
 
-  private async generateCommissionReport(shopId: string, from: string, to: string) {
+  private async generateCommissionReport(
+    shopId: string,
+    from: string,
+    to: string,
+  ) {
     const commissions = await this.prisma.commissionLedger.findMany({
       where: {
         shopId,
@@ -189,7 +190,11 @@ export class ReportsService {
     };
   }
 
-  private async generateCustomerReport(shopId: string, from: string, to: string) {
+  private async generateCustomerReport(
+    shopId: string,
+    from: string,
+    to: string,
+  ) {
     const orders = await this.prisma.order.findMany({
       where: {
         shopId,

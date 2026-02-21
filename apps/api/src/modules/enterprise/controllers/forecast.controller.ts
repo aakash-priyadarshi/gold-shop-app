@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Query,
-  UseGuards,
-} from "@nestjs/common";
+import { Controller, Get, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
 import { CurrentUser } from "../../auth/decorators/current-user.decorator";
@@ -33,7 +27,9 @@ export class ForecastController {
 
   @Post("generate")
   @Roles(UserRole.SHOPKEEPER)
-  @ApiOperation({ summary: "Generate new demand forecasts from historical data" })
+  @ApiOperation({
+    summary: "Generate new demand forecasts from historical data",
+  })
   async generate(@CurrentUser("activeShopId") shopId: string) {
     return this.forecastService.generateForecasts(shopId);
   }

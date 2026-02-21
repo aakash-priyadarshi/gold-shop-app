@@ -64,8 +64,9 @@ export class ForecastService {
 
       // Seasonal factor (simplified — higher in wedding/festival months)
       const nextMonthNum = now.getMonth() + 2;
-      const seasonalFactor =
-        [10, 11, 12, 1, 2, 4, 5].includes(nextMonthNum) ? 1.2 : 0.9;
+      const seasonalFactor = [10, 11, 12, 1, 2, 4, 5].includes(nextMonthNum)
+        ? 1.2
+        : 0.9;
 
       const predictedDemand = Math.round(avgMonthlyDemand * seasonalFactor);
 

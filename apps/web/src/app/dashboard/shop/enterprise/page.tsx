@@ -24,7 +24,6 @@ import {
   RefreshCw,
   Shield,
   TrendingUp,
-  Upload,
   UserPlus,
   Users,
   Webhook,
@@ -110,7 +109,7 @@ interface Forecast {
 export default function EnterprisePage() {
   return (
     <ShopGuard>
-      <DashboardLayout role="SHOPKEEPER">
+      <DashboardLayout>
         <EnterpriseContent />
       </DashboardLayout>
     </ShopGuard>
@@ -192,7 +191,8 @@ function EnterpriseContent() {
           Enterprise Hub
         </h1>
         <p className="text-muted-foreground mt-1">
-          Manage branches, staff, integrations, AI tools, and white-label settings
+          Manage branches, staff, integrations, AI tools, and white-label
+          settings
         </p>
       </div>
 
@@ -243,7 +243,10 @@ function EnterpriseContent() {
               <CardContent className="py-8 text-center text-muted-foreground">
                 <Building2 className="h-12 w-12 mx-auto mb-3 opacity-30" />
                 <p>No branches configured yet.</p>
-                <p className="text-sm">Add your first branch location to manage multi-store operations.</p>
+                <p className="text-sm">
+                  Add your first branch location to manage multi-store
+                  operations.
+                </p>
               </CardContent>
             </Card>
           ) : (
@@ -253,7 +256,9 @@ function EnterpriseContent() {
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="text-base">{b.branchName}</CardTitle>
+                        <CardTitle className="text-base">
+                          {b.branchName}
+                        </CardTitle>
                         <CardDescription>{b.branchCode}</CardDescription>
                       </div>
                       <div className="flex gap-1">
@@ -265,7 +270,9 @@ function EnterpriseContent() {
                     </div>
                   </CardHeader>
                   <CardContent className="text-sm text-muted-foreground">
-                    <p>{b.address}, {b.city}, {b.country}</p>
+                    <p>
+                      {b.address}, {b.city}, {b.country}
+                    </p>
                     <p>{b.contactPhone}</p>
                   </CardContent>
                 </Card>
@@ -289,7 +296,9 @@ function EnterpriseContent() {
               <CardContent className="py-8 text-center text-muted-foreground">
                 <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
                 <p>No staff members yet.</p>
-                <p className="text-sm">Invite team members with specific roles and branch access.</p>
+                <p className="text-sm">
+                  Invite team members with specific roles and branch access.
+                </p>
               </CardContent>
             </Card>
           ) : (
@@ -298,13 +307,21 @@ function EnterpriseContent() {
                 <Card key={s.id}>
                   <CardContent className="py-3 flex items-center justify-between">
                     <div>
-                      <p className="font-medium">{s.user.firstName} {s.user.lastName}</p>
-                      <p className="text-sm text-muted-foreground">{s.user.email}</p>
+                      <p className="font-medium">
+                        {s.user.firstName} {s.user.lastName}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {s.user.email}
+                      </p>
                     </div>
                     <div className="flex gap-2 items-center">
                       <Badge>{s.staffRole}</Badge>
-                      {!s.acceptedAt && <Badge variant="secondary">Pending</Badge>}
-                      {!s.isActive && <Badge variant="destructive">Disabled</Badge>}
+                      {!s.acceptedAt && (
+                        <Badge variant="secondary">Pending</Badge>
+                      )}
+                      {!s.isActive && (
+                        <Badge variant="destructive">Disabled</Badge>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -322,7 +339,8 @@ function EnterpriseContent() {
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">
-            Use API keys to integrate OriVraa with your ERP, POS, or accounting systems.
+            Use API keys to integrate OriVraa with your ERP, POS, or accounting
+            systems.
           </p>
           {loading ? (
             <p className="text-muted-foreground">Loading...</p>
@@ -331,7 +349,9 @@ function EnterpriseContent() {
               <CardContent className="py-8 text-center text-muted-foreground">
                 <Code className="h-12 w-12 mx-auto mb-3 opacity-30" />
                 <p>No API keys created yet.</p>
-                <p className="text-sm">Generate keys to integrate with external systems.</p>
+                <p className="text-sm">
+                  Generate keys to integrate with external systems.
+                </p>
               </CardContent>
             </Card>
           ) : (
@@ -341,7 +361,9 @@ function EnterpriseContent() {
                   <CardContent className="py-3 flex items-center justify-between">
                     <div>
                       <p className="font-medium">{k.keyName}</p>
-                      <p className="text-sm text-muted-foreground font-mono">{k.keyPrefix}...</p>
+                      <p className="text-sm text-muted-foreground font-mono">
+                        {k.keyPrefix}...
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         Scopes: {k.scopes.join(", ")}
                       </p>
@@ -352,7 +374,8 @@ function EnterpriseContent() {
                       </Badge>
                       {k.lastUsedAt && (
                         <span className="text-xs text-muted-foreground">
-                          Last used: {new Date(k.lastUsedAt).toLocaleDateString()}
+                          Last used:{" "}
+                          {new Date(k.lastUsedAt).toLocaleDateString()}
                         </span>
                       )}
                     </div>
@@ -372,7 +395,8 @@ function EnterpriseContent() {
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">
-            Receive real-time push notifications for order changes, payments, inventory events, and more.
+            Receive real-time push notifications for order changes, payments,
+            inventory events, and more.
           </p>
           {loading ? (
             <p className="text-muted-foreground">Loading...</p>
@@ -381,7 +405,9 @@ function EnterpriseContent() {
               <CardContent className="py-8 text-center text-muted-foreground">
                 <Globe className="h-12 w-12 mx-auto mb-3 opacity-30" />
                 <p>No webhooks configured.</p>
-                <p className="text-sm">Set up HTTPS endpoints to receive event notifications.</p>
+                <p className="text-sm">
+                  Set up HTTPS endpoints to receive event notifications.
+                </p>
               </CardContent>
             </Card>
           ) : (
@@ -401,7 +427,9 @@ function EnterpriseContent() {
                           {w.isActive ? "Active" : "Paused"}
                         </Badge>
                         {w.failureCount > 0 && (
-                          <Badge variant="destructive">{w.failureCount} failures</Badge>
+                          <Badge variant="destructive">
+                            {w.failureCount} failures
+                          </Badge>
                         )}
                       </div>
                     </div>
@@ -416,7 +444,8 @@ function EnterpriseContent() {
         <TabsContent value="branding" className="space-y-4">
           <h2 className="text-lg font-semibold">White-Label Branding</h2>
           <p className="text-sm text-muted-foreground">
-            Customize your storefront appearance, use a custom domain, and remove OriVraa branding.
+            Customize your storefront appearance, use a custom domain, and
+            remove OriVraa branding.
           </p>
           {loading ? (
             <p className="text-muted-foreground">Loading...</p>
@@ -430,7 +459,10 @@ function EnterpriseContent() {
                   <p className="text-sm font-mono">
                     {whiteLabel?.customDomain || "Not configured"}
                   </p>
-                  <Badge variant={whiteLabel?.isActive ? "default" : "secondary"} className="mt-2">
+                  <Badge
+                    variant={whiteLabel?.isActive ? "default" : "secondary"}
+                    className="mt-2"
+                  >
                     {whiteLabel?.isActive ? "Active" : "Inactive"}
                   </Badge>
                 </CardContent>
@@ -444,21 +476,28 @@ function EnterpriseContent() {
                   <div className="flex flex-col items-center gap-1">
                     <div
                       className="w-10 h-10 rounded-full border"
-                      style={{ backgroundColor: whiteLabel?.primaryColor || "#D4AF37" }}
+                      style={{
+                        backgroundColor: whiteLabel?.primaryColor || "#D4AF37",
+                      }}
                     />
                     <span className="text-xs">Primary</span>
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     <div
                       className="w-10 h-10 rounded-full border"
-                      style={{ backgroundColor: whiteLabel?.secondaryColor || "#1F2937" }}
+                      style={{
+                        backgroundColor:
+                          whiteLabel?.secondaryColor || "#1F2937",
+                      }}
                     />
                     <span className="text-xs">Secondary</span>
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     <div
                       className="w-10 h-10 rounded-full border"
-                      style={{ backgroundColor: whiteLabel?.accentColor || "#F59E0B" }}
+                      style={{
+                        backgroundColor: whiteLabel?.accentColor || "#F59E0B",
+                      }}
                     />
                     <span className="text-xs">Accent</span>
                   </div>
@@ -472,11 +511,17 @@ function EnterpriseContent() {
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>Font Family</span>
-                    <span className="text-muted-foreground">{whiteLabel?.fontFamily || "Inter"}</span>
+                    <span className="text-muted-foreground">
+                      {whiteLabel?.fontFamily || "Inter"}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Hide OriVraa Branding</span>
-                    <Badge variant={whiteLabel?.hideOrivraa ? "default" : "secondary"}>
+                    <Badge
+                      variant={
+                        whiteLabel?.hideOrivraa ? "default" : "secondary"
+                      }
+                    >
                       {whiteLabel?.hideOrivraa ? "Yes" : "No"}
                     </Badge>
                   </div>
@@ -491,11 +536,18 @@ function EnterpriseContent() {
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold">Automated Repricing Rules</h2>
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => {
-                api.post("/enterprise/repricing/evaluate").then(res => {
-                  toast({ title: "Evaluation complete", description: `${res.data.filter((r: any) => r.triggered).length} rules triggered.` });
-                });
-              }}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  api.post("/enterprise/repricing/evaluate").then((res) => {
+                    toast({
+                      title: "Evaluation complete",
+                      description: `${res.data.filter((r: any) => r.triggered).length} rules triggered.`,
+                    });
+                  });
+                }}
+              >
                 <RefreshCw className="h-4 w-4 mr-1" /> Evaluate Now
               </Button>
               <Button size="sm">
@@ -510,7 +562,10 @@ function EnterpriseContent() {
               <CardContent className="py-8 text-center text-muted-foreground">
                 <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-30" />
                 <p>No repricing rules configured.</p>
-                <p className="text-sm">Create rules to automatically adjust prices based on gold rates, stock levels, or time.</p>
+                <p className="text-sm">
+                  Create rules to automatically adjust prices based on gold
+                  rates, stock levels, or time.
+                </p>
               </CardContent>
             </Card>
           ) : (
@@ -521,7 +576,8 @@ function EnterpriseContent() {
                     <div>
                       <p className="font-medium">{r.ruleName}</p>
                       <p className="text-xs text-muted-foreground">
-                        Type: {r.ruleType.replace(/_/g, " ")} &middot; Triggered {r.triggerCount}x
+                        Type: {r.ruleType.replace(/_/g, " ")} &middot; Triggered{" "}
+                        {r.triggerCount}x
                       </p>
                     </div>
                     <Badge variant={r.isActive ? "outline" : "secondary"}>
@@ -538,12 +594,18 @@ function EnterpriseContent() {
         <TabsContent value="forecasts" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold">AI Demand Forecasting</h2>
-            <Button size="sm" onClick={() => {
-              api.post("/enterprise/forecasts/generate").then(() => {
-                toast({ title: "Forecasts generated", description: "New predictions are ready." });
-                loadData("forecasts");
-              });
-            }}>
+            <Button
+              size="sm"
+              onClick={() => {
+                api.post("/enterprise/forecasts/generate").then(() => {
+                  toast({
+                    title: "Forecasts generated",
+                    description: "New predictions are ready.",
+                  });
+                  loadData("forecasts");
+                });
+              }}
+            >
               <LineChart className="h-4 w-4 mr-1" /> Generate Forecasts
             </Button>
           </div>
@@ -554,7 +616,10 @@ function EnterpriseContent() {
               <CardContent className="py-8 text-center text-muted-foreground">
                 <LineChart className="h-12 w-12 mx-auto mb-3 opacity-30" />
                 <p>No forecasts available yet.</p>
-                <p className="text-sm">Generate AI-powered demand predictions based on your historical sales data.</p>
+                <p className="text-sm">
+                  Generate AI-powered demand predictions based on your
+                  historical sales data.
+                </p>
               </CardContent>
             </Card>
           ) : (
@@ -570,11 +635,15 @@ function EnterpriseContent() {
                   <CardContent>
                     <div className="flex justify-between text-sm mb-2">
                       <span>Predicted Demand</span>
-                      <span className="font-bold">{f.predictedDemand} units</span>
+                      <span className="font-bold">
+                        {f.predictedDemand} units
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm mb-2">
                       <span>Confidence</span>
-                      <span className="font-medium">{Math.round(f.confidenceScore * 100)}%</span>
+                      <span className="font-medium">
+                        {Math.round(f.confidenceScore * 100)}%
+                      </span>
                     </div>
                     {f.recommendation && (
                       <p className="text-xs text-muted-foreground mt-2 border-t pt-2">

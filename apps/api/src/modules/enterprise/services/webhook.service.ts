@@ -1,8 +1,8 @@
 import {
-  Injectable,
-  NotFoundException,
   BadRequestException,
+  Injectable,
   Logger,
+  NotFoundException,
 } from "@nestjs/common";
 import * as crypto from "crypto";
 import { PrismaService } from "../../../prisma/prisma.service";
@@ -91,7 +91,9 @@ export class WebhookService {
       where: { id: webhookId, shopId },
     });
     if (!webhook) throw new NotFoundException("Webhook not found");
-    return this.prisma.webhookSubscription.delete({ where: { id: webhook.id } });
+    return this.prisma.webhookSubscription.delete({
+      where: { id: webhook.id },
+    });
   }
 
   /**

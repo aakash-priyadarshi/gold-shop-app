@@ -56,7 +56,14 @@ export class ReportsController {
   async updateScheduled(
     @CurrentUser("activeShopId") shopId: string,
     @Param("id") id: string,
-    @Body() body: Partial<{ frequency: string; recipients: string[]; format: string; filters: Record<string, unknown>; isActive: boolean }>,
+    @Body()
+    body: Partial<{
+      frequency: string;
+      recipients: string[];
+      format: string;
+      filters: Record<string, unknown>;
+      isActive: boolean;
+    }>,
   ) {
     return this.reportsService.updateScheduledReport(shopId, id, body);
   }

@@ -1,8 +1,8 @@
 import {
-  Injectable,
-  NotFoundException,
   BadRequestException,
   ConflictException,
+  Injectable,
+  NotFoundException,
 } from "@nestjs/common";
 import { PrismaService } from "../../../prisma/prisma.service";
 
@@ -35,7 +35,9 @@ export class StaffService {
       where: { shopId_userId: { shopId, userId: data.userId } },
     });
     if (existing) {
-      throw new ConflictException("User is already a staff member of this shop");
+      throw new ConflictException(
+        "User is already a staff member of this shop",
+      );
     }
 
     // Verify branch IDs belong to this shop
@@ -57,7 +59,11 @@ export class StaffService {
         branchIds: data.branchIds || [],
         invitedByUserId,
       },
-      include: { user: { select: { id: true, email: true, firstName: true, lastName: true } } },
+      include: {
+        user: {
+          select: { id: true, email: true, firstName: true, lastName: true },
+        },
+      },
     });
   }
 
@@ -66,7 +72,13 @@ export class StaffService {
       where: { shopId, ...(includeInactive ? {} : { isActive: true }) },
       include: {
         user: {
-          select: { id: true, email: true, firstName: true, lastName: true, role: true },
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+          },
         },
       },
       orderBy: { createdAt: "desc" },
@@ -78,7 +90,13 @@ export class StaffService {
       where: { id: staffId, shopId },
       include: {
         user: {
-          select: { id: true, email: true, firstName: true, lastName: true, role: true },
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+          },
         },
       },
     });

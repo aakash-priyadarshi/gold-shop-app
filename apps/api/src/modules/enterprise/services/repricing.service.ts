@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  Logger,
-} from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../../prisma/prisma.service";
 
 @Injectable()
@@ -116,9 +112,7 @@ export class RepricingService {
           });
         }
       } catch (error) {
-        this.logger.warn(
-          `Rule ${rule.id} evaluation failed: ${error.message}`,
-        );
+        this.logger.warn(`Rule ${rule.id} evaluation failed: ${error.message}`);
       }
     }
 

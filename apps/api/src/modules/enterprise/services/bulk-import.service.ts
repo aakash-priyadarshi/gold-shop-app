@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  Logger,
-} from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../../prisma/prisma.service";
 
 @Injectable()
@@ -84,7 +80,9 @@ export class BulkImportService {
         data: {
           status: "FAILED",
           completedAt: new Date(),
-          errorLog: [{ row: 0, field: "system", message: error.message }] as any,
+          errorLog: [
+            { row: 0, field: "system", message: error.message },
+          ] as any,
         },
       });
     }
@@ -157,7 +155,11 @@ export class BulkImportService {
       distinct: ["customerId"],
     });
     const customers = orders.map((o) => o.customer);
-    return { exportType: "CUSTOMER_LIST", count: customers.length, data: customers };
+    return {
+      exportType: "CUSTOMER_LIST",
+      count: customers.length,
+      data: customers,
+    };
   }
 
   private async exportPriceSheet(shopId: string) {
