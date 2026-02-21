@@ -834,4 +834,79 @@ export const posApi = {
   getSession: (sessionId: string) => api.get(`/pos/session/${sessionId}`),
 };
 
+// ─── Subscription Plans API ───
+export const subscriptionPlansApi = {
+  // Public
+  getAvailable: (country: string) =>
+    api.get("/subscription-plans/available", { params: { country } }),
+  // Admin CRUD
+  list: (params?: { country?: string; isActive?: string }) =>
+    api.get("/subscription-plans", { params }),
+  getById: (id: string) => api.get(`/subscription-plans/${id}`),
+  create: (data: Record<string, unknown>) =>
+    api.post("/subscription-plans", data),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/subscription-plans/${id}`, data),
+  toggle: (id: string, isActive: boolean) =>
+    api.patch(`/subscription-plans/${id}/toggle`, { isActive }),
+};
+
+// ─── Seller Subscriptions API ───
+export const sellerSubscriptionsApi = {
+  // Seller
+  subscribe: (data: {
+    shopId: string;
+    planId: string;
+    country: string;
+    billingCycle?: string;
+  }) => api.post("/seller-subscriptions/subscribe", data),
+  cancel: (id: string, data?: { reason?: string; immediate?: boolean }) =>
+    api.post(`/seller-subscriptions/${id}/cancel`, data || {}),
+  getMySubscription: () => api.get("/seller-subscriptions/my-subscription"),
+  getMyHistory: () => api.get("/seller-subscriptions/my-history"),
+  // Admin
+  listAll: (params?: {
+    status?: string;
+    country?: string;
+    page?: number;
+    limit?: number;
+  }) => api.get("/seller-subscriptions/admin/all", { params }),
+  adminOverride: (data: {
+    shopId: string;
+    planId: string;
+    periodEnd?: string;
+    reason?: string;
+  }) => api.post("/seller-subscriptions/admin/override", data),
+  adminActivate: (id: string) =>
+    api.post(`/seller-subscriptions/admin/${id}/activate`),
+  getStats: () => api.get("/seller-subscriptions/admin/stats"),
+};
+
+// ─── AI Credits API ───
+export const aiCreditsApi = {
+  // User
+  getBalance: () => api.get("/ai-credits/balance"),
+  getLedger: (params?: { page?: number; limit?: number; action?: string }) =>
+    api.get("/ai-credits/ledger", { params }),
+  // Admin
+  getUserCredits: (userId: string) =>
+    api.get(`/ai-credits/admin/user/${userId}`),
+  getUserLedger: (userId: string, params?: { page?: number; limit?: number }) =>
+    api.get(`/ai-credits/admin/user/${userId}/ledger`, { params }),
+  adminAdjust: (data: { userId: string; amount: number; reason: string }) =>
+    api.post("/ai-credits/admin/adjust", data),
+  triggerMonthlyGrant: () => api.post("/ai-credits/admin/monthly-grant"),
+  getCreditStats: () => api.get("/ai-credits/admin/stats"),
+};
+
+// ─── Payment Gateway API ───
+export const paymentGatewayApi = {
+  listConfigs: () => api.get("/payment-gateway/configs"),
+  getConfig: (id: string) => api.get(`/payment-gateway/configs/${id}`),
+  upsertConfig: (data: Record<string, unknown>) =>
+    api.post("/payment-gateway/configs", data),
+  toggleGateway: (id: string, isEnabled: boolean) =>
+    api.patch(`/payment-gateway/configs/${id}/toggle`, { isEnabled }),
+};
+
 export default api;

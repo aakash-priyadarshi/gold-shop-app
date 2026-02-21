@@ -149,6 +149,12 @@ const navItems: NavItem[] = [
     icon: Brain,
     roles: ["ADMIN"],
   },
+  {
+    label: "Billing & Plans",
+    href: "/dashboard/admin/billing",
+    icon: CreditCard,
+    roles: ["ADMIN"],
+  },
 
   // Shopkeeper routes
   {
@@ -233,6 +239,12 @@ const navItems: NavItem[] = [
     label: "Engagement",
     href: "/dashboard/shop/engagement",
     icon: Award,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Billing",
+    href: "/dashboard/shop/billing",
+    icon: CreditCard,
     roles: ["SHOPKEEPER"],
   },
   {
