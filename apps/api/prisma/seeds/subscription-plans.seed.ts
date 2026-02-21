@@ -156,6 +156,17 @@ async function main() {
           priorityListing: true,
           apiAccess: true,
           whiteLabel: true,
+          multiBranch: true,
+          staffAccounts: true,
+          webhookSubscriptions: true,
+          scheduledReports: true,
+          demandForecasting: true,
+          automatedRepricing: true,
+          bulkImportExport: true,
+          customDomain: true,
+          auditLogExport: true,
+          ssoIntegration: false, // coming soon
+          dataResidency: false, // coming soon
         },
         isActive: true,
         sortOrder: 2,

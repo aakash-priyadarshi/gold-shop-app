@@ -68,6 +68,8 @@ model User {
   aiCreditsBalance     Int                 @default(0)
   aiCreditsGrantedAt   DateTime?
   aiCreditLedger       AiCreditLedger[]
+  // Enterprise staff
+  staffAccounts        StaffAccount[]
 
   @@index([email])
   @@index([phone])
@@ -274,6 +276,16 @@ model Shop {
   posSessions             PosSession[]
   stockReservations       StockReservation[]
   subscriptions           SellerSubscription[]
+  // Enterprise features
+  branches                ShopBranch[]
+  staffAccounts           StaffAccount[]
+  apiKeys                 ShopApiKey[]
+  webhookSubscriptions    WebhookSubscription[]
+  whiteLabelConfig        WhiteLabelConfig?
+  scheduledReports        ScheduledReport[]
+  bulkImportJobs          BulkImportJob[]
+  demandForecasts         DemandForecast[]
+  repricingRules          RepricingRule[]
 
   @@index([userId])
   @@index([country, city])
@@ -2582,4 +2594,280 @@ model PaymentGatewayConfig {
   @@unique([gatewayName])
   @@index([isEnabled])
   @@index([priority])
+}
+
+// ═══════════════════════════════════════════
+// ENTERPRISE FEATURES
+// ═══════════════════════════════════════════
+
+// Multi-branch support — single enterprise account managing multiple locations
+model ShopBranch {
+  id              String   @id @default(uuid())
+  shopId          String
+  branchName      String
+  branchCode      String   // e.g. "KTM-01", "BLR-MAIN"
+  country         String
+  state           String?
+  city            String
+  address         String
+  pincode         String?
+  latitude        Float?
+  longitude       Float?
+  contactPhone    String
+  contactEmail    String?
+  isActive        Boolean  @default(true)
+  isHeadquarter   Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, branchCode])
+  @@index([shopId, isActive])
+  @@index([country, city])
+}
+
+// Staff sub-accounts with granular permissions
+model StaffAccount {
+  id              String         @id @default(uuid())
+  shopId          String
+  userId          String
+  staffRole       StaffRole
+  permissions     Json           // e.g. { "inventory": true, "orders": true, "billing": false }
+  branchIds       String[]       // which branches this staff can access; empty = all
+  isActive        Boolean        @default(true)
+  invitedByUserId String
+  invitedAt       DateTime       @default(now())
+  acceptedAt      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  shop            Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, userId])
+  @@index([shopId, isActive])
+  @@index([userId])
+}
+
+enum StaffRole {
+  MANAGER       // Full access to branch operations
+  INVENTORY     // Inventory + catalogue management only
+  CASHIER       // POS + order processing only
+  VIEWER        // Read-only dashboard access
+  AUDITOR       // Read-only + audit log + reports
+}
+
+// API key management for enterprise integrations
+model ShopApiKey {
+  id              String   @id @default(uuid())
+  shopId          String
+  keyName         String   // e.g. "ERP Sync", "POS Integration"
+  keyHash         String   // sha256 hash of the API key (not the raw key)
+  keyPrefix       String   // first 8 chars to identify key: "ovrk_xxxx"
+  scopes          String[] // e.g. ["inventory:read", "orders:read", "orders:write"]
+  expiresAt       DateTime?
+  lastUsedAt      DateTime?
+  lastUsedIp      String?
+  isActive        Boolean  @default(true)
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, isActive])
+  @@index([keyPrefix])
+}
+
+// Webhook subscriptions for enterprise event push
+model WebhookSubscription {
+  id              String           @id @default(uuid())
+  shopId          String
+  url             String           // HTTPS endpoint URL
+  secret          String           // HMAC secret for signature verification
+  events          WebhookEvent[]   // which events to fire
+  isActive        Boolean          @default(true)
+  failureCount    Int              @default(0) // consecutive failures; disabled after 10
+  lastDeliveredAt DateTime?
+  lastFailedAt    DateTime?
+  lastHttpStatus  Int?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  shop            Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, isActive])
+}
+
+enum WebhookEvent {
+  ORDER_CREATED
+  ORDER_STATUS_CHANGED
+  ORDER_COMPLETED
+  ORDER_CANCELLED
+  PAYMENT_RECEIVED
+  INVENTORY_LOW_STOCK
+  INVENTORY_UPDATED
+  RFQ_RECEIVED
+  OFFER_ACCEPTED
+  PRICE_ALERT
+  SUBSCRIPTION_CHANGED
+}
+
+// White-label / custom branding config
+model WhiteLabelConfig {
+  id              String   @id @default(uuid())
+  shopId          String   @unique
+  customDomain    String?  @unique  // e.g. "shop.mybrand.com"
+  logoUrl         String?
+  faviconUrl      String?
+  primaryColor    String?  // hex e.g. "#D4AF37"
+  secondaryColor  String?
+  accentColor     String?
+  fontFamily      String?  // Google Fonts name
+  headerHtml      String?  // custom HTML for storefront header
+  footerHtml      String?  // custom HTML for storefront footer
+  hideOrivraa     Boolean  @default(false) // hide "Powered by OriVraa"
+  customCss       String?  // extra CSS overrides
+  metaTitle       String?
+  metaDescription String?
+  ogImageUrl      String?
+  isActive        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+}
+
+// Scheduled report config
+model ScheduledReport {
+  id              String         @id @default(uuid())
+  shopId          String
+  reportType      ReportType
+  frequency       ReportFrequency
+  recipients      String[]       // email addresses
+  format          ReportFormat   @default(PDF)
+  filters         Json?          // date range, categories, branches, etc.
+  isActive        Boolean        @default(true)
+  lastSentAt      DateTime?
+  nextRunAt       DateTime?
+  createdByUserId String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  shop            Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, isActive])
+  @@index([nextRunAt])
+}
+
+enum ReportType {
+  SALES_SUMMARY
+  INVENTORY_STATUS
+  COMMISSION_STATEMENT
+  CUSTOMER_ANALYTICS
+  REVENUE_TREND
+  TAX_REPORT
+  STAFF_PERFORMANCE
+}
+
+enum ReportFrequency {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+}
+
+enum ReportFormat {
+  PDF
+  EXCEL
+  CSV
+}
+
+// Bulk import/export job tracking
+model BulkImportJob {
+  id              String           @id @default(uuid())
+  shopId          String
+  importType      BulkImportType
+  status          BulkJobStatus    @default(PENDING)
+  fileUrl         String           // R2 URL of uploaded file
+  totalRows       Int?
+  processedRows   Int              @default(0)
+  successRows     Int              @default(0)
+  failedRows      Int              @default(0)
+  errorLog        Json?            // array of { row, field, message }
+  resultFileUrl   String?          // URL of result/error file
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdByUserId String
+  createdAt       DateTime         @default(now())
+
+  shop            Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, status])
+  @@index([createdAt])
+}
+
+enum BulkImportType {
+  INVENTORY_ITEMS
+  PRODUCT_VARIANTS
+  CUSTOMER_LIST
+  PRICE_SHEET
+  CATALOGUE_ITEMS
+}
+
+enum BulkJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// AI demand forecasting results
+model DemandForecast {
+  id              String   @id @default(uuid())
+  shopId          String
+  period          String   // "2026-03", "2026-Q1"
+  category        String   // jewellery type, karat, etc.
+  predictedDemand Int
+  confidenceScore Float    // 0-1
+  factors         Json?    // { "seasonal": 0.3, "trend": 0.5, "promotion": 0.2 }
+  recommendation  String?  // AI-generated recommendation text
+  createdAt       DateTime @default(now())
+
+  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, period])
+  @@index([category])
+}
+
+// Automated repricing rules
+model RepricingRule {
+  id              String           @id @default(uuid())
+  shopId          String
+  ruleName        String
+  ruleType        RepricingType
+  conditions      Json             // e.g. { "metalType": "GOLD", "karat": 24, "marginMin": 3 }
+  action          Json             // e.g. { "adjustPercent": -2, "roundTo": 10 }
+  isActive        Boolean          @default(true)
+  priority        Int              @default(0)
+  lastTriggeredAt DateTime?
+  triggerCount    Int              @default(0)
+  createdByUserId String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  shop            Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, isActive])
+}
+
+enum RepricingType {
+  GOLD_RATE_CHANGE  // trigger when gold rate changes by X%
+  LOW_STOCK         // mark up when stock < threshold
+  COMPETITOR_MATCH  // match competitor pricing
+  TIME_BASED        // scheduled discounts (e.g. weekend sale)
+  DEMAND_BASED      // AI-driven demand elasticity
 }

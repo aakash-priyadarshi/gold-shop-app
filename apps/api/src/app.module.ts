@@ -16,6 +16,7 @@ import { ChatModule } from "./modules/chat/chat.module";
 import { CommissionModule } from "./modules/commission/commission.module";
 import { CustomerCrmModule } from "./modules/customer-crm/customer-crm.module";
 import { DesignsModule } from "./modules/designs/designs.module";
+import { EnterpriseModule } from "./modules/enterprise/enterprise.module";
 import { HealthModule } from "./modules/health/health.module";
 import { InventoryModule } from "./modules/inventory/inventory.module";
 import { InvoicesModule } from "./modules/invoices/invoices.module";
@@ -117,6 +118,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     SubscriptionPlansModule,
     AiCreditsModule,
     PaymentGatewayModule,
+    EnterpriseModule,
   ],
   providers: [
     // Apply ThrottlerGuard globally so @Throttle() decorators are enforced

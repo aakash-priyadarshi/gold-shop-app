@@ -1,6 +1,6 @@
 # Gold Shop App — Architecture & Feature Inventory
 
-_Last updated: 2026-02-22_
+_Last updated: 2026-02-23_
 
 This document is a code-informed overview of the system architecture and the major product features implemented in this repository.
 
@@ -50,13 +50,14 @@ flowchart LR
 ### Frontend (Next.js)
 
 - Uses Next.js App Router under `apps/web/src/app`.
+- Vercel Speed Insights integrated (`@vercel/speed-insights`) for Core Web Vitals monitoring.
 - Main route areas (folder-level):
   - Public pages: `about/`, `shops/`, `shop/`, `rfq/`, `designs/`, `cart/`, `checkout/`, `orders/`, `notifications/`, `auth/`, `help/`, `platform-guidelines/`, `c/` (public catalogues).
   - Dashboards: `dashboard/customer/*`, `dashboard/shop/*`, `dashboard/admin/*`, `dashboard/sales/*`, `dashboard/support/*`.
 
 Dashboard route map (folder inventory):
 - Customer dashboard (`apps/web/src/app/dashboard/customer`): `orders/`, `payments/`, `rfqs/`, `settings/`, `wishlist/`, `messages/`, `refunds/`.
-- Shop dashboard (`apps/web/src/app/dashboard/shop`): `analytics/`, `billing/`, `catalogues/`, `commissions/`, `customers/`, `engagement/`, `inventory/`, `invoices/`, `orders/`, `pos/`, `pricing/`, `products/`, `profile/`, `quotes/`, `rfqs/`, `settings/`, `shop-profile/`, `tools/`, `messages/`, `variants/`.
+- Shop dashboard (`apps/web/src/app/dashboard/shop`): `analytics/`, `billing/`, `catalogues/`, `commissions/`, `customers/`, `engagement/`, `enterprise/`, `inventory/`, `invoices/`, `orders/`, `pos/`, `pricing/`, `products/`, `profile/`, `quotes/`, `rfqs/`, `settings/`, `shop-profile/`, `tools/`, `messages/`, `variants/`.
 - Admin dashboard (`apps/web/src/app/dashboard/admin`): `billing/`, `shops/`, `users/`, `verifications/`, `orders/`, `commissions/`, `intelligence/`, `reports/`, `settings/`, `profile/`, `support/`, `chat-monitoring/`, `refunds/`, `messages/`.
 - Sales dashboard (`apps/web/src/app/dashboard/sales`): `shops/`, `orders/`, `messages/`, `profile/`.
 - Support dashboard (`apps/web/src/app/dashboard/support`): `tickets/`, `page.tsx` (overview).
@@ -108,6 +109,7 @@ Backend module inventory (`apps/api/src/modules/*`):
 - `subscriptions`: admin-configurable subscription plans (FREE/PRO/ENTERPRISE per country in local currency), seller subscription lifecycle (subscribe/cancel/activate/renew), Stripe webhook integration, plan-based commission rates
 - `ai-credits`: atomic AI credit debit/refund with `SELECT FOR UPDATE`, Redis idempotency + rate limiting (20/hr, 100/day), monthly grant with rollover cap logic, admin adjustments
 - `payment-gateway`: multi-gateway routing (Stripe/Razorpay) with priority-based country selection, `envKeyLabel` pattern (secrets never stored in DB), admin gateway config CRUD
+- `enterprise`: enterprise-tier features — multi-branch management, staff accounts & roles, API key generation, webhook subscriptions, white-label/custom domain, scheduled reports, bulk import/export, demand forecasting, automated repricing; protected by `EnterpriseGuard` (checks active ENTERPRISE subscription, admin bypass)
 
 ### Images (Cloudflare Worker + R2)
 
@@ -210,6 +212,19 @@ Core domain aggregates (high-level):
 - `PaymentGatewayConfig`: per-gateway routing config. Fields: gatewayName (@unique), displayName, isEnabled, envKeyLabel (string reference to env var — never the actual secret), webhookEndpoint, supportedCountries (MarketRegion[]), supportedMethods (PaymentMethod[]), priority (Int). Indexed on [isEnabled, priority].
 - User model additions: `aiCreditsBalance` (Int, default 0), `aiCreditsGrantedAt` (DateTime?).
 - New enums: `SubscriptionStatus`, `CreditAction`, `OverageBehavior`, `CurrencyCode` (NPR, INR, AED, GBP, USD, EUR).
+
+**Enterprise features (ENTERPRISE-tier only)**
+- `ShopBranch`: multi-branch management — branchCode, name, type (HQ/BRANCH/WAREHOUSE/KIOSK), address, phone, email, isActive; @@unique [shopId, branchCode]
+- `StaffAccount`: staff roles & permissions — userId, shopId, branchId (optional), role (StaffRole: MANAGER, CASHIER, SALES_ASSOCIATE, INVENTORY_CLERK, ACCOUNTANT, VIEWER), permissions (JSON — granular per-module flags), inviteToken, inviteStatus (PENDING/ACCEPTED/REVOKED/EXPIRED), invitedByUserId
+- `ShopApiKey`: API key management — keyHash (sha256, unique), prefix (`ovrk_`), label, scopes (String[]), expiresAt, isActive, lastUsedAt; raw key returned only on creation
+- `WebhookSubscription`: event-driven webhook delivery — url, events (WebhookEvent[]: ORDER_CREATED, ORDER_STATUS_CHANGED, PAYMENT_RECEIVED, INVENTORY_LOW, RFQ_RECEIVED, OFFER_ACCEPTED, REFUND_PROCESSED, COMMISSION_CHARGED), secret (HMAC signing), isActive, consecutiveFailures, lastDeliveredAt; auto-disabled after 10 consecutive failures
+- `WhiteLabelConfig`: custom branding — logoUrl, faviconUrl, primaryColor, secondaryColor, customDomain, customCss, footerHtml; @@unique [shopId]
+- `ScheduledReport`: automated report generation — reportType (ReportType: SALES_SUMMARY, INVENTORY_STATUS, COMMISSION_STATEMENT, CUSTOMER_ANALYTICS, TAX_REPORT, PROFIT_LOSS), frequency (ReportFrequency: DAILY, WEEKLY, BIWEEKLY, MONTHLY, QUARTERLY), format (ReportFormat: PDF, CSV, XLSX), recipients (String[]), filters (JSON), nextRunAt, lastRunAt, isActive
+- `BulkImportJob`: bulk data import/export — importType (BulkImportType: INVENTORY_ITEMS, CUSTOMER_LIST, PRICE_SHEET, ORDER_HISTORY), status (BulkJobStatus: PENDING, PROCESSING, COMPLETED, FAILED), fileUrl, totalRows, processedRows, successRows, failedRows, errors (JSON)
+- `DemandForecast`: demand prediction — category, forecastMonth, predictedDemand (Int), confidenceScore (Float), seasonalFactor (Float), recommendation (String)
+- `RepricingRule`: automated price adjustment — name, ruleType (RepricingType: GOLD_RATE_CHANGE, LOW_STOCK, COMPETITOR_MATCH, TIME_BASED, DEMAND_BASED), conditions (JSON), adjustmentPercent (Float), maxAdjustment (Float), isActive, priority (Int), lastTriggeredAt
+
+New enterprise enums: `StaffRole`, `WebhookEvent`, `ReportType`, `ReportFrequency`, `ReportFormat`, `BulkImportType`, `BulkJobStatus`, `RepricingType`.
 
 Enums represent key business states and supported options, e.g. `OrderStatus`, `DetailedOrderStatus` (includes `REFUND_REQUESTED`), `PaymentMethod`, `PaymentStatusEnum`, `RfqStatus`, `OfferStatus`, `RefundStatus`, `ConversationStatus`, `CommissionStatus` (includes `REVERSED`), `NotificationType` (includes `NEW_MESSAGE`, `CONVERSATION_LOCKED`, `REFUND_REQUESTED`, `REFUND_APPROVED`, `REFUND_REJECTED`, `REFUND_PROCESSED`, `TICKET_CREATED`, `TICKET_CLAIMED`, `TICKET_UPDATED`, `TICKET_MESSAGE`, `TICKET_RESOLVED`, `TICKET_CLOSED`), `UserRole` (ADMIN, SHOPKEEPER, CUSTOMER, SUPPORT, SALES), `TicketType` (ACCOUNT_SUSPENSION, LOGIN_ISSUE, PASSWORD_RECOVERY, HACKED_ACCOUNT, ORDER_ISSUE, REFUND_ISSUE, PAYMENT_ISSUE, PRODUCT_ISSUE, SHIPPING_ISSUE, SELLER_COMPLAINT, BUYER_COMPLAINT, PLATFORM_BUG, FEATURE_REQUEST, KYC_VERIFICATION, OTHER), `TicketStatus` (OPEN, CLAIMED, IN_PROGRESS, WAITING_USER, RESOLVED, CLOSED), `TicketPriority` (LOW, MEDIUM, HIGH, URGENT), and multiple material/finish/gem enums.
 
@@ -399,6 +414,57 @@ Instead of logging suspended users out:
 - All admin mutations are audit-logged via `AuditService`.
 - Stripe webhooks verified via `constructEvent` with raw body + signature.
 
+### 4.15 Enterprise features (ENTERPRISE-tier only)
+
+All enterprise endpoints are protected by `EnterpriseGuard` — verifies the seller has an active ENTERPRISE subscription. Admin role bypasses the check.
+
+**Multi-branch management**:
+1. ENTERPRISE seller creates branches (`HQ`, `BRANCH`, `WAREHOUSE`, `KIOSK`) with unique branch codes per shop.
+2. Each branch has address, phone, email, manager assignment, operating hours.
+3. Staff accounts can be optionally scoped to a specific branch.
+
+**Staff accounts & roles**:
+1. Seller invites staff by email with a role and optional branch assignment.
+2. Roles: `MANAGER`, `CASHIER`, `SALES_ASSOCIATE`, `INVENTORY_CLERK`, `ACCOUNTANT`, `VIEWER`.
+3. Permissions stored as JSON — granular flags per module (inventory, orders, pricing, reports, etc.).
+4. Invited user accepts via token → `PENDING` → `ACCEPTED`. Seller can revoke access.
+
+**API key management**:
+1. Seller generates API keys — format: `ovrk_` + 24 random hex bytes.
+2. Key is hashed (sha256) before storage; raw key returned only once on creation.
+3. Keys have scoped access (e.g. `inventory:read`, `orders:write`, `pricing:read`), optional expiry.
+4. Validation endpoint for external integrations to verify key validity and check scopes.
+
+**Webhook subscriptions**:
+1. Seller registers webhook URLs with selected event types (ORDER_CREATED, PAYMENT_RECEIVED, INVENTORY_LOW, etc.).
+2. Events are delivered via HTTP POST with HMAC-SHA256 signature (`v1=<hex>` in `X-Signature` header).
+3. 10-second timeout per delivery attempt.
+4. Consecutive failures tracked; webhook auto-disabled after 10 failures.
+5. Other services call `webhookService.fireEvent(shopId, event, payload)` to trigger delivery.
+
+**White-label / custom domain**:
+1. Seller configures custom branding: logo, favicon, primary/secondary colors, custom CSS, footer HTML.
+2. Optional custom domain mapping — `WhiteLabelConfig.customDomain` resolved by middleware.
+
+**Scheduled reports**:
+1. Seller creates report schedules: type (SALES_SUMMARY, INVENTORY_STATUS, COMMISSION_STATEMENT, CUSTOMER_ANALYTICS, TAX_REPORT, PROFIT_LOSS), frequency (DAILY to QUARTERLY), format (PDF/CSV/XLSX), recipients (email list), filters.
+2. `nextRunAt` auto-calculated based on frequency.
+3. On-demand report generation also available — returns data directly.
+
+**Bulk import/export**:
+1. Import: upload file (INVENTORY_ITEMS, CUSTOMER_LIST, PRICE_SHEET, ORDER_HISTORY) → job queued → processed asynchronously.
+2. Export: on-demand data export with formatted output for inventory, customers, price sheets.
+
+**Demand forecasting**:
+1. Analyzes last 6 months of delivered orders by category (jewellery type).
+2. Applies seasonal factors (wedding/festival months get 1.2x multiplier).
+3. Generates per-category predictions with confidence scores and stock recommendations.
+
+**Automated repricing**:
+1. Seller defines repricing rules: type (GOLD_RATE_CHANGE, LOW_STOCK, COMPETITOR_MATCH, TIME_BASED, DEMAND_BASED), conditions (JSON), adjustment percentage, max adjustment cap, priority.
+2. `evaluateRules()` engine processes active rules by priority — checks conditions against current inventory/market data.
+3. Returns list of price adjustments for review before application.
+
 ## 5) Feature inventory (by role)
 
 ### Customers
@@ -428,6 +494,7 @@ Instead of logging suspended users out:
 - Size variant management: enable sizes, create/edit/delete variants, manage per-size stock and price overrides
 - **Seller Catalogues**: create/manage multiple catalogues per shop; add inventory items with sort order, override prices, hidden flags; share via link/QR; showroom mode for walk-in presentation; password protection with expiry; create walk-in RFQs (3-step modal: items → details → customer info); view analytics (views, unique visitors); share catalogues and products as rich cards in chat
 - **Billing**: view current subscription plan, AI credit balance + transaction ledger, browse and subscribe to available plans, cancel subscription
+- **Enterprise features** (ENTERPRISE-tier only): multi-branch management (HQ/branch/warehouse/kiosk), staff accounts with role-based permissions (6 roles), API key generation with scoped access, webhook subscriptions (8 event types) with HMAC signing, white-label branding (logo/colors/CSS/custom domain), scheduled reports (6 types, 5 frequencies, 3 formats), bulk import/export (inventory/customers/price sheets), demand forecasting with seasonal analysis, automated repricing rules (5 rule types); 7-tab dashboard at `/dashboard/shop/enterprise`
 
 ### Admin
 
@@ -624,6 +691,77 @@ WebSocket gateway: namespace `/support`, events: `joinTicket`, `leaveTicket`, `t
 | POST | `/payment-gateways/configs` | ADMIN | Upsert gateway config (audit-logged) |
 | PATCH | `/payment-gateways/configs/:id/toggle` | ADMIN | Enable/disable gateway (audit-logged) |
 
+### Enterprise — Branches (`/api/enterprise/branches`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/enterprise/branches` | SHOPKEEPER (ENTERPRISE) | Create branch |
+| GET | `/enterprise/branches` | SHOPKEEPER (ENTERPRISE) | List shop branches |
+| PATCH | `/enterprise/branches/:id` | SHOPKEEPER (ENTERPRISE) | Update branch |
+| DELETE | `/enterprise/branches/:id` | SHOPKEEPER (ENTERPRISE) | Delete branch |
+
+### Enterprise — Staff (`/api/enterprise/staff`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/enterprise/staff/invite` | SHOPKEEPER (ENTERPRISE) | Invite staff member |
+| GET | `/enterprise/staff` | SHOPKEEPER (ENTERPRISE) | List staff accounts |
+| PATCH | `/enterprise/staff/:id` | SHOPKEEPER (ENTERPRISE) | Update staff role/permissions |
+| DELETE | `/enterprise/staff/:id` | SHOPKEEPER (ENTERPRISE) | Remove staff member |
+| POST | `/enterprise/staff/accept/:token` | JWT | Accept staff invite |
+
+### Enterprise — API Keys (`/api/enterprise/api-keys`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/enterprise/api-keys` | SHOPKEEPER (ENTERPRISE) | Generate API key (returns raw key once) |
+| GET | `/enterprise/api-keys` | SHOPKEEPER (ENTERPRISE) | List API keys (no secrets) |
+| DELETE | `/enterprise/api-keys/:id` | SHOPKEEPER (ENTERPRISE) | Revoke API key |
+| POST | `/enterprise/api-keys/validate` | Public | Validate API key and check scopes |
+
+### Enterprise — Webhooks (`/api/enterprise/webhooks`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/enterprise/webhooks` | SHOPKEEPER (ENTERPRISE) | Create webhook subscription |
+| GET | `/enterprise/webhooks` | SHOPKEEPER (ENTERPRISE) | List webhook subscriptions |
+| PATCH | `/enterprise/webhooks/:id` | SHOPKEEPER (ENTERPRISE) | Update webhook |
+| DELETE | `/enterprise/webhooks/:id` | SHOPKEEPER (ENTERPRISE) | Delete webhook |
+
+### Enterprise — White Label (`/api/enterprise/white-label`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| PUT | `/enterprise/white-label` | SHOPKEEPER (ENTERPRISE) | Upsert branding config |
+| GET | `/enterprise/white-label` | SHOPKEEPER (ENTERPRISE) | Get branding config |
+
+### Enterprise — Reports (`/api/enterprise/reports`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/enterprise/reports/schedules` | SHOPKEEPER (ENTERPRISE) | Create scheduled report |
+| GET | `/enterprise/reports/schedules` | SHOPKEEPER (ENTERPRISE) | List scheduled reports |
+| PATCH | `/enterprise/reports/schedules/:id` | SHOPKEEPER (ENTERPRISE) | Update scheduled report |
+| DELETE | `/enterprise/reports/schedules/:id` | SHOPKEEPER (ENTERPRISE) | Delete scheduled report |
+| POST | `/enterprise/reports/generate` | SHOPKEEPER (ENTERPRISE) | Generate on-demand report |
+
+### Enterprise — Bulk Import/Export (`/api/enterprise/bulk`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/enterprise/bulk/import` | SHOPKEEPER (ENTERPRISE) | Create import job |
+| GET | `/enterprise/bulk/jobs` | SHOPKEEPER (ENTERPRISE) | List import jobs |
+| GET | `/enterprise/bulk/jobs/:id` | SHOPKEEPER (ENTERPRISE) | Get job status |
+| POST | `/enterprise/bulk/export` | SHOPKEEPER (ENTERPRISE) | Export data (inventory/customers/prices) |
+
+### Enterprise — Repricing (`/api/enterprise/repricing`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/enterprise/repricing/rules` | SHOPKEEPER (ENTERPRISE) | Create repricing rule |
+| GET | `/enterprise/repricing/rules` | SHOPKEEPER (ENTERPRISE) | List repricing rules |
+| PATCH | `/enterprise/repricing/rules/:id` | SHOPKEEPER (ENTERPRISE) | Update repricing rule |
+| DELETE | `/enterprise/repricing/rules/:id` | SHOPKEEPER (ENTERPRISE) | Delete repricing rule |
+| POST | `/enterprise/repricing/evaluate` | SHOPKEEPER (ENTERPRISE) | Evaluate rules (preview adjustments) |
+
+### Enterprise — Forecasting (`/api/enterprise/forecasts`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/enterprise/forecasts` | SHOPKEEPER (ENTERPRISE) | Get demand forecasts |
+| GET | `/enterprise/forecasts/history` | SHOPKEEPER (ENTERPRISE) | Get forecast history |
+
 ## 7) Operations & CI/CD notes
 
 - CI/CD guidance is documented in `docs/CI-CD-PIPELINE.md`.
@@ -656,6 +794,40 @@ Worker (`cloudflare-worker`):
 ---
 
 ## 9) Changelog
+
+### 2026-02-23 — Enterprise features + Vercel Speed Insights
+
+**New backend module** — `EnterpriseModule` (9 services, 9 controllers, 1 guard)
+
+**Schema additions** — nine new models:
+- `ShopBranch` — multi-branch management (HQ, BRANCH, WAREHOUSE, KIOSK)
+- `StaffAccount` — role-based staff access with JSON permissions and invite flow
+- `ShopApiKey` — API key generation with sha256 hashing and scoped access
+- `WebhookSubscription` — event-driven webhooks with HMAC-SHA256 signing, auto-disable after 10 failures
+- `WhiteLabelConfig` — custom branding (logo, colors, CSS, custom domain)
+- `ScheduledReport` — automated report generation (6 types × 5 frequencies × 3 formats)
+- `BulkImportJob` — bulk import/export lifecycle tracking
+- `DemandForecast` — category-level demand prediction with seasonal analysis
+- `RepricingRule` — automated price adjustment rules (5 rule types)
+
+**New enums**: `StaffRole`, `WebhookEvent`, `ReportType`, `ReportFrequency`, `ReportFormat`, `BulkImportType`, `BulkJobStatus`, `RepricingType`.
+
+**EnterpriseGuard** — all enterprise endpoints check for active ENTERPRISE subscription; admin role bypasses.
+
+**Enterprise plan features expanded** — subscription seed updated with 11 enterprise-only feature flags: `multiBranch`, `staffAccounts`, `webhookSubscriptions`, `scheduledReports`, `demandForecasting`, `automatedRepricing`, `bulkImportExport`, `customDomain`, `auditLogExport`, `ssoIntegration` (planned), `dataResidency` (planned).
+
+**Migration** — `002_enterprise_features.sql` with all 9 tables, 8 enums, indexes, and constraints.
+
+**Frontend** — new `/dashboard/shop/enterprise` page with 7-tab interface:
+- Branches: CRUD with type badges, HQ indicator
+- Staff: invite/manage with role selection and status tracking
+- API Keys: generate/revoke with scope management, masked display
+- Webhooks: configure URLs and event subscriptions, failure count monitoring
+- Branding: logo/favicon/color customization with live preview
+- Repricing: rule CRUD with type/condition configuration, real-time evaluation
+- Forecasts: category-level demand charts with confidence scores and recommendations
+
+**Vercel Speed Insights** — `@vercel/speed-insights` (v1.3.1) integrated in root layout for Core Web Vitals monitoring.
 
 ### 2026-02-22 — Subscription & billing system
 
