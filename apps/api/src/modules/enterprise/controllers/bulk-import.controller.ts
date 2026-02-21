@@ -42,7 +42,10 @@ export class BulkImportController {
     @CurrentUser("activeShopId") shopId: string,
     @Query("limit") limit?: string,
   ) {
-    return this.bulkImportService.listImportJobs(shopId, limit ? parseInt(limit) : 20);
+    return this.bulkImportService.listImportJobs(
+      shopId,
+      limit ? parseInt(limit) : 20,
+    );
   }
 
   @Get("imports/:id")

@@ -1,7 +1,7 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from "@nestjs/common";
 import * as crypto from "crypto";
 import { PrismaService } from "../../../prisma/prisma.service";
@@ -113,10 +113,7 @@ export class ApiKeyService {
   async validateApiKey(rawKey: string) {
     if (!rawKey.startsWith(API_KEY_PREFIX)) return null;
 
-    const keyHash = crypto
-      .createHash("sha256")
-      .update(rawKey)
-      .digest("hex");
+    const keyHash = crypto.createHash("sha256").update(rawKey).digest("hex");
 
     const apiKey = await this.prisma.shopApiKey.findFirst({
       where: {

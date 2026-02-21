@@ -43,7 +43,11 @@ export class StaffController {
       branchIds?: string[];
     },
   ) {
-    const staff = await this.staffService.inviteStaff(shopId, invitedByUserId, body);
+    const staff = await this.staffService.inviteStaff(
+      shopId,
+      invitedByUserId,
+      body,
+    );
 
     await this.auditService.log({
       userId: invitedByUserId,
@@ -84,7 +88,13 @@ export class StaffController {
     @CurrentUser("activeShopId") shopId: string,
     @CurrentUser("id") userId: string,
     @Param("id") id: string,
-    @Body() body: Partial<{ staffRole: string; permissions: Record<string, boolean>; branchIds: string[]; isActive: boolean }>,
+    @Body()
+    body: Partial<{
+      staffRole: string;
+      permissions: Record<string, boolean>;
+      branchIds: string[];
+      isActive: boolean;
+    }>,
   ) {
     const result = await this.staffService.updateStaff(shopId, id, body);
 

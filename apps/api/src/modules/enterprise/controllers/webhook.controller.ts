@@ -26,7 +26,9 @@ export class WebhookController {
 
   @Post()
   @Roles(UserRole.SHOPKEEPER)
-  @ApiOperation({ summary: "Create webhook subscription (HMAC secret shown once)" })
+  @ApiOperation({
+    summary: "Create webhook subscription (HMAC secret shown once)",
+  })
   async create(
     @CurrentUser("activeShopId") shopId: string,
     @Body() body: { url: string; events: string[] },

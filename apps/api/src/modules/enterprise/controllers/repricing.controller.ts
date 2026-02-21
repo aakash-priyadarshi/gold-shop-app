@@ -80,7 +80,14 @@ export class RepricingController {
   async update(
     @CurrentUser("activeShopId") shopId: string,
     @Param("id") id: string,
-    @Body() body: Partial<{ ruleName: string; conditions: Record<string, unknown>; action: Record<string, unknown>; isActive: boolean; priority: number }>,
+    @Body()
+    body: Partial<{
+      ruleName: string;
+      conditions: Record<string, unknown>;
+      action: Record<string, unknown>;
+      isActive: boolean;
+      priority: number;
+    }>,
   ) {
     return this.repricingService.updateRule(shopId, id, body);
   }

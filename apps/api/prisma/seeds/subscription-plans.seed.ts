@@ -35,7 +35,10 @@ async function main() {
   // ─── Country-specific pricing tables ───────────
   // Prices are calibrated to local markets; admin can adjust anytime
 
-  const PRO_PRICING: Record<string, { monthly: number; annual: number; extraCredit: number }> = {
+  const PRO_PRICING: Record<
+    string,
+    { monthly: number; annual: number; extraCredit: number }
+  > = {
     NP: { monthly: 1999, annual: 19990, extraCredit: 50 },
     IN: { monthly: 999, annual: 9990, extraCredit: 25 },
     AE: { monthly: 99, annual: 990, extraCredit: 5 },
@@ -44,7 +47,10 @@ async function main() {
     EU: { monthly: 29, annual: 290, extraCredit: 1.5 },
   };
 
-  const ENTERPRISE_PRICING: Record<string, { monthly: number; annual: number; extraCredit: number }> = {
+  const ENTERPRISE_PRICING: Record<
+    string,
+    { monthly: number; annual: number; extraCredit: number }
+  > = {
     NP: { monthly: 9999, annual: 99990, extraCredit: 30 },
     IN: { monthly: 4999, annual: 49990, extraCredit: 15 },
     AE: { monthly: 499, annual: 4990, extraCredit: 3 },
@@ -175,7 +181,9 @@ async function main() {
     console.log(`  ✅ ENTERPRISE plan (${region}): ${plan.id}`);
   }
 
-  console.log("\n✨ Subscription plans seeded successfully! (18 plans: 6 FREE + 6 PRO + 6 ENTERPRISE)");
+  console.log(
+    "\n✨ Subscription plans seeded successfully! (18 plans: 6 FREE + 6 PRO + 6 ENTERPRISE)",
+  );
 }
 
 main()
