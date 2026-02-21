@@ -2,6 +2,7 @@ import { GeoMismatchBanner } from "@/components/layout/GeoMismatchBanner";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/toaster";
 import { BRAND } from "@/config/brand";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -77,6 +78,7 @@ export default function RootLayout({
           <GeoMismatchBanner />
           {children}
           <Toaster />
+          <SpeedInsights />
         </Providers>
       </body>
     </html>
