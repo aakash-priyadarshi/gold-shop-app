@@ -1,9 +1,9 @@
 import {
+  BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
-  BadRequestException,
-  ConflictException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -149,12 +149,17 @@ export class SellerSubscriptionsService {
     let clientSecret: string | null = null;
     try {
       const stripeKey = this.configService.get<string>("STRIPE_SECRET_KEY");
-      if (stripeKey && stripeKey !== "" && stripeKey !== "sk_test_placeholder") {
+      if (
+        stripeKey &&
+        stripeKey !== "" &&
+        stripeKey !== "sk_test_placeholder"
+      ) {
         const stripe = require("stripe")(stripeKey);
 
         // Find or create Stripe customer
-        let stripeCustomerId =
-          await this.getOrCreateStripeCustomer(opts.shopId);
+        let stripeCustomerId = await this.getOrCreateStripeCustomer(
+          opts.shopId,
+        );
 
         const paymentIntent = await stripe.paymentIntents.create({
           amount: Math.round(price * 100), // cents
@@ -186,7 +191,9 @@ export class SellerSubscriptionsService {
         );
       }
     } catch (err) {
-      this.logger.error(`Stripe payment intent creation failed: ${err.message}`);
+      this.logger.error(
+        `Stripe payment intent creation failed: ${err.message}`,
+      );
       // Subscription stays in TRIALING — admin can manually activate
     }
 
@@ -203,7 +210,9 @@ export class SellerSubscriptionsService {
   private async getOrCreateStripeCustomer(shopId: string): Promise<string> {
     const shop = await this.prisma.shop.findUnique({
       where: { id: shopId },
-      include: { owner: { select: { email: true, firstName: true, lastName: true } } },
+      include: {
+        user: { select: { email: true, firstName: true, lastName: true } },
+      },
     });
 
     if (!shop) throw new NotFoundException("Shop not found");
@@ -222,9 +231,9 @@ export class SellerSubscriptionsService {
 
     const stripe = require("stripe")(stripeKey);
     const customer = await stripe.customers.create({
-      email: shop.owner.email,
-      name: `${shop.owner.firstName} ${shop.owner.lastName}`,
-      metadata: { shopId, businessName: shop.businessName },
+      email: shop.user.email,
+      name: `${shop.user.firstName} ${shop.user.lastName}`,
+      metadata: { shopId, shopName: shop.shopName },
     });
 
     return customer.id;
@@ -267,7 +276,9 @@ export class SellerSubscriptionsService {
     if (!sub) throw new NotFoundException("Subscription not found");
 
     if (sub.status === "CANCELLED" || sub.status === "EXPIRED") {
-      throw new BadRequestException("Subscription is already cancelled/expired");
+      throw new BadRequestException(
+        "Subscription is already cancelled/expired",
+      );
     }
 
     if (opts.immediate) {
@@ -381,9 +392,7 @@ export class SellerSubscriptionsService {
             });
           }
 
-          this.logger.warn(
-            `Payment failed for subscription ${subscriptionId}`,
-          );
+          this.logger.warn(`Payment failed for subscription ${subscriptionId}`);
         }
         break;
       }
@@ -471,9 +480,9 @@ export class SellerSubscriptionsService {
           shop: {
             select: {
               id: true,
-              businessName: true,
+              shopName: true,
               slug: true,
-              owner: {
+              user: {
                 select: { email: true, firstName: true, lastName: true },
               },
             },

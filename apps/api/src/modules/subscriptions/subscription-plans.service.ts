@@ -1,8 +1,8 @@
 import {
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
-  ConflictException,
 } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { CreatePlanDto, UpdatePlanDto } from "./dto";
@@ -46,7 +46,7 @@ export class SubscriptionPlansService {
         rolloverCap: dto.rolloverCap,
         extraCreditPrice: dto.extraCreditPrice,
         overageBehavior: (dto.overageBehavior as any) || "BLOCK",
-        features: dto.features ?? {},
+        features: (dto.features ?? {}) as any,
         isActive: dto.isActive ?? true,
         sortOrder: dto.sortOrder ?? 0,
       },

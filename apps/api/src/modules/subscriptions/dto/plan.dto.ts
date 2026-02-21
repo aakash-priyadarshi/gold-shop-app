@@ -1,13 +1,13 @@
 import {
-  IsString,
-  IsNumber,
   IsBoolean,
-  IsOptional,
   IsEnum,
   IsInt,
-  Min,
-  Max,
+  IsNumber,
   IsObject,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
 } from "class-validator";
 
 enum MarketRegionDto {

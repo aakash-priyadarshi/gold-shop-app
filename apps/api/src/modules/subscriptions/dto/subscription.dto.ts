@@ -1,9 +1,9 @@
 import {
-  IsString,
-  IsOptional,
   IsBoolean,
-  IsEnum,
   IsDateString,
+  IsEnum,
+  IsOptional,
+  IsString,
 } from "class-validator";
 
 enum MarketRegionDto {

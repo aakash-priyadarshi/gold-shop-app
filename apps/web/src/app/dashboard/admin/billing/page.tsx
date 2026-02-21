@@ -26,14 +26,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/hooks/use-toast";
 import {
-  subscriptionPlansApi,
-  sellerSubscriptionsApi,
   aiCreditsApi,
   paymentGatewayApi,
+  sellerSubscriptionsApi,
+  subscriptionPlansApi,
 } from "@/lib/api";
 import {
-  CreditCard,
   Crown,
   DollarSign,
   Plus,
@@ -41,10 +41,8 @@ import {
   ToggleLeft,
   ToggleRight,
   Users,
-  Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { toast } from "@/hooks/use-toast";
 
 // ─── Types ───────────────────────────────────────
 
@@ -151,7 +149,11 @@ function PlansTab() {
       const res = await subscriptionPlansApi.list(params);
       setPlans(res.data);
     } catch {
-      toast({ title: "Error", description: "Failed to load plans", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to load plans",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -164,10 +166,17 @@ function PlansTab() {
   const handleToggle = async (plan: Plan) => {
     try {
       await subscriptionPlansApi.toggle(plan.id, !plan.isActive);
-      toast({ title: "Success", description: `Plan ${plan.isActive ? "disabled" : "enabled"} successfully` });
+      toast({
+        title: "Success",
+        description: `Plan ${plan.isActive ? "disabled" : "enabled"} successfully`,
+      });
       fetchPlans();
     } catch {
-      toast({ title: "Error", description: "Failed to toggle plan", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to toggle plan",
+        variant: "destructive",
+      });
     }
   };
 
@@ -225,10 +234,7 @@ function PlansTab() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {plans.map((plan) => (
-            <Card
-              key={plan.id}
-              className={!plan.isActive ? "opacity-60" : ""}
-            >
+            <Card key={plan.id} className={!plan.isActive ? "opacity-60" : ""}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{plan.displayName}</CardTitle>
@@ -337,7 +343,11 @@ function CreatePlanForm({ onSuccess }: { onSuccess: () => void }) {
       toast({ title: "Success", description: "Plan created successfully" });
       onSuccess();
     } catch (err: any) {
-      toast({ title: "Error", description: err?.response?.data?.message || "Failed to create plan", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: err?.response?.data?.message || "Failed to create plan",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -410,7 +420,10 @@ function CreatePlanForm({ onSuccess }: { onSuccess: () => void }) {
             className="mt-1 w-full rounded-md border px-3 py-2 text-sm dark:bg-zinc-900"
             value={form.monthlyPrice}
             onChange={(e) =>
-              setForm({ ...form, monthlyPrice: parseFloat(e.target.value) || 0 })
+              setForm({
+                ...form,
+                monthlyPrice: parseFloat(e.target.value) || 0,
+              })
             }
           />
         </div>
@@ -451,9 +464,7 @@ function CreatePlanForm({ onSuccess }: { onSuccess: () => void }) {
           <input
             type="checkbox"
             checked={form.includesAi}
-            onChange={(e) =>
-              setForm({ ...form, includesAi: e.target.checked })
-            }
+            onChange={(e) => setForm({ ...form, includesAi: e.target.checked })}
           />
           <label className="text-sm font-medium">Includes AI</label>
         </div>
@@ -511,7 +522,11 @@ function SubscriptionsTab() {
         setSubs(subsRes.data.data);
         setStats(statsRes.data);
       } catch {
-        toast({ title: "Error", description: "Failed to load subscriptions", variant: "destructive" });
+        toast({
+          title: "Error",
+          description: "Failed to load subscriptions",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
@@ -573,9 +588,7 @@ function SubscriptionsTab() {
 
       {/* Subscription list */}
       {loading ? (
-        <div className="py-8 text-center text-muted-foreground">
-          Loading...
-        </div>
+        <div className="py-8 text-center text-muted-foreground">Loading...</div>
       ) : subs.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
@@ -591,9 +604,7 @@ function SubscriptionsTab() {
                 <th className="px-4 py-3 text-left font-medium">Plan</th>
                 <th className="px-4 py-3 text-left font-medium">Status</th>
                 <th className="px-4 py-3 text-left font-medium">Period End</th>
-                <th className="px-4 py-3 text-left font-medium">
-                  Auto Renew
-                </th>
+                <th className="px-4 py-3 text-left font-medium">Auto Renew</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -626,9 +637,7 @@ function SubscriptionsTab() {
                   <td className="px-4 py-3">
                     {new Date(sub.currentPeriodEnd).toLocaleDateString()}
                   </td>
-                  <td className="px-4 py-3">
-                    {sub.autoRenew ? "Yes" : "No"}
-                  </td>
+                  <td className="px-4 py-3">{sub.autoRenew ? "Yes" : "No"}</td>
                 </tr>
               ))}
             </tbody>
@@ -653,7 +662,11 @@ function CreditsTab() {
         const res = await aiCreditsApi.getCreditStats();
         setStats(res.data);
       } catch {
-        toast({ title: "Error", description: "Failed to load credit stats", variant: "destructive" });
+        toast({
+          title: "Error",
+          description: "Failed to load credit stats",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
@@ -662,12 +675,24 @@ function CreditsTab() {
   }, []);
 
   const handleMonthlyGrant = async () => {
-    if (!confirm("This will grant monthly credits to all active subscribers. Continue?")) return;
+    if (
+      !confirm(
+        "This will grant monthly credits to all active subscribers. Continue?",
+      )
+    )
+      return;
     try {
       const res = await aiCreditsApi.triggerMonthlyGrant();
-      toast({ title: "Success", description: `Granted credits to ${res.data.granted} users, expired ${res.data.expired} credits` });
+      toast({
+        title: "Success",
+        description: `Granted credits to ${res.data.granted} users, expired ${res.data.expired} credits`,
+      });
     } catch {
-      toast({ title: "Error", description: "Failed to process monthly grant", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to process monthly grant",
+        variant: "destructive",
+      });
     }
   };
 
@@ -682,9 +707,7 @@ function CreditsTab() {
       </div>
 
       {loading ? (
-        <div className="py-8 text-center text-muted-foreground">
-          Loading...
-        </div>
+        <div className="py-8 text-center text-muted-foreground">Loading...</div>
       ) : stats ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
@@ -739,7 +762,11 @@ function GatewaysTab() {
       const res = await paymentGatewayApi.listConfigs();
       setConfigs(res.data);
     } catch {
-      toast({ title: "Error", description: "Failed to load gateway configs", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to load gateway configs",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -752,10 +779,17 @@ function GatewaysTab() {
   const handleToggle = async (config: GatewayConfig) => {
     try {
       await paymentGatewayApi.toggleGateway(config.id, !config.isEnabled);
-      toast({ title: "Success", description: `${config.displayName} ${config.isEnabled ? "disabled" : "enabled"}` });
+      toast({
+        title: "Success",
+        description: `${config.displayName} ${config.isEnabled ? "disabled" : "enabled"}`,
+      });
       fetchConfigs();
     } catch {
-      toast({ title: "Error", description: "Failed to toggle gateway", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to toggle gateway",
+        variant: "destructive",
+      });
     }
   };
 
@@ -770,9 +804,7 @@ function GatewaysTab() {
       </div>
 
       {loading ? (
-        <div className="py-8 text-center text-muted-foreground">
-          Loading...
-        </div>
+        <div className="py-8 text-center text-muted-foreground">Loading...</div>
       ) : configs.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">

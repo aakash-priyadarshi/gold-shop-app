@@ -1,11 +1,11 @@
 import {
-  Injectable,
-  Logger,
   BadRequestException,
   ForbiddenException,
+  Injectable,
+  Logger,
 } from "@nestjs/common";
-import { PrismaService } from "../../prisma/prisma.service";
 import { RedisService } from "../../common/redis";
+import { PrismaService } from "../../prisma/prisma.service";
 
 const RATE_LIMIT_HOURLY = 20; // max generations per hour per user
 const RATE_LIMIT_DAILY = 100; // max generations per day per user
@@ -45,9 +45,7 @@ export class AiCreditsService {
         `ai_credit_idem:${opts.idempotencyKey}`,
       );
       if (existing) {
-        this.logger.log(
-          `Idempotent debit skipped: ${opts.idempotencyKey}`,
-        );
+        this.logger.log(`Idempotent debit skipped: ${opts.idempotencyKey}`);
         return JSON.parse(existing);
       }
     }
@@ -193,7 +191,7 @@ export class AiCreditsService {
         plan: true,
         shop: {
           include: {
-            owner: { select: { id: true, aiCreditsBalance: true } },
+            user: { select: { id: true, aiCreditsBalance: true } },
           },
         },
       },
@@ -203,8 +201,8 @@ export class AiCreditsService {
     let expired = 0;
 
     for (const sub of activeSubscriptions) {
-      const user = sub.shop.owner;
-      const plan = sub.plan;
+      const user = (sub as any).shop.user;
+      const plan = (sub as any).plan;
 
       if (!user || plan.monthlyAiCredits <= 0) continue;
 

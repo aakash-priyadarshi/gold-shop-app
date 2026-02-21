@@ -8,6 +8,7 @@ import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { HttpClientModule } from "./common/http-client";
 import { RedisModule } from "./common/redis";
 import { AdminModule } from "./modules/admin/admin.module";
+import { AiCreditsModule } from "./modules/ai-credits/ai-credits.module";
 import { AuditModule } from "./modules/audit/audit.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { CatalogueModule } from "./modules/catalogue/catalogue.module";
@@ -28,6 +29,7 @@ import { NotificationsModule } from "./modules/notifications/notifications.modul
 import { OffersModule } from "./modules/offers/offers.module";
 import { OrdersModule } from "./modules/orders/orders.module";
 import { PagesModule } from "./modules/pages/pages.module";
+import { PaymentGatewayModule } from "./modules/payment-gateway/payment-gateway.module";
 import { PaymentsModule } from "./modules/payments/payments.module";
 import { PlatformConfigModule } from "./modules/platform-config/platform-config.module";
 import { PosModule } from "./modules/pos/pos.module";
@@ -38,11 +40,9 @@ import { RfqModule } from "./modules/rfq/rfq.module";
 import { SellerPerformanceModule } from "./modules/seller-performance/seller-performance.module";
 import { ShopQuotesModule } from "./modules/shop-quotes/shop-quotes.module";
 import { ShopsModule } from "./modules/shops/shops.module";
+import { SubscriptionPlansModule } from "./modules/subscriptions/subscription-plans.module";
 import { SupportModule } from "./modules/support/support.module";
 import { UsersModule } from "./modules/users/users.module";
-import { SubscriptionPlansModule } from "./modules/subscriptions/subscription-plans.module";
-import { AiCreditsModule } from "./modules/ai-credits/ai-credits.module";
-import { PaymentGatewayModule } from "./modules/payment-gateway/payment-gateway.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
 @Module({
