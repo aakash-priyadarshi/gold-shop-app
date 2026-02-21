@@ -1,0 +1,168 @@
+import {
+  IsString,
+  IsNumber,
+  IsBoolean,
+  IsOptional,
+  IsEnum,
+  IsInt,
+  Min,
+  Max,
+  IsObject,
+} from "class-validator";
+
+enum MarketRegionDto {
+  NP = "NP",
+  IN = "IN",
+  AE = "AE",
+  UK = "UK",
+  EU = "EU",
+  US = "US",
+}
+
+enum CurrencyCodeDto {
+  NPR = "NPR",
+  INR = "INR",
+  AED = "AED",
+  USD = "USD",
+  GBP = "GBP",
+  EUR = "EUR",
+}
+
+enum OverageBehaviorDto {
+  BLOCK = "BLOCK",
+  AUTO_CHARGE = "AUTO_CHARGE",
+}
+
+export class CreatePlanDto {
+  @IsString()
+  name: string;
+
+  @IsString()
+  displayName: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsEnum(MarketRegionDto)
+  country: string;
+
+  @IsEnum(CurrencyCodeDto)
+  currency: string;
+
+  @IsNumber()
+  @Min(0)
+  monthlyPrice: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  annualPrice?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  catalogueLimit?: number;
+
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  commissionPercent: number;
+
+  @IsBoolean()
+  includesAi: boolean;
+
+  @IsInt()
+  @Min(0)
+  monthlyAiCredits: number;
+
+  @IsInt()
+  @Min(0)
+  rolloverCap: number;
+
+  @IsNumber()
+  @Min(0)
+  extraCreditPrice: number;
+
+  @IsOptional()
+  @IsEnum(OverageBehaviorDto)
+  overageBehavior?: string;
+
+  @IsOptional()
+  @IsObject()
+  features?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  sortOrder?: number;
+}
+
+export class UpdatePlanDto {
+  @IsOptional()
+  @IsString()
+  displayName?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  monthlyPrice?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  annualPrice?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  catalogueLimit?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  commissionPercent?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  includesAi?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  monthlyAiCredits?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  rolloverCap?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  extraCreditPrice?: number;
+
+  @IsOptional()
+  @IsEnum(OverageBehaviorDto)
+  overageBehavior?: string;
+
+  @IsOptional()
+  @IsObject()
+  features?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  sortOrder?: number;
+}

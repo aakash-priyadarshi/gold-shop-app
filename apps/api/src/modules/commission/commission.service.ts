@@ -1,15 +1,19 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { CommissionStatus } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { PlatformConfigService } from "../platform-config/platform-config.service";
+import { SubscriptionPlansService } from "../subscriptions/subscription-plans.service";
 
 const SETTLEMENT_DAYS = 21; // Days to settle commission
 
 @Injectable()
 export class CommissionService {
+  private readonly logger = new Logger(CommissionService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly platformConfig: PlatformConfigService,
+    private readonly plansService: SubscriptionPlansService,
   ) {}
 
   /**
@@ -29,9 +33,16 @@ export class CommissionService {
     const dueAt = new Date();
     dueAt.setDate(dueAt.getDate() + SETTLEMENT_DAYS);
 
-    // Calculate commission amount using dynamic platform rate
-    const commissionRate =
-      (await this.platformConfig.getPlatformCommissionRate()) / 100;
+    // Calculate commission amount using plan-based rate (fallback to platform default)
+    let commissionRate: number;
+    try {
+      const plan = await this.plansService.getActiveShopPlan(order.shopId);
+      commissionRate = plan ? plan.commissionPercent / 100 : (await this.platformConfig.getPlatformCommissionRate()) / 100;
+    } catch {
+      // Fallback to platform-wide rate if plan lookup fails
+      commissionRate = (await this.platformConfig.getPlatformCommissionRate()) / 100;
+      this.logger.warn(`Plan lookup failed for shop ${order.shopId}, using platform default rate`);
+    }
     const commissionAmount = order.totalNpr * commissionRate;
 
     // Check if ledger entry already exists

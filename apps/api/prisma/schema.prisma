@@ -64,6 +64,10 @@ model User {
   ticketMessages       TicketMessage[]    @relation("TicketMessageSender")
   // POS / Wishlist
   wishlistItems        WishlistItem[]
+  // AI Credits
+  aiCreditsBalance     Int                 @default(0)
+  aiCreditsGrantedAt   DateTime?
+  aiCreditLedger       AiCreditLedger[]
 
   @@index([email])
   @@index([phone])
@@ -269,6 +273,7 @@ model Shop {
   showroomSessions        ShowroomSession[]
   posSessions             PosSession[]
   stockReservations       StockReservation[]
+  subscriptions           SellerSubscription[]
 
   @@index([userId])
   @@index([country, city])
@@ -2423,4 +2428,158 @@ enum TicketPriority {
   MEDIUM
   HIGH
   URGENT
+}
+
+// ═══════════════════════════════════════════
+// SUBSCRIPTION & BILLING SYSTEM
+// ═══════════════════════════════════════════
+
+model SubscriptionPlan {
+  id                  String               @id @default(uuid())
+  name                String               // FREE, PRO, PRO_PLUS, ENTERPRISE, etc.
+  displayName         String               // "Free Plan", "Pro Plan", etc.
+  description         String?
+  country             MarketRegion         // IN, NP, AE, UK, EU, US
+  currency            CurrencyCode
+  monthlyPrice        Float                // 0 for free plan
+  annualPrice         Float?               // optional discounted annual price
+  catalogueLimit      Int?                 // null = unlimited
+  commissionPercent   Float                // e.g. 5.0 = 5%
+  includesAi          Boolean              @default(false)
+  monthlyAiCredits    Int                  @default(0)
+  rolloverCap         Int                  @default(0)  // max credits that can roll over month-to-month
+  extraCreditPrice    Float                @default(0)  // price per extra AI generation
+  overageBehavior     OverageBehavior      @default(BLOCK) // what happens when credits run out
+  features            Json?                // additional feature flags: { "prioritySupport": true, "analytics": true, ... }
+  isActive            Boolean              @default(true)
+  sortOrder           Int                  @default(0)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  subscriptions       SellerSubscription[]
+
+  @@unique([name, country])
+  @@index([country, isActive])
+  @@index([isActive, sortOrder])
+}
+
+model SellerSubscription {
+  id                    String             @id @default(uuid())
+  shopId                String
+  planId                String
+  status                SubscriptionStatus @default(ACTIVE)
+  startedAt             DateTime           @default(now())
+  currentPeriodStart    DateTime           @default(now())
+  currentPeriodEnd      DateTime
+  expiresAt             DateTime?          // hard expiry (for non-renewing)
+  cancelledAt           DateTime?
+  cancelReason          String?
+  stripeSubscriptionId  String?            @unique
+  stripeCustomerId      String?
+  country               MarketRegion
+  autoRenew             Boolean            @default(true)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  shop                  Shop               @relation(fields: [shopId], references: [id])
+  plan                  SubscriptionPlan   @relation(fields: [planId], references: [id])
+  payments              SubscriptionPayment[]
+
+  @@index([shopId])
+  @@index([planId])
+  @@index([status])
+  @@index([stripeSubscriptionId])
+  @@index([currentPeriodEnd])
+}
+
+model SubscriptionPayment {
+  id                    String             @id @default(uuid())
+  subscriptionId        String
+  amount                Float
+  currency              CurrencyCode
+  gateway               String             // "stripe", "phonepe", "manual"
+  gatewayPaymentId      String?
+  status                PaymentStatus      @default(PENDING)
+  periodStart           DateTime
+  periodEnd             DateTime
+  invoiceUrl            String?
+  failureReason         String?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  subscription          SellerSubscription @relation(fields: [subscriptionId], references: [id])
+
+  @@index([subscriptionId])
+  @@index([gatewayPaymentId])
+  @@index([status])
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+  TRIALING
+}
+
+enum OverageBehavior {
+  BLOCK        // Block generation when credits run out
+  AUTO_CHARGE  // Auto-charge extraCreditPrice via Stripe
+}
+
+// ═══════════════════════════════════════════
+// AI CREDIT SYSTEM
+// ═══════════════════════════════════════════
+
+model AiCreditLedger {
+  id              String       @id @default(uuid())
+  userId          String
+  shopId          String?
+  action          CreditAction
+  amount          Int          // always positive; action determines direction
+  balanceBefore   Int
+  balanceAfter    Int
+  reason          String?      // "monthly_grant", "image_gen", "admin_adjustment", "overage_charge", "expiry"
+  referenceId     String?      // designId, subscriptionPaymentId, etc.
+  idempotencyKey  String?      @unique
+  createdAt       DateTime     @default(now())
+
+  user            User         @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([shopId, createdAt])
+  @@index([idempotencyKey])
+  @@index([action])
+}
+
+enum CreditAction {
+  GRANT        // Monthly/admin grant
+  DEBIT        // Used for generation
+  REFUND       // Failed generation refund
+  EXPIRE       // End-of-period expiry beyond rollover cap
+  ADMIN_ADJUST // Manual admin adjustment
+  OVERAGE      // Extra credit purchased
+}
+
+// ═══════════════════════════════════════════
+// PAYMENT GATEWAY CONFIGURATION
+// ═══════════════════════════════════════════
+
+model PaymentGatewayConfig {
+  id                  String       @id @default(uuid())
+  gatewayName         String       // "stripe", "phonepe", "razorpay", "esewa", "khalti"
+  displayName         String       // "Stripe", "PhonePe", etc.
+  isEnabled           Boolean      @default(false)
+  supportedCountries  MarketRegion[]
+  supportedMethods    PaymentMethod[] // CARD, UPI, BANK_TRANSFER, etc.
+  priority            Int          @default(0)  // higher = preferred when multiple gateways available
+  envKeyLabel         String       // reference label: "STRIPE_SECRET_KEY", "PHONEPE_MERCHANT_ID" — never the actual value
+  webhookEndpoint     String?      // e.g. "/api/webhooks/stripe"
+  updatedBy           String?
+  updatedAt           DateTime     @updatedAt
+  createdAt           DateTime     @default(now())
+
+  @@unique([gatewayName])
+  @@index([isEnabled])
+  @@index([priority])
 }

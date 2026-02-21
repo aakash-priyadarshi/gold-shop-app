@@ -40,6 +40,9 @@ import { ShopQuotesModule } from "./modules/shop-quotes/shop-quotes.module";
 import { ShopsModule } from "./modules/shops/shops.module";
 import { SupportModule } from "./modules/support/support.module";
 import { UsersModule } from "./modules/users/users.module";
+import { SubscriptionPlansModule } from "./modules/subscriptions/subscription-plans.module";
+import { AiCreditsModule } from "./modules/ai-credits/ai-credits.module";
+import { PaymentGatewayModule } from "./modules/payment-gateway/payment-gateway.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
 @Module({
@@ -111,6 +114,9 @@ import { PrismaModule } from "./prisma/prisma.module";
     SupportModule,
     ProductVariantsModule,
     PosModule,
+    SubscriptionPlansModule,
+    AiCreditsModule,
+    PaymentGatewayModule,
   ],
   providers: [
     // Apply ThrottlerGuard globally so @Throttle() decorators are enforced
