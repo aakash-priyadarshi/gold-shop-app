@@ -109,7 +109,7 @@ export function PlatingSelector({
                 <p className="font-medium text-amber-800">Vermeil requires Sterling Silver</p>
                 <p className="text-amber-700 text-xs mt-0.5">
                   True vermeil must be gold plating over 925 sterling silver. 
-                  Please select "Sterling Silver" as the base metal or choose a different plating type.
+                  Please select &quot;Sterling Silver&quot; as the base metal or choose a different plating type.
                 </p>
               </div>
             </div>
