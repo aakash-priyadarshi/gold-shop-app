@@ -425,8 +425,6 @@ function SidebarContent({
   getRoleBadge: (role: UserRole) => React.ReactNode;
   getInitials: () => string;
 }) {
-  if (!user) return null;
-
   const navRef = useRef<HTMLElement>(null);
   const [canScrollDown, setCanScrollDown] = useState(false);
 
@@ -461,6 +459,8 @@ function SidebarContent({
       }
     });
   }, [pathname]);
+
+  if (!user) return null;
 
   return (
     <div className="flex flex-col h-full">

@@ -2152,7 +2152,6 @@ export default function CreateRfqPage() {
     fetchPriceEstimate,
   ]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updateFormData = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
