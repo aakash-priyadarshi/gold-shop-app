@@ -163,12 +163,12 @@ export class SubscriptionPlansService {
   /**
    * Get plans available for a country (public endpoint for sellers).
    */
-  async getAvailablePlans(country: string) {
+  async getAvailablePlans(country?: string) {
+    const where: any = { isActive: true };
+    if (country) where.country = country;
+
     return this.prisma.subscriptionPlan.findMany({
-      where: {
-        country: country as any,
-        isActive: true,
-      },
+      where,
       orderBy: { sortOrder: "asc" },
       select: {
         id: true,
