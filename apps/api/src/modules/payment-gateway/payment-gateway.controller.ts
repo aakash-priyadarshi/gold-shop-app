@@ -3,29 +3,40 @@ import {
   Controller,
   Get,
   Headers,
+  Inject,
+  Logger,
   Param,
   Patch,
   Post,
   RawBodyRequest,
   Req,
   UseGuards,
+  forwardRef,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
+import { Request } from "express";
+import { AiCreditsService } from "../ai-credits/ai-credits.service";
 import { AuditService } from "../audit/audit.service";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
+import { OrdersService } from "../orders/orders.service";
 import { PaymentGatewayService } from "./payment-gateway.service";
-import { Request } from "express";
 
 @ApiTags("payment-gateway")
 @Controller("payment-gateway")
 export class PaymentGatewayController {
+  private readonly logger = new Logger(PaymentGatewayController.name);
+
   constructor(
     private readonly gatewayService: PaymentGatewayService,
     private readonly auditService: AuditService,
+    @Inject(forwardRef(() => OrdersService))
+    private readonly ordersService: OrdersService,
+    @Inject(forwardRef(() => AiCreditsService))
+    private readonly aiCreditsService: AiCreditsService,
   ) {}
 
   // ─── Admin: Gateway Configuration ─────────────────
@@ -219,17 +230,18 @@ export class PaymentGatewayController {
     // Process event based on type
     switch (event.type) {
       case "payment_intent.succeeded":
-        this.handlePaymentSuccess(
+        await this.handlePaymentSuccess(
           "stripe",
           event.data.object.id,
           event.data.object.metadata,
         );
         break;
       case "payment_intent.payment_failed":
-        this.handlePaymentFailure(
+        await this.handlePaymentFailure(
           "stripe",
           event.data.object.id,
           event.data.object.last_payment_error?.message,
+          event.data.object.metadata,
         );
         break;
       default:
@@ -245,13 +257,9 @@ export class PaymentGatewayController {
     const result = await this.gatewayService.verifyPhonePeWebhook(body);
 
     if (result.status === "succeeded") {
-      this.handlePaymentSuccess("phonepe", result.transactionId, {});
+      await this.handlePaymentSuccess("phonepe", result.transactionId, result.metadata || {});
     } else {
-      this.handlePaymentFailure(
-        "phonepe",
-        result.transactionId,
-        result.status,
-      );
+      await this.handlePaymentFailure("phonepe", result.transactionId, result.status, result.metadata || {});
     }
 
     return { received: true };
@@ -259,26 +267,90 @@ export class PaymentGatewayController {
 
   // ─── Internal Handlers ────────────────────────────
 
-  private handlePaymentSuccess(
+  private async handlePaymentSuccess(
     gateway: string,
     paymentId: string,
     metadata: Record<string, string>,
   ) {
-    // TODO: Update order/subscription/RFQ status based on metadata.type + metadata.resourceId
-    // This will be wired to specific services via events or direct calls
-    console.log(
-      `[${gateway}] Payment succeeded: ${paymentId}`,
-      metadata,
+    this.logger.log(
+      `[${gateway}] Payment succeeded: ${paymentId}, type=${metadata.type}, resourceId=${metadata.resourceId}`,
     );
+
+    try {
+      switch (metadata.type) {
+        case "order":
+        case "rfq_booking":
+          await this.ordersService.handleOrderPaymentSuccess(
+            paymentId,
+            gateway,
+            metadata,
+          );
+          break;
+
+        case "ai_credits":
+          await this.aiCreditsService.handleCreditPurchaseSuccess({
+            userId: metadata.userId,
+            shopId: metadata.shopId,
+            creditAmount: parseInt(metadata.creditAmount || "0", 10),
+            gatewayPaymentId: paymentId,
+            gateway,
+            paidAmount: parseFloat(metadata.paidAmount || "0"),
+            currency: metadata.currency || "USD",
+          });
+          break;
+
+        default:
+          this.logger.warn(
+            `Unhandled payment type: ${metadata.type} for ${paymentId}`,
+          );
+      }
+    } catch (err: any) {
+      this.logger.error(
+        `Failed to process payment success for ${paymentId}: ${err.message}`,
+      );
+    }
   }
 
-  private handlePaymentFailure(
+  private async handlePaymentFailure(
     gateway: string,
     paymentId: string,
     reason?: string,
+    metadata?: Record<string, string>,
   ) {
-    console.log(
+    this.logger.warn(
       `[${gateway}] Payment failed: ${paymentId}, reason: ${reason}`,
     );
+
+    try {
+      const meta = metadata || {};
+      switch (meta.type) {
+        case "order":
+        case "rfq_booking":
+          await this.ordersService.handleOrderPaymentFailure(
+            paymentId,
+            gateway,
+            reason,
+            meta,
+          );
+          break;
+
+        case "ai_credits":
+          await this.aiCreditsService.handleCreditPurchaseFailure({
+            userId: meta.userId,
+            gatewayPaymentId: paymentId,
+            reason,
+          });
+          break;
+
+        default:
+          this.logger.warn(
+            `Unhandled failed payment type: ${meta.type} for ${paymentId}`,
+          );
+      }
+    } catch (err: any) {
+      this.logger.error(
+        `Failed to process payment failure for ${paymentId}: ${err.message}`,
+      );
+    }
   }
 }

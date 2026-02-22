@@ -31,9 +31,7 @@ function PaymentCallbackContent() {
             <CardDescription>
               Your payment via {gateway || "the gateway"} was not completed.
               {txn && (
-                <span className="block mt-1 text-xs">
-                  Transaction: {txn}
-                </span>
+                <span className="block mt-1 text-xs">Transaction: {txn}</span>
               )}
             </CardDescription>
           </CardHeader>
@@ -64,16 +62,14 @@ function PaymentCallbackContent() {
           <CardDescription>
             Your payment via {gateway || "the gateway"} is being verified.
             {txn && (
-              <span className="block mt-1 text-xs font-mono">
-                Ref: {txn}
-              </span>
+              <span className="block mt-1 text-xs font-mono">Ref: {txn}</span>
             )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="text-center text-sm text-muted-foreground">
-            You will receive a confirmation once the payment is verified.
-            This may take a few moments.
+            You will receive a confirmation once the payment is verified. This
+            may take a few moments.
           </div>
           <Button
             className="w-full"

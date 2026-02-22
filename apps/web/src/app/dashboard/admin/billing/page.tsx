@@ -45,7 +45,6 @@ import {
   Crown,
   DollarSign,
   Globe,
-  Heart,
   Loader2,
   Pencil,
   Plus,
@@ -1876,7 +1875,10 @@ function GatewaysTab() {
     const h = healthMap[gateway];
     if (!h)
       return (
-        <span className="inline-block h-2.5 w-2.5 rounded-full bg-gray-300" title="Not checked" />
+        <span
+          className="inline-block h-2.5 w-2.5 rounded-full bg-gray-300"
+          title="Not checked"
+        />
       );
     const color =
       h.status === "online"
@@ -1940,9 +1942,7 @@ function GatewaysTab() {
                 <HealthDot gateway={c.gatewayName} />
                 <span className="font-medium">{c.displayName}</span>
                 {h?.latencyMs && (
-                  <span className="text-muted-foreground">
-                    {h.latencyMs}ms
-                  </span>
+                  <span className="text-muted-foreground">{h.latencyMs}ms</span>
                 )}
               </div>
             );
@@ -1985,9 +1985,7 @@ function GatewaysTab() {
                         <Star className="h-3 w-3 mr-0.5" /> Default
                       </Badge>
                     )}
-                    <Badge
-                      variant={config.isEnabled ? "default" : "secondary"}
-                    >
+                    <Badge variant={config.isEnabled ? "default" : "secondary"}>
                       {config.isEnabled ? "Active" : "Disabled"}
                     </Badge>
                   </div>
@@ -2020,35 +2018,36 @@ function GatewaysTab() {
                 </div>
 
                 {/* Env Keys Required */}
-                {config.envKeysRequired && config.envKeysRequired.length > 0 && (
-                  <div className="space-y-1">
-                    <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                      <Shield className="h-3 w-3" /> Required Env Keys:
-                    </span>
-                    <div className="space-y-0.5">
-                      {(config.envKeysRequired as string[]).map((key) => {
-                        const h = healthMap[config.gatewayName];
-                        const isConfigured =
-                          h?.status === "online" || h?.status === undefined;
-                        return (
-                          <div
-                            key={key}
-                            className="flex items-center gap-1.5 text-xs"
-                          >
-                            {isConfigured ? (
-                              <Check className="h-3 w-3 text-green-500" />
-                            ) : (
-                              <AlertTriangle className="h-3 w-3 text-yellow-500" />
-                            )}
-                            <code className="text-xs bg-muted px-1 rounded">
-                              {key}
-                            </code>
-                          </div>
-                        );
-                      })}
+                {config.envKeysRequired &&
+                  config.envKeysRequired.length > 0 && (
+                    <div className="space-y-1">
+                      <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                        <Shield className="h-3 w-3" /> Required Env Keys:
+                      </span>
+                      <div className="space-y-0.5">
+                        {(config.envKeysRequired as string[]).map((key) => {
+                          const h = healthMap[config.gatewayName];
+                          const isConfigured =
+                            h?.status === "online" || h?.status === undefined;
+                          return (
+                            <div
+                              key={key}
+                              className="flex items-center gap-1.5 text-xs"
+                            >
+                              {isConfigured ? (
+                                <Check className="h-3 w-3 text-green-500" />
+                              ) : (
+                                <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                              )}
+                              <code className="text-xs bg-muted px-1 rounded">
+                                {key}
+                              </code>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {/* Webhook URL */}
                 {config.webhookEndpoint && (

@@ -1,12 +1,12 @@
 import {
+  BadRequestException,
   Injectable,
   Logger,
   NotFoundException,
-  BadRequestException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { PrismaService } from "../../prisma/prisma.service";
 import * as crypto from "crypto";
+import { PrismaService } from "../../prisma/prisma.service";
 
 /**
  * Unified interface for any payment gateway adapter.
@@ -353,6 +353,7 @@ export class PaymentGatewayService {
     transactionId: string;
     status: string;
     amount: number;
+    metadata: Record<string, string>;
   }> {
     const saltKey = this.configService.get<string>("PHONEPE_SALT_KEY");
 
@@ -364,11 +365,25 @@ export class PaymentGatewayService {
       Buffer.from(payload.response, "base64").toString("utf-8"),
     );
 
+    // PhonePe merchantTransactionId encodes our metadata as: type_resourceId
+    // We need to look up the original payment to get full metadata
+    const txnId = decodedData.data?.merchantTransactionId || "";
+    let metadata: Record<string, string> = {};
+
+    // Try to find the Payment record by gatewayPaymentId to recover metadata
+    const payment = await this.prisma.payment.findFirst({
+      where: { gatewayPaymentId: txnId },
+    });
+    if (payment?.metadata) {
+      metadata = (payment.metadata as Record<string, string>) || {};
+    }
+
     return {
-      transactionId: decodedData.data?.merchantTransactionId,
+      transactionId: txnId,
       status:
         decodedData.code === "PAYMENT_SUCCESS" ? "succeeded" : decodedData.code,
       amount: (decodedData.data?.amount || 0) / 100,
+      metadata,
     };
   }
 
@@ -679,9 +694,7 @@ export class PaymentGatewayService {
     }
   }
 
-  private async checkStripeHealth(
-    start: number,
-  ): Promise<GatewayHealthResult> {
+  private async checkStripeHealth(start: number): Promise<GatewayHealthResult> {
     const stripeKey = this.configService.get<string>("STRIPE_SECRET_KEY");
     if (!stripeKey || stripeKey === "" || stripeKey === "sk_test_placeholder") {
       return {
@@ -827,9 +840,7 @@ export class PaymentGatewayService {
     }
   }
 
-  private async checkEsewaHealth(
-    start: number,
-  ): Promise<GatewayHealthResult> {
+  private async checkEsewaHealth(start: number): Promise<GatewayHealthResult> {
     const merchantId = this.configService.get<string>("ESEWA_MERCHANT_ID");
     const secret = this.configService.get<string>("ESEWA_SECRET");
 
@@ -849,9 +860,7 @@ export class PaymentGatewayService {
     };
   }
 
-  private async checkKhaltiHealth(
-    start: number,
-  ): Promise<GatewayHealthResult> {
+  private async checkKhaltiHealth(start: number): Promise<GatewayHealthResult> {
     const secretKey = this.configService.get<string>("KHALTI_SECRET_KEY");
 
     if (!secretKey || secretKey === "") {

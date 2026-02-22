@@ -2,10 +2,12 @@ import {
   Body,
   Controller,
   Get,
+  Inject,
   Param,
   Post,
   Query,
   UseGuards,
+  forwardRef,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
@@ -14,6 +16,7 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
+import { PaymentGatewayService } from "../payment-gateway/payment-gateway.service";
 import { AiCreditsService } from "./ai-credits.service";
 
 @ApiTags("ai-credits")
@@ -24,6 +27,8 @@ export class AiCreditsController {
   constructor(
     private readonly creditsService: AiCreditsService,
     private readonly auditService: AuditService,
+    @Inject(forwardRef(() => PaymentGatewayService))
+    private readonly paymentGatewayService: PaymentGatewayService,
   ) {}
 
   // ─── User endpoints ───────────────────────────────
@@ -46,6 +51,41 @@ export class AiCreditsController {
       page: page ? parseInt(page) : undefined,
       limit: limit ? parseInt(limit) : undefined,
       action,
+    });
+  }
+
+  @Post("purchase")
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiOperation({ summary: "Purchase extra AI credits via payment gateway" })
+  async purchaseCredits(
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") shopId: string,
+    @Body()
+    body: {
+      creditAmount: number;
+      pricePerCredit: number;
+      currency: string;
+      country: string;
+      preferredGateway?: string;
+    },
+  ) {
+    const totalAmount = body.creditAmount * body.pricePerCredit;
+
+    return this.paymentGatewayService.initiatePayment({
+      type: "ai_credits",
+      resourceId: `credits_${userId}_${Date.now()}`,
+      amount: totalAmount,
+      currency: body.currency,
+      country: body.country,
+      metadata: {
+        userId,
+        shopId,
+        creditAmount: String(body.creditAmount),
+        paidAmount: String(totalAmount),
+        currency: body.currency,
+      },
+      customerId: userId,
+      preferredGateway: body.preferredGateway,
     });
   }
 

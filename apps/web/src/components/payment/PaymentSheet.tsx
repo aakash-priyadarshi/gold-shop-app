@@ -47,7 +47,10 @@ interface PaymentSheetProps {
   onCancel?: () => void;
 }
 
-const GATEWAY_LABELS: Record<string, { label: string; icon: string; description: string }> = {
+const GATEWAY_LABELS: Record<
+  string,
+  { label: string; icon: string; description: string }
+> = {
   stripe: {
     label: "Pay with Card",
     icon: "💳",
@@ -203,7 +206,9 @@ export function PaymentSheet({
             <CreditCard className="h-8 w-8 mx-auto mb-2 opacity-50" />
             Stripe card form will mount here.
             <br />
-            <code className="text-xs">clientSecret: {result.clientSecret.slice(0, 20)}...</code>
+            <code className="text-xs">
+              clientSecret: {result.clientSecret.slice(0, 20)}...
+            </code>
           </div>
         )}
 
@@ -214,11 +219,7 @@ export function PaymentSheet({
               Cancel
             </Button>
           )}
-          <Button
-            className="flex-1"
-            onClick={handlePay}
-            disabled={loading}
-          >
+          <Button className="flex-1" onClick={handlePay} disabled={loading}>
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-1 animate-spin" />

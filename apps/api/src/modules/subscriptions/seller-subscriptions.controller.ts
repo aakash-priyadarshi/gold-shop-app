@@ -313,13 +313,21 @@ export class SellerSubscriptionsController {
     );
 
     if (!sig || !endpointSecret) {
-      return { received: true, processed: false, reason: "Missing signature or secret" };
+      return {
+        received: true,
+        processed: false,
+        reason: "Missing signature or secret",
+      };
     }
 
     try {
       const stripeKey = this.configService.get<string>("STRIPE_SECRET_KEY");
       if (!stripeKey) {
-        return { received: true, processed: false, reason: "Stripe not configured" };
+        return {
+          received: true,
+          processed: false,
+          reason: "Stripe not configured",
+        };
       }
 
       const stripe = require("stripe")(stripeKey);

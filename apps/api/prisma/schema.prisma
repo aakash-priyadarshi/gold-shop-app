@@ -2612,7 +2612,8 @@ enum CreditAction {
   REFUND       // Failed generation refund
   EXPIRE       // End-of-period expiry beyond rollover cap
   ADMIN_ADJUST // Manual admin adjustment
-  OVERAGE      // Extra credit purchased
+  OVERAGE      // Extra credit purchased (auto-charge)
+  PURCHASE     // Manually purchased extra credits
 }
 
 // ═══════════════════════════════════════════

@@ -3,17 +3,20 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  Inject,
   Param,
   Patch,
   Post,
   Query,
   UseGuards,
+  forwardRef,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
+import { PaymentGatewayService } from "../payment-gateway/payment-gateway.service";
 import {
   AdminCancelOrderDto,
   AdminOrderFilterDto,
@@ -37,7 +40,11 @@ import { OrdersService } from "./orders.service";
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class OrdersController {
-  constructor(private ordersService: OrdersService) {}
+  constructor(
+    private ordersService: OrdersService,
+    @Inject(forwardRef(() => PaymentGatewayService))
+    private paymentGatewayService: PaymentGatewayService,
+  ) {}
 
   @Post("inventory")
   @Roles("CUSTOMER")
@@ -47,6 +54,40 @@ export class OrdersController {
     @Body() dto: CreateInventoryOrderDto,
   ) {
     return this.ordersService.createInventoryOrder(userId, dto);
+  }
+
+  @Post(":id/pay")
+  @Roles("CUSTOMER")
+  @ApiOperation({ summary: "Initiate payment for an order" })
+  async payOrder(
+    @Param("id") orderId: string,
+    @CurrentUser("id") userId: string,
+    @Body() body: { preferredGateway?: string },
+  ) {
+    const order = await this.ordersService.getOrderById(orderId);
+    if (!order) {
+      throw new ForbiddenException("Order not found");
+    }
+    if (order.customerId !== userId) {
+      throw new ForbiddenException("You can only pay for your own orders");
+    }
+    if (order.paymentStatus === "COMPLETED") {
+      throw new ForbiddenException("This order is already paid");
+    }
+
+    return this.paymentGatewayService.initiatePayment({
+      type: "order",
+      resourceId: orderId,
+      amount: order.balanceDueNpr,
+      currency: order.displayCurrency || "NPR",
+      country: order.marketCountry || "NP",
+      metadata: {
+        orderNumber: order.orderNumber,
+        customerId: userId,
+      },
+      customerId: userId,
+      preferredGateway: body.preferredGateway,
+    });
   }
 
   @Post("custom")

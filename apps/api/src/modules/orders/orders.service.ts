@@ -362,6 +362,13 @@ export class OrdersService {
     return order;
   }
 
+  // Get order by ID (used for payment initiation)
+  async getOrderById(orderId: string) {
+    return this.prisma.order.findUnique({
+      where: { id: orderId },
+    });
+  }
+
   // Find customer orders
   async findCustomerOrders(customerId: string, filters: OrderFilterDto) {
     const { type, status, page = 1, limit = 20 } = filters;
@@ -1624,5 +1631,144 @@ export class OrdersService {
         message: "Commission of 1% is due within 21 days",
       },
     };
+  }
+
+  // ─── Payment Gateway Webhook Handlers ────────────
+
+  /**
+   * Called by payment-gateway webhook when a payment_intent succeeds.
+   * Looks up the order by gatewayPaymentId and marks it as PAID.
+   */
+  async handleOrderPaymentSuccess(
+    gatewayPaymentId: string,
+    gateway: string,
+    metadata: Record<string, string>,
+  ) {
+    const orderId = metadata.resourceId;
+    if (!orderId) {
+      this.logger.warn(
+        `handleOrderPaymentSuccess: no resourceId in metadata for ${gatewayPaymentId}`,
+      );
+      return;
+    }
+
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        customer: { select: { id: true } },
+        shop: { select: { id: true, userId: true } },
+      },
+    });
+
+    if (!order) {
+      this.logger.warn(`handleOrderPaymentSuccess: order ${orderId} not found`);
+      return;
+    }
+
+    if (order.paymentStatus === "COMPLETED") {
+      this.logger.log(`Order ${orderId} already paid — skipping`);
+      return;
+    }
+
+    // Record the payment
+    await this.prisma.payment.create({
+      data: {
+        orderId: order.id,
+        amountNpr: order.totalNpr,
+        currency: order.displayCurrency || "NPR",
+        paymentGateway: gateway,
+        gatewayPaymentId,
+        status: "COMPLETED" as any,
+        completedAt: new Date(),
+      },
+    });
+
+    // Update order status
+    await this.prisma.order.update({
+      where: { id: orderId },
+      data: {
+        paymentStatus: "COMPLETED",
+        paymentStatusEnum: "PAID" as any,
+        balanceDueNpr: 0,
+        status: order.status === "CREATED" ? ("PAID" as OrderStatus) : order.status,
+      },
+    });
+
+    // Notify customer
+    await this.notificationsService.create({
+      userId: order.customerId,
+      type: "SYSTEM_ALERT",
+      titleKey: "notification.payment.success.title",
+      titleParams: { orderNumber: order.orderNumber },
+      bodyKey: "notification.payment.success.body",
+      bodyParams: { orderNumber: order.orderNumber, gateway },
+      referenceType: "ORDER",
+      referenceId: order.id,
+      channels: ["PUSH"],
+    });
+
+    // Notify shop
+    await this.notificationsService.create({
+      userId: order.shop.userId,
+      type: "SYSTEM_ALERT",
+      titleKey: "notification.order.paid.title",
+      titleParams: { orderNumber: order.orderNumber },
+      bodyKey: "notification.order.paid.body",
+      bodyParams: { orderNumber: order.orderNumber },
+      referenceType: "ORDER",
+      referenceId: order.id,
+      channels: ["PUSH"],
+    });
+
+    this.logger.log(
+      `Order ${orderId} (${order.orderNumber}) payment succeeded via ${gateway} — ${gatewayPaymentId}`,
+    );
+  }
+
+  /**
+   * Called by payment-gateway webhook when a payment_intent fails.
+   */
+  async handleOrderPaymentFailure(
+    gatewayPaymentId: string,
+    gateway: string,
+    reason: string | undefined,
+    metadata: Record<string, string>,
+  ) {
+    const orderId = metadata.resourceId;
+    if (!orderId) return;
+
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+    });
+    if (!order) return;
+
+    // Record failed payment
+    await this.prisma.payment.create({
+      data: {
+        orderId: order.id,
+        amountNpr: order.totalNpr,
+        currency: order.displayCurrency || "NPR",
+        paymentGateway: gateway,
+        gatewayPaymentId,
+        status: "FAILED" as any,
+        failureReason: reason || "Payment failed",
+      },
+    });
+
+    // Update order status
+    await this.prisma.order.update({
+      where: { id: orderId },
+      data: {
+        paymentStatus: "FAILED",
+        status:
+          order.status === "CREATED"
+            ? ("PAYMENT_PENDING" as OrderStatus)
+            : order.status,
+      },
+    });
+
+    this.logger.warn(
+      `Order ${orderId} payment failed via ${gateway}: ${reason}`,
+    );
   }
 }
