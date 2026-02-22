@@ -4,8 +4,14 @@ const prisma = new PrismaClient();
 
 /**
  * Seed subscription plans for every market region.
- * Creates FREE, PRO, and PRO_PLUS (Pro+) tiers per country with local-currency pricing.
+ * Creates 4 tiers per country: FREE, PRO, PRO_PLUS, ENTERPRISE
  * All plans are fully configurable from the Admin Billing dashboard at runtime.
+ *
+ * Tier Philosophy:
+ * - FREE:       Basic marketplace listing, no CRM, no AI
+ * - PRO:        Full CRM features, NO AI included — but AI credits are purchasable
+ * - PRO_PLUS:   Full CRM + AI included (100 credits/mo), more credits purchasable
+ * - ENTERPRISE: Custom pricing, everything in Pro+, dedicated support, API, white-label
  *
  * Run: npx ts-node prisma/seeds/subscription-plans.seed.ts
  */
@@ -33,7 +39,6 @@ async function main() {
   const REGIONS = ["NP", "IN", "AE", "UK", "US", "EU"] as const;
 
   // ─── Country-specific pricing tables ───────────
-  // Prices are calibrated to local markets; admin can adjust anytime
 
   const PRO_PRICING: Record<
     string,
@@ -51,15 +56,28 @@ async function main() {
     string,
     { monthly: number; annual: number; extraCredit: number }
   > = {
-    NP: { monthly: 9999, annual: 99990, extraCredit: 30 },
-    IN: { monthly: 4999, annual: 49990, extraCredit: 15 },
-    AE: { monthly: 499, annual: 4990, extraCredit: 3 },
-    UK: { monthly: 149, annual: 1490, extraCredit: 1 },
-    US: { monthly: 199, annual: 1990, extraCredit: 1.2 },
-    EU: { monthly: 149, annual: 1490, extraCredit: 1 },
+    NP: { monthly: 4999, annual: 49990, extraCredit: 30 },
+    IN: { monthly: 2499, annual: 24990, extraCredit: 15 },
+    AE: { monthly: 249, annual: 2490, extraCredit: 3 },
+    UK: { monthly: 79, annual: 790, extraCredit: 1 },
+    US: { monthly: 99, annual: 990, extraCredit: 1.2 },
+    EU: { monthly: 79, annual: 790, extraCredit: 1 },
   };
 
-  // ─── FREE plans for every country ──────────────
+  // Enterprise pricing is a starting-from baseline — actual pricing is custom per client
+  const ENTERPRISE_PRICING: Record<
+    string,
+    { monthly: number; annual: number; extraCredit: number }
+  > = {
+    NP: { monthly: 14999, annual: 149990, extraCredit: 20 },
+    IN: { monthly: 7999, annual: 79990, extraCredit: 10 },
+    AE: { monthly: 799, annual: 7990, extraCredit: 2 },
+    UK: { monthly: 249, annual: 2490, extraCredit: 0.8 },
+    US: { monthly: 299, annual: 2990, extraCredit: 1 },
+    EU: { monthly: 249, annual: 2490, extraCredit: 0.8 },
+  };
+
+  // ─── FREE plans ───────────────────────────────
 
   for (const region of REGIONS) {
     const plan = await prisma.subscriptionPlan.upsert({
@@ -67,8 +85,9 @@ async function main() {
       update: {},
       create: {
         name: "FREE",
-        displayName: `Free Plan (${COUNTRY_NAMES[region]})`,
-        description: `Free tier for sellers in ${COUNTRY_NAMES[region]}. Includes basic marketplace features.`,
+        displayName: `Free (${COUNTRY_NAMES[region]})`,
+        description:
+          "Get started for free. List products on the marketplace with basic features.",
         country: region,
         currency: CURRENCY_MAP[region] as any,
         monthlyPrice: 0,
@@ -82,18 +101,22 @@ async function main() {
         overageBehavior: "BLOCK",
         features: {
           basicAnalytics: true,
+          marketplace: true,
           prioritySupport: false,
           customBranding: false,
           bulkUpload: false,
+          crm: false,
+          invoicing: false,
+          inventoryManagement: false,
         },
         isActive: true,
         sortOrder: 0,
       },
     });
-    console.log(`  ✅ FREE plan (${region}): ${plan.id}`);
+    console.log(`  ✅ FREE (${region}): ${plan.id}`);
   }
 
-  // ─── PRO plans for every country ──────────────
+  // ─── PRO plans — CRM without AI, credits purchasable ─────
 
   for (const region of REGIONS) {
     const p = PRO_PRICING[region];
@@ -102,51 +125,108 @@ async function main() {
       update: {},
       create: {
         name: "PRO",
-        displayName: `Pro Plan (${COUNTRY_NAMES[region]})`,
-        description: `For growing sellers in ${COUNTRY_NAMES[region]}. Lower commission, AI design credits, and priority listings.`,
+        displayName: `Pro (${COUNTRY_NAMES[region]})`,
+        description:
+          "Full CRM for your jewellery business — inventory, invoicing, customer management, and analytics. AI credits available for purchase.",
         country: region,
         currency: CURRENCY_MAP[region] as any,
         monthlyPrice: p.monthly,
         annualPrice: p.annual,
         catalogueLimit: 200,
         commissionPercent: 3.0,
-        includesAi: true,
-        monthlyAiCredits: 50,
-        rolloverCap: 100,
+        includesAi: false,
+        monthlyAiCredits: 0,
+        rolloverCap: 0,
         extraCreditPrice: p.extraCredit,
         overageBehavior: "BLOCK",
         features: {
           basicAnalytics: true,
           advancedAnalytics: true,
+          marketplace: true,
+          crm: true,
+          invoicing: true,
+          inventoryManagement: true,
+          customerManagement: true,
           prioritySupport: true,
           customBranding: true,
           bulkUpload: true,
           priorityListing: true,
+          purchasableAiCredits: true,
         },
         isActive: true,
         sortOrder: 1,
       },
     });
-    console.log(`  ✅ PRO plan (${region}): ${plan.id}`);
+    console.log(`  ✅ PRO (${region}): ${plan.id}`);
   }
 
-  // ─── PRO+ plans for every country ──────────────
+  // ─── PRO+ plans — CRM + AI (100 credits/mo included) ─────
 
   for (const region of REGIONS) {
-    const e = PRO_PLUS_PRICING[region];
+    const p = PRO_PLUS_PRICING[region];
     const plan = await prisma.subscriptionPlan.upsert({
       where: { name_country: { name: "PRO_PLUS", country: region } },
       update: {},
       create: {
         name: "PRO_PLUS",
         displayName: `Pro+ (${COUNTRY_NAMES[region]})`,
-        description: `Unlimited catalogue, lowest commission, generous AI credits, dedicated support, API access, and white-label options.`,
+        description:
+          "Everything in Pro, plus AI-powered design generation, smart recommendations, and 100 AI credits per month. Additional credits purchasable.",
+        country: region,
+        currency: CURRENCY_MAP[region] as any,
+        monthlyPrice: p.monthly,
+        annualPrice: p.annual,
+        catalogueLimit: 1000,
+        commissionPercent: 2.0,
+        includesAi: true,
+        monthlyAiCredits: 100,
+        rolloverCap: 200,
+        extraCreditPrice: p.extraCredit,
+        overageBehavior: "BLOCK",
+        features: {
+          basicAnalytics: true,
+          advancedAnalytics: true,
+          marketplace: true,
+          crm: true,
+          invoicing: true,
+          inventoryManagement: true,
+          customerManagement: true,
+          prioritySupport: true,
+          customBranding: true,
+          bulkUpload: true,
+          priorityListing: true,
+          purchasableAiCredits: true,
+          aiDesignGeneration: true,
+          aiSmartRecommendations: true,
+          aiPriceOptimization: true,
+          scheduledReports: true,
+          demandForecasting: true,
+        },
+        isActive: true,
+        sortOrder: 2,
+      },
+    });
+    console.log(`  ✅ PRO_PLUS (${region}): ${plan.id}`);
+  }
+
+  // ─── ENTERPRISE plans — Custom, everything included ───────
+
+  for (const region of REGIONS) {
+    const e = ENTERPRISE_PRICING[region];
+    const plan = await prisma.subscriptionPlan.upsert({
+      where: { name_country: { name: "ENTERPRISE", country: region } },
+      update: {},
+      create: {
+        name: "ENTERPRISE",
+        displayName: `Enterprise (${COUNTRY_NAMES[region]})`,
+        description:
+          "Custom plan for large businesses. Unlimited catalogue, lowest commission, dedicated account manager, API access, white-label, and custom integrations.",
         country: region,
         currency: CURRENCY_MAP[region] as any,
         monthlyPrice: e.monthly,
         annualPrice: e.annual,
         catalogueLimit: null, // unlimited
-        commissionPercent: 1.5,
+        commissionPercent: 1.0,
         includesAi: true,
         monthlyAiCredits: 500,
         rolloverCap: 500,
@@ -155,34 +235,45 @@ async function main() {
         features: {
           basicAnalytics: true,
           advancedAnalytics: true,
+          marketplace: true,
+          crm: true,
+          invoicing: true,
+          inventoryManagement: true,
+          customerManagement: true,
           prioritySupport: true,
           dedicatedSupport: true,
+          dedicatedAccountManager: true,
           customBranding: true,
           bulkUpload: true,
           priorityListing: true,
+          purchasableAiCredits: true,
+          aiDesignGeneration: true,
+          aiSmartRecommendations: true,
+          aiPriceOptimization: true,
+          scheduledReports: true,
+          demandForecasting: true,
+          automatedRepricing: true,
+          bulkImportExport: true,
           apiAccess: true,
           whiteLabel: true,
           multiBranch: true,
           staffAccounts: true,
           webhookSubscriptions: true,
-          scheduledReports: true,
-          demandForecasting: true,
-          automatedRepricing: true,
-          bulkImportExport: true,
           customDomain: true,
           auditLogExport: true,
+          customIntegrations: true,
           ssoIntegration: false, // coming soon
           dataResidency: false, // coming soon
         },
         isActive: true,
-        sortOrder: 2,
+        sortOrder: 3,
       },
     });
-    console.log(`  ✅ PRO_PLUS plan (${region}): ${plan.id}`);
+    console.log(`  ✅ ENTERPRISE (${region}): ${plan.id}`);
   }
 
   console.log(
-    "\n✨ Subscription plans seeded successfully! (18 plans: 6 FREE + 6 PRO + 6 PRO_PLUS)",
+    "\n✨ Subscription plans seeded! (24 plans: 6 FREE + 6 PRO + 6 PRO_PLUS + 6 ENTERPRISE)",
   );
 }
 
