@@ -718,16 +718,12 @@ export class SellerSubscriptionsService {
         type: notificationType,
         titleKey,
         titleParams: {
-          planName: accept
-            ? sub.plan.successorPlan.displayName
-            : "Free Plan",
+          planName: accept ? sub.plan.successorPlan.displayName : "Free Plan",
         },
         bodyKey,
         bodyParams: {
           oldPlan: sub.plan.displayName,
-          newPlan: accept
-            ? sub.plan.successorPlan.displayName
-            : "Free Plan",
+          newPlan: accept ? sub.plan.successorPlan.displayName : "Free Plan",
           shopName: sub.shop.shopName,
           periodEnd: sub.currentPeriodEnd.toISOString(),
         },

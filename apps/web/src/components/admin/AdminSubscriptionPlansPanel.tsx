@@ -1,24 +1,14 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -26,7 +16,25 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { subscriptionPlansApi } from "@/lib/api";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   AlertTriangle,
   ArrowRightLeft,
@@ -34,13 +42,14 @@ import {
   CheckCircle2,
   CreditCard,
   Loader2,
+  Pencil,
   RefreshCw,
   Send,
   Trash2,
   Users,
   XCircle,
-} from 'lucide-react';
-import { subscriptionPlansApi } from '@/lib/api';
+} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 
 interface SubscriptionPlan {
   id: string;
@@ -67,11 +76,16 @@ interface SubscriptionPlan {
 export function AdminSubscriptionPlansPanel() {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [countryFilter, setCountryFilter] = useState<string>('all');
-  const [subscriberCounts, setSubscriberCounts] = useState<Record<string, number>>({});
+  const [countryFilter, setCountryFilter] = useState<string>("all");
+  const [subscriberCounts, setSubscriberCounts] = useState<
+    Record<string, number>
+  >({});
 
   // Dialog states
-  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; plan?: SubscriptionPlan }>({
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    plan?: SubscriptionPlan;
+  }>({
     open: false,
   });
   const [successorDialog, setSuccessorDialog] = useState<{
@@ -79,14 +93,22 @@ export function AdminSubscriptionPlansPanel() {
     plan?: SubscriptionPlan;
     selectedSuccessorId?: string;
   }>({ open: false });
+  const [editDialog, setEditDialog] = useState<{
+    open: boolean;
+    plan?: SubscriptionPlan;
+    form: Record<string, unknown>;
+  }>({ open: false, form: {} });
   const [actionLoading, setActionLoading] = useState(false);
-  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [toast, setToast] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   const loadPlans = useCallback(async () => {
     setLoading(true);
     try {
       const params: Record<string, string> = {};
-      if (countryFilter !== 'all') params.country = countryFilter;
+      if (countryFilter !== "all") params.country = countryFilter;
       const res = await subscriptionPlansApi.list(params);
       setPlans(res.data);
 
@@ -95,7 +117,9 @@ export function AdminSubscriptionPlansPanel() {
       await Promise.all(
         res.data.map(async (plan: SubscriptionPlan) => {
           try {
-            const countRes = await subscriptionPlansApi.getSubscriberCount(plan.id);
+            const countRes = await subscriptionPlansApi.getSubscriberCount(
+              plan.id,
+            );
             counts[plan.id] = countRes.data.activeSubscribers;
           } catch {
             counts[plan.id] = -1; // error
@@ -104,7 +128,10 @@ export function AdminSubscriptionPlansPanel() {
       );
       setSubscriberCounts(counts);
     } catch (err: any) {
-      showToast('error', `Failed to load plans: ${err?.response?.data?.message || err.message}`);
+      showToast(
+        "error",
+        `Failed to load plans: ${err?.response?.data?.message || err.message}`,
+      );
     } finally {
       setLoading(false);
     }
@@ -114,7 +141,7 @@ export function AdminSubscriptionPlansPanel() {
     loadPlans();
   }, [loadPlans]);
 
-  const showToast = (type: 'success' | 'error', message: string) => {
+  const showToast = (type: "success" | "error", message: string) => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 5000);
   };
@@ -125,13 +152,92 @@ export function AdminSubscriptionPlansPanel() {
     setActionLoading(true);
     try {
       await subscriptionPlansApi.deletePlan(plan.id);
-      showToast('success', `Plan "${plan.displayName}" deleted successfully.`);
+      showToast("success", `Plan "${plan.displayName}" deleted successfully.`);
       setDeleteDialog({ open: false });
       loadPlans();
     } catch (err: any) {
       showToast(
-        'error',
+        "error",
         err?.response?.data?.message || `Failed to delete plan: ${err.message}`,
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // ─── Edit Plan ───────────────────────────────────────
+
+  const openEditDialog = (plan: SubscriptionPlan) => {
+    setEditDialog({
+      open: true,
+      plan,
+      form: {
+        displayName: plan.displayName,
+        description: plan.description || "",
+        monthlyPrice: plan.monthlyPrice,
+        annualPrice: plan.annualPrice ?? "",
+        maxProducts: plan.maxProducts ?? "",
+        maxInvoicesPerMonth: plan.maxInvoicesPerMonth ?? "",
+        maxCatalogues: plan.maxCatalogues ?? "",
+        maxOrdersPerMonth: plan.maxOrdersPerMonth ?? "",
+        commissionPercent: plan.commissionPercent,
+        includesAi: plan.includesAi,
+        monthlyAiCredits: plan.monthlyAiCredits,
+        sortOrder: plan.sortOrder,
+      },
+    });
+  };
+
+  const updateEditForm = (field: string, value: unknown) => {
+    setEditDialog((prev) => ({
+      ...prev,
+      form: { ...prev.form, [field]: value },
+    }));
+  };
+
+  const handleEdit = async () => {
+    if (!editDialog.plan) return;
+    setActionLoading(true);
+    try {
+      // Build payload: only send changed fields, convert numbers
+      const payload: Record<string, unknown> = {};
+      const plan = editDialog.plan;
+      const f = editDialog.form;
+
+      if (f.displayName !== plan.displayName) payload.displayName = f.displayName;
+      if (f.description !== (plan.description || "")) payload.description = f.description;
+      if (Number(f.monthlyPrice) !== plan.monthlyPrice) payload.monthlyPrice = Number(f.monthlyPrice);
+      if (f.annualPrice !== "" && Number(f.annualPrice) !== (plan.annualPrice ?? 0))
+        payload.annualPrice = Number(f.annualPrice);
+      if (f.maxProducts !== "" && Number(f.maxProducts) !== (plan.maxProducts ?? 0))
+        payload.maxProducts = Number(f.maxProducts);
+      if (f.maxInvoicesPerMonth !== "" && Number(f.maxInvoicesPerMonth) !== (plan.maxInvoicesPerMonth ?? 0))
+        payload.maxInvoicesPerMonth = Number(f.maxInvoicesPerMonth);
+      if (f.maxCatalogues !== "" && Number(f.maxCatalogues) !== (plan.maxCatalogues ?? 0))
+        payload.maxCatalogues = Number(f.maxCatalogues);
+      if (f.maxOrdersPerMonth !== "" && Number(f.maxOrdersPerMonth) !== (plan.maxOrdersPerMonth ?? 0))
+        payload.maxOrdersPerMonth = Number(f.maxOrdersPerMonth);
+      if (Number(f.commissionPercent) !== plan.commissionPercent)
+        payload.commissionPercent = Number(f.commissionPercent);
+      if (f.includesAi !== plan.includesAi) payload.includesAi = f.includesAi;
+      if (Number(f.monthlyAiCredits) !== plan.monthlyAiCredits)
+        payload.monthlyAiCredits = Number(f.monthlyAiCredits);
+      if (Number(f.sortOrder) !== plan.sortOrder) payload.sortOrder = Number(f.sortOrder);
+
+      if (Object.keys(payload).length === 0) {
+        showToast("error", "No changes detected.");
+        setActionLoading(false);
+        return;
+      }
+
+      await subscriptionPlansApi.update(plan.id, payload);
+      showToast("success", `Plan "${plan.displayName}" updated successfully.`);
+      setEditDialog({ open: false, form: {} });
+      loadPlans();
+    } catch (err: any) {
+      showToast(
+        "error",
+        err?.response?.data?.message || `Failed to update plan: ${err.message}`,
       );
     } finally {
       setActionLoading(false);
@@ -151,15 +257,16 @@ export function AdminSubscriptionPlansPanel() {
       );
       const data = res.data;
       showToast(
-        'success',
+        "success",
         `Plan disabled. ${data.affectedSubscriptions} subscriber(s) notified for migration to "${data.successor.displayName}".`,
       );
       setSuccessorDialog({ open: false });
       loadPlans();
     } catch (err: any) {
       showToast(
-        'error',
-        err?.response?.data?.message || `Failed to disable plan: ${err.message}`,
+        "error",
+        err?.response?.data?.message ||
+          `Failed to disable plan: ${err.message}`,
       );
     } finally {
       setActionLoading(false);
@@ -172,9 +279,12 @@ export function AdminSubscriptionPlansPanel() {
     setActionLoading(true);
     try {
       const res = await subscriptionPlansApi.triggerMigrationReminders();
-      showToast('success', `Sent ${res.data.sent} migration reminder(s).`);
+      showToast("success", `Sent ${res.data.sent} migration reminder(s).`);
     } catch (err: any) {
-      showToast('error', err?.response?.data?.message || 'Failed to send reminders');
+      showToast(
+        "error",
+        err?.response?.data?.message || "Failed to send reminders",
+      );
     } finally {
       setActionLoading(false);
     }
@@ -185,12 +295,15 @@ export function AdminSubscriptionPlansPanel() {
     try {
       const res = await subscriptionPlansApi.processRenewalMigrations();
       showToast(
-        'success',
+        "success",
         `Migrations processed: ${res.data.migrated} migrated, ${res.data.downgraded} downgraded.`,
       );
       loadPlans();
     } catch (err: any) {
-      showToast('error', err?.response?.data?.message || 'Failed to process migrations');
+      showToast(
+        "error",
+        err?.response?.data?.message || "Failed to process migrations",
+      );
     } finally {
       setActionLoading(false);
     }
@@ -222,12 +335,12 @@ export function AdminSubscriptionPlansPanel() {
       {toast && (
         <div
           className={`fixed top-4 right-4 z-50 flex items-center gap-2 rounded-lg px-4 py-3 shadow-lg transition-all ${
-            toast.type === 'success'
-              ? 'bg-green-50 text-green-800 border border-green-200'
-              : 'bg-red-50 text-red-800 border border-red-200'
+            toast.type === "success"
+              ? "bg-green-50 text-green-800 border border-green-200"
+              : "bg-red-50 text-red-800 border border-red-200"
           }`}
         >
-          {toast.type === 'success' ? (
+          {toast.type === "success" ? (
             <CheckCircle2 className="h-4 w-4" />
           ) : (
             <XCircle className="h-4 w-4" />
@@ -331,12 +444,14 @@ export function AdminSubscriptionPlansPanel() {
               {plans.map((plan) => (
                 <TableRow
                   key={plan.id}
-                  className={!plan.isActive ? 'opacity-60' : ''}
+                  className={!plan.isActive ? "opacity-60" : ""}
                 >
                   <TableCell>
                     <div>
                       <div className="font-medium">{plan.displayName}</div>
-                      <div className="text-xs text-muted-foreground">{plan.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {plan.name}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -385,6 +500,14 @@ export function AdminSubscriptionPlansPanel() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditDialog(plan)}
+                        title="Edit plan"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
                       {plan.isActive && (
                         <Button
                           variant="outline"
@@ -438,7 +561,7 @@ export function AdminSubscriptionPlansPanel() {
               Delete Plan
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to permanently delete{' '}
+              Are you sure you want to permanently delete{" "}
               <strong>{deleteDialog.plan?.displayName}</strong>?
               <br />
               <br />
@@ -446,11 +569,11 @@ export function AdminSubscriptionPlansPanel() {
               subscribers. Otherwise, use &quot;Disable with Successor&quot;.
             </DialogDescription>
           </DialogHeader>
-          {(subscriberCounts[deleteDialog.plan?.id || ''] || 0) > 0 && (
+          {(subscriberCounts[deleteDialog.plan?.id || ""] || 0) > 0 && (
             <div className="flex items-center gap-2 p-3 rounded-md bg-amber-50 text-amber-800 text-sm border border-amber-200">
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-              This plan has {subscriberCounts[deleteDialog.plan?.id || '']} active
-              subscriber(s). Delete will fail.
+              This plan has {subscriberCounts[deleteDialog.plan?.id || ""]}{" "}
+              active subscriber(s). Delete will fail.
             </div>
           )}
           <DialogFooter>
@@ -462,7 +585,9 @@ export function AdminSubscriptionPlansPanel() {
             </Button>
             <Button
               variant="destructive"
-              onClick={() => deleteDialog.plan && handleDelete(deleteDialog.plan)}
+              onClick={() =>
+                deleteDialog.plan && handleDelete(deleteDialog.plan)
+              }
               disabled={actionLoading}
             >
               {actionLoading ? (
@@ -471,6 +596,185 @@ export function AdminSubscriptionPlansPanel() {
                 <Trash2 className="h-4 w-4 mr-2" />
               )}
               Delete Plan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Plan Dialog */}
+      <Dialog
+        open={editDialog.open}
+        onOpenChange={(open) => !open && setEditDialog({ open: false, form: {} })}
+      >
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5 text-blue-500" />
+              Edit Plan: {editDialog.plan?.displayName}
+            </DialogTitle>
+            <DialogDescription>
+              Update plan details. Changes are saved immediately.
+              {editDialog.plan && !editDialog.plan.isActive && (
+                <span className="block mt-1 text-amber-600">This plan is currently disabled.</span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            {/* Display Name */}
+            <div className="col-span-2">
+              <Label htmlFor="edit-displayName">Display Name</Label>
+              <Input
+                id="edit-displayName"
+                value={(editDialog.form.displayName as string) || ""}
+                onChange={(e) => updateEditForm("displayName", e.target.value)}
+              />
+            </div>
+            {/* Description */}
+            <div className="col-span-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Input
+                id="edit-description"
+                value={(editDialog.form.description as string) || ""}
+                onChange={(e) => updateEditForm("description", e.target.value)}
+              />
+            </div>
+            {/* Pricing */}
+            <div>
+              <Label htmlFor="edit-monthlyPrice">Monthly Price ({editDialog.plan?.currency})</Label>
+              <Input
+                id="edit-monthlyPrice"
+                type="number"
+                min={0}
+                step="0.01"
+                value={editDialog.form.monthlyPrice as number ?? ""}
+                onChange={(e) => updateEditForm("monthlyPrice", e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-annualPrice">Annual Price ({editDialog.plan?.currency})</Label>
+              <Input
+                id="edit-annualPrice"
+                type="number"
+                min={0}
+                step="0.01"
+                value={editDialog.form.annualPrice as number ?? ""}
+                onChange={(e) => updateEditForm("annualPrice", e.target.value)}
+                placeholder="Leave empty for no annual option"
+              />
+            </div>
+            {/* Commission */}
+            <div>
+              <Label htmlFor="edit-commission">Commission %</Label>
+              <Input
+                id="edit-commission"
+                type="number"
+                min={0}
+                max={100}
+                step="0.1"
+                value={editDialog.form.commissionPercent as number ?? ""}
+                onChange={(e) => updateEditForm("commissionPercent", e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-sortOrder">Sort Order</Label>
+              <Input
+                id="edit-sortOrder"
+                type="number"
+                min={0}
+                value={editDialog.form.sortOrder as number ?? ""}
+                onChange={(e) => updateEditForm("sortOrder", e.target.value)}
+              />
+            </div>
+            {/* Resource Limits */}
+            <div className="col-span-2">
+              <p className="text-sm font-medium text-muted-foreground mb-2">Resource Limits (leave empty = unlimited)</p>
+            </div>
+            <div>
+              <Label htmlFor="edit-maxProducts">Max Products</Label>
+              <Input
+                id="edit-maxProducts"
+                type="number"
+                min={0}
+                value={editDialog.form.maxProducts as number ?? ""}
+                onChange={(e) => updateEditForm("maxProducts", e.target.value)}
+                placeholder="Unlimited"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-maxInvoices">Max Invoices/Month</Label>
+              <Input
+                id="edit-maxInvoices"
+                type="number"
+                min={0}
+                value={editDialog.form.maxInvoicesPerMonth as number ?? ""}
+                onChange={(e) => updateEditForm("maxInvoicesPerMonth", e.target.value)}
+                placeholder="Unlimited"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-maxCatalogues">Max Catalogues</Label>
+              <Input
+                id="edit-maxCatalogues"
+                type="number"
+                min={0}
+                value={editDialog.form.maxCatalogues as number ?? ""}
+                onChange={(e) => updateEditForm("maxCatalogues", e.target.value)}
+                placeholder="Unlimited"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-maxOrders">Max Orders/Month</Label>
+              <Input
+                id="edit-maxOrders"
+                type="number"
+                min={0}
+                value={editDialog.form.maxOrdersPerMonth as number ?? ""}
+                onChange={(e) => updateEditForm("maxOrdersPerMonth", e.target.value)}
+                placeholder="Unlimited"
+              />
+            </div>
+            {/* AI Settings */}
+            <div className="col-span-2">
+              <p className="text-sm font-medium text-muted-foreground mb-2">AI Settings</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                id="edit-includesAi"
+                type="checkbox"
+                checked={!!editDialog.form.includesAi}
+                onChange={(e) => updateEditForm("includesAi", e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <Label htmlFor="edit-includesAi">Includes AI Features</Label>
+            </div>
+            <div>
+              <Label htmlFor="edit-aiCredits">Monthly AI Credits</Label>
+              <Input
+                id="edit-aiCredits"
+                type="number"
+                min={0}
+                value={editDialog.form.monthlyAiCredits as number ?? ""}
+                onChange={(e) => updateEditForm("monthlyAiCredits", e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditDialog({ open: false, form: {} })}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEdit}
+              disabled={actionLoading}
+            >
+              {actionLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Pencil className="h-4 w-4 mr-2" />
+              )}
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -498,13 +802,13 @@ export function AdminSubscriptionPlansPanel() {
               <p className="text-sm font-medium mb-2">Current subscribers:</p>
               <Badge variant="outline" className="text-base px-3 py-1">
                 <Users className="h-4 w-4 mr-1" />
-                {subscriberCounts[successorDialog.plan?.id || ''] ?? '...'}
+                {subscriberCounts[successorDialog.plan?.id || ""] ?? "..."}
               </Badge>
             </div>
             <div>
               <p className="text-sm font-medium mb-2">Select successor plan:</p>
               <Select
-                value={successorDialog.selectedSuccessorId || ''}
+                value={successorDialog.selectedSuccessorId || ""}
                 onValueChange={(v) =>
                   setSuccessorDialog((prev) => ({
                     ...prev,
@@ -516,10 +820,10 @@ export function AdminSubscriptionPlansPanel() {
                   <SelectValue placeholder="Choose a successor plan..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {eligibleSuccessors(successorDialog.plan?.id || '').map(
+                  {eligibleSuccessors(successorDialog.plan?.id || "").map(
                     (p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        {p.displayName} ({p.country}) — {p.currency}{' '}
+                        {p.displayName} ({p.country}) — {p.currency}{" "}
                         {p.monthlyPrice}/mo
                       </SelectItem>
                     ),
