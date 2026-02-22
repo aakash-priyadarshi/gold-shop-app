@@ -2,11 +2,13 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { FeatureGate } from "@/components/FeatureGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
+import { useFeatures } from "@/hooks/useFeatures";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { customerCrmApi } from "@/lib/api";
 import {
@@ -37,6 +39,7 @@ interface Customer {
 
 export default function CustomerDirectoryPage() {
   const { symbol: currencySymbol } = useShopCurrency();
+  const { hasFeature, planName, loading: featuresLoading } = useFeatures();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -63,13 +66,17 @@ export default function CustomerDirectoryPage() {
   };
 
   useEffect(() => {
-    const timer = setTimeout(fetchCustomers, 400);
-    return () => clearTimeout(timer);
-  }, [search, page]);
+    if (!featuresLoading && hasFeature("crm")) {
+      const timer = setTimeout(fetchCustomers, 400);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, page, featuresLoading, hasFeature]);
 
   return (
     <ShopGuard>
       <DashboardLayout>
+        <FeatureGate feature="crm" featureLabel="CRM / Customer Directory" hasFeature={hasFeature} planName={planName} loading={featuresLoading}>
         <div className="space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -212,6 +219,7 @@ export default function CustomerDirectoryPage() {
             </div>
           )}
         </div>
+        </FeatureGate>
       </DashboardLayout>
     </ShopGuard>
   );

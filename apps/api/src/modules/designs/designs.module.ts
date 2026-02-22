@@ -9,7 +9,12 @@ import { DesignsService } from "./designs.service";
 import { ImageGenerationService } from "./image-generation.service";
 
 @Module({
-  imports: [AuditModule, NotificationsModule, ConfigModule, SubscriptionPlansModule],
+  imports: [
+    AuditModule,
+    NotificationsModule,
+    ConfigModule,
+    SubscriptionPlansModule,
+  ],
   controllers: [DesignsController],
   providers: [
     DesignsService,

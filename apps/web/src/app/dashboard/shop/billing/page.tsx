@@ -14,6 +14,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatures } from "@/hooks/useFeatures";
 import {
   aiCreditsApi,
   sellerSubscriptionsApi,
@@ -358,10 +359,7 @@ function CurrentPlanTab() {
                         acc[f.category].push(f);
                         return acc;
                       },
-                      {} as Record<
-                        string,
-                        typeof features.features
-                      >,
+                      {} as Record<string, typeof features.features>,
                     ),
                   ).map(([category, items]) => (
                     <div key={category} className="rounded-lg border p-3">
@@ -530,6 +528,8 @@ function UsageBar({
 
 function AiCreditsTab() {
   const { user } = useAuth();
+  const { hasFeature, loading: featuresLoading } = useFeatures();
+  const canPurchase = hasFeature("purchasableAiCredits");
   const [balance, setBalance] = useState<number | null>(null);
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -595,11 +595,20 @@ function AiCreditsTab() {
   }, []);
 
   const handleBuyCredits = async () => {
+    if (!canPurchase) {
+      toast({
+        title: "Feature Not Available",
+        description:
+          "Purchasable AI Credits is not enabled on your plan. Upgrade from the Available Plans tab.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (!planInfo || planInfo.extraCreditPrice <= 0) {
       toast({
-        title: "Not Available",
+        title: "Not Configured",
         description:
-          "Credit purchases are not available on your current plan. Please upgrade.",
+          "Credit pricing is not configured for your plan. Contact support.",
         variant: "destructive",
       });
       return;
@@ -713,16 +722,23 @@ function AiCreditsTab() {
       </Card>
 
       {/* Buy Credits Card */}
-      <Card>
+      <Card className={!canPurchase ? "opacity-60" : ""}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <CreditCard className="h-4 w-4" />
             Buy Credits
+            {!canPurchase && (
+              <Badge variant="outline" className="ml-2 text-xs font-normal">
+                Upgrade to unlock
+              </Badge>
+            )}
           </CardTitle>
           <CardDescription>
-            {planInfo && planInfo.extraCreditPrice > 0
-              ? `${planInfo.currency} ${planInfo.extraCreditPrice} per credit`
-              : "Upgrade your plan to purchase extra credits"}
+            {!canPurchase
+              ? "This feature is not included in your current plan."
+              : planInfo && planInfo.extraCreditPrice > 0
+                ? `${planInfo.currency} ${planInfo.extraCreditPrice} per credit`
+                : "Credit pricing not configured — contact support."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -749,7 +765,7 @@ function AiCreditsTab() {
           </div>
           <Button
             onClick={handleBuyCredits}
-            disabled={buying || !planInfo || planInfo.extraCreditPrice <= 0}
+            disabled={buying || !canPurchase || !planInfo || planInfo.extraCreditPrice <= 0}
             className="w-full sm:w-auto"
           >
             {buying ? (

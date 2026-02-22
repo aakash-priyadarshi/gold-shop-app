@@ -2,6 +2,7 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { FeatureGate } from "@/components/FeatureGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,6 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
+import { useFeatures } from "@/hooks/useFeatures";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { invoicesApi } from "@/lib/api";
 import {
@@ -81,6 +83,7 @@ const statusColors: Record<string, string> = {
 
 export default function InvoicesListPage() {
   const { symbol: currencySymbol } = useShopCurrency();
+  const { hasFeature, planName, loading: featuresLoading } = useFeatures();
   const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
   const [stats, setStats] = useState<InvoiceStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -115,17 +118,21 @@ export default function InvoicesListPage() {
   };
 
   useEffect(() => {
-    loadInvoices();
-  }, [page, statusFilter]);
+    if (!featuresLoading && hasFeature("invoicing")) loadInvoices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, statusFilter, featuresLoading, hasFeature]);
 
   // Debounced search
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setPage(1);
-      loadInvoices();
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [search]);
+    if (!featuresLoading && hasFeature("invoicing")) {
+      const timer = setTimeout(() => {
+        setPage(1);
+        loadInvoices();
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, featuresLoading, hasFeature]);
 
   const formatCurrency = (amount: number, currency?: string) => {
     return `${currency || currencySymbol} ${amount.toLocaleString()}`;
@@ -142,6 +149,7 @@ export default function InvoicesListPage() {
   return (
     <ShopGuard>
       <DashboardLayout>
+        <FeatureGate feature="invoicing" featureLabel="Invoicing" hasFeature={hasFeature} planName={planName} loading={featuresLoading}>
         <div className="space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -359,6 +367,7 @@ export default function InvoicesListPage() {
             </div>
           )}
         </div>
+        </FeatureGate>
       </DashboardLayout>
     </ShopGuard>
   );
