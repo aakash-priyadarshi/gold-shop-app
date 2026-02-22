@@ -5,6 +5,14 @@ import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BRAND } from "@/config/brand";
+import { subscriptionPlansApi } from "@/lib/api";
+import {
+  COUNTRIES,
+  CURRENCIES,
+  usePreferencesStore,
+  type CountryCode,
+  type CurrencyCode,
+} from "@/store/preferences";
 import {
   Check,
   X,
@@ -16,395 +24,507 @@ import {
   TrendingUp,
   Headphones,
   Zap,
-  BarChart3,
-  Package,
-  FileText,
-  Users,
-  Palette,
-  Brain,
   Globe,
   ChevronDown,
   Star,
+  Loader2,
+  Package,
+  FileText,
+  Users,
+  BarChart3,
+  Palette,
+  Brain,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 /* ────────────────────────────────────────────────────────────── */
-/*  PRICING DATA — mirrored from seed, USD shown as default      */
+/*  TYPES                                                         */
 /* ────────────────────────────────────────────────────────────── */
 
-const PLANS = [
+interface PlanFromAPI {
+  id: string;
+  name: string; // FREE | PRO | PRO_PLUS | ENTERPRISE
+  displayName: string;
+  description: string;
+  country: string;
+  currency: CurrencyCode;
+  monthlyPrice: number;
+  annualPrice: number;
+  maxProducts: number | null;
+  maxInvoicesPerMonth: number | null;
+  maxCatalogues: number | null;
+  catalogueLimit: number | null;
+  maxOrdersPerMonth: number | null;
+  commissionPercent: number;
+  includesAi: boolean;
+  monthlyAiCredits: number;
+  rolloverCap: number;
+  extraCreditPrice: number;
+  overageBehavior: string;
+  features: Record<string, boolean | string | number>;
+  sortOrder: number;
+}
+
+/* ────────────────────────────────────────────────────────────── */
+/*  STATIC CONTENT (design, copy, comparison structure)           */
+/* ────────────────────────────────────────────────────────────── */
+
+/* Feature labels for the comparison table — mapped from features JSON keys */
+const FEATURE_DISPLAY: Record<string, { label: string; category: string }> = {
+  // Marketplace
+  marketplace: { label: "Marketplace listing", category: "Marketplace" },
+  priorityListing: {
+    label: "Priority listing placement",
+    category: "Marketplace",
+  },
+  bulkUpload: { label: "Bulk product upload", category: "Marketplace" },
+
+  // CRM & Business Tools
+  crm: { label: "CRM suite", category: "CRM & Business Tools" },
+  invoicing: { label: "Invoicing & billing", category: "CRM & Business Tools" },
+  inventoryManagement: {
+    label: "Inventory management",
+    category: "CRM & Business Tools",
+  },
+  customerManagement: {
+    label: "Customer management",
+    category: "CRM & Business Tools",
+  },
+  customBranding: {
+    label: "Custom branding",
+    category: "CRM & Business Tools",
+  },
+  staffAccounts: { label: "Staff accounts", category: "CRM & Business Tools" },
+  multiBranch: {
+    label: "Multi-branch support",
+    category: "CRM & Business Tools",
+  },
+
+  // AI & Intelligence
+  purchasableAiCredits: {
+    label: "Purchase AI credits",
+    category: "AI & Intelligence",
+  },
+  aiDesignGeneration: {
+    label: "AI design generation",
+    category: "AI & Intelligence",
+  },
+  aiSmartRecommendations: {
+    label: "Smart recommendations",
+    category: "AI & Intelligence",
+  },
+  aiPriceOptimization: {
+    label: "Price optimization",
+    category: "AI & Intelligence",
+  },
+  demandForecasting: {
+    label: "Demand forecasting",
+    category: "AI & Intelligence",
+  },
+
+  // Analytics & Reports
+  basicAnalytics: { label: "Basic analytics", category: "Analytics & Reports" },
+  advancedAnalytics: {
+    label: "Advanced analytics",
+    category: "Analytics & Reports",
+  },
+  scheduledReports: {
+    label: "Scheduled reports",
+    category: "Analytics & Reports",
+  },
+  auditLogExport: {
+    label: "Audit log export",
+    category: "Analytics & Reports",
+  },
+
+  // Support & Integration
+  prioritySupport: {
+    label: "Priority support",
+    category: "Support & Integration",
+  },
+  dedicatedSupport: {
+    label: "Dedicated support",
+    category: "Support & Integration",
+  },
+  dedicatedAccountManager: {
+    label: "Dedicated account manager",
+    category: "Support & Integration",
+  },
+  apiAccess: { label: "API access", category: "Support & Integration" },
+  webhookSubscriptions: {
+    label: "Webhook subscriptions",
+    category: "Support & Integration",
+  },
+  whiteLabel: { label: "White-label option", category: "Support & Integration" },
+  customDomain: { label: "Custom domain", category: "Support & Integration" },
+  customIntegrations: {
+    label: "Custom integrations",
+    category: "Support & Integration",
+  },
+};
+
+/** Order categories appear in */
+const CATEGORY_ORDER = [
+  "Marketplace",
+  "CRM & Business Tools",
+  "AI & Intelligence",
+  "Analytics & Reports",
+  "Support & Integration",
+];
+
+/** Tier presentation metadata — slug → display data */
+const TIER_META: Record<
+  string,
   {
-    name: "Free",
-    slug: "FREE",
-    monthlyPrice: 0,
-    annualPrice: 0,
-    currency: "$",
-    description: "Get started for free. List your products on the marketplace.",
+    icon: typeof Sparkles | null;
+    iconColor: string;
+    badge: string | null;
+    highlight: boolean;
+    cta: string;
+    ctaVariant: "default" | "outline";
+    ctaClass: string;
+  }
+> = {
+  FREE: {
+    icon: null,
+    iconColor: "",
     badge: null,
     highlight: false,
     cta: "Start Free",
-    ctaLink: "/dashboard/shop/billing",
-    features: [
-      { text: "Up to 20 product listings", included: true },
-      { text: "Basic marketplace presence", included: true },
-      { text: "Basic analytics", included: true },
-      { text: "5% platform commission", included: true },
-      { text: "CRM & Invoicing", included: false },
-      { text: "Inventory management", included: false },
-      { text: "AI design tools", included: false },
-      { text: "Priority support", included: false },
-      { text: "Custom branding", included: false },
-    ],
+    ctaVariant: "outline",
+    ctaClass: "",
   },
-  {
-    name: "Pro",
-    slug: "PRO",
-    monthlyPrice: 35,
-    annualPrice: 350,
-    currency: "$",
-    description:
-      "Complete CRM for growing jewellery businesses. AI credits purchasable separately.",
+  PRO: {
+    icon: null,
+    iconColor: "",
     badge: null,
     highlight: false,
     cta: "Get Pro",
-    ctaLink: "/dashboard/shop/billing",
-    features: [
-      { text: "Up to 200 product listings", included: true },
-      { text: "Full CRM suite", included: true },
-      { text: "Invoicing & billing", included: true },
-      { text: "Inventory management", included: true },
-      { text: "Customer management", included: true },
-      { text: "Advanced analytics", included: true },
-      { text: "3% platform commission", included: true },
-      { text: "Priority support", included: true },
-      { text: "Custom branding", included: true },
-      { text: "Bulk upload", included: true },
-      { text: "Priority marketplace listing", included: true },
-      { text: "AI credits purchasable", included: true },
-      { text: "AI included in plan", included: false },
-    ],
+    ctaVariant: "outline",
+    ctaClass: "",
   },
-  {
-    name: "Pro+",
-    slug: "PRO_PLUS",
-    monthlyPrice: 99,
-    annualPrice: 990,
-    currency: "$",
-    description:
-      "Everything in Pro, plus AI-powered tools with 100 credits/month included.",
+  PRO_PLUS: {
+    icon: Sparkles,
+    iconColor: "text-amber-500",
     badge: "Most Popular",
     highlight: true,
     cta: "Get Pro+",
-    ctaLink: "/dashboard/shop/billing",
-    features: [
-      { text: "Up to 1,000 product listings", included: true },
-      { text: "Full CRM suite", included: true },
-      { text: "Invoicing & billing", included: true },
-      { text: "Inventory management", included: true },
-      { text: "Customer management", included: true },
-      { text: "Advanced analytics", included: true },
-      { text: "2% platform commission", included: true },
-      { text: "Priority support", included: true },
-      { text: "Custom branding", included: true },
-      { text: "100 AI credits/month included", included: true },
-      { text: "AI design generation", included: true },
-      { text: "Smart recommendations", included: true },
-      { text: "Price optimization", included: true },
-      { text: "Demand forecasting", included: true },
-      { text: "Scheduled reports", included: true },
-      { text: "Additional credits purchasable", included: true },
-    ],
+    ctaVariant: "default",
+    ctaClass: "bg-amber-500 hover:bg-amber-600 text-white",
   },
-  {
-    name: "Enterprise",
-    slug: "ENTERPRISE",
-    monthlyPrice: null,
-    annualPrice: null,
-    currency: "$",
-    description:
-      "Custom plan for large businesses. Unlimited everything, dedicated support, and white-label.",
+  ENTERPRISE: {
+    icon: Crown,
+    iconColor: "text-purple-500",
     badge: null,
     highlight: false,
     cta: "Contact Sales",
-    ctaLink: `mailto:${BRAND.salesEmail}?subject=Enterprise%20Plan%20Inquiry`,
-    features: [
-      { text: "Unlimited product listings", included: true },
-      { text: "Full CRM suite", included: true },
-      { text: "Everything in Pro+", included: true },
-      { text: "1% platform commission", included: true },
-      { text: "500 AI credits/month", included: true },
-      { text: "Dedicated account manager", included: true },
-      { text: "API access", included: true },
-      { text: "White-label option", included: true },
-      { text: "Multi-branch support", included: true },
-      { text: "Staff accounts", included: true },
-      { text: "Custom domain", included: true },
-      { text: "Custom integrations", included: true },
-      { text: "Webhook subscriptions", included: true },
-      { text: "Audit log export", included: true },
-      { text: "Auto-charge overage", included: true },
-    ],
+    ctaVariant: "default",
+    ctaClass: "bg-purple-600 hover:bg-purple-700 text-white",
   },
-];
+};
 
-/* Full feature comparison table */
-const COMPARISON_CATEGORIES = [
-  {
-    category: "Marketplace",
-    features: [
-      {
-        name: "Product listings",
-        free: "20",
-        pro: "200",
-        proPlus: "1,000",
-        enterprise: "Unlimited",
-      },
-      {
-        name: "Platform commission",
-        free: "5%",
-        pro: "3%",
-        proPlus: "2%",
-        enterprise: "1%",
-      },
-      {
-        name: "Priority listing placement",
-        free: false,
-        pro: true,
-        proPlus: true,
-        enterprise: true,
-      },
-      {
-        name: "Bulk product upload",
-        free: false,
-        pro: true,
-        proPlus: true,
-        enterprise: true,
-      },
-    ],
-  },
-  {
-    category: "CRM & Business Tools",
-    features: [
-      {
-        name: "Customer management",
-        free: false,
-        pro: true,
-        proPlus: true,
-        enterprise: true,
-      },
-      {
-        name: "Invoicing & billing",
-        free: false,
-        pro: true,
-        proPlus: true,
-        enterprise: true,
-      },
-      {
-        name: "Inventory management",
-        free: false,
-        pro: true,
-        proPlus: true,
-        enterprise: true,
-      },
-      {
-        name: "Custom branding",
-        free: false,
-        pro: true,
-        proPlus: true,
-        enterprise: true,
-      },
-      {
-        name: "Staff accounts",
-        free: false,
-        pro: false,
-        proPlus: false,
-        enterprise: true,
-      },
-      {
-        name: "Multi-branch support",
-        free: false,
-        pro: false,
-        proPlus: false,
-        enterprise: true,
-      },
-    ],
-  },
-  {
-    category: "AI & Intelligence",
-    features: [
-      {
-        name: "AI credits included",
-        free: "0",
-        pro: "0",
-        proPlus: "100/mo",
-        enterprise: "500/mo",
-      },
-      {
-        name: "Purchase extra AI credits",
-        free: false,
-        pro: true,
-        proPlus: true,
-        enterprise: true,
-      },
-      {
-        name: "AI design generation",
-        free: false,
-        pro: false,
-        proPlus: true,
-        enterprise: true,
-      },
-      {
-        name: "Smart recommendations",
-        free: false,
-        pro: false,
-        proPlus: true,
-        enterprise: true,
-      },
-      {
-        name: "Price optimization",
-        free: false,
-        pro: false,
-        proPlus: true,
-        enterprise: true,
-      },
-      {
-        name: "Demand forecasting",
-        free: false,
-        pro: false,
-        proPlus: true,
-        enterprise: true,
-      },
-    ],
-  },
-  {
-    category: "Analytics & Reports",
-    features: [
-      {
-        name: "Basic analytics",
-        free: true,
-        pro: true,
-        proPlus: true,
-        enterprise: true,
-      },
-      {
-        name: "Advanced analytics",
-        free: false,
-        pro: true,
-        proPlus: true,
-        enterprise: true,
-      },
-      {
-        name: "Scheduled reports",
-        free: false,
-        pro: false,
-        proPlus: true,
-        enterprise: true,
-      },
-      {
-        name: "Audit log export",
-        free: false,
-        pro: false,
-        proPlus: false,
-        enterprise: true,
-      },
-    ],
-  },
-  {
-    category: "Support & Integration",
-    features: [
-      {
-        name: "Email support",
-        free: true,
-        pro: true,
-        proPlus: true,
-        enterprise: true,
-      },
-      {
-        name: "Priority support",
-        free: false,
-        pro: true,
-        proPlus: true,
-        enterprise: true,
-      },
-      {
-        name: "Dedicated account manager",
-        free: false,
-        pro: false,
-        proPlus: false,
-        enterprise: true,
-      },
-      {
-        name: "API access",
-        free: false,
-        pro: false,
-        proPlus: false,
-        enterprise: true,
-      },
-      {
-        name: "Webhook subscriptions",
-        free: false,
-        pro: false,
-        proPlus: false,
-        enterprise: true,
-      },
-      {
-        name: "White-label option",
-        free: false,
-        pro: false,
-        proPlus: false,
-        enterprise: true,
-      },
-      {
-        name: "Custom domain",
-        free: false,
-        pro: false,
-        proPlus: false,
-        enterprise: true,
-      },
-    ],
-  },
-];
-
-/* SaaS vs One-Time CRM comparison */
+/* SaaS vs One-Time CRM advantages */
 const SAAS_ADVANTAGES = [
   {
     icon: RefreshCw,
     title: "Always Up-to-Date",
     description:
-      "New features, security patches, and improvements are delivered automatically — no manual upgrades or version headaches.",
+      "New features, security patches, and improvements delivered automatically — no manual upgrades.",
   },
   {
     icon: ShieldCheck,
     title: "Zero IT Overhead",
     description:
-      "No servers to manage, no backups to worry about, no database maintenance. We handle everything so you focus on selling.",
+      "No servers to manage, no backups to worry about. We handle everything so you focus on selling.",
   },
   {
     icon: TrendingUp,
     title: "Scale as You Grow",
     description:
-      "Start free, upgrade when ready. No upfront investment. Pay only for what you use — downgrade or cancel anytime.",
+      "Start free, upgrade when ready. No upfront investment. Downgrade or cancel anytime.",
   },
   {
     icon: Headphones,
     title: "Live Support Included",
     description:
-      "Get help when you need it. Priority support for paid plans, dedicated account managers for Enterprise.",
+      "Priority support for paid plans, dedicated account managers for Enterprise.",
   },
   {
     icon: Zap,
     title: "Instant Setup",
     description:
-      "Create your account and start selling in minutes. No installation, no configuration, no waiting.",
+      "Create your account and start selling in minutes. No installation, no configuration.",
   },
   {
     icon: Globe,
     title: "Access Anywhere",
     description:
-      "Manage your business from any device — phone, tablet, or desktop. Your CRM travels with you.",
+      "Manage your business from any device — phone, tablet, or desktop.",
   },
 ];
+
+const SAAS_VS_ONETIME = [
+  {
+    label: "Upfront cost",
+    saas: "₹0 — start free",
+    legacy: "₹50,000 — ₹5,00,000+",
+  },
+  {
+    label: "Updates & new features",
+    saas: "Automatic, always latest",
+    legacy: "Paid upgrades, often manual",
+  },
+  {
+    label: "Server & hosting",
+    saas: "Included (cloud)",
+    legacy: "You manage + pay separately",
+  },
+  {
+    label: "Data backups",
+    saas: "Automated daily",
+    legacy: "Manual — your responsibility",
+  },
+  {
+    label: "Mobile access",
+    saas: "Works on any device",
+    legacy: "Desktop-only (usually)",
+  },
+  {
+    label: "AI features",
+    saas: "Built-in, improving",
+    legacy: "None or extra purchase",
+  },
+  {
+    label: "Marketplace built-in",
+    saas: "Yes — sell to customers",
+    legacy: "No — just internal CRM",
+  },
+  {
+    label: "Security patches",
+    saas: "Immediate, automatic",
+    legacy: "Delayed, often requires reinstall",
+  },
+  {
+    label: "Scaling",
+    saas: "Upgrade plan as needed",
+    legacy: "Buy new license / hardware",
+  },
+  {
+    label: "Lock-in risk",
+    saas: "Cancel anytime, export data",
+    legacy: "Tied to vendor for upgrades",
+  },
+];
+
+const FAQ_ITEMS = [
+  {
+    q: "Can I start for free?",
+    a: "Yes! The Free plan lets you list products on the marketplace at no cost, forever. Upgrade only when you need CRM features or more listings.",
+  },
+  {
+    q: "What's the difference between Pro and Pro+?",
+    a: "Pro gives you a full CRM — inventory, invoicing, customer management, and analytics. Pro+ adds AI-powered tools: design generation, smart recommendations, price optimization, and monthly AI credits. With Pro, you can still purchase AI credits separately.",
+  },
+  {
+    q: "What are AI credits?",
+    a: "AI credits let you use features like jewellery design generation, smart product descriptions, price optimization, and demand forecasting. Each action costs a certain number of credits. Pro+ and Enterprise include monthly credits. You can always buy more.",
+  },
+  {
+    q: "Why pay monthly instead of buying CRM software once?",
+    a: "One-time CRM software becomes outdated fast, requires manual updates, needs you to manage servers, and has no AI. With Orivraa, you get automatic updates, cloud hosting, built-in marketplace, AI features, and zero maintenance — all for a fraction of the cost.",
+  },
+  {
+    q: "Can I switch plans anytime?",
+    a: "Absolutely. Upgrade, downgrade, or cancel at any time. Changes take effect immediately. Annual plans include a pro-rated refund if you switch early.",
+  },
+  {
+    q: "Is my data safe?",
+    a: "Your data is encrypted at rest and in transit, backed up daily, and hosted on enterprise-grade cloud infrastructure. We never share or sell your data.",
+  },
+  {
+    q: "What does Enterprise include?",
+    a: "Enterprise is fully customizable — unlimited listings, lowest commission, generous AI credits, dedicated account manager, API access, white-label option, multi-branch support, custom integrations, and more. Contact us for a tailored quote.",
+  },
+  {
+    q: "Do you support my country's currency and taxes?",
+    a: "Yes! We support sellers in Nepal, India, UAE, UK, US, and Europe with local currency pricing and tax compliance (GST, VAT, etc.).",
+  },
+];
+
+/* ────────────────────────────────────────────────────────────── */
+/*  HELPERS                                                       */
+/* ────────────────────────────────────────────────────────────── */
+
+function currencySymbol(code: CurrencyCode): string {
+  return CURRENCIES[code]?.symbol ?? code;
+}
+
+function formatPrice(amount: number, currency: CurrencyCode): string {
+  const sym = currencySymbol(currency);
+  if (amount === 0) return `${sym}0`;
+  // For large amounts like NPR, INR — use locale formatting
+  try {
+    const locale = CURRENCIES[currency]?.locale ?? "en-US";
+    return new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency: currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `${sym}${amount.toLocaleString()}`;
+  }
+}
+
+/** Build feature rows from plan features for the cards */
+function buildFeatureList(plan: PlanFromAPI): { text: string; included: boolean }[] {
+  const items: { text: string; included: boolean }[] = [];
+
+  // Listing limit
+  const limit = plan.catalogueLimit ?? plan.maxProducts;
+  items.push({
+    text: limit ? `Up to ${limit.toLocaleString()} product listings` : "Unlimited product listings",
+    included: true,
+  });
+
+  // Commission
+  items.push({
+    text: `${plan.commissionPercent}% platform commission`,
+    included: true,
+  });
+
+  // Key features from the features JSON
+  const featureKeys = [
+    "crm",
+    "invoicing",
+    "inventoryManagement",
+    "customerManagement",
+    "basicAnalytics",
+    "advancedAnalytics",
+    "customBranding",
+    "bulkUpload",
+    "priorityListing",
+    "prioritySupport",
+  ];
+
+  for (const key of featureKeys) {
+    const display = FEATURE_DISPLAY[key];
+    if (!display) continue;
+    const val = plan.features?.[key];
+    items.push({ text: display.label, included: !!val });
+  }
+
+  // AI section
+  if (plan.includesAi && plan.monthlyAiCredits > 0) {
+    items.push({
+      text: `${plan.monthlyAiCredits} AI credits/month included`,
+      included: true,
+    });
+  } else if (plan.features?.purchasableAiCredits) {
+    items.push({ text: "AI credits purchasable", included: true });
+    items.push({ text: "AI included in plan", included: false });
+  } else {
+    items.push({ text: "AI design tools", included: false });
+  }
+
+  // AI features
+  const aiKeys = ["aiDesignGeneration", "aiSmartRecommendations", "aiPriceOptimization", "demandForecasting"];
+  for (const key of aiKeys) {
+    const display = FEATURE_DISPLAY[key];
+    if (!display) continue;
+    const val = plan.features?.[key];
+    items.push({ text: display.label, included: !!val });
+  }
+
+  // Enterprise features
+  const enterpriseKeys = ["dedicatedAccountManager", "apiAccess", "whiteLabel", "staffAccounts", "multiBranch", "customDomain"];
+  for (const key of enterpriseKeys) {
+    const display = FEATURE_DISPLAY[key];
+    if (!display) continue;
+    const val = plan.features?.[key];
+    if (val !== undefined) {
+      items.push({ text: display.label, included: !!val });
+    }
+  }
+
+  return items;
+}
+
+/** Build full comparison table from all plans */
+function buildComparisonTable(plans: PlanFromAPI[]) {
+  // Collect all unique feature keys across all plans
+  const allKeys = new Set<string>();
+  for (const p of plans) {
+    if (p.features) Object.keys(p.features).forEach((k) => allKeys.add(k));
+  }
+
+  // Group by category
+  const categoryMap = new Map<
+    string,
+    { key: string; label: string; values: (boolean | string)[] }[]
+  >();
+
+  for (const cat of CATEGORY_ORDER) {
+    categoryMap.set(cat, []);
+  }
+
+  // Add numeric plan properties first
+  const numericRows: { key: string; label: string; category: string; values: (boolean | string)[] }[] = [
+    {
+      key: "_listings",
+      label: "Product listings",
+      category: "Marketplace",
+      values: plans.map((p) => {
+        const limit = p.catalogueLimit ?? p.maxProducts;
+        return limit ? limit.toLocaleString() : "Unlimited";
+      }),
+    },
+    {
+      key: "_commission",
+      label: "Platform commission",
+      category: "Marketplace",
+      values: plans.map((p) => `${p.commissionPercent}%`),
+    },
+    {
+      key: "_aiCredits",
+      label: "AI credits included",
+      category: "AI & Intelligence",
+      values: plans.map((p) =>
+        p.monthlyAiCredits > 0 ? `${p.monthlyAiCredits}/mo` : "0",
+      ),
+    },
+  ];
+
+  for (const row of numericRows) {
+    const cat = categoryMap.get(row.category);
+    if (cat) cat.push({ key: row.key, label: row.label, values: row.values });
+  }
+
+  // Add boolean feature rows
+  for (const key of Array.from(allKeys)) {
+    const display = FEATURE_DISPLAY[key];
+    if (!display) continue;
+    const cat = categoryMap.get(display.category);
+    if (!cat) continue;
+
+    const values = plans.map((p) => {
+      const val = p.features?.[key];
+      if (typeof val === "boolean") return val;
+      if (typeof val === "string") return val;
+      return false;
+    });
+
+    cat.push({ key, label: display.label, values });
+  }
+
+  return CATEGORY_ORDER
+    .map((cat) => ({
+      category: cat,
+      features: categoryMap.get(cat) ?? [],
+    }))
+    .filter((c) => c.features.length > 0);
+}
 
 /* ────────────────────────────────────────────────────────────── */
 /*  COMPONENT                                                     */
@@ -413,6 +533,50 @@ const SAAS_ADVANTAGES = [
 export default function PricingPage() {
   const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
   const [showComparison, setShowComparison] = useState(false);
+  const [plans, setPlans] = useState<PlanFromAPI[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const country = usePreferencesStore((s) => s.country);
+  const setCountry = usePreferencesStore((s) => s.setCountry);
+
+  const fetchPlans = useCallback(async (c: CountryCode) => {
+    try {
+      setLoading(true);
+      const res = await subscriptionPlansApi.getAvailable(c);
+      const data = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+      setPlans(data);
+    } catch {
+      // Fallback: try US if country has no plans
+      if (c !== "US") {
+        try {
+          const res = await subscriptionPlansApi.getAvailable("US");
+          const data = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+          setPlans(data);
+        } catch {
+          setPlans([]);
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPlans(country);
+  }, [country, fetchPlans]);
+
+  // Derived data
+  const sortedPlans = useMemo(
+    () => [...plans].sort((a, b) => a.sortOrder - b.sortOrder),
+    [plans],
+  );
+
+  const comparison = useMemo(
+    () => buildComparisonTable(sortedPlans),
+    [sortedPlans],
+  );
+
+  const cur = plans[0]?.currency ?? (COUNTRIES[country]?.defaultCurrency as CurrencyCode) ?? "USD";
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -420,7 +584,6 @@ export default function PricingPage() {
 
       {/* ── Hero ─────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-gradient-to-b from-amber-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-950 dark:to-gray-950 pt-20 pb-16">
-        {/* Decorative background */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-40 -right-40 w-96 h-96 bg-amber-200/20 dark:bg-amber-500/5 rounded-full blur-3xl" />
           <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-amber-100/30 dark:bg-amber-500/5 rounded-full blur-3xl" />
@@ -447,234 +610,300 @@ export default function PricingPage() {
             contracts, cancel anytime.
           </p>
 
-          {/* Billing toggle */}
-          <div className="mt-8 inline-flex items-center gap-3 bg-white dark:bg-gray-800 rounded-full p-1.5 shadow-sm border border-gray-200 dark:border-gray-700">
-            <button
-              onClick={() => setBilling("monthly")}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
-                billing === "monthly"
-                  ? "bg-amber-500 text-white shadow-sm"
-                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              }`}
-            >
-              Monthly
-            </button>
-            <button
-              onClick={() => setBilling("annual")}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
-                billing === "annual"
-                  ? "bg-amber-500 text-white shadow-sm"
-                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              }`}
-            >
-              Annual
-              <span className="ml-1.5 text-xs font-semibold text-green-600 dark:text-green-400">
-                Save 17%
-              </span>
-            </button>
+          {/* Country selector + Billing toggle */}
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+            {/* Country pills */}
+            <div className="inline-flex items-center gap-1 bg-white dark:bg-gray-800 rounded-full p-1.5 shadow-sm border border-gray-200 dark:border-gray-700">
+              {(Object.keys(COUNTRIES) as CountryCode[]).map((code) => (
+                <button
+                  key={code}
+                  onClick={() => setCountry(code)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    country === code
+                      ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-sm"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  }`}
+                  title={COUNTRIES[code].name}
+                >
+                  {code === "EU" ? "EU" : COUNTRIES[code].name.split(" ")[0]}
+                </button>
+              ))}
+            </div>
+
+            {/* Billing toggle */}
+            <div className="inline-flex items-center gap-3 bg-white dark:bg-gray-800 rounded-full p-1.5 shadow-sm border border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setBilling("monthly")}
+                className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                  billing === "monthly"
+                    ? "bg-amber-500 text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setBilling("annual")}
+                className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                  billing === "annual"
+                    ? "bg-amber-500 text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                }`}
+              >
+                Annual
+                <span className="ml-1.5 text-xs font-semibold text-green-600 dark:text-green-400">
+                  Save 17%
+                </span>
+              </button>
+            </div>
           </div>
+
+          {/* Current country label */}
+          <p className="mt-3 text-xs text-gray-500 dark:text-gray-500">
+            Showing prices for{" "}
+            <span className="font-medium text-gray-700 dark:text-gray-300">
+              {COUNTRIES[country]?.name ?? country}
+            </span>{" "}
+            in {currencySymbol(cur)} ({cur})
+          </p>
         </div>
       </section>
 
       {/* ── Plan Cards ───────────────────────────────────── */}
       <section className="max-w-7xl mx-auto px-4 -mt-4 pb-20">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {PLANS.map((plan) => (
-            <div
-              key={plan.slug}
-              className={`relative rounded-2xl border bg-white dark:bg-gray-900 shadow-sm transition-all hover:shadow-lg ${
-                plan.highlight
-                  ? "border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/20 scale-[1.02]"
-                  : "border-gray-200 dark:border-gray-800"
-              }`}
-            >
-              {plan.badge && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                  <Badge className="bg-amber-500 text-white border-0 px-4 py-1 text-xs font-semibold shadow-md">
-                    <Star className="w-3 h-3 mr-1 fill-white" />
-                    {plan.badge}
-                  </Badge>
-                </div>
-              )}
-
-              <div className="p-6 lg:p-8">
-                {/* Plan name */}
-                <div className="flex items-center gap-2 mb-2">
-                  {plan.slug === "PRO_PLUS" && (
-                    <Sparkles className="h-5 w-5 text-amber-500" />
-                  )}
-                  {plan.slug === "ENTERPRISE" && (
-                    <Crown className="h-5 w-5 text-purple-500" />
-                  )}
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                    {plan.name}
-                  </h3>
-                </div>
-
-                {/* Price */}
-                <div className="mt-4 mb-4">
-                  {plan.monthlyPrice !== null ? (
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-bold text-gray-900 dark:text-white">
-                        {plan.currency}
-                        {billing === "monthly"
-                          ? plan.monthlyPrice
-                          : Math.round((plan.annualPrice ?? 0) / 12)}
-                      </span>
-                      <span className="text-gray-500 dark:text-gray-400 text-sm">
-                        /month
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-bold text-gray-900 dark:text-white">
-                        Custom
-                      </span>
-                    </div>
-                  )}
-                  {billing === "annual" && plan.annualPrice !== null && plan.annualPrice > 0 && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {plan.currency}{plan.annualPrice} billed annually
-                    </p>
-                  )}
-                </div>
-
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 min-h-[40px]">
-                  {plan.description}
-                </p>
-
-                {/* CTA */}
-                <Link href={plan.ctaLink}>
-                  <Button
-                    className={`w-full ${
-                      plan.highlight
-                        ? "bg-amber-500 hover:bg-amber-600 text-white"
-                        : plan.slug === "ENTERPRISE"
-                          ? "bg-purple-600 hover:bg-purple-700 text-white"
-                          : ""
-                    }`}
-                    variant={plan.highlight || plan.slug === "ENTERPRISE" ? "default" : "outline"}
-                    size="lg"
-                  >
-                    {plan.cta}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-
-                {/* Features */}
-                <div className="mt-6 space-y-3">
-                  {plan.features.map((f, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      {f.included ? (
-                        <Check className="h-4 w-4 mt-0.5 text-green-500 flex-shrink-0" />
-                      ) : (
-                        <X className="h-4 w-4 mt-0.5 text-gray-300 dark:text-gray-600 flex-shrink-0" />
-                      )}
-                      <span
-                        className={`text-sm ${
-                          f.included
-                            ? "text-gray-700 dark:text-gray-300"
-                            : "text-gray-400 dark:text-gray-600"
-                        }`}
-                      >
-                        {f.text}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Feature Comparison Table ─────────────────────── */}
-      <section className="max-w-6xl mx-auto px-4 pb-20">
-        <div className="text-center mb-8">
-          <button
-            onClick={() => setShowComparison(!showComparison)}
-            className="inline-flex items-center gap-2 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium transition-colors"
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+          </div>
+        ) : sortedPlans.length === 0 ? (
+          <div className="text-center py-20 text-muted-foreground">
+            <p>No plans available for this region yet. Please check back soon or try another country.</p>
+          </div>
+        ) : (
+          <div
+            className={`grid gap-6 ${
+              sortedPlans.length === 4
+                ? "md:grid-cols-2 lg:grid-cols-4"
+                : sortedPlans.length === 3
+                  ? "md:grid-cols-3"
+                  : "md:grid-cols-2"
+            }`}
           >
-            {showComparison ? "Hide" : "Show"} Full Feature Comparison
-            <ChevronDown
-              className={`h-4 w-4 transition-transform ${showComparison ? "rotate-180" : ""}`}
-            />
-          </button>
-        </div>
+            {sortedPlans.map((plan) => {
+              const meta = TIER_META[plan.name] ?? TIER_META.FREE;
+              const features = buildFeatureList(plan);
+              const isEnterprise = plan.name === "ENTERPRISE";
+              const ctaLink = isEnterprise
+                ? `mailto:${BRAND.salesEmail}?subject=Enterprise%20Plan%20Inquiry`
+                : "/dashboard/shop/billing";
 
-        {showComparison && (
-          <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-800">
-                  <th className="text-left px-6 py-4 font-medium text-gray-500 dark:text-gray-400 w-1/3">
-                    Feature
-                  </th>
-                  <th className="text-center px-4 py-4 font-semibold text-gray-900 dark:text-white">
-                    Free
-                  </th>
-                  <th className="text-center px-4 py-4 font-semibold text-gray-900 dark:text-white">
-                    Pro
-                  </th>
-                  <th className="text-center px-4 py-4 font-semibold text-amber-600 dark:text-amber-400">
-                    Pro+
-                  </th>
-                  <th className="text-center px-4 py-4 font-semibold text-purple-600 dark:text-purple-400">
-                    Enterprise
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {COMPARISON_CATEGORIES.map((cat) => (
-                  <>
-                    <tr
-                      key={cat.category}
-                      className="bg-gray-50 dark:bg-gray-800/50"
-                    >
-                      <td
-                        colSpan={5}
-                        className="px-6 py-3 font-semibold text-gray-900 dark:text-white text-xs uppercase tracking-wider"
+              return (
+                <div
+                  key={plan.id}
+                  className={`relative rounded-2xl border bg-white dark:bg-gray-900 shadow-sm transition-all hover:shadow-lg ${
+                    meta.highlight
+                      ? "border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/20 scale-[1.02]"
+                      : "border-gray-200 dark:border-gray-800"
+                  }`}
+                >
+                  {meta.badge && (
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                      <Badge className="bg-amber-500 text-white border-0 px-4 py-1 text-xs font-semibold shadow-md">
+                        <Star className="w-3 h-3 mr-1 fill-white" />
+                        {meta.badge}
+                      </Badge>
+                    </div>
+                  )}
+
+                  <div className="p-6 lg:p-8">
+                    {/* Plan name */}
+                    <div className="flex items-center gap-2 mb-2">
+                      {meta.icon && (
+                        <meta.icon className={`h-5 w-5 ${meta.iconColor}`} />
+                      )}
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                        {plan.displayName.replace(/\s*\(.*?\)\s*$/, "")}
+                      </h3>
+                    </div>
+
+                    {/* Price */}
+                    <div className="mt-4 mb-4">
+                      {isEnterprise ? (
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-3xl font-bold text-gray-900 dark:text-white">
+                            Custom
+                          </span>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-4xl font-bold text-gray-900 dark:text-white">
+                              {formatPrice(
+                                billing === "monthly"
+                                  ? plan.monthlyPrice
+                                  : Math.round(plan.annualPrice / 12),
+                                plan.currency,
+                              )}
+                            </span>
+                            <span className="text-gray-500 dark:text-gray-400 text-sm">
+                              /month
+                            </span>
+                          </div>
+                          {billing === "annual" && plan.annualPrice > 0 && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              {formatPrice(plan.annualPrice, plan.currency)}{" "}
+                              billed annually
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 min-h-[40px]">
+                      {plan.description}
+                    </p>
+
+                    {/* CTA */}
+                    <Link href={ctaLink}>
+                      <Button
+                        className={`w-full ${meta.ctaClass}`}
+                        variant={meta.ctaVariant}
+                        size="lg"
                       >
-                        {cat.category}
-                      </td>
-                    </tr>
-                    {cat.features.map((f) => (
-                      <tr
-                        key={f.name}
-                        className="border-t border-gray-100 dark:border-gray-800/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
-                      >
-                        <td className="px-6 py-3 text-gray-700 dark:text-gray-300">
-                          {f.name}
-                        </td>
-                        {(
-                          [f.free, f.pro, f.proPlus, f.enterprise] as (
-                            | boolean
-                            | string
-                          )[]
-                        ).map((val, i) => (
-                          <td key={i} className="text-center px-4 py-3">
-                            {typeof val === "boolean" ? (
-                              val ? (
-                                <Check className="h-4 w-4 text-green-500 mx-auto" />
-                              ) : (
-                                <X className="h-4 w-4 text-gray-300 dark:text-gray-600 mx-auto" />
-                              )
-                            ) : (
-                              <span className="font-medium text-gray-900 dark:text-white">
-                                {val}
-                              </span>
-                            )}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </>
-                ))}
-              </tbody>
-            </table>
+                        {meta.cta}
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </Link>
+
+                    {/* AI credits info */}
+                    {plan.includesAi && plan.monthlyAiCredits > 0 && (
+                      <p className="mt-3 text-xs text-center text-amber-600 dark:text-amber-400 font-medium">
+                        {plan.monthlyAiCredits} AI credits/month included
+                      </p>
+                    )}
+                    {!plan.includesAi &&
+                      plan.extraCreditPrice > 0 &&
+                      plan.features?.purchasableAiCredits && (
+                        <p className="mt-3 text-xs text-center text-gray-500 dark:text-gray-400">
+                          AI credits from {formatPrice(plan.extraCreditPrice, plan.currency)}/credit
+                        </p>
+                      )}
+
+                    {/* Features */}
+                    <div className="mt-6 space-y-3">
+                      {features.map((f, i) => (
+                        <div key={i} className="flex items-start gap-3">
+                          {f.included ? (
+                            <Check className="h-4 w-4 mt-0.5 text-green-500 flex-shrink-0" />
+                          ) : (
+                            <X className="h-4 w-4 mt-0.5 text-gray-300 dark:text-gray-600 flex-shrink-0" />
+                          )}
+                          <span
+                            className={`text-sm ${
+                              f.included
+                                ? "text-gray-700 dark:text-gray-300"
+                                : "text-gray-400 dark:text-gray-600"
+                            }`}
+                          >
+                            {f.text}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </section>
+
+      {/* ── Feature Comparison Table ─────────────────────── */}
+      {sortedPlans.length > 0 && (
+        <section className="max-w-6xl mx-auto px-4 pb-20">
+          <div className="text-center mb-8">
+            <button
+              onClick={() => setShowComparison(!showComparison)}
+              className="inline-flex items-center gap-2 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium transition-colors"
+            >
+              {showComparison ? "Hide" : "Show"} Full Feature Comparison
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${showComparison ? "rotate-180" : ""}`}
+              />
+            </button>
+          </div>
+
+          {showComparison && (
+            <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-800">
+                    <th className="text-left px-6 py-4 font-medium text-gray-500 dark:text-gray-400 w-1/3">
+                      Feature
+                    </th>
+                    {sortedPlans.map((p) => (
+                      <th
+                        key={p.id}
+                        className={`text-center px-4 py-4 font-semibold ${
+                          p.name === "PRO_PLUS"
+                            ? "text-amber-600 dark:text-amber-400"
+                            : p.name === "ENTERPRISE"
+                              ? "text-purple-600 dark:text-purple-400"
+                              : "text-gray-900 dark:text-white"
+                        }`}
+                      >
+                        {p.displayName.replace(/\s*\(.*?\)\s*$/, "")}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparison.map((cat) => (
+                    <>
+                      <tr
+                        key={cat.category}
+                        className="bg-gray-50 dark:bg-gray-800/50"
+                      >
+                        <td
+                          colSpan={sortedPlans.length + 1}
+                          className="px-6 py-3 font-semibold text-gray-900 dark:text-white text-xs uppercase tracking-wider"
+                        >
+                          {cat.category}
+                        </td>
+                      </tr>
+                      {cat.features.map((f) => (
+                        <tr
+                          key={f.key}
+                          className="border-t border-gray-100 dark:border-gray-800/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
+                        >
+                          <td className="px-6 py-3 text-gray-700 dark:text-gray-300">
+                            {f.label}
+                          </td>
+                          {f.values.map((val, i) => (
+                            <td key={i} className="text-center px-4 py-3">
+                              {typeof val === "boolean" ? (
+                                val ? (
+                                  <Check className="h-4 w-4 text-green-500 mx-auto" />
+                                ) : (
+                                  <X className="h-4 w-4 text-gray-300 dark:text-gray-600 mx-auto" />
+                                )
+                              ) : (
+                                <span className="font-medium text-gray-900 dark:text-white">
+                                  {val}
+                                </span>
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ── Why SaaS > One-Time CRM ──────────────────────── */}
       <section className="bg-white dark:bg-gray-900 border-y border-gray-200 dark:border-gray-800 py-20">
@@ -685,7 +914,7 @@ export default function PricingPage() {
               className="mb-4 border-blue-300 text-blue-700 dark:border-blue-600 dark:text-blue-400 px-4 py-1.5"
             >
               <TrendingUp className="w-3.5 h-3.5 mr-1.5" />
-              Why Choose Orivraa
+              Why Choose {BRAND.name}
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
               Why Our Monthly Software Beats
@@ -697,7 +926,7 @@ export default function PricingPage() {
             <p className="mt-4 text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
               Traditional one-time CRM software quickly becomes outdated, needs
               costly upgrades, and leaves you managing servers. Here&apos;s why
-              smart jewellers choose Orivraa.
+              smart jewellers choose {BRAND.name}.
             </p>
           </div>
 
@@ -735,58 +964,7 @@ export default function PricingPage() {
                 </span>
               </div>
             </div>
-            {[
-              {
-                label: "Upfront cost",
-                saas: "₹0 — start free",
-                legacy: "₹50,000 — ₹5,00,000+",
-              },
-              {
-                label: "Updates & new features",
-                saas: "Automatic, always latest",
-                legacy: "Paid upgrades, often manual",
-              },
-              {
-                label: "Server & hosting",
-                saas: "Included (cloud)",
-                legacy: "You manage + pay separately",
-              },
-              {
-                label: "Data backups",
-                saas: "Automated daily",
-                legacy: "Manual — your responsibility",
-              },
-              {
-                label: "Mobile access",
-                saas: "Works on any device",
-                legacy: "Desktop-only (usually)",
-              },
-              {
-                label: "AI features",
-                saas: "Built-in, improving",
-                legacy: "None or extra purchase",
-              },
-              {
-                label: "Marketplace built-in",
-                saas: "Yes — sell to customers",
-                legacy: "No — just internal CRM",
-              },
-              {
-                label: "Security patches",
-                saas: "Immediate, automatic",
-                legacy: "Delayed, often requires reinstall",
-              },
-              {
-                label: "Scaling",
-                saas: "Upgrade plan as needed",
-                legacy: "Buy new license / hardware",
-              },
-              {
-                label: "Lock-in risk",
-                saas: "Cancel anytime, export data",
-                legacy: "Tied to vendor for upgrades",
-              },
-            ].map((row, i) => (
+            {SAAS_VS_ONETIME.map((row, i) => (
               <div
                 key={i}
                 className={`grid grid-cols-3 ${
@@ -879,40 +1057,7 @@ export default function PricingPage() {
           </h2>
 
           <div className="space-y-6">
-            {[
-              {
-                q: "Can I start for free?",
-                a: "Yes! The Free plan lets you list up to 20 products on the marketplace at no cost, forever. Upgrade only when you need CRM features or more listings.",
-              },
-              {
-                q: "What's the difference between Pro and Pro+?",
-                a: "Pro gives you a full CRM — inventory, invoicing, customer management, and analytics. Pro+ adds AI-powered tools: design generation, smart recommendations, price optimization, and 100 AI credits per month. With Pro, you can still purchase AI credits separately.",
-              },
-              {
-                q: "What are AI credits?",
-                a: "AI credits let you use features like jewellery design generation, smart product descriptions, price optimization, and demand forecasting. Each action costs a certain number of credits. Pro+ includes 100/month; Enterprise includes 500/month. You can always buy more.",
-              },
-              {
-                q: "Why pay monthly instead of buying CRM software once?",
-                a: "One-time CRM software becomes outdated fast, requires manual updates, needs you to manage servers, and has no AI. With Orivraa, you get automatic updates, cloud hosting, built-in marketplace, AI features, and zero maintenance — all for a fraction of the cost.",
-              },
-              {
-                q: "Can I switch plans anytime?",
-                a: "Absolutely. Upgrade, downgrade, or cancel at any time. Changes take effect immediately. Annual plans include a pro-rated refund if you switch early.",
-              },
-              {
-                q: "Is my data safe?",
-                a: "Your data is encrypted at rest and in transit, backed up daily, and hosted on enterprise-grade cloud infrastructure. We never share or sell your data.",
-              },
-              {
-                q: "What does Enterprise include?",
-                a: "Enterprise is fully customizable — unlimited listings, lowest commission (1%), 500 AI credits, dedicated account manager, API access, white-label option, multi-branch support, custom integrations, and more. Contact us for a tailored quote.",
-              },
-              {
-                q: "Do you support my country's currency and taxes?",
-                a: "Yes! We support sellers in Nepal, India, UAE, UK, US, and Europe with local currency pricing and tax compliance (GST, VAT, etc.).",
-              },
-            ].map((item, i) => (
+            {FAQ_ITEMS.map((item, i) => (
               <details
                 key={i}
                 className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden"
@@ -952,7 +1097,9 @@ export default function PricingPage() {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
-            <Link href={`mailto:${BRAND.salesEmail}?subject=Enterprise%20Plan%20Inquiry`}>
+            <Link
+              href={`mailto:${BRAND.salesEmail}?subject=Enterprise%20Plan%20Inquiry`}
+            >
               <Button size="lg" variant="outline" className="px-8">
                 Talk to Sales
               </Button>
