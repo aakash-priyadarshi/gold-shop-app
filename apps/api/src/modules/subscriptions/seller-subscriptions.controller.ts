@@ -42,13 +42,16 @@ export class SellerSubscriptionsController {
     @CurrentUser("id") userId: string,
     @CurrentUser("shopId") shopId: string,
   ) {
+    // Use JWT shopId if not provided in body
+    const resolvedShopId = dto.shopId || shopId;
+
     // Ensure seller can only subscribe their own shop
-    if (dto.shopId !== shopId) {
+    if (resolvedShopId !== shopId) {
       throw new Error("You can only subscribe your own shop");
     }
 
     const result = await this.subscriptionService.subscribeToPlan({
-      shopId: dto.shopId,
+      shopId: resolvedShopId,
       planId: dto.planId,
       country: dto.country,
       billingCycle: dto.billingCycle as any,
