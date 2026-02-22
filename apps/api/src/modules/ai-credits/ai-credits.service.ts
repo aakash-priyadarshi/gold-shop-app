@@ -1,16 +1,20 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
+  forwardRef,
 } from "@nestjs/common";
 import { RedisService } from "../../common/redis";
 import { PrismaService } from "../../prisma/prisma.service";
+import { PaymentGatewayService } from "../payment-gateway/payment-gateway.service";
 
 const RATE_LIMIT_HOURLY = 20; // max generations per hour per user
 const RATE_LIMIT_DAILY = 100; // max generations per day per user
 const RATE_LIMIT_HOUR_TTL = 3600;
 const RATE_LIMIT_DAY_TTL = 86400;
+const AUTO_RECHARGE_LOCK_TTL = 300; // 5 min lock to prevent concurrent recharges
 
 @Injectable()
 export class AiCreditsService {
@@ -19,6 +23,8 @@ export class AiCreditsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
+    @Inject(forwardRef(() => PaymentGatewayService))
+    private readonly paymentGatewayService: PaymentGatewayService,
   ) {}
 
   // ─── Core: Atomic Debit ───────────────────────────
@@ -104,6 +110,14 @@ export class AiCreditsService {
         `ai_credit_idem:${opts.idempotencyKey}`,
         JSON.stringify(result),
         86400,
+      );
+    }
+
+    // 5. Trigger auto-recharge if balance fell below threshold (fire-and-forget)
+    if (opts.shopId) {
+      this.maybeAutoRecharge(opts.userId, opts.shopId, result.balanceAfter).catch(
+        (err) =>
+          this.logger.error(`Auto-recharge check failed: ${err.message}`),
       );
     }
 
@@ -507,6 +521,225 @@ export class AiCreditsService {
         (totalDebited._sum.amount || 0) +
         (totalRefunded._sum.amount || 0) -
         (totalExpired._sum.amount || 0),
+    };
+  }
+
+  // ─── Auto-Recharge Settings ───────────────────────
+
+  /**
+   * Get auto-recharge settings for a shop.
+   */
+  async getAutoRechargeSettings(shopId: string) {
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: {
+        autoRechargeEnabled: true,
+        autoRechargeThreshold: true,
+        autoRechargePack: true,
+      },
+    });
+    return shop || { autoRechargeEnabled: false, autoRechargeThreshold: 5, autoRechargePack: 50 };
+  }
+
+  /**
+   * Update auto-recharge settings for a shop.
+   */
+  async updateAutoRechargeSettings(
+    shopId: string,
+    opts: {
+      autoRechargeEnabled?: boolean;
+      autoRechargeThreshold?: number;
+      autoRechargePack?: number;
+    },
+  ) {
+    return this.prisma.shop.update({
+      where: { id: shopId },
+      data: {
+        ...(opts.autoRechargeEnabled !== undefined && {
+          autoRechargeEnabled: opts.autoRechargeEnabled,
+        }),
+        ...(opts.autoRechargeThreshold !== undefined && {
+          autoRechargeThreshold: Math.max(1, opts.autoRechargeThreshold),
+        }),
+        ...(opts.autoRechargePack !== undefined && {
+          autoRechargePack: Math.max(10, opts.autoRechargePack),
+        }),
+      },
+      select: {
+        autoRechargeEnabled: true,
+        autoRechargeThreshold: true,
+        autoRechargePack: true,
+      },
+    });
+  }
+
+  // ─── Auto-Recharge Logic ──────────────────────────
+
+  /**
+   * Check if auto-recharge should trigger and execute it.
+   * Called fire-and-forget after every debit.
+   */
+  private async maybeAutoRecharge(
+    userId: string,
+    shopId: string,
+    currentBalance: number,
+  ) {
+    // Load shop settings
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: {
+        autoRechargeEnabled: true,
+        autoRechargeThreshold: true,
+        autoRechargePack: true,
+        subscriptions: {
+          where: { status: "ACTIVE" },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: {
+            stripeCustomerId: true,
+            plan: {
+              select: {
+                extraCreditPrice: true,
+                currency: true,
+                overageBehavior: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!shop?.autoRechargeEnabled) return;
+    if (currentBalance >= shop.autoRechargeThreshold) return;
+
+    const activeSub = shop.subscriptions[0];
+    if (!activeSub?.stripeCustomerId) {
+      this.logger.warn(
+        `Auto-recharge skipped for shop ${shopId}: no Stripe customer ID`,
+      );
+      return;
+    }
+
+    const plan = activeSub.plan;
+    if (plan.overageBehavior !== "AUTO_CHARGE" || plan.extraCreditPrice <= 0) {
+      return;
+    }
+
+    // Acquire Redis lock to prevent concurrent auto-recharges
+    const lockKey = `auto_recharge_lock:${shopId}`;
+    const locked = await this.redis.get(lockKey);
+    if (locked) return; // already in progress
+    await this.redis.set(lockKey, "1", AUTO_RECHARGE_LOCK_TTL);
+
+    try {
+      const creditsToBuy = shop.autoRechargePack;
+      const totalAmount = creditsToBuy * plan.extraCreditPrice;
+
+      this.logger.log(
+        `Auto-recharging ${creditsToBuy} credits for shop ${shopId} (balance: ${currentBalance} < threshold: ${shop.autoRechargeThreshold})`,
+      );
+
+      const chargeResult = await this.paymentGatewayService.chargeStripeOffSession({
+        stripeCustomerId: activeSub.stripeCustomerId,
+        amount: totalAmount,
+        currency: plan.currency,
+        metadata: {
+          type: "ai_credits",
+          userId,
+          shopId,
+          creditAmount: String(creditsToBuy),
+          paidAmount: String(totalAmount),
+          currency: plan.currency,
+          autoRecharge: "true",
+        },
+      });
+
+      if (chargeResult.success) {
+        // Credit the balance
+        await this.handleCreditPurchaseSuccess({
+          userId,
+          shopId,
+          creditAmount: creditsToBuy,
+          gatewayPaymentId: chargeResult.paymentIntentId!,
+          gateway: "stripe",
+          paidAmount: totalAmount,
+          currency: plan.currency,
+        });
+
+        this.logger.log(
+          `Auto-recharge successful: +${creditsToBuy} credits for shop ${shopId}`,
+        );
+      } else {
+        this.logger.warn(
+          `Auto-recharge payment failed for shop ${shopId}: ${chargeResult.error}`,
+        );
+      }
+    } finally {
+      // Release lock after a short delay (keep 60s to prevent rapid retries)
+      await this.redis.set(lockKey, "1", 60);
+    }
+  }
+
+  // ─── Admin: List sellers with balances ────────────
+
+  /**
+   * Get all sellers with their credit balances (for admin credit management).
+   */
+  async listSellersWithBalances(opts: {
+    search?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const { search, page = 1, limit = 20 } = opts;
+    const skip = (page - 1) * limit;
+
+    const where: any = { role: "SHOPKEEPER" };
+    if (search) {
+      where.OR = [
+        { email: { contains: search, mode: "insensitive" } },
+        { firstName: { contains: search, mode: "insensitive" } },
+        { lastName: { contains: search, mode: "insensitive" } },
+        {
+          shops: { some: { shopName: { contains: search, mode: "insensitive" } } },
+        },
+      ];
+    }
+
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          aiCreditsBalance: true,
+          shops: {
+            take: 1,
+            select: {
+              id: true,
+              shopName: true,
+              autoRechargeEnabled: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    return {
+      data: users.map((u) => ({
+        ...u,
+        shop: u.shops[0] || null,
+        shops: undefined,
+      })),
+      total,
+      page,
+      limit,
+      pages: Math.ceil(total / limit),
     };
   }
 }

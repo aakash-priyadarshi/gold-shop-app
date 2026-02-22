@@ -4,6 +4,7 @@ import {
   Get,
   Inject,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -89,6 +90,30 @@ export class AiCreditsController {
     });
   }
 
+  // ─── Auto-Recharge Settings ───────────────────────
+
+  @Get("auto-recharge")
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiOperation({ summary: "Get auto-recharge settings" })
+  async getAutoRechargeSettings(@CurrentUser("shopId") shopId: string) {
+    return this.creditsService.getAutoRechargeSettings(shopId);
+  }
+
+  @Patch("auto-recharge")
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiOperation({ summary: "Update auto-recharge settings" })
+  async updateAutoRechargeSettings(
+    @CurrentUser("shopId") shopId: string,
+    @Body()
+    body: {
+      autoRechargeEnabled?: boolean;
+      autoRechargeThreshold?: number;
+      autoRechargePack?: number;
+    },
+  ) {
+    return this.creditsService.updateAutoRechargeSettings(shopId, body);
+  }
+
   // ─── Admin endpoints ──────────────────────────────
 
   @Get("admin/user/:userId")
@@ -167,5 +192,20 @@ export class AiCreditsController {
   @ApiOperation({ summary: "Get AI credit statistics (admin)" })
   async getStats() {
     return this.creditsService.getCreditStats();
+  }
+
+  @Get("admin/sellers")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "List sellers with credit balances (admin)" })
+  async listSellers(
+    @Query("search") search?: string,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
+  ) {
+    return this.creditsService.listSellersWithBalances({
+      search,
+      page: page ? parseInt(page) : undefined,
+      limit: limit ? parseInt(limit) : undefined,
+    });
   }
 }

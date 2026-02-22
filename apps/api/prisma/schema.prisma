@@ -287,6 +287,11 @@ model Shop {
   demandForecasts         DemandForecast[]
   repricingRules          RepricingRule[]
 
+  // AI Credit Auto-Recharge
+  autoRechargeEnabled     Boolean               @default(false)
+  autoRechargeThreshold   Int                   @default(5)   // trigger when balance drops below this
+  autoRechargePack        Int                   @default(50)  // credits to buy per auto-recharge
+
   @@index([userId])
   @@index([country, city])
   @@index([isActive, isVerified])

@@ -915,6 +915,13 @@ export const aiCreditsApi = {
     country: string;
     preferredGateway?: string;
   }) => api.post("/ai-credits/purchase", data),
+  // Auto-recharge
+  getAutoRecharge: () => api.get("/ai-credits/auto-recharge"),
+  updateAutoRecharge: (data: {
+    autoRechargeEnabled?: boolean;
+    autoRechargeThreshold?: number;
+    autoRechargePack?: number;
+  }) => api.patch("/ai-credits/auto-recharge", data),
   // Admin
   getUserCredits: (userId: string) =>
     api.get(`/ai-credits/admin/user/${userId}`),
@@ -924,6 +931,8 @@ export const aiCreditsApi = {
     api.post("/ai-credits/admin/adjust", data),
   triggerMonthlyGrant: () => api.post("/ai-credits/admin/monthly-grant"),
   getCreditStats: () => api.get("/ai-credits/admin/stats"),
+  listSellers: (params?: { search?: string; page?: number; limit?: number }) =>
+    api.get("/ai-credits/admin/sellers", { params }),
 };
 
 // ─── Payment Gateway API ───

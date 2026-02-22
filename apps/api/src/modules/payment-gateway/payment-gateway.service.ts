@@ -242,6 +242,66 @@ export class PaymentGatewayService {
     };
   }
 
+  /**
+   * Charge a Stripe customer off-session using their saved payment method.
+   * Used for auto-recharge of AI credits.
+   */
+  async chargeStripeOffSession(opts: {
+    stripeCustomerId: string;
+    amount: number;
+    currency: string;
+    metadata: Record<string, string>;
+  }): Promise<{
+    success: boolean;
+    paymentIntentId?: string;
+    error?: string;
+  }> {
+    const stripeKey = this.configService.get<string>("STRIPE_SECRET_KEY");
+    if (!stripeKey || stripeKey === "" || stripeKey === "sk_test_placeholder") {
+      return { success: false, error: "Stripe not configured" };
+    }
+
+    try {
+      const stripe = require("stripe")(stripeKey);
+
+      // Get customer's default payment method
+      const customer = await stripe.customers.retrieve(opts.stripeCustomerId);
+      const defaultPm =
+        customer.invoice_settings?.default_payment_method ||
+        customer.default_source;
+
+      if (!defaultPm) {
+        return {
+          success: false,
+          error: "No saved payment method on file",
+        };
+      }
+
+      const intent = await stripe.paymentIntents.create({
+        amount: Math.round(opts.amount * 100),
+        currency: opts.currency.toLowerCase(),
+        customer: opts.stripeCustomerId,
+        payment_method: defaultPm,
+        off_session: true,
+        confirm: true,
+        metadata: opts.metadata,
+      });
+
+      if (intent.status === "succeeded") {
+        return { success: true, paymentIntentId: intent.id };
+      }
+
+      return {
+        success: false,
+        paymentIntentId: intent.id,
+        error: `Payment status: ${intent.status}`,
+      };
+    } catch (err: any) {
+      this.logger.error(`Off-session charge failed: ${err.message}`);
+      return { success: false, error: err.message };
+    }
+  }
+
   async verifyStripeWebhook(payload: Buffer, signature: string) {
     const stripeKey = this.configService.get<string>("STRIPE_SECRET_KEY");
     const webhookSecret = this.configService.get<string>(

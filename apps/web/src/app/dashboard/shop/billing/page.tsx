@@ -464,33 +464,136 @@ function UsageBar({
 // ═══════════════════════════════════════════════════
 
 function AiCreditsTab() {
+  const { user } = useAuth();
   const [balance, setBalance] = useState<number | null>(null);
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetch() {
-      try {
-        const [balRes, ledRes] = await Promise.all([
-          aiCreditsApi.getBalance(),
-          aiCreditsApi.getLedger({ limit: 30 }),
-        ]);
-        setBalance(balRes.data?.balance ?? 0);
-        setLedger(
-          Array.isArray(ledRes.data) ? ledRes.data : (ledRes.data?.data ?? []),
-        );
-      } catch {
-        toast({
-          title: "Error",
-          description: "Failed to load credit information",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
+  // Buy credits state
+  const [buyAmount, setBuyAmount] = useState(50);
+  const [buying, setBuying] = useState(false);
+
+  // Auto-recharge state
+  const [autoRecharge, setAutoRecharge] = useState({
+    autoRechargeEnabled: false,
+    autoRechargeThreshold: 5,
+    autoRechargePack: 50,
+  });
+  const [savingRecharge, setSavingRecharge] = useState(false);
+
+  // Get current plan info
+  const [planInfo, setPlanInfo] = useState<{
+    extraCreditPrice: number;
+    currency: string;
+    country: string;
+    overageBehavior: string;
+  } | null>(null);
+
+  const fetchData = async () => {
+    try {
+      const [balRes, ledRes, arRes, subRes] = await Promise.all([
+        aiCreditsApi.getBalance(),
+        aiCreditsApi.getLedger({ limit: 30 }),
+        aiCreditsApi.getAutoRecharge().catch(() => ({ data: null })),
+        sellerSubscriptionsApi
+          .getMySubscription()
+          .catch(() => ({ data: null })),
+      ]);
+      setBalance(balRes.data?.balance ?? 0);
+      setLedger(
+        Array.isArray(ledRes.data) ? ledRes.data : (ledRes.data?.data ?? []),
+      );
+      if (arRes.data) {
+        setAutoRecharge(arRes.data);
       }
+      if (subRes.data?.plan) {
+        setPlanInfo({
+          extraCreditPrice: subRes.data.plan.extraCreditPrice || 0,
+          currency: subRes.data.plan.currency || "USD",
+          country: subRes.data.plan.country || "US",
+          overageBehavior: subRes.data.plan.overageBehavior || "BLOCK",
+        });
+      }
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to load credit information",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-    fetch();
+  };
+
+  useEffect(() => {
+    fetchData();
   }, []);
+
+  const handleBuyCredits = async () => {
+    if (!planInfo || planInfo.extraCreditPrice <= 0) {
+      toast({
+        title: "Not Available",
+        description:
+          "Credit purchases are not available on your current plan. Please upgrade.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setBuying(true);
+      const res = await aiCreditsApi.purchaseCredits({
+        creditAmount: buyAmount,
+        pricePerCredit: planInfo.extraCreditPrice,
+        currency: planInfo.currency,
+        country: planInfo.country,
+      });
+      // Redirect to payment if URL provided
+      if (res.data?.redirectUrl) {
+        window.location.href = res.data.redirectUrl;
+        return;
+      }
+      if (res.data?.clientSecret) {
+        toast({
+          title: "Payment Initiated",
+          description:
+            "Complete the payment in the payment sheet to receive your credits.",
+        });
+        // In future: open Stripe Elements inline
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description:
+          err?.response?.data?.message || "Failed to initiate credit purchase",
+        variant: "destructive",
+      });
+    } finally {
+      setBuying(false);
+    }
+  };
+
+  const handleSaveAutoRecharge = async () => {
+    try {
+      setSavingRecharge(true);
+      const res = await aiCreditsApi.updateAutoRecharge(autoRecharge);
+      setAutoRecharge(res.data);
+      toast({
+        title: "Saved",
+        description: autoRecharge.autoRechargeEnabled
+          ? `Auto-recharge enabled: ${autoRecharge.autoRechargePack} credits when balance drops below ${autoRecharge.autoRechargeThreshold}`
+          : "Auto-recharge disabled",
+      });
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to save auto-recharge settings",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingRecharge(false);
+    }
+  };
 
   const ACTION_COLORS: Record<string, string> = {
     GRANT: "text-green-500",
@@ -499,7 +602,10 @@ function AiCreditsTab() {
     EXPIRE: "text-orange-500",
     ADMIN_ADJUST: "text-purple-500",
     OVERAGE: "text-yellow-500",
+    PURCHASE: "text-emerald-500",
   };
+
+  const CREDIT_PACKS = [10, 25, 50, 100, 200, 500];
 
   if (loading) {
     return (
@@ -514,21 +620,201 @@ function AiCreditsTab() {
       {/* Balance Card */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-orange-500">
-              <Sparkles className="h-7 w-7 text-white" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-orange-500">
+                <Sparkles className="h-7 w-7 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Available AI Credits
+                </p>
+                <p className="text-3xl font-bold">
+                  {balance?.toLocaleString() ?? 0}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Available AI Credits
-              </p>
-              <p className="text-3xl font-bold">
-                {balance?.toLocaleString() ?? 0}
-              </p>
-            </div>
+            {autoRecharge.autoRechargeEnabled && (
+              <Badge
+                variant="outline"
+                className="border-green-500 text-green-600"
+              >
+                <Zap className="mr-1 h-3 w-3" />
+                Auto-Recharge ON
+              </Badge>
+            )}
           </div>
         </CardContent>
       </Card>
+
+      {/* Buy Credits Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <CreditCard className="h-4 w-4" />
+            Buy Credits
+          </CardTitle>
+          <CardDescription>
+            {planInfo && planInfo.extraCreditPrice > 0
+              ? `${planInfo.currency} ${planInfo.extraCreditPrice} per credit`
+              : "Upgrade your plan to purchase extra credits"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2 mb-4">
+            {CREDIT_PACKS.map((pack) => (
+              <button
+                key={pack}
+                onClick={() => setBuyAmount(pack)}
+                className={`rounded-lg border px-4 py-2 text-sm font-medium transition-all ${
+                  buyAmount === pack
+                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                    : "border-muted hover:border-primary/50"
+                }`}
+              >
+                {pack} credits
+                {planInfo && planInfo.extraCreditPrice > 0 && (
+                  <span className="ml-1 text-xs opacity-75">
+                    ({planInfo.currency}{" "}
+                    {(pack * planInfo.extraCreditPrice).toFixed(2)})
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+          <Button
+            onClick={handleBuyCredits}
+            disabled={
+              buying || !planInfo || planInfo.extraCreditPrice <= 0
+            }
+            className="w-full sm:w-auto"
+          >
+            {buying ? (
+              "Processing..."
+            ) : (
+              <>
+                <CreditCard className="mr-2 h-4 w-4" />
+                Buy {buyAmount} Credits
+                {planInfo && planInfo.extraCreditPrice > 0 && (
+                  <span className="ml-1">
+                    — {planInfo.currency}{" "}
+                    {(buyAmount * planInfo.extraCreditPrice).toFixed(2)}
+                  </span>
+                )}
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Auto-Recharge Card */}
+      {planInfo && planInfo.overageBehavior === "AUTO_CHARGE" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Zap className="h-4 w-4" />
+              Auto-Recharge
+            </CardTitle>
+            <CardDescription>
+              Automatically buy credits when your balance runs low, so your AI
+              features never stop working.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() =>
+                  setAutoRecharge({
+                    ...autoRecharge,
+                    autoRechargeEnabled: !autoRecharge.autoRechargeEnabled,
+                  })
+                }
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  autoRecharge.autoRechargeEnabled
+                    ? "bg-primary"
+                    : "bg-muted-foreground/30"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    autoRecharge.autoRechargeEnabled
+                      ? "translate-x-6"
+                      : "translate-x-1"
+                  }`}
+                />
+              </button>
+              <span className="text-sm font-medium">
+                {autoRecharge.autoRechargeEnabled ? "Enabled" : "Disabled"}
+              </span>
+            </div>
+
+            {autoRecharge.autoRechargeEnabled && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Recharge when balance drops below
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    className="mt-1 w-full rounded-md border px-3 py-2 text-sm dark:bg-zinc-900"
+                    value={autoRecharge.autoRechargeThreshold}
+                    onChange={(e) =>
+                      setAutoRecharge({
+                        ...autoRecharge,
+                        autoRechargeThreshold:
+                          parseInt(e.target.value) || 5,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Credits to buy per recharge
+                  </label>
+                  <input
+                    type="number"
+                    min={10}
+                    max={1000}
+                    step={10}
+                    className="mt-1 w-full rounded-md border px-3 py-2 text-sm dark:bg-zinc-900"
+                    value={autoRecharge.autoRechargePack}
+                    onChange={(e) =>
+                      setAutoRecharge({
+                        ...autoRecharge,
+                        autoRechargePack: parseInt(e.target.value) || 50,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+            )}
+
+            {autoRecharge.autoRechargeEnabled && planInfo.extraCreditPrice > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Each recharge will charge{" "}
+                <strong>
+                  {planInfo.currency}{" "}
+                  {(
+                    autoRecharge.autoRechargePack *
+                    planInfo.extraCreditPrice
+                  ).toFixed(2)}
+                </strong>{" "}
+                to your saved payment method.
+              </p>
+            )}
+
+            <Button
+              variant="outline"
+              onClick={handleSaveAutoRecharge}
+              disabled={savingRecharge}
+            >
+              {savingRecharge ? "Saving..." : "Save Settings"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Ledger */}
       <Card>
@@ -557,7 +843,9 @@ function AiCreditsTab() {
                     <span
                       className={`font-mono font-medium ${ACTION_COLORS[entry.action] || ""}`}
                     >
-                      {entry.amount > 0 ? "+" : ""}
+                      {entry.action === "DEBIT" || entry.action === "EXPIRE"
+                        ? "-"
+                        : "+"}
                       {entry.amount}
                     </span>
                     <span className="text-xs text-muted-foreground">

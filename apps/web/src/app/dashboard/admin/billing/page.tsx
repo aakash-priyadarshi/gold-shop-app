@@ -1675,27 +1675,80 @@ function SubscriptionsTab() {
 // CREDITS TAB
 // ═══════════════════════════════════════════════════
 
+interface SellerCredit {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  aiCreditsBalance: number;
+  shop: { id: string; shopName: string; autoRechargeEnabled: boolean } | null;
+}
+
 function CreditsTab() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetch() {
-      try {
-        const res = await aiCreditsApi.getCreditStats();
-        setStats(res.data);
-      } catch {
-        toast({
-          title: "Error",
-          description: "Failed to load credit stats",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
+  // Seller list
+  const [sellers, setSellers] = useState<SellerCredit[]>([]);
+  const [sellerSearch, setSellerSearch] = useState("");
+  const [sellersLoading, setSellersLoading] = useState(false);
+
+  // Adjust dialog
+  const [adjustDialog, setAdjustDialog] = useState(false);
+  const [adjustTarget, setAdjustTarget] = useState<SellerCredit | null>(null);
+  const [adjustForm, setAdjustForm] = useState({
+    amount: 50,
+    reason: "",
+    isDeduction: false,
+  });
+  const [adjustLoading, setAdjustLoading] = useState(false);
+
+  const fetchStats = async () => {
+    try {
+      const res = await aiCreditsApi.getCreditStats();
+      setStats(res.data);
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to load credit stats",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-    fetch();
+  };
+
+  const fetchSellers = async (search?: string) => {
+    try {
+      setSellersLoading(true);
+      const res = await aiCreditsApi.listSellers({
+        search: search || undefined,
+        limit: 20,
+      });
+      setSellers(res.data?.data ?? []);
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to load sellers",
+        variant: "destructive",
+      });
+    } finally {
+      setSellersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+    fetchSellers();
   }, []);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchSellers(sellerSearch);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [sellerSearch]);
 
   const handleMonthlyGrant = async () => {
     if (
@@ -1710,12 +1763,62 @@ function CreditsTab() {
         title: "Success",
         description: `Granted credits to ${res.data.granted} users, expired ${res.data.expired} credits`,
       });
+      fetchStats();
+      fetchSellers(sellerSearch);
     } catch {
       toast({
         title: "Error",
         description: "Failed to process monthly grant",
         variant: "destructive",
       });
+    }
+  };
+
+  const openAdjustDialog = (seller: SellerCredit) => {
+    setAdjustTarget(seller);
+    setAdjustForm({ amount: 50, reason: "", isDeduction: false });
+    setAdjustDialog(true);
+  };
+
+  const handleAdjust = async () => {
+    if (!adjustTarget) return;
+    if (!adjustForm.reason.trim()) {
+      toast({
+        title: "Error",
+        description: "Please provide a reason for the adjustment",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setAdjustLoading(true);
+      const amount = adjustForm.isDeduction
+        ? -Math.abs(adjustForm.amount)
+        : Math.abs(adjustForm.amount);
+
+      await aiCreditsApi.adminAdjust({
+        userId: adjustTarget.id,
+        amount,
+        reason: adjustForm.reason,
+      });
+
+      toast({
+        title: "Success",
+        description: `${amount > 0 ? "Added" : "Deducted"} ${Math.abs(amount)} credits ${amount > 0 ? "to" : "from"} ${adjustTarget.email}`,
+      });
+      setAdjustDialog(false);
+      fetchSellers(sellerSearch);
+      fetchStats();
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description:
+          err?.response?.data?.message || "Failed to adjust credits",
+        variant: "destructive",
+      });
+    } finally {
+      setAdjustLoading(false);
     }
   };
 
@@ -1767,6 +1870,239 @@ function CreditsTab() {
           </Card>
         </div>
       ) : null}
+
+      {/* Seller Credits Management */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Seller Credits
+              </CardTitle>
+              <CardDescription>
+                View and adjust AI credit balances for individual sellers
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Input
+            placeholder="Search by name, email, or shop name..."
+            value={sellerSearch}
+            onChange={(e) => setSellerSearch(e.target.value)}
+            className="mb-4"
+          />
+
+          {sellersLoading ? (
+            <div className="py-6 text-center text-muted-foreground">
+              <Loader2 className="h-5 w-5 mx-auto animate-spin mb-2" />
+              Loading sellers...
+            </div>
+          ) : sellers.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              No sellers found.
+            </p>
+          ) : (
+            <div className="rounded-md border">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium">Seller</th>
+                    <th className="px-4 py-3 text-left font-medium">Shop</th>
+                    <th className="px-4 py-3 text-right font-medium">
+                      Balance
+                    </th>
+                    <th className="px-4 py-3 text-center font-medium">
+                      Auto-Recharge
+                    </th>
+                    <th className="px-4 py-3 text-right font-medium">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {sellers.map((seller) => (
+                    <tr key={seller.id} className="hover:bg-muted/30">
+                      <td className="px-4 py-3">
+                        <div>
+                          <p className="font-medium">
+                            {seller.firstName} {seller.lastName}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {seller.email}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {seller.shop?.shopName || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span
+                          className={`font-mono font-semibold ${
+                            seller.aiCreditsBalance <= 0
+                              ? "text-red-500"
+                              : seller.aiCreditsBalance < 10
+                                ? "text-orange-500"
+                                : "text-green-600"
+                          }`}
+                        >
+                          {seller.aiCreditsBalance.toLocaleString()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {seller.shop?.autoRechargeEnabled ? (
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-green-400 text-green-600"
+                          >
+                            ON
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs">
+                            OFF
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openAdjustDialog(seller)}
+                        >
+                          <Sparkles className="mr-1 h-3 w-3" />
+                          Adjust
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Adjust Credits Dialog */}
+      <Dialog
+        open={adjustDialog}
+        onOpenChange={(open) => !open && setAdjustDialog(false)}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-purple-500" />
+              Adjust Credits
+            </DialogTitle>
+            <DialogDescription>
+              {adjustTarget && (
+                <>
+                  Adjusting credits for{" "}
+                  <strong>{adjustTarget.email}</strong>
+                  {adjustTarget.shop?.shopName && (
+                    <> ({adjustTarget.shop.shopName})</>
+                  )}
+                  . Current balance:{" "}
+                  <strong>
+                    {adjustTarget.aiCreditsBalance.toLocaleString()}
+                  </strong>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() =>
+                  setAdjustForm({ ...adjustForm, isDeduction: false })
+                }
+                className={`flex-1 rounded-lg border p-3 text-center text-sm font-medium transition-all ${
+                  !adjustForm.isDeduction
+                    ? "border-green-500 bg-green-50 text-green-700 dark:bg-green-950"
+                    : "hover:border-green-300"
+                }`}
+              >
+                <Plus className="mx-auto mb-1 h-5 w-5" />
+                Add Credits
+              </button>
+              <button
+                onClick={() =>
+                  setAdjustForm({ ...adjustForm, isDeduction: true })
+                }
+                className={`flex-1 rounded-lg border p-3 text-center text-sm font-medium transition-all ${
+                  adjustForm.isDeduction
+                    ? "border-red-500 bg-red-50 text-red-700 dark:bg-red-950"
+                    : "hover:border-red-300"
+                }`}
+              >
+                <AlertTriangle className="mx-auto mb-1 h-5 w-5" />
+                Deduct Credits
+              </button>
+            </div>
+            <div>
+              <Label>Amount</Label>
+              <Input
+                type="number"
+                min={1}
+                value={adjustForm.amount}
+                onChange={(e) =>
+                  setAdjustForm({
+                    ...adjustForm,
+                    amount: parseInt(e.target.value) || 0,
+                  })
+                }
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>Reason *</Label>
+              <Input
+                placeholder="e.g., Promotional bonus, Bug fix compensation..."
+                value={adjustForm.reason}
+                onChange={(e) =>
+                  setAdjustForm({ ...adjustForm, reason: e.target.value })
+                }
+                className="mt-1"
+              />
+            </div>
+            {adjustTarget && (
+              <div className="rounded-md bg-muted p-3 text-sm">
+                <p>
+                  New balance:{" "}
+                  <strong>
+                    {(
+                      adjustTarget.aiCreditsBalance +
+                      (adjustForm.isDeduction
+                        ? -Math.abs(adjustForm.amount)
+                        : Math.abs(adjustForm.amount))
+                    ).toLocaleString()}
+                  </strong>
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAdjustDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAdjust}
+              disabled={adjustLoading || !adjustForm.reason.trim()}
+              variant={adjustForm.isDeduction ? "destructive" : "default"}
+            >
+              {adjustLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : adjustForm.isDeduction ? (
+                <AlertTriangle className="h-4 w-4 mr-2" />
+              ) : (
+                <Plus className="h-4 w-4 mr-2" />
+              )}
+              {adjustForm.isDeduction ? "Deduct" : "Add"}{" "}
+              {Math.abs(adjustForm.amount)} Credits
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
