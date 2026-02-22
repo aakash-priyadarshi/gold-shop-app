@@ -111,6 +111,8 @@ async function main() {
         },
         isActive: true,
         sortOrder: 0,
+        badgeText: null,
+        buttonColor: null,
       },
     });
     console.log(`  ✅ FREE (${region}): ${plan.id}`);
@@ -155,6 +157,8 @@ async function main() {
         },
         isActive: true,
         sortOrder: 1,
+        badgeText: null,
+        buttonColor: null,
       },
     });
     console.log(`  ✅ PRO (${region}): ${plan.id}`);
@@ -204,6 +208,8 @@ async function main() {
         },
         isActive: true,
         sortOrder: 2,
+        badgeText: "Most Popular",
+        buttonColor: "#f59e0b",
       },
     });
     console.log(`  ✅ PRO_PLUS (${region}): ${plan.id}`);
@@ -267,6 +273,8 @@ async function main() {
         },
         isActive: true,
         sortOrder: 3,
+        badgeText: null,
+        buttonColor: "#7c3aed",
       },
     });
     console.log(`  ✅ ENTERPRISE (${region}): ${plan.id}`);

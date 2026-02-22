@@ -58,6 +58,8 @@ export class SubscriptionPlansService {
         features: (dto.features ?? {}) as any,
         isActive: dto.isActive ?? true,
         sortOrder: dto.sortOrder ?? 0,
+        badgeText: dto.badgeText ?? null,
+        buttonColor: dto.buttonColor ?? null,
       },
     });
   }
@@ -202,6 +204,8 @@ export class SubscriptionPlansService {
         overageBehavior: true,
         features: true,
         sortOrder: true,
+        badgeText: true,
+        buttonColor: true,
       },
     });
   }

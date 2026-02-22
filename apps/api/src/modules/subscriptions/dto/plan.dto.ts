@@ -120,6 +120,14 @@ export class CreatePlanDto {
   @IsOptional()
   @IsInt()
   sortOrder?: number;
+
+  @IsOptional()
+  @IsString()
+  badgeText?: string;
+
+  @IsOptional()
+  @IsString()
+  buttonColor?: string;
 }
 
 export class UpdatePlanDto {
@@ -207,6 +215,14 @@ export class UpdatePlanDto {
   @IsOptional()
   @IsInt()
   sortOrder?: number;
+
+  @IsOptional()
+  @IsString()
+  badgeText?: string;
+
+  @IsOptional()
+  @IsString()
+  buttonColor?: string;
 
   @IsOptional()
   @IsString()
