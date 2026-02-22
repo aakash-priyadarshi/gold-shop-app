@@ -13,12 +13,12 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import {
   aiCreditsApi,
   sellerSubscriptionsApi,
   subscriptionPlansApi,
 } from "@/lib/api";
-import { useAuth } from "@/hooks/useAuth";
 import {
   ArrowRight,
   BarChart3,

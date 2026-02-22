@@ -17,6 +17,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -33,8 +35,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { subscriptionPlansApi } from "@/lib/api";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   AlertTriangle,
   ArrowRightLeft,
@@ -204,25 +204,44 @@ export function AdminSubscriptionPlansPanel() {
       const plan = editDialog.plan;
       const f = editDialog.form;
 
-      if (f.displayName !== plan.displayName) payload.displayName = f.displayName;
-      if (f.description !== (plan.description || "")) payload.description = f.description;
-      if (Number(f.monthlyPrice) !== plan.monthlyPrice) payload.monthlyPrice = Number(f.monthlyPrice);
-      if (f.annualPrice !== "" && Number(f.annualPrice) !== (plan.annualPrice ?? 0))
+      if (f.displayName !== plan.displayName)
+        payload.displayName = f.displayName;
+      if (f.description !== (plan.description || ""))
+        payload.description = f.description;
+      if (Number(f.monthlyPrice) !== plan.monthlyPrice)
+        payload.monthlyPrice = Number(f.monthlyPrice);
+      if (
+        f.annualPrice !== "" &&
+        Number(f.annualPrice) !== (plan.annualPrice ?? 0)
+      )
         payload.annualPrice = Number(f.annualPrice);
-      if (f.maxProducts !== "" && Number(f.maxProducts) !== (plan.maxProducts ?? 0))
+      if (
+        f.maxProducts !== "" &&
+        Number(f.maxProducts) !== (plan.maxProducts ?? 0)
+      )
         payload.maxProducts = Number(f.maxProducts);
-      if (f.maxInvoicesPerMonth !== "" && Number(f.maxInvoicesPerMonth) !== (plan.maxInvoicesPerMonth ?? 0))
+      if (
+        f.maxInvoicesPerMonth !== "" &&
+        Number(f.maxInvoicesPerMonth) !== (plan.maxInvoicesPerMonth ?? 0)
+      )
         payload.maxInvoicesPerMonth = Number(f.maxInvoicesPerMonth);
-      if (f.maxCatalogues !== "" && Number(f.maxCatalogues) !== (plan.maxCatalogues ?? 0))
+      if (
+        f.maxCatalogues !== "" &&
+        Number(f.maxCatalogues) !== (plan.maxCatalogues ?? 0)
+      )
         payload.maxCatalogues = Number(f.maxCatalogues);
-      if (f.maxOrdersPerMonth !== "" && Number(f.maxOrdersPerMonth) !== (plan.maxOrdersPerMonth ?? 0))
+      if (
+        f.maxOrdersPerMonth !== "" &&
+        Number(f.maxOrdersPerMonth) !== (plan.maxOrdersPerMonth ?? 0)
+      )
         payload.maxOrdersPerMonth = Number(f.maxOrdersPerMonth);
       if (Number(f.commissionPercent) !== plan.commissionPercent)
         payload.commissionPercent = Number(f.commissionPercent);
       if (f.includesAi !== plan.includesAi) payload.includesAi = f.includesAi;
       if (Number(f.monthlyAiCredits) !== plan.monthlyAiCredits)
         payload.monthlyAiCredits = Number(f.monthlyAiCredits);
-      if (Number(f.sortOrder) !== plan.sortOrder) payload.sortOrder = Number(f.sortOrder);
+      if (Number(f.sortOrder) !== plan.sortOrder)
+        payload.sortOrder = Number(f.sortOrder);
 
       if (Object.keys(payload).length === 0) {
         showToast("error", "No changes detected.");
@@ -604,7 +623,9 @@ export function AdminSubscriptionPlansPanel() {
       {/* Edit Plan Dialog */}
       <Dialog
         open={editDialog.open}
-        onOpenChange={(open) => !open && setEditDialog({ open: false, form: {} })}
+        onOpenChange={(open) =>
+          !open && setEditDialog({ open: false, form: {} })
+        }
       >
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
@@ -615,7 +636,9 @@ export function AdminSubscriptionPlansPanel() {
             <DialogDescription>
               Update plan details. Changes are saved immediately.
               {editDialog.plan && !editDialog.plan.isActive && (
-                <span className="block mt-1 text-amber-600">This plan is currently disabled.</span>
+                <span className="block mt-1 text-amber-600">
+                  This plan is currently disabled.
+                </span>
               )}
             </DialogDescription>
           </DialogHeader>
@@ -640,24 +663,28 @@ export function AdminSubscriptionPlansPanel() {
             </div>
             {/* Pricing */}
             <div>
-              <Label htmlFor="edit-monthlyPrice">Monthly Price ({editDialog.plan?.currency})</Label>
+              <Label htmlFor="edit-monthlyPrice">
+                Monthly Price ({editDialog.plan?.currency})
+              </Label>
               <Input
                 id="edit-monthlyPrice"
                 type="number"
                 min={0}
                 step="0.01"
-                value={editDialog.form.monthlyPrice as number ?? ""}
+                value={(editDialog.form.monthlyPrice as number) ?? ""}
                 onChange={(e) => updateEditForm("monthlyPrice", e.target.value)}
               />
             </div>
             <div>
-              <Label htmlFor="edit-annualPrice">Annual Price ({editDialog.plan?.currency})</Label>
+              <Label htmlFor="edit-annualPrice">
+                Annual Price ({editDialog.plan?.currency})
+              </Label>
               <Input
                 id="edit-annualPrice"
                 type="number"
                 min={0}
                 step="0.01"
-                value={editDialog.form.annualPrice as number ?? ""}
+                value={(editDialog.form.annualPrice as number) ?? ""}
                 onChange={(e) => updateEditForm("annualPrice", e.target.value)}
                 placeholder="Leave empty for no annual option"
               />
@@ -671,8 +698,10 @@ export function AdminSubscriptionPlansPanel() {
                 min={0}
                 max={100}
                 step="0.1"
-                value={editDialog.form.commissionPercent as number ?? ""}
-                onChange={(e) => updateEditForm("commissionPercent", e.target.value)}
+                value={(editDialog.form.commissionPercent as number) ?? ""}
+                onChange={(e) =>
+                  updateEditForm("commissionPercent", e.target.value)
+                }
               />
             </div>
             <div>
@@ -681,13 +710,15 @@ export function AdminSubscriptionPlansPanel() {
                 id="edit-sortOrder"
                 type="number"
                 min={0}
-                value={editDialog.form.sortOrder as number ?? ""}
+                value={(editDialog.form.sortOrder as number) ?? ""}
                 onChange={(e) => updateEditForm("sortOrder", e.target.value)}
               />
             </div>
             {/* Resource Limits */}
             <div className="col-span-2">
-              <p className="text-sm font-medium text-muted-foreground mb-2">Resource Limits (leave empty = unlimited)</p>
+              <p className="text-sm font-medium text-muted-foreground mb-2">
+                Resource Limits (leave empty = unlimited)
+              </p>
             </div>
             <div>
               <Label htmlFor="edit-maxProducts">Max Products</Label>
@@ -695,7 +726,7 @@ export function AdminSubscriptionPlansPanel() {
                 id="edit-maxProducts"
                 type="number"
                 min={0}
-                value={editDialog.form.maxProducts as number ?? ""}
+                value={(editDialog.form.maxProducts as number) ?? ""}
                 onChange={(e) => updateEditForm("maxProducts", e.target.value)}
                 placeholder="Unlimited"
               />
@@ -706,8 +737,10 @@ export function AdminSubscriptionPlansPanel() {
                 id="edit-maxInvoices"
                 type="number"
                 min={0}
-                value={editDialog.form.maxInvoicesPerMonth as number ?? ""}
-                onChange={(e) => updateEditForm("maxInvoicesPerMonth", e.target.value)}
+                value={(editDialog.form.maxInvoicesPerMonth as number) ?? ""}
+                onChange={(e) =>
+                  updateEditForm("maxInvoicesPerMonth", e.target.value)
+                }
                 placeholder="Unlimited"
               />
             </div>
@@ -717,8 +750,10 @@ export function AdminSubscriptionPlansPanel() {
                 id="edit-maxCatalogues"
                 type="number"
                 min={0}
-                value={editDialog.form.maxCatalogues as number ?? ""}
-                onChange={(e) => updateEditForm("maxCatalogues", e.target.value)}
+                value={(editDialog.form.maxCatalogues as number) ?? ""}
+                onChange={(e) =>
+                  updateEditForm("maxCatalogues", e.target.value)
+                }
                 placeholder="Unlimited"
               />
             </div>
@@ -728,14 +763,18 @@ export function AdminSubscriptionPlansPanel() {
                 id="edit-maxOrders"
                 type="number"
                 min={0}
-                value={editDialog.form.maxOrdersPerMonth as number ?? ""}
-                onChange={(e) => updateEditForm("maxOrdersPerMonth", e.target.value)}
+                value={(editDialog.form.maxOrdersPerMonth as number) ?? ""}
+                onChange={(e) =>
+                  updateEditForm("maxOrdersPerMonth", e.target.value)
+                }
                 placeholder="Unlimited"
               />
             </div>
             {/* AI Settings */}
             <div className="col-span-2">
-              <p className="text-sm font-medium text-muted-foreground mb-2">AI Settings</p>
+              <p className="text-sm font-medium text-muted-foreground mb-2">
+                AI Settings
+              </p>
             </div>
             <div className="flex items-center gap-3">
               <input
@@ -753,8 +792,10 @@ export function AdminSubscriptionPlansPanel() {
                 id="edit-aiCredits"
                 type="number"
                 min={0}
-                value={editDialog.form.monthlyAiCredits as number ?? ""}
-                onChange={(e) => updateEditForm("monthlyAiCredits", e.target.value)}
+                value={(editDialog.form.monthlyAiCredits as number) ?? ""}
+                onChange={(e) =>
+                  updateEditForm("monthlyAiCredits", e.target.value)
+                }
               />
             </div>
           </div>
@@ -765,10 +806,7 @@ export function AdminSubscriptionPlansPanel() {
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleEdit}
-              disabled={actionLoading}
-            >
+            <Button onClick={handleEdit} disabled={actionLoading}>
               {actionLoading ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (

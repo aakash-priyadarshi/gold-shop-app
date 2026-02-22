@@ -154,35 +154,125 @@ export default function AdminBillingPage() {
 /** All known feature keys — used for checkboxes in the edit dialog */
 const ALL_FEATURE_KEYS: { key: string; label: string; category: string }[] = [
   { key: "marketplace", label: "Marketplace listing", category: "Marketplace" },
-  { key: "priorityListing", label: "Priority listing", category: "Marketplace" },
+  {
+    key: "priorityListing",
+    label: "Priority listing",
+    category: "Marketplace",
+  },
   { key: "bulkUpload", label: "Bulk product upload", category: "Marketplace" },
   { key: "crm", label: "CRM suite", category: "CRM & Business" },
-  { key: "invoicing", label: "Invoicing & billing", category: "CRM & Business" },
-  { key: "inventoryManagement", label: "Inventory management", category: "CRM & Business" },
-  { key: "customerManagement", label: "Customer management", category: "CRM & Business" },
-  { key: "customBranding", label: "Custom branding", category: "CRM & Business" },
+  {
+    key: "invoicing",
+    label: "Invoicing & billing",
+    category: "CRM & Business",
+  },
+  {
+    key: "inventoryManagement",
+    label: "Inventory management",
+    category: "CRM & Business",
+  },
+  {
+    key: "customerManagement",
+    label: "Customer management",
+    category: "CRM & Business",
+  },
+  {
+    key: "customBranding",
+    label: "Custom branding",
+    category: "CRM & Business",
+  },
   { key: "staffAccounts", label: "Staff accounts", category: "CRM & Business" },
-  { key: "multiBranch", label: "Multi-branch support", category: "CRM & Business" },
-  { key: "purchasableAiCredits", label: "Purchasable AI credits", category: "AI & Intelligence" },
-  { key: "aiDesignGeneration", label: "AI design generation", category: "AI & Intelligence" },
-  { key: "aiSmartRecommendations", label: "Smart recommendations", category: "AI & Intelligence" },
-  { key: "aiPriceOptimization", label: "Price optimization", category: "AI & Intelligence" },
-  { key: "demandForecasting", label: "Demand forecasting", category: "AI & Intelligence" },
-  { key: "basicAnalytics", label: "Basic analytics", category: "Analytics & Reports" },
-  { key: "advancedAnalytics", label: "Advanced analytics", category: "Analytics & Reports" },
-  { key: "scheduledReports", label: "Scheduled reports", category: "Analytics & Reports" },
-  { key: "auditLogExport", label: "Audit log export", category: "Analytics & Reports" },
-  { key: "prioritySupport", label: "Priority support", category: "Support & Integration" },
-  { key: "dedicatedSupport", label: "Dedicated support", category: "Support & Integration" },
-  { key: "dedicatedAccountManager", label: "Account manager", category: "Support & Integration" },
+  {
+    key: "multiBranch",
+    label: "Multi-branch support",
+    category: "CRM & Business",
+  },
+  {
+    key: "purchasableAiCredits",
+    label: "Purchasable AI credits",
+    category: "AI & Intelligence",
+  },
+  {
+    key: "aiDesignGeneration",
+    label: "AI design generation",
+    category: "AI & Intelligence",
+  },
+  {
+    key: "aiSmartRecommendations",
+    label: "Smart recommendations",
+    category: "AI & Intelligence",
+  },
+  {
+    key: "aiPriceOptimization",
+    label: "Price optimization",
+    category: "AI & Intelligence",
+  },
+  {
+    key: "demandForecasting",
+    label: "Demand forecasting",
+    category: "AI & Intelligence",
+  },
+  {
+    key: "basicAnalytics",
+    label: "Basic analytics",
+    category: "Analytics & Reports",
+  },
+  {
+    key: "advancedAnalytics",
+    label: "Advanced analytics",
+    category: "Analytics & Reports",
+  },
+  {
+    key: "scheduledReports",
+    label: "Scheduled reports",
+    category: "Analytics & Reports",
+  },
+  {
+    key: "auditLogExport",
+    label: "Audit log export",
+    category: "Analytics & Reports",
+  },
+  {
+    key: "prioritySupport",
+    label: "Priority support",
+    category: "Support & Integration",
+  },
+  {
+    key: "dedicatedSupport",
+    label: "Dedicated support",
+    category: "Support & Integration",
+  },
+  {
+    key: "dedicatedAccountManager",
+    label: "Account manager",
+    category: "Support & Integration",
+  },
   { key: "apiAccess", label: "API access", category: "Support & Integration" },
-  { key: "webhookSubscriptions", label: "Webhook subscriptions", category: "Support & Integration" },
-  { key: "whiteLabel", label: "White-label option", category: "Support & Integration" },
-  { key: "customDomain", label: "Custom domain", category: "Support & Integration" },
-  { key: "customIntegrations", label: "Custom integrations", category: "Support & Integration" },
+  {
+    key: "webhookSubscriptions",
+    label: "Webhook subscriptions",
+    category: "Support & Integration",
+  },
+  {
+    key: "whiteLabel",
+    label: "White-label option",
+    category: "Support & Integration",
+  },
+  {
+    key: "customDomain",
+    label: "Custom domain",
+    category: "Support & Integration",
+  },
+  {
+    key: "customIntegrations",
+    label: "Custom integrations",
+    category: "Support & Integration",
+  },
 ];
 
-const FEATURE_CATEGORIES = Array.from(new Set(ALL_FEATURE_KEYS.map((f) => f.category)));
+const FEATURE_CATEGORIES = Array.from(
+  new Set(ALL_FEATURE_KEYS.map((f) => f.category)),
+);
 
 function PlansTab() {
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -226,17 +316,42 @@ function PlansTab() {
       const f = editForm;
       const p = editPlan;
       if (f.displayName !== p.displayName) payload.displayName = f.displayName;
-      if (f.description !== (p.description || "")) payload.description = f.description;
-      if (Number(f.monthlyPrice) !== p.monthlyPrice) payload.monthlyPrice = Number(f.monthlyPrice);
-      if (f.annualPrice !== "" && Number(f.annualPrice) !== (p.annualPrice ?? 0)) payload.annualPrice = Number(f.annualPrice);
-      if (f.maxProducts !== "" && Number(f.maxProducts) !== (p.maxProducts ?? 0)) payload.maxProducts = Number(f.maxProducts);
-      if (f.maxInvoicesPerMonth !== "" && Number(f.maxInvoicesPerMonth) !== (p.maxInvoicesPerMonth ?? 0)) payload.maxInvoicesPerMonth = Number(f.maxInvoicesPerMonth);
-      if (f.maxCatalogues !== "" && Number(f.maxCatalogues) !== (p.maxCatalogues ?? 0)) payload.maxCatalogues = Number(f.maxCatalogues);
-      if (f.maxOrdersPerMonth !== "" && Number(f.maxOrdersPerMonth) !== (p.maxOrdersPerMonth ?? 0)) payload.maxOrdersPerMonth = Number(f.maxOrdersPerMonth);
-      if (Number(f.commissionPercent) !== p.commissionPercent) payload.commissionPercent = Number(f.commissionPercent);
+      if (f.description !== (p.description || ""))
+        payload.description = f.description;
+      if (Number(f.monthlyPrice) !== p.monthlyPrice)
+        payload.monthlyPrice = Number(f.monthlyPrice);
+      if (
+        f.annualPrice !== "" &&
+        Number(f.annualPrice) !== (p.annualPrice ?? 0)
+      )
+        payload.annualPrice = Number(f.annualPrice);
+      if (
+        f.maxProducts !== "" &&
+        Number(f.maxProducts) !== (p.maxProducts ?? 0)
+      )
+        payload.maxProducts = Number(f.maxProducts);
+      if (
+        f.maxInvoicesPerMonth !== "" &&
+        Number(f.maxInvoicesPerMonth) !== (p.maxInvoicesPerMonth ?? 0)
+      )
+        payload.maxInvoicesPerMonth = Number(f.maxInvoicesPerMonth);
+      if (
+        f.maxCatalogues !== "" &&
+        Number(f.maxCatalogues) !== (p.maxCatalogues ?? 0)
+      )
+        payload.maxCatalogues = Number(f.maxCatalogues);
+      if (
+        f.maxOrdersPerMonth !== "" &&
+        Number(f.maxOrdersPerMonth) !== (p.maxOrdersPerMonth ?? 0)
+      )
+        payload.maxOrdersPerMonth = Number(f.maxOrdersPerMonth);
+      if (Number(f.commissionPercent) !== p.commissionPercent)
+        payload.commissionPercent = Number(f.commissionPercent);
       if (f.includesAi !== p.includesAi) payload.includesAi = f.includesAi;
-      if (Number(f.monthlyAiCredits) !== p.monthlyAiCredits) payload.monthlyAiCredits = Number(f.monthlyAiCredits);
-      if (Number(f.sortOrder) !== p.sortOrder) payload.sortOrder = Number(f.sortOrder);
+      if (Number(f.monthlyAiCredits) !== p.monthlyAiCredits)
+        payload.monthlyAiCredits = Number(f.monthlyAiCredits);
+      if (Number(f.sortOrder) !== p.sortOrder)
+        payload.sortOrder = Number(f.sortOrder);
 
       // Features — always send if changed
       const currentFeatures = JSON.stringify(p.features ?? {});
@@ -244,8 +359,10 @@ function PlansTab() {
       if (newFeatures !== currentFeatures) payload.features = f.features;
 
       // Display customization
-      if ((f.badgeText ?? "") !== (p.badgeText ?? "")) payload.badgeText = f.badgeText || null;
-      if ((f.buttonColor ?? "") !== (p.buttonColor ?? "")) payload.buttonColor = f.buttonColor || null;
+      if ((f.badgeText ?? "") !== (p.badgeText ?? ""))
+        payload.badgeText = f.badgeText || null;
+      if ((f.buttonColor ?? "") !== (p.buttonColor ?? ""))
+        payload.buttonColor = f.buttonColor || null;
 
       if (Object.keys(payload).length === 0) {
         toast({ title: "Info", description: "No changes detected." });
@@ -253,11 +370,18 @@ function PlansTab() {
         return;
       }
       await subscriptionPlansApi.update(p.id, payload);
-      toast({ title: "Success", description: `Plan "${p.displayName}" updated.` });
+      toast({
+        title: "Success",
+        description: `Plan "${p.displayName}" updated.`,
+      });
       setEditPlan(null);
       fetchPlans();
     } catch (err: any) {
-      toast({ title: "Error", description: err?.response?.data?.message || "Failed to update plan", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: err?.response?.data?.message || "Failed to update plan",
+        variant: "destructive",
+      });
     } finally {
       setActionLoading(false);
     }
@@ -268,11 +392,18 @@ function PlansTab() {
     setActionLoading(true);
     try {
       await subscriptionPlansApi.deletePlan(deletePlan.id);
-      toast({ title: "Success", description: `Plan "${deletePlan.displayName}" deleted.` });
+      toast({
+        title: "Success",
+        description: `Plan "${deletePlan.displayName}" deleted.`,
+      });
       setDeletePlan(null);
       fetchPlans();
     } catch (err: any) {
-      toast({ title: "Error", description: err?.response?.data?.message || "Failed to delete plan", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: err?.response?.data?.message || "Failed to delete plan",
+        variant: "destructive",
+      });
     } finally {
       setActionLoading(false);
     }
@@ -317,27 +448,34 @@ function PlansTab() {
     }
   };
 
+  const COUNTRY_PILLS: { code: string; label: string }[] = [
+    { code: "", label: "All" },
+    { code: "NP", label: "Nepal" },
+    { code: "IN", label: "India" },
+    { code: "AE", label: "UAE" },
+    { code: "UK", label: "UK" },
+    { code: "US", label: "US" },
+    { code: "EU", label: "EU" },
+  ];
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Select
-            value={countryFilter || "ALL"}
-            onValueChange={(v) => setCountryFilter(v === "ALL" ? "" : v)}
-          >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="All countries" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All</SelectItem>
-              <SelectItem value="NP">Nepal</SelectItem>
-              <SelectItem value="IN">India</SelectItem>
-              <SelectItem value="AE">UAE</SelectItem>
-              <SelectItem value="UK">UK</SelectItem>
-              <SelectItem value="US">US</SelectItem>
-              <SelectItem value="EU">EU</SelectItem>
-            </SelectContent>
-          </Select>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="inline-flex items-center gap-1 bg-white dark:bg-gray-800 rounded-full p-1.5 shadow-sm border border-gray-200 dark:border-gray-700">
+          {COUNTRY_PILLS.map((c) => (
+            <button
+              key={c.code}
+              onClick={() => setCountryFilter(c.code)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                countryFilter === c.code
+                  ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              }`}
+              title={c.label}
+            >
+              {c.label}
+            </button>
+          ))}
         </div>
 
         <Dialog open={showCreate} onOpenChange={setShowCreate}>
@@ -484,7 +622,10 @@ function PlansTab() {
       )}
 
       {/* Edit Plan Dialog */}
-      <Dialog open={!!editPlan} onOpenChange={(open) => !open && setEditPlan(null)}>
+      <Dialog
+        open={!!editPlan}
+        onOpenChange={(open) => !open && setEditPlan(null)}
+      >
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -498,104 +639,253 @@ function PlansTab() {
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="col-span-2">
               <Label>Display Name</Label>
-              <Input value={(editForm.displayName as string) || ""} onChange={(e) => setEditForm({ ...editForm, displayName: e.target.value })} />
+              <Input
+                value={(editForm.displayName as string) || ""}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, displayName: e.target.value })
+                }
+              />
             </div>
             <div className="col-span-2">
               <Label>Description</Label>
-              <Input value={(editForm.description as string) || ""} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
+              <Input
+                value={(editForm.description as string) || ""}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, description: e.target.value })
+                }
+              />
             </div>
             <div>
               <Label>Monthly Price ({editPlan?.currency})</Label>
-              <Input type="number" min={0} step="0.01" value={editForm.monthlyPrice as number ?? ""} onChange={(e) => setEditForm({ ...editForm, monthlyPrice: e.target.value })} />
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={(editForm.monthlyPrice as number) ?? ""}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, monthlyPrice: e.target.value })
+                }
+              />
             </div>
             <div>
               <Label>Annual Price ({editPlan?.currency})</Label>
-              <Input type="number" min={0} step="0.01" value={editForm.annualPrice as number ?? ""} onChange={(e) => setEditForm({ ...editForm, annualPrice: e.target.value })} placeholder="Leave empty for none" />
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={(editForm.annualPrice as number) ?? ""}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, annualPrice: e.target.value })
+                }
+                placeholder="Leave empty for none"
+              />
             </div>
             <div>
               <Label>Commission %</Label>
-              <Input type="number" min={0} max={100} step="0.1" value={editForm.commissionPercent as number ?? ""} onChange={(e) => setEditForm({ ...editForm, commissionPercent: e.target.value })} />
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                step="0.1"
+                value={(editForm.commissionPercent as number) ?? ""}
+                onChange={(e) =>
+                  setEditForm({
+                    ...editForm,
+                    commissionPercent: e.target.value,
+                  })
+                }
+              />
             </div>
             <div>
               <Label>Sort Order</Label>
-              <Input type="number" min={0} value={editForm.sortOrder as number ?? ""} onChange={(e) => setEditForm({ ...editForm, sortOrder: e.target.value })} />
+              <Input
+                type="number"
+                min={0}
+                value={(editForm.sortOrder as number) ?? ""}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, sortOrder: e.target.value })
+                }
+              />
             </div>
             <div className="col-span-2">
-              <p className="text-sm font-medium text-muted-foreground mb-2">Resource Limits (empty = unlimited)</p>
+              <p className="text-sm font-medium text-muted-foreground mb-2">
+                Resource Limits (empty = unlimited)
+              </p>
             </div>
             <div>
               <Label>Max Products</Label>
-              <Input type="number" min={0} value={editForm.maxProducts as number ?? ""} onChange={(e) => setEditForm({ ...editForm, maxProducts: e.target.value })} placeholder="Unlimited" />
+              <Input
+                type="number"
+                min={0}
+                value={(editForm.maxProducts as number) ?? ""}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, maxProducts: e.target.value })
+                }
+                placeholder="Unlimited"
+              />
             </div>
             <div>
               <Label>Max Invoices/Month</Label>
-              <Input type="number" min={0} value={editForm.maxInvoicesPerMonth as number ?? ""} onChange={(e) => setEditForm({ ...editForm, maxInvoicesPerMonth: e.target.value })} placeholder="Unlimited" />
+              <Input
+                type="number"
+                min={0}
+                value={(editForm.maxInvoicesPerMonth as number) ?? ""}
+                onChange={(e) =>
+                  setEditForm({
+                    ...editForm,
+                    maxInvoicesPerMonth: e.target.value,
+                  })
+                }
+                placeholder="Unlimited"
+              />
             </div>
             <div>
               <Label>Max Catalogues</Label>
-              <Input type="number" min={0} value={editForm.maxCatalogues as number ?? ""} onChange={(e) => setEditForm({ ...editForm, maxCatalogues: e.target.value })} placeholder="Unlimited" />
+              <Input
+                type="number"
+                min={0}
+                value={(editForm.maxCatalogues as number) ?? ""}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, maxCatalogues: e.target.value })
+                }
+                placeholder="Unlimited"
+              />
             </div>
             <div>
               <Label>Max Orders/Month</Label>
-              <Input type="number" min={0} value={editForm.maxOrdersPerMonth as number ?? ""} onChange={(e) => setEditForm({ ...editForm, maxOrdersPerMonth: e.target.value })} placeholder="Unlimited" />
+              <Input
+                type="number"
+                min={0}
+                value={(editForm.maxOrdersPerMonth as number) ?? ""}
+                onChange={(e) =>
+                  setEditForm({
+                    ...editForm,
+                    maxOrdersPerMonth: e.target.value,
+                  })
+                }
+                placeholder="Unlimited"
+              />
             </div>
             <div className="col-span-2">
-              <p className="text-sm font-medium text-muted-foreground mb-2">AI Settings</p>
+              <p className="text-sm font-medium text-muted-foreground mb-2">
+                AI Settings
+              </p>
             </div>
             <div className="flex items-center gap-3">
-              <input type="checkbox" checked={!!editForm.includesAi} onChange={(e) => setEditForm({ ...editForm, includesAi: e.target.checked })} className="h-4 w-4 rounded border-gray-300" />
+              <input
+                type="checkbox"
+                checked={!!editForm.includesAi}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, includesAi: e.target.checked })
+                }
+                className="h-4 w-4 rounded border-gray-300"
+              />
               <Label>Includes AI Features</Label>
             </div>
             <div>
               <Label>Monthly AI Credits</Label>
-              <Input type="number" min={0} value={editForm.monthlyAiCredits as number ?? ""} onChange={(e) => setEditForm({ ...editForm, monthlyAiCredits: e.target.value })} />
+              <Input
+                type="number"
+                min={0}
+                value={(editForm.monthlyAiCredits as number) ?? ""}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, monthlyAiCredits: e.target.value })
+                }
+              />
             </div>
 
             {/* ─── Display Customization ─────────────────────── */}
             <div className="col-span-2">
-              <p className="text-sm font-medium text-muted-foreground mb-2">Display Customization</p>
+              <p className="text-sm font-medium text-muted-foreground mb-2">
+                Display Customization
+              </p>
             </div>
             <div>
               <Label>Badge Text</Label>
-              <Input value={(editForm.badgeText as string) || ""} onChange={(e) => setEditForm({ ...editForm, badgeText: e.target.value })} placeholder='e.g. "Most Popular"' />
-              <p className="text-xs text-muted-foreground mt-1">Shown on the pricing page card</p>
+              <Input
+                value={(editForm.badgeText as string) || ""}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, badgeText: e.target.value })
+                }
+                placeholder='e.g. "Most Popular"'
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Shown on the pricing page card
+              </p>
             </div>
             <div>
               <Label>Button Color</Label>
               <div className="flex gap-2 items-center">
-                <Input value={(editForm.buttonColor as string) || ""} onChange={(e) => setEditForm({ ...editForm, buttonColor: e.target.value })} placeholder="#f59e0b" className="flex-1" />
+                <Input
+                  value={(editForm.buttonColor as string) || ""}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, buttonColor: e.target.value })
+                  }
+                  placeholder="#f59e0b"
+                  className="flex-1"
+                />
                 {(editForm.buttonColor as string) && (
-                  <div className="h-9 w-9 rounded-md border flex-shrink-0" style={{ backgroundColor: editForm.buttonColor as string }} />
+                  <div
+                    className="h-9 w-9 rounded-md border flex-shrink-0"
+                    style={{ backgroundColor: editForm.buttonColor as string }}
+                  />
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Hex color for CTA button on pricing page</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Hex color for CTA button on pricing page
+              </p>
             </div>
 
             {/* ─── Plan Features (checkboxes) ────────────────── */}
             <div className="col-span-2 mt-2">
-              <p className="text-sm font-medium text-muted-foreground mb-3">Plan Features</p>
+              <p className="text-sm font-medium text-muted-foreground mb-3">
+                Plan Features
+              </p>
               <div className="space-y-4">
                 {FEATURE_CATEGORIES.map((cat) => {
-                  const keys = ALL_FEATURE_KEYS.filter((f) => f.category === cat);
+                  const keys = ALL_FEATURE_KEYS.filter(
+                    (f) => f.category === cat,
+                  );
                   return (
                     <div key={cat}>
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{cat}</p>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                        {cat}
+                      </p>
                       <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                         {keys.map(({ key, label }) => {
-                          const features = (editForm.features as Record<string, unknown>) ?? {};
+                          const features =
+                            (editForm.features as Record<string, unknown>) ??
+                            {};
                           const checked = !!features[key];
                           return (
-                            <label key={key} className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground">
+                            <label
+                              key={key}
+                              className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground"
+                            >
                               <input
                                 type="checkbox"
                                 checked={checked}
                                 onChange={(e) => {
-                                  const updated = { ...features, [key]: e.target.checked };
-                                  setEditForm({ ...editForm, features: updated });
+                                  const updated = {
+                                    ...features,
+                                    [key]: e.target.checked,
+                                  };
+                                  setEditForm({
+                                    ...editForm,
+                                    features: updated,
+                                  });
                                 }}
                                 className="h-4 w-4 rounded border-gray-300 accent-amber-500"
                               />
-                              <span className={checked ? "text-foreground" : "text-muted-foreground"}>{label}</span>
+                              <span
+                                className={
+                                  checked
+                                    ? "text-foreground"
+                                    : "text-muted-foreground"
+                                }
+                              >
+                                {label}
+                              </span>
                             </label>
                           );
                         })}
@@ -607,9 +897,15 @@ function PlansTab() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditPlan(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setEditPlan(null)}>
+              Cancel
+            </Button>
             <Button onClick={handleSaveEdit} disabled={actionLoading}>
-              {actionLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Pencil className="h-4 w-4 mr-2" />}
+              {actionLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Pencil className="h-4 w-4 mr-2" />
+              )}
               Save Changes
             </Button>
           </DialogFooter>
@@ -617,7 +913,10 @@ function PlansTab() {
       </Dialog>
 
       {/* Delete Plan Dialog */}
-      <Dialog open={!!deletePlan} onOpenChange={(open) => !open && setDeletePlan(null)}>
+      <Dialog
+        open={!!deletePlan}
+        onOpenChange={(open) => !open && setDeletePlan(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -625,14 +924,25 @@ function PlansTab() {
               Delete Plan
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to permanently delete <strong>{deletePlan?.displayName}</strong>?
-              This will only succeed if there are <strong>zero</strong> active subscribers.
+              Are you sure you want to permanently delete{" "}
+              <strong>{deletePlan?.displayName}</strong>? This will only succeed
+              if there are <strong>zero</strong> active subscribers.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeletePlan(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={actionLoading}>
-              {actionLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+            <Button variant="outline" onClick={() => setDeletePlan(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={actionLoading}
+            >
+              {actionLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
+              )}
               Delete Plan
             </Button>
           </DialogFooter>
@@ -1013,8 +1323,7 @@ function SubscriptionsTab() {
     } catch (err: any) {
       toast({
         title: "Error",
-        description:
-          err?.response?.data?.message || "Failed to assign plan",
+        description: err?.response?.data?.message || "Failed to assign plan",
         variant: "destructive",
       });
     } finally {
@@ -1208,7 +1517,10 @@ function SubscriptionsTab() {
       )}
 
       {/* Assign Plan Dialog */}
-      <Dialog open={assignDialog} onOpenChange={(open) => !open && setAssignDialog(false)}>
+      <Dialog
+        open={assignDialog}
+        onOpenChange={(open) => !open && setAssignDialog(false)}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1216,7 +1528,8 @@ function SubscriptionsTab() {
               Assign Plan to Shop
             </DialogTitle>
             <DialogDescription>
-              Force-assign a subscription plan to a shop for 1-12 months. The current active subscription will be cancelled.
+              Force-assign a subscription plan to a shop for 1-12 months. The
+              current active subscription will be cancelled.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -1225,9 +1538,14 @@ function SubscriptionsTab() {
               {assignForm.shopId ? (
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant="outline" className="px-3 py-1.5">
-                    {uniqueShops.find((s) => s.id === assignForm.shopId)?.name || assignForm.shopId}
+                    {uniqueShops.find((s) => s.id === assignForm.shopId)
+                      ?.name || assignForm.shopId}
                   </Badge>
-                  <Button size="sm" variant="ghost" onClick={() => setAssignForm({ ...assignForm, shopId: "" })}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setAssignForm({ ...assignForm, shopId: "" })}
+                  >
                     Change
                   </Button>
                 </div>
@@ -1236,7 +1554,9 @@ function SubscriptionsTab() {
                   <Input
                     placeholder="Paste Shop ID or select from table..."
                     value={assignForm.shopId}
-                    onChange={(e) => setAssignForm({ ...assignForm, shopId: e.target.value })}
+                    onChange={(e) =>
+                      setAssignForm({ ...assignForm, shopId: e.target.value })
+                    }
                   />
                   {uniqueShops.length > 0 && (
                     <div className="mt-2 max-h-32 overflow-y-auto rounded border p-1">
@@ -1244,11 +1564,15 @@ function SubscriptionsTab() {
                         <button
                           key={shop.id}
                           className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-muted/50"
-                          onClick={() => setAssignForm({ ...assignForm, shopId: shop.id })}
+                          onClick={() =>
+                            setAssignForm({ ...assignForm, shopId: shop.id })
+                          }
                         >
                           <span className="font-medium">{shop.name}</span>
                           {shop.email && (
-                            <span className="ml-2 text-xs text-muted-foreground">{shop.email}</span>
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {shop.email}
+                            </span>
                           )}
                         </button>
                       ))}
@@ -1261,7 +1585,9 @@ function SubscriptionsTab() {
               <Label>Plan</Label>
               <Select
                 value={assignForm.planId}
-                onValueChange={(v) => setAssignForm({ ...assignForm, planId: v })}
+                onValueChange={(v) =>
+                  setAssignForm({ ...assignForm, planId: v })
+                }
               >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select a plan..." />
@@ -1271,7 +1597,8 @@ function SubscriptionsTab() {
                     .filter((p) => p.isActive)
                     .map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        {p.displayName} ({p.country}) — {p.currency} {p.monthlyPrice}/mo
+                        {p.displayName} ({p.country}) — {p.currency}{" "}
+                        {p.monthlyPrice}/mo
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -1315,7 +1642,9 @@ function SubscriptionsTab() {
             </Button>
             <Button
               onClick={handleAssignPlan}
-              disabled={actionLoading || !assignForm.shopId || !assignForm.planId}
+              disabled={
+                actionLoading || !assignForm.shopId || !assignForm.planId
+              }
             >
               {actionLoading ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

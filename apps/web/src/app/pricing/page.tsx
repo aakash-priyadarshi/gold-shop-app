@@ -2,8 +2,8 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { BRAND } from "@/config/brand";
 import { subscriptionPlansApi } from "@/lib/api";
 import {
@@ -14,26 +14,26 @@ import {
   type CurrencyCode,
 } from "@/store/preferences";
 import {
-  Check,
-  X,
-  Sparkles,
-  Crown,
   ArrowRight,
-  ShieldCheck,
-  RefreshCw,
-  TrendingUp,
-  Headphones,
-  Zap,
-  Globe,
+  BarChart3,
+  Brain,
+  Check,
   ChevronDown,
-  Star,
+  Crown,
+  FileText,
+  Globe,
+  Headphones,
   Loader2,
   Package,
-  FileText,
-  Users,
-  BarChart3,
   Palette,
-  Brain,
+  RefreshCw,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  TrendingUp,
+  Users,
+  X,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -158,7 +158,10 @@ const FEATURE_DISPLAY: Record<string, { label: string; category: string }> = {
     label: "Webhook subscriptions",
     category: "Support & Integration",
   },
-  whiteLabel: { label: "White-label option", category: "Support & Integration" },
+  whiteLabel: {
+    label: "White-label option",
+    category: "Support & Integration",
+  },
   customDomain: { label: "Custom domain", category: "Support & Integration" },
   customIntegrations: {
     label: "Custom integrations",
@@ -380,13 +383,17 @@ function formatPrice(amount: number, currency: CurrencyCode): string {
 }
 
 /** Build feature rows from plan features for the cards */
-function buildFeatureList(plan: PlanFromAPI): { text: string; included: boolean }[] {
+function buildFeatureList(
+  plan: PlanFromAPI,
+): { text: string; included: boolean }[] {
   const items: { text: string; included: boolean }[] = [];
 
   // Listing limit
   const limit = plan.catalogueLimit ?? plan.maxProducts;
   items.push({
-    text: limit ? `Up to ${limit.toLocaleString()} product listings` : "Unlimited product listings",
+    text: limit
+      ? `Up to ${limit.toLocaleString()} product listings`
+      : "Unlimited product listings",
     included: true,
   });
 
@@ -431,7 +438,12 @@ function buildFeatureList(plan: PlanFromAPI): { text: string; included: boolean 
   }
 
   // AI features
-  const aiKeys = ["aiDesignGeneration", "aiSmartRecommendations", "aiPriceOptimization", "demandForecasting"];
+  const aiKeys = [
+    "aiDesignGeneration",
+    "aiSmartRecommendations",
+    "aiPriceOptimization",
+    "demandForecasting",
+  ];
   for (const key of aiKeys) {
     const display = FEATURE_DISPLAY[key];
     if (!display) continue;
@@ -440,7 +452,14 @@ function buildFeatureList(plan: PlanFromAPI): { text: string; included: boolean 
   }
 
   // Enterprise features
-  const enterpriseKeys = ["dedicatedAccountManager", "apiAccess", "whiteLabel", "staffAccounts", "multiBranch", "customDomain"];
+  const enterpriseKeys = [
+    "dedicatedAccountManager",
+    "apiAccess",
+    "whiteLabel",
+    "staffAccounts",
+    "multiBranch",
+    "customDomain",
+  ];
   for (const key of enterpriseKeys) {
     const display = FEATURE_DISPLAY[key];
     if (!display) continue;
@@ -472,7 +491,12 @@ function buildComparisonTable(plans: PlanFromAPI[]) {
   }
 
   // Add numeric plan properties first
-  const numericRows: { key: string; label: string; category: string; values: (boolean | string)[] }[] = [
+  const numericRows: {
+    key: string;
+    label: string;
+    category: string;
+    values: (boolean | string)[];
+  }[] = [
     {
       key: "_listings",
       label: "Product listings",
@@ -520,12 +544,10 @@ function buildComparisonTable(plans: PlanFromAPI[]) {
     cat.push({ key, label: display.label, values });
   }
 
-  return CATEGORY_ORDER
-    .map((cat) => ({
-      category: cat,
-      features: categoryMap.get(cat) ?? [],
-    }))
-    .filter((c) => c.features.length > 0);
+  return CATEGORY_ORDER.map((cat) => ({
+    category: cat,
+    features: categoryMap.get(cat) ?? [],
+  })).filter((c) => c.features.length > 0);
 }
 
 /* ────────────────────────────────────────────────────────────── */
@@ -552,7 +574,9 @@ export default function PricingPage() {
       if (c !== "US") {
         try {
           const res = await subscriptionPlansApi.getAvailable("US");
-          const data = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+          const data = Array.isArray(res.data)
+            ? res.data
+            : (res.data?.data ?? []);
           setPlans(data);
         } catch {
           setPlans([]);
@@ -578,7 +602,10 @@ export default function PricingPage() {
     [sortedPlans],
   );
 
-  const cur = plans[0]?.currency ?? (COUNTRIES[country]?.defaultCurrency as CurrencyCode) ?? "USD";
+  const cur =
+    plans[0]?.currency ??
+    (COUNTRIES[country]?.defaultCurrency as CurrencyCode) ??
+    "USD";
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -679,7 +706,10 @@ export default function PricingPage() {
           </div>
         ) : sortedPlans.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground">
-            <p>No plans available for this region yet. Please check back soon or try another country.</p>
+            <p>
+              No plans available for this region yet. Please check back soon or
+              try another country.
+            </p>
           </div>
         ) : (
           <div
@@ -703,7 +733,13 @@ export default function PricingPage() {
               const badge = plan.badgeText ?? meta.badge;
               const hasHighlight = !!badge || meta.highlight;
               const btnColor = plan.buttonColor;
-              const btnStyle = btnColor ? { backgroundColor: btnColor, borderColor: btnColor, color: "#fff" } : undefined;
+              const btnStyle = btnColor
+                ? {
+                    backgroundColor: btnColor,
+                    borderColor: btnColor,
+                    color: "#fff",
+                  }
+                : undefined;
               const btnClass = btnColor ? "hover:opacity-90" : meta.ctaClass;
 
               return (
@@ -795,7 +831,9 @@ export default function PricingPage() {
                       plan.extraCreditPrice > 0 &&
                       plan.features?.purchasableAiCredits && (
                         <p className="mt-3 text-xs text-center text-gray-500 dark:text-gray-400">
-                          AI credits from {formatPrice(plan.extraCreditPrice, plan.currency)}/credit
+                          AI credits from{" "}
+                          {formatPrice(plan.extraCreditPrice, plan.currency)}
+                          /credit
                         </p>
                       )}
 
