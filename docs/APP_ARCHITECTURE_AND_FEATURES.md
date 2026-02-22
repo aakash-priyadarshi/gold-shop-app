@@ -1,6 +1,6 @@
 # Gold Shop App — Architecture & Feature Inventory
 
-_Last updated: 2026-02-23_
+_Last updated: 2026-02-24_
 
 This document is a code-informed overview of the system architecture and the major product features implemented in this repository.
 
@@ -389,12 +389,14 @@ Instead of logging suspended users out:
 - Admin can create/update/disable plans anytime; all pricing, commission rates, features, and AI credit allocations are fully configurable per country.
 
 **Seller subscription lifecycle**:
-1. Seller picks a plan from the Billing page → `POST /seller-subscriptions/subscribe`.
-2. FREE plans activate immediately. Paid plans create a Stripe payment intent → seller completes payment.
-3. Stripe webhook (`payment_intent.succeeded`) activates the subscription.
-4. Commission rate is automatically read from the seller's active plan (fallback to platform default 5%).
-5. At period end: auto-renew creates new payment, or subscription expires if `autoRenew=false`.
-6. Admin can override any seller's plan, manually activate subscriptions, or view MRR stats.
+1. When a seller creates a shop (registration, OAuth setup, or manual creation), the FREE plan is **automatically activated** — no manual subscription required.
+2. Seller can upgrade from the Billing page → `POST /seller-subscriptions/subscribe`.
+3. FREE plans activate immediately. Paid plans create a Stripe payment intent → seller completes payment.
+4. Stripe webhook (`payment_intent.succeeded`) activates the subscription.
+5. Commission rate is automatically read from the seller's active plan (fallback to platform default 5%).
+6. At period end: auto-renew creates new payment, or subscription expires if `autoRenew=false`.
+7. Admin can override any seller's plan, manually activate subscriptions, or view MRR stats.
+8. Available Plans tab shows which plan is currently active (highlighted card with "Current Plan" badge).
 
 **AI credit system** (server-authoritative):
 - Credits granted monthly via Bull cron job. Rollover cap enforced — excess credits expire.
@@ -425,7 +427,7 @@ All enterprise endpoints are protected by `EnterpriseGuard` — verifies the sel
 
 **Staff accounts & roles**:
 1. Seller invites staff by email with a role and optional branch assignment.
-2. Roles: `MANAGER`, `CASHIER`, `SALES_ASSOCIATE`, `INVENTORY_CLERK`, `ACCOUNTANT`, `VIEWER`.
+2. Roles: `MANAGER`, `INVENTORY`, `CASHIER`, `VIEWER`, `AUDITOR`.
 3. Permissions stored as JSON — granular flags per module (inventory, orders, pricing, reports, etc.).
 4. Invited user accepts via token → `PENDING` → `ACCEPTED`. Seller can revoke access.
 
@@ -795,6 +797,30 @@ Worker (`cloudflare-worker`):
 
 ## 9) Changelog
 
+### 2026-02-24 — Auto free plan, subscription UX, security fix
+
+**Auto-activate FREE plan on shop creation**:
+- When a seller creates a shop (via registration, OAuth setup, or manual creation), the FREE subscription plan for their country is automatically activated. No manual subscription step required.
+- `SellerSubscriptionsService.autoActivateFreePlan()` method — finds FREE plan by country, creates ACTIVE subscription, silently fails if no plan exists (doesn't block shop creation).
+- Wired into: `AuthService.register()`, `ShopsService.setupShopForOAuthUser()`, `ShopsService.create()`.
+- Module dependency: `SubscriptionPlansModule` imported into `ShopsModule` and `AuthModule`.
+
+**Available Plans tab — current plan indicator**:
+- Available Plans tab now fetches the current subscription alongside plans.
+- Active plan card highlighted with primary border + ring, "Current" badge, and disabled "Current Plan" button.
+- After subscribing, tab auto-refreshes to show updated state.
+
+**Security fix — cancel subscription ownership check**:
+- `POST /seller-subscriptions/:id/cancel` now verifies the subscription belongs to the caller's shop via JWT `shopId`.
+- Previously, any authenticated SHOPKEEPER could cancel any subscription by ID (IDOR vulnerability).
+
+**Cleanup**:
+- Deleted 4 one-time manual migration SQL files that were already applied to production: `prisma/apply_pending_migrations.sql`, `prisma/fix_login_urgent.sql`, `prisma/migrations/002_enterprise_features.sql`, `apps/api/prisma/_mark_applied.sql`.
+
+**Doc corrections**:
+- Fixed `StaffRole` enum values: `MANAGER, INVENTORY, CASHIER, VIEWER, AUDITOR` (was incorrectly listed as `MANAGER, CASHIER, SALES_ASSOCIATE, INVENTORY_CLERK, ACCOUNTANT, VIEWER`).
+- Fixed model name in changelog: `AiCreditLedger` (was incorrectly listed as `AiCreditBalance / AiCreditTransaction`).
+
 ### 2026-02-23 — Enterprise features + Vercel Speed Insights
 
 **New backend module** — `EnterpriseModule` (9 services, 9 controllers, 1 guard)
@@ -836,7 +862,7 @@ Worker (`cloudflare-worker`):
 **Schema additions** — five new models:
 - `SubscriptionPlan` — tier/country/currency/price/features/limits; fully admin-configurable
 - `SellerSubscription` — links Shop→Plan with lifecycle (`ACTIVE`, `PAST_DUE`, `CANCELLED`, `EXPIRED`)
-- `AiCreditBalance` / `AiCreditTransaction` — credit wallet with ledger tracking per user
+- `AiCreditLedger` — immutable credit transaction ledger per user
 - `PaymentGatewayConfig` — multi-gateway support (Stripe, Razorpay, eSewa, FonePay) per country
 
 **Multi-country, multi-currency support** — plans seeded for 6 regions:

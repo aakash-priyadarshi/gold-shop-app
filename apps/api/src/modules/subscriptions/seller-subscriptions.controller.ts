@@ -84,10 +84,12 @@ export class SellerSubscriptionsController {
     @Param("id") subscriptionId: string,
     @Body() dto: CancelSubscriptionDto,
     @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") shopId: string,
   ) {
+    // Verify the subscription belongs to the user's shop
     const result = await this.subscriptionService.cancelSubscription(
       subscriptionId,
-      { reason: dto.reason, immediate: dto.immediate },
+      { reason: dto.reason, immediate: dto.immediate, shopId },
     );
 
     await this.auditService.log({

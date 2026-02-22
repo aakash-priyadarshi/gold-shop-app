@@ -18,6 +18,7 @@ import { MailService } from "../mail/mail.service";
 import { LoginDto } from "./dto/login.dto";
 import { RegisterDto } from "./dto/register.dto";
 import { OtpService } from "./otp.service";
+import { SellerSubscriptionsService } from "../subscriptions/seller-subscriptions.service";
 
 export interface JwtPayload {
   sub: string;
@@ -66,6 +67,7 @@ export class AuthService {
     private mailService: MailService,
     private otpService: OtpService,
     private redisService: RedisService,
+    private sellerSubscriptionsService: SellerSubscriptionsService,
   ) {}
 
   /**
@@ -231,6 +233,14 @@ export class AuthService {
     await this.redisService.invalidateEmailCache(dto.email);
     if (dto.phone) {
       await this.redisService.invalidatePhoneCache(dto.phone);
+    }
+
+    // Auto-activate FREE subscription plan for new shopkeeper shops
+    if (result.shop) {
+      await this.sellerSubscriptionsService.autoActivateFreePlan(
+        result.shop.id,
+        dto.shop?.country || "NP",
+      );
     }
 
     this.logger.log(`New ${dto.role} registered: ${dto.email}`);
