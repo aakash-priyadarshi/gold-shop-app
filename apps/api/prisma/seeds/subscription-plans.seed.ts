@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 
 /**
  * Seed subscription plans for every market region.
- * Creates FREE, PRO, and ENTERPRISE tiers per country with local-currency pricing.
+ * Creates FREE, PRO, and PRO_PLUS (Pro+) tiers per country with local-currency pricing.
  * All plans are fully configurable from the Admin Billing dashboard at runtime.
  *
  * Run: npx ts-node prisma/seeds/subscription-plans.seed.ts
@@ -47,7 +47,7 @@ async function main() {
     EU: { monthly: 29, annual: 290, extraCredit: 1.5 },
   };
 
-  const ENTERPRISE_PRICING: Record<
+  const PRO_PLUS_PRICING: Record<
     string,
     { monthly: number; annual: number; extraCredit: number }
   > = {
@@ -130,16 +130,16 @@ async function main() {
     console.log(`  ✅ PRO plan (${region}): ${plan.id}`);
   }
 
-  // ─── ENTERPRISE plans for every country ────────
+  // ─── PRO+ plans for every country ──────────────
 
   for (const region of REGIONS) {
-    const e = ENTERPRISE_PRICING[region];
+    const e = PRO_PLUS_PRICING[region];
     const plan = await prisma.subscriptionPlan.upsert({
-      where: { name_country: { name: "ENTERPRISE", country: region } },
+      where: { name_country: { name: "PRO_PLUS", country: region } },
       update: {},
       create: {
-        name: "ENTERPRISE",
-        displayName: `Enterprise (${COUNTRY_NAMES[region]})`,
+        name: "PRO_PLUS",
+        displayName: `Pro+ (${COUNTRY_NAMES[region]})`,
         description: `Unlimited catalogue, lowest commission, generous AI credits, dedicated support, API access, and white-label options.`,
         country: region,
         currency: CURRENCY_MAP[region] as any,
@@ -178,11 +178,11 @@ async function main() {
         sortOrder: 2,
       },
     });
-    console.log(`  ✅ ENTERPRISE plan (${region}): ${plan.id}`);
+    console.log(`  ✅ PRO_PLUS plan (${region}): ${plan.id}`);
   }
 
   console.log(
-    "\n✨ Subscription plans seeded successfully! (18 plans: 6 FREE + 6 PRO + 6 ENTERPRISE)",
+    "\n✨ Subscription plans seeded successfully! (18 plans: 6 FREE + 6 PRO + 6 PRO_PLUS)",
   );
 }
 

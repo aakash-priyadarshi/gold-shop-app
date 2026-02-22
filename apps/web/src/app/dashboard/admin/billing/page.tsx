@@ -14,10 +14,14 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -34,12 +38,18 @@ import {
   subscriptionPlansApi,
 } from "@/lib/api";
 import {
+  AlertTriangle,
+  Calendar,
   Crown,
   DollarSign,
+  Loader2,
+  Pencil,
   Plus,
   Sparkles,
   ToggleLeft,
   ToggleRight,
+  Trash2,
+  UserPlus,
   Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -144,6 +154,82 @@ function PlansTab() {
   const [loading, setLoading] = useState(true);
   const [countryFilter, setCountryFilter] = useState<string>("");
   const [showCreate, setShowCreate] = useState(false);
+  const [editPlan, setEditPlan] = useState<Plan | null>(null);
+  const [editForm, setEditForm] = useState<Record<string, unknown>>({});
+  const [deletePlan, setDeletePlan] = useState<Plan | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const openEditPlan = (plan: Plan) => {
+    setEditPlan(plan);
+    setEditForm({
+      displayName: plan.displayName,
+      description: plan.description || "",
+      monthlyPrice: plan.monthlyPrice,
+      annualPrice: plan.annualPrice ?? "",
+      maxProducts: plan.maxProducts ?? "",
+      maxInvoicesPerMonth: plan.maxInvoicesPerMonth ?? "",
+      maxCatalogues: plan.maxCatalogues ?? "",
+      catalogueLimit: plan.catalogueLimit ?? "",
+      maxOrdersPerMonth: plan.maxOrdersPerMonth ?? "",
+      commissionPercent: plan.commissionPercent,
+      includesAi: plan.includesAi,
+      monthlyAiCredits: plan.monthlyAiCredits,
+      rolloverCap: plan.rolloverCap,
+      extraCreditPrice: plan.extraCreditPrice,
+      sortOrder: plan.sortOrder,
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editPlan) return;
+    setActionLoading(true);
+    try {
+      const payload: Record<string, unknown> = {};
+      const f = editForm;
+      const p = editPlan;
+      if (f.displayName !== p.displayName) payload.displayName = f.displayName;
+      if (f.description !== (p.description || "")) payload.description = f.description;
+      if (Number(f.monthlyPrice) !== p.monthlyPrice) payload.monthlyPrice = Number(f.monthlyPrice);
+      if (f.annualPrice !== "" && Number(f.annualPrice) !== (p.annualPrice ?? 0)) payload.annualPrice = Number(f.annualPrice);
+      if (f.maxProducts !== "" && Number(f.maxProducts) !== (p.maxProducts ?? 0)) payload.maxProducts = Number(f.maxProducts);
+      if (f.maxInvoicesPerMonth !== "" && Number(f.maxInvoicesPerMonth) !== (p.maxInvoicesPerMonth ?? 0)) payload.maxInvoicesPerMonth = Number(f.maxInvoicesPerMonth);
+      if (f.maxCatalogues !== "" && Number(f.maxCatalogues) !== (p.maxCatalogues ?? 0)) payload.maxCatalogues = Number(f.maxCatalogues);
+      if (f.maxOrdersPerMonth !== "" && Number(f.maxOrdersPerMonth) !== (p.maxOrdersPerMonth ?? 0)) payload.maxOrdersPerMonth = Number(f.maxOrdersPerMonth);
+      if (Number(f.commissionPercent) !== p.commissionPercent) payload.commissionPercent = Number(f.commissionPercent);
+      if (f.includesAi !== p.includesAi) payload.includesAi = f.includesAi;
+      if (Number(f.monthlyAiCredits) !== p.monthlyAiCredits) payload.monthlyAiCredits = Number(f.monthlyAiCredits);
+      if (Number(f.sortOrder) !== p.sortOrder) payload.sortOrder = Number(f.sortOrder);
+
+      if (Object.keys(payload).length === 0) {
+        toast({ title: "Info", description: "No changes detected." });
+        setActionLoading(false);
+        return;
+      }
+      await subscriptionPlansApi.update(p.id, payload);
+      toast({ title: "Success", description: `Plan "${p.displayName}" updated.` });
+      setEditPlan(null);
+      fetchPlans();
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.response?.data?.message || "Failed to update plan", variant: "destructive" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deletePlan) return;
+    setActionLoading(true);
+    try {
+      await subscriptionPlansApi.deletePlan(deletePlan.id);
+      toast({ title: "Success", description: `Plan "${deletePlan.displayName}" deleted.` });
+      setDeletePlan(null);
+      fetchPlans();
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.response?.data?.message || "Failed to delete plan", variant: "destructive" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const fetchPlans = async () => {
     try {
@@ -317,6 +403,14 @@ function PlansTab() {
                   <Button
                     size="sm"
                     variant="outline"
+                    onClick={() => openEditPlan(plan)}
+                  >
+                    <Pencil className="mr-1 h-3 w-3" />
+                    Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => handleToggle(plan)}
                   >
                     {plan.isActive ? (
@@ -326,17 +420,125 @@ function PlansTab() {
                     )}
                     {plan.isActive ? "Disable" : "Enable"}
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-red-600 hover:text-red-700"
+                    onClick={() => setDeletePlan(plan)}
+                  >
+                    <Trash2 className="mr-1 h-3 w-3" />
+                    Delete
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      {/* Edit Plan Dialog */}
+      <Dialog open={!!editPlan} onOpenChange={(open) => !open && setEditPlan(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5 text-blue-500" />
+              Edit Plan: {editPlan?.displayName}
+            </DialogTitle>
+            <DialogDescription>
+              Update plan details. Changes apply immediately.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="col-span-2">
+              <Label>Display Name</Label>
+              <Input value={(editForm.displayName as string) || ""} onChange={(e) => setEditForm({ ...editForm, displayName: e.target.value })} />
+            </div>
+            <div className="col-span-2">
+              <Label>Description</Label>
+              <Input value={(editForm.description as string) || ""} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
+            </div>
+            <div>
+              <Label>Monthly Price ({editPlan?.currency})</Label>
+              <Input type="number" min={0} step="0.01" value={editForm.monthlyPrice as number ?? ""} onChange={(e) => setEditForm({ ...editForm, monthlyPrice: e.target.value })} />
+            </div>
+            <div>
+              <Label>Annual Price ({editPlan?.currency})</Label>
+              <Input type="number" min={0} step="0.01" value={editForm.annualPrice as number ?? ""} onChange={(e) => setEditForm({ ...editForm, annualPrice: e.target.value })} placeholder="Leave empty for none" />
+            </div>
+            <div>
+              <Label>Commission %</Label>
+              <Input type="number" min={0} max={100} step="0.1" value={editForm.commissionPercent as number ?? ""} onChange={(e) => setEditForm({ ...editForm, commissionPercent: e.target.value })} />
+            </div>
+            <div>
+              <Label>Sort Order</Label>
+              <Input type="number" min={0} value={editForm.sortOrder as number ?? ""} onChange={(e) => setEditForm({ ...editForm, sortOrder: e.target.value })} />
+            </div>
+            <div className="col-span-2">
+              <p className="text-sm font-medium text-muted-foreground mb-2">Resource Limits (empty = unlimited)</p>
+            </div>
+            <div>
+              <Label>Max Products</Label>
+              <Input type="number" min={0} value={editForm.maxProducts as number ?? ""} onChange={(e) => setEditForm({ ...editForm, maxProducts: e.target.value })} placeholder="Unlimited" />
+            </div>
+            <div>
+              <Label>Max Invoices/Month</Label>
+              <Input type="number" min={0} value={editForm.maxInvoicesPerMonth as number ?? ""} onChange={(e) => setEditForm({ ...editForm, maxInvoicesPerMonth: e.target.value })} placeholder="Unlimited" />
+            </div>
+            <div>
+              <Label>Max Catalogues</Label>
+              <Input type="number" min={0} value={editForm.maxCatalogues as number ?? ""} onChange={(e) => setEditForm({ ...editForm, maxCatalogues: e.target.value })} placeholder="Unlimited" />
+            </div>
+            <div>
+              <Label>Max Orders/Month</Label>
+              <Input type="number" min={0} value={editForm.maxOrdersPerMonth as number ?? ""} onChange={(e) => setEditForm({ ...editForm, maxOrdersPerMonth: e.target.value })} placeholder="Unlimited" />
+            </div>
+            <div className="col-span-2">
+              <p className="text-sm font-medium text-muted-foreground mb-2">AI Settings</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <input type="checkbox" checked={!!editForm.includesAi} onChange={(e) => setEditForm({ ...editForm, includesAi: e.target.checked })} className="h-4 w-4 rounded border-gray-300" />
+              <Label>Includes AI Features</Label>
+            </div>
+            <div>
+              <Label>Monthly AI Credits</Label>
+              <Input type="number" min={0} value={editForm.monthlyAiCredits as number ?? ""} onChange={(e) => setEditForm({ ...editForm, monthlyAiCredits: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditPlan(null)}>Cancel</Button>
+            <Button onClick={handleSaveEdit} disabled={actionLoading}>
+              {actionLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Pencil className="h-4 w-4 mr-2" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Plan Dialog */}
+      <Dialog open={!!deletePlan} onOpenChange={(open) => !open && setDeletePlan(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Delete Plan
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently delete <strong>{deletePlan?.displayName}</strong>?
+              This will only succeed if there are <strong>zero</strong> active subscribers.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletePlan(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={actionLoading}>
+              {actionLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Delete Plan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-
-// ─── Create Plan Form ────────────────────────────
 
 function CreatePlanForm({ onSuccess }: { onSuccess: () => void }) {
   const [form, setForm] = useState({
@@ -633,32 +835,122 @@ function CreatePlanForm({ onSuccess }: { onSuccess: () => void }) {
 
 function SubscriptionsTab() {
   const [subs, setSubs] = useState<Subscription[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [assignDialog, setAssignDialog] = useState(false);
+  const [assignForm, setAssignForm] = useState({
+    shopId: "",
+    planId: "",
+    durationMonths: 1,
+    reason: "",
+  });
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [subsRes, statsRes, plansRes] = await Promise.all([
+        sellerSubscriptionsApi.listAll({ limit: 100 }),
+        sellerSubscriptionsApi.getStats(),
+        subscriptionPlansApi.list(),
+      ]);
+      const subsData = subsRes.data;
+      setSubs(Array.isArray(subsData) ? subsData : (subsData?.data ?? []));
+      setStats(statsRes.data);
+      setPlans(
+        Array.isArray(plansRes.data)
+          ? plansRes.data
+          : (plansRes.data?.data ?? []),
+      );
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to load subscriptions",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetch() {
-      try {
-        setLoading(true);
-        const [subsRes, statsRes] = await Promise.all([
-          sellerSubscriptionsApi.listAll({ limit: 50 }),
-          sellerSubscriptionsApi.getStats(),
-        ]);
-        const subsData = subsRes.data;
-        setSubs(Array.isArray(subsData) ? subsData : (subsData?.data ?? []));
-        setStats(statsRes.data);
-      } catch {
-        toast({
-          title: "Error",
-          description: "Failed to load subscriptions",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetch();
+    fetchData();
   }, []);
+
+  const handleAssignPlan = async () => {
+    if (!assignForm.shopId || !assignForm.planId) {
+      toast({
+        title: "Error",
+        description: "Please select a shop and a plan",
+        variant: "destructive",
+      });
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const now = new Date();
+      const periodEnd = new Date(now);
+      periodEnd.setMonth(periodEnd.getMonth() + assignForm.durationMonths);
+
+      await sellerSubscriptionsApi.adminOverride({
+        shopId: assignForm.shopId,
+        planId: assignForm.planId,
+        periodEnd: periodEnd.toISOString(),
+        reason:
+          assignForm.reason ||
+          `Admin assigned for ${assignForm.durationMonths} month(s)`,
+      });
+      toast({
+        title: "Success",
+        description: `Plan assigned for ${assignForm.durationMonths} month(s).`,
+      });
+      setAssignDialog(false);
+      setAssignForm({ shopId: "", planId: "", durationMonths: 1, reason: "" });
+      fetchData();
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description:
+          err?.response?.data?.message || "Failed to assign plan",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleActivate = async (subId: string) => {
+    try {
+      await sellerSubscriptionsApi.adminActivate(subId);
+      toast({ title: "Success", description: "Subscription activated." });
+      fetchData();
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err?.response?.data?.message || "Failed to activate",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Get unique shops from subscriptions for the assign dialog
+  const uniqueShops = Array.from(
+    new Map(
+      subs.map((s) => [
+        s.shopId,
+        {
+          id: s.shopId,
+          name:
+            (s.shop as any)?.shopName ||
+            (s.shop as any)?.businessName ||
+            s.shopId,
+          email:
+            (s.shop as any)?.user?.email || (s.shop as any)?.owner?.email || "",
+        },
+      ]),
+    ).values(),
+  );
 
   return (
     <div className="space-y-4">
@@ -712,6 +1004,15 @@ function SubscriptionsTab() {
         </div>
       )}
 
+      {/* Assign Plan Button */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">All Subscriptions</h3>
+        <Button onClick={() => setAssignDialog(true)}>
+          <UserPlus className="mr-2 h-4 w-4" />
+          Assign Plan to Shop
+        </Button>
+      </div>
+
       {/* Subscription list */}
       {loading ? (
         <div className="py-8 text-center text-muted-foreground">Loading...</div>
@@ -731,6 +1032,7 @@ function SubscriptionsTab() {
                 <th className="px-4 py-3 text-left font-medium">Status</th>
                 <th className="px-4 py-3 text-left font-medium">Period End</th>
                 <th className="px-4 py-3 text-left font-medium">Auto Renew</th>
+                <th className="px-4 py-3 text-right font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -767,12 +1069,162 @@ function SubscriptionsTab() {
                     {new Date(sub.currentPeriodEnd).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3">{sub.autoRenew ? "Yes" : "No"}</td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {sub.status !== "ACTIVE" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleActivate(sub.id)}
+                        >
+                          Activate
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setAssignForm({
+                            shopId: sub.shopId,
+                            planId: "",
+                            durationMonths: 1,
+                            reason: "",
+                          });
+                          setAssignDialog(true);
+                        }}
+                      >
+                        <Calendar className="mr-1 h-3 w-3" />
+                        Change Plan
+                      </Button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+
+      {/* Assign Plan Dialog */}
+      <Dialog open={assignDialog} onOpenChange={(open) => !open && setAssignDialog(false)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-blue-500" />
+              Assign Plan to Shop
+            </DialogTitle>
+            <DialogDescription>
+              Force-assign a subscription plan to a shop for 1-12 months. The current active subscription will be cancelled.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>Shop</Label>
+              {assignForm.shopId ? (
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="outline" className="px-3 py-1.5">
+                    {uniqueShops.find((s) => s.id === assignForm.shopId)?.name || assignForm.shopId}
+                  </Badge>
+                  <Button size="sm" variant="ghost" onClick={() => setAssignForm({ ...assignForm, shopId: "" })}>
+                    Change
+                  </Button>
+                </div>
+              ) : (
+                <div className="mt-1">
+                  <Input
+                    placeholder="Paste Shop ID or select from table..."
+                    value={assignForm.shopId}
+                    onChange={(e) => setAssignForm({ ...assignForm, shopId: e.target.value })}
+                  />
+                  {uniqueShops.length > 0 && (
+                    <div className="mt-2 max-h-32 overflow-y-auto rounded border p-1">
+                      {uniqueShops.map((shop) => (
+                        <button
+                          key={shop.id}
+                          className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-muted/50"
+                          onClick={() => setAssignForm({ ...assignForm, shopId: shop.id })}
+                        >
+                          <span className="font-medium">{shop.name}</span>
+                          {shop.email && (
+                            <span className="ml-2 text-xs text-muted-foreground">{shop.email}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div>
+              <Label>Plan</Label>
+              <Select
+                value={assignForm.planId}
+                onValueChange={(v) => setAssignForm({ ...assignForm, planId: v })}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select a plan..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {plans
+                    .filter((p) => p.isActive)
+                    .map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.displayName} ({p.country}) — {p.currency} {p.monthlyPrice}/mo
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Duration (months)</Label>
+              <Select
+                value={String(assignForm.durationMonths)}
+                onValueChange={(v) =>
+                  setAssignForm({ ...assignForm, durationMonths: Number(v) })
+                }
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                    <SelectItem key={m} value={String(m)}>
+                      {m} month{m > 1 ? "s" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Reason (optional)</Label>
+              <Input
+                placeholder="e.g., Promotional offer, support case..."
+                value={assignForm.reason}
+                onChange={(e) =>
+                  setAssignForm({ ...assignForm, reason: e.target.value })
+                }
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAssignPlan}
+              disabled={actionLoading || !assignForm.shopId || !assignForm.planId}
+            >
+              {actionLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <UserPlus className="h-4 w-4 mr-2" />
+              )}
+              Assign Plan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
