@@ -163,16 +163,36 @@ export default function AdminBillingPage() {
 // ═══════════════════════════════════════════════════
 
 /** All known feature keys — used for checkboxes in the edit dialog */
-const ALL_FEATURE_KEYS: { key: string; label: string; category: string; enforced: boolean }[] = [
-  { key: "marketplace", label: "Marketplace listing", category: "Marketplace", enforced: false },
+const ALL_FEATURE_KEYS: {
+  key: string;
+  label: string;
+  category: string;
+  enforced: boolean;
+}[] = [
+  {
+    key: "marketplace",
+    label: "Marketplace listing",
+    category: "Marketplace",
+    enforced: false,
+  },
   {
     key: "priorityListing",
     label: "Priority listing",
     category: "Marketplace",
     enforced: false,
   },
-  { key: "bulkUpload", label: "Bulk product upload", category: "Marketplace", enforced: true },
-  { key: "crm", label: "CRM suite", category: "CRM & Business", enforced: true },
+  {
+    key: "bulkUpload",
+    label: "Bulk product upload",
+    category: "Marketplace",
+    enforced: true,
+  },
+  {
+    key: "crm",
+    label: "CRM suite",
+    category: "CRM & Business",
+    enforced: true,
+  },
   {
     key: "invoicing",
     label: "Invoicing & billing",
@@ -197,7 +217,12 @@ const ALL_FEATURE_KEYS: { key: string; label: string; category: string; enforced
     category: "CRM & Business",
     enforced: true,
   },
-  { key: "staffAccounts", label: "Staff accounts", category: "CRM & Business", enforced: true },
+  {
+    key: "staffAccounts",
+    label: "Staff accounts",
+    category: "CRM & Business",
+    enforced: true,
+  },
   {
     key: "multiBranch",
     label: "Multi-branch support",
@@ -276,7 +301,12 @@ const ALL_FEATURE_KEYS: { key: string; label: string; category: string; enforced
     category: "Support & Integration",
     enforced: false,
   },
-  { key: "apiAccess", label: "API access", category: "Support & Integration", enforced: true },
+  {
+    key: "apiAccess",
+    label: "API access",
+    category: "Support & Integration",
+    enforced: true,
+  },
   {
     key: "webhookSubscriptions",
     label: "Webhook subscriptions",
@@ -875,8 +905,18 @@ function PlansTab() {
                 Plan Features
               </p>
               <p className="text-xs text-muted-foreground mb-3">
-                <span className="inline-flex items-center gap-1"><span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-1 py-0.5 rounded text-[10px] font-medium">Enforced</span> = backend blocks access when disabled.</span>{" "}
-                <span className="inline-flex items-center gap-1"><span className="bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500 px-1 py-0.5 rounded text-[10px] font-medium">Display only</span> = shown on pricing page only.</span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-1 py-0.5 rounded text-[10px] font-medium">
+                    Enforced
+                  </span>{" "}
+                  = backend blocks access when disabled.
+                </span>{" "}
+                <span className="inline-flex items-center gap-1">
+                  <span className="bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500 px-1 py-0.5 rounded text-[10px] font-medium">
+                    Display only
+                  </span>{" "}
+                  = shown on pricing page only.
+                </span>
               </p>
               <div className="space-y-4">
                 {FEATURE_CATEGORIES.map((cat) => {

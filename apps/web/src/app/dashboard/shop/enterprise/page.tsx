@@ -2,6 +2,7 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { FeatureGate } from "@/components/FeatureGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
+import { useFeatures } from "@/hooks/useFeatures";
 import api from "@/lib/api";
 import {
   Building2,
@@ -104,6 +106,17 @@ interface Forecast {
   recommendation: string | null;
 }
 
+/** Maps each tab key to the backend feature key that gates it */
+const TAB_FEATURE_MAP: Record<string, string> = {
+  branches: "multiBranch",
+  staff: "staffAccounts",
+  "api-keys": "apiAccess",
+  webhooks: "webhookSubscriptions",
+  branding: "customBranding",
+  repricing: "aiPriceOptimization",
+  forecasts: "demandForecasting",
+};
+
 // ─── Main Page ───────────────────────────────────
 
 export default function EnterprisePage() {
@@ -117,6 +130,7 @@ export default function EnterprisePage() {
 }
 
 function EnterpriseContent() {
+  const { hasFeature, planName, loading: featuresLoading } = useFeatures();
   const [activeTab, setActiveTab] = useState("branches");
   const [branches, setBranches] = useState<Branch[]>([]);
   const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -128,6 +142,12 @@ function EnterpriseContent() {
   const [loading, setLoading] = useState(false);
 
   const loadData = useCallback(async (tab: string) => {
+    // Skip API call if the feature is disabled — FeatureGate will show upgrade prompt
+    const featureKey = TAB_FEATURE_MAP[tab];
+    if (featureKey && !hasFeature(featureKey)) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       switch (tab) {
@@ -176,11 +196,11 @@ function EnterpriseContent() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [hasFeature]);
 
   useEffect(() => {
-    loadData(activeTab);
-  }, [activeTab, loadData]);
+    if (!featuresLoading) loadData(activeTab);
+  }, [activeTab, loadData, featuresLoading]);
 
   return (
     <div className="space-y-6">
@@ -230,6 +250,7 @@ function EnterpriseContent() {
 
         {/* ─── Branches ──────────────────────── */}
         <TabsContent value="branches" className="space-y-4">
+          <FeatureGate feature="multiBranch" featureLabel="Multi-Branch Management" hasFeature={hasFeature} planName={planName} loading={featuresLoading}>
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold">Multi-Branch Management</h2>
             <Button size="sm">
@@ -279,10 +300,12 @@ function EnterpriseContent() {
               ))}
             </div>
           )}
+          </FeatureGate>
         </TabsContent>
 
         {/* ─── Staff ─────────────────────────── */}
         <TabsContent value="staff" className="space-y-4">
+          <FeatureGate feature="staffAccounts" featureLabel="Staff Accounts" hasFeature={hasFeature} planName={planName} loading={featuresLoading}>
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold">Staff Accounts</h2>
             <Button size="sm">
@@ -328,10 +351,12 @@ function EnterpriseContent() {
               ))}
             </div>
           )}
+          </FeatureGate>
         </TabsContent>
 
         {/* ─── API Keys ──────────────────────── */}
         <TabsContent value="api-keys" className="space-y-4">
+          <FeatureGate feature="apiAccess" featureLabel="API Access" hasFeature={hasFeature} planName={planName} loading={featuresLoading}>
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold">API Key Management</h2>
             <Button size="sm">
@@ -384,10 +409,12 @@ function EnterpriseContent() {
               ))}
             </div>
           )}
+          </FeatureGate>
         </TabsContent>
 
         {/* ─── Webhooks ──────────────────────── */}
         <TabsContent value="webhooks" className="space-y-4">
+          <FeatureGate feature="webhookSubscriptions" featureLabel="Webhook Subscriptions" hasFeature={hasFeature} planName={planName} loading={featuresLoading}>
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold">Webhook Subscriptions</h2>
             <Button size="sm">
@@ -438,10 +465,12 @@ function EnterpriseContent() {
               ))}
             </div>
           )}
+          </FeatureGate>
         </TabsContent>
 
         {/* ─── White-Label Branding ──────────── */}
         <TabsContent value="branding" className="space-y-4">
+          <FeatureGate feature="customBranding" featureLabel="White-Label Branding" hasFeature={hasFeature} planName={planName} loading={featuresLoading}>
           <h2 className="text-lg font-semibold">White-Label Branding</h2>
           <p className="text-sm text-muted-foreground">
             Customize your storefront appearance, use a custom domain, and
@@ -529,10 +558,12 @@ function EnterpriseContent() {
               </Card>
             </div>
           )}
+          </FeatureGate>
         </TabsContent>
 
         {/* ─── Automated Repricing ───────────── */}
         <TabsContent value="repricing" className="space-y-4">
+          <FeatureGate feature="aiPriceOptimization" featureLabel="Automated Repricing" hasFeature={hasFeature} planName={planName} loading={featuresLoading}>
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold">Automated Repricing Rules</h2>
             <div className="flex gap-2">
@@ -588,10 +619,12 @@ function EnterpriseContent() {
               ))}
             </div>
           )}
+          </FeatureGate>
         </TabsContent>
 
         {/* ─── AI Demand Forecasts ───────────── */}
         <TabsContent value="forecasts" className="space-y-4">
+          <FeatureGate feature="demandForecasting" featureLabel="AI Demand Forecasting" hasFeature={hasFeature} planName={planName} loading={featuresLoading}>
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold">AI Demand Forecasting</h2>
             <Button
@@ -655,6 +688,7 @@ function EnterpriseContent() {
               ))}
             </div>
           )}
+          </FeatureGate>
         </TabsContent>
       </Tabs>
     </div>

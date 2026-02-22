@@ -109,20 +109,33 @@ export class TicketsService {
         // Look up the user's active shop to check plan features
         const user = await this.prisma.user.findUnique({
           where: { id: userId },
-          select: { activeShopId: true, shops: { select: { id: true }, take: 1 } },
+          select: {
+            activeShopId: true,
+            shops: { select: { id: true }, take: 1 },
+          },
         });
 
         const shopId = user?.activeShopId || user?.shops?.[0]?.id;
 
         if (shopId) {
-          const hasDedicated = await this.planLimits.hasFeature(shopId, "dedicatedSupport");
-          const hasPriority = await this.planLimits.hasFeature(shopId, "prioritySupport");
+          const hasDedicated = await this.planLimits.hasFeature(
+            shopId,
+            "dedicatedSupport",
+          );
+          const hasPriority = await this.planLimits.hasFeature(
+            shopId,
+            "prioritySupport",
+          );
 
           if (hasDedicated && priority !== TicketPriority.URGENT) {
             priority = TicketPriority.URGENT;
             priorityBoostedByPlan = true;
             boostReason = "Dedicated Support plan feature";
-          } else if (hasPriority && priority !== TicketPriority.URGENT && priority !== TicketPriority.HIGH) {
+          } else if (
+            hasPriority &&
+            priority !== TicketPriority.URGENT &&
+            priority !== TicketPriority.HIGH
+          ) {
             priority = TicketPriority.HIGH;
             priorityBoostedByPlan = true;
             boostReason = "Priority Support plan feature";
@@ -130,7 +143,9 @@ export class TicketsService {
         }
       } catch (err) {
         // Don't fail ticket creation if plan lookup fails
-        this.logger.warn(`Plan-based priority lookup failed for user ${userId}: ${err.message}`);
+        this.logger.warn(
+          `Plan-based priority lookup failed for user ${userId}: ${err.message}`,
+        );
       }
     }
 

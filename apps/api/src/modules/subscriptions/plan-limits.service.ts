@@ -317,8 +317,7 @@ export class PlanLimitsService {
 
     if (features[featureKey] === true) return;
 
-    const label =
-      PlanLimitsService.FEATURE_LABELS[featureKey] ?? featureKey;
+    const label = PlanLimitsService.FEATURE_LABELS[featureKey] ?? featureKey;
     throw new FeatureNotEnabledException(
       featureKey,
       label,
