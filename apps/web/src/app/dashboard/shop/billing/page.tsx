@@ -117,8 +117,8 @@ function CurrentPlanTab() {
         sellerSubscriptionsApi.getMySubscription(),
         sellerSubscriptionsApi.getMyHistory(),
       ]);
-      setSub(subRes.data);
-      setHistory(histRes.data);
+      setSub(subRes.data || null);
+      setHistory(Array.isArray(histRes.data) ? histRes.data : []);
     } catch {
       // No active subscription or error
     } finally {
@@ -299,8 +299,8 @@ function AiCreditsTab() {
           aiCreditsApi.getBalance(),
           aiCreditsApi.getLedger({ limit: 30 }),
         ]);
-        setBalance(balRes.data.balance);
-        setLedger(ledRes.data);
+        setBalance(balRes.data?.balance ?? 0);
+        setLedger(Array.isArray(ledRes.data) ? ledRes.data : (ledRes.data?.data ?? []));
       } catch {
         toast({
           title: "Error",
@@ -413,7 +413,7 @@ function AvailablePlansTab() {
       try {
         // Fetch plans — pass empty country to get all
         const res = await subscriptionPlansApi.getAvailable("");
-        setPlans(res.data);
+        setPlans(Array.isArray(res.data) ? res.data : (res.data?.data ?? []));
       } catch {
         toast({
           title: "Error",

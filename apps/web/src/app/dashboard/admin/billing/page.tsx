@@ -147,7 +147,7 @@ function PlansTab() {
       const params: Record<string, string> = {};
       if (countryFilter) params.country = countryFilter;
       const res = await subscriptionPlansApi.list(params);
-      setPlans(res.data);
+      setPlans(Array.isArray(res.data) ? res.data : (res.data?.data ?? []));
     } catch {
       toast({
         title: "Error",
@@ -184,12 +184,12 @@ function PlansTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Select value={countryFilter} onValueChange={setCountryFilter}>
+          <Select value={countryFilter || "ALL"} onValueChange={(v) => setCountryFilter(v === "ALL" ? "" : v)}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="All countries" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All</SelectItem>
+              <SelectItem value="ALL">All</SelectItem>
               <SelectItem value="NP">Nepal</SelectItem>
               <SelectItem value="IN">India</SelectItem>
               <SelectItem value="AE">UAE</SelectItem>
@@ -519,7 +519,8 @@ function SubscriptionsTab() {
           sellerSubscriptionsApi.listAll({ limit: 50 }),
           sellerSubscriptionsApi.getStats(),
         ]);
-        setSubs(subsRes.data.data);
+        const subsData = subsRes.data;
+        setSubs(Array.isArray(subsData) ? subsData : (subsData?.data ?? []));
         setStats(statsRes.data);
       } catch {
         toast({
@@ -613,10 +614,10 @@ function SubscriptionsTab() {
                   <td className="px-4 py-3">
                     <div>
                       <p className="font-medium">
-                        {sub.shop?.businessName || sub.shopId}
+                        {(sub.shop as any)?.shopName || (sub.shop as any)?.businessName || sub.shopId}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {sub.shop?.owner?.email}
+                        {(sub.shop as any)?.user?.email || (sub.shop as any)?.owner?.email}
                       </p>
                     </div>
                   </td>
