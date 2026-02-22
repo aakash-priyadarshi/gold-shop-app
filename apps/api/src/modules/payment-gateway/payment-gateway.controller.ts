@@ -2,9 +2,12 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
+  RawBodyRequest,
+  Req,
   UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
@@ -15,11 +18,10 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { PaymentGatewayService } from "./payment-gateway.service";
+import { Request } from "express";
 
 @ApiTags("payment-gateway")
 @Controller("payment-gateway")
-@UseGuards(JwtAuthGuard, RolesGuard)
-@ApiBearerAuth()
 export class PaymentGatewayController {
   constructor(
     private readonly gatewayService: PaymentGatewayService,
@@ -29,21 +31,27 @@ export class PaymentGatewayController {
   // ─── Admin: Gateway Configuration ─────────────────
 
   @Get("configs")
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({ summary: "List all gateway configs (admin)" })
   async listConfigs() {
     return this.gatewayService.getGatewayConfigs();
   }
 
   @Get("configs/:id")
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({ summary: "Get gateway config by ID (admin)" })
   async getConfig(@Param("id") id: string) {
     return this.gatewayService.getGatewayConfig(id);
   }
 
   @Post("configs")
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({ summary: "Create/update gateway config (admin)" })
   async upsertConfig(
     @Body()
@@ -51,10 +59,13 @@ export class PaymentGatewayController {
       gatewayName: string;
       displayName: string;
       isEnabled: boolean;
+      isDefault?: boolean;
       supportedCountries: string[];
       supportedMethods: string[];
       priority: number;
       envKeyLabel: string;
+      envKeysRequired?: string[];
+      commissionInfo?: string;
       webhookEndpoint?: string;
     },
     @CurrentUser("id") adminId: string,
@@ -80,7 +91,9 @@ export class PaymentGatewayController {
   }
 
   @Patch("configs/:id/toggle")
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({ summary: "Enable/disable a gateway (admin)" })
   async toggleConfig(
     @Param("id") id: string,
@@ -103,5 +116,157 @@ export class PaymentGatewayController {
     });
 
     return config;
+  }
+
+  @Patch("configs/:id/set-default")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Set a gateway as the default fallback (admin)" })
+  async setDefault(
+    @Param("id") id: string,
+    @CurrentUser("id") adminId: string,
+  ) {
+    const config = await this.gatewayService.setDefaultGateway(id, adminId);
+
+    await this.auditService.log({
+      userId: adminId,
+      actorType: "ADMIN",
+      action: "SET_DEFAULT_PAYMENT_GATEWAY",
+      resourceType: "PaymentGatewayConfig",
+      resourceId: id,
+      newValue: { gatewayName: config.gatewayName, isDefault: true },
+    });
+
+    return config;
+  }
+
+  // ─── Health Check ─────────────────────────────────
+
+  @Get("health")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Check health of all enabled gateways (admin)" })
+  async checkAllHealth() {
+    return this.gatewayService.checkAllGatewaysHealth();
+  }
+
+  @Get("health/:gatewayName")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Check health of a specific gateway (admin)" })
+  async checkHealth(@Param("gatewayName") gatewayName: string) {
+    return this.gatewayService.checkGatewayHealth(gatewayName);
+  }
+
+  // ─── Unified Payment Initiation ───────────────────
+
+  @Post("initiate")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Initiate a payment (auto-routes to gateway)" })
+  async initiatePayment(
+    @Body()
+    body: {
+      type: "subscription" | "order" | "rfq_booking" | "ai_credits";
+      resourceId: string;
+      amount: number;
+      currency: string;
+      country: string;
+      metadata?: Record<string, string>;
+      preferredGateway?: string;
+    },
+    @CurrentUser("id") userId: string,
+  ) {
+    return this.gatewayService.initiatePayment({
+      ...body,
+      customerId: userId,
+    });
+  }
+
+  // ─── Webhooks (no auth — verified by signature) ───
+
+  @Post("webhooks/stripe")
+  @ApiOperation({ summary: "Stripe webhook handler" })
+  async stripeWebhook(
+    @Req() req: RawBodyRequest<Request>,
+    @Headers("stripe-signature") signature: string,
+  ) {
+    const rawBody = req.rawBody;
+    if (!rawBody) {
+      return { received: false, error: "Missing raw body" };
+    }
+
+    const event = await this.gatewayService.verifyStripeWebhook(
+      rawBody,
+      signature,
+    );
+
+    // Process event based on type
+    switch (event.type) {
+      case "payment_intent.succeeded":
+        this.handlePaymentSuccess(
+          "stripe",
+          event.data.object.id,
+          event.data.object.metadata,
+        );
+        break;
+      case "payment_intent.payment_failed":
+        this.handlePaymentFailure(
+          "stripe",
+          event.data.object.id,
+          event.data.object.last_payment_error?.message,
+        );
+        break;
+      default:
+        break;
+    }
+
+    return { received: true };
+  }
+
+  @Post("webhooks/phonepe")
+  @ApiOperation({ summary: "PhonePe webhook handler" })
+  async phonePeWebhook(@Body() body: any) {
+    const result = await this.gatewayService.verifyPhonePeWebhook(body);
+
+    if (result.status === "succeeded") {
+      this.handlePaymentSuccess("phonepe", result.transactionId, {});
+    } else {
+      this.handlePaymentFailure(
+        "phonepe",
+        result.transactionId,
+        result.status,
+      );
+    }
+
+    return { received: true };
+  }
+
+  // ─── Internal Handlers ────────────────────────────
+
+  private handlePaymentSuccess(
+    gateway: string,
+    paymentId: string,
+    metadata: Record<string, string>,
+  ) {
+    // TODO: Update order/subscription/RFQ status based on metadata.type + metadata.resourceId
+    // This will be wired to specific services via events or direct calls
+    console.log(
+      `[${gateway}] Payment succeeded: ${paymentId}`,
+      metadata,
+    );
+  }
+
+  private handlePaymentFailure(
+    gateway: string,
+    paymentId: string,
+    reason?: string,
+  ) {
+    console.log(
+      `[${gateway}] Payment failed: ${paymentId}, reason: ${reason}`,
+    );
   }
 }

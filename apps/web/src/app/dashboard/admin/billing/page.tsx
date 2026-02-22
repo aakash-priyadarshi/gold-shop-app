@@ -40,17 +40,26 @@ import {
 import {
   AlertTriangle,
   Calendar,
+  Check,
+  Copy,
   Crown,
   DollarSign,
+  Globe,
+  Heart,
   Loader2,
   Pencil,
   Plus,
+  RefreshCw,
+  Shield,
   Sparkles,
+  Star,
   ToggleLeft,
   ToggleRight,
   Trash2,
   UserPlus,
   Users,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -98,10 +107,13 @@ interface GatewayConfig {
   gatewayName: string;
   displayName: string;
   isEnabled: boolean;
+  isDefault: boolean;
   supportedCountries: string[];
   supportedMethods: string[];
   priority: number;
   envKeyLabel: string;
+  envKeysRequired?: string[];
+  commissionInfo?: string;
   webhookEndpoint?: string;
 }
 
@@ -1767,6 +1779,10 @@ function CreditsTab() {
 function GatewaysTab() {
   const [configs, setConfigs] = useState<GatewayConfig[]>([]);
   const [loading, setLoading] = useState(true);
+  const [healthMap, setHealthMap] = useState<
+    Record<string, { status: string; latencyMs?: number; message?: string }>
+  >({});
+  const [checkingHealth, setCheckingHealth] = useState(false);
 
   const fetchConfigs = async () => {
     try {
@@ -1784,9 +1800,38 @@ function GatewaysTab() {
     }
   };
 
+  const fetchHealth = async () => {
+    try {
+      setCheckingHealth(true);
+      const res = await paymentGatewayApi.healthCheckAll();
+      const map: typeof healthMap = {};
+      for (const h of res.data as any[]) {
+        map[h.gateway] = {
+          status: h.status,
+          latencyMs: h.latencyMs,
+          message: h.message,
+        };
+      }
+      setHealthMap(map);
+    } catch {
+      toast({
+        title: "Error",
+        description: "Health check failed",
+        variant: "destructive",
+      });
+    } finally {
+      setCheckingHealth(false);
+    }
+  };
+
   useEffect(() => {
     fetchConfigs();
   }, []);
+
+  // Auto-check health after configs load
+  useEffect(() => {
+    if (configs.length > 0) fetchHealth();
+  }, [configs.length]);
 
   const handleToggle = async (config: GatewayConfig) => {
     try {
@@ -1805,60 +1850,271 @@ function GatewaysTab() {
     }
   };
 
+  const handleSetDefault = async (config: GatewayConfig) => {
+    try {
+      await paymentGatewayApi.setDefault(config.id);
+      toast({
+        title: "Success",
+        description: `${config.displayName} set as default fallback gateway`,
+      });
+      fetchConfigs();
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to set default gateway",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: "Copied!", description: text });
+  };
+
+  const HealthDot = ({ gateway }: { gateway: string }) => {
+    const h = healthMap[gateway];
+    if (!h)
+      return (
+        <span className="inline-block h-2.5 w-2.5 rounded-full bg-gray-300" title="Not checked" />
+      );
+    const color =
+      h.status === "online"
+        ? "bg-green-500"
+        : h.status === "not_configured"
+          ? "bg-yellow-400"
+          : "bg-red-500";
+    return (
+      <span
+        className={`inline-block h-2.5 w-2.5 rounded-full ${color}`}
+        title={`${h.status}${h.latencyMs ? ` (${h.latencyMs}ms)` : ""}${h.message ? ` — ${h.message}` : ""}`}
+      />
+    );
+  };
+
+  const GATEWAY_ICONS: Record<string, string> = {
+    stripe: "💳",
+    phonepe: "📱",
+    esewa: "🟢",
+    khalti: "🟣",
+    razorpay: "🔷",
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Payment Gateways</h3>
-        <p className="text-sm text-muted-foreground">
-          Gateway secrets are stored as environment variables, never in the
-          database.
-        </p>
+        <div>
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Shield className="h-5 w-5" /> Payment Gateways
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Gateway secrets are stored as environment variables, never in the
+            database. Keys shown below are labels only.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={fetchHealth}
+          disabled={checkingHealth}
+        >
+          {checkingHealth ? (
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4 mr-1" />
+          )}
+          Check Health
+        </Button>
       </div>
 
+      {/* Health Summary Bar */}
+      {Object.keys(healthMap).length > 0 && (
+        <div className="flex gap-3 flex-wrap">
+          {configs.map((c) => {
+            const h = healthMap[c.gatewayName];
+            return (
+              <div
+                key={c.gatewayName}
+                className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-md bg-muted"
+              >
+                <HealthDot gateway={c.gatewayName} />
+                <span className="font-medium">{c.displayName}</span>
+                {h?.latencyMs && (
+                  <span className="text-muted-foreground">
+                    {h.latencyMs}ms
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {loading ? (
-        <div className="py-8 text-center text-muted-foreground">Loading...</div>
+        <div className="py-8 text-center text-muted-foreground">
+          <Loader2 className="h-6 w-6 mx-auto animate-spin mb-2" />
+          Loading gateways...
+        </div>
       ) : configs.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            No payment gateways configured yet.
+            No payment gateways configured yet. Run the gateway seed script to
+            populate.
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {configs.map((config) => (
-            <Card key={config.id}>
+            <Card
+              key={config.id}
+              className={`transition-all ${config.isEnabled ? "border-l-4 border-l-green-500" : "opacity-70"}`}
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <span>{GATEWAY_ICONS[config.gatewayName] || "🔌"}</span>
                     {config.displayName}
+                    <HealthDot gateway={config.gatewayName} />
                   </CardTitle>
-                  <Badge variant={config.isEnabled ? "default" : "secondary"}>
-                    {config.isEnabled ? "Enabled" : "Disabled"}
-                  </Badge>
+                  <div className="flex items-center gap-1">
+                    {config.isDefault && (
+                      <Badge
+                        variant="outline"
+                        className="text-xs border-amber-400 text-amber-600"
+                      >
+                        <Star className="h-3 w-3 mr-0.5" /> Default
+                      </Badge>
+                    )}
+                    <Badge
+                      variant={config.isEnabled ? "default" : "secondary"}
+                    >
+                      {config.isEnabled ? "Active" : "Disabled"}
+                    </Badge>
+                  </div>
                 </div>
-                <CardDescription>{config.gatewayName}</CardDescription>
+                <CardDescription className="flex items-center gap-2">
+                  <Globe className="h-3 w-3" />
+                  {config.supportedCountries.join(", ")}
+                  <span className="text-muted-foreground">•</span>
+                  Priority: {config.priority}
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Countries</span>
-                  <span>{config.supportedCountries.join(", ")}</span>
+              <CardContent className="space-y-3 text-sm">
+                {/* Commission Info */}
+                {config.commissionInfo && (
+                  <div className="flex items-start gap-2 p-2 rounded bg-muted/50">
+                    <DollarSign className="h-3.5 w-3.5 mt-0.5 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">
+                      {config.commissionInfo}
+                    </span>
+                  </div>
+                )}
+
+                {/* Payment Methods */}
+                <div className="flex flex-wrap gap-1">
+                  {config.supportedMethods.map((m) => (
+                    <Badge key={m} variant="outline" className="text-xs">
+                      {m}
+                    </Badge>
+                  ))}
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Priority</span>
-                  <span className="font-medium">{config.priority}</span>
+
+                {/* Env Keys Required */}
+                {config.envKeysRequired && config.envKeysRequired.length > 0 && (
+                  <div className="space-y-1">
+                    <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      <Shield className="h-3 w-3" /> Required Env Keys:
+                    </span>
+                    <div className="space-y-0.5">
+                      {(config.envKeysRequired as string[]).map((key) => {
+                        const h = healthMap[config.gatewayName];
+                        const isConfigured =
+                          h?.status === "online" || h?.status === undefined;
+                        return (
+                          <div
+                            key={key}
+                            className="flex items-center gap-1.5 text-xs"
+                          >
+                            {isConfigured ? (
+                              <Check className="h-3 w-3 text-green-500" />
+                            ) : (
+                              <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                            )}
+                            <code className="text-xs bg-muted px-1 rounded">
+                              {key}
+                            </code>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Webhook URL */}
+                {config.webhookEndpoint && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      Webhook:
+                    </span>
+                    <code className="text-xs bg-muted px-1.5 py-0.5 rounded flex-1 truncate">
+                      {config.webhookEndpoint}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() =>
+                        copyToClipboard(
+                          `https://api.orivraa.com${config.webhookEndpoint}`,
+                        )
+                      }
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+
+                {/* Health status message */}
+                {healthMap[config.gatewayName]?.message && (
+                  <div className="text-xs text-muted-foreground italic flex items-center gap-1">
+                    {healthMap[config.gatewayName].status === "online" ? (
+                      <Wifi className="h-3 w-3 text-green-500" />
+                    ) : (
+                      <WifiOff className="h-3 w-3 text-red-500" />
+                    )}
+                    {healthMap[config.gatewayName].message}
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    size="sm"
+                    variant={config.isEnabled ? "destructive" : "default"}
+                    className="flex-1"
+                    onClick={() => handleToggle(config)}
+                  >
+                    {config.isEnabled ? (
+                      <>
+                        <ToggleRight className="h-3.5 w-3.5 mr-1" /> Disable
+                      </>
+                    ) : (
+                      <>
+                        <ToggleLeft className="h-3.5 w-3.5 mr-1" /> Enable
+                      </>
+                    )}
+                  </Button>
+                  {!config.isDefault && config.isEnabled && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleSetDefault(config)}
+                      title="Set as default fallback gateway"
+                    >
+                      <Star className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Env Key</span>
-                  <code className="text-xs">{config.envKeyLabel}</code>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="mt-2"
-                  onClick={() => handleToggle(config)}
-                >
-                  {config.isEnabled ? "Disable" : "Enable"}
-                </Button>
               </CardContent>
             </Card>
           ))}

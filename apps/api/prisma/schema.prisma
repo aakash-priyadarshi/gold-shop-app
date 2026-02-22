@@ -1827,6 +1827,7 @@ enum PaymentMethod {
   CONNECTIPS
   PAYPAL
   STRIPE
+  PHONEPE
   PAID_AT_SHOP
 }
 
@@ -2618,10 +2619,13 @@ model PaymentGatewayConfig {
   gatewayName         String       // "stripe", "phonepe", "razorpay", "esewa", "khalti"
   displayName         String       // "Stripe", "PhonePe", etc.
   isEnabled           Boolean      @default(false)
+  isDefault           Boolean      @default(false)  // fallback gateway when no country match
   supportedCountries  MarketRegion[]
   supportedMethods    PaymentMethod[] // CARD, UPI, BANK_TRANSFER, etc.
   priority            Int          @default(0)  // higher = preferred when multiple gateways available
   envKeyLabel         String       // reference label: "STRIPE_SECRET_KEY", "PHONEPE_MERCHANT_ID" — never the actual value
+  envKeysRequired     Json?        // JSON array of env key names: ["STRIPE_SECRET_KEY","STRIPE_WEBHOOK_SECRET"]
+  commissionInfo      String?      // human-readable: "1.5% + ₹2 per txn"
   webhookEndpoint     String?      // e.g. "/api/webhooks/stripe"
   updatedBy           String?
   updatedAt           DateTime     @updatedAt
@@ -2629,6 +2633,7 @@ model PaymentGatewayConfig {
 
   @@unique([gatewayName])
   @@index([isEnabled])
+  @@index([isDefault])
   @@index([priority])
 }
 
