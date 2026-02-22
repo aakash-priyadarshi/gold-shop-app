@@ -116,7 +116,9 @@ async function main() {
           updatedBy: "system-seed",
         },
       });
-      console.log(`  ✅ Updated: ${gw.displayName} (${gw.supportedCountries.join(", ")})`);
+      console.log(
+        `  ✅ Updated: ${gw.displayName} (${gw.supportedCountries.join(", ")})`,
+      );
     } else {
       await prisma.paymentGatewayConfig.create({
         data: {
@@ -134,7 +136,9 @@ async function main() {
           updatedBy: "system-seed",
         },
       });
-      console.log(`  ✨ Created: ${gw.displayName} (${gw.supportedCountries.join(", ")})`);
+      console.log(
+        `  ✨ Created: ${gw.displayName} (${gw.supportedCountries.join(", ")})`,
+      );
     }
   }
 

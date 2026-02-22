@@ -148,7 +148,8 @@ export class SellerSubscriptionsService {
     const stripeCustomerId = await this.getOrCreateStripeCustomer(opts.shopId);
 
     // Build the Checkout Session
-    const frontendUrl = this.configService.get<string>("FRONTEND_URL") || "http://localhost:3000";
+    const frontendUrl =
+      this.configService.get<string>("FRONTEND_URL") || "http://localhost:3000";
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
@@ -216,7 +217,9 @@ export class SellerSubscriptionsService {
         },
       });
       stripeProductId = product.id;
-      this.logger.log(`Created Stripe Product: ${stripeProductId} for plan ${plan.name}`);
+      this.logger.log(
+        `Created Stripe Product: ${stripeProductId} for plan ${plan.name}`,
+      );
     }
 
     // Create monthly Price if missing
@@ -262,14 +265,24 @@ export class SellerSubscriptionsService {
       where: { isActive: true, monthlyPrice: { gt: 0 } },
     });
 
-    const results: Array<{ planId: string; name: string; synced: boolean; error?: string }> = [];
+    const results: Array<{
+      planId: string;
+      name: string;
+      synced: boolean;
+      error?: string;
+    }> = [];
 
     for (const plan of plans) {
       try {
         await this.ensurePlanSyncedToStripe(plan.id);
         results.push({ planId: plan.id, name: plan.name, synced: true });
       } catch (err) {
-        results.push({ planId: plan.id, name: plan.name, synced: false, error: err.message });
+        results.push({
+          planId: plan.id,
+          name: plan.name,
+          synced: false,
+          error: err.message,
+        });
       }
     }
 
@@ -295,7 +308,8 @@ export class SellerSubscriptionsService {
       );
     }
 
-    const frontendUrl = this.configService.get<string>("FRONTEND_URL") || "http://localhost:3000";
+    const frontendUrl =
+      this.configService.get<string>("FRONTEND_URL") || "http://localhost:3000";
 
     const session = await stripe.billingPortal.sessions.create({
       customer: sub.stripeCustomerId,
@@ -519,13 +533,16 @@ export class SellerSubscriptionsService {
         let periodEnd = new Date();
         if (this.stripe) {
           try {
-            const stripeSub =
-              await this.stripe.subscriptions.retrieve(stripeSubscriptionId) as any;
+            const stripeSub = (await this.stripe.subscriptions.retrieve(
+              stripeSubscriptionId,
+            )) as any;
             periodStart = new Date(stripeSub.current_period_start * 1000);
             periodEnd = new Date(stripeSub.current_period_end * 1000);
           } catch (e) {
             this.logger.warn(`Could not retrieve Stripe period: ${e.message}`);
-            periodEnd.setMonth(periodEnd.getMonth() + (billingCycle === "annual" ? 12 : 1));
+            periodEnd.setMonth(
+              periodEnd.getMonth() + (billingCycle === "annual" ? 12 : 1),
+            );
           }
         }
 
@@ -637,8 +654,7 @@ export class SellerSubscriptionsService {
             periodStart: sub.currentPeriodStart,
             periodEnd: sub.currentPeriodEnd,
             failureReason:
-              (invoice as any).last_payment_error?.message ||
-              "Payment failed",
+              (invoice as any).last_payment_error?.message || "Payment failed",
           },
         });
 
@@ -672,9 +688,7 @@ export class SellerSubscriptionsService {
           data: {
             status: newStatus as any,
             autoRenew: !cancelAtPeriodEnd,
-            currentPeriodStart: new Date(
-              stripeSub.current_period_start * 1000,
-            ),
+            currentPeriodStart: new Date(stripeSub.current_period_start * 1000),
             currentPeriodEnd: new Date(stripeSub.current_period_end * 1000),
           },
         });

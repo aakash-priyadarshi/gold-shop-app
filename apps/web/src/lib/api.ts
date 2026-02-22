@@ -899,8 +899,7 @@ export const sellerSubscriptionsApi = {
   adminActivate: (id: string) =>
     api.post(`/seller-subscriptions/admin/${id}/activate`),
   getStats: () => api.get("/seller-subscriptions/admin/stats"),
-  adminSyncStripe: () =>
-    api.post("/seller-subscriptions/admin/sync-stripe"),
+  adminSyncStripe: () => api.post("/seller-subscriptions/admin/sync-stripe"),
 };
 
 // ─── AI Credits API ───
@@ -909,6 +908,13 @@ export const aiCreditsApi = {
   getBalance: () => api.get("/ai-credits/balance"),
   getLedger: (params?: { page?: number; limit?: number; action?: string }) =>
     api.get("/ai-credits/ledger", { params }),
+  purchaseCredits: (data: {
+    creditAmount: number;
+    pricePerCredit: number;
+    currency: string;
+    country: string;
+    preferredGateway?: string;
+  }) => api.post("/ai-credits/purchase", data),
   // Admin
   getUserCredits: (userId: string) =>
     api.get(`/ai-credits/admin/user/${userId}`),
@@ -946,6 +952,8 @@ export const paymentGatewayApi = {
     metadata?: Record<string, string>;
     preferredGateway?: string;
   }) => api.post("/payment-gateway/initiate", data),
+  payOrder: (orderId: string, preferredGateway?: string) =>
+    api.post(`/orders/${orderId}/pay`, { preferredGateway }),
 };
 
 export default api;

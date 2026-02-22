@@ -31,8 +31,8 @@ import {
   Store,
   Zap,
 } from "lucide-react";
-import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 
 // ─── Types ───────────────────────────────────────
 
@@ -117,8 +117,7 @@ function SellerBillingPageInner() {
     if (searchParams.get("success") === "true") {
       toast({
         title: "Payment Successful!",
-        description:
-          "Your subscription has been activated. Welcome aboard!",
+        description: "Your subscription has been activated. Welcome aboard!",
       });
       // Clean up URL
       window.history.replaceState({}, "", "/dashboard/shop/billing");
@@ -341,7 +340,8 @@ function CurrentPlanTab() {
                     size="sm"
                     onClick={async () => {
                       try {
-                        const res = await sellerSubscriptionsApi.getBillingPortal();
+                        const res =
+                          await sellerSubscriptionsApi.getBillingPortal();
                         if (res.data?.url) {
                           window.location.href = res.data.url;
                         }

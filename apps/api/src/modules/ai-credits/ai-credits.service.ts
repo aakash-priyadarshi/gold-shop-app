@@ -405,6 +405,74 @@ export class AiCreditsService {
     return { data, total, page, limit, pages: Math.ceil(total / limit) };
   }
 
+  // ─── Purchase Extra Credits (Pay-per-use) ─────────
+
+  /**
+   * Called after a successful AI credit purchase payment.
+   * Credits the user's balance and records the transaction.
+   */
+  async handleCreditPurchaseSuccess(opts: {
+    userId: string;
+    shopId?: string;
+    creditAmount: number;
+    gatewayPaymentId: string;
+    gateway: string;
+    paidAmount: number;
+    currency: string;
+  }) {
+    const result = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.$queryRaw<
+        { id: string; aiCreditsBalance: number }[]
+      >`SELECT id, "aiCreditsBalance" FROM "User" WHERE id = ${opts.userId} FOR UPDATE`;
+
+      if (!user.length) throw new BadRequestException("User not found");
+
+      const balanceBefore = user[0].aiCreditsBalance;
+      const balanceAfter = balanceBefore + opts.creditAmount;
+
+      await tx.user.update({
+        where: { id: opts.userId },
+        data: { aiCreditsBalance: balanceAfter },
+      });
+
+      const ledgerEntry = await tx.aiCreditLedger.create({
+        data: {
+          userId: opts.userId,
+          shopId: opts.shopId,
+          action: "PURCHASE",
+          amount: opts.creditAmount,
+          balanceBefore,
+          balanceAfter,
+          reason: `Purchased ${opts.creditAmount} credits (${opts.currency} ${opts.paidAmount}) via ${opts.gateway}`,
+          referenceId: opts.gatewayPaymentId,
+          idempotencyKey: `purchase:${opts.gatewayPaymentId}`,
+        },
+      });
+
+      return { ledgerEntry, balanceAfter };
+    });
+
+    this.logger.log(
+      `Credits purchased: +${opts.creditAmount} for user ${opts.userId} via ${opts.gateway} (${opts.gatewayPaymentId})`,
+    );
+
+    return result;
+  }
+
+  /**
+   * Called when AI credit purchase payment fails.
+   */
+  async handleCreditPurchaseFailure(opts: {
+    userId: string;
+    gatewayPaymentId: string;
+    reason?: string;
+  }) {
+    this.logger.warn(
+      `AI credit purchase failed for user ${opts.userId}: ${opts.reason || "unknown"} (${opts.gatewayPaymentId})`,
+    );
+    // No balance changes needed — credits were not granted yet
+  }
+
   /**
    * Get aggregate credit stats (admin).
    */
