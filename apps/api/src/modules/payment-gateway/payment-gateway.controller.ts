@@ -163,6 +163,18 @@ export class PaymentGatewayController {
 
   // ─── Unified Payment Initiation ───────────────────
 
+  @Get("available")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "List available (configured) gateways for a country",
+  })
+  async getAvailableGateways(
+    @Req() req: Request & { query: { country?: string } },
+  ) {
+    return this.gatewayService.getAvailableGateways(req.query.country);
+  }
+
   @Post("initiate")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

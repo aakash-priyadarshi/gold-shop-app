@@ -926,6 +926,10 @@ export const paymentGatewayApi = {
     api.patch(`/payment-gateway/configs/${id}/toggle`, { isEnabled }),
   setDefault: (id: string) =>
     api.patch(`/payment-gateway/configs/${id}/set-default`),
+  getAvailableGateways: (country?: string) =>
+    api.get(
+      `/payment-gateway/available${country ? `?country=${country}` : ""}`,
+    ),
   healthCheckAll: () => api.get("/payment-gateway/health"),
   healthCheck: (gatewayName: string) =>
     api.get(`/payment-gateway/health/${gatewayName}`),
