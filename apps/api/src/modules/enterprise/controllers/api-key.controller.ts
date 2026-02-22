@@ -14,12 +14,14 @@ import { CurrentUser } from "../../auth/decorators/current-user.decorator";
 import { Roles } from "../../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../../auth/guards/roles.guard";
-import { EnterpriseGuard } from "../guards/enterprise.guard";
+import { FeatureGateGuard } from "../../subscriptions/feature-gate.guard";
+import { RequireFeature } from "../../subscriptions/require-feature.decorator";
 import { ApiKeyService } from "../services/api-key.service";
 
 @ApiTags("enterprise/api-keys")
 @Controller("enterprise/api-keys")
-@UseGuards(JwtAuthGuard, RolesGuard, EnterpriseGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, FeatureGateGuard)
+@RequireFeature("apiAccess")
 @ApiBearerAuth()
 export class ApiKeyController {
   constructor(

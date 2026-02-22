@@ -1813,8 +1813,7 @@ function CreditsTab() {
     } catch (err: any) {
       toast({
         title: "Error",
-        description:
-          err?.response?.data?.message || "Failed to adjust credits",
+        description: err?.response?.data?.message || "Failed to adjust credits",
         variant: "destructive",
       });
     } finally {
@@ -1997,8 +1996,7 @@ function CreditsTab() {
             <DialogDescription>
               {adjustTarget && (
                 <>
-                  Adjusting credits for{" "}
-                  <strong>{adjustTarget.email}</strong>
+                  Adjusting credits for <strong>{adjustTarget.email}</strong>
                   {adjustTarget.shop?.shopName && (
                     <> ({adjustTarget.shop.shopName})</>
                   )}

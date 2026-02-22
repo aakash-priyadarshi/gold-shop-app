@@ -257,9 +257,18 @@ export class PaymentGatewayController {
     const result = await this.gatewayService.verifyPhonePeWebhook(body);
 
     if (result.status === "succeeded") {
-      await this.handlePaymentSuccess("phonepe", result.transactionId, result.metadata || {});
+      await this.handlePaymentSuccess(
+        "phonepe",
+        result.transactionId,
+        result.metadata || {},
+      );
     } else {
-      await this.handlePaymentFailure("phonepe", result.transactionId, result.status, result.metadata || {});
+      await this.handlePaymentFailure(
+        "phonepe",
+        result.transactionId,
+        result.status,
+        result.metadata || {},
+      );
     }
 
     return { received: true };

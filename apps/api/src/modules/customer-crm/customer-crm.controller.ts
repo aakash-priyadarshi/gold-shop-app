@@ -11,12 +11,15 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { FeatureGateGuard } from "../subscriptions/feature-gate.guard";
+import { RequireFeature } from "../subscriptions/require-feature.decorator";
 import { CustomerCrmService } from "./customer-crm.service";
 import { AddCustomerNoteDto } from "./dto/customer-note.dto";
 
 @ApiTags("customer-crm")
 @Controller("users/customers")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, FeatureGateGuard)
+@RequireFeature("crm")
 @ApiBearerAuth()
 export class CustomerCrmController {
   constructor(private crmService: CustomerCrmService) {}

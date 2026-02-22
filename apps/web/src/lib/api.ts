@@ -866,6 +866,7 @@ export const subscriptionPlansApi = {
 // ─── Seller Subscriptions API ───
 export const sellerSubscriptionsApi = {
   // Seller
+  getMyFeatures: () => api.get("/seller-subscriptions/my-features"),
   subscribe: (data: {
     shopId: string;
     planId: string;

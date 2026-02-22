@@ -4,6 +4,7 @@ import { RedisModule } from "../../common/redis";
 import { PrismaModule } from "../../prisma/prisma.module";
 import { AuditModule } from "../audit/audit.module";
 import { PaymentGatewayModule } from "../payment-gateway/payment-gateway.module";
+import { SubscriptionPlansModule } from "../subscriptions/subscription-plans.module";
 import { AiCreditsController } from "./ai-credits.controller";
 import { AiCreditsService } from "./ai-credits.service";
 
@@ -14,6 +15,7 @@ import { AiCreditsService } from "./ai-credits.service";
     RedisModule,
     AuditModule,
     forwardRef(() => PaymentGatewayModule),
+    SubscriptionPlansModule,
   ],
   controllers: [AiCreditsController],
   providers: [AiCreditsService],

@@ -28,6 +28,8 @@ import {
 import { Request as ExpressRequest } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
+import { FeatureGateGuard } from "../subscriptions/feature-gate.guard";
+import { RequireFeature } from "../subscriptions/require-feature.decorator";
 import { DescriptionGeneratorService } from "./description-generator.service";
 import { DesignsService } from "./designs.service";
 
@@ -243,7 +245,8 @@ export class DesignsController {
    * Requires authentication
    */
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, FeatureGateGuard)
+  @RequireFeature("aiDesignGeneration")
   async createDesign(
     @Request() req: AuthenticatedRequest,
     @Body() dto: CreateDesignDto,

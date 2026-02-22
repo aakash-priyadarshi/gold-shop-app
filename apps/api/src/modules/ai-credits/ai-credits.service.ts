@@ -115,9 +115,12 @@ export class AiCreditsService {
 
     // 5. Trigger auto-recharge if balance fell below threshold (fire-and-forget)
     if (opts.shopId) {
-      this.maybeAutoRecharge(opts.userId, opts.shopId, result.balanceAfter).catch(
-        (err) =>
-          this.logger.error(`Auto-recharge check failed: ${err.message}`),
+      this.maybeAutoRecharge(
+        opts.userId,
+        opts.shopId,
+        result.balanceAfter,
+      ).catch((err) =>
+        this.logger.error(`Auto-recharge check failed: ${err.message}`),
       );
     }
 
@@ -538,7 +541,13 @@ export class AiCreditsService {
         autoRechargePack: true,
       },
     });
-    return shop || { autoRechargeEnabled: false, autoRechargeThreshold: 5, autoRechargePack: 50 };
+    return (
+      shop || {
+        autoRechargeEnabled: false,
+        autoRechargeThreshold: 5,
+        autoRechargePack: 50,
+      }
+    );
   }
 
   /**
@@ -639,20 +648,21 @@ export class AiCreditsService {
         `Auto-recharging ${creditsToBuy} credits for shop ${shopId} (balance: ${currentBalance} < threshold: ${shop.autoRechargeThreshold})`,
       );
 
-      const chargeResult = await this.paymentGatewayService.chargeStripeOffSession({
-        stripeCustomerId: activeSub.stripeCustomerId,
-        amount: totalAmount,
-        currency: plan.currency,
-        metadata: {
-          type: "ai_credits",
-          userId,
-          shopId,
-          creditAmount: String(creditsToBuy),
-          paidAmount: String(totalAmount),
+      const chargeResult =
+        await this.paymentGatewayService.chargeStripeOffSession({
+          stripeCustomerId: activeSub.stripeCustomerId,
+          amount: totalAmount,
           currency: plan.currency,
-          autoRecharge: "true",
-        },
-      });
+          metadata: {
+            type: "ai_credits",
+            userId,
+            shopId,
+            creditAmount: String(creditsToBuy),
+            paidAmount: String(totalAmount),
+            currency: plan.currency,
+            autoRecharge: "true",
+          },
+        });
 
       if (chargeResult.success) {
         // Credit the balance
@@ -700,7 +710,9 @@ export class AiCreditsService {
         { firstName: { contains: search, mode: "insensitive" } },
         { lastName: { contains: search, mode: "insensitive" } },
         {
-          shops: { some: { shopName: { contains: search, mode: "insensitive" } } },
+          shops: {
+            some: { shopName: { contains: search, mode: "insensitive" } },
+          },
         },
       ];
     }

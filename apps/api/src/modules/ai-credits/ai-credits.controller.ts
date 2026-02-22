@@ -18,6 +18,8 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { PaymentGatewayService } from "../payment-gateway/payment-gateway.service";
+import { FeatureGateGuard } from "../subscriptions/feature-gate.guard";
+import { RequireFeature } from "../subscriptions/require-feature.decorator";
 import { AiCreditsService } from "./ai-credits.service";
 
 @ApiTags("ai-credits")
@@ -56,6 +58,8 @@ export class AiCreditsController {
   }
 
   @Post("purchase")
+  @UseGuards(FeatureGateGuard)
+  @RequireFeature("purchasableAiCredits")
   @Roles(UserRole.SHOPKEEPER)
   @ApiOperation({ summary: "Purchase extra AI credits via payment gateway" })
   async purchaseCredits(
