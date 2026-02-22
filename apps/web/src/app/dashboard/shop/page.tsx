@@ -2,6 +2,7 @@
 
 import { ShopkeeperGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { PlanMigrationBanner } from "@/components/dashboard/PlanMigrationBanner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -241,6 +242,9 @@ export default function ShopDashboard() {
               </div>
             </div>
           )}
+
+          {/* Plan Migration Banner */}
+          <PlanMigrationBanner />
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map((stat) => (

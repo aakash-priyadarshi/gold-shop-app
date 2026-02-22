@@ -1,12 +1,17 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { InventoryStatus, JewelleryType } from "@prisma/client";
+import { PrismaService } from "../../prisma/prisma.service";
+import { PlanLimitsService } from "../subscriptions/plan-limits.service";
 import {
   CreateInventoryItemDto,
-  UpdateInventoryItemDto,
   InventoryFilterDto,
-} from './dto/inventory.dto';
-import { JewelleryType, InventoryStatus } from '@prisma/client';
-import { PlanLimitsService } from '../subscriptions/plan-limits.service';
+  UpdateInventoryItemDto,
+} from "./dto/inventory.dto";
 
 @Injectable()
 export class InventoryService {
@@ -23,7 +28,7 @@ export class InventoryService {
     });
 
     if (!shop) {
-      throw new ForbiddenException('You do not own this shop');
+      throw new ForbiddenException("You do not own this shop");
     }
 
     // ── Plan limit check ──────────────────────────────────────────────
@@ -35,7 +40,7 @@ export class InventoryService {
     });
 
     if (existingSku) {
-      throw new BadRequestException('SKU already exists in your shop');
+      throw new BadRequestException("SKU already exists in your shop");
     }
 
     // Calculate total price
@@ -59,8 +64,8 @@ export class InventoryService {
         buildMethod: dto.buildMethod,
         composition: dto.composition as object,
         totalWeightGrams: dto.totalWeightGrams || 0,
-        dimensions: dto.dimensions as object || null,
-        gemstones: dto.gemstones as object || null,
+        dimensions: (dto.dimensions as object) || null,
+        gemstones: (dto.gemstones as object) || null,
         metalValueNpr: metalValue,
         makingChargeNpr: makingCharge,
         gemstoneValueNpr: gemstoneValue,
@@ -84,18 +89,14 @@ export class InventoryService {
   }
 
   // Update inventory item
-  async update(
-    itemId: string,
-    userId: string,
-    dto: UpdateInventoryItemDto,
-  ) {
+  async update(itemId: string, userId: string, dto: UpdateInventoryItemDto) {
     const item = await this.prisma.inventoryItem.findUnique({
       where: { id: itemId },
       include: { shop: true },
     });
 
     if (!item) {
-      throw new NotFoundException('Inventory item not found');
+      throw new NotFoundException("Inventory item not found");
     }
 
     // Verify shop ownership
@@ -104,36 +105,49 @@ export class InventoryService {
     });
 
     if (!shop) {
-      throw new ForbiddenException('You do not own this shop');
+      throw new ForbiddenException("You do not own this shop");
     }
 
     // Prepare update data
     const updateData: any = {};
-    
+
     if (dto.nameEn !== undefined) updateData.nameEn = dto.nameEn;
     if (dto.nameNe !== undefined) updateData.nameNe = dto.nameNe;
     if (dto.nameHi !== undefined) updateData.nameHi = dto.nameHi;
-    if (dto.descriptionEn !== undefined) updateData.descriptionEn = dto.descriptionEn;
-    if (dto.descriptionNe !== undefined) updateData.descriptionNe = dto.descriptionNe;
-    if (dto.descriptionHi !== undefined) updateData.descriptionHi = dto.descriptionHi;
-    if (dto.stockQuantity !== undefined) updateData.stockQuantity = dto.stockQuantity;
-    if (dto.status !== undefined) updateData.status = dto.status as InventoryStatus;
+    if (dto.descriptionEn !== undefined)
+      updateData.descriptionEn = dto.descriptionEn;
+    if (dto.descriptionNe !== undefined)
+      updateData.descriptionNe = dto.descriptionNe;
+    if (dto.descriptionHi !== undefined)
+      updateData.descriptionHi = dto.descriptionHi;
+    if (dto.stockQuantity !== undefined)
+      updateData.stockQuantity = dto.stockQuantity;
+    if (dto.status !== undefined)
+      updateData.status = dto.status as InventoryStatus;
     if (dto.images !== undefined) updateData.images = dto.images;
     if (dto.videos !== undefined) updateData.videos = dto.videos;
     if (dto.labels !== undefined) updateData.labels = dto.labels;
-    if (dto.metalValueNpr !== undefined) updateData.metalValueNpr = dto.metalValueNpr;
-    if (dto.makingChargeNpr !== undefined) updateData.makingChargeNpr = dto.makingChargeNpr;
-    if (dto.gemstoneValueNpr !== undefined) updateData.gemstoneValueNpr = dto.gemstoneValueNpr;
+    if (dto.metalValueNpr !== undefined)
+      updateData.metalValueNpr = dto.metalValueNpr;
+    if (dto.makingChargeNpr !== undefined)
+      updateData.makingChargeNpr = dto.makingChargeNpr;
+    if (dto.gemstoneValueNpr !== undefined)
+      updateData.gemstoneValueNpr = dto.gemstoneValueNpr;
     if (dto.taxNpr !== undefined) updateData.taxNpr = dto.taxNpr;
-    
+
     // Recalculate total if any price component changed
-    if (dto.metalValueNpr !== undefined || dto.makingChargeNpr !== undefined || 
-        dto.gemstoneValueNpr !== undefined || dto.taxNpr !== undefined) {
+    if (
+      dto.metalValueNpr !== undefined ||
+      dto.makingChargeNpr !== undefined ||
+      dto.gemstoneValueNpr !== undefined ||
+      dto.taxNpr !== undefined
+    ) {
       const metalValue = dto.metalValueNpr ?? item.metalValueNpr;
       const makingCharge = dto.makingChargeNpr ?? item.makingChargeNpr;
       const gemstoneValue = dto.gemstoneValueNpr ?? item.gemstoneValueNpr;
       const tax = dto.taxNpr ?? item.taxNpr;
-      updateData.totalPriceNpr = metalValue + makingCharge + gemstoneValue + tax;
+      updateData.totalPriceNpr =
+        metalValue + makingCharge + gemstoneValue + tax;
     }
 
     const updatedItem = await this.prisma.inventoryItem.update({
@@ -152,7 +166,7 @@ export class InventoryService {
     });
 
     if (!item) {
-      throw new NotFoundException('Inventory item not found');
+      throw new NotFoundException("Inventory item not found");
     }
 
     // Verify shop ownership
@@ -161,7 +175,7 @@ export class InventoryService {
     });
 
     if (!shop) {
-      throw new ForbiddenException('You do not own this shop');
+      throw new ForbiddenException("You do not own this shop");
     }
 
     // Soft delete by setting status to DISCONTINUED
@@ -187,7 +201,7 @@ export class InventoryService {
             city: true,
             isVerified: true,
             metalRates: {
-              orderBy: { lastUpdatedAt: 'desc' },
+              orderBy: { lastUpdatedAt: "desc" },
               take: 5,
             },
           },
@@ -196,7 +210,7 @@ export class InventoryService {
     });
 
     if (!item || item.status === InventoryStatus.DISCONTINUED) {
-      throw new NotFoundException('Inventory item not found');
+      throw new NotFoundException("Inventory item not found");
     }
 
     return item;
@@ -213,9 +227,9 @@ export class InventoryService {
       maxPrice,
       minWeight,
       maxWeight,
-      status = 'AVAILABLE',
-      sortBy = 'createdAt',
-      sortOrder = 'desc',
+      status = "AVAILABLE",
+      sortBy = "createdAt",
+      sortOrder = "desc",
       page = 1,
       limit = 20,
     } = filters;
@@ -226,8 +240,8 @@ export class InventoryService {
 
     if (search) {
       where.OR = [
-        { nameEn: { contains: search, mode: 'insensitive' } },
-        { descriptionEn: { contains: search, mode: 'insensitive' } },
+        { nameEn: { contains: search, mode: "insensitive" } },
+        { descriptionEn: { contains: search, mode: "insensitive" } },
         { labels: { has: search.toLowerCase() } },
       ];
     }
@@ -283,22 +297,26 @@ export class InventoryService {
   }
 
   // Get shop inventory (for shopkeeper)
-  async findShopInventory(shopId: string, userId: string, filters: InventoryFilterDto) {
+  async findShopInventory(
+    shopId: string,
+    userId: string,
+    filters: InventoryFilterDto,
+  ) {
     // Verify shop ownership
     const shop = await this.prisma.shop.findFirst({
       where: { id: shopId, userId },
     });
 
     if (!shop) {
-      throw new ForbiddenException('You do not own this shop');
+      throw new ForbiddenException("You do not own this shop");
     }
 
     const {
       search,
       status,
       jewelleryType,
-      sortBy = 'createdAt',
-      sortOrder = 'desc',
+      sortBy = "createdAt",
+      sortOrder = "desc",
       page = 1,
       limit = 20,
     } = filters;
@@ -307,8 +325,8 @@ export class InventoryService {
 
     if (search) {
       where.OR = [
-        { nameEn: { contains: search, mode: 'insensitive' } },
-        { sku: { contains: search, mode: 'insensitive' } },
+        { nameEn: { contains: search, mode: "insensitive" } },
+        { sku: { contains: search, mode: "insensitive" } },
       ];
     }
 
@@ -353,7 +371,7 @@ export class InventoryService {
     });
 
     if (!shop) {
-      throw new ForbiddenException('You do not own this shop');
+      throw new ForbiddenException("You do not own this shop");
     }
 
     const results = await this.prisma.$transaction(
@@ -389,7 +407,7 @@ export class InventoryService {
         _sum: { totalPriceNpr: true },
       }),
       this.prisma.inventoryItem.groupBy({
-        by: ['jewelleryType'],
+        by: ["jewelleryType"],
         where: { shopId, status: InventoryStatus.AVAILABLE },
         _count: true,
       }),

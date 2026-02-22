@@ -849,6 +849,18 @@ export const subscriptionPlansApi = {
     api.patch(`/subscription-plans/${id}`, data),
   toggle: (id: string, isActive: boolean) =>
     api.patch(`/subscription-plans/${id}/toggle`, { isActive }),
+  // Plan Lifecycle
+  deletePlan: (id: string) => api.delete(`/subscription-plans/${id}`),
+  disableWithSuccessor: (id: string, successorPlanId: string) =>
+    api.patch(`/subscription-plans/${id}/disable-with-successor`, {
+      successorPlanId,
+    }),
+  getSubscriberCount: (id: string) =>
+    api.get(`/subscription-plans/${id}/subscriber-count`),
+  triggerMigrationReminders: () =>
+    api.post("/subscription-plans/migration-reminders"),
+  processRenewalMigrations: () =>
+    api.post("/subscription-plans/process-renewal-migrations"),
 };
 
 // ─── Seller Subscriptions API ───
@@ -865,6 +877,10 @@ export const sellerSubscriptionsApi = {
   getMySubscription: () => api.get("/seller-subscriptions/my-subscription"),
   getMyHistory: () => api.get("/seller-subscriptions/my-history"),
   getMyUsage: () => api.get("/seller-subscriptions/my-usage"),
+  // Migration
+  getMyMigration: () => api.get("/seller-subscriptions/my-migration"),
+  respondToMigration: (id: string, accept: boolean) =>
+    api.post(`/seller-subscriptions/${id}/migration-response`, { accept }),
   // Admin
   listAll: (params?: {
     status?: string;

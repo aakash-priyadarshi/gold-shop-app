@@ -1,9 +1,4 @@
-import {
-  ForbiddenException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from "@nestjs/common";
+import { ForbiddenException, Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { SubscriptionPlansService } from "./subscription-plans.service";
 
@@ -226,7 +221,8 @@ export class PlanLimitsService {
         products: {
           used: productCount,
           limit: plan?.maxProducts ?? null,
-          unlimited: plan?.maxProducts === null || plan?.maxProducts === undefined,
+          unlimited:
+            plan?.maxProducts === null || plan?.maxProducts === undefined,
         },
         invoicesPerMonth: {
           used: invoiceCount,
@@ -239,8 +235,7 @@ export class PlanLimitsService {
           used: catalogueCount,
           limit: plan?.maxCatalogues ?? null,
           unlimited:
-            plan?.maxCatalogues === null ||
-            plan?.maxCatalogues === undefined,
+            plan?.maxCatalogues === null || plan?.maxCatalogues === undefined,
         },
         ordersPerMonth: {
           used: orderCount,

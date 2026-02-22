@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -15,7 +16,7 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
-import { CreatePlanDto, UpdatePlanDto } from "./dto";
+import { CreatePlanDto, DisablePlanWithSuccessorDto, UpdatePlanDto } from "./dto";
 import { SubscriptionPlansService } from "./subscription-plans.service";
 
 @ApiTags("subscription-plans")
@@ -133,5 +134,120 @@ export class SubscriptionPlansController {
   @ApiOperation({ summary: "Get plan by ID (admin)" })
   async getById(@Param("id") planId: string) {
     return this.plansService.getPlanById(planId);
+  }
+
+  // ─── Plan Lifecycle ──────────────────────────────────
+
+  @Delete(":id")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Safe-delete a plan (admin). Fails if active subscribers exist.",
+  })
+  async deletePlan(
+    @Param("id") planId: string,
+    @CurrentUser("id") adminId: string,
+  ) {
+    const result = await this.plansService.safeDeletPlan(planId);
+
+    await this.auditService.log({
+      userId: adminId,
+      actorType: "ADMIN",
+      action: "DELETE_SUBSCRIPTION_PLAN",
+      resourceType: "SubscriptionPlan",
+      resourceId: planId,
+      previousValue: { planName: result.planName },
+      newValue: { deleted: true },
+    });
+
+    return result;
+  }
+
+  @Patch(":id/disable-with-successor")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      "Disable a plan, set successor, and notify all active subscribers (admin)",
+  })
+  async disableWithSuccessor(
+    @Param("id") planId: string,
+    @Body() dto: DisablePlanWithSuccessorDto,
+    @CurrentUser("id") adminId: string,
+  ) {
+    const result = await this.plansService.disablePlanWithSuccessor(
+      planId,
+      dto.successorPlanId,
+    );
+
+    await this.auditService.log({
+      userId: adminId,
+      actorType: "ADMIN",
+      action: "DISABLE_PLAN_WITH_SUCCESSOR",
+      resourceType: "SubscriptionPlan",
+      resourceId: planId,
+      previousValue: { isActive: true },
+      newValue: {
+        isActive: false,
+        successorPlanId: dto.successorPlanId,
+        affectedSubscriptions: result.affectedSubscriptions,
+      },
+    });
+
+    return result;
+  }
+
+  @Get(":id/subscriber-count")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Get active subscriber count for a plan (admin)" })
+  async getSubscriberCount(@Param("id") planId: string) {
+    const count = await this.plansService.getActiveSubscriberCount(planId);
+    return { planId, activeSubscribers: count };
+  }
+
+  @Post("migration-reminders")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Trigger migration reminder emails (admin/cron)" })
+  async triggerMigrationReminders(@CurrentUser("id") adminId: string) {
+    const result = await this.plansService.sendMigrationReminders();
+
+    await this.auditService.log({
+      userId: adminId,
+      actorType: "ADMIN",
+      action: "TRIGGER_MIGRATION_REMINDERS",
+      resourceType: "SubscriptionPlan",
+      resourceId: "system",
+      newValue: result,
+    });
+
+    return result;
+  }
+
+  @Post("process-renewal-migrations")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Process pending migrations at renewal time (admin/cron)",
+  })
+  async processRenewalMigrations(@CurrentUser("id") adminId: string) {
+    const result = await this.plansService.processRenewalMigrations();
+
+    await this.auditService.log({
+      userId: adminId,
+      actorType: "ADMIN",
+      action: "PROCESS_RENEWAL_MIGRATIONS",
+      resourceType: "SubscriptionPlan",
+      resourceId: "system",
+      newValue: result,
+    });
+
+    return result;
   }
 }

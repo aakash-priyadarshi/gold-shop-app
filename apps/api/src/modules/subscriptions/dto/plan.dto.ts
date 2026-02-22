@@ -207,4 +207,18 @@ export class UpdatePlanDto {
   @IsOptional()
   @IsInt()
   sortOrder?: number;
+
+  @IsOptional()
+  @IsString()
+  successorPlanId?: string;
+}
+
+export class DisablePlanWithSuccessorDto {
+  @IsString()
+  successorPlanId: string;
+}
+
+export class MigrationResponseDto {
+  @IsBoolean()
+  accept: boolean;
 }

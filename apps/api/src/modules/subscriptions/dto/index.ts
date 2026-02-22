@@ -1,4 +1,9 @@
-export { CreatePlanDto, UpdatePlanDto } from "./plan.dto";
+export {
+  CreatePlanDto,
+  UpdatePlanDto,
+  DisablePlanWithSuccessorDto,
+  MigrationResponseDto,
+} from "./plan.dto";
 export {
   AdminOverrideDto,
   CancelSubscriptionDto,

@@ -15,6 +15,7 @@ import { notificationsApi } from "@/lib/api";
 import { formatDistanceToNow } from "date-fns";
 import {
   AlertCircle,
+  ArrowRightLeft,
   Ban,
   Bell,
   Check,
@@ -288,6 +289,53 @@ const notificationConfig: Record<
       params?.amount
         ? `₹${params.amount.toLocaleString()} has been refunded`
         : "Your refund has been processed",
+  },
+  // Plan Migration notifications
+  PLAN_MIGRATION: {
+    icon: ArrowRightLeft,
+    color: "text-amber-500",
+    formatTitle: (params) =>
+      params?.oldPlan
+        ? `Plan Change: ${params.oldPlan}`
+        : "Plan Migration Required",
+    formatBody: (params) =>
+      params?.newPlan
+        ? `Your "${params.oldPlan}" plan is being discontinued. You can migrate to "${params.newPlan}" or downgrade to Free.`
+        : "Your current plan is being discontinued. Please review your options.",
+  },
+  PLAN_MIGRATION_REMINDER: {
+    icon: Bell,
+    color: "text-amber-600",
+    formatTitle: (params) =>
+      `Migration Reminder${params?.reminderNumber ? ` #${params.reminderNumber}` : ""}`,
+    formatBody: (params) =>
+      params?.newPlan
+        ? `Please respond to the plan migration for "${params.oldPlan}". Migrate to "${params.newPlan}" or downgrade to Free.`
+        : "Please respond to the pending plan migration.",
+  },
+  PLAN_MIGRATED: {
+    icon: CheckCircle2,
+    color: "text-green-600",
+    formatTitle: (params) =>
+      params?.planName
+        ? `Migrated to ${params.planName}`
+        : "Plan Migrated",
+    formatBody: (params) =>
+      params?.newPlan
+        ? `Your shop has been migrated from "${params.oldPlan}" to "${params.newPlan}".`
+        : "Your plan has been successfully migrated.",
+  },
+  PLAN_DOWNGRADED: {
+    icon: AlertCircle,
+    color: "text-red-500",
+    formatTitle: (params) =>
+      params?.planName
+        ? `Downgraded to ${params.planName}`
+        : "Plan Downgraded",
+    formatBody: (params) =>
+      params?.oldPlan
+        ? `Your "${params.oldPlan}" plan has ended. You've been moved to "${params.newPlan || 'Free Plan'}".`
+        : "Your plan has been downgraded.",
   },
   // System notifications (fallback)
   SYSTEM_ALERT: {
