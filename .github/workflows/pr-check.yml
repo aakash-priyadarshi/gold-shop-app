@@ -352,11 +352,10 @@ jobs:
 
       - name: Run Tests
         working-directory: apps/api
-        run: pnpm test || echo "Tests not configured yet"
+        run: pnpm test
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/goldshop_test
           NODE_ENV: test
-        continue-on-error: true
 
   # ══════════════════════════════════════════════════════════
   # Final: PR Status Summary
@@ -377,5 +376,8 @@ jobs:
             echo "::error::Prisma check failed"
             exit 1
           fi
+          if [[ "${{ needs.test-api.result }}" != "success" ]]; then
+            echo "::error::API tests failed"
+            exit 1
+          fi
           echo "✅ All critical checks passed!"
-          echo "📝 Test job status: ${{ needs.test-api.result }}"
