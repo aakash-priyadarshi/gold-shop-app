@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { AdminSubscriptionPlansPanel } from '@/components/admin/AdminSubscriptionPlansPanel';
+import { AdminSubscriptionPlansPanel } from "@/components/admin/AdminSubscriptionPlansPanel";
 
 export default function AdminSubscriptionPlansPage() {
   return (

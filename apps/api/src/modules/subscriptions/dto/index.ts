@@ -1,8 +1,8 @@
 export {
   CreatePlanDto,
-  UpdatePlanDto,
   DisablePlanWithSuccessorDto,
   MigrationResponseDto,
+  UpdatePlanDto,
 } from "./plan.dto";
 export {
   AdminOverrideDto,

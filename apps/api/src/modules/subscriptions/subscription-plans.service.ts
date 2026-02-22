@@ -248,7 +248,9 @@ export class SubscriptionPlansService {
 
     await this.prisma.subscriptionPlan.delete({ where: { id: planId } });
 
-    this.logger.log(`Plan "${plan.displayName}" (${planId}) permanently deleted`);
+    this.logger.log(
+      `Plan "${plan.displayName}" (${planId}) permanently deleted`,
+    );
     return { deleted: true, planName: plan.displayName };
   }
 
@@ -259,7 +261,9 @@ export class SubscriptionPlansService {
   async disablePlanWithSuccessor(planId: string, successorPlanId: string) {
     const [plan, successor] = await Promise.all([
       this.prisma.subscriptionPlan.findUnique({ where: { id: planId } }),
-      this.prisma.subscriptionPlan.findUnique({ where: { id: successorPlanId } }),
+      this.prisma.subscriptionPlan.findUnique({
+        where: { id: successorPlanId },
+      }),
     ]);
 
     if (!plan) throw new NotFoundException("Plan not found");
@@ -434,7 +438,9 @@ export class SubscriptionPlansService {
       }
     }
 
-    this.logger.log(`Sent ${sent} migration reminders out of ${pendingSubs.length} pending`);
+    this.logger.log(
+      `Sent ${sent} migration reminders out of ${pendingSubs.length} pending`,
+    );
     return { sent, total: pendingSubs.length };
   }
 
@@ -456,7 +462,9 @@ export class SubscriptionPlansService {
       },
       include: {
         plan: { include: { successorPlan: true } },
-        shop: { select: { id: true, userId: true, shopName: true, country: true } },
+        shop: {
+          select: { id: true, userId: true, shopName: true, country: true },
+        },
       },
     });
 
@@ -498,7 +506,9 @@ export class SubscriptionPlansService {
           channels: ["IN_APP", "EMAIL"],
         });
       } catch (err) {
-        this.logger.error(`Failed to notify migration for sub ${sub.id}: ${err.message}`);
+        this.logger.error(
+          `Failed to notify migration for sub ${sub.id}: ${err.message}`,
+        );
       }
 
       migrated++;
@@ -513,7 +523,9 @@ export class SubscriptionPlansService {
       },
       include: {
         plan: true,
-        shop: { select: { id: true, userId: true, shopName: true, country: true } },
+        shop: {
+          select: { id: true, userId: true, shopName: true, country: true },
+        },
       },
     });
 
@@ -572,7 +584,9 @@ export class SubscriptionPlansService {
           channels: ["IN_APP", "EMAIL"],
         });
       } catch (err) {
-        this.logger.error(`Failed to notify downgrade for sub ${sub.id}: ${err.message}`);
+        this.logger.error(
+          `Failed to notify downgrade for sub ${sub.id}: ${err.message}`,
+        );
       }
 
       downgraded++;

@@ -317,9 +317,7 @@ const notificationConfig: Record<
     icon: CheckCircle2,
     color: "text-green-600",
     formatTitle: (params) =>
-      params?.planName
-        ? `Migrated to ${params.planName}`
-        : "Plan Migrated",
+      params?.planName ? `Migrated to ${params.planName}` : "Plan Migrated",
     formatBody: (params) =>
       params?.newPlan
         ? `Your shop has been migrated from "${params.oldPlan}" to "${params.newPlan}".`
@@ -329,12 +327,10 @@ const notificationConfig: Record<
     icon: AlertCircle,
     color: "text-red-500",
     formatTitle: (params) =>
-      params?.planName
-        ? `Downgraded to ${params.planName}`
-        : "Plan Downgraded",
+      params?.planName ? `Downgraded to ${params.planName}` : "Plan Downgraded",
     formatBody: (params) =>
       params?.oldPlan
-        ? `Your "${params.oldPlan}" plan has ended. You've been moved to "${params.newPlan || 'Free Plan'}".`
+        ? `Your "${params.oldPlan}" plan has ended. You've been moved to "${params.newPlan || "Free Plan"}".`
         : "Your plan has been downgraded.",
   },
   // System notifications (fallback)

@@ -171,9 +171,7 @@ export class SellerSubscriptionsController {
     await this.auditService.log({
       userId,
       actorType: "SHOPKEEPER",
-      action: dto.accept
-        ? "ACCEPT_PLAN_MIGRATION"
-        : "DECLINE_PLAN_MIGRATION",
+      action: dto.accept ? "ACCEPT_PLAN_MIGRATION" : "DECLINE_PLAN_MIGRATION",
       resourceType: "SellerSubscription",
       resourceId: subscriptionId,
       newValue: {

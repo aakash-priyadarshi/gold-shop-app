@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { sellerSubscriptionsApi } from "@/lib/api";
 import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
   Loader2,
   XCircle,
-} from 'lucide-react';
-import { sellerSubscriptionsApi } from '@/lib/api';
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface MigrationInfo {
   subscriptionId: string;
@@ -24,7 +24,7 @@ interface MigrationInfo {
     currency: string;
     features?: Record<string, unknown>;
   } | null;
-  migrationStatus: 'PENDING' | 'ACCEPTED' | 'DECLINED';
+  migrationStatus: "PENDING" | "ACCEPTED" | "DECLINED";
   periodEnd: string;
   notifiedAt: string;
 }
@@ -65,12 +65,12 @@ export function PlanMigrationBanner() {
       setResponseMessage(res.data.message);
       setMigration((prev) =>
         prev
-          ? { ...prev, migrationStatus: accept ? 'ACCEPTED' : 'DECLINED' }
+          ? { ...prev, migrationStatus: accept ? "ACCEPTED" : "DECLINED" }
           : null,
       );
     } catch (err: any) {
       setResponseMessage(
-        err?.response?.data?.message || 'Failed to respond. Please try again.',
+        err?.response?.data?.message || "Failed to respond. Please try again.",
       );
     } finally {
       setResponding(false);
@@ -80,12 +80,12 @@ export function PlanMigrationBanner() {
   if (loading || !migration) return null;
 
   const periodEndDate = new Date(migration.periodEnd).toLocaleDateString(
-    'en-US',
-    { year: 'numeric', month: 'long', day: 'numeric' },
+    "en-US",
+    { year: "numeric", month: "long", day: "numeric" },
   );
 
   // ─── Already responded ───────────────────────────────
-  if (migration.migrationStatus === 'ACCEPTED') {
+  if (migration.migrationStatus === "ACCEPTED") {
     return (
       <Card className="border-green-200 bg-green-50">
         <CardContent className="flex items-center gap-3 py-4">
@@ -104,7 +104,7 @@ export function PlanMigrationBanner() {
     );
   }
 
-  if (migration.migrationStatus === 'DECLINED') {
+  if (migration.migrationStatus === "DECLINED") {
     return (
       <Card className="border-red-200 bg-red-50">
         <CardContent className="flex items-center gap-3 py-4">
@@ -135,10 +135,10 @@ export function PlanMigrationBanner() {
                 Your plan is being discontinued
               </p>
               <p className="text-xs text-amber-700 mt-1">
-                Your <strong>{migration.currentPlan}</strong> plan will end on{' '}
-                <strong>{periodEndDate}</strong>. You can migrate to{' '}
+                Your <strong>{migration.currentPlan}</strong> plan will end on{" "}
+                <strong>{periodEndDate}</strong>. You can migrate to{" "}
                 <strong>{migration.successorPlan?.displayName}</strong> (
-                {migration.successorPlan?.currency}{' '}
+                {migration.successorPlan?.currency}{" "}
                 {migration.successorPlan?.monthlyPrice}/mo) or stay on the Free
                 plan.
               </p>

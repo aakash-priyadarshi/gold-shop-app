@@ -16,7 +16,11 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
-import { CreatePlanDto, DisablePlanWithSuccessorDto, UpdatePlanDto } from "./dto";
+import {
+  CreatePlanDto,
+  DisablePlanWithSuccessorDto,
+  UpdatePlanDto,
+} from "./dto";
 import { SubscriptionPlansService } from "./subscription-plans.service";
 
 @ApiTags("subscription-plans")
