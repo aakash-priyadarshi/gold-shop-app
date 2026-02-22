@@ -25,6 +25,27 @@ export class PlanLimitExceededException extends ForbiddenException {
   }
 }
 
+/**
+ * Thrown when a shop tries to access a feature not included in their plan.
+ * Contains metadata for the frontend to display upgrade prompts.
+ */
+export class FeatureNotEnabledException extends ForbiddenException {
+  constructor(
+    public readonly featureKey: string,
+    public readonly featureLabel: string,
+    public readonly planName: string,
+  ) {
+    super({
+      statusCode: 403,
+      error: "FEATURE_NOT_ENABLED",
+      message: `The "${featureLabel}" feature is not included in your ${planName} plan. Please upgrade to access this feature.`,
+      featureKey,
+      featureLabel,
+      planName,
+    });
+  }
+}
+
 @Injectable()
 export class PlanLimitsService {
   private readonly logger = new Logger(PlanLimitsService.name);
@@ -246,6 +267,120 @@ export class PlanLimitsService {
         },
       },
       features: (plan?.features as Record<string, unknown>) ?? {},
+    };
+  }
+
+  // ═══════════════════════════════════════════
+  // FEATURE GATING
+  // ═══════════════════════════════════════════
+
+  /**
+   * Human-readable labels for feature keys (used in error messages).
+   */
+  static readonly FEATURE_LABELS: Record<string, string> = {
+    marketplace: "Marketplace listing",
+    priorityListing: "Priority listing",
+    bulkUpload: "Bulk product upload",
+    crm: "CRM suite",
+    invoicing: "Invoicing & billing",
+    inventoryManagement: "Inventory management",
+    customerManagement: "Customer management",
+    customBranding: "Custom branding",
+    staffAccounts: "Staff accounts",
+    multiBranch: "Multi-branch support",
+    purchasableAiCredits: "Purchasable AI credits",
+    aiDesignGeneration: "AI design generation",
+    aiSmartRecommendations: "Smart recommendations",
+    aiPriceOptimization: "Price optimization",
+    demandForecasting: "Demand forecasting",
+    basicAnalytics: "Basic analytics",
+    advancedAnalytics: "Advanced analytics",
+    scheduledReports: "Scheduled reports",
+    auditLogExport: "Audit log export",
+    prioritySupport: "Priority support",
+    dedicatedSupport: "Dedicated support",
+    dedicatedAccountManager: "Account manager",
+    apiAccess: "API access",
+    webhookSubscriptions: "Webhook subscriptions",
+    whiteLabel: "White-label option",
+    customDomain: "Custom domain",
+    customIntegrations: "Custom integrations",
+  };
+
+  /**
+   * Check whether a feature is enabled for a shop's active plan.
+   * Throws FeatureNotEnabledException if the feature is disabled.
+   */
+  async checkFeature(shopId: string, featureKey: string): Promise<void> {
+    const plan = await this.plansService.getActiveShopPlan(shopId);
+    const features = (plan?.features as Record<string, unknown>) ?? {};
+
+    if (features[featureKey] === true) return;
+
+    const label =
+      PlanLimitsService.FEATURE_LABELS[featureKey] ?? featureKey;
+    throw new FeatureNotEnabledException(
+      featureKey,
+      label,
+      plan?.displayName ?? "Free Plan",
+    );
+  }
+
+  /**
+   * Returns true/false for a single feature (non-throwing).
+   */
+  async hasFeature(shopId: string, featureKey: string): Promise<boolean> {
+    const plan = await this.plansService.getActiveShopPlan(shopId);
+    const features = (plan?.features as Record<string, unknown>) ?? {};
+    return features[featureKey] === true;
+  }
+
+  /**
+   * Return all features for a shop's active plan, including labels and categories.
+   */
+  async getActiveFeatures(shopId: string) {
+    const plan = await this.plansService.getActiveShopPlan(shopId);
+    const features = (plan?.features as Record<string, unknown>) ?? {};
+
+    const CATEGORIES: Record<string, string> = {
+      marketplace: "Marketplace",
+      priorityListing: "Marketplace",
+      bulkUpload: "Marketplace",
+      crm: "CRM & Business",
+      invoicing: "CRM & Business",
+      inventoryManagement: "CRM & Business",
+      customerManagement: "CRM & Business",
+      customBranding: "CRM & Business",
+      staffAccounts: "CRM & Business",
+      multiBranch: "CRM & Business",
+      purchasableAiCredits: "AI & Intelligence",
+      aiDesignGeneration: "AI & Intelligence",
+      aiSmartRecommendations: "AI & Intelligence",
+      aiPriceOptimization: "AI & Intelligence",
+      demandForecasting: "AI & Intelligence",
+      basicAnalytics: "Analytics & Reports",
+      advancedAnalytics: "Analytics & Reports",
+      scheduledReports: "Analytics & Reports",
+      auditLogExport: "Analytics & Reports",
+      prioritySupport: "Support & Integration",
+      dedicatedSupport: "Support & Integration",
+      dedicatedAccountManager: "Support & Integration",
+      apiAccess: "Support & Integration",
+      webhookSubscriptions: "Support & Integration",
+      whiteLabel: "Support & Integration",
+      customDomain: "Support & Integration",
+      customIntegrations: "Support & Integration",
+    };
+
+    return {
+      planName: plan?.displayName ?? "Free Plan",
+      planId: plan?.id ?? null,
+      features: Object.keys(PlanLimitsService.FEATURE_LABELS).map((key) => ({
+        key,
+        label: PlanLimitsService.FEATURE_LABELS[key],
+        category: CATEGORIES[key] ?? "Other",
+        enabled: features[key] === true,
+      })),
     };
   }
 }

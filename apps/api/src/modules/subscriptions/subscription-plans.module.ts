@@ -3,6 +3,7 @@ import { ConfigModule } from "@nestjs/config";
 import { PrismaModule } from "../../prisma/prisma.module";
 import { AuditModule } from "../audit/audit.module";
 import { NotificationsModule } from "../notifications/notifications.module";
+import { FeatureGateGuard } from "./feature-gate.guard";
 import { PlanLimitsService } from "./plan-limits.service";
 import { SellerSubscriptionsController } from "./seller-subscriptions.controller";
 import { SellerSubscriptionsService } from "./seller-subscriptions.service";
@@ -16,11 +17,13 @@ import { SubscriptionPlansService } from "./subscription-plans.service";
     SubscriptionPlansService,
     SellerSubscriptionsService,
     PlanLimitsService,
+    FeatureGateGuard,
   ],
   exports: [
     SubscriptionPlansService,
     SellerSubscriptionsService,
     PlanLimitsService,
+    FeatureGateGuard,
   ],
 })
 export class SubscriptionPlansModule {}

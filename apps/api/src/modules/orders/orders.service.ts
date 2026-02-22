@@ -1690,7 +1690,8 @@ export class OrdersService {
         paymentStatus: "COMPLETED",
         paymentStatusEnum: "PAID" as any,
         balanceDueNpr: 0,
-        status: order.status === "CREATED" ? ("PAID" as OrderStatus) : order.status,
+        status:
+          order.status === "CREATED" ? ("PAID" as OrderStatus) : order.status,
       },
     });
 

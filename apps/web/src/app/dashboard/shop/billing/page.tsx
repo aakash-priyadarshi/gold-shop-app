@@ -173,19 +173,30 @@ function CurrentPlanTab() {
   const [sub, setSub] = useState<Subscription | null>(null);
   const [history, setHistory] = useState<Subscription[]>([]);
   const [usage, setUsage] = useState<UsageSummary | null>(null);
+  const [features, setFeatures] = useState<{
+    planName: string;
+    features: {
+      key: string;
+      label: string;
+      category: string;
+      enabled: boolean;
+    }[];
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [subRes, histRes, usageRes] = await Promise.all([
+      const [subRes, histRes, usageRes, featRes] = await Promise.all([
         sellerSubscriptionsApi.getMySubscription(),
         sellerSubscriptionsApi.getMyHistory(),
         sellerSubscriptionsApi.getMyUsage().catch(() => ({ data: null })),
+        sellerSubscriptionsApi.getMyFeatures().catch(() => ({ data: null })),
       ]);
       setSub(subRes.data || null);
       setHistory(Array.isArray(histRes.data) ? histRes.data : []);
       setUsage(usageRes.data || null);
+      setFeatures(featRes.data || null);
     } catch {
       // No active subscription or error
     } finally {
@@ -328,6 +339,60 @@ function CurrentPlanTab() {
                     label="Orders / mo"
                     info={usage.limits.ordersPerMonth}
                   />
+                </div>
+              </div>
+            )}
+
+            {/* ── Plan Features ────────────────────────────────── */}
+            {features && features.features.length > 0 && (
+              <div className="mt-6">
+                <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                  <Sparkles className="h-4 w-4" />
+                  Plan Features
+                </h4>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {Object.entries(
+                    features.features.reduce(
+                      (acc, f) => {
+                        if (!acc[f.category]) acc[f.category] = [];
+                        acc[f.category].push(f);
+                        return acc;
+                      },
+                      {} as Record<
+                        string,
+                        typeof features.features
+                      >,
+                    ),
+                  ).map(([category, items]) => (
+                    <div key={category} className="rounded-lg border p-3">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        {category}
+                      </p>
+                      <div className="space-y-1">
+                        {items.map((f) => (
+                          <div
+                            key={f.key}
+                            className="flex items-center gap-2 text-sm"
+                          >
+                            {f.enabled ? (
+                              <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                            ) : (
+                              <span className="h-3.5 w-3.5 rounded-full border border-muted-foreground/30" />
+                            )}
+                            <span
+                              className={
+                                f.enabled
+                                  ? "text-foreground"
+                                  : "text-muted-foreground line-through"
+                              }
+                            >
+                              {f.label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -684,9 +749,7 @@ function AiCreditsTab() {
           </div>
           <Button
             onClick={handleBuyCredits}
-            disabled={
-              buying || !planInfo || planInfo.extraCreditPrice <= 0
-            }
+            disabled={buying || !planInfo || planInfo.extraCreditPrice <= 0}
             className="w-full sm:w-auto"
           >
             {buying ? (
@@ -763,8 +826,7 @@ function AiCreditsTab() {
                     onChange={(e) =>
                       setAutoRecharge({
                         ...autoRecharge,
-                        autoRechargeThreshold:
-                          parseInt(e.target.value) || 5,
+                        autoRechargeThreshold: parseInt(e.target.value) || 5,
                       })
                     }
                   />
@@ -791,19 +853,19 @@ function AiCreditsTab() {
               </div>
             )}
 
-            {autoRecharge.autoRechargeEnabled && planInfo.extraCreditPrice > 0 && (
-              <p className="text-xs text-muted-foreground">
-                Each recharge will charge{" "}
-                <strong>
-                  {planInfo.currency}{" "}
-                  {(
-                    autoRecharge.autoRechargePack *
-                    planInfo.extraCreditPrice
-                  ).toFixed(2)}
-                </strong>{" "}
-                to your saved payment method.
-              </p>
-            )}
+            {autoRecharge.autoRechargeEnabled &&
+              planInfo.extraCreditPrice > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Each recharge will charge{" "}
+                  <strong>
+                    {planInfo.currency}{" "}
+                    {(
+                      autoRecharge.autoRechargePack * planInfo.extraCreditPrice
+                    ).toFixed(2)}
+                  </strong>{" "}
+                  to your saved payment method.
+                </p>
+              )}
 
             <Button
               variant="outline"

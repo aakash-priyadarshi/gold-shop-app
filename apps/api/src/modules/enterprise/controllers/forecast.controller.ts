@@ -5,12 +5,14 @@ import { CurrentUser } from "../../auth/decorators/current-user.decorator";
 import { Roles } from "../../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../../auth/guards/roles.guard";
-import { EnterpriseGuard } from "../guards/enterprise.guard";
+import { FeatureGateGuard } from "../../subscriptions/feature-gate.guard";
+import { RequireFeature } from "../../subscriptions/require-feature.decorator";
 import { ForecastService } from "../services/forecast.service";
 
 @ApiTags("enterprise/forecasts")
 @Controller("enterprise/forecasts")
-@UseGuards(JwtAuthGuard, RolesGuard, EnterpriseGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, FeatureGateGuard)
+@RequireFeature("demandForecasting")
 @ApiBearerAuth()
 export class ForecastController {
   constructor(private readonly forecastService: ForecastService) {}

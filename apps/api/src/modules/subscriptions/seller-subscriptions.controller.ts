@@ -142,6 +142,17 @@ export class SellerSubscriptionsController {
     return this.planLimitsService.getUsageSummary(shopId);
   }
 
+  @Get("my-features")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Get all plan features with enabled/disabled status",
+  })
+  async getMyFeatures(@CurrentUser("shopId") shopId: string) {
+    return this.planLimitsService.getActiveFeatures(shopId);
+  }
+
   @Get("my-migration")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SHOPKEEPER)

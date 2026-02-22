@@ -14,12 +14,14 @@ import { CurrentUser } from "../../auth/decorators/current-user.decorator";
 import { Roles } from "../../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../../auth/guards/roles.guard";
-import { EnterpriseGuard } from "../guards/enterprise.guard";
+import { FeatureGateGuard } from "../../subscriptions/feature-gate.guard";
+import { RequireFeature } from "../../subscriptions/require-feature.decorator";
 import { BulkImportService } from "../services/bulk-import.service";
 
 @ApiTags("enterprise/bulk")
 @Controller("enterprise/bulk")
-@UseGuards(JwtAuthGuard, RolesGuard, EnterpriseGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, FeatureGateGuard)
+@RequireFeature("bulkUpload")
 @ApiBearerAuth()
 export class BulkImportController {
   constructor(private readonly bulkImportService: BulkImportService) {}
