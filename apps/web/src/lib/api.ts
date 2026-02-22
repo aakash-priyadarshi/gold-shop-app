@@ -924,6 +924,20 @@ export const paymentGatewayApi = {
     api.post("/payment-gateway/configs", data),
   toggleGateway: (id: string, isEnabled: boolean) =>
     api.patch(`/payment-gateway/configs/${id}/toggle`, { isEnabled }),
+  setDefault: (id: string) =>
+    api.patch(`/payment-gateway/configs/${id}/set-default`),
+  healthCheckAll: () => api.get("/payment-gateway/health"),
+  healthCheck: (gatewayName: string) =>
+    api.get(`/payment-gateway/health/${gatewayName}`),
+  initiatePayment: (data: {
+    type: "subscription" | "order" | "rfq_booking" | "ai_credits";
+    resourceId: string;
+    amount: number;
+    currency: string;
+    country: string;
+    metadata?: Record<string, string>;
+    preferredGateway?: string;
+  }) => api.post("/payment-gateway/initiate", data),
 };
 
 export default api;
