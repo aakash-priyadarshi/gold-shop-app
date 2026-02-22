@@ -18,6 +18,7 @@ import {
   sellerSubscriptionsApi,
   subscriptionPlansApi,
 } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 import {
   ArrowRight,
   BarChart3,
@@ -527,6 +528,8 @@ function AiCreditsTab() {
 // ═══════════════════════════════════════════════════
 
 function AvailablePlansTab() {
+  const { user } = useAuth();
+  const shopCountry = user?.shop?.country || "";
   const [plans, setPlans] = useState<Plan[]>([]);
   const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -534,9 +537,9 @@ function AvailablePlansTab() {
 
   const fetchData = async () => {
     try {
-      // Fetch available plans and current subscription in parallel
+      // Fetch plans for the shop's country and current subscription in parallel
       const [plansRes, subRes] = await Promise.all([
-        subscriptionPlansApi.getAvailable(""),
+        subscriptionPlansApi.getAvailable(shopCountry),
         sellerSubscriptionsApi
           .getMySubscription()
           .catch(() => ({ data: null })),
@@ -562,7 +565,8 @@ function AvailablePlansTab() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shopCountry]);
 
   const handleSubscribe = async (plan: Plan) => {
     try {
