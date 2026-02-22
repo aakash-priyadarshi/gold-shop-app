@@ -16,6 +16,7 @@ import { CreateShopDto } from "./dto/create-shop.dto";
 import { OAuthShopSetupDto } from "./dto/oauth-shop-setup.dto";
 import { UpdateMetalRatesDto } from "./dto/update-metal-rates.dto";
 import { UpdateShopDto } from "./dto/update-shop.dto";
+import { SellerSubscriptionsService } from "../subscriptions/seller-subscriptions.service";
 
 @Injectable()
 export class ShopsService {
@@ -27,6 +28,7 @@ export class ShopsService {
     private redisService: RedisService,
     private configService: PlatformConfigService,
     private moderationService: ContentModerationService,
+    private sellerSubscriptionsService: SellerSubscriptionsService,
   ) {}
 
   /**
@@ -157,6 +159,12 @@ export class ShopsService {
       newValue: { shopName: shop.shopName, method: "oauth_setup" },
     });
 
+    // Auto-activate FREE subscription plan
+    await this.sellerSubscriptionsService.autoActivateFreePlan(
+      shop.id,
+      dto.country || "NP",
+    );
+
     return shop;
   }
 
@@ -196,6 +204,12 @@ export class ShopsService {
       resourceId: shop.id,
       newValue: { shopName: shop.shopName },
     });
+
+    // Auto-activate FREE subscription plan
+    await this.sellerSubscriptionsService.autoActivateFreePlan(
+      shop.id,
+      dto.country || "NP",
+    );
 
     return shop;
   }

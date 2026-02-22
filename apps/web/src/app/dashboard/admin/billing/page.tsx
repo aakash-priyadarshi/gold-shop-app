@@ -184,7 +184,10 @@ function PlansTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Select value={countryFilter || "ALL"} onValueChange={(v) => setCountryFilter(v === "ALL" ? "" : v)}>
+          <Select
+            value={countryFilter || "ALL"}
+            onValueChange={(v) => setCountryFilter(v === "ALL" ? "" : v)}
+          >
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="All countries" />
             </SelectTrigger>
@@ -614,10 +617,13 @@ function SubscriptionsTab() {
                   <td className="px-4 py-3">
                     <div>
                       <p className="font-medium">
-                        {(sub.shop as any)?.shopName || (sub.shop as any)?.businessName || sub.shopId}
+                        {(sub.shop as any)?.shopName ||
+                          (sub.shop as any)?.businessName ||
+                          sub.shopId}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {(sub.shop as any)?.user?.email || (sub.shop as any)?.owner?.email}
+                        {(sub.shop as any)?.user?.email ||
+                          (sub.shop as any)?.owner?.email}
                       </p>
                     </div>
                   </td>

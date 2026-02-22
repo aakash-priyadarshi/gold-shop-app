@@ -266,7 +266,7 @@ export class SellerSubscriptionsService {
    */
   async cancelSubscription(
     subscriptionId: string,
-    opts: { reason?: string; immediate?: boolean },
+    opts: { reason?: string; immediate?: boolean; shopId?: string },
   ) {
     const sub = await this.prisma.sellerSubscription.findUnique({
       where: { id: subscriptionId },
@@ -274,6 +274,13 @@ export class SellerSubscriptionsService {
     });
 
     if (!sub) throw new NotFoundException("Subscription not found");
+
+    // Verify shop ownership if shopId is provided
+    if (opts.shopId && sub.shopId !== opts.shopId) {
+      throw new BadRequestException(
+        "You can only cancel subscriptions for your own shop",
+      );
+    }
 
     if (sub.status === "CANCELLED" || sub.status === "EXPIRED") {
       throw new BadRequestException(
@@ -578,5 +585,75 @@ export class SellerSubscriptionsService {
       byPlan,
       mrr: Number(mrr[0]?.mrr || 0),
     };
+  }
+
+  // ─── Auto-activate FREE plan ──────────────────────
+
+  /**
+   * Auto-activate the FREE plan for a newly created shop.
+   * Called automatically when a shop is created.
+   * Silently fails if no FREE plan exists for the country.
+   */
+  async autoActivateFreePlan(
+    shopId: string,
+    country: string,
+  ): Promise<void> {
+    try {
+      const freePlan = await this.prisma.subscriptionPlan.findFirst({
+        where: {
+          name: "FREE",
+          country: country as any,
+          isActive: true,
+        },
+      });
+
+      if (!freePlan) {
+        this.logger.warn(
+          `No active FREE plan found for country ${country}. Shop ${shopId} has no auto-subscription.`,
+        );
+        return;
+      }
+
+      // Skip if already subscribed
+      const existing = await this.prisma.sellerSubscription.findFirst({
+        where: {
+          shopId,
+          status: { in: ["ACTIVE", "TRIALING"] },
+        },
+      });
+
+      if (existing) {
+        this.logger.debug(
+          `Shop ${shopId} already has an active subscription. Skipping auto-activation.`,
+        );
+        return;
+      }
+
+      const now = new Date();
+      const periodEnd = new Date(now);
+      periodEnd.setFullYear(periodEnd.getFullYear() + 100); // Free plan never expires
+
+      await this.prisma.sellerSubscription.create({
+        data: {
+          shopId,
+          planId: freePlan.id,
+          status: "ACTIVE",
+          country: country as any,
+          startedAt: now,
+          currentPeriodStart: now,
+          currentPeriodEnd: periodEnd,
+          autoRenew: true,
+        },
+      });
+
+      this.logger.log(
+        `Auto-activated FREE plan for shop ${shopId} (country: ${country})`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to auto-activate FREE plan for shop ${shopId}: ${error.message}`,
+      );
+      // Don't throw — shop creation should still succeed
+    }
   }
 }

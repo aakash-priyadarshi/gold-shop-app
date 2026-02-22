@@ -18,7 +18,7 @@ import {
   sellerSubscriptionsApi,
   subscriptionPlansApi,
 } from "@/lib/api";
-import { ArrowRight, Crown, Sparkles, Zap } from "lucide-react";
+import { ArrowRight, CheckCircle, Crown, Sparkles, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 
 // ─── Types ───────────────────────────────────────
@@ -300,7 +300,9 @@ function AiCreditsTab() {
           aiCreditsApi.getLedger({ limit: 30 }),
         ]);
         setBalance(balRes.data?.balance ?? 0);
-        setLedger(Array.isArray(ledRes.data) ? ledRes.data : (ledRes.data?.data ?? []));
+        setLedger(
+          Array.isArray(ledRes.data) ? ledRes.data : (ledRes.data?.data ?? []),
+        );
       } catch {
         toast({
           title: "Error",
@@ -405,26 +407,38 @@ function AiCreditsTab() {
 
 function AvailablePlansTab() {
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetch() {
-      try {
-        // Fetch plans — pass empty country to get all
-        const res = await subscriptionPlansApi.getAvailable("");
-        setPlans(Array.isArray(res.data) ? res.data : (res.data?.data ?? []));
-      } catch {
-        toast({
-          title: "Error",
-          description: "Failed to load available plans",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
+  const fetchData = async () => {
+    try {
+      // Fetch available plans and current subscription in parallel
+      const [plansRes, subRes] = await Promise.all([
+        subscriptionPlansApi.getAvailable(""),
+        sellerSubscriptionsApi.getMySubscription().catch(() => ({ data: null })),
+      ]);
+      setPlans(
+        Array.isArray(plansRes.data)
+          ? plansRes.data
+          : (plansRes.data?.data ?? []),
+      );
+      if (subRes.data?.planId) {
+        setCurrentPlanId(subRes.data.planId);
       }
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to load available plans",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-    fetch();
+  };
+
+  useEffect(() => {
+    fetchData();
   }, []);
 
   const handleSubscribe = async (plan: Plan) => {
@@ -440,6 +454,7 @@ function AvailablePlansTab() {
         window.location.href = res.data.paymentUrl;
       } else {
         toast({ title: "Success", description: "Subscription activated!" });
+        fetchData(); // Refresh to show the new active plan
       }
     } catch (err: any) {
       toast({
@@ -475,74 +490,96 @@ function AvailablePlansTab() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {plans.map((plan) => (
-            <Card key={plan.id} className="flex flex-col">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">{plan.displayName}</CardTitle>
-                <CardDescription>
-                  {plan.country} · {plan.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-1 flex-col space-y-2 text-sm">
-                <div className="flex-1 space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Monthly</span>
-                    <span className="font-semibold">
-                      {plan.monthlyPrice === 0
-                        ? "Free"
-                        : `${plan.currency} ${plan.monthlyPrice}`}
-                    </span>
+          {plans.map((plan) => {
+            const isCurrentPlan = currentPlanId === plan.id;
+            return (
+              <Card
+                key={plan.id}
+                className={`flex flex-col ${isCurrentPlan ? "border-primary ring-2 ring-primary/20" : ""}`}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">
+                      {plan.displayName}
+                    </CardTitle>
+                    {isCurrentPlan && (
+                      <Badge className="flex items-center gap-1 bg-primary">
+                        <CheckCircle className="h-3 w-3" />
+                        Current
+                      </Badge>
+                    )}
                   </div>
-                  {plan.annualPrice && plan.annualPrice > 0 && (
+                  <CardDescription>
+                    {plan.country} · {plan.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-1 flex-col space-y-2 text-sm">
+                  <div className="flex-1 space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Annual</span>
+                      <span className="text-muted-foreground">Monthly</span>
                       <span className="font-semibold">
-                        {plan.currency} {plan.annualPrice}
+                        {plan.monthlyPrice === 0
+                          ? "Free"
+                          : `${plan.currency} ${plan.monthlyPrice}`}
                       </span>
                     </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Commission</span>
-                    <span>{plan.commissionPercent}%</span>
+                    {plan.annualPrice && plan.annualPrice > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Annual</span>
+                        <span className="font-semibold">
+                          {plan.currency} {plan.annualPrice}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Commission</span>
+                      <span>{plan.commissionPercent}%</span>
+                    </div>
+                    {plan.includesAi && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          AI Credits/mo
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Zap className="h-3 w-3 text-yellow-500" />
+                          {plan.monthlyAiCredits}
+                        </span>
+                      </div>
+                    )}
+                    {plan.catalogueLimit && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Catalogue</span>
+                        <span>{plan.catalogueLimit} products</span>
+                      </div>
+                    )}
                   </div>
-                  {plan.includesAi && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        AI Credits/mo
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Zap className="h-3 w-3 text-yellow-500" />
-                        {plan.monthlyAiCredits}
-                      </span>
-                    </div>
-                  )}
-                  {plan.catalogueLimit && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Catalogue</span>
-                      <span>{plan.catalogueLimit} products</span>
-                    </div>
-                  )}
-                </div>
 
-                <Button
-                  className="mt-4 w-full"
-                  disabled={subscribing === plan.id}
-                  onClick={() => handleSubscribe(plan)}
-                >
-                  {subscribing === plan.id ? (
-                    "Processing..."
-                  ) : (
-                    <>
-                      {plan.monthlyPrice === 0
-                        ? "Activate Free Plan"
-                        : "Subscribe"}
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+                  <Button
+                    className="mt-4 w-full"
+                    variant={isCurrentPlan ? "outline" : "default"}
+                    disabled={isCurrentPlan || subscribing === plan.id}
+                    onClick={() => handleSubscribe(plan)}
+                  >
+                    {isCurrentPlan ? (
+                      <>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Current Plan
+                      </>
+                    ) : subscribing === plan.id ? (
+                      "Processing..."
+                    ) : (
+                      <>
+                        {plan.monthlyPrice === 0
+                          ? "Activate Free Plan"
+                          : "Subscribe"}
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
