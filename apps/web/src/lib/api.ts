@@ -881,6 +881,8 @@ export const sellerSubscriptionsApi = {
   getMyMigration: () => api.get("/seller-subscriptions/my-migration"),
   respondToMigration: (id: string, accept: boolean) =>
     api.post(`/seller-subscriptions/${id}/migration-response`, { accept }),
+  // Stripe Billing Portal
+  getBillingPortal: () => api.get("/seller-subscriptions/billing-portal"),
   // Admin
   listAll: (params?: {
     status?: string;
@@ -897,6 +899,8 @@ export const sellerSubscriptionsApi = {
   adminActivate: (id: string) =>
     api.post(`/seller-subscriptions/admin/${id}/activate`),
   getStats: () => api.get("/seller-subscriptions/admin/stats"),
+  adminSyncStripe: () =>
+    api.post("/seller-subscriptions/admin/sync-stripe"),
 };
 
 // ─── AI Credits API ───

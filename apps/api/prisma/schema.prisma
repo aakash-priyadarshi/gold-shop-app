@@ -2488,6 +2488,11 @@ model SubscriptionPlan {
   successorPlan       SubscriptionPlan?    @relation("PlanSuccessor", fields: [successorPlanId], references: [id])
   predecessors        SubscriptionPlan[]   @relation("PlanSuccessor")
 
+  // ─── Stripe Billing IDs ────────────────────────────────────────────
+  stripeProductId     String?              // Stripe Product ID (prod_xxx)
+  stripePriceId       String?              // Stripe monthly recurring Price ID (price_xxx)
+  stripeAnnualPriceId String?              // Stripe annual recurring Price ID (price_xxx)
+
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 

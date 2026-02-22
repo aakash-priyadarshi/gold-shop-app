@@ -71,10 +71,10 @@ export class SellerSubscriptionsController {
       actorType: "SHOPKEEPER",
       action: "SUBSCRIBE_TO_PLAN",
       resourceType: "SellerSubscription",
-      resourceId: result.subscription.id,
+      resourceId: result.subscription?.id || "pending-checkout",
       newValue: {
         planId: dto.planId,
-        planName: result.subscription.plan.name,
+        planName: result.subscription?.plan?.name || dto.planId,
         requiresPayment: result.requiresPayment,
       },
     });
@@ -149,6 +149,15 @@ export class SellerSubscriptionsController {
   @ApiOperation({ summary: "Get pending migration status (if any)" })
   async getMyMigration(@CurrentUser("shopId") shopId: string) {
     return this.subscriptionService.getMigrationStatus(shopId);
+  }
+
+  @Get("billing-portal")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Get Stripe Customer Portal URL" })
+  async getBillingPortal(@CurrentUser("shopId") shopId: string) {
+    return this.subscriptionService.createBillingPortalSession(shopId);
   }
 
   @Post(":id/migration-response")
@@ -271,22 +280,48 @@ export class SellerSubscriptionsController {
     return this.subscriptionService.getSubscriptionStats();
   }
 
+  @Post("admin/sync-stripe")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Sync all paid plans to Stripe Products & Prices (admin)",
+  })
+  async syncStripe(@CurrentUser("id") adminId: string) {
+    const result = await this.subscriptionService.syncAllPlansToStripe();
+
+    await this.auditService.log({
+      userId: adminId,
+      actorType: "ADMIN",
+      action: "SYNC_PLANS_TO_STRIPE",
+      resourceType: "SubscriptionPlan",
+      resourceId: "all",
+      newValue: result,
+    });
+
+    return result;
+  }
+
   // ─── Stripe Webhook ───────────────────────────────
 
   @Post("webhooks/stripe")
   @ApiOperation({ summary: "Stripe webhook handler for subscriptions" })
   async stripeWebhook(@Req() req: RawBodyRequest<Request>) {
-    const sig = req.headers["stripe-signature"];
+    const sig = req.headers["stripe-signature"] as string;
     const endpointSecret = this.configService.get<string>(
       "STRIPE_WEBHOOK_SECRET",
     );
 
     if (!sig || !endpointSecret) {
-      return { received: true, processed: false };
+      return { received: true, processed: false, reason: "Missing signature or secret" };
     }
 
     try {
       const stripeKey = this.configService.get<string>("STRIPE_SECRET_KEY");
+      if (!stripeKey) {
+        return { received: true, processed: false, reason: "Stripe not configured" };
+      }
+
       const stripe = require("stripe")(stripeKey);
       const event = stripe.webhooks.constructEvent(
         req.rawBody,

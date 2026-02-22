@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import Stripe from "stripe";
 import { PrismaService } from "../../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { SubscriptionPlansService } from "./subscription-plans.service";
@@ -13,19 +14,34 @@ import { SubscriptionPlansService } from "./subscription-plans.service";
 @Injectable()
 export class SellerSubscriptionsService {
   private readonly logger = new Logger(SellerSubscriptionsService.name);
+  private stripe: Stripe | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly plansService: SubscriptionPlansService,
     private readonly notificationsService: NotificationsService,
-  ) {}
+  ) {
+    const stripeKey = this.configService.get<string>("STRIPE_SECRET_KEY");
+    if (stripeKey && stripeKey !== "" && stripeKey !== "sk_test_placeholder") {
+      this.stripe = new Stripe(stripeKey);
+    }
+  }
+
+  private get stripeOrThrow(): Stripe {
+    if (!this.stripe) {
+      throw new BadRequestException(
+        "Stripe is not configured. Add STRIPE_SECRET_KEY to enable paid subscriptions.",
+      );
+    }
+    return this.stripe;
+  }
 
   // ─── Subscribe / Change Plan ───────────────────────
 
   /**
    * Subscribe a shop to a plan.
-   * For paid plans → initiate Stripe checkout (or return clientSecret).
+   * For paid plans → Create Stripe Checkout Session (redirect URL).
    * For FREE plans → activate immediately.
    */
   async subscribeToPlan(opts: {
@@ -74,6 +90,17 @@ export class SellerSubscriptionsService {
     if (plan.monthlyPrice === 0) {
       // Cancel existing paid subscription if any
       if (existing) {
+        // If existing has a Stripe subscription, cancel it in Stripe too
+        if (existing.stripeSubscriptionId && this.stripe) {
+          try {
+            await this.stripe.subscriptions.cancel(
+              existing.stripeSubscriptionId,
+            );
+          } catch (e) {
+            this.logger.warn(`Failed to cancel Stripe sub: ${e.message}`);
+          }
+        }
+
         await this.prisma.sellerSubscription.update({
           where: { id: existing.id },
           data: {
@@ -101,110 +128,181 @@ export class SellerSubscriptionsService {
       return { subscription, requiresPayment: false };
     }
 
-    // ---- PAID PLAN: create pending subscription + Stripe intent ----
-    const price =
-      opts.billingCycle === "annual" && plan.annualPrice
-        ? plan.annualPrice
-        : plan.monthlyPrice;
+    // ---- PAID PLAN: Create Stripe Checkout Session ----
+    const stripe = this.stripeOrThrow;
 
-    // If there's an existing subscription on a different plan, cancel it
-    if (existing) {
-      await this.prisma.sellerSubscription.update({
-        where: { id: existing.id },
-        data: {
-          status: "CANCELLED",
-          cancelledAt: now,
-          cancelReason: `Switching to ${plan.name}`,
-        },
-      });
+    // Ensure the plan has a Stripe Price synced
+    const syncedPlan = await this.ensurePlanSyncedToStripe(opts.planId);
+    const priceId =
+      opts.billingCycle === "annual" && syncedPlan.stripeAnnualPriceId
+        ? syncedPlan.stripeAnnualPriceId
+        : syncedPlan.stripePriceId;
+
+    if (!priceId) {
+      throw new BadRequestException(
+        "Plan is not synced to Stripe. Admin must sync plans first.",
+      );
     }
 
-    // Create subscription in TRIALING state (pending payment)
-    const subscription = await this.prisma.sellerSubscription.create({
-      data: {
+    // Get or create Stripe customer
+    const stripeCustomerId = await this.getOrCreateStripeCustomer(opts.shopId);
+
+    // Build the Checkout Session
+    const frontendUrl = this.configService.get<string>("FRONTEND_URL") || "http://localhost:3000";
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      customer: stripeCustomerId,
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${frontendUrl}/dashboard/shop/billing?session_id={CHECKOUT_SESSION_ID}&success=true`,
+      cancel_url: `${frontendUrl}/dashboard/shop/billing?cancelled=true`,
+      subscription_data: {
+        metadata: {
+          shopId: opts.shopId,
+          planId: opts.planId,
+          country: opts.country,
+          billingCycle: opts.billingCycle || "monthly",
+        },
+      },
+      metadata: {
         shopId: opts.shopId,
         planId: opts.planId,
-        status: "TRIALING",
-        country: opts.country as any,
-        startedAt: now,
-        currentPeriodStart: now,
-        currentPeriodEnd: periodEnd,
-        autoRenew: true,
-      },
-      include: { plan: true },
-    });
-
-    // Create pending payment record
-    const payment = await this.prisma.subscriptionPayment.create({
-      data: {
-        subscriptionId: subscription.id,
-        amount: price,
-        currency: plan.currency,
-        gateway: "stripe",
-        status: "PENDING",
-        periodStart: now,
-        periodEnd,
+        userId: opts.userId,
       },
     });
 
-    // Attempt to create Stripe payment intent
-    let clientSecret: string | null = null;
-    try {
-      const stripeKey = this.configService.get<string>("STRIPE_SECRET_KEY");
-      if (
-        stripeKey &&
-        stripeKey !== "" &&
-        stripeKey !== "sk_test_placeholder"
-      ) {
-        const stripe = require("stripe")(stripeKey);
-
-        // Find or create Stripe customer
-        let stripeCustomerId = await this.getOrCreateStripeCustomer(
-          opts.shopId,
-        );
-
-        const paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(price * 100), // cents
-          currency: plan.currency.toLowerCase(),
-          customer: stripeCustomerId,
-          metadata: {
-            subscriptionId: subscription.id,
-            paymentId: payment.id,
-            shopId: opts.shopId,
-            planId: opts.planId,
-          },
-        });
-
-        clientSecret = paymentIntent.client_secret;
-
-        // Save Stripe IDs
-        await this.prisma.sellerSubscription.update({
-          where: { id: subscription.id },
-          data: { stripeCustomerId },
-        });
-
-        await this.prisma.subscriptionPayment.update({
-          where: { id: payment.id },
-          data: { gatewayPaymentId: paymentIntent.id },
-        });
-      } else {
-        this.logger.warn(
-          "Stripe not configured. Subscription created in TRIALING state pending manual activation.",
-        );
-      }
-    } catch (err) {
-      this.logger.error(
-        `Stripe payment intent creation failed: ${err.message}`,
-      );
-      // Subscription stays in TRIALING — admin can manually activate
-    }
+    this.logger.log(
+      `Stripe Checkout Session created: ${session.id} for shop ${opts.shopId} plan ${plan.name}`,
+    );
 
     return {
-      subscription,
-      payment,
-      clientSecret,
+      subscription: null,
       requiresPayment: true,
+      checkoutUrl: session.url,
+      sessionId: session.id,
     };
+  }
+
+  // ─── Sync Plan to Stripe ──────────────────────────
+
+  /**
+   * Ensure a SubscriptionPlan has corresponding Stripe Product + Price objects.
+   * Creates them if missing, returns the plan with Stripe IDs.
+   */
+  async ensurePlanSyncedToStripe(planId: string) {
+    const plan = await this.prisma.subscriptionPlan.findUnique({
+      where: { id: planId },
+    });
+    if (!plan) throw new NotFoundException("Plan not found");
+
+    // Skip free plans
+    if (plan.monthlyPrice === 0) return plan;
+
+    const stripe = this.stripeOrThrow;
+
+    let stripeProductId = plan.stripeProductId;
+    let stripePriceId = plan.stripePriceId;
+    let stripeAnnualPriceId = plan.stripeAnnualPriceId;
+
+    // Create or update Product
+    if (!stripeProductId) {
+      const product = await stripe.products.create({
+        name: `${plan.displayName} (${plan.country})`,
+        description: plan.description || `${plan.displayName} subscription`,
+        metadata: {
+          planId: plan.id,
+          planName: plan.name,
+          country: plan.country,
+        },
+      });
+      stripeProductId = product.id;
+      this.logger.log(`Created Stripe Product: ${stripeProductId} for plan ${plan.name}`);
+    }
+
+    // Create monthly Price if missing
+    if (!stripePriceId && plan.monthlyPrice > 0) {
+      const price = await stripe.prices.create({
+        product: stripeProductId,
+        unit_amount: Math.round(plan.monthlyPrice * 100),
+        currency: plan.currency.toLowerCase(),
+        recurring: { interval: "month" },
+        metadata: { planId: plan.id, cycle: "monthly" },
+      });
+      stripePriceId = price.id;
+      this.logger.log(`Created Stripe Monthly Price: ${stripePriceId}`);
+    }
+
+    // Create annual Price if missing and annualPrice is set
+    if (!stripeAnnualPriceId && plan.annualPrice && plan.annualPrice > 0) {
+      const price = await stripe.prices.create({
+        product: stripeProductId,
+        unit_amount: Math.round(plan.annualPrice * 100),
+        currency: plan.currency.toLowerCase(),
+        recurring: { interval: "year" },
+        metadata: { planId: plan.id, cycle: "annual" },
+      });
+      stripeAnnualPriceId = price.id;
+      this.logger.log(`Created Stripe Annual Price: ${stripeAnnualPriceId}`);
+    }
+
+    // Persist Stripe IDs
+    const updated = await this.prisma.subscriptionPlan.update({
+      where: { id: planId },
+      data: { stripeProductId, stripePriceId, stripeAnnualPriceId },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Admin: Sync all active paid plans to Stripe Products & Prices.
+   */
+  async syncAllPlansToStripe() {
+    const plans = await this.prisma.subscriptionPlan.findMany({
+      where: { isActive: true, monthlyPrice: { gt: 0 } },
+    });
+
+    const results: Array<{ planId: string; name: string; synced: boolean; error?: string }> = [];
+
+    for (const plan of plans) {
+      try {
+        await this.ensurePlanSyncedToStripe(plan.id);
+        results.push({ planId: plan.id, name: plan.name, synced: true });
+      } catch (err) {
+        results.push({ planId: plan.id, name: plan.name, synced: false, error: err.message });
+      }
+    }
+
+    return { total: plans.length, results };
+  }
+
+  // ─── Stripe Customer Portal ────────────────────────
+
+  /**
+   * Create a Stripe Customer Portal session for a shop to manage billing.
+   */
+  async createBillingPortalSession(shopId: string) {
+    const stripe = this.stripeOrThrow;
+
+    const sub = await this.prisma.sellerSubscription.findFirst({
+      where: { shopId, stripeCustomerId: { not: null } },
+      select: { stripeCustomerId: true },
+    });
+
+    if (!sub?.stripeCustomerId) {
+      throw new BadRequestException(
+        "No Stripe customer found. Subscribe to a paid plan first.",
+      );
+    }
+
+    const frontendUrl = this.configService.get<string>("FRONTEND_URL") || "http://localhost:3000";
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer: sub.stripeCustomerId,
+      return_url: `${frontendUrl}/dashboard/shop/billing`,
+    });
+
+    return { url: session.url };
   }
 
   // ─── Stripe Customer ──────────────────────────────
@@ -228,10 +326,7 @@ export class SellerSubscriptionsService {
     if (existingSub?.stripeCustomerId) return existingSub.stripeCustomerId;
 
     // Create new Stripe customer
-    const stripeKey = this.configService.get<string>("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new BadRequestException("Stripe not configured");
-
-    const stripe = require("stripe")(stripeKey);
+    const stripe = this.stripeOrThrow;
     const customer = await stripe.customers.create({
       email: shop.user.email,
       name: `${shop.user.firstName} ${shop.user.lastName}`,
@@ -288,6 +383,22 @@ export class SellerSubscriptionsService {
       throw new BadRequestException(
         "Subscription is already cancelled/expired",
       );
+    }
+
+    // Cancel in Stripe if there's a Stripe subscription
+    if (sub.stripeSubscriptionId && this.stripe) {
+      try {
+        if (opts.immediate) {
+          await this.stripe.subscriptions.cancel(sub.stripeSubscriptionId);
+        } else {
+          await this.stripe.subscriptions.update(sub.stripeSubscriptionId, {
+            cancel_at_period_end: true,
+          });
+        }
+      } catch (err) {
+        this.logger.error(`Stripe cancel failed: ${err.message}`);
+        // Still proceed with local cancellation
+      }
     }
 
     if (opts.immediate) {
@@ -350,64 +461,233 @@ export class SellerSubscriptionsService {
   // ─── Stripe Webhook ───────────────────────────────
 
   /**
-   * Handle Stripe webhook events for subscription payments.
+   * Handle Stripe webhook events for subscription lifecycle.
    */
   async handleStripeWebhook(event: any) {
     switch (event.type) {
-      case "payment_intent.succeeded": {
-        const pi = event.data.object;
-        const { subscriptionId, paymentId } = pi.metadata || {};
+      // ── Checkout completed → create local subscription ──
+      case "checkout.session.completed": {
+        const session = event.data.object as any;
+        if (session.mode !== "subscription") break;
 
-        if (subscriptionId) {
-          // Activate subscription
-          await this.activateSubscription(subscriptionId);
+        const { shopId, planId, country, billingCycle } =
+          (session.subscription_details as any)?.metadata ||
+          (session.metadata as any) ||
+          {};
 
-          // Update payment record
-          if (paymentId) {
-            await this.prisma.subscriptionPayment.update({
-              where: { id: paymentId },
-              data: {
-                status: "COMPLETED",
-                gatewayPaymentId: pi.id,
-              },
-            });
-          }
+        const stripeSubscriptionId = session.subscription as string;
+        const stripeCustomerId = session.customer as string;
 
-          this.logger.log(
-            `Subscription ${subscriptionId} activated via Stripe webhook`,
+        if (!shopId || !planId || !stripeSubscriptionId) {
+          this.logger.warn(
+            `checkout.session.completed missing metadata: shopId=${shopId}, planId=${planId}, stripeSub=${stripeSubscriptionId}`,
           );
+          break;
         }
-        break;
-      }
 
-      case "payment_intent.payment_failed": {
-        const pi = event.data.object;
-        const { subscriptionId, paymentId } = pi.metadata || {};
-
-        if (subscriptionId) {
-          await this.prisma.sellerSubscription.update({
-            where: { id: subscriptionId },
-            data: { status: "PAST_DUE" },
-          });
-
-          if (paymentId) {
-            await this.prisma.subscriptionPayment.update({
-              where: { id: paymentId },
-              data: {
-                status: "FAILED",
-                failureReason:
-                  pi.last_payment_error?.message || "Payment failed",
-              },
-            });
+        // Cancel any existing active subscription for this shop
+        const existing = await this.prisma.sellerSubscription.findFirst({
+          where: { shopId, status: { in: ["ACTIVE", "TRIALING"] } },
+        });
+        if (existing) {
+          // Cancel old Stripe subscription if different
+          if (
+            existing.stripeSubscriptionId &&
+            existing.stripeSubscriptionId !== stripeSubscriptionId &&
+            this.stripe
+          ) {
+            try {
+              await this.stripe.subscriptions.cancel(
+                existing.stripeSubscriptionId,
+              );
+            } catch (e) {
+              this.logger.warn(`Failed to cancel old Stripe sub: ${e.message}`);
+            }
           }
-
-          this.logger.warn(`Payment failed for subscription ${subscriptionId}`);
+          await this.prisma.sellerSubscription.update({
+            where: { id: existing.id },
+            data: {
+              status: "CANCELLED",
+              cancelledAt: new Date(),
+              cancelReason: "Replaced by new subscription",
+            },
+          });
         }
+
+        // Retrieve the Stripe Subscription to get period dates
+        let periodStart = new Date();
+        let periodEnd = new Date();
+        if (this.stripe) {
+          try {
+            const stripeSub =
+              await this.stripe.subscriptions.retrieve(stripeSubscriptionId) as any;
+            periodStart = new Date(stripeSub.current_period_start * 1000);
+            periodEnd = new Date(stripeSub.current_period_end * 1000);
+          } catch (e) {
+            this.logger.warn(`Could not retrieve Stripe period: ${e.message}`);
+            periodEnd.setMonth(periodEnd.getMonth() + (billingCycle === "annual" ? 12 : 1));
+          }
+        }
+
+        await this.prisma.sellerSubscription.create({
+          data: {
+            shopId,
+            planId,
+            status: "ACTIVE",
+            country: (country || "US") as any,
+            startedAt: new Date(),
+            currentPeriodStart: periodStart,
+            currentPeriodEnd: periodEnd,
+            stripeSubscriptionId,
+            stripeCustomerId,
+            autoRenew: true,
+          },
+        });
+
+        this.logger.log(
+          `Subscription created for shop ${shopId} via Stripe Checkout (${stripeSubscriptionId})`,
+        );
         break;
       }
 
+      // ── Invoice paid → record payment + keep subscription ACTIVE ──
+      case "invoice.paid": {
+        const invoice = event.data.object as any;
+        const stripeSubId = invoice.subscription as string;
+        if (!stripeSubId) break;
+
+        const sub = await this.prisma.sellerSubscription.findFirst({
+          where: { stripeSubscriptionId: stripeSubId },
+          include: { plan: true },
+        });
+        if (!sub) {
+          this.logger.warn(
+            `invoice.paid: no local sub for Stripe sub ${stripeSubId}`,
+          );
+          break;
+        }
+
+        // Update period dates
+        if (invoice.lines?.data?.[0]) {
+          const line = invoice.lines.data[0];
+          const pStart = new Date((line.period?.start || 0) * 1000);
+          const pEnd = new Date((line.period?.end || 0) * 1000);
+          await this.prisma.sellerSubscription.update({
+            where: { id: sub.id },
+            data: {
+              status: "ACTIVE",
+              currentPeriodStart: pStart,
+              currentPeriodEnd: pEnd,
+            },
+          });
+        } else {
+          await this.prisma.sellerSubscription.update({
+            where: { id: sub.id },
+            data: { status: "ACTIVE" },
+          });
+        }
+
+        // Record the payment
+        await this.prisma.subscriptionPayment.create({
+          data: {
+            subscriptionId: sub.id,
+            amount: (invoice.amount_paid || 0) / 100,
+            currency: (sub.plan.currency || "USD") as any,
+            gateway: "stripe",
+            gatewayPaymentId: invoice.payment_intent as string,
+            status: "COMPLETED",
+            periodStart: sub.currentPeriodStart,
+            periodEnd: sub.currentPeriodEnd,
+            invoiceUrl: invoice.hosted_invoice_url || undefined,
+          },
+        });
+
+        this.logger.log(
+          `Invoice paid for subscription ${sub.id} (${invoice.id})`,
+        );
+        break;
+      }
+
+      // ── Invoice failed → mark PAST_DUE ──
+      case "invoice.payment_failed": {
+        const invoice = event.data.object as any;
+        const stripeSubId = invoice.subscription as string;
+        if (!stripeSubId) break;
+
+        const sub = await this.prisma.sellerSubscription.findFirst({
+          where: { stripeSubscriptionId: stripeSubId },
+          include: { plan: true },
+        });
+        if (!sub) break;
+
+        await this.prisma.sellerSubscription.update({
+          where: { id: sub.id },
+          data: { status: "PAST_DUE" },
+        });
+
+        // Record failed payment
+        await this.prisma.subscriptionPayment.create({
+          data: {
+            subscriptionId: sub.id,
+            amount: (invoice.amount_due || 0) / 100,
+            currency: (sub.plan.currency || "USD") as any,
+            gateway: "stripe",
+            gatewayPaymentId: invoice.payment_intent as string,
+            status: "FAILED",
+            periodStart: sub.currentPeriodStart,
+            periodEnd: sub.currentPeriodEnd,
+            failureReason:
+              (invoice as any).last_payment_error?.message ||
+              "Payment failed",
+          },
+        });
+
+        this.logger.warn(
+          `Payment failed → subscription ${sub.id} marked PAST_DUE`,
+        );
+        break;
+      }
+
+      // ── Subscription updated (plan change, cancel-at-period-end, etc.) ──
+      case "customer.subscription.updated": {
+        const stripeSub = event.data.object as any;
+        const sub = await this.prisma.sellerSubscription.findFirst({
+          where: { stripeSubscriptionId: stripeSub.id },
+        });
+        if (!sub) break;
+
+        const statusMap: Record<string, string> = {
+          active: "ACTIVE",
+          past_due: "PAST_DUE",
+          canceled: "CANCELLED",
+          unpaid: "PAST_DUE",
+          trialing: "TRIALING",
+        };
+
+        const newStatus = statusMap[stripeSub.status] || sub.status;
+        const cancelAtPeriodEnd = stripeSub.cancel_at_period_end;
+
+        await this.prisma.sellerSubscription.update({
+          where: { id: sub.id },
+          data: {
+            status: newStatus as any,
+            autoRenew: !cancelAtPeriodEnd,
+            currentPeriodStart: new Date(
+              stripeSub.current_period_start * 1000,
+            ),
+            currentPeriodEnd: new Date(stripeSub.current_period_end * 1000),
+          },
+        });
+
+        this.logger.log(
+          `Subscription ${sub.id} updated: status=${newStatus}, autoRenew=${!cancelAtPeriodEnd}`,
+        );
+        break;
+      }
+
+      // ── Subscription deleted → cancel locally ──
       case "customer.subscription.deleted": {
-        const stripeSub = event.data.object;
+        const stripeSub = event.data.object as any;
         const sub = await this.prisma.sellerSubscription.findFirst({
           where: { stripeSubscriptionId: stripeSub.id },
         });
@@ -421,9 +701,15 @@ export class SellerSubscriptionsService {
               cancelReason: "Cancelled via Stripe",
             },
           });
+          this.logger.log(
+            `Subscription ${sub.id} cancelled via Stripe (${stripeSub.id})`,
+          );
         }
         break;
       }
+
+      default:
+        this.logger.debug(`Unhandled webhook event: ${event.type}`);
     }
   }
 
