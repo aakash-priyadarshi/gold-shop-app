@@ -163,121 +163,143 @@ export default function AdminBillingPage() {
 // ═══════════════════════════════════════════════════
 
 /** All known feature keys — used for checkboxes in the edit dialog */
-const ALL_FEATURE_KEYS: { key: string; label: string; category: string }[] = [
-  { key: "marketplace", label: "Marketplace listing", category: "Marketplace" },
+const ALL_FEATURE_KEYS: { key: string; label: string; category: string; enforced: boolean }[] = [
+  { key: "marketplace", label: "Marketplace listing", category: "Marketplace", enforced: false },
   {
     key: "priorityListing",
     label: "Priority listing",
     category: "Marketplace",
+    enforced: false,
   },
-  { key: "bulkUpload", label: "Bulk product upload", category: "Marketplace" },
-  { key: "crm", label: "CRM suite", category: "CRM & Business" },
+  { key: "bulkUpload", label: "Bulk product upload", category: "Marketplace", enforced: true },
+  { key: "crm", label: "CRM suite", category: "CRM & Business", enforced: true },
   {
     key: "invoicing",
     label: "Invoicing & billing",
     category: "CRM & Business",
+    enforced: true,
   },
   {
     key: "inventoryManagement",
     label: "Inventory management",
     category: "CRM & Business",
+    enforced: false,
   },
   {
     key: "customerManagement",
     label: "Customer management",
     category: "CRM & Business",
+    enforced: false,
   },
   {
     key: "customBranding",
     label: "Custom branding",
     category: "CRM & Business",
+    enforced: true,
   },
-  { key: "staffAccounts", label: "Staff accounts", category: "CRM & Business" },
+  { key: "staffAccounts", label: "Staff accounts", category: "CRM & Business", enforced: true },
   {
     key: "multiBranch",
     label: "Multi-branch support",
     category: "CRM & Business",
+    enforced: true,
   },
   {
     key: "purchasableAiCredits",
     label: "Purchasable AI credits",
     category: "AI & Intelligence",
+    enforced: true,
   },
   {
     key: "aiDesignGeneration",
     label: "AI design generation",
     category: "AI & Intelligence",
+    enforced: true,
   },
   {
     key: "aiSmartRecommendations",
     label: "Smart recommendations",
     category: "AI & Intelligence",
+    enforced: false,
   },
   {
     key: "aiPriceOptimization",
     label: "Price optimization",
     category: "AI & Intelligence",
+    enforced: true,
   },
   {
     key: "demandForecasting",
     label: "Demand forecasting",
     category: "AI & Intelligence",
+    enforced: true,
   },
   {
     key: "basicAnalytics",
     label: "Basic analytics",
     category: "Analytics & Reports",
+    enforced: false,
   },
   {
     key: "advancedAnalytics",
     label: "Advanced analytics",
     category: "Analytics & Reports",
+    enforced: false,
   },
   {
     key: "scheduledReports",
     label: "Scheduled reports",
     category: "Analytics & Reports",
+    enforced: true,
   },
   {
     key: "auditLogExport",
     label: "Audit log export",
     category: "Analytics & Reports",
+    enforced: false,
   },
   {
     key: "prioritySupport",
     label: "Priority support",
     category: "Support & Integration",
+    enforced: true,
   },
   {
     key: "dedicatedSupport",
     label: "Dedicated support",
     category: "Support & Integration",
+    enforced: true,
   },
   {
     key: "dedicatedAccountManager",
     label: "Account manager",
     category: "Support & Integration",
+    enforced: false,
   },
-  { key: "apiAccess", label: "API access", category: "Support & Integration" },
+  { key: "apiAccess", label: "API access", category: "Support & Integration", enforced: true },
   {
     key: "webhookSubscriptions",
     label: "Webhook subscriptions",
     category: "Support & Integration",
+    enforced: true,
   },
   {
     key: "whiteLabel",
     label: "White-label option",
     category: "Support & Integration",
+    enforced: false,
   },
   {
     key: "customDomain",
     label: "Custom domain",
     category: "Support & Integration",
+    enforced: false,
   },
   {
     key: "customIntegrations",
     label: "Custom integrations",
     category: "Support & Integration",
+    enforced: false,
   },
 ];
 
@@ -849,8 +871,12 @@ function PlansTab() {
 
             {/* ─── Plan Features (checkboxes) ────────────────── */}
             <div className="col-span-2 mt-2">
-              <p className="text-sm font-medium text-muted-foreground mb-3">
+              <p className="text-sm font-medium text-muted-foreground mb-1">
                 Plan Features
+              </p>
+              <p className="text-xs text-muted-foreground mb-3">
+                <span className="inline-flex items-center gap-1"><span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-1 py-0.5 rounded text-[10px] font-medium">Enforced</span> = backend blocks access when disabled.</span>{" "}
+                <span className="inline-flex items-center gap-1"><span className="bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500 px-1 py-0.5 rounded text-[10px] font-medium">Display only</span> = shown on pricing page only.</span>
               </p>
               <div className="space-y-4">
                 {FEATURE_CATEGORIES.map((cat) => {
@@ -863,7 +889,7 @@ function PlansTab() {
                         {cat}
                       </p>
                       <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                        {keys.map(({ key, label }) => {
+                        {keys.map(({ key, label, enforced }) => {
                           const features =
                             (editForm.features as Record<string, unknown>) ??
                             {};
@@ -897,6 +923,15 @@ function PlansTab() {
                               >
                                 {label}
                               </span>
+                              {enforced ? (
+                                <span className="text-[10px] font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-1.5 py-0.5 rounded-full leading-none">
+                                  Enforced
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-medium bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500 px-1.5 py-0.5 rounded-full leading-none">
+                                  Display only
+                                </span>
+                              )}
                             </label>
                           );
                         })}

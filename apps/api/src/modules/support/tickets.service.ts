@@ -8,6 +8,7 @@ import {
 import { TicketPriority, TicketStatus, TicketType } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { PlanLimitsService } from "../subscriptions/plan-limits.service";
 
 // Helper to create notification compatible with the service's DTO
 function ticketNotif(
@@ -66,6 +67,7 @@ export class TicketsService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private planLimits: PlanLimitsService,
   ) {}
 
   // ─── Generate unique ticket number ───
@@ -95,6 +97,41 @@ export class TicketsService {
       dto.type === TicketType.ACCOUNT_SUSPENSION
     ) {
       priority = TicketPriority.HIGH;
+    }
+
+    // ─── Plan-based priority escalation ───
+    // Users on paid plans with support features get automatic priority boost
+    let priorityBoostedByPlan = false;
+    let boostReason = "";
+
+    if (userId) {
+      try {
+        // Look up the user's active shop to check plan features
+        const user = await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { activeShopId: true, shops: { select: { id: true }, take: 1 } },
+        });
+
+        const shopId = user?.activeShopId || user?.shops?.[0]?.id;
+
+        if (shopId) {
+          const hasDedicated = await this.planLimits.hasFeature(shopId, "dedicatedSupport");
+          const hasPriority = await this.planLimits.hasFeature(shopId, "prioritySupport");
+
+          if (hasDedicated && priority !== TicketPriority.URGENT) {
+            priority = TicketPriority.URGENT;
+            priorityBoostedByPlan = true;
+            boostReason = "Dedicated Support plan feature";
+          } else if (hasPriority && priority !== TicketPriority.URGENT && priority !== TicketPriority.HIGH) {
+            priority = TicketPriority.HIGH;
+            priorityBoostedByPlan = true;
+            boostReason = "Priority Support plan feature";
+          }
+        }
+      } catch (err) {
+        // Don't fail ticket creation if plan lookup fails
+        this.logger.warn(`Plan-based priority lookup failed for user ${userId}: ${err.message}`);
+      }
     }
 
     const ticket = await this.prisma.supportTicket.create({
@@ -132,6 +169,22 @@ export class TicketsService {
         content: `Ticket ${ticketNumber} created. Our support team will review your issue shortly.`,
       },
     });
+
+    // If priority was boosted by plan, add a system note so staff sees the reason
+    if (priorityBoostedByPlan) {
+      await this.prisma.ticketMessage.create({
+        data: {
+          ticketId: ticket.id,
+          senderRole: "SYSTEM",
+          senderName: "System",
+          content: `⚡ Priority escalated to ${priority} — ${boostReason}. This user is on a paid plan with enhanced support.`,
+          isInternal: true,
+        },
+      });
+      this.logger.log(
+        `Ticket ${ticketNumber} priority boosted to ${priority} (${boostReason})`,
+      );
+    }
 
     // Notify all SUPPORT and ADMIN users about new ticket
     const supportStaff = await this.prisma.user.findMany({

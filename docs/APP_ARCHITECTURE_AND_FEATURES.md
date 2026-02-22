@@ -1,6 +1,6 @@
 # Gold Shop App — Architecture & Feature Inventory
 
-_Last updated: 2026-02-24_
+_Last updated: 2026-02-25_
 
 This document is a code-informed overview of the system architecture and the major product features implemented in this repository.
 
@@ -102,14 +102,14 @@ Backend module inventory (`apps/api/src/modules/*`):
 - `admin`, `marketplace-intelligence`, `i18n`: admin tools + intelligence + localization support
 - `chat`: anti-circumvention in-app messaging with **3-strike global blocking** (messages BLOCKED, not masked), dual-layer detection (regex + Gemini Flash AI deep scan including image analysis), per-user violation tracking, account suspension on 3rd strike, admin unblock; WebSocket real-time delivery; **online presence tracking** (30s polling), **file attachments** (images, video ≤10s, documents via R2), type-specific violation warnings (13 types with English+Hindi labels)
 - `refunds`: metal-only refund policy enforcement, eligibility checks, refund lifecycle (request → approve/reject → process), commission reversal
-- `support`: internal operations dashboard aggregating pending refunds, flagged conversations, KYC queue, and order monitoring; **ticket system** (SupportTicket + TicketMessage models, real-time WebSocket `/support` namespace, claim/resolve/close lifecycle, internal notes, auto-priority); **AI chatbot** (Gemini Flash 2.0 for public help queries with escalation to tickets)
+- `support`: internal operations dashboard aggregating pending refunds, flagged conversations, KYC queue, and order monitoring; **ticket system** (SupportTicket + TicketMessage models, real-time WebSocket `/support` namespace, claim/resolve/close lifecycle, internal notes, auto-priority, **plan-based priority escalation** — `dedicatedSupport` → URGENT, `prioritySupport` → HIGH); **AI chatbot** (Gemini Flash 2.0 for public help queries with escalation to tickets)
 - `product-variants`: size variant management for rings/bangles/bracelets with SKU-level stock, price overrides, and standardised size charts
 - `catalogue`: seller catalogue system — shareable product catalogues with showroom mode, password protection, walk-in RFQ creation, analytics, and chat integration (product cards, catalogue links, showroom sessions)
 - `pos`: POS basket from customer likes/picks — session-based basket with stock reservations, checkout-to-invoice, 30-min expiry via Bull cron
-- `subscriptions`: admin-configurable subscription plans (FREE/PRO/ENTERPRISE per country in local currency), seller subscription lifecycle (subscribe/cancel/activate/renew), Stripe webhook integration, plan-based commission rates
-- `ai-credits`: atomic AI credit debit/refund with `SELECT FOR UPDATE`, Redis idempotency + rate limiting (20/hr, 100/day), monthly grant with rollover cap logic, admin adjustments
-- `payment-gateway`: multi-gateway routing (Stripe/Razorpay) with priority-based country selection, `envKeyLabel` pattern (secrets never stored in DB), admin gateway config CRUD
-- `enterprise`: enterprise-tier features — multi-branch management, staff accounts & roles, API key generation, webhook subscriptions, white-label/custom domain, scheduled reports, bulk import/export, demand forecasting, automated repricing; protected by `EnterpriseGuard` (checks active ENTERPRISE subscription, admin bypass)
+- `subscriptions`: admin-configurable subscription plans (FREE/PRO/PRO_PLUS/ENTERPRISE per country in local currency), seller subscription lifecycle (subscribe/cancel/activate/renew), Stripe webhook integration, plan-based commission rates; **feature gating system** — `PlanLimitsService` with `checkFeature()` / `hasFeature()` / `getActiveFeatures()`, `@RequireFeature()` decorator + `FeatureGateGuard` (admins bypass), `FeatureNotEnabledException` with upgrade prompt metadata; 15 features backend-enforced, 13 display-only
+- `ai-credits`: atomic AI credit debit/refund with `SELECT FOR UPDATE`, Redis idempotency + rate limiting (20/hr, 100/day), monthly grant with rollover cap logic, admin adjustments; **credit purchase** (PURCHASE action via payment gateway), **auto-recharge** configuration (threshold + top-up amount)
+- `payment-gateway`: multi-gateway routing (Stripe/Razorpay/PhonePe/eSewa/Khalti) with priority-based country selection, `envKeyLabel` pattern (secrets never stored in DB), admin gateway config CRUD; **wired to order payments** (inventory + custom orders) and **AI credit purchases** (one-time PaymentIntents via unified flow)
+- `enterprise`: enterprise-tier features — multi-branch management, staff accounts & roles, API key generation, webhook subscriptions, white-label/custom domain, scheduled reports, bulk import/export, demand forecasting, automated repricing; protected by `FeatureGateGuard` with per-feature `@RequireFeature()` decorators (e.g. `bulkUpload`, `multiBranch`, `staffAccounts`, `apiAccess`, `webhookSubscriptions`, `customBranding`, `scheduledReports`, `demandForecasting`, `aiPriceOptimization`); admin bypass remains
 
 ### Images (Cloudflare Worker + R2)
 
@@ -208,7 +208,7 @@ Core domain aggregates (high-level):
 - `SubscriptionPlan`: admin-configurable per-country plans. Fields: name+country (@@unique), displayName, description, country (MarketRegion), currency (CurrencyCode), monthlyPrice, annualPrice, catalogueLimit (null=unlimited), commissionPercent, includesAi, monthlyAiCredits, rolloverCap, extraCreditPrice, overageBehavior (BLOCK|AUTO_CHARGE), features (JSON — feature flags like prioritySupport, analytics, apiAccess, whiteLabel), isActive, sortOrder. Indexed on [country, isActive] and [isActive, sortOrder].
 - `SellerSubscription`: shopId + planId, status (SubscriptionStatus: ACTIVE, PAST_DUE, CANCELLED, EXPIRED, TRIALING), billingCycle (MONTHLY|ANNUAL), currentPeriodStart/End, autoRenew, stripeCustomerId/SubscriptionId (optional), cancellationReason. Indexed on [shopId, status].
 - `SubscriptionPayment`: per-period payment tracking with gateway info, amount, currency, PaymentStatus.
-- `AiCreditLedger`: immutable credit transaction ledger. Fields: userId, shopId, action (CreditAction: GRANT, DEBIT, REFUND, EXPIRE, ADMIN_ADJUST, OVERAGE), amount, balanceBefore, balanceAfter, reason, referenceId, idempotencyKey (@unique). Indexed on [userId, action, createdAt].
+- `AiCreditLedger`: immutable credit transaction ledger. Fields: userId, shopId, action (CreditAction: GRANT, DEBIT, REFUND, EXPIRE, ADMIN_ADJUST, OVERAGE, PURCHASE), amount, balanceBefore, balanceAfter, reason, referenceId, idempotencyKey (@unique). Indexed on [userId, action, createdAt].
 - `PaymentGatewayConfig`: per-gateway routing config. Fields: gatewayName (@unique), displayName, isEnabled, envKeyLabel (string reference to env var — never the actual secret), webhookEndpoint, supportedCountries (MarketRegion[]), supportedMethods (PaymentMethod[]), priority (Int). Indexed on [isEnabled, priority].
 - User model additions: `aiCreditsBalance` (Int, default 0), `aiCreditsGrantedAt` (DateTime?).
 - New enums: `SubscriptionStatus`, `CreditAction`, `OverageBehavior`, `CurrencyCode` (NPR, INR, AED, GBP, USD, EUR).
@@ -325,7 +325,8 @@ Instead of logging suspended users out:
 6. Users reply in ticket chat; auto-transitions `WAITING_USER → IN_PROGRESS`.
 7. Resolution adds a note; closing sets `closedAt`.
 8. All lifecycle events create system messages and in-app notifications.
-9. Auto-priority: `HACKED_ACCOUNT` and `ACCOUNT_SUSPENSION` types auto-set to `URGENT`.
+9. Auto-priority: `HACKED_ACCOUNT` and `ACCOUNT_SUSPENSION` types auto-set to `HIGH`.
+10. **Plan-based priority escalation**: when a logged-in user creates a ticket, their active subscription plan is checked. If `dedicatedSupport` feature is enabled → priority auto-escalated to `URGENT`. If `prioritySupport` → auto-escalated to `HIGH`. An internal-only system message is created noting the boost reason, visible only to support staff.
 
 **15 ticket types**: Account Suspension, Login Issue, Password Recovery, Hacked Account, Order Issue, Refund Issue, Payment Issue, Product Issue, Shipping Issue, Seller Complaint, Buyer Complaint, Platform Bug, Feature Request, KYC Verification, Other.
 
@@ -382,11 +383,13 @@ Instead of logging suspended users out:
 
 ### 4.14 Subscription & billing system
 
-**Three-tier plan model** (all configurable from Admin Billing dashboard):
+**Four-tier plan model** (all configurable from Admin Billing dashboard):
 - **FREE**: 20-item catalogue limit, 5% commission, no AI credits. Available in all 6 markets.
 - **PRO**: 200-item catalogue, 3% commission, 50 AI credits/month with 100 rollover cap. Priced in local currency (e.g. NPR 1,999/mo, INR 999/mo, USD 35/mo, GBP 29/mo, AED 99/mo, EUR 29/mo).
+- **PRO_PLUS**: 500-item catalogue, 2% commission, 200 AI credits/month, priority support, CRM suite, advanced analytics. Priced between PRO and ENTERPRISE.
 - **ENTERPRISE**: Unlimited catalogue, 1.5% commission, 500 AI credits/month, AUTO_CHARGE overage, dedicated support, API access, white-label. Priced per-country (e.g. NPR 9,999/mo, USD 199/mo).
 - Admin can create/update/disable plans anytime; all pricing, commission rates, features, and AI credit allocations are fully configurable per country.
+- **28 feature flags** across 6 categories (Marketplace, CRM & Business, AI & Intelligence, Analytics & Reports, Support & Integration). Each plan's `features` JSON toggles individual flags. Admin billing page annotates which features are **Enforced** (backend blocks access) vs **Display only** (shown on pricing page).
 
 **Seller subscription lifecycle**:
 1. When a seller creates a shop (registration, OAuth setup, or manual creation), the FREE plan is **automatically activated** — no manual subscription required.
@@ -418,7 +421,7 @@ Instead of logging suspended users out:
 
 ### 4.15 Enterprise features (ENTERPRISE-tier only)
 
-All enterprise endpoints are protected by `EnterpriseGuard` — verifies the seller has an active ENTERPRISE subscription. Admin role bypasses the check.
+All enterprise endpoints are protected by `FeatureGateGuard` with granular `@RequireFeature()` decorators — each endpoint specifies the exact feature key required (e.g. `@RequireFeature('bulkUpload')`, `@RequireFeature('multiBranch')`). This replaces the earlier blanket `EnterpriseGuard`. Admin role bypasses all feature checks.
 
 **Multi-branch management**:
 1. ENTERPRISE seller creates branches (`HQ`, `BRANCH`, `WAREHOUSE`, `KIOSK`) with unique branch codes per shop.
@@ -467,6 +470,59 @@ All enterprise endpoints are protected by `EnterpriseGuard` — verifies the sel
 2. `evaluateRules()` engine processes active rules by priority — checks conditions against current inventory/market data.
 3. Returns list of price adjustments for review before application.
 
+### 4.16 Feature gating system
+
+**Architecture**: `PlanLimitsService` (in `SubscriptionPlansModule`) provides both quantitative limit checks (products, invoices, catalogues, orders) and per-feature boolean gating.
+
+**Components**:
+- `PlanLimitsService.checkFeature(shopId, featureKey)` — throws `FeatureNotEnabledException` (HTTP 403, error code `FEATURE_NOT_ENABLED`) with feature key, label, and plan name for frontend upgrade prompts.
+- `PlanLimitsService.hasFeature(shopId, featureKey)` — non-throwing boolean check (used for conditional logic like ticket priority).
+- `PlanLimitsService.getActiveFeatures(shopId)` — returns all 28 features with enabled/disabled state, labels, and categories.
+- `@RequireFeature(...features)` decorator — sets metadata on NestJS route handlers/controllers.
+- `FeatureGateGuard` — `CanActivate` guard that reads `@RequireFeature()` metadata and calls `checkFeature()`. Admin role bypasses all checks.
+- `FeatureNotEnabledException` — structured error response with `featureKey`, `featureLabel`, `planName` for client-side upgrade prompts.
+
+**28 features** across 6 categories:
+1. **Marketplace**: marketplace, priorityListing, bulkUpload
+2. **CRM & Business**: crm, invoicing, inventoryManagement, customerManagement, customBranding, staffAccounts, multiBranch
+3. **AI & Intelligence**: purchasableAiCredits, aiDesignGeneration, aiSmartRecommendations, aiPriceOptimization, demandForecasting
+4. **Analytics & Reports**: basicAnalytics, advancedAnalytics, scheduledReports, auditLogExport
+5. **Support & Integration**: prioritySupport, dedicatedSupport, dedicatedAccountManager, apiAccess, webhookSubscriptions, whiteLabel, customDomain, customIntegrations
+
+**15 features are backend-enforced** (access blocked when disabled):
+- bulkUpload, crm, invoicing, customBranding, staffAccounts, multiBranch, purchasableAiCredits, aiDesignGeneration, aiPriceOptimization, demandForecasting, scheduledReports, apiAccess, webhookSubscriptions, prioritySupport, dedicatedSupport
+
+**13 features are display-only** (shown on pricing page but not enforced by backend):
+- marketplace, priorityListing, inventoryManagement, customerManagement, aiSmartRecommendations, basicAnalytics, advancedAnalytics, auditLogExport, dedicatedAccountManager, whiteLabel, customDomain, customIntegrations
+
+**Admin billing page** annotates each feature checkbox with "Enforced" (green badge) or "Display only" (gray badge), with a legend explaining the difference.
+
+**Wired controllers** (13 feature gates):
+- Enterprise: bulk-import (`bulkUpload`), branches (`multiBranch`), staff (`staffAccounts`), api-keys (`apiAccess`), webhooks (`webhookSubscriptions`), white-label (`customBranding`), reports (`scheduledReports`), forecasting (`demandForecasting`), repricing (`aiPriceOptimization`)
+- Business: invoices (`invoicing`), customer-crm (`crm`)
+- AI: ai-credits purchase (`purchasableAiCredits`), designs create (`aiDesignGeneration`)
+- Support: ticket priority escalation (`prioritySupport`, `dedicatedSupport`)
+
+### 4.17 Payment gateway — order & credit purchase wiring
+
+The `PaymentGatewayModule` is wired (via `forwardRef`) to both `OrdersModule` and `AiCreditsModule`:
+
+**Order payments**:
+1. When an order is created (inventory or custom), a payment intent is created via the unified gateway flow.
+2. Gateway adapter (Stripe/PhonePe/eSewa/Khalti/Razorpay) is selected based on seller's country + priority.
+3. On payment confirmation (webhook or redirect), order status transitions to confirmed.
+
+**AI credit purchases**:
+1. Seller clicks "Buy Credits" on billing page → `POST /ai-credits/purchase` with credit amount.
+2. Backend calculates price from plan's `extraCreditPrice`, creates PaymentIntent via gateway.
+3. On payment success, credits are added to balance with `PURCHASE` action in ledger.
+4. **Auto-recharge**: sellers configure a threshold balance and top-up amount. When credits drop below threshold during a debit, auto-recharge triggers a new purchase.
+
+**Frontend**:
+- Buy Credits dialog on billing page with credit amount input and price preview.
+- Auto-recharge toggle with threshold and top-up amount configuration.
+- Admin can adjust credits manually with audit trail.
+
 ## 5) Feature inventory (by role)
 
 ### Customers
@@ -495,7 +551,7 @@ All enterprise endpoints are protected by `EnterpriseGuard` — verifies the sel
 - In-app messaging with customers (contact info blocked, 3-strike system — account suspended on 3rd violation)
 - Size variant management: enable sizes, create/edit/delete variants, manage per-size stock and price overrides
 - **Seller Catalogues**: create/manage multiple catalogues per shop; add inventory items with sort order, override prices, hidden flags; share via link/QR; showroom mode for walk-in presentation; password protection with expiry; create walk-in RFQs (3-step modal: items → details → customer info); view analytics (views, unique visitors); share catalogues and products as rich cards in chat
-- **Billing**: view current subscription plan, AI credit balance + transaction ledger, browse and subscribe to available plans, cancel subscription
+- **Billing**: view current subscription plan with all 28 features (enabled/disabled indicators grouped by category), AI credit balance + transaction ledger, browse and subscribe to available plans, cancel subscription, **buy AI credits** (one-time purchase via payment gateway), **auto-recharge** configuration (trigger threshold + top-up amount)
 - **Enterprise features** (ENTERPRISE-tier only): multi-branch management (HQ/branch/warehouse/kiosk), staff accounts with role-based permissions (6 roles), API key generation with scoped access, webhook subscriptions (8 event types) with HMAC signing, white-label branding (logo/colors/CSS/custom domain), scheduled reports (6 types, 5 frequencies, 3 formats), bulk import/export (inventory/customers/price sheets), demand forecasting with seasonal analysis, automated repricing rules (5 rule types); 7-tab dashboard at `/dashboard/shop/enterprise`
 
 ### Admin
@@ -667,6 +723,7 @@ WebSocket gateway: namespace `/support`, events: `joinTicket`, `leaveTicket`, `t
 | POST | `/seller-subscriptions/subscribe` | SHOPKEEPER | Subscribe to a plan (FREE=instant, paid=Stripe intent) |
 | POST | `/seller-subscriptions/:id/cancel` | SHOPKEEPER | Cancel subscription (at period end or immediately) |
 | GET | `/seller-subscriptions/my-subscription` | SHOPKEEPER | Get current active subscription |
+| GET | `/seller-subscriptions/my-features` | SHOPKEEPER | Get all 28 features with enabled/disabled state for active plan |
 | GET | `/seller-subscriptions/my-history` | SHOPKEEPER | Get subscription history |
 | GET | `/seller-subscriptions/admin/all` | ADMIN | List all subscriptions (paginated, filterable) |
 | POST | `/seller-subscriptions/admin/override` | ADMIN | Override seller's plan (audit-logged) |
@@ -679,6 +736,9 @@ WebSocket gateway: namespace `/support`, events: `joinTicket`, `leaveTicket`, `t
 |--------|------|------|-------------|
 | GET | `/ai-credits/balance` | JWT | Get current credit balance |
 | GET | `/ai-credits/ledger` | JWT | Get credit transaction history |
+| POST | `/ai-credits/purchase` | SHOPKEEPER | Buy AI credits (creates PaymentIntent; requires `purchasableAiCredits` feature) |
+| GET | `/ai-credits/auto-recharge` | SHOPKEEPER | Get auto-recharge configuration |
+| PUT | `/ai-credits/auto-recharge` | SHOPKEEPER | Set auto-recharge threshold and top-up amount |
 | GET | `/ai-credits/admin/user/:userId` | ADMIN | Get user's credit balance |
 | GET | `/ai-credits/admin/user/:userId/ledger` | ADMIN | Get user's credit ledger |
 | POST | `/ai-credits/admin/adjust` | ADMIN | Admin credit adjustment (audit-logged) |
@@ -796,6 +856,33 @@ Worker (`cloudflare-worker`):
 ---
 
 ## 9) Changelog
+
+### 2026-02-25 — Feature gating system, ticket priority escalation, payment wiring
+
+**Feature gating system** (replaces blanket EnterpriseGuard):
+- `PlanLimitsService`: `checkFeature()` / `hasFeature()` / `getActiveFeatures()` for all 28 plan features.
+- `@RequireFeature()` decorator + `FeatureGateGuard`: NestJS guard reads metadata, calls `checkFeature()`, admins bypass.
+- `FeatureNotEnabledException`: structured 403 response with `featureKey`, `featureLabel`, `planName` for frontend upgrade prompts.
+- Wired to 13 controllers (15 feature gates): enterprise bulk-import, branches, staff, api-keys, webhooks, white-label, reports, forecasting, repricing; business invoices, customer-crm; AI credit purchase, design generation.
+- `GET /seller-subscriptions/my-features`: returns all 28 features with enabled/disabled state, labels, categories.
+- Seller billing "My Plan" tab now displays all features grouped by category with enabled/disabled indicators.
+- Admin billing plan editor annotates each feature checkbox with "Enforced" (green) or "Display only" (gray) badge.
+
+**Plan-based ticket priority escalation**:
+- `TicketsService.createTicket()` now checks the user's active plan features via `PlanLimitsService`.
+- `dedicatedSupport` enabled → ticket auto-escalated to `URGENT`.
+- `prioritySupport` enabled → ticket auto-escalated to `HIGH`.
+- Internal-only system message created noting the boost reason (visible to support staff only).
+- `SupportModule` now imports `SubscriptionPlansModule` for plan feature lookups.
+- Graceful fallback: if plan lookup fails, ticket proceeds at normal priority.
+
+**Payment gateway wiring to orders & credits**:
+- `PaymentGatewayModule` wired (via `forwardRef`) to `OrdersModule` and `AiCreditsModule`.
+- 5 gateway adapters: Stripe, PhonePe, eSewa, Khalti, Razorpay.
+- Order payments: unified flow creates payment intent on order creation, gateway selected by country + priority.
+- AI credit purchases: `POST /ai-credits/purchase` creates PaymentIntent; on success, credits added with `PURCHASE` action.
+- Auto-recharge: threshold + top-up config (`GET/PUT /ai-credits/auto-recharge`); triggers on credit debit below threshold.
+- `CreditAction` enum extended with `PURCHASE`.
 
 ### 2026-02-24 — Auto free plan, subscription UX, security fix
 
