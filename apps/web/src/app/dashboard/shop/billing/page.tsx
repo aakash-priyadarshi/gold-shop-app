@@ -23,6 +23,7 @@ import {
   ArrowRight,
   BarChart3,
   CheckCircle,
+  CreditCard,
   Crown,
   Package,
   Receipt,
@@ -30,7 +31,8 @@ import {
   Store,
   Zap,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 // ─── Types ───────────────────────────────────────
 
@@ -101,6 +103,35 @@ interface UsageSummary {
 // ─── Main Page ───────────────────────────────────
 
 export default function SellerBillingPage() {
+  return (
+    <Suspense fallback={null}>
+      <SellerBillingPageInner />
+    </Suspense>
+  );
+}
+
+function SellerBillingPageInner() {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("success") === "true") {
+      toast({
+        title: "Payment Successful!",
+        description:
+          "Your subscription has been activated. Welcome aboard!",
+      });
+      // Clean up URL
+      window.history.replaceState({}, "", "/dashboard/shop/billing");
+    } else if (searchParams.get("cancelled") === "true") {
+      toast({
+        title: "Payment Cancelled",
+        description: "You can subscribe anytime from the Available Plans tab.",
+        variant: "destructive",
+      });
+      window.history.replaceState({}, "", "/dashboard/shop/billing");
+    }
+  }, [searchParams]);
+
   return (
     <ShopGuard>
       <DashboardLayout>
@@ -304,9 +335,32 @@ function CurrentPlanTab() {
 
             <div className="mt-6 flex gap-3">
               {sub.status === "ACTIVE" && sub.plan.monthlyPrice > 0 && (
-                <Button variant="outline" size="sm" onClick={handleCancel}>
-                  Cancel Subscription
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        const res = await sellerSubscriptionsApi.getBillingPortal();
+                        if (res.data?.url) {
+                          window.location.href = res.data.url;
+                        }
+                      } catch {
+                        toast({
+                          title: "Error",
+                          description: "Could not open billing portal",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                  >
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Manage Billing
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleCancel}>
+                    Cancel Subscription
+                  </Button>
+                </>
               )}
             </div>
           </CardContent>
@@ -577,12 +631,19 @@ function AvailablePlansTab() {
         country: plan.country,
         billingCycle: "MONTHLY",
       });
+      // Stripe Checkout redirect (paid plans)
+      if (res.data.checkoutUrl) {
+        window.location.href = res.data.checkoutUrl;
+        return;
+      }
+      // Legacy paymentUrl fallback
       if (res.data.paymentUrl) {
         window.location.href = res.data.paymentUrl;
-      } else {
-        toast({ title: "Success", description: "Subscription activated!" });
-        fetchData(); // Refresh to show the new active plan
+        return;
       }
+      // Free plan — activated immediately
+      toast({ title: "Success", description: "Subscription activated!" });
+      fetchData();
     } catch (err: any) {
       toast({
         title: "Error",
