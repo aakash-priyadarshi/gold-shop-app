@@ -413,6 +413,10 @@ function PlansTab() {
       if (f.includesAi !== p.includesAi) payload.includesAi = f.includesAi;
       if (Number(f.monthlyAiCredits) !== p.monthlyAiCredits)
         payload.monthlyAiCredits = Number(f.monthlyAiCredits);
+      if (Number(f.extraCreditPrice) !== p.extraCreditPrice)
+        payload.extraCreditPrice = Number(f.extraCreditPrice);
+      if (Number(f.rolloverCap) !== p.rolloverCap)
+        payload.rolloverCap = Number(f.rolloverCap);
       if (Number(f.sortOrder) !== p.sortOrder)
         payload.sortOrder = Number(f.sortOrder);
 
@@ -856,6 +860,37 @@ function PlansTab() {
                 }
               />
             </div>
+            <div>
+              <Label>Extra Credit Price</Label>
+              <Input
+                type="number"
+                min={0}
+                step={0.01}
+                value={(editForm.extraCreditPrice as number) ?? 0}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, extraCreditPrice: parseFloat(e.target.value) || 0 })
+                }
+                placeholder="Price per extra AI credit"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Price per extra AI credit (in plan currency). Set &gt; 0 to enable purchasing.
+              </p>
+            </div>
+            <div>
+              <Label>Rollover Cap</Label>
+              <Input
+                type="number"
+                min={0}
+                value={(editForm.rolloverCap as number) ?? 0}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, rolloverCap: parseInt(e.target.value) || 0 })
+                }
+                placeholder="0 = no rollover"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Max unused credits that roll over to next month (0 = none)
+              </p>
+            </div>
 
             {/* ─── Display Customization ─────────────────────── */}
             <div className="col-span-2">
@@ -1227,6 +1262,46 @@ function CreatePlanForm({ onSuccess }: { onSuccess: () => void }) {
               })
             }
           />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-sm font-medium">Extra Credit Price</label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            className="mt-1 w-full rounded-md border px-3 py-2 text-sm dark:bg-zinc-900"
+            value={form.extraCreditPrice}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                extraCreditPrice: parseFloat(e.target.value) || 0,
+              })
+            }
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Price per extra AI credit. Set &gt; 0 to enable purchasing.
+          </p>
+        </div>
+        <div>
+          <label className="text-sm font-medium">Rollover Cap</label>
+          <input
+            type="number"
+            min="0"
+            className="mt-1 w-full rounded-md border px-3 py-2 text-sm dark:bg-zinc-900"
+            value={form.rolloverCap}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                rolloverCap: parseInt(e.target.value) || 0,
+              })
+            }
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Max unused credits rolling over (0 = none)
+          </p>
         </div>
       </div>
 
