@@ -2478,6 +2478,10 @@ model SubscriptionPlan {
   isActive            Boolean              @default(true)
   sortOrder           Int                  @default(0)
 
+  // ─── Display Customization (admin-editable) ─────────────────────────
+  badgeText           String?              // e.g. "Most Popular", "Best Value", shown on pricing page
+  buttonColor         String?              // e.g. "#f59e0b", hex color for CTA button on pricing page
+
   // ─── Plan Succession ────────────────────────────────────────────────
   successorPlanId     String?              // when disabled, point users to this replacement plan
   successorPlan       SubscriptionPlan?    @relation("PlanSuccessor", fields: [successorPlanId], references: [id])

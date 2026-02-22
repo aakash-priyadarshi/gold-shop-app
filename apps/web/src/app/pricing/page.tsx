@@ -64,6 +64,8 @@ interface PlanFromAPI {
   overageBehavior: string;
   features: Record<string, boolean | string | number>;
   sortOrder: number;
+  badgeText?: string | null;
+  buttonColor?: string | null;
 }
 
 /* ────────────────────────────────────────────────────────────── */
@@ -697,20 +699,27 @@ export default function PricingPage() {
                 ? `mailto:${BRAND.salesEmail}?subject=Enterprise%20Plan%20Inquiry`
                 : "/dashboard/shop/billing";
 
+              // Use DB values if set, else fall back to TIER_META
+              const badge = plan.badgeText ?? meta.badge;
+              const hasHighlight = !!badge || meta.highlight;
+              const btnColor = plan.buttonColor;
+              const btnStyle = btnColor ? { backgroundColor: btnColor, borderColor: btnColor, color: "#fff" } : undefined;
+              const btnClass = btnColor ? "hover:opacity-90" : meta.ctaClass;
+
               return (
                 <div
                   key={plan.id}
                   className={`relative rounded-2xl border bg-white dark:bg-gray-900 shadow-sm transition-all hover:shadow-lg ${
-                    meta.highlight
+                    hasHighlight
                       ? "border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/20 scale-[1.02]"
                       : "border-gray-200 dark:border-gray-800"
                   }`}
                 >
-                  {meta.badge && (
+                  {badge && (
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
                       <Badge className="bg-amber-500 text-white border-0 px-4 py-1 text-xs font-semibold shadow-md">
                         <Star className="w-3 h-3 mr-1 fill-white" />
-                        {meta.badge}
+                        {badge}
                       </Badge>
                     </div>
                   )}
@@ -766,9 +775,10 @@ export default function PricingPage() {
                     {/* CTA */}
                     <Link href={ctaLink}>
                       <Button
-                        className={`w-full ${meta.ctaClass}`}
+                        className={`w-full ${btnClass}`}
                         variant={meta.ctaVariant}
                         size="lg"
+                        style={btnStyle}
                       >
                         {meta.cta}
                         <ArrowRight className="ml-2 h-4 w-4" />

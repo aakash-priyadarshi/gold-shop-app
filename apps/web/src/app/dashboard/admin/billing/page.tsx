@@ -79,6 +79,8 @@ interface Plan {
   features?: Record<string, unknown>;
   isActive: boolean;
   sortOrder: number;
+  badgeText?: string | null;
+  buttonColor?: string | null;
 }
 
 interface Subscription {
@@ -149,6 +151,39 @@ export default function AdminBillingPage() {
 // PLANS TAB
 // ═══════════════════════════════════════════════════
 
+/** All known feature keys — used for checkboxes in the edit dialog */
+const ALL_FEATURE_KEYS: { key: string; label: string; category: string }[] = [
+  { key: "marketplace", label: "Marketplace listing", category: "Marketplace" },
+  { key: "priorityListing", label: "Priority listing", category: "Marketplace" },
+  { key: "bulkUpload", label: "Bulk product upload", category: "Marketplace" },
+  { key: "crm", label: "CRM suite", category: "CRM & Business" },
+  { key: "invoicing", label: "Invoicing & billing", category: "CRM & Business" },
+  { key: "inventoryManagement", label: "Inventory management", category: "CRM & Business" },
+  { key: "customerManagement", label: "Customer management", category: "CRM & Business" },
+  { key: "customBranding", label: "Custom branding", category: "CRM & Business" },
+  { key: "staffAccounts", label: "Staff accounts", category: "CRM & Business" },
+  { key: "multiBranch", label: "Multi-branch support", category: "CRM & Business" },
+  { key: "purchasableAiCredits", label: "Purchasable AI credits", category: "AI & Intelligence" },
+  { key: "aiDesignGeneration", label: "AI design generation", category: "AI & Intelligence" },
+  { key: "aiSmartRecommendations", label: "Smart recommendations", category: "AI & Intelligence" },
+  { key: "aiPriceOptimization", label: "Price optimization", category: "AI & Intelligence" },
+  { key: "demandForecasting", label: "Demand forecasting", category: "AI & Intelligence" },
+  { key: "basicAnalytics", label: "Basic analytics", category: "Analytics & Reports" },
+  { key: "advancedAnalytics", label: "Advanced analytics", category: "Analytics & Reports" },
+  { key: "scheduledReports", label: "Scheduled reports", category: "Analytics & Reports" },
+  { key: "auditLogExport", label: "Audit log export", category: "Analytics & Reports" },
+  { key: "prioritySupport", label: "Priority support", category: "Support & Integration" },
+  { key: "dedicatedSupport", label: "Dedicated support", category: "Support & Integration" },
+  { key: "dedicatedAccountManager", label: "Account manager", category: "Support & Integration" },
+  { key: "apiAccess", label: "API access", category: "Support & Integration" },
+  { key: "webhookSubscriptions", label: "Webhook subscriptions", category: "Support & Integration" },
+  { key: "whiteLabel", label: "White-label option", category: "Support & Integration" },
+  { key: "customDomain", label: "Custom domain", category: "Support & Integration" },
+  { key: "customIntegrations", label: "Custom integrations", category: "Support & Integration" },
+];
+
+const FEATURE_CATEGORIES = Array.from(new Set(ALL_FEATURE_KEYS.map((f) => f.category)));
+
 function PlansTab() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -177,6 +212,9 @@ function PlansTab() {
       rolloverCap: plan.rolloverCap,
       extraCreditPrice: plan.extraCreditPrice,
       sortOrder: plan.sortOrder,
+      features: { ...(plan.features ?? {}) },
+      badgeText: plan.badgeText ?? "",
+      buttonColor: plan.buttonColor ?? "",
     });
   };
 
@@ -199,6 +237,15 @@ function PlansTab() {
       if (f.includesAi !== p.includesAi) payload.includesAi = f.includesAi;
       if (Number(f.monthlyAiCredits) !== p.monthlyAiCredits) payload.monthlyAiCredits = Number(f.monthlyAiCredits);
       if (Number(f.sortOrder) !== p.sortOrder) payload.sortOrder = Number(f.sortOrder);
+
+      // Features — always send if changed
+      const currentFeatures = JSON.stringify(p.features ?? {});
+      const newFeatures = JSON.stringify(f.features ?? {});
+      if (newFeatures !== currentFeatures) payload.features = f.features;
+
+      // Display customization
+      if ((f.badgeText ?? "") !== (p.badgeText ?? "")) payload.badgeText = f.badgeText || null;
+      if ((f.buttonColor ?? "") !== (p.buttonColor ?? "")) payload.buttonColor = f.buttonColor || null;
 
       if (Object.keys(payload).length === 0) {
         toast({ title: "Info", description: "No changes detected." });
@@ -502,6 +549,61 @@ function PlansTab() {
             <div>
               <Label>Monthly AI Credits</Label>
               <Input type="number" min={0} value={editForm.monthlyAiCredits as number ?? ""} onChange={(e) => setEditForm({ ...editForm, monthlyAiCredits: e.target.value })} />
+            </div>
+
+            {/* ─── Display Customization ─────────────────────── */}
+            <div className="col-span-2">
+              <p className="text-sm font-medium text-muted-foreground mb-2">Display Customization</p>
+            </div>
+            <div>
+              <Label>Badge Text</Label>
+              <Input value={(editForm.badgeText as string) || ""} onChange={(e) => setEditForm({ ...editForm, badgeText: e.target.value })} placeholder='e.g. "Most Popular"' />
+              <p className="text-xs text-muted-foreground mt-1">Shown on the pricing page card</p>
+            </div>
+            <div>
+              <Label>Button Color</Label>
+              <div className="flex gap-2 items-center">
+                <Input value={(editForm.buttonColor as string) || ""} onChange={(e) => setEditForm({ ...editForm, buttonColor: e.target.value })} placeholder="#f59e0b" className="flex-1" />
+                {(editForm.buttonColor as string) && (
+                  <div className="h-9 w-9 rounded-md border flex-shrink-0" style={{ backgroundColor: editForm.buttonColor as string }} />
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Hex color for CTA button on pricing page</p>
+            </div>
+
+            {/* ─── Plan Features (checkboxes) ────────────────── */}
+            <div className="col-span-2 mt-2">
+              <p className="text-sm font-medium text-muted-foreground mb-3">Plan Features</p>
+              <div className="space-y-4">
+                {FEATURE_CATEGORIES.map((cat) => {
+                  const keys = ALL_FEATURE_KEYS.filter((f) => f.category === cat);
+                  return (
+                    <div key={cat}>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{cat}</p>
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                        {keys.map(({ key, label }) => {
+                          const features = (editForm.features as Record<string, unknown>) ?? {};
+                          const checked = !!features[key];
+                          return (
+                            <label key={key} className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(e) => {
+                                  const updated = { ...features, [key]: e.target.checked };
+                                  setEditForm({ ...editForm, features: updated });
+                                }}
+                                className="h-4 w-4 rounded border-gray-300 accent-amber-500"
+                              />
+                              <span className={checked ? "text-foreground" : "text-muted-foreground"}>{label}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
           <DialogFooter>
