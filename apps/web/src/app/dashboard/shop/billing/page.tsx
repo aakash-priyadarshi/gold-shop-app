@@ -18,7 +18,7 @@ import {
   sellerSubscriptionsApi,
   subscriptionPlansApi,
 } from "@/lib/api";
-import { ArrowRight, CheckCircle, Crown, Sparkles, Zap } from "lucide-react";
+import { ArrowRight, BarChart3, CheckCircle, Crown, Package, Receipt, Sparkles, Store, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 
 // ─── Types ───────────────────────────────────────
@@ -32,12 +32,17 @@ interface Plan {
   currency: string;
   monthlyPrice: number;
   annualPrice?: number;
-  catalogueLimit?: number;
+  maxProducts?: number | null;
+  maxInvoicesPerMonth?: number | null;
+  maxCatalogues?: number | null;
+  catalogueLimit?: number | null;
+  maxOrdersPerMonth?: number | null;
   commissionPercent: number;
   includesAi: boolean;
   monthlyAiCredits: number;
   rolloverCap: number;
   overageBehavior: string;
+  features?: Record<string, unknown>;
   isActive: boolean;
   sortOrder: number;
 }
@@ -62,6 +67,24 @@ interface LedgerEntry {
   balanceAfter: number;
   reason?: string;
   createdAt: string;
+}
+
+interface UsageLimitInfo {
+  used: number;
+  limit: number | null;
+  unlimited: boolean;
+}
+
+interface UsageSummary {
+  planName: string;
+  planId: string | null;
+  limits: {
+    products: UsageLimitInfo;
+    invoicesPerMonth: UsageLimitInfo;
+    catalogues: UsageLimitInfo;
+    ordersPerMonth: UsageLimitInfo;
+  };
+  features: Record<string, unknown>;
 }
 
 // ─── Main Page ───────────────────────────────────
@@ -108,17 +131,20 @@ export default function SellerBillingPage() {
 function CurrentPlanTab() {
   const [sub, setSub] = useState<Subscription | null>(null);
   const [history, setHistory] = useState<Subscription[]>([]);
+  const [usage, setUsage] = useState<UsageSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [subRes, histRes] = await Promise.all([
+      const [subRes, histRes, usageRes] = await Promise.all([
         sellerSubscriptionsApi.getMySubscription(),
         sellerSubscriptionsApi.getMyHistory(),
+        sellerSubscriptionsApi.getMyUsage().catch(() => ({ data: null })),
       ]);
       setSub(subRes.data || null);
       setHistory(Array.isArray(histRes.data) ? histRes.data : []);
+      setUsage(usageRes.data || null);
     } catch {
       // No active subscription or error
     } finally {
@@ -225,11 +251,43 @@ function CurrentPlanTab() {
             {sub.plan.catalogueLimit && (
               <div className="mt-3">
                 <p className="text-sm text-muted-foreground">
-                  Catalogue Limit:{" "}
+                  Items per Catalogue:{" "}
                   <span className="font-medium text-foreground">
-                    {sub.plan.catalogueLimit} products
+                    {sub.plan.catalogueLimit}
                   </span>
                 </p>
+              </div>
+            )}
+
+            {/* ── Usage vs Limits ──────────────────────────────── */}
+            {usage && (
+              <div className="mt-6">
+                <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                  <BarChart3 className="h-4 w-4" />
+                  Resource Usage
+                </h4>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <UsageBar
+                    icon={<Package className="h-4 w-4" />}
+                    label="Products"
+                    info={usage.limits.products}
+                  />
+                  <UsageBar
+                    icon={<Receipt className="h-4 w-4" />}
+                    label="Invoices / mo"
+                    info={usage.limits.invoicesPerMonth}
+                  />
+                  <UsageBar
+                    icon={<Store className="h-4 w-4" />}
+                    label="Catalogues"
+                    info={usage.limits.catalogues}
+                  />
+                  <UsageBar
+                    icon={<Store className="h-4 w-4" />}
+                    label="Orders / mo"
+                    info={usage.limits.ordersPerMonth}
+                  />
+                </div>
               </div>
             )}
 
@@ -278,6 +336,57 @@ function CurrentPlanTab() {
             </div>
           </CardContent>
         </Card>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════
+// USAGE BAR COMPONENT
+// ═══════════════════════════════════════════════════
+
+function UsageBar({
+  icon,
+  label,
+  info,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  info: UsageLimitInfo;
+}) {
+  if (info.unlimited) {
+    return (
+      <div className="rounded-lg border p-3">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          {icon} {label}
+        </div>
+        <p className="mt-1 text-lg font-semibold">{info.used}</p>
+        <p className="text-xs text-muted-foreground">Unlimited</p>
+      </div>
+    );
+  }
+  const pct = info.limit ? Math.min(100, (info.used / info.limit) * 100) : 0;
+  const isNearLimit = pct >= 80;
+  const isAtLimit = pct >= 100;
+  return (
+    <div className="rounded-lg border p-3">
+      <div className="flex items-center gap-2 text-sm font-medium">
+        {icon} {label}
+      </div>
+      <p className="mt-1 text-lg font-semibold">
+        {info.used}{" "}
+        <span className="text-sm font-normal text-muted-foreground">
+          / {info.limit}
+        </span>
+      </p>
+      <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className={`h-full rounded-full transition-all ${isAtLimit ? "bg-red-500" : isNearLimit ? "bg-yellow-500" : "bg-primary"}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {isAtLimit && (
+        <p className="mt-1 text-xs text-red-500">Limit reached — upgrade to continue</p>
       )}
     </div>
   );
@@ -416,7 +525,9 @@ function AvailablePlansTab() {
       // Fetch available plans and current subscription in parallel
       const [plansRes, subRes] = await Promise.all([
         subscriptionPlansApi.getAvailable(""),
-        sellerSubscriptionsApi.getMySubscription().catch(() => ({ data: null })),
+        sellerSubscriptionsApi
+          .getMySubscription()
+          .catch(() => ({ data: null })),
       ]);
       setPlans(
         Array.isArray(plansRes.data)
@@ -535,6 +646,34 @@ function AvailablePlansTab() {
                       <span className="text-muted-foreground">Commission</span>
                       <span>{plan.commissionPercent}%</span>
                     </div>
+
+                    {/* ── Resource Limits ─────────────────── */}
+                    <div className="my-1 border-t pt-2 text-xs font-medium text-muted-foreground">
+                      Limits
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Products</span>
+                      <span>{plan.maxProducts ?? "Unlimited"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Invoices/mo</span>
+                      <span>{plan.maxInvoicesPerMonth ?? "Unlimited"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Catalogues</span>
+                      <span>{plan.maxCatalogues ?? "Unlimited"}</span>
+                    </div>
+                    {plan.catalogueLimit && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Items/catalogue</span>
+                        <span>{plan.catalogueLimit}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Orders/mo</span>
+                      <span>{plan.maxOrdersPerMonth ?? "Unlimited"}</span>
+                    </div>
+
                     {plan.includesAi && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">
@@ -544,12 +683,6 @@ function AvailablePlansTab() {
                           <Zap className="h-3 w-3 text-yellow-500" />
                           {plan.monthlyAiCredits}
                         </span>
-                      </div>
-                    )}
-                    {plan.catalogueLimit && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Catalogue</span>
-                        <span>{plan.catalogueLimit} products</span>
                       </div>
                     )}
                   </div>

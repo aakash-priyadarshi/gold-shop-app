@@ -864,6 +864,7 @@ export const sellerSubscriptionsApi = {
     api.post(`/seller-subscriptions/${id}/cancel`, data || {}),
   getMySubscription: () => api.get("/seller-subscriptions/my-subscription"),
   getMyHistory: () => api.get("/seller-subscriptions/my-history"),
+  getMyUsage: () => api.get("/seller-subscriptions/my-usage"),
   // Admin
   listAll: (params?: {
     status?: string;

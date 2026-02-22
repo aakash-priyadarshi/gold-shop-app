@@ -15,10 +15,10 @@ import { RedisService } from "../../common/redis";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { MailService } from "../mail/mail.service";
+import { SellerSubscriptionsService } from "../subscriptions/seller-subscriptions.service";
 import { LoginDto } from "./dto/login.dto";
 import { RegisterDto } from "./dto/register.dto";
 import { OtpService } from "./otp.service";
-import { SellerSubscriptionsService } from "../subscriptions/seller-subscriptions.service";
 
 export interface JwtPayload {
   sub: string;

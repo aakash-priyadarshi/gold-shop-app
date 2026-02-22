@@ -55,7 +55,11 @@ interface Plan {
   currency: string;
   monthlyPrice: number;
   annualPrice?: number;
-  catalogueLimit?: number;
+  maxProducts?: number | null;
+  maxInvoicesPerMonth?: number | null;
+  maxCatalogues?: number | null;
+  catalogueLimit?: number | null;
+  maxOrdersPerMonth?: number | null;
   commissionPercent: number;
   includesAi: boolean;
   monthlyAiCredits: number;
@@ -276,14 +280,31 @@ function PlansTab() {
                     {plan.includesAi ? plan.monthlyAiCredits : "—"}
                   </span>
                 </div>
+                <div className="mt-2 border-t pt-2 text-xs font-medium text-muted-foreground">
+                  Resource Limits
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Products</span>
+                  <span className="font-medium">{plan.maxProducts ?? "∞"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Invoices/mo</span>
+                  <span className="font-medium">{plan.maxInvoicesPerMonth ?? "∞"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Catalogues</span>
+                  <span className="font-medium">{plan.maxCatalogues ?? "∞"}</span>
+                </div>
                 {plan.catalogueLimit && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">
-                      Catalogue Limit
-                    </span>
+                    <span className="text-muted-foreground">Items/Catalogue</span>
                     <span className="font-medium">{plan.catalogueLimit}</span>
                   </div>
                 )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Orders/mo</span>
+                  <span className="font-medium">{plan.maxOrdersPerMonth ?? "∞"}</span>
+                </div>
                 <div className="mt-4 flex gap-2">
                   <Button
                     size="sm"
@@ -318,7 +339,11 @@ function CreatePlanForm({ onSuccess }: { onSuccess: () => void }) {
     currency: "NPR",
     monthlyPrice: 0,
     annualPrice: 0,
+    maxProducts: 0,
+    maxInvoicesPerMonth: 0,
+    maxCatalogues: 0,
     catalogueLimit: 0,
+    maxOrdersPerMonth: 0,
     commissionPercent: 5,
     includesAi: false,
     monthlyAiCredits: 0,
@@ -342,7 +367,16 @@ function CreatePlanForm({ onSuccess }: { onSuccess: () => void }) {
     e.preventDefault();
     try {
       setSaving(true);
-      await subscriptionPlansApi.create(form);
+      // 0 means unlimited → send as null
+      const payload = {
+        ...form,
+        maxProducts: form.maxProducts || null,
+        maxInvoicesPerMonth: form.maxInvoicesPerMonth || null,
+        maxCatalogues: form.maxCatalogues || null,
+        catalogueLimit: form.catalogueLimit || null,
+        maxOrdersPerMonth: form.maxOrdersPerMonth || null,
+      };
+      await subscriptionPlansApi.create(payload);
       toast({ title: "Success", description: "Plan created successfully" });
       onSuccess();
     } catch (err: any) {
@@ -483,6 +517,77 @@ function CreatePlanForm({ onSuccess }: { onSuccess: () => void }) {
                 ...form,
                 monthlyAiCredits: parseInt(e.target.value) || 0,
               })
+            }
+          />
+        </div>
+      </div>
+
+      {/* ── Resource Limits (0 = unlimited) ──────────── */}
+      <div>
+        <label className="text-sm font-medium text-muted-foreground">
+          Resource Limits (0 = unlimited)
+        </label>
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <label className="text-sm font-medium">Max Products</label>
+          <input
+            type="number"
+            min="0"
+            className="mt-1 w-full rounded-md border px-3 py-2 text-sm dark:bg-zinc-900"
+            value={form.maxProducts}
+            onChange={(e) =>
+              setForm({ ...form, maxProducts: parseInt(e.target.value) || 0 })
+            }
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Max Invoices/mo</label>
+          <input
+            type="number"
+            min="0"
+            className="mt-1 w-full rounded-md border px-3 py-2 text-sm dark:bg-zinc-900"
+            value={form.maxInvoicesPerMonth}
+            onChange={(e) =>
+              setForm({ ...form, maxInvoicesPerMonth: parseInt(e.target.value) || 0 })
+            }
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Max Catalogues</label>
+          <input
+            type="number"
+            min="0"
+            className="mt-1 w-full rounded-md border px-3 py-2 text-sm dark:bg-zinc-900"
+            value={form.maxCatalogues}
+            onChange={(e) =>
+              setForm({ ...form, maxCatalogues: parseInt(e.target.value) || 0 })
+            }
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-sm font-medium">Items/Catalogue</label>
+          <input
+            type="number"
+            min="0"
+            className="mt-1 w-full rounded-md border px-3 py-2 text-sm dark:bg-zinc-900"
+            value={form.catalogueLimit}
+            onChange={(e) =>
+              setForm({ ...form, catalogueLimit: parseInt(e.target.value) || 0 })
+            }
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Max Orders/mo</label>
+          <input
+            type="number"
+            min="0"
+            className="mt-1 w-full rounded-md border px-3 py-2 text-sm dark:bg-zinc-900"
+            value={form.maxOrdersPerMonth}
+            onChange={(e) =>
+              setForm({ ...form, maxOrdersPerMonth: parseInt(e.target.value) || 0 })
             }
           />
         </div>

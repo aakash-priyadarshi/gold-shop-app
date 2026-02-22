@@ -11,12 +11,12 @@ import { RedisService } from "../../common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { PlatformConfigService } from "../platform-config/platform-config.service";
+import { SellerSubscriptionsService } from "../subscriptions/seller-subscriptions.service";
 import { ContentModerationService } from "./content-moderation.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
 import { OAuthShopSetupDto } from "./dto/oauth-shop-setup.dto";
 import { UpdateMetalRatesDto } from "./dto/update-metal-rates.dto";
 import { UpdateShopDto } from "./dto/update-shop.dto";
-import { SellerSubscriptionsService } from "../subscriptions/seller-subscriptions.service";
 
 @Injectable()
 export class ShopsService {

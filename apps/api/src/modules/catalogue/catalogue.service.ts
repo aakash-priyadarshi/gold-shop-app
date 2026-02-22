@@ -9,6 +9,7 @@ import { CatalogueMode, InventoryVisibility } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
+import { PlanLimitsService } from "../subscriptions/plan-limits.service";
 import {
   createCatalogueToken,
   hashViewerIp,
@@ -24,6 +25,7 @@ export class CatalogueService {
   constructor(
     private prisma: PrismaService,
     private auditService: AuditService,
+    private planLimitsService: PlanLimitsService,
   ) {}
 
   // ─── Field mapping helpers (Prisma → API contract) ─────────────────
@@ -87,6 +89,9 @@ export class CatalogueService {
   // ─── Seller CRUD ───────────────────────────────────────────────────
 
   async create(shopId: string, userId: string, dto: CreateCatalogueDto) {
+    // ── Plan limit check ──────────────────────────────────────────────
+    await this.planLimitsService.checkCatalogueLimit(shopId);
+
     let slug = this.generateSlug(dto.name);
     // Ensure unique slug
     const existing = await this.prisma.catalogue.findUnique({
@@ -267,6 +272,9 @@ export class CatalogueService {
       where: { id: catalogueId, shopId, deletedAt: null },
     });
     if (!catalogue) throw new NotFoundException("Catalogue not found");
+
+    // ── Plan limit: max items per catalogue ───────────────────────────
+    await this.planLimitsService.checkCatalogueItemLimit(shopId, catalogueId);
 
     // Verify inventory item belongs to shop and is not HIDDEN
     const inventoryItem = await this.prisma.inventoryItem.findFirst({

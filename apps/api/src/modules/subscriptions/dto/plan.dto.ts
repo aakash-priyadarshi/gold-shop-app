@@ -59,10 +59,31 @@ export class CreatePlanDto {
   @Min(0)
   annualPrice?: number;
 
+  // ─── Resource Limits (null / omit = unlimited) ──────────────────────
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  maxProducts?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  maxInvoicesPerMonth?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  maxCatalogues?: number;
+
   @IsOptional()
   @IsInt()
   @Min(0)
   catalogueLimit?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  maxOrdersPerMonth?: number;
 
   @IsNumber()
   @Min(0)
@@ -120,10 +141,31 @@ export class UpdatePlanDto {
   @Min(0)
   annualPrice?: number;
 
+  // ─── Resource Limits (null / omit = unlimited) ──────────────────────
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  maxProducts?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  maxInvoicesPerMonth?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  maxCatalogues?: number;
+
   @IsOptional()
   @IsInt()
   @Min(0)
   catalogueLimit?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  maxOrdersPerMonth?: number;
 
   @IsOptional()
   @IsNumber()
