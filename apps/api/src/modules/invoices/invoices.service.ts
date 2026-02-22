@@ -5,11 +5,15 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
+import { PlanLimitsService } from "../subscriptions/plan-limits.service";
 import { CreateInvoiceDto, UpdatePaymentDto } from "./dto/invoice.dto";
 
 @Injectable()
 export class InvoicesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private planLimitsService: PlanLimitsService,
+  ) {}
 
   /**
    * Generate a unique invoice number: INV-YYYYMMDD-XXXX
@@ -35,6 +39,9 @@ export class InvoicesService {
   }
 
   async create(shopId: string, dto: CreateInvoiceDto) {
+    // ── Plan limit check ──────────────────────────────────────────────
+    await this.planLimitsService.checkInvoiceLimit(shopId);
+
     const invoiceNumber = await this.generateInvoiceNumber();
 
     // Calculate totals from line items

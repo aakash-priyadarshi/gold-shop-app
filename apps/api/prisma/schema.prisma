@@ -2455,14 +2455,21 @@ model SubscriptionPlan {
   currency            CurrencyCode
   monthlyPrice        Float                // 0 for free plan
   annualPrice         Float?               // optional discounted annual price
-  catalogueLimit      Int?                 // null = unlimited
+
+  // ─── Resource Limits (null = unlimited) ─────────────────────────────
+  maxProducts         Int?                 // max inventory items per shop
+  maxInvoicesPerMonth Int?                 // max invoices/bills per calendar month
+  maxCatalogues       Int?                 // max catalogues per shop
+  catalogueLimit      Int?                 // max items per single catalogue
+  maxOrdersPerMonth   Int?                 // max orders per calendar month
+
   commissionPercent   Float                // e.g. 5.0 = 5%
   includesAi          Boolean              @default(false)
   monthlyAiCredits    Int                  @default(0)
   rolloverCap         Int                  @default(0)  // max credits that can roll over month-to-month
   extraCreditPrice    Float                @default(0)  // price per extra AI generation
   overageBehavior     OverageBehavior      @default(BLOCK) // what happens when credits run out
-  features            Json?                // additional feature flags: { "prioritySupport": true, "analytics": true, ... }
+  features            Json?                // { "crmAccess": "BASIC"|"FULL", "analyticsAccess": "NONE"|"BASIC"|"ADVANCED", "automatedQuotes": bool, "priorityListing": bool }
   isActive            Boolean              @default(true)
   sortOrder           Int                  @default(0)
   createdAt           DateTime             @default(now())

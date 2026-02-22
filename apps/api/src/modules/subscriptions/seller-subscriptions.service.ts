@@ -594,10 +594,7 @@ export class SellerSubscriptionsService {
    * Called automatically when a shop is created.
    * Silently fails if no FREE plan exists for the country.
    */
-  async autoActivateFreePlan(
-    shopId: string,
-    country: string,
-  ): Promise<void> {
+  async autoActivateFreePlan(shopId: string, country: string): Promise<void> {
     try {
       const freePlan = await this.prisma.subscriptionPlan.findFirst({
         where: {

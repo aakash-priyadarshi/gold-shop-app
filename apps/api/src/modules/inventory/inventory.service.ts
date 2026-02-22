@@ -6,10 +6,14 @@ import {
   InventoryFilterDto,
 } from './dto/inventory.dto';
 import { JewelleryType, InventoryStatus } from '@prisma/client';
+import { PlanLimitsService } from '../subscriptions/plan-limits.service';
 
 @Injectable()
 export class InventoryService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private planLimitsService: PlanLimitsService,
+  ) {}
 
   // Create inventory item
   async create(shopId: string, userId: string, dto: CreateInventoryItemDto) {
@@ -21,6 +25,9 @@ export class InventoryService {
     if (!shop) {
       throw new ForbiddenException('You do not own this shop');
     }
+
+    // ── Plan limit check ──────────────────────────────────────────────
+    await this.planLimitsService.checkProductLimit(shopId);
 
     // Check SKU uniqueness within shop
     const existingSku = await this.prisma.inventoryItem.findFirst({

@@ -19,6 +19,7 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { AdminOverrideDto, CancelSubscriptionDto, SubscribeDto } from "./dto";
+import { PlanLimitsService } from "./plan-limits.service";
 import { SellerSubscriptionsService } from "./seller-subscriptions.service";
 
 @ApiTags("seller-subscriptions")
@@ -26,6 +27,7 @@ import { SellerSubscriptionsService } from "./seller-subscriptions.service";
 export class SellerSubscriptionsController {
   constructor(
     private readonly subscriptionService: SellerSubscriptionsService,
+    private readonly planLimitsService: PlanLimitsService,
     private readonly auditService: AuditService,
     private readonly configService: ConfigService,
   ) {}
@@ -124,6 +126,15 @@ export class SellerSubscriptionsController {
   @ApiOperation({ summary: "Get subscription history" })
   async getMyHistory(@CurrentUser("shopId") shopId: string) {
     return this.subscriptionService.getShopSubscriptionHistory(shopId);
+  }
+
+  @Get("my-usage")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Get plan usage vs limits" })
+  async getMyUsage(@CurrentUser("shopId") shopId: string) {
+    return this.planLimitsService.getUsageSummary(shopId);
   }
 
   // ─── Admin endpoints ──────────────────────────────
