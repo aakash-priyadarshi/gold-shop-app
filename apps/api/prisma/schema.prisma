@@ -1677,6 +1677,11 @@ enum NotificationType {
   CATALOGUE_SHARED
   WALKIN_RFQ_CREATED
   QUOTE_FROM_CATALOGUE
+  // Subscription
+  PLAN_MIGRATION
+  PLAN_MIGRATION_REMINDER
+  PLAN_MIGRATED
+  PLAN_DOWNGRADED
   // POS
   POS_SESSION_CREATED
   POS_CHECKOUT_COMPLETED
@@ -2472,6 +2477,12 @@ model SubscriptionPlan {
   features            Json?                // { "crmAccess": "BASIC"|"FULL", "analyticsAccess": "NONE"|"BASIC"|"ADVANCED", "automatedQuotes": bool, "priorityListing": bool }
   isActive            Boolean              @default(true)
   sortOrder           Int                  @default(0)
+
+  // ─── Plan Succession ────────────────────────────────────────────────
+  successorPlanId     String?              // when disabled, point users to this replacement plan
+  successorPlan       SubscriptionPlan?    @relation("PlanSuccessor", fields: [successorPlanId], references: [id])
+  predecessors        SubscriptionPlan[]   @relation("PlanSuccessor")
+
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 
@@ -2497,6 +2508,12 @@ model SellerSubscription {
   stripeCustomerId      String?
   country               MarketRegion
   autoRenew             Boolean            @default(true)
+
+  // ─── Plan Migration ─────────────────────────────────────────────────
+  migrationStatus       MigrationStatus    @default(NONE)
+  migrationNotifiedAt   DateTime?          // when the first migration email was sent
+  migrationNotifyCount  Int                @default(0)  // how many follow-up emails sent
+
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
 
@@ -2509,6 +2526,7 @@ model SellerSubscription {
   @@index([status])
   @@index([stripeSubscriptionId])
   @@index([currentPeriodEnd])
+  @@index([migrationStatus])
 }
 
 model SubscriptionPayment {
@@ -2539,6 +2557,13 @@ enum SubscriptionStatus {
   CANCELLED
   EXPIRED
   TRIALING
+}
+
+enum MigrationStatus {
+  NONE       // no migration pending
+  PENDING    // notified, awaiting response
+  ACCEPTED   // user accepted migration to successor plan
+  DECLINED   // user declined, will downgrade to FREE at period end
 }
 
 enum OverageBehavior {

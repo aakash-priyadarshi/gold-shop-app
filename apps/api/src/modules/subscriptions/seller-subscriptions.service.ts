@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../prisma/prisma.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import { SubscriptionPlansService } from "./subscription-plans.service";
 
 @Injectable()
@@ -17,6 +18,7 @@ export class SellerSubscriptionsService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly plansService: SubscriptionPlansService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // ─── Subscribe / Change Plan ───────────────────────
@@ -652,5 +654,144 @@ export class SellerSubscriptionsService {
       );
       // Don't throw — shop creation should still succeed
     }
+  }
+
+  // ─── Plan Migration Response ──────────────────────
+
+  /**
+   * Seller responds to a plan migration: accept or decline.
+   */
+  async respondToMigration(
+    subscriptionId: string,
+    shopId: string,
+    accept: boolean,
+  ) {
+    const sub = await this.prisma.sellerSubscription.findUnique({
+      where: { id: subscriptionId },
+      include: {
+        plan: { include: { successorPlan: true } },
+        shop: { select: { id: true, userId: true, shopName: true } },
+      },
+    });
+
+    if (!sub) throw new NotFoundException("Subscription not found");
+
+    // Verify shop ownership
+    if (sub.shopId !== shopId) {
+      throw new BadRequestException(
+        "You can only respond for your own shop's subscription",
+      );
+    }
+
+    if (sub.migrationStatus !== "PENDING") {
+      throw new BadRequestException(
+        `Migration is not pending (current status: ${sub.migrationStatus})`,
+      );
+    }
+
+    if (!sub.plan.successorPlan) {
+      throw new BadRequestException(
+        "No successor plan configured for this plan",
+      );
+    }
+
+    const newStatus = accept ? "ACCEPTED" : "DECLINED";
+
+    const updated = await this.prisma.sellerSubscription.update({
+      where: { id: subscriptionId },
+      data: { migrationStatus: newStatus as any },
+      include: { plan: { include: { successorPlan: true } } },
+    });
+
+    // Send confirmation notification
+    const notificationType = accept ? "PLAN_MIGRATED" : "PLAN_DOWNGRADED";
+    const titleKey = accept
+      ? "notification.migration_accepted.title"
+      : "notification.migration_declined.title";
+    const bodyKey = accept
+      ? "notification.migration_accepted.body"
+      : "notification.migration_declined.body";
+
+    try {
+      await this.notificationsService.create({
+        userId: sub.shop.userId,
+        type: notificationType,
+        titleKey,
+        titleParams: {
+          planName: accept
+            ? sub.plan.successorPlan.displayName
+            : "Free Plan",
+        },
+        bodyKey,
+        bodyParams: {
+          oldPlan: sub.plan.displayName,
+          newPlan: accept
+            ? sub.plan.successorPlan.displayName
+            : "Free Plan",
+          shopName: sub.shop.shopName,
+          periodEnd: sub.currentPeriodEnd.toISOString(),
+        },
+        referenceType: "SellerSubscription",
+        referenceId: sub.id,
+        channels: ["IN_APP"],
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to send migration response notification: ${err.message}`,
+      );
+    }
+
+    this.logger.log(
+      `Subscription ${subscriptionId}: migration ${newStatus} by shop ${shopId}`,
+    );
+
+    return {
+      subscription: updated,
+      migrationStatus: newStatus,
+      message: accept
+        ? `You will be migrated to "${sub.plan.successorPlan.displayName}" at the end of your current period.`
+        : `You will be downgraded to the Free plan at the end of your current period.`,
+    };
+  }
+
+  /**
+   * Get migration status for the current shop's subscription.
+   */
+  async getMigrationStatus(shopId: string) {
+    const sub = await this.prisma.sellerSubscription.findFirst({
+      where: {
+        shopId,
+        migrationStatus: { not: "NONE" },
+        status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] },
+      },
+      include: {
+        plan: {
+          include: {
+            successorPlan: {
+              select: {
+                id: true,
+                name: true,
+                displayName: true,
+                monthlyPrice: true,
+                annualPrice: true,
+                currency: true,
+                features: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!sub) return null;
+
+    return {
+      subscriptionId: sub.id,
+      currentPlan: sub.plan.displayName,
+      successorPlan: sub.plan.successorPlan,
+      migrationStatus: sub.migrationStatus,
+      periodEnd: sub.currentPeriodEnd,
+      notifiedAt: sub.migrationNotifiedAt,
+    };
   }
 }

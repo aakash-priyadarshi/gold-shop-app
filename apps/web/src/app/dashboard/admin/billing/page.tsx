@@ -289,21 +289,29 @@ function PlansTab() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Invoices/mo</span>
-                  <span className="font-medium">{plan.maxInvoicesPerMonth ?? "∞"}</span>
+                  <span className="font-medium">
+                    {plan.maxInvoicesPerMonth ?? "∞"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Catalogues</span>
-                  <span className="font-medium">{plan.maxCatalogues ?? "∞"}</span>
+                  <span className="font-medium">
+                    {plan.maxCatalogues ?? "∞"}
+                  </span>
                 </div>
                 {plan.catalogueLimit && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Items/Catalogue</span>
+                    <span className="text-muted-foreground">
+                      Items/Catalogue
+                    </span>
                     <span className="font-medium">{plan.catalogueLimit}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Orders/mo</span>
-                  <span className="font-medium">{plan.maxOrdersPerMonth ?? "∞"}</span>
+                  <span className="font-medium">
+                    {plan.maxOrdersPerMonth ?? "∞"}
+                  </span>
                 </div>
                 <div className="mt-4 flex gap-2">
                   <Button
@@ -549,7 +557,10 @@ function CreatePlanForm({ onSuccess }: { onSuccess: () => void }) {
             className="mt-1 w-full rounded-md border px-3 py-2 text-sm dark:bg-zinc-900"
             value={form.maxInvoicesPerMonth}
             onChange={(e) =>
-              setForm({ ...form, maxInvoicesPerMonth: parseInt(e.target.value) || 0 })
+              setForm({
+                ...form,
+                maxInvoicesPerMonth: parseInt(e.target.value) || 0,
+              })
             }
           />
         </div>
@@ -575,7 +586,10 @@ function CreatePlanForm({ onSuccess }: { onSuccess: () => void }) {
             className="mt-1 w-full rounded-md border px-3 py-2 text-sm dark:bg-zinc-900"
             value={form.catalogueLimit}
             onChange={(e) =>
-              setForm({ ...form, catalogueLimit: parseInt(e.target.value) || 0 })
+              setForm({
+                ...form,
+                catalogueLimit: parseInt(e.target.value) || 0,
+              })
             }
           />
         </div>
@@ -587,7 +601,10 @@ function CreatePlanForm({ onSuccess }: { onSuccess: () => void }) {
             className="mt-1 w-full rounded-md border px-3 py-2 text-sm dark:bg-zinc-900"
             value={form.maxOrdersPerMonth}
             onChange={(e) =>
-              setForm({ ...form, maxOrdersPerMonth: parseInt(e.target.value) || 0 })
+              setForm({
+                ...form,
+                maxOrdersPerMonth: parseInt(e.target.value) || 0,
+              })
             }
           />
         </div>

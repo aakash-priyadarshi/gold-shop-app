@@ -18,7 +18,17 @@ import {
   sellerSubscriptionsApi,
   subscriptionPlansApi,
 } from "@/lib/api";
-import { ArrowRight, BarChart3, CheckCircle, Crown, Package, Receipt, Sparkles, Store, Zap } from "lucide-react";
+import {
+  ArrowRight,
+  BarChart3,
+  CheckCircle,
+  Crown,
+  Package,
+  Receipt,
+  Sparkles,
+  Store,
+  Zap,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 // ─── Types ───────────────────────────────────────
@@ -386,7 +396,9 @@ function UsageBar({
         />
       </div>
       {isAtLimit && (
-        <p className="mt-1 text-xs text-red-500">Limit reached — upgrade to continue</p>
+        <p className="mt-1 text-xs text-red-500">
+          Limit reached — upgrade to continue
+        </p>
       )}
     </div>
   );
@@ -665,7 +677,9 @@ function AvailablePlansTab() {
                     </div>
                     {plan.catalogueLimit && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Items/catalogue</span>
+                        <span className="text-muted-foreground">
+                          Items/catalogue
+                        </span>
                         <span>{plan.catalogueLimit}</span>
                       </div>
                     )}

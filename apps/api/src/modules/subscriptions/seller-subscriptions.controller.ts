@@ -18,7 +18,12 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
-import { AdminOverrideDto, CancelSubscriptionDto, SubscribeDto } from "./dto";
+import {
+  AdminOverrideDto,
+  CancelSubscriptionDto,
+  MigrationResponseDto,
+  SubscribeDto,
+} from "./dto";
 import { PlanLimitsService } from "./plan-limits.service";
 import { SellerSubscriptionsService } from "./seller-subscriptions.service";
 
@@ -135,6 +140,49 @@ export class SellerSubscriptionsController {
   @ApiOperation({ summary: "Get plan usage vs limits" })
   async getMyUsage(@CurrentUser("shopId") shopId: string) {
     return this.planLimitsService.getUsageSummary(shopId);
+  }
+
+  @Get("my-migration")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Get pending migration status (if any)" })
+  async getMyMigration(@CurrentUser("shopId") shopId: string) {
+    return this.subscriptionService.getMigrationStatus(shopId);
+  }
+
+  @Post(":id/migration-response")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Accept or decline plan migration" })
+  async respondToMigration(
+    @Param("id") subscriptionId: string,
+    @Body() dto: MigrationResponseDto,
+    @CurrentUser("id") userId: string,
+    @CurrentUser("shopId") shopId: string,
+  ) {
+    const result = await this.subscriptionService.respondToMigration(
+      subscriptionId,
+      shopId,
+      dto.accept,
+    );
+
+    await this.auditService.log({
+      userId,
+      actorType: "SHOPKEEPER",
+      action: dto.accept
+        ? "ACCEPT_PLAN_MIGRATION"
+        : "DECLINE_PLAN_MIGRATION",
+      resourceType: "SellerSubscription",
+      resourceId: subscriptionId,
+      newValue: {
+        migrationStatus: result.migrationStatus,
+        accept: dto.accept,
+      },
+    });
+
+    return result;
   }
 
   // ─── Admin endpoints ──────────────────────────────
