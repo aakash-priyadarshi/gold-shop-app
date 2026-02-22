@@ -60,14 +60,42 @@ export class PaymentGatewayService {
   ) {}
 
   // ═══════════════════════════════════════════════════
+  // ENV KEY VERIFICATION
+  // ═══════════════════════════════════════════════════
+
+  /**
+   * Check whether a gateway's required env keys are actually set (non-empty).
+   * If envKeysRequired is null/empty, we check the primary envKeyLabel.
+   */
+  private isGatewayKeysConfigured(gatewayName: string): boolean {
+    const keyMap: Record<string, string[]> = {
+      stripe: ["STRIPE_SECRET_KEY"],
+      phonepe: ["PHONEPE_MERCHANT_ID", "PHONEPE_SALT_KEY"],
+      razorpay: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"],
+      esewa: ["ESEWA_MERCHANT_ID", "ESEWA_SECRET"],
+      khalti: ["KHALTI_SECRET_KEY"],
+    };
+
+    const requiredKeys = keyMap[gatewayName];
+    if (!requiredKeys) return false; // unknown gateway
+
+    return requiredKeys.every((key) => {
+      const val = this.configService.get<string>(key);
+      return val && val.trim() !== "";
+    });
+  }
+
+  // ═══════════════════════════════════════════════════
   // GATEWAY ROUTING
   // ═══════════════════════════════════════════════════
 
   /**
    * Select the best gateway for a given country.
+   * Only picks gateways whose env keys are actually configured.
    * Falls back to default gateway, then to "manual".
    */
   async selectGateway(country: string): Promise<string> {
+    // 1. Find enabled gateways for this country, sorted by priority
     const configs = await this.prisma.paymentGatewayConfig.findMany({
       where: {
         isEnabled: true,
@@ -76,25 +104,32 @@ export class PaymentGatewayService {
       orderBy: { priority: "desc" },
     });
 
-    if (configs.length) {
-      return configs[0].gatewayName;
+    // 2. Pick the first one whose env keys are actually configured
+    for (const config of configs) {
+      if (this.isGatewayKeysConfigured(config.gatewayName)) {
+        return config.gatewayName;
+      }
+      this.logger.warn(
+        `Gateway ${config.gatewayName} is enabled for ${country} but env keys not set — skipping`,
+      );
     }
 
-    // Fallback: default gateway
+    // 3. Fallback: default gateway (if its keys are configured)
     const defaultGw = await this.prisma.paymentGatewayConfig.findFirst({
       where: { isEnabled: true, isDefault: true },
       orderBy: { priority: "desc" },
     });
 
-    if (defaultGw) {
+    if (defaultGw && this.isGatewayKeysConfigured(defaultGw.gatewayName)) {
       this.logger.warn(
-        `No gateway for ${country}, using default: ${defaultGw.gatewayName}`,
+        `No configured gateway for ${country}, using default: ${defaultGw.gatewayName}`,
       );
       return defaultGw.gatewayName;
     }
 
+    // 4. Nothing configured at all
     this.logger.warn(
-      `No enabled payment gateway for country: ${country}. Falling back to manual/COD.`,
+      `No configured payment gateway for country: ${country}. Falling back to manual/COD.`,
     );
     return "manual";
   }
@@ -905,6 +940,32 @@ export class PaymentGatewayService {
     return this.prisma.paymentGatewayConfig.findMany({
       orderBy: { priority: "desc" },
     });
+  }
+
+  /**
+   * Returns only gateways that are enabled AND have env keys configured.
+   * Used by frontend to show available payment options.
+   */
+  async getAvailableGateways(country?: string) {
+    const where: any = { isEnabled: true };
+    if (country) {
+      where.supportedCountries = { has: country as any };
+    }
+
+    const configs = await this.prisma.paymentGatewayConfig.findMany({
+      where,
+      orderBy: { priority: "desc" },
+    });
+
+    return configs
+      .filter((c) => this.isGatewayKeysConfigured(c.gatewayName))
+      .map((c) => ({
+        gatewayName: c.gatewayName,
+        displayName: c.displayName,
+        supportedMethods: c.supportedMethods,
+        commissionInfo: c.commissionInfo,
+        isDefault: c.isDefault,
+      }));
   }
 
   async getGatewayConfig(id: string) {
