@@ -171,10 +171,11 @@ export class SubscriptionPlansService {
 
   /**
    * Get plans available for a country (public endpoint for sellers).
+   * Country is required — returns empty array if missing to prevent cross-country leakage.
    */
   async getAvailablePlans(country?: string) {
-    const where: any = { isActive: true };
-    if (country) where.country = country;
+    if (!country) return [];
+    const where: any = { isActive: true, country };
 
     return this.prisma.subscriptionPlan.findMany({
       where,
