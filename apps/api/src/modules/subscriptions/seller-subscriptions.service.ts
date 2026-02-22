@@ -731,6 +731,7 @@ export class SellerSubscriptionsService {
 
   /**
    * Get shop's current active subscription with plan details.
+   * Falls back to the FREE plan for the shop's country when no subscription exists.
    */
   async getShopSubscription(shopId: string) {
     const sub = await this.prisma.sellerSubscription.findFirst({
@@ -748,7 +749,25 @@ export class SellerSubscriptionsService {
       orderBy: { createdAt: "desc" },
     });
 
-    return sub;
+    if (sub) return sub;
+
+    // No active subscription — return a synthetic response with the FREE plan
+    const freePlan = await this.plansService.getActiveShopPlan(shopId);
+    if (!freePlan) return null;
+
+    return {
+      id: null,
+      shopId,
+      planId: freePlan.id,
+      status: "FREE",
+      plan: freePlan,
+      payments: [],
+      currentPeriodStart: null,
+      currentPeriodEnd: null,
+      stripeSubscriptionId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
   }
 
   /**
