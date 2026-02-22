@@ -1,0 +1,4 @@
+-- Add auto-recharge fields to Shop model
+ALTER TABLE "Shop" ADD COLUMN IF NOT EXISTS "autoRechargeEnabled" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Shop" ADD COLUMN IF NOT EXISTS "autoRechargeThreshold" INTEGER NOT NULL DEFAULT 5;
+ALTER TABLE "Shop" ADD COLUMN IF NOT EXISTS "autoRechargePack" INTEGER NOT NULL DEFAULT 50;
