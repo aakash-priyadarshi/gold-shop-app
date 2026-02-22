@@ -214,8 +214,8 @@ export function AlloyBuilder({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="text-xs">
-                    24K is pure gold (not available in Method B as it&apos;s not an
-                    alloy). Lower karats contain more alloy metals for
+                    24K is pure gold (not available in Method B as it&apos;s not
+                    an alloy). Lower karats contain more alloy metals for
                     durability.
                   </p>
                 </TooltipContent>
