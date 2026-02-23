@@ -41,17 +41,21 @@ import {
   AlertTriangle,
   Calendar,
   Check,
+  CheckCircle,
   Copy,
   Crown,
   DollarSign,
   Globe,
+  Link,
   Loader2,
   Pencil,
+  Play,
   Plus,
   RefreshCw,
   Shield,
   Sparkles,
   Star,
+  TestTube2,
   ToggleLeft,
   ToggleRight,
   Trash2,
@@ -59,6 +63,8 @@ import {
   Users,
   Wifi,
   WifiOff,
+  XCircle,
+  Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -2601,6 +2607,494 @@ function GatewaysTab() {
               </CardContent>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* ─── Webhook Status ─── */}
+      <WebhookStatusSection />
+
+      {/* ─── Stripe Sandbox Testing ─── */}
+      <StripeSandboxSection />
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════
+// WEBHOOK STATUS SECTION
+// ═══════════════════════════════════════════════════
+
+function WebhookStatusSection() {
+  const [webhooks, setWebhooks] = useState<
+    {
+      name: string;
+      endpoint: string;
+      configured: boolean;
+      secretEnvKey: string;
+      description: string;
+    }[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchStatus = async () => {
+    try {
+      setLoading(true);
+      const res = await paymentGatewayApi.getWebhookStatus();
+      setWebhooks(res.data);
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to load webhook status",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStatus();
+  }, []);
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: "Copied!", description: text });
+  };
+
+  return (
+    <div className="space-y-3 pt-4 border-t">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Link className="h-5 w-5" /> Stripe Webhook Endpoints
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Both endpoints must be registered in your{" "}
+            <a
+              href="https://dashboard.stripe.com/webhooks"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline text-primary"
+            >
+              Stripe Dashboard → Webhooks
+            </a>
+            . Each endpoint needs its own signing secret.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={fetchStatus} disabled={loading}>
+          {loading ? (
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4 mr-1" />
+          )}
+          Refresh
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="py-4 text-center text-muted-foreground">
+          <Loader2 className="h-5 w-5 mx-auto animate-spin mb-1" />
+          Checking webhooks...
+        </div>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2">
+          {webhooks.map((wh) => (
+            <Card
+              key={wh.name}
+              className={`transition-all ${wh.configured ? "border-l-4 border-l-green-500" : "border-l-4 border-l-red-400"}`}
+            >
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    {wh.configured ? (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <XCircle className="h-4 w-4 text-red-500" />
+                    )}
+                    {wh.name}
+                  </CardTitle>
+                  <Badge variant={wh.configured ? "default" : "destructive"}>
+                    {wh.configured ? "Configured" : "Not Set"}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2 text-xs">
+                <p className="text-muted-foreground">{wh.description}</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground shrink-0">URL:</span>
+                  <code className="bg-muted px-1.5 py-0.5 rounded flex-1 truncate">
+                    https://api.orivraa.com{wh.endpoint}
+                  </code>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 shrink-0"
+                    onClick={() =>
+                      copyToClipboard(`https://api.orivraa.com${wh.endpoint}`)
+                    }
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground shrink-0">Secret Env:</span>
+                  <code className="bg-muted px-1.5 py-0.5 rounded">
+                    {wh.secretEnvKey}
+                  </code>
+                  {!wh.configured && (
+                    <span className="text-red-500 text-[10px]">
+                      Add this env variable in Railway
+                    </span>
+                  )}
+                </div>
+                {wh.name === "Stripe Subscriptions" && (
+                  <div className="mt-1 p-2 bg-amber-50 dark:bg-amber-950/30 rounded text-[10px] text-amber-700 dark:text-amber-400">
+                    <strong>Events to listen for:</strong> checkout.session.completed,
+                    invoice.paid, invoice.payment_failed,
+                    customer.subscription.updated, customer.subscription.deleted
+                  </div>
+                )}
+                {wh.name === "Stripe Payments" && (
+                  <div className="mt-1 p-2 bg-blue-50 dark:bg-blue-950/30 rounded text-[10px] text-blue-700 dark:text-blue-400">
+                    <strong>Events to listen for:</strong> payment_intent.succeeded,
+                    payment_intent.payment_failed
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════
+// STRIPE SANDBOX TESTING SECTION
+// ═══════════════════════════════════════════════════
+
+function StripeSandboxSection() {
+  const [isSandbox, setIsSandbox] = useState<boolean | null>(null);
+  const [modeMessage, setModeMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [testingPayment, setTestingPayment] = useState(false);
+  const [testingSub, setTestingSub] = useState(false);
+  const [paymentResult, setPaymentResult] = useState<{
+    success: boolean;
+    paymentIntentId?: string;
+    refundId?: string;
+    error?: string;
+    details?: string;
+  } | null>(null);
+  const [subResult, setSubResult] = useState<{
+    success: boolean;
+    subscriptionId?: string;
+    customerId?: string;
+    error?: string;
+    details?: string;
+  } | null>(null);
+
+  // Test config
+  const [paymentAmount, setPaymentAmount] = useState(1.0);
+  const [paymentCurrency, setPaymentCurrency] = useState("USD");
+  const [subAmount, setSubAmount] = useState(9.99);
+  const [subCurrency, setSubCurrency] = useState("USD");
+  const [subInterval, setSubInterval] = useState<"month" | "year">("month");
+
+  useEffect(() => {
+    paymentGatewayApi
+      .getStripeMode()
+      .then((res) => {
+        setIsSandbox(res.data.isSandbox);
+        setModeMessage(res.data.message);
+      })
+      .catch(() => {
+        setIsSandbox(false);
+        setModeMessage("Could not determine Stripe mode");
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const runPaymentTest = async () => {
+    setTestingPayment(true);
+    setPaymentResult(null);
+    try {
+      const res = await paymentGatewayApi.testStripePayment({
+        amount: paymentAmount,
+        currency: paymentCurrency,
+      });
+      setPaymentResult(res.data);
+    } catch (err: any) {
+      setPaymentResult({
+        success: false,
+        error: err.response?.data?.message || err.message,
+      });
+    } finally {
+      setTestingPayment(false);
+    }
+  };
+
+  const runSubTest = async () => {
+    setTestingSub(true);
+    setSubResult(null);
+    try {
+      const res = await paymentGatewayApi.testStripeSubscription({
+        amount: subAmount,
+        currency: subCurrency,
+        interval: subInterval,
+      });
+      setSubResult(res.data);
+    } catch (err: any) {
+      setSubResult({
+        success: false,
+        error: err.response?.data?.message || err.message,
+      });
+    } finally {
+      setTestingSub(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="pt-4 border-t">
+        <div className="py-4 text-center text-muted-foreground">
+          <Loader2 className="h-5 w-5 mx-auto animate-spin mb-1" />
+          Checking Stripe mode...
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 pt-4 border-t">
+      <div>
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <TestTube2 className="h-5 w-5" /> Stripe Sandbox Testing
+        </h3>
+        <p className="text-sm text-muted-foreground flex items-center gap-2">
+          {isSandbox ? (
+            <>
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-amber-400" />
+              <span className="text-amber-600 dark:text-amber-400 font-medium">
+                TEST MODE
+              </span>
+              — {modeMessage}
+            </>
+          ) : (
+            <>
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500" />
+              <span className="text-green-600 dark:text-green-400 font-medium">
+                LIVE MODE
+              </span>
+              — {modeMessage}
+            </>
+          )}
+        </p>
+      </div>
+
+      {!isSandbox ? (
+        <Card>
+          <CardContent className="py-8 text-center text-muted-foreground">
+            <Shield className="h-8 w-8 mx-auto mb-2 text-green-500" />
+            <p className="font-medium">Live Mode Active</p>
+            <p className="text-sm mt-1">
+              Sandbox testing is only available when using{" "}
+              <code className="bg-muted px-1 rounded">sk_test_</code> keys.
+              Switch to test keys in Railway env to enable sandbox tests.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* One-Time Payment Test */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Test One-Time Payment
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Creates a PaymentIntent with a test card, confirms it, then
+                auto-refunds. Tests the{" "}
+                <code className="text-[10px]">/payment-gateway/webhooks/stripe</code>{" "}
+                flow.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Amount</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0.50"
+                    value={paymentAmount}
+                    onChange={(e) =>
+                      setPaymentAmount(parseFloat(e.target.value) || 1)
+                    }
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Currency</Label>
+                  <Select value={paymentCurrency} onValueChange={setPaymentCurrency}>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="EUR">EUR</SelectItem>
+                      <SelectItem value="GBP">GBP</SelectItem>
+                      <SelectItem value="INR">INR</SelectItem>
+                      <SelectItem value="AED">AED</SelectItem>
+                      <SelectItem value="NPR">NPR</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button
+                onClick={runPaymentTest}
+                disabled={testingPayment}
+                size="sm"
+                className="w-full"
+              >
+                {testingPayment ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Play className="h-4 w-4 mr-1" />
+                )}
+                Run Payment Test
+              </Button>
+              {paymentResult && (
+                <div
+                  className={`p-2 rounded text-xs space-y-1 ${
+                    paymentResult.success
+                      ? "bg-green-50 dark:bg-green-950/30 text-green-800 dark:text-green-300"
+                      : "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-1 font-medium">
+                    {paymentResult.success ? (
+                      <CheckCircle className="h-3.5 w-3.5" />
+                    ) : (
+                      <XCircle className="h-3.5 w-3.5" />
+                    )}
+                    {paymentResult.success ? "PASSED" : "FAILED"}
+                  </div>
+                  {paymentResult.details && <p>{paymentResult.details}</p>}
+                  {paymentResult.error && <p>Error: {paymentResult.error}</p>}
+                  {paymentResult.paymentIntentId && (
+                    <p className="text-[10px] text-muted-foreground">
+                      PI: {paymentResult.paymentIntentId}
+                    </p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Subscription Test */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Zap className="h-4 w-4" />
+                Test Subscription
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Creates a customer, subscription, then cancels &amp; cleans up.
+                Tests the{" "}
+                <code className="text-[10px]">
+                  /seller-subscriptions/webhooks/stripe
+                </code>{" "}
+                flow.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <Label className="text-xs">Amount</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0.50"
+                    value={subAmount}
+                    onChange={(e) =>
+                      setSubAmount(parseFloat(e.target.value) || 9.99)
+                    }
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Currency</Label>
+                  <Select value={subCurrency} onValueChange={setSubCurrency}>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="EUR">EUR</SelectItem>
+                      <SelectItem value="GBP">GBP</SelectItem>
+                      <SelectItem value="INR">INR</SelectItem>
+                      <SelectItem value="AED">AED</SelectItem>
+                      <SelectItem value="NPR">NPR</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Interval</Label>
+                  <Select
+                    value={subInterval}
+                    onValueChange={(v) => setSubInterval(v as "month" | "year")}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="month">Monthly</SelectItem>
+                      <SelectItem value="year">Annual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button
+                onClick={runSubTest}
+                disabled={testingSub}
+                size="sm"
+                className="w-full"
+              >
+                {testingSub ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Play className="h-4 w-4 mr-1" />
+                )}
+                Run Subscription Test
+              </Button>
+              {subResult && (
+                <div
+                  className={`p-2 rounded text-xs space-y-1 ${
+                    subResult.success
+                      ? "bg-green-50 dark:bg-green-950/30 text-green-800 dark:text-green-300"
+                      : "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-1 font-medium">
+                    {subResult.success ? (
+                      <CheckCircle className="h-3.5 w-3.5" />
+                    ) : (
+                      <XCircle className="h-3.5 w-3.5" />
+                    )}
+                    {subResult.success ? "PASSED" : "FAILED"}
+                  </div>
+                  {subResult.details && <p>{subResult.details}</p>}
+                  {subResult.error && <p>Error: {subResult.error}</p>}
+                  {subResult.subscriptionId && (
+                    <p className="text-[10px] text-muted-foreground">
+                      Sub: {subResult.subscriptionId}
+                    </p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

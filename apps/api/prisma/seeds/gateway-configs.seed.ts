@@ -28,9 +28,10 @@ const GATEWAY_CONFIGS = [
       "STRIPE_SECRET_KEY",
       "STRIPE_PUBLISHABLE_KEY",
       "STRIPE_WEBHOOK_SECRET",
+      "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET",
     ],
     commissionInfo: "2.9% + 30¢ (domestic) | 3.9% + 30¢ (international)",
-    webhookEndpoint: "/payment-gateway/webhooks/stripe",
+    webhookEndpoint: "/api/payment-gateway/webhooks/stripe",
   },
   {
     gatewayName: "phonepe",

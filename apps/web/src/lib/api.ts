@@ -953,6 +953,18 @@ export const paymentGatewayApi = {
   healthCheckAll: () => api.get("/payment-gateway/health"),
   healthCheck: (gatewayName: string) =>
     api.get(`/payment-gateway/health/${gatewayName}`),
+  // Webhook status
+  getWebhookStatus: () => api.get("/payment-gateway/webhooks/status"),
+  // Stripe sandbox testing
+  getStripeMode: () => api.get("/payment-gateway/test/stripe-mode"),
+  testStripePayment: (data?: { amount?: number; currency?: string }) =>
+    api.post("/payment-gateway/test/stripe-payment", data || {}),
+  testStripeSubscription: (data?: {
+    amount?: number;
+    currency?: string;
+    interval?: "month" | "year";
+  }) => api.post("/payment-gateway/test/stripe-subscription", data || {}),
+  // Payment initiation
   initiatePayment: (data: {
     type: "subscription" | "order" | "rfq_booking" | "ai_credits";
     resourceId: string;
