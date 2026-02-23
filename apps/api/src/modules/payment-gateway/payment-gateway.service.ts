@@ -1162,7 +1162,10 @@ export class PaymentGatewayService {
       {
         name: "Stripe Payments",
         endpoint: "/api/payment-gateway/webhooks/stripe",
-        configured: isStripeConfigured && !!paymentWebhookSecret && paymentWebhookSecret !== "",
+        configured:
+          isStripeConfigured &&
+          !!paymentWebhookSecret &&
+          paymentWebhookSecret !== "",
         secretEnvKey: "STRIPE_WEBHOOK_SECRET",
         description:
           "Handles one-time payments: orders, AI credit purchases, RFQ bookings",
@@ -1171,7 +1174,9 @@ export class PaymentGatewayService {
         name: "Stripe Subscriptions",
         endpoint: "/api/seller-subscriptions/webhooks/stripe",
         configured:
-          isStripeConfigured && !!subscriptionWebhookSecret && subscriptionWebhookSecret !== "",
+          isStripeConfigured &&
+          !!subscriptionWebhookSecret &&
+          subscriptionWebhookSecret !== "",
         secretEnvKey: "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET",
         description:
           "Handles subscription lifecycle: checkout, renewals, cancellations, payment failures",
@@ -1213,7 +1218,10 @@ export class PaymentGatewayService {
    * Test a one-time payment flow via Stripe (sandbox only).
    * Creates a PaymentIntent with a test card token, confirms it, then refunds.
    */
-  async testStripePayment(amount: number, currency: string): Promise<{
+  async testStripePayment(
+    amount: number,
+    currency: string,
+  ): Promise<{
     success: boolean;
     paymentIntentId?: string;
     refundId?: string;
@@ -1224,18 +1232,30 @@ export class PaymentGatewayService {
     if (!testKey) {
       return {
         success: false,
-        error: "STRIPE_TEST_SECRET_KEY is not configured. Add a sk_test_ key to Railway env.",
+        error:
+          "STRIPE_TEST_SECRET_KEY is not configured. Add a sk_test_ key to Railway env.",
       };
     }
 
     const stripe = require("stripe")(testKey);
 
     try {
-      // 1. Create a PaymentIntent
+      // 1. Create a real test PaymentMethod using Stripe test card
+      const pm = await stripe.paymentMethods.create({
+        type: "card",
+        card: {
+          number: "4242424242424242",
+          exp_month: 12,
+          exp_year: 2030,
+          cvc: "123",
+        },
+      });
+
+      // 2. Create a PaymentIntent
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(amount * 100), // cents
         currency: currency.toLowerCase(),
-        payment_method: "pm_card_visa", // Stripe test card
+        payment_method: pm.id,
         confirm: true,
         automatic_payment_methods: { enabled: true, allow_redirects: "never" },
         metadata: { test: "true", source: "admin_sandbox" },
@@ -1284,7 +1304,8 @@ export class PaymentGatewayService {
     if (!testKey) {
       return {
         success: false,
-        error: "STRIPE_TEST_SECRET_KEY is not configured. Add a sk_test_ key to Railway env.",
+        error:
+          "STRIPE_TEST_SECRET_KEY is not configured. Add a sk_test_ key to Railway env.",
       };
     }
 
@@ -1305,20 +1326,31 @@ export class PaymentGatewayService {
         recurring: { interval },
       });
 
-      // 3. Create a test customer with a test payment method
+      // 3. Create a real test PaymentMethod using Stripe test card
+      const pm = await stripe.paymentMethods.create({
+        type: "card",
+        card: {
+          number: "4242424242424242",
+          exp_month: 12,
+          exp_year: 2030,
+          cvc: "123",
+        },
+      });
+
+      // 4. Create a test customer and attach the payment method
       const customer = await stripe.customers.create({
         email: "sandbox-test@orivraa.com",
         name: "Sandbox Test Customer",
-        payment_method: "pm_card_visa",
-        invoice_settings: { default_payment_method: "pm_card_visa" },
+        payment_method: pm.id,
+        invoice_settings: { default_payment_method: pm.id },
         metadata: { test: "true", source: "admin_sandbox" },
       });
 
-      // 4. Create subscription using the price
+      // 5. Create subscription using the price
       const subscription = await stripe.subscriptions.create({
         customer: customer.id,
         items: [{ price: price.id }],
-        default_payment_method: "pm_card_visa",
+        default_payment_method: pm.id,
         metadata: { test: "true", source: "admin_sandbox" },
       });
 
@@ -1327,11 +1359,14 @@ export class PaymentGatewayService {
 
       // 6. Clean up: delete customer, archive product
       await stripe.customers.del(customer.id).catch(() => {});
-      await stripe.products.update(product.id, { active: false }).catch(() => {});
+      await stripe.products
+        .update(product.id, { active: false })
+        .catch(() => {});
 
       return {
         success:
-          subscription.status === "active" || subscription.status === "trialing",
+          subscription.status === "active" ||
+          subscription.status === "trialing",
         subscriptionId: subscription.id,
         customerId: customer.id,
         details: `Created → ${subscription.status}, Cancelled → ${cancelled.status}. Customer cleaned up. Amount: ${currency} ${amount}/${interval}.`,

@@ -61,7 +61,9 @@ describe("PlanLimitsService", () => {
       plansService.getActiveShopPlan.mockResolvedValue(
         makePlan({ features: { invoicing: true, crm: true } }),
       );
-      await expect(service.checkFeature("shop1", "invoicing")).resolves.toBeUndefined();
+      await expect(
+        service.checkFeature("shop1", "invoicing"),
+      ).resolves.toBeUndefined();
     });
 
     it("should throw FeatureNotEnabledException when feature is false", async () => {
@@ -100,7 +102,9 @@ describe("PlanLimitsService", () => {
         fail("Should have thrown");
       } catch (err) {
         expect(err).toBeInstanceOf(FeatureNotEnabledException);
-        const resp = (err as FeatureNotEnabledException).getResponse() as Record<string, unknown>;
+        const resp = (
+          err as FeatureNotEnabledException
+        ).getResponse() as Record<string, unknown>;
         expect(resp.error).toBe("FEATURE_NOT_ENABLED");
         expect(resp.featureKey).toBe("multiBranch");
         expect(resp.featureLabel).toBe("Multi-branch support");
@@ -116,7 +120,9 @@ describe("PlanLimitsService", () => {
         await service.checkFeature("shop1", "unknownFeature");
         fail("Should have thrown");
       } catch (err) {
-        const resp = (err as FeatureNotEnabledException).getResponse() as Record<string, unknown>;
+        const resp = (
+          err as FeatureNotEnabledException
+        ).getResponse() as Record<string, unknown>;
         expect(resp.featureLabel).toBe("unknownFeature");
       }
     });
@@ -140,7 +146,9 @@ describe("PlanLimitsService", () => {
         plansService.getActiveShopPlan.mockResolvedValue(
           makePlan({ features: { [key]: true } }),
         );
-        await expect(service.checkFeature("shop1", key)).resolves.toBeUndefined();
+        await expect(
+          service.checkFeature("shop1", key),
+        ).resolves.toBeUndefined();
       },
     );
 
@@ -275,7 +283,9 @@ describe("PlanLimitsService", () => {
         await service.checkProductLimit("shop1");
         fail("Should have thrown");
       } catch (err) {
-        const resp = (err as PlanLimitExceededException).getResponse() as Record<string, unknown>;
+        const resp = (
+          err as PlanLimitExceededException
+        ).getResponse() as Record<string, unknown>;
         expect(resp.error).toBe("PLAN_LIMIT_EXCEEDED");
         expect(resp.resource).toBe("products");
         expect(resp.currentCount).toBe(50);
@@ -323,7 +333,7 @@ describe("PlanLimitsService", () => {
       const gte = callArgs.where.createdAt.gte as Date;
       const lt = callArgs.where.createdAt.lt as Date;
       expect(gte.getDate()).toBe(1); // starts on 1st
-      expect(lt.getDate()).toBe(1);  // ends on 1st of next month
+      expect(lt.getDate()).toBe(1); // ends on 1st of next month
     });
   });
 
@@ -332,7 +342,9 @@ describe("PlanLimitsService", () => {
       plansService.getActiveShopPlan.mockResolvedValue(
         makePlan({ maxCatalogues: null }),
       );
-      await expect(service.checkCatalogueLimit("shop1")).resolves.toBeUndefined();
+      await expect(
+        service.checkCatalogueLimit("shop1"),
+      ).resolves.toBeUndefined();
     });
 
     it("should throw when at limit", async () => {

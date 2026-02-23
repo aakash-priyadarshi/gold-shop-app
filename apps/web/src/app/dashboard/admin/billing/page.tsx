@@ -874,12 +874,16 @@ function PlansTab() {
                 step={0.01}
                 value={(editForm.extraCreditPrice as number) ?? 0}
                 onChange={(e) =>
-                  setEditForm({ ...editForm, extraCreditPrice: parseFloat(e.target.value) || 0 })
+                  setEditForm({
+                    ...editForm,
+                    extraCreditPrice: parseFloat(e.target.value) || 0,
+                  })
                 }
                 placeholder="Price per extra AI credit"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Price per extra AI credit (in plan currency). Set &gt; 0 to enable purchasing.
+                Price per extra AI credit (in plan currency). Set &gt; 0 to
+                enable purchasing.
               </p>
             </div>
             <div>
@@ -889,7 +893,10 @@ function PlansTab() {
                 min={0}
                 value={(editForm.rolloverCap as number) ?? 0}
                 onChange={(e) =>
-                  setEditForm({ ...editForm, rolloverCap: parseInt(e.target.value) || 0 })
+                  setEditForm({
+                    ...editForm,
+                    rolloverCap: parseInt(e.target.value) || 0,
+                  })
                 }
                 placeholder="0 = no rollover"
               />
@@ -2680,7 +2687,12 @@ function WebhookStatusSection() {
             . Each endpoint needs its own signing secret.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchStatus} disabled={loading}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={fetchStatus}
+          disabled={loading}
+        >
           {loading ? (
             <Loader2 className="h-4 w-4 mr-1 animate-spin" />
           ) : (
@@ -2736,7 +2748,9 @@ function WebhookStatusSection() {
                   </Button>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground shrink-0">Secret Env:</span>
+                  <span className="text-muted-foreground shrink-0">
+                    Secret Env:
+                  </span>
                   <code className="bg-muted px-1.5 py-0.5 rounded">
                     {wh.secretEnvKey}
                   </code>
@@ -2748,15 +2762,16 @@ function WebhookStatusSection() {
                 </div>
                 {wh.name === "Stripe Subscriptions" && (
                   <div className="mt-1 p-2 bg-amber-50 dark:bg-amber-950/30 rounded text-[10px] text-amber-700 dark:text-amber-400">
-                    <strong>Events to listen for:</strong> checkout.session.completed,
-                    invoice.paid, invoice.payment_failed,
-                    customer.subscription.updated, customer.subscription.deleted
+                    <strong>Events to listen for:</strong>{" "}
+                    checkout.session.completed, invoice.paid,
+                    invoice.payment_failed, customer.subscription.updated,
+                    customer.subscription.deleted
                   </div>
                 )}
                 {wh.name === "Stripe Payments" && (
                   <div className="mt-1 p-2 bg-blue-50 dark:bg-blue-950/30 rounded text-[10px] text-blue-700 dark:text-blue-400">
-                    <strong>Events to listen for:</strong> payment_intent.succeeded,
-                    payment_intent.payment_failed
+                    <strong>Events to listen for:</strong>{" "}
+                    payment_intent.succeeded, payment_intent.payment_failed
                   </div>
                 )}
               </CardContent>
@@ -2898,14 +2913,19 @@ function StripeSandboxSection() {
             <p className="font-medium">Sandbox Testing Not Configured</p>
             <p className="text-sm mt-1">
               Add{" "}
-              <code className="bg-muted px-1 rounded">STRIPE_TEST_SECRET_KEY</code>{" "}
-              (a <code className="bg-muted px-1 rounded">sk_test_...</code> key) to your Railway
-              environment variables to enable sandbox testing.
+              <code className="bg-muted px-1 rounded">
+                STRIPE_TEST_SECRET_KEY
+              </code>{" "}
+              (a <code className="bg-muted px-1 rounded">sk_test_...</code> key)
+              to your Railway environment variables to enable sandbox testing.
             </p>
             <p className="text-xs mt-2 text-muted-foreground">
               Optionally also add{" "}
-              <code className="bg-muted px-1 rounded">STRIPE_TEST_PUBLISHABLE_KEY</code>{" "}
-              (<code className="bg-muted px-1 rounded">pk_test_...</code>) for frontend test integration.
+              <code className="bg-muted px-1 rounded">
+                STRIPE_TEST_PUBLISHABLE_KEY
+              </code>{" "}
+              (<code className="bg-muted px-1 rounded">pk_test_...</code>) for
+              frontend test integration.
             </p>
           </CardContent>
         </Card>
@@ -2921,7 +2941,9 @@ function StripeSandboxSection() {
               <CardDescription className="text-xs">
                 Creates a PaymentIntent with a test card, confirms it, then
                 auto-refunds. Tests the{" "}
-                <code className="text-[10px]">/payment-gateway/webhooks/stripe</code>{" "}
+                <code className="text-[10px]">
+                  /payment-gateway/webhooks/stripe
+                </code>{" "}
                 flow.
               </CardDescription>
             </CardHeader>
@@ -2942,7 +2964,10 @@ function StripeSandboxSection() {
                 </div>
                 <div>
                   <Label className="text-xs">Currency</Label>
-                  <Select value={paymentCurrency} onValueChange={setPaymentCurrency}>
+                  <Select
+                    value={paymentCurrency}
+                    onValueChange={setPaymentCurrency}
+                  >
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue />
                     </SelectTrigger>

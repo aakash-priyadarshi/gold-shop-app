@@ -149,224 +149,236 @@ export default function InvoicesListPage() {
   return (
     <ShopGuard>
       <DashboardLayout>
-        <FeatureGate feature="invoicing" featureLabel="Invoicing" hasFeature={hasFeature} planName={planName} loading={featuresLoading}>
-        <div className="space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">Invoices</h1>
-              <p className="text-muted-foreground">
-                Manage billing and track payments
-              </p>
+        <FeatureGate
+          feature="invoicing"
+          featureLabel="Invoicing"
+          hasFeature={hasFeature}
+          planName={planName}
+          loading={featuresLoading}
+        >
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold">Invoices</h1>
+                <p className="text-muted-foreground">
+                  Manage billing and track payments
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Link href="/dashboard/shop/invoices/settings">
+                  <Button variant="outline" size="sm">
+                    <Settings2 className="h-4 w-4 mr-2" />
+                    Bill Settings
+                  </Button>
+                </Link>
+                <Link href="/dashboard/shop/invoices/create">
+                  <Button className="bg-amber-500 hover:bg-amber-600">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Invoice
+                  </Button>
+                </Link>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Link href="/dashboard/shop/invoices/settings">
-                <Button variant="outline" size="sm">
-                  <Settings2 className="h-4 w-4 mr-2" />
-                  Bill Settings
-                </Button>
-              </Link>
-              <Link href="/dashboard/shop/invoices/create">
-                <Button className="bg-amber-500 hover:bg-amber-600">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Invoice
-                </Button>
-              </Link>
-            </div>
-          </div>
 
-          {/* Stats Cards */}
-          {stats && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="pt-4">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-blue-500" />
-                    <span className="text-sm text-muted-foreground">Total</span>
-                  </div>
-                  <p className="text-2xl font-bold mt-1">
-                    {stats.counts.total}
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-green-500" />
-                    <span className="text-sm text-muted-foreground">
-                      Collected
-                    </span>
-                  </div>
-                  <p className="text-2xl font-bold mt-1 text-green-600 dark:text-green-400">
-                    {formatCurrency(stats.revenue.totalCollected)}
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-amber-500" />
-                    <span className="text-sm text-muted-foreground">
-                      Outstanding
-                    </span>
-                  </div>
-                  <p className="text-2xl font-bold mt-1 text-amber-600 dark:text-amber-400">
-                    {formatCurrency(stats.revenue.totalOutstanding)}
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-purple-500" />
-                    <span className="text-sm text-muted-foreground">Paid</span>
-                  </div>
-                  <p className="text-2xl font-bold mt-1">{stats.counts.paid}</p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+            {/* Stats Cards */}
+            {stats && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-blue-500" />
+                      <span className="text-sm text-muted-foreground">
+                        Total
+                      </span>
+                    </div>
+                    <p className="text-2xl font-bold mt-1">
+                      {stats.counts.total}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-green-500" />
+                      <span className="text-sm text-muted-foreground">
+                        Collected
+                      </span>
+                    </div>
+                    <p className="text-2xl font-bold mt-1 text-green-600 dark:text-green-400">
+                      {formatCurrency(stats.revenue.totalCollected)}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-amber-500" />
+                      <span className="text-sm text-muted-foreground">
+                        Outstanding
+                      </span>
+                    </div>
+                    <p className="text-2xl font-bold mt-1 text-amber-600 dark:text-amber-400">
+                      {formatCurrency(stats.revenue.totalOutstanding)}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-purple-500" />
+                      <span className="text-sm text-muted-foreground">
+                        Paid
+                      </span>
+                    </div>
+                    <p className="text-2xl font-bold mt-1">
+                      {stats.counts.paid}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
-          {/* Filters */}
-          <div className="flex gap-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search invoices..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
+            {/* Filters */}
+            <div className="flex gap-4">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search invoices..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Filter status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="ISSUED">Issued</SelectItem>
+                  <SelectItem value="PAID">Paid</SelectItem>
+                  <SelectItem value="PARTIALLY_PAID">Partial</SelectItem>
+                  <SelectItem value="OVERDUE">Overdue</SelectItem>
+                  <SelectItem value="VOID">Voided</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Filter status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="ISSUED">Issued</SelectItem>
-                <SelectItem value="PAID">Paid</SelectItem>
-                <SelectItem value="PARTIALLY_PAID">Partial</SelectItem>
-                <SelectItem value="OVERDUE">Overdue</SelectItem>
-                <SelectItem value="VOID">Voided</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
-          {/* Invoice Table */}
-          <Card>
-            <CardContent className="p-0">
-              {isLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : invoices.length === 0 ? (
-                <div className="text-center py-12">
-                  <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-30" />
-                  <h3 className="text-lg font-medium">No invoices yet</h3>
-                  <p className="text-muted-foreground">
-                    Create your first invoice to start tracking payments.
-                  </p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Invoice #</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead>Paid</TableHead>
-                      <TableHead>Balance</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead className="w-10"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invoices.map((inv) => (
-                      <TableRow key={inv.id}>
-                        <TableCell className="font-mono text-sm">
-                          {inv.invoiceNumber}
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{inv.customerName}</p>
-                            {inv.customerPhone && (
-                              <p className="text-xs text-muted-foreground">
-                                {inv.customerPhone}
-                              </p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-semibold">
-                          {formatCurrency(inv.totalAmount, inv.currency)}
-                        </TableCell>
-                        <TableCell className="text-green-600">
-                          {formatCurrency(inv.paidAmount, inv.currency)}
-                        </TableCell>
-                        <TableCell
-                          className={
-                            inv.balanceDue > 0
-                              ? "text-red-600 font-medium"
-                              : "text-green-600"
-                          }
-                        >
-                          {formatCurrency(inv.balanceDue, inv.currency)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
+            {/* Invoice Table */}
+            <Card>
+              <CardContent className="p-0">
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : invoices.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-30" />
+                    <h3 className="text-lg font-medium">No invoices yet</h3>
+                    <p className="text-muted-foreground">
+                      Create your first invoice to start tracking payments.
+                    </p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Invoice #</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Total</TableHead>
+                        <TableHead>Paid</TableHead>
+                        <TableHead>Balance</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead className="w-10"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {invoices.map((inv) => (
+                        <TableRow key={inv.id}>
+                          <TableCell className="font-mono text-sm">
+                            {inv.invoiceNumber}
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{inv.customerName}</p>
+                              {inv.customerPhone && (
+                                <p className="text-xs text-muted-foreground">
+                                  {inv.customerPhone}
+                                </p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-semibold">
+                            {formatCurrency(inv.totalAmount, inv.currency)}
+                          </TableCell>
+                          <TableCell className="text-green-600">
+                            {formatCurrency(inv.paidAmount, inv.currency)}
+                          </TableCell>
+                          <TableCell
                             className={
-                              statusColors[inv.status] || "bg-gray-100"
+                              inv.balanceDue > 0
+                                ? "text-red-600 font-medium"
+                                : "text-green-600"
                             }
                           >
-                            {inv.status.replace(/_/g, " ")}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {inv.issuedAt
-                            ? formatDate(inv.issuedAt)
-                            : formatDate(inv.createdAt)}
-                        </TableCell>
-                        <TableCell>
-                          <Link href={`/dashboard/shop/invoices/${inv.id}`}>
-                            <Button variant="ghost" size="sm">
-                              <ArrowRight className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+                            {formatCurrency(inv.balanceDue, inv.currency)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              className={
+                                statusColors[inv.status] || "bg-gray-100"
+                              }
+                            >
+                              {inv.status.replace(/_/g, " ")}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {inv.issuedAt
+                              ? formatDate(inv.issuedAt)
+                              : formatDate(inv.createdAt)}
+                          </TableCell>
+                          <TableCell>
+                            <Link href={`/dashboard/shop/invoices/${inv.id}`}>
+                              <Button variant="ghost" size="sm">
+                                <ArrowRight className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page === 1}
-                onClick={() => setPage(page - 1)}
-              >
-                Previous
-              </Button>
-              <span className="text-sm text-muted-foreground py-2">
-                Page {page} of {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page === totalPages}
-                onClick={() => setPage(page + 1)}
-              >
-                Next
-              </Button>
-            </div>
-          )}
-        </div>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 1}
+                  onClick={() => setPage(page - 1)}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground py-2">
+                  Page {page} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === totalPages}
+                  onClick={() => setPage(page + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </div>
         </FeatureGate>
       </DashboardLayout>
     </ShopGuard>
