@@ -29,6 +29,8 @@ const GATEWAY_CONFIGS = [
       "STRIPE_PUBLISHABLE_KEY",
       "STRIPE_WEBHOOK_SECRET",
       "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET",
+      "STRIPE_TEST_SECRET_KEY",
+      "STRIPE_TEST_PUBLISHABLE_KEY",
     ],
     commissionInfo: "2.9% + 30¢ (domestic) | 3.9% + 30¢ (international)",
     webhookEndpoint: "/api/payment-gateway/webhooks/stripe",

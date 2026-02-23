@@ -2895,11 +2895,17 @@ function StripeSandboxSection() {
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
             <Shield className="h-8 w-8 mx-auto mb-2 text-green-500" />
-            <p className="font-medium">Live Mode Active</p>
+            <p className="font-medium">Sandbox Testing Not Configured</p>
             <p className="text-sm mt-1">
-              Sandbox testing is only available when using{" "}
-              <code className="bg-muted px-1 rounded">sk_test_</code> keys.
-              Switch to test keys in Railway env to enable sandbox tests.
+              Add{" "}
+              <code className="bg-muted px-1 rounded">STRIPE_TEST_SECRET_KEY</code>{" "}
+              (a <code className="bg-muted px-1 rounded">sk_test_...</code> key) to your Railway
+              environment variables to enable sandbox testing.
+            </p>
+            <p className="text-xs mt-2 text-muted-foreground">
+              Optionally also add{" "}
+              <code className="bg-muted px-1 rounded">STRIPE_TEST_PUBLISHABLE_KEY</code>{" "}
+              (<code className="bg-muted px-1 rounded">pk_test_...</code>) for frontend test integration.
             </p>
           </CardContent>
         </Card>

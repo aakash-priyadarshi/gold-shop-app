@@ -220,11 +220,13 @@ export class PaymentGatewayController {
   @ApiBearerAuth()
   @ApiOperation({ summary: "Check if Stripe is in sandbox/test mode (admin)" })
   async getStripeMode() {
+    const isSandbox = this.gatewayService.isStripeSandbox();
     return {
-      isSandbox: this.gatewayService.isStripeSandbox(),
-      message: this.gatewayService.isStripeSandbox()
-        ? "Stripe is in TEST mode — safe to run sandbox tests"
-        : "Stripe is in LIVE mode — sandbox tests are disabled",
+      isSandbox,
+      testKeyConfigured: isSandbox,
+      message: isSandbox
+        ? "STRIPE_TEST_SECRET_KEY is configured — safe to run sandbox tests"
+        : "STRIPE_TEST_SECRET_KEY is not configured — add a sk_test_ key to enable sandbox tests",
     };
   }
 
