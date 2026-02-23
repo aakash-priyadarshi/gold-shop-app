@@ -1291,7 +1291,21 @@ export class PaymentGatewayService {
     const stripe = require("stripe")(testKey);
 
     try {
-      // 1. Create a test customer with a test payment method
+      // 1. Create a test product
+      const product = await stripe.products.create({
+        name: "OriVraa Sandbox Test Plan",
+        metadata: { test: "true", source: "admin_sandbox" },
+      });
+
+      // 2. Create a recurring price for the product
+      const price = await stripe.prices.create({
+        product: product.id,
+        currency: currency.toLowerCase(),
+        unit_amount: Math.round(amount * 100),
+        recurring: { interval },
+      });
+
+      // 3. Create a test customer with a test payment method
       const customer = await stripe.customers.create({
         email: "sandbox-test@orivraa.com",
         name: "Sandbox Test Customer",
@@ -1300,28 +1314,20 @@ export class PaymentGatewayService {
         metadata: { test: "true", source: "admin_sandbox" },
       });
 
-      // 2. Create an inline price (ad-hoc) and subscription
+      // 4. Create subscription using the price
       const subscription = await stripe.subscriptions.create({
         customer: customer.id,
-        items: [
-          {
-            price_data: {
-              currency: currency.toLowerCase(),
-              unit_amount: Math.round(amount * 100),
-              recurring: { interval },
-              product_data: { name: "OriVraa Sandbox Test Plan" },
-            },
-          },
-        ],
+        items: [{ price: price.id }],
         default_payment_method: "pm_card_visa",
         metadata: { test: "true", source: "admin_sandbox" },
       });
 
-      // 3. Cancel immediately
+      // 5. Cancel immediately
       const cancelled = await stripe.subscriptions.cancel(subscription.id);
 
-      // 4. Delete test customer
+      // 6. Clean up: delete customer, archive product
       await stripe.customers.del(customer.id).catch(() => {});
+      await stripe.products.update(product.id, { active: false }).catch(() => {});
 
       return {
         success:
