@@ -172,6 +172,62 @@ export class PaymentGatewayController {
     return this.gatewayService.checkGatewayHealth(gatewayName);
   }
 
+  // ─── Webhook Status ───────────────────────────────
+
+  @Get("webhooks/status")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Get webhook endpoint configuration status (admin)" })
+  async getWebhookStatus() {
+    return this.gatewayService.getWebhookStatus();
+  }
+
+  // ─── Stripe Sandbox Testing ───────────────────────
+
+  @Post("test/stripe-payment")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Test Stripe one-time payment in sandbox mode (admin)" })
+  async testStripePayment(
+    @Body() body: { amount?: number; currency?: string },
+  ) {
+    return this.gatewayService.testStripePayment(
+      body.amount || 1.00,
+      body.currency || "USD",
+    );
+  }
+
+  @Post("test/stripe-subscription")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Test Stripe subscription in sandbox mode (admin)" })
+  async testStripeSubscription(
+    @Body() body: { amount?: number; currency?: string; interval?: "month" | "year" },
+  ) {
+    return this.gatewayService.testStripeSubscription(
+      body.amount || 9.99,
+      body.currency || "USD",
+      body.interval || "month",
+    );
+  }
+
+  @Get("test/stripe-mode")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Check if Stripe is in sandbox/test mode (admin)" })
+  async getStripeMode() {
+    return {
+      isSandbox: this.gatewayService.isStripeSandbox(),
+      message: this.gatewayService.isStripeSandbox()
+        ? "Stripe is in TEST mode — safe to run sandbox tests"
+        : "Stripe is in LIVE mode — sandbox tests are disabled",
+    };
+  }
+
   // ─── Unified Payment Initiation ───────────────────
 
   @Get("available")

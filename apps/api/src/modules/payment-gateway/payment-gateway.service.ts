@@ -1126,4 +1126,196 @@ export class PaymentGatewayService {
       data: { isDefault: true, updatedBy },
     });
   }
+
+  // ═══════════════════════════════════════════════════
+  // WEBHOOK STATUS
+  // ═══════════════════════════════════════════════════
+
+  /**
+   * Check the configuration status of both Stripe webhook endpoints.
+   * Verifies the signing secrets are set for each.
+   */
+  async getWebhookStatus(): Promise<
+    {
+      name: string;
+      endpoint: string;
+      configured: boolean;
+      secretEnvKey: string;
+      description: string;
+      lastVerifiedAt?: string;
+    }[]
+  > {
+    const stripeKey = this.configService.get<string>("STRIPE_SECRET_KEY");
+    const paymentWebhookSecret = this.configService.get<string>(
+      "STRIPE_WEBHOOK_SECRET",
+    );
+    const subscriptionWebhookSecret =
+      this.configService.get<string>("STRIPE_SUBSCRIPTION_WEBHOOK_SECRET") ||
+      this.configService.get<string>("STRIPE_WEBHOOK_SECRET");
+
+    const isStripeConfigured =
+      !!stripeKey && stripeKey !== "" && stripeKey !== "sk_test_placeholder";
+
+    return [
+      {
+        name: "Stripe Payments",
+        endpoint: "/api/payment-gateway/webhooks/stripe",
+        configured: isStripeConfigured && !!paymentWebhookSecret && paymentWebhookSecret !== "",
+        secretEnvKey: "STRIPE_WEBHOOK_SECRET",
+        description:
+          "Handles one-time payments: orders, AI credit purchases, RFQ bookings",
+      },
+      {
+        name: "Stripe Subscriptions",
+        endpoint: "/api/seller-subscriptions/webhooks/stripe",
+        configured:
+          isStripeConfigured && !!subscriptionWebhookSecret && subscriptionWebhookSecret !== "",
+        secretEnvKey: "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET",
+        description:
+          "Handles subscription lifecycle: checkout, renewals, cancellations, payment failures",
+      },
+    ];
+  }
+
+  // ═══════════════════════════════════════════════════
+  // STRIPE SANDBOX TESTING
+  // ═══════════════════════════════════════════════════
+
+  /**
+   * Check if Stripe is in test/sandbox mode.
+   */
+  isStripeSandbox(): boolean {
+    const key = this.configService.get<string>("STRIPE_SECRET_KEY") || "";
+    return key.startsWith("sk_test_");
+  }
+
+  /**
+   * Test a one-time payment flow via Stripe (sandbox only).
+   * Creates a PaymentIntent with a test card token, confirms it, then refunds.
+   */
+  async testStripePayment(amount: number, currency: string): Promise<{
+    success: boolean;
+    paymentIntentId?: string;
+    refundId?: string;
+    error?: string;
+    details?: string;
+  }> {
+    const stripeKey = this.configService.get<string>("STRIPE_SECRET_KEY");
+    if (!stripeKey || !stripeKey.startsWith("sk_test_")) {
+      return {
+        success: false,
+        error: "Stripe is not in test mode. Use sk_test_ keys for sandbox testing.",
+      };
+    }
+
+    const stripe = require("stripe")(stripeKey);
+
+    try {
+      // 1. Create a PaymentIntent
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(amount * 100), // cents
+        currency: currency.toLowerCase(),
+        payment_method: "pm_card_visa", // Stripe test card
+        confirm: true,
+        automatic_payment_methods: { enabled: true, allow_redirects: "never" },
+        metadata: { test: "true", source: "admin_sandbox" },
+      });
+
+      // 2. Refund immediately so no real money moves
+      let refundId: string | undefined;
+      if (paymentIntent.status === "succeeded") {
+        const refund = await stripe.refunds.create({
+          payment_intent: paymentIntent.id,
+        });
+        refundId = refund.id;
+      }
+
+      return {
+        success: paymentIntent.status === "succeeded",
+        paymentIntentId: paymentIntent.id,
+        refundId,
+        details: `Status: ${paymentIntent.status}. Amount: ${currency} ${amount}. Auto-refunded.`,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err.message,
+        details: err.type || err.code,
+      };
+    }
+  }
+
+  /**
+   * Test subscription creation flow via Stripe (sandbox only).
+   * Creates a test customer, product, price, and subscription, then cancels.
+   */
+  async testStripeSubscription(
+    amount: number,
+    currency: string,
+    interval: "month" | "year",
+  ): Promise<{
+    success: boolean;
+    subscriptionId?: string;
+    customerId?: string;
+    error?: string;
+    details?: string;
+  }> {
+    const stripeKey = this.configService.get<string>("STRIPE_SECRET_KEY");
+    if (!stripeKey || !stripeKey.startsWith("sk_test_")) {
+      return {
+        success: false,
+        error: "Stripe is not in test mode. Use sk_test_ keys for sandbox testing.",
+      };
+    }
+
+    const stripe = require("stripe")(stripeKey);
+
+    try {
+      // 1. Create a test customer with a test payment method
+      const customer = await stripe.customers.create({
+        email: "sandbox-test@orivraa.com",
+        name: "Sandbox Test Customer",
+        payment_method: "pm_card_visa",
+        invoice_settings: { default_payment_method: "pm_card_visa" },
+        metadata: { test: "true", source: "admin_sandbox" },
+      });
+
+      // 2. Create an inline price (ad-hoc) and subscription
+      const subscription = await stripe.subscriptions.create({
+        customer: customer.id,
+        items: [
+          {
+            price_data: {
+              currency: currency.toLowerCase(),
+              unit_amount: Math.round(amount * 100),
+              recurring: { interval },
+              product_data: { name: "OriVraa Sandbox Test Plan" },
+            },
+          },
+        ],
+        default_payment_method: "pm_card_visa",
+        metadata: { test: "true", source: "admin_sandbox" },
+      });
+
+      // 3. Cancel immediately
+      const cancelled = await stripe.subscriptions.cancel(subscription.id);
+
+      // 4. Delete test customer
+      await stripe.customers.del(customer.id).catch(() => {});
+
+      return {
+        success:
+          subscription.status === "active" || subscription.status === "trialing",
+        subscriptionId: subscription.id,
+        customerId: customer.id,
+        details: `Created → ${subscription.status}, Cancelled → ${cancelled.status}. Customer cleaned up. Amount: ${currency} ${amount}/${interval}.`,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err.message,
+        details: err.type || err.code,
+      };
+    }
+  }
 }

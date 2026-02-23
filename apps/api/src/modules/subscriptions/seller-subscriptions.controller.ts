@@ -319,9 +319,10 @@ export class SellerSubscriptionsController {
   @ApiOperation({ summary: "Stripe webhook handler for subscriptions" })
   async stripeWebhook(@Req() req: RawBodyRequest<Request>) {
     const sig = req.headers["stripe-signature"] as string;
-    const endpointSecret = this.configService.get<string>(
-      "STRIPE_WEBHOOK_SECRET",
-    );
+    // Use dedicated subscription webhook secret, fallback to shared secret
+    const endpointSecret =
+      this.configService.get<string>("STRIPE_SUBSCRIPTION_WEBHOOK_SECRET") ||
+      this.configService.get<string>("STRIPE_WEBHOOK_SECRET");
 
     if (!sig || !endpointSecret) {
       return {
