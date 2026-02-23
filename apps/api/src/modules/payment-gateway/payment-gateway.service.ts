@@ -1240,15 +1240,10 @@ export class PaymentGatewayService {
     const stripe = require("stripe")(testKey);
 
     try {
-      // 1. Create a real test PaymentMethod using Stripe test card
+      // 1. Create a PaymentMethod from Stripe's test token (no raw card data needed)
       const pm = await stripe.paymentMethods.create({
         type: "card",
-        card: {
-          number: "4242424242424242",
-          exp_month: 12,
-          exp_year: 2099,
-          cvc: "123",
-        },
+        card: { token: "tok_visa" },
       });
 
       // 2. Create a PaymentIntent
@@ -1326,15 +1321,10 @@ export class PaymentGatewayService {
         recurring: { interval },
       });
 
-      // 3. Create a real test PaymentMethod using Stripe test card
+      // 3. Create a PaymentMethod from Stripe's test token (no raw card data needed)
       const pm = await stripe.paymentMethods.create({
         type: "card",
-        card: {
-          number: "4242424242424242",
-          exp_month: 12,
-          exp_year: 2099,
-          cvc: "123",
-        },
+        card: { token: "tok_visa" },
       });
 
       // 4. Create a test customer and attach the payment method

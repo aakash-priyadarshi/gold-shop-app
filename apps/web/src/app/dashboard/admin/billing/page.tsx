@@ -2608,9 +2608,7 @@ function GatewaysTab() {
             {configs.map((c) => (
               <Button
                 key={c.gatewayName}
-                variant={
-                  activeGateway === c.gatewayName ? "default" : "ghost"
-                }
+                variant={activeGateway === c.gatewayName ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setActiveGateway(c.gatewayName)}
                 className="flex items-center gap-1.5"
@@ -2653,11 +2651,24 @@ function GatewaysTab() {
                 {config.gatewayName === "phonepe" && (
                   <Card>
                     <CardContent className="py-6 text-sm text-muted-foreground">
-                      <p className="font-medium text-foreground">PhonePe Integration Notes</p>
+                      <p className="font-medium text-foreground">
+                        PhonePe Integration Notes
+                      </p>
                       <ul className="mt-2 space-y-1 list-disc list-inside text-xs">
                         <li>UPI is the primary payment method for India</li>
-                        <li>Webhook endpoint: <code className="bg-muted px-1 rounded">https://api.orivraa.com{config.webhookEndpoint}</code></li>
-                        <li>Test mode: set <code className="bg-muted px-1 rounded">PHONEPE_ENV=sandbox</code> in Railway</li>
+                        <li>
+                          Webhook endpoint:{" "}
+                          <code className="bg-muted px-1 rounded">
+                            https://api.orivraa.com{config.webhookEndpoint}
+                          </code>
+                        </li>
+                        <li>
+                          Test mode: set{" "}
+                          <code className="bg-muted px-1 rounded">
+                            PHONEPE_ENV=sandbox
+                          </code>{" "}
+                          in Railway
+                        </li>
                       </ul>
                     </CardContent>
                   </Card>
@@ -2667,10 +2678,14 @@ function GatewaysTab() {
                 {config.gatewayName === "esewa" && (
                   <Card>
                     <CardContent className="py-6 text-sm text-muted-foreground">
-                      <p className="font-medium text-foreground">eSewa Integration Notes</p>
+                      <p className="font-medium text-foreground">
+                        eSewa Integration Notes
+                      </p>
                       <ul className="mt-2 space-y-1 list-disc list-inside text-xs">
                         <li>Primary gateway for Nepal (NPR)</li>
-                        <li>No webhook endpoint — uses redirect-based verification</li>
+                        <li>
+                          No webhook endpoint — uses redirect-based verification
+                        </li>
                         <li>Commission: ~1.5-2% per transaction</li>
                       </ul>
                     </CardContent>
@@ -2681,11 +2696,15 @@ function GatewaysTab() {
                 {config.gatewayName === "khalti" && (
                   <Card>
                     <CardContent className="py-6 text-sm text-muted-foreground">
-                      <p className="font-medium text-foreground">Khalti Integration Notes</p>
+                      <p className="font-medium text-foreground">
+                        Khalti Integration Notes
+                      </p>
                       <ul className="mt-2 space-y-1 list-disc list-inside text-xs">
                         <li>Secondary gateway for Nepal (NPR)</li>
                         <li>Lower priority than eSewa (priority 5 vs 10)</li>
-                        <li>No webhook endpoint — uses redirect-based verification</li>
+                        <li>
+                          No webhook endpoint — uses redirect-based verification
+                        </li>
                       </ul>
                     </CardContent>
                   </Card>
@@ -2695,11 +2714,18 @@ function GatewaysTab() {
                 {config.gatewayName === "razorpay" && (
                   <Card>
                     <CardContent className="py-6 text-sm text-muted-foreground">
-                      <p className="font-medium text-foreground">Razorpay Integration Notes</p>
+                      <p className="font-medium text-foreground">
+                        Razorpay Integration Notes
+                      </p>
                       <ul className="mt-2 space-y-1 list-disc list-inside text-xs">
-                        <li>Alternative gateway for India (disabled by default — PhonePe is primary)</li>
+                        <li>
+                          Alternative gateway for India (disabled by default —
+                          PhonePe is primary)
+                        </li>
                         <li>Supports Card, UPI, and Bank Transfer</li>
-                        <li>Test mode: use test API keys from Razorpay Dashboard</li>
+                        <li>
+                          Test mode: use test API keys from Razorpay Dashboard
+                        </li>
                       </ul>
                     </CardContent>
                   </Card>
@@ -3028,25 +3054,36 @@ function StripeSandboxSection() {
                   </p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1">
                     <div>
-                      <span className="text-muted-foreground">Card Number:</span>
-                      <code className="ml-1 bg-muted px-1 rounded font-mono">4242 4242 4242 4242</code>
+                      <span className="text-muted-foreground">
+                        Card Number:
+                      </span>
+                      <code className="ml-1 bg-muted px-1 rounded font-mono">
+                        4242 4242 4242 4242
+                      </code>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Expiry:</span>
-                      <code className="ml-1 bg-muted px-1 rounded font-mono">12/2099</code>
+                      <code className="ml-1 bg-muted px-1 rounded font-mono">
+                        12/2099
+                      </code>
                     </div>
                     <div>
                       <span className="text-muted-foreground">CVC:</span>
-                      <code className="ml-1 bg-muted px-1 rounded font-mono">123</code>
+                      <code className="ml-1 bg-muted px-1 rounded font-mono">
+                        123
+                      </code>
                     </div>
                     <div>
                       <span className="text-muted-foreground">ZIP:</span>
-                      <code className="ml-1 bg-muted px-1 rounded font-mono">Any</code>
+                      <code className="ml-1 bg-muted px-1 rounded font-mono">
+                        Any
+                      </code>
                     </div>
                   </div>
                   <p className="text-muted-foreground">
-                    This is the Stripe standard test Visa card. All sandbox tests below use this card automatically.
-                    No real charges are made.
+                    This is the Stripe standard test Visa card. All sandbox
+                    tests below use this card automatically. No real charges are
+                    made.
                   </p>
                 </div>
               </div>
@@ -3054,202 +3091,204 @@ function StripeSandboxSection() {
           </Card>
 
           <div className="grid gap-4 md:grid-cols-2">
-          {/* One-Time Payment Test */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Test One-Time Payment
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Creates a PaymentIntent with a test card, confirms it, then
-                auto-refunds. Tests the{" "}
-                <code className="text-[10px]">
-                  /payment-gateway/webhooks/stripe
-                </code>{" "}
-                flow.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-xs">Amount</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0.50"
-                    value={paymentAmount}
-                    onChange={(e) =>
-                      setPaymentAmount(parseFloat(e.target.value) || 1)
-                    }
-                    className="h-8 text-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Currency</Label>
-                  <Select
-                    value={paymentCurrency}
-                    onValueChange={setPaymentCurrency}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="USD">USD</SelectItem>
-                      <SelectItem value="EUR">EUR</SelectItem>
-                      <SelectItem value="GBP">GBP</SelectItem>
-                      <SelectItem value="INR">INR</SelectItem>
-                      <SelectItem value="AED">AED</SelectItem>
-                      <SelectItem value="NPR">NPR</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <Button
-                onClick={runPaymentTest}
-                disabled={testingPayment}
-                size="sm"
-                className="w-full"
-              >
-                {testingPayment ? (
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                ) : (
-                  <Play className="h-4 w-4 mr-1" />
-                )}
-                Run Payment Test
-              </Button>
-              {paymentResult && (
-                <div
-                  className={`p-2 rounded text-xs space-y-1 ${
-                    paymentResult.success
-                      ? "bg-green-50 dark:bg-green-950/30 text-green-800 dark:text-green-300"
-                      : "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300"
-                  }`}
-                >
-                  <div className="flex items-center gap-1 font-medium">
-                    {paymentResult.success ? (
-                      <CheckCircle className="h-3.5 w-3.5" />
-                    ) : (
-                      <XCircle className="h-3.5 w-3.5" />
-                    )}
-                    {paymentResult.success ? "PASSED" : "FAILED"}
+            {/* One-Time Payment Test */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Test One-Time Payment
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Creates a PaymentIntent with a test card, confirms it, then
+                  auto-refunds. Tests the{" "}
+                  <code className="text-[10px]">
+                    /payment-gateway/webhooks/stripe
+                  </code>{" "}
+                  flow.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Amount</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0.50"
+                      value={paymentAmount}
+                      onChange={(e) =>
+                        setPaymentAmount(parseFloat(e.target.value) || 1)
+                      }
+                      className="h-8 text-sm"
+                    />
                   </div>
-                  {paymentResult.details && <p>{paymentResult.details}</p>}
-                  {paymentResult.error && <p>Error: {paymentResult.error}</p>}
-                  {paymentResult.paymentIntentId && (
-                    <p className="text-[10px] text-muted-foreground">
-                      PI: {paymentResult.paymentIntentId}
-                    </p>
-                  )}
+                  <div>
+                    <Label className="text-xs">Currency</Label>
+                    <Select
+                      value={paymentCurrency}
+                      onValueChange={setPaymentCurrency}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="EUR">EUR</SelectItem>
+                        <SelectItem value="GBP">GBP</SelectItem>
+                        <SelectItem value="INR">INR</SelectItem>
+                        <SelectItem value="AED">AED</SelectItem>
+                        <SelectItem value="NPR">NPR</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                <Button
+                  onClick={runPaymentTest}
+                  disabled={testingPayment}
+                  size="sm"
+                  className="w-full"
+                >
+                  {testingPayment ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Play className="h-4 w-4 mr-1" />
+                  )}
+                  Run Payment Test
+                </Button>
+                {paymentResult && (
+                  <div
+                    className={`p-2 rounded text-xs space-y-1 ${
+                      paymentResult.success
+                        ? "bg-green-50 dark:bg-green-950/30 text-green-800 dark:text-green-300"
+                        : "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1 font-medium">
+                      {paymentResult.success ? (
+                        <CheckCircle className="h-3.5 w-3.5" />
+                      ) : (
+                        <XCircle className="h-3.5 w-3.5" />
+                      )}
+                      {paymentResult.success ? "PASSED" : "FAILED"}
+                    </div>
+                    {paymentResult.details && <p>{paymentResult.details}</p>}
+                    {paymentResult.error && <p>Error: {paymentResult.error}</p>}
+                    {paymentResult.paymentIntentId && (
+                      <p className="text-[10px] text-muted-foreground">
+                        PI: {paymentResult.paymentIntentId}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-          {/* Subscription Test */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Zap className="h-4 w-4" />
-                Test Subscription
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Creates a customer, subscription, then cancels &amp; cleans up.
-                Tests the{" "}
-                <code className="text-[10px]">
-                  /seller-subscriptions/webhooks/stripe
-                </code>{" "}
-                flow.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <Label className="text-xs">Amount</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0.50"
-                    value={subAmount}
-                    onChange={(e) =>
-                      setSubAmount(parseFloat(e.target.value) || 9.99)
-                    }
-                    className="h-8 text-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Currency</Label>
-                  <Select value={subCurrency} onValueChange={setSubCurrency}>
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="USD">USD</SelectItem>
-                      <SelectItem value="EUR">EUR</SelectItem>
-                      <SelectItem value="GBP">GBP</SelectItem>
-                      <SelectItem value="INR">INR</SelectItem>
-                      <SelectItem value="AED">AED</SelectItem>
-                      <SelectItem value="NPR">NPR</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs">Interval</Label>
-                  <Select
-                    value={subInterval}
-                    onValueChange={(v) => setSubInterval(v as "month" | "year")}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="month">Monthly</SelectItem>
-                      <SelectItem value="year">Annual</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <Button
-                onClick={runSubTest}
-                disabled={testingSub}
-                size="sm"
-                className="w-full"
-              >
-                {testingSub ? (
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                ) : (
-                  <Play className="h-4 w-4 mr-1" />
-                )}
-                Run Subscription Test
-              </Button>
-              {subResult && (
-                <div
-                  className={`p-2 rounded text-xs space-y-1 ${
-                    subResult.success
-                      ? "bg-green-50 dark:bg-green-950/30 text-green-800 dark:text-green-300"
-                      : "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300"
-                  }`}
-                >
-                  <div className="flex items-center gap-1 font-medium">
-                    {subResult.success ? (
-                      <CheckCircle className="h-3.5 w-3.5" />
-                    ) : (
-                      <XCircle className="h-3.5 w-3.5" />
-                    )}
-                    {subResult.success ? "PASSED" : "FAILED"}
+            {/* Subscription Test */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <Zap className="h-4 w-4" />
+                  Test Subscription
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Creates a customer, subscription, then cancels &amp; cleans
+                  up. Tests the{" "}
+                  <code className="text-[10px]">
+                    /seller-subscriptions/webhooks/stripe
+                  </code>{" "}
+                  flow.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Label className="text-xs">Amount</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0.50"
+                      value={subAmount}
+                      onChange={(e) =>
+                        setSubAmount(parseFloat(e.target.value) || 9.99)
+                      }
+                      className="h-8 text-sm"
+                    />
                   </div>
-                  {subResult.details && <p>{subResult.details}</p>}
-                  {subResult.error && <p>Error: {subResult.error}</p>}
-                  {subResult.subscriptionId && (
-                    <p className="text-[10px] text-muted-foreground">
-                      Sub: {subResult.subscriptionId}
-                    </p>
-                  )}
+                  <div>
+                    <Label className="text-xs">Currency</Label>
+                    <Select value={subCurrency} onValueChange={setSubCurrency}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="EUR">EUR</SelectItem>
+                        <SelectItem value="GBP">GBP</SelectItem>
+                        <SelectItem value="INR">INR</SelectItem>
+                        <SelectItem value="AED">AED</SelectItem>
+                        <SelectItem value="NPR">NPR</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Interval</Label>
+                    <Select
+                      value={subInterval}
+                      onValueChange={(v) =>
+                        setSubInterval(v as "month" | "year")
+                      }
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="month">Monthly</SelectItem>
+                        <SelectItem value="year">Annual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                <Button
+                  onClick={runSubTest}
+                  disabled={testingSub}
+                  size="sm"
+                  className="w-full"
+                >
+                  {testingSub ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Play className="h-4 w-4 mr-1" />
+                  )}
+                  Run Subscription Test
+                </Button>
+                {subResult && (
+                  <div
+                    className={`p-2 rounded text-xs space-y-1 ${
+                      subResult.success
+                        ? "bg-green-50 dark:bg-green-950/30 text-green-800 dark:text-green-300"
+                        : "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1 font-medium">
+                      {subResult.success ? (
+                        <CheckCircle className="h-3.5 w-3.5" />
+                      ) : (
+                        <XCircle className="h-3.5 w-3.5" />
+                      )}
+                      {subResult.success ? "PASSED" : "FAILED"}
+                    </div>
+                    {subResult.details && <p>{subResult.details}</p>}
+                    {subResult.error && <p>Error: {subResult.error}</p>}
+                    {subResult.subscriptionId && (
+                      <p className="text-[10px] text-muted-foreground">
+                        Sub: {subResult.subscriptionId}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )}
     </div>
