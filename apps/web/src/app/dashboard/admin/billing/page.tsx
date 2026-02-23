@@ -2279,6 +2279,7 @@ function GatewaysTab() {
     Record<string, { status: string; latencyMs?: number; message?: string }>
   >({});
   const [checkingHealth, setCheckingHealth] = useState(false);
+  const [activeGateway, setActiveGateway] = useState<string>("overview");
 
   const fetchConfigs = async () => {
     try {
@@ -2324,7 +2325,6 @@ function GatewaysTab() {
     fetchConfigs();
   }, []);
 
-  // Auto-check health after configs load
   useEffect(() => {
     if (configs.length > 0) fetchHealth();
   }, [configs.length]);
@@ -2399,6 +2399,141 @@ function GatewaysTab() {
     razorpay: "🔷",
   };
 
+  // Helper to render a single gateway detail card
+  const GatewayDetailCard = ({ config }: { config: GatewayConfig }) => (
+    <Card
+      className={`transition-all ${config.isEnabled ? "border-l-4 border-l-green-500" : "opacity-70"}`}
+    >
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <span>{GATEWAY_ICONS[config.gatewayName] || "🔌"}</span>
+            {config.displayName}
+            <HealthDot gateway={config.gatewayName} />
+          </CardTitle>
+          <div className="flex items-center gap-1">
+            {config.isDefault && (
+              <Badge
+                variant="outline"
+                className="text-xs border-amber-400 text-amber-600"
+              >
+                <Star className="h-3 w-3 mr-0.5" /> Default
+              </Badge>
+            )}
+            <Badge variant={config.isEnabled ? "default" : "secondary"}>
+              {config.isEnabled ? "Active" : "Disabled"}
+            </Badge>
+          </div>
+        </div>
+        <CardDescription className="flex items-center gap-2">
+          <Globe className="h-3 w-3" />
+          {config.supportedCountries.join(", ")}
+          <span className="text-muted-foreground">•</span>
+          Priority: {config.priority}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        {config.commissionInfo && (
+          <div className="flex items-start gap-2 p-2 rounded bg-muted/50">
+            <DollarSign className="h-3.5 w-3.5 mt-0.5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">
+              {config.commissionInfo}
+            </span>
+          </div>
+        )}
+        <div className="flex flex-wrap gap-1">
+          {config.supportedMethods.map((m) => (
+            <Badge key={m} variant="outline" className="text-xs">
+              {m}
+            </Badge>
+          ))}
+        </div>
+        {config.envKeysRequired && config.envKeysRequired.length > 0 && (
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <Shield className="h-3 w-3" /> Required Env Keys:
+            </span>
+            <div className="space-y-0.5">
+              {(config.envKeysRequired as string[]).map((key) => {
+                const h = healthMap[config.gatewayName];
+                const isConfigured =
+                  h?.status === "online" || h?.status === undefined;
+                return (
+                  <div key={key} className="flex items-center gap-1.5 text-xs">
+                    {isConfigured ? (
+                      <Check className="h-3 w-3 text-green-500" />
+                    ) : (
+                      <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                    )}
+                    <code className="text-xs bg-muted px-1 rounded">{key}</code>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        {config.webhookEndpoint && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Webhook:</span>
+            <code className="text-xs bg-muted px-1.5 py-0.5 rounded flex-1 truncate">
+              {config.webhookEndpoint}
+            </code>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={() =>
+                copyToClipboard(
+                  `https://api.orivraa.com${config.webhookEndpoint}`,
+                )
+              }
+            >
+              <Copy className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
+        {healthMap[config.gatewayName]?.message && (
+          <div className="text-xs text-muted-foreground italic flex items-center gap-1">
+            {healthMap[config.gatewayName].status === "online" ? (
+              <Wifi className="h-3 w-3 text-green-500" />
+            ) : (
+              <WifiOff className="h-3 w-3 text-red-500" />
+            )}
+            {healthMap[config.gatewayName].message}
+          </div>
+        )}
+        <div className="flex gap-2 pt-1">
+          <Button
+            size="sm"
+            variant={config.isEnabled ? "destructive" : "default"}
+            className="flex-1"
+            onClick={() => handleToggle(config)}
+          >
+            {config.isEnabled ? (
+              <>
+                <ToggleRight className="h-3.5 w-3.5 mr-1" /> Disable
+              </>
+            ) : (
+              <>
+                <ToggleLeft className="h-3.5 w-3.5 mr-1" /> Enable
+              </>
+            )}
+          </Button>
+          {!config.isDefault && config.isEnabled && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleSetDefault(config)}
+              title="Set as default fallback gateway"
+            >
+              <Star className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -2460,168 +2595,119 @@ function GatewaysTab() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {configs.map((config) => (
-            <Card
-              key={config.id}
-              className={`transition-all ${config.isEnabled ? "border-l-4 border-l-green-500" : "opacity-70"}`}
+        <>
+          {/* ─── Gateway Sub-Navigation ─── */}
+          <div className="flex gap-2 flex-wrap border-b pb-2">
+            <Button
+              variant={activeGateway === "overview" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setActiveGateway("overview")}
             >
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <span>{GATEWAY_ICONS[config.gatewayName] || "🔌"}</span>
-                    {config.displayName}
-                    <HealthDot gateway={config.gatewayName} />
-                  </CardTitle>
-                  <div className="flex items-center gap-1">
-                    {config.isDefault && (
-                      <Badge
-                        variant="outline"
-                        className="text-xs border-amber-400 text-amber-600"
-                      >
-                        <Star className="h-3 w-3 mr-0.5" /> Default
-                      </Badge>
-                    )}
-                    <Badge variant={config.isEnabled ? "default" : "secondary"}>
-                      {config.isEnabled ? "Active" : "Disabled"}
-                    </Badge>
-                  </div>
-                </div>
-                <CardDescription className="flex items-center gap-2">
-                  <Globe className="h-3 w-3" />
-                  {config.supportedCountries.join(", ")}
-                  <span className="text-muted-foreground">•</span>
-                  Priority: {config.priority}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                {/* Commission Info */}
-                {config.commissionInfo && (
-                  <div className="flex items-start gap-2 p-2 rounded bg-muted/50">
-                    <DollarSign className="h-3.5 w-3.5 mt-0.5 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">
-                      {config.commissionInfo}
-                    </span>
-                  </div>
-                )}
+              All Gateways
+            </Button>
+            {configs.map((c) => (
+              <Button
+                key={c.gatewayName}
+                variant={
+                  activeGateway === c.gatewayName ? "default" : "ghost"
+                }
+                size="sm"
+                onClick={() => setActiveGateway(c.gatewayName)}
+                className="flex items-center gap-1.5"
+              >
+                <span>{GATEWAY_ICONS[c.gatewayName] || "🔌"}</span>
+                {c.displayName}
+                <HealthDot gateway={c.gatewayName} />
+              </Button>
+            ))}
+          </div>
 
-                {/* Payment Methods */}
-                <div className="flex flex-wrap gap-1">
-                  {config.supportedMethods.map((m) => (
-                    <Badge key={m} variant="outline" className="text-xs">
-                      {m}
-                    </Badge>
-                  ))}
+          {/* ─── Overview: All Gateways Grid ─── */}
+          {activeGateway === "overview" && (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {configs.map((config) => (
+                <GatewayDetailCard key={config.id} config={config} />
+              ))}
+            </div>
+          )}
+
+          {/* ─── Per-Gateway Sub-Sections ─── */}
+          {configs
+            .filter((c) => c.gatewayName === activeGateway)
+            .map((config) => (
+              <div key={config.id} className="space-y-4">
+                {/* Gateway Config Card */}
+                <div className="max-w-2xl">
+                  <GatewayDetailCard config={config} />
                 </div>
 
-                {/* Env Keys Required */}
-                {config.envKeysRequired &&
-                  config.envKeysRequired.length > 0 && (
-                    <div className="space-y-1">
-                      <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                        <Shield className="h-3 w-3" /> Required Env Keys:
-                      </span>
-                      <div className="space-y-0.5">
-                        {(config.envKeysRequired as string[]).map((key) => {
-                          const h = healthMap[config.gatewayName];
-                          const isConfigured =
-                            h?.status === "online" || h?.status === undefined;
-                          return (
-                            <div
-                              key={key}
-                              className="flex items-center gap-1.5 text-xs"
-                            >
-                              {isConfigured ? (
-                                <Check className="h-3 w-3 text-green-500" />
-                              ) : (
-                                <AlertTriangle className="h-3 w-3 text-yellow-500" />
-                              )}
-                              <code className="text-xs bg-muted px-1 rounded">
-                                {key}
-                              </code>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                {/* Webhook URL */}
-                {config.webhookEndpoint && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      Webhook:
-                    </span>
-                    <code className="text-xs bg-muted px-1.5 py-0.5 rounded flex-1 truncate">
-                      {config.webhookEndpoint}
-                    </code>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                      onClick={() =>
-                        copyToClipboard(
-                          `https://api.orivraa.com${config.webhookEndpoint}`,
-                        )
-                      }
-                    >
-                      <Copy className="h-3 w-3" />
-                    </Button>
-                  </div>
+                {/* Stripe-specific: Webhooks + Sandbox */}
+                {config.gatewayName === "stripe" && (
+                  <>
+                    <WebhookStatusSection />
+                    <StripeSandboxSection />
+                  </>
                 )}
 
-                {/* Health status message */}
-                {healthMap[config.gatewayName]?.message && (
-                  <div className="text-xs text-muted-foreground italic flex items-center gap-1">
-                    {healthMap[config.gatewayName].status === "online" ? (
-                      <Wifi className="h-3 w-3 text-green-500" />
-                    ) : (
-                      <WifiOff className="h-3 w-3 text-red-500" />
-                    )}
-                    {healthMap[config.gatewayName].message}
-                  </div>
+                {/* PhonePe-specific */}
+                {config.gatewayName === "phonepe" && (
+                  <Card>
+                    <CardContent className="py-6 text-sm text-muted-foreground">
+                      <p className="font-medium text-foreground">PhonePe Integration Notes</p>
+                      <ul className="mt-2 space-y-1 list-disc list-inside text-xs">
+                        <li>UPI is the primary payment method for India</li>
+                        <li>Webhook endpoint: <code className="bg-muted px-1 rounded">https://api.orivraa.com{config.webhookEndpoint}</code></li>
+                        <li>Test mode: set <code className="bg-muted px-1 rounded">PHONEPE_ENV=sandbox</code> in Railway</li>
+                      </ul>
+                    </CardContent>
+                  </Card>
                 )}
 
-                {/* Actions */}
-                <div className="flex gap-2 pt-1">
-                  <Button
-                    size="sm"
-                    variant={config.isEnabled ? "destructive" : "default"}
-                    className="flex-1"
-                    onClick={() => handleToggle(config)}
-                  >
-                    {config.isEnabled ? (
-                      <>
-                        <ToggleRight className="h-3.5 w-3.5 mr-1" /> Disable
-                      </>
-                    ) : (
-                      <>
-                        <ToggleLeft className="h-3.5 w-3.5 mr-1" /> Enable
-                      </>
-                    )}
-                  </Button>
-                  {!config.isDefault && config.isEnabled && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleSetDefault(config)}
-                      title="Set as default fallback gateway"
-                    >
-                      <Star className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                {/* eSewa-specific */}
+                {config.gatewayName === "esewa" && (
+                  <Card>
+                    <CardContent className="py-6 text-sm text-muted-foreground">
+                      <p className="font-medium text-foreground">eSewa Integration Notes</p>
+                      <ul className="mt-2 space-y-1 list-disc list-inside text-xs">
+                        <li>Primary gateway for Nepal (NPR)</li>
+                        <li>No webhook endpoint — uses redirect-based verification</li>
+                        <li>Commission: ~1.5-2% per transaction</li>
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Khalti-specific */}
+                {config.gatewayName === "khalti" && (
+                  <Card>
+                    <CardContent className="py-6 text-sm text-muted-foreground">
+                      <p className="font-medium text-foreground">Khalti Integration Notes</p>
+                      <ul className="mt-2 space-y-1 list-disc list-inside text-xs">
+                        <li>Secondary gateway for Nepal (NPR)</li>
+                        <li>Lower priority than eSewa (priority 5 vs 10)</li>
+                        <li>No webhook endpoint — uses redirect-based verification</li>
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Razorpay-specific */}
+                {config.gatewayName === "razorpay" && (
+                  <Card>
+                    <CardContent className="py-6 text-sm text-muted-foreground">
+                      <p className="font-medium text-foreground">Razorpay Integration Notes</p>
+                      <ul className="mt-2 space-y-1 list-disc list-inside text-xs">
+                        <li>Alternative gateway for India (disabled by default — PhonePe is primary)</li>
+                        <li>Supports Card, UPI, and Bank Transfer</li>
+                        <li>Test mode: use test API keys from Razorpay Dashboard</li>
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            ))}
+        </>
       )}
-
-      {/* ─── Webhook Status ─── */}
-      <WebhookStatusSection />
-
-      {/* ─── Stripe Sandbox Testing ─── */}
-      <StripeSandboxSection />
     </div>
   );
 }
@@ -2930,7 +3016,44 @@ function StripeSandboxSection() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-4">
+          {/* Test Card Info Banner */}
+          <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
+            <CardContent className="py-3">
+              <div className="flex items-start gap-3">
+                <TestTube2 className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                <div className="space-y-1.5 text-xs">
+                  <p className="font-semibold text-sm text-amber-800 dark:text-amber-300">
+                    Stripe Test Card Details
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1">
+                    <div>
+                      <span className="text-muted-foreground">Card Number:</span>
+                      <code className="ml-1 bg-muted px-1 rounded font-mono">4242 4242 4242 4242</code>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Expiry:</span>
+                      <code className="ml-1 bg-muted px-1 rounded font-mono">12/2099</code>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">CVC:</span>
+                      <code className="ml-1 bg-muted px-1 rounded font-mono">123</code>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">ZIP:</span>
+                      <code className="ml-1 bg-muted px-1 rounded font-mono">Any</code>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground">
+                    This is the Stripe standard test Visa card. All sandbox tests below use this card automatically.
+                    No real charges are made.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-4 md:grid-cols-2">
           {/* One-Time Payment Test */}
           <Card>
             <CardHeader className="pb-3">
@@ -3126,6 +3249,7 @@ function StripeSandboxSection() {
               )}
             </CardContent>
           </Card>
+        </div>
         </div>
       )}
     </div>
