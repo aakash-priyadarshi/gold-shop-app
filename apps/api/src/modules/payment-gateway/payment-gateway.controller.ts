@@ -178,7 +178,9 @@ export class PaymentGatewayController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Get webhook endpoint configuration status (admin)" })
+  @ApiOperation({
+    summary: "Get webhook endpoint configuration status (admin)",
+  })
   async getWebhookStatus() {
     return this.gatewayService.getWebhookStatus();
   }
@@ -189,12 +191,14 @@ export class PaymentGatewayController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Test Stripe one-time payment in sandbox mode (admin)" })
+  @ApiOperation({
+    summary: "Test Stripe one-time payment in sandbox mode (admin)",
+  })
   async testStripePayment(
     @Body() body: { amount?: number; currency?: string },
   ) {
     return this.gatewayService.testStripePayment(
-      body.amount || 1.00,
+      body.amount || 1.0,
       body.currency || "USD",
     );
   }
@@ -205,7 +209,12 @@ export class PaymentGatewayController {
   @ApiBearerAuth()
   @ApiOperation({ summary: "Test Stripe subscription in sandbox mode (admin)" })
   async testStripeSubscription(
-    @Body() body: { amount?: number; currency?: string; interval?: "month" | "year" },
+    @Body()
+    body: {
+      amount?: number;
+      currency?: string;
+      interval?: "month" | "year";
+    },
   ) {
     return this.gatewayService.testStripeSubscription(
       body.amount || 9.99,

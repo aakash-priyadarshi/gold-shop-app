@@ -765,7 +765,12 @@ function AiCreditsTab() {
           </div>
           <Button
             onClick={handleBuyCredits}
-            disabled={buying || !canPurchase || !planInfo || planInfo.extraCreditPrice <= 0}
+            disabled={
+              buying ||
+              !canPurchase ||
+              !planInfo ||
+              planInfo.extraCreditPrice <= 0
+            }
             className="w-full sm:w-auto"
           >
             {buying ? (

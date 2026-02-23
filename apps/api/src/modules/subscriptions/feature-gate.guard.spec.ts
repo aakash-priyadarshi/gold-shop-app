@@ -2,8 +2,10 @@ import { ExecutionContext, ForbiddenException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { Test, TestingModule } from "@nestjs/testing";
 import { FeatureGateGuard } from "./feature-gate.guard";
-import { FeatureNotEnabledException, PlanLimitsService } from "./plan-limits.service";
-import { REQUIRED_FEATURE_KEY } from "./require-feature.decorator";
+import {
+  FeatureNotEnabledException,
+  PlanLimitsService,
+} from "./plan-limits.service";
 
 // ─── Helper: build a fake ExecutionContext ────────────────
 function mockContext(user: Record<string, unknown> | null): ExecutionContext {
@@ -86,7 +88,9 @@ describe("FeatureGateGuard", () => {
   // 5. Feature enabled → allow
   // ═══════════════════════════════════════════════════
   it("should ALLOW when checkFeature passes for all required features", async () => {
-    jest.spyOn(reflector, "getAllAndOverride").mockReturnValue(["crm", "invoicing"]);
+    jest
+      .spyOn(reflector, "getAllAndOverride")
+      .mockReturnValue(["crm", "invoicing"]);
     planLimits.checkFeature.mockResolvedValue(undefined); // no throw = pass
 
     const ctx = mockContext({ id: "u1", role: "SHOPKEEPER", shopId: "s1" });
@@ -106,13 +110,19 @@ describe("FeatureGateGuard", () => {
     );
 
     const ctx = mockContext({ id: "u1", role: "SHOPKEEPER", shopId: "s1" });
-    await expect(guard.canActivate(ctx)).rejects.toThrow(FeatureNotEnabledException);
+    await expect(guard.canActivate(ctx)).rejects.toThrow(
+      FeatureNotEnabledException,
+    );
   });
 
   it("should include feature metadata in the error response", async () => {
     jest.spyOn(reflector, "getAllAndOverride").mockReturnValue(["multiBranch"]);
     planLimits.checkFeature.mockRejectedValue(
-      new FeatureNotEnabledException("multiBranch", "Multi-branch support", "Pro Plan"),
+      new FeatureNotEnabledException(
+        "multiBranch",
+        "Multi-branch support",
+        "Pro Plan",
+      ),
     );
 
     const ctx = mockContext({ id: "u1", role: "SHOPKEEPER", shopId: "s1" });
@@ -121,7 +131,10 @@ describe("FeatureGateGuard", () => {
       fail("Should have thrown");
     } catch (err) {
       expect(err).toBeInstanceOf(FeatureNotEnabledException);
-      const resp = (err as FeatureNotEnabledException).getResponse() as Record<string, unknown>;
+      const resp = (err as FeatureNotEnabledException).getResponse() as Record<
+        string,
+        unknown
+      >;
       expect(resp.error).toBe("FEATURE_NOT_ENABLED");
       expect(resp.featureKey).toBe("multiBranch");
       expect(resp.planName).toBe("Pro Plan");
@@ -132,15 +145,24 @@ describe("FeatureGateGuard", () => {
   // 7. Multiple features — first failure stops chain
   // ═══════════════════════════════════════════════════
   it("should stop checking at first failing feature", async () => {
-    jest.spyOn(reflector, "getAllAndOverride").mockReturnValue(["crm", "invoicing"]);
+    jest
+      .spyOn(reflector, "getAllAndOverride")
+      .mockReturnValue(["crm", "invoicing"]);
     planLimits.checkFeature
-      .mockResolvedValueOnce(undefined)  // crm passes
-      .mockRejectedValueOnce(            // invoicing fails
-        new FeatureNotEnabledException("invoicing", "Invoicing & billing", "Free Plan"),
+      .mockResolvedValueOnce(undefined) // crm passes
+      .mockRejectedValueOnce(
+        // invoicing fails
+        new FeatureNotEnabledException(
+          "invoicing",
+          "Invoicing & billing",
+          "Free Plan",
+        ),
       );
 
     const ctx = mockContext({ id: "u1", role: "SHOPKEEPER", shopId: "s1" });
-    await expect(guard.canActivate(ctx)).rejects.toThrow(FeatureNotEnabledException);
+    await expect(guard.canActivate(ctx)).rejects.toThrow(
+      FeatureNotEnabledException,
+    );
     expect(planLimits.checkFeature).toHaveBeenCalledTimes(2);
   });
 

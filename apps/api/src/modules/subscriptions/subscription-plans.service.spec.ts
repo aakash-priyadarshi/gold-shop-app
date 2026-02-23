@@ -217,7 +217,11 @@ describe("SubscriptionPlansService", () => {
 
       // Next call should see the updated features (LIVE)
       const result2 = await service.getActiveShopPlan("shop1");
-      expect(result2!.features).toEqual({ crm: true, invoicing: true, apiAccess: false });
+      expect(result2!.features).toEqual({
+        crm: true,
+        invoicing: true,
+        apiAccess: false,
+      });
     });
 
     it("should include extraCreditPrice in the plan record", async () => {
