@@ -1156,6 +1156,8 @@ export class PaymentGatewayService {
     const isStripeConfigured =
       !!stripeKey && stripeKey !== "" && stripeKey !== "sk_test_placeholder";
 
+    const testKey = this.getStripeTestKey();
+
     return [
       {
         name: "Stripe Payments",
@@ -1174,6 +1176,14 @@ export class PaymentGatewayService {
         description:
           "Handles subscription lifecycle: checkout, renewals, cancellations, payment failures",
       },
+      {
+        name: "Stripe Test Key",
+        endpoint: "(sandbox only — no webhook)",
+        configured: !!testKey,
+        secretEnvKey: "STRIPE_TEST_SECRET_KEY",
+        description:
+          "Dedicated sandbox/test API key (sk_test_). Required for admin sandbox testing.",
+      },
     ];
   }
 
@@ -1182,11 +1192,21 @@ export class PaymentGatewayService {
   // ═══════════════════════════════════════════════════
 
   /**
-   * Check if Stripe is in test/sandbox mode.
+   * Get the Stripe test/sandbox secret key.
+   * Uses STRIPE_TEST_SECRET_KEY (dedicated sandbox key).
+   */
+  private getStripeTestKey(): string | null {
+    const testKey = this.configService.get<string>("STRIPE_TEST_SECRET_KEY");
+    if (testKey && testKey.startsWith("sk_test_")) return testKey;
+    return null;
+  }
+
+  /**
+   * Check if Stripe sandbox testing is available.
+   * Requires a dedicated STRIPE_TEST_SECRET_KEY (sk_test_...) to be configured.
    */
   isStripeSandbox(): boolean {
-    const key = this.configService.get<string>("STRIPE_SECRET_KEY") || "";
-    return key.startsWith("sk_test_");
+    return !!this.getStripeTestKey();
   }
 
   /**
@@ -1200,15 +1220,15 @@ export class PaymentGatewayService {
     error?: string;
     details?: string;
   }> {
-    const stripeKey = this.configService.get<string>("STRIPE_SECRET_KEY");
-    if (!stripeKey || !stripeKey.startsWith("sk_test_")) {
+    const testKey = this.getStripeTestKey();
+    if (!testKey) {
       return {
         success: false,
-        error: "Stripe is not in test mode. Use sk_test_ keys for sandbox testing.",
+        error: "STRIPE_TEST_SECRET_KEY is not configured. Add a sk_test_ key to Railway env.",
       };
     }
 
-    const stripe = require("stripe")(stripeKey);
+    const stripe = require("stripe")(testKey);
 
     try {
       // 1. Create a PaymentIntent
@@ -1260,15 +1280,15 @@ export class PaymentGatewayService {
     error?: string;
     details?: string;
   }> {
-    const stripeKey = this.configService.get<string>("STRIPE_SECRET_KEY");
-    if (!stripeKey || !stripeKey.startsWith("sk_test_")) {
+    const testKey = this.getStripeTestKey();
+    if (!testKey) {
       return {
         success: false,
-        error: "Stripe is not in test mode. Use sk_test_ keys for sandbox testing.",
+        error: "STRIPE_TEST_SECRET_KEY is not configured. Add a sk_test_ key to Railway env.",
       };
     }
 
-    const stripe = require("stripe")(stripeKey);
+    const stripe = require("stripe")(testKey);
 
     try {
       // 1. Create a test customer with a test payment method
