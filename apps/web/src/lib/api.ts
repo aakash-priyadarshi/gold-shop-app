@@ -587,6 +587,7 @@ export const intelligenceApi = {
     occasion?: string;
     preferredMetal?: string;
     marketRegion?: string;
+    currency?: string;
   }) => api.post("/marketplace-intelligence/rfq-builder", data),
 
   // Budget Feasibility Check

@@ -2166,6 +2166,7 @@ export default function CreateRfqPage() {
       const res = await intelligenceApi.buildRfq({
         description: aiInput,
         marketRegion: country || "NP",
+        currency: currency || "NPR",
       });
       const data = res.data;
 
@@ -2453,11 +2454,23 @@ export default function CreateRfqPage() {
         }
 
         // ─── Step 3: Budget ───
-        if (data.budgetMinNpr) {
-          updateFormData("budgetMin", String(data.budgetMinNpr));
+        // AI now returns budget in both user's currency (budgetMin/budgetMax)
+        // and NPR (budgetMinNpr/budgetMaxNpr). We fill the form with user's currency values.
+        // On submission, they'll be converted back to NPR.
+        if (data.budgetMin) {
+          updateFormData("budgetMin", String(data.budgetMin));
+        } else if (data.budgetMinNpr) {
+          // Fallback: convert NPR to user's currency
+          const NPR_RATES: Record<string, number> = { NPR: 1, INR: 1.6, USD: 133, AED: 36, GBP: 170, EUR: 150 };
+          const rate = NPR_RATES[currency] || 1;
+          updateFormData("budgetMin", String(Math.round(data.budgetMinNpr / rate)));
         }
-        if (data.budgetMaxNpr) {
-          updateFormData("budgetMax", String(data.budgetMaxNpr));
+        if (data.budgetMax) {
+          updateFormData("budgetMax", String(data.budgetMax));
+        } else if (data.budgetMaxNpr) {
+          const NPR_RATES: Record<string, number> = { NPR: 1, INR: 1.6, USD: 133, AED: 36, GBP: 170, EUR: 150 };
+          const rate = NPR_RATES[currency] || 1;
+          updateFormData("budgetMax", String(Math.round(data.budgetMaxNpr / rate)));
         }
 
         // ─── Step 3: Deadline ───
@@ -2684,8 +2697,19 @@ export default function CreateRfqPage() {
           // Link to the design from gallery if coming from "Build This"
           designId: designId || undefined,
           targetTotalWeightG: weight,
-          budgetMinNpr: parseFloat(formData.budgetMin) || 0,
-          budgetMaxNpr: parseFloat(formData.budgetMax) || 0,
+          // Budget form values are in user's display currency — convert to NPR for submission
+          budgetMinNpr: (() => {
+            const val = parseFloat(formData.budgetMin) || 0;
+            if (currency === "NPR" || !currency) return val;
+            const CURRENCY_TO_NPR: Record<string, number> = { NPR: 1, INR: 1.6, USD: 133, AED: 36, GBP: 170, EUR: 150 };
+            return Math.round(val * (CURRENCY_TO_NPR[currency] || 1));
+          })(),
+          budgetMaxNpr: (() => {
+            const val = parseFloat(formData.budgetMax) || 0;
+            if (currency === "NPR" || !currency) return val;
+            const CURRENCY_TO_NPR: Record<string, number> = { NPR: 1, INR: 1.6, USD: 133, AED: 36, GBP: 170, EUR: 150 };
+            return Math.round(val * (CURRENCY_TO_NPR[currency] || 1));
+          })(),
           preferredDeliveryDays: formData.deadline
             ? Math.ceil(
                 (new Date(formData.deadline).getTime() - Date.now()) /

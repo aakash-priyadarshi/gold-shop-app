@@ -19,6 +19,10 @@ export class AiRfqBuilderDto {
   @IsOptional()
   @IsString()
   marketRegion?: string; // "NP", "IN", "AE", etc.
+
+  @IsOptional()
+  @IsString()
+  currency?: string; // "NPR", "INR", "USD", "AED", "GBP", "EUR"
 }
 
 export class AiRfqBuilderResponse {
@@ -37,6 +41,9 @@ export class AiRfqBuilderResponse {
   surfaceFinish?: string;
   budgetMinNpr?: number;
   budgetMaxNpr?: number;
+  budgetMin?: number; // Budget in user's currency
+  budgetMax?: number; // Budget in user's currency
+  budgetCurrency?: string; // The currency used for budgetMin/budgetMax
   description?: string;
   specialInstructions?: string;
   deadline?: string;
