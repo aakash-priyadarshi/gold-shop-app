@@ -56,7 +56,14 @@ export class FeatureGateGuard implements CanActivate {
       return true;
     }
 
-    // 3. Need a shopId
+    // Customers (non-shopkeepers) are allowed through feature gates.
+    // They don't have a shopId, but features like AI design preview
+    // should still be accessible to them (the endpoint uses user.id).
+    if (user.role === "CUSTOMER") {
+      return true;
+    }
+
+    // 3. Need a shopId (shopkeeper flow)
     const shopId = user.shopId;
     if (!shopId) {
       throw new ForbiddenException(

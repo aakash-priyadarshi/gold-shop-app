@@ -174,6 +174,7 @@ ${dto.budgetHint ? `Budget Hint: "${dto.budgetHint}"` : ""}
 ${dto.occasion ? `Occasion: "${dto.occasion}"` : ""}
 ${dto.preferredMetal ? `Preferred Metal: "${dto.preferredMetal}"` : ""}
 ${dto.marketRegion ? `Market Region: ${dto.marketRegion}` : ""}
+${dto.currency ? `Customer Currency: ${dto.currency}` : "Customer Currency: NPR"}
 
 ${marketContext}
 
@@ -231,7 +232,11 @@ Respond with a JSON object matching this exact structure:
   "estimatedWeight": number in grams — ALWAYS fill this, never null (use the defaults above),
   "surfaceFinish": "HIGH_POLISH"|"MATTE"|"BRUSHED"|"SATIN"|"HAMMERED"|"SANDBLASTED"|"FLORENTINE"|"DIAMOND_CUT"|"ENGRAVED" — default "HIGH_POLISH",
   "budgetMinNpr": number or null (in NPR),
-  "budgetMaxNpr": number or null (in NPR),
+  "budgetMinNpr": number or null (in NPR — for internal use),
+  "budgetMaxNpr": number or null (in NPR — for internal use),
+  "budgetMin": number or null (in the CUSTOMER'S CURRENCY — shown to user),
+  "budgetMax": number or null (in the CUSTOMER'S CURRENCY — shown to user),
+  "budgetCurrency": string — the customer's currency code (e.g. "INR", "NPR", "USD"),
   "description": string describing the design/appearance the customer wants,
   "specialInstructions": string summarizing any special requests (engraving, sizing, packaging, etc.),
   "deadline": "YYYY-MM-DD" date string or null (if customer mentions when they need it),
@@ -275,10 +280,23 @@ CRITICAL RULES:
    - Keep it 2-4 sentences. Warm, helpful, not robotic
    - Do NOT mention confidence percentages or technical terms like "METHOD_B"
    - Use friendly names: "precious metal alloy" → "22K gold", "METHOD_B" → just describe the metal
+   - Always mention budget amounts in the CUSTOMER'S CURRENCY (never mention NPR unless that IS the customer's currency)
 
 7. **Always provide methodBConfig when buildMethod=METHOD_B, even if defaulting**
 
-Budget conversions: 1 USD ≈ 133 NPR, 1 INR ≈ 1.6 NPR, 1 AED ≈ 36 NPR, 1 GBP ≈ 170 NPR
+8. **BUDGET-AWARE CONFIGURATION** — When a customer mentions a budget, you MUST:
+   - Consider whether the budget can realistically afford the combination of metal, weight, and gemstones you select
+   - Gold price reference: ~NPR 13,500/g for 24K, ~NPR 12,400/g for 22K, ~NPR 10,100/g for 18K, ~NPR 7,600/g for 14K, ~NPR 120/g for silver 925
+   - If the budget is LOW relative to the metal/weight: prefer lighter weight, lower karat, or suggest METHOD_C (plated)
+   - Example: "budget 10000 INR" (≈16000 NPR) for a gold necklace → pick 14K or even plated, or a very light piece ~1-2g
+   - Example: "budget 50000 NPR" for a ring → 22K gold ring at 2-3g fits comfortably
+   - In conversationalMessage, warn the user if the configured piece likely exceeds their budget: "I've set up a 22K gold ring at 3g. Just a heads up, this might be slightly above your budget — you could go with 18K or reduce the weight to fit your range."
+   - Set budgetMin/budgetMax in the CUSTOMER'S currency, and budgetMinNpr/budgetMaxNpr in NPR (use the conversion rates below)
+
+Budget conversions: 1 USD ≈ 133 NPR, 1 INR ≈ 1.6 NPR, 1 AED ≈ 36 NPR, 1 GBP ≈ 170 NPR, 1 EUR ≈ 150 NPR
+When the customer provides a budget in their local currency, output "budgetMin"/"budgetMax" in THAT currency, and convert to NPR for "budgetMinNpr"/"budgetMaxNpr".
+When no budget is mentioned, set all budget fields to null.
+"budgetCurrency" should ALWAYS be set to the customer's currency code (from Customer Currency above).
 For "gold ring" without karat, default to 22K in NP/IN markets, 18K in western markets.
 Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale accordingly.`;
   }
@@ -346,6 +364,9 @@ Weight categories: LIGHT (<5g), MEDIUM (5-15g), HEAVY (>15g) for rings; scale ac
       surfaceFinish: parsed.surfaceFinish || "HIGH_POLISH",
       budgetMinNpr: parsed.budgetMinNpr || undefined,
       budgetMaxNpr: parsed.budgetMaxNpr || undefined,
+      budgetMin: parsed.budgetMin || undefined,
+      budgetMax: parsed.budgetMax || undefined,
+      budgetCurrency: parsed.budgetCurrency || undefined,
       description: parsed.description || "",
       specialInstructions: parsed.specialInstructions || "",
       deadline: parsed.deadline || undefined,
