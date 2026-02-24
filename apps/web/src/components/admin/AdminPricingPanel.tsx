@@ -62,13 +62,19 @@ interface MetalPrice {
 }
 
 interface GemstonePrice {
+  id?: string;
   stoneType: string;
   origin: string;
   qualityGrade: string;
   sizeRange: string;
+  sizeMin?: number;
+  sizeMax?: number;
+  sizeUnit?: string;
   pricePerUnit: number;
   unit: 'CARAT' | 'MM' | 'PIECE';
+  currency?: string;
   source: 'SYSTEM' | 'MANUAL';
+  note?: string;
 }
 
 interface FinishPrice {
@@ -118,12 +124,39 @@ export function AdminPricingPanel() {
   const loadPricingData = async () => {
     setLoading(true);
     try {
-      // In real app, fetch from API
-      // const [metals, gems, finishes, shops] = await Promise.all([...]);
-      
-      // Mock data for demo
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      // Fetch real gemstone prices from admin API; other tabs use mock for now
+      const [gemRes] = await Promise.all([
+        fetch(`${API_URL}/pricing/admin/gemstones`, { headers }).catch(() => null),
+      ]);
+
       setMetalPrices(getMockMetalPrices());
-      setGemstonePrices(getMockGemstonePrices());
+
+      if (gemRes && gemRes.ok) {
+        const gemData = await gemRes.json();
+        const mapped: GemstonePrice[] = (gemData.prices || []).map((p: any) => ({
+          id: p.id,
+          stoneType: p.stoneType,
+          origin: p.origin || 'NATURAL',
+          qualityGrade: p.qualityTier,
+          sizeRange: `${p.sizeMin}-${p.sizeMax}${p.sizeUnit === 'CARAT' ? 'ct' : 'mm'}`,
+          sizeMin: p.sizeMin,
+          sizeMax: p.sizeMax,
+          sizeUnit: p.sizeUnit,
+          pricePerUnit: p.pricePerStone,
+          unit: p.sizeUnit === 'CARAT' ? 'CARAT' as const : 'MM' as const,
+          currency: p.currency || 'NPR',
+          source: (p.source === 'manual' ? 'MANUAL' : 'SYSTEM') as 'SYSTEM' | 'MANUAL',
+          note: p.note || '',
+        }));
+        setGemstonePrices(mapped.length > 0 ? mapped : getMockGemstonePrices());
+      } else {
+        setGemstonePrices(getMockGemstonePrices());
+      }
+
       setFinishPrices(getMockFinishPrices());
       setShops([
         { id: 'shop-1', name: 'Ramesh Gold House' },
@@ -140,9 +173,35 @@ export function AdminPricingPanel() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Save to API
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulated delay
-      console.log('Saving pricing data...', { metalPrices, gemstonePrices, finishPrices, globalSettings });
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      // Save gemstone prices to API
+      const gemPayload = gemstonePrices.map((g: any) => ({
+        id: g.id || undefined,
+        stoneType: g.stoneType,
+        origin: g.origin,
+        sizeUnit: g.unit === 'CARAT' ? 'CARAT' : 'MM',
+        sizeMin: g.sizeMin ?? 0,
+        sizeMax: g.sizeMax ?? 0,
+        qualityTier: g.qualityGrade,
+        pricePerStone: g.pricePerUnit,
+        currency: g.currency || 'NPR',
+        note: g.note || '',
+      }));
+
+      const res = await fetch(`${API_URL}/pricing/admin/gemstones`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ prices: gemPayload }),
+      });
+
+      if (!res.ok) {
+        console.error('Failed to save gemstone prices:', await res.text());
+      }
+
+      console.log('Pricing data saved', { metalPrices, finishPrices, globalSettings });
     } catch (error) {
       console.error('Failed to save:', error);
     } finally {

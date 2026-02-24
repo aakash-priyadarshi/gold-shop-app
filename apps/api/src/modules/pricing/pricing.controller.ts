@@ -2,7 +2,7 @@
  * Pricing Controller
  * REST API for pricing estimates and rate lookups
  */
-import { Controller, Get, Post, Body, Query, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Query, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
 import { PricingEstimateService } from './services/pricing-estimate.service';
 import { PricingFxService } from './services/pricing-fx.service';
 import { MaterialPricingService } from './services/material-pricing.service';
@@ -16,6 +16,12 @@ import {
   FinishPrice,
   SupportedCountry,
 } from './types';
+import { PrismaService } from '../../prisma/prisma.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '@prisma/client';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('pricing')
 export class PricingController {
@@ -25,6 +31,7 @@ export class PricingController {
     private readonly materialService: MaterialPricingService,
     private readonly finishService: FinishPricingService,
     private readonly gemstoneService: GemstonesPricingService,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
@@ -136,5 +143,91 @@ export class PricingController {
       validation,
       status: validation.isValid ? 'OK' : 'WARNING',
     };
+  }
+
+  // ════════════════════════════════════════════════════════
+  // ADMIN — System Gemstone Pricing (GemstoneCatalog table)
+  // ════════════════════════════════════════════════════════
+
+  /**
+   * GET /pricing/admin/gemstones
+   * Fetch all system-level gemstone prices from GemstoneCatalog
+   */
+  @Get('admin/gemstones')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  async getAdminGemstonePrices() {
+    const catalog = await this.prisma.gemstoneCatalog.findMany({
+      orderBy: [{ stoneType: 'asc' }, { sizeMin: 'asc' }, { qualityTier: 'asc' }],
+    });
+    return { prices: catalog };
+  }
+
+  /**
+   * PUT /pricing/admin/gemstones
+   * Upsert system-level gemstone prices in GemstoneCatalog
+   */
+  @Put('admin/gemstones')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  async updateAdminGemstonePrices(
+    @Body()
+    dto: {
+      prices: Array<{
+        id?: string;
+        stoneType: string;
+        origin?: string;
+        sizeUnit: string;
+        sizeMin: number;
+        sizeMax: number;
+        qualityTier: string;
+        pricePerStone: number;
+        currency: string;
+        note?: string;
+      }>;
+    },
+  ) {
+    const results = await Promise.all(
+      dto.prices.map(async (p) => {
+        if (p.id) {
+          // Update existing
+          return this.prisma.gemstoneCatalog.update({
+            where: { id: p.id },
+            data: {
+              stoneType: p.stoneType,
+              origin: p.origin,
+              sizeUnit: p.sizeUnit,
+              sizeMin: p.sizeMin,
+              sizeMax: p.sizeMax,
+              qualityTier: p.qualityTier,
+              pricePerStone: p.pricePerStone,
+              currency: p.currency,
+              source: 'manual',
+              note: p.note,
+              updatedAt: new Date(),
+            },
+          });
+        } else {
+          // Create new
+          return this.prisma.gemstoneCatalog.create({
+            data: {
+              stoneType: p.stoneType,
+              origin: p.origin,
+              sizeUnit: p.sizeUnit,
+              sizeMin: p.sizeMin,
+              sizeMax: p.sizeMax,
+              qualityTier: p.qualityTier,
+              pricePerStone: p.pricePerStone,
+              currency: p.currency,
+              source: 'manual',
+              note: p.note,
+            },
+          });
+        }
+      }),
+    );
+    return { updated: results.length, prices: results };
   }
 }
