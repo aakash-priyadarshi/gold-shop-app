@@ -94,7 +94,26 @@ export class ShopsController {
     @Query("pageSize") pageSize?: string,
     @Query("includeInternational") includeInternational?: string,
     @Query("gemstoneCost") gemstoneCost?: string,
+    @Query("gemstones") gemstones?: string,
+    @Query("gemstoneCostFallback") gemstoneCostFallback?: string,
   ) {
+    // Parse gemstone specs JSON from query param
+    let parsedGemstones: Array<{
+      stoneType: string;
+      sizeValue: string;
+      sizeUnit: string;
+      count: number;
+      qualityTier: string;
+      settingStyle?: string;
+    }> = [];
+    if (gemstones) {
+      try {
+        parsedGemstones = JSON.parse(gemstones);
+      } catch {
+        // Ignore malformed JSON
+      }
+    }
+
     return this.shopsService.findMatchingSellers({
       jewelleryType,
       buildMethod,
@@ -114,6 +133,10 @@ export class ShopsController {
       pageSize: pageSize ? parseInt(pageSize, 10) : 20,
       includeInternational: includeInternational === "true",
       gemstoneCost: gemstoneCost ? parseFloat(gemstoneCost) : 0,
+      gemstones: parsedGemstones.length > 0 ? parsedGemstones : undefined,
+      gemstoneCostFallback: gemstoneCostFallback
+        ? parseFloat(gemstoneCostFallback)
+        : 0,
     });
   }
 

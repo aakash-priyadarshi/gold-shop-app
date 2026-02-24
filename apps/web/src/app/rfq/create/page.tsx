@@ -1740,9 +1740,25 @@ export default function CreateRfqPage() {
         params.append("minRating", String(sellerMinRating));
       if (sellerMaxPrice !== undefined)
         params.append("maxPrice", String(sellerMaxPrice));
-      // Pass pre-computed gemstone cost from live calculator so seller matching includes it
+      // Pass gemstone specifications so the server can compute per-seller gemstone cost
+      if (formData.hasGemstones && formData.gemstonesV2.length > 0) {
+        const gemSpecs = formData.gemstonesV2
+          .filter((g) => g.stoneType)
+          .map((g) => ({
+            stoneType: g.stoneType,
+            sizeValue: g.sizeValue || "3",
+            sizeUnit: g.sizeUnit || "MM",
+            count: g.count || 1,
+            qualityTier: "MEDIUM",
+            settingStyle: g.settingStyle || "PRONG",
+          }));
+        if (gemSpecs.length > 0) {
+          params.append("gemstones", JSON.stringify(gemSpecs));
+        }
+      }
+      // Also pass pre-computed gemstone cost as fallback
       if (priceEstimate?.gemstoneCost && priceEstimate.gemstoneCost > 0) {
-        params.append("gemstoneCost", String(priceEstimate.gemstoneCost));
+        params.append("gemstoneCostFallback", String(Math.round(priceEstimate.gemstoneCost)));
       }
 
       // Priority 1: Use advanced filter values if set
@@ -1838,6 +1854,8 @@ export default function CreateRfqPage() {
     formData.alloyConfig,
     formData.methodCConfig,
     formData.methodDConfig,
+    formData.hasGemstones,
+    formData.gemstonesV2,
     sellerSortBy,
     sellerMinRating,
     sellerMaxPrice,
@@ -1963,13 +1981,13 @@ export default function CreateRfqPage() {
         };
       }
 
-      // Add gemstones if any
-      if (formData.gemstones.length > 0) {
-        requestBody.gemstones = formData.gemstones
+      // Add gemstones if any (use V2 format which is the active editor)
+      if (formData.gemstonesV2.length > 0) {
+        requestBody.gemstones = formData.gemstonesV2
           .filter((g) => g.stoneType)
           .map((g) => ({
             stoneType: g.stoneType.toUpperCase(),
-            sizeMm: parseFloat(g.size) || 3,
+            sizeMm: parseFloat(g.sizeValue) || 3,
             qualityTier: "STANDARD",
             settingType: g.settingStyle?.toUpperCase() || "PRONG",
             count: g.count || 1,
@@ -2143,7 +2161,7 @@ export default function CreateRfqPage() {
     formData.addGoldPlating,
     formData.platingType,
     formData.platingTier,
-    formData.gemstones,
+    formData.gemstonesV2,
     formData.alloyConfig,
     formData.methodCConfig,
     currency,
@@ -2461,16 +2479,36 @@ export default function CreateRfqPage() {
           updateFormData("budgetMin", String(data.budgetMin));
         } else if (data.budgetMinNpr) {
           // Fallback: convert NPR to user's currency
-          const NPR_RATES: Record<string, number> = { NPR: 1, INR: 1.6, USD: 133, AED: 36, GBP: 170, EUR: 150 };
+          const NPR_RATES: Record<string, number> = {
+            NPR: 1,
+            INR: 1.6,
+            USD: 133,
+            AED: 36,
+            GBP: 170,
+            EUR: 150,
+          };
           const rate = NPR_RATES[currency] || 1;
-          updateFormData("budgetMin", String(Math.round(data.budgetMinNpr / rate)));
+          updateFormData(
+            "budgetMin",
+            String(Math.round(data.budgetMinNpr / rate)),
+          );
         }
         if (data.budgetMax) {
           updateFormData("budgetMax", String(data.budgetMax));
         } else if (data.budgetMaxNpr) {
-          const NPR_RATES: Record<string, number> = { NPR: 1, INR: 1.6, USD: 133, AED: 36, GBP: 170, EUR: 150 };
+          const NPR_RATES: Record<string, number> = {
+            NPR: 1,
+            INR: 1.6,
+            USD: 133,
+            AED: 36,
+            GBP: 170,
+            EUR: 150,
+          };
           const rate = NPR_RATES[currency] || 1;
-          updateFormData("budgetMax", String(Math.round(data.budgetMaxNpr / rate)));
+          updateFormData(
+            "budgetMax",
+            String(Math.round(data.budgetMaxNpr / rate)),
+          );
         }
 
         // ─── Step 3: Deadline ───
@@ -2701,13 +2739,27 @@ export default function CreateRfqPage() {
           budgetMinNpr: (() => {
             const val = parseFloat(formData.budgetMin) || 0;
             if (currency === "NPR" || !currency) return val;
-            const CURRENCY_TO_NPR: Record<string, number> = { NPR: 1, INR: 1.6, USD: 133, AED: 36, GBP: 170, EUR: 150 };
+            const CURRENCY_TO_NPR: Record<string, number> = {
+              NPR: 1,
+              INR: 1.6,
+              USD: 133,
+              AED: 36,
+              GBP: 170,
+              EUR: 150,
+            };
             return Math.round(val * (CURRENCY_TO_NPR[currency] || 1));
           })(),
           budgetMaxNpr: (() => {
             const val = parseFloat(formData.budgetMax) || 0;
             if (currency === "NPR" || !currency) return val;
-            const CURRENCY_TO_NPR: Record<string, number> = { NPR: 1, INR: 1.6, USD: 133, AED: 36, GBP: 170, EUR: 150 };
+            const CURRENCY_TO_NPR: Record<string, number> = {
+              NPR: 1,
+              INR: 1.6,
+              USD: 133,
+              AED: 36,
+              GBP: 170,
+              EUR: 150,
+            };
             return Math.round(val * (CURRENCY_TO_NPR[currency] || 1));
           })(),
           preferredDeliveryDays: formData.deadline
