@@ -127,25 +127,36 @@ const DEFAULT_CONFIGS: Record<string, {
 
 @Injectable()
 export class MarketConfigService {
+  // In-memory cache: countryCode → { data, timestamp }
+  private configCache = new Map<string, { data: any; timestamp: number }>();
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Get market config by country code
+   * Get market config by country code (cached for 5 minutes)
    */
   async getConfig(countryCode: string): Promise<any> {
+    // Check in-memory cache first
+    const cached = this.configCache.get(countryCode);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+      return cached.data;
+    }
+
     // Try to get from database first
     const dbConfig = await this.prisma.marketConfig.findUnique({
       where: { countryCode: countryCode as MarketRegion },
     });
 
     if (dbConfig) {
+      this.configCache.set(countryCode, { data: dbConfig, timestamp: Date.now() });
       return dbConfig;
     }
 
     // Return default config if not in database
     const defaultConfig = DEFAULT_CONFIGS[countryCode];
     if (defaultConfig) {
-      return {
+      const result = {
         id: `default-${countryCode}`,
         countryCode: countryCode as MarketRegion,
         ...defaultConfig,
@@ -156,6 +167,8 @@ export class MarketConfigService {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
+      this.configCache.set(countryCode, { data: result, timestamp: Date.now() });
+      return result;
     }
 
     // If unsupported country, return US config

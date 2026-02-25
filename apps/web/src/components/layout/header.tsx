@@ -238,11 +238,15 @@ export function Header() {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    fetchNotifications();
+    // Defer initial fetch to let the page render first (improves FCP/LCP)
+    const timeout = setTimeout(fetchNotifications, 2000);
 
     // Poll for new notifications every 30 seconds
     const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(interval);
+    };
   }, [fetchNotifications]);
 
   // Fetch recent orders for the orders popover
@@ -260,7 +264,9 @@ export function Header() {
   }, [isAuthenticated, user?.role]);
 
   useEffect(() => {
-    fetchRecentOrders();
+    // Defer to avoid blocking initial render
+    const timeout = setTimeout(fetchRecentOrders, 2500);
+    return () => clearTimeout(timeout);
   }, [fetchRecentOrders]);
 
   // Fetch unread messages count and recent messages
@@ -297,9 +303,13 @@ export function Header() {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    fetchUnreadMessages();
+    // Defer to avoid blocking initial render
+    const timeout = setTimeout(fetchUnreadMessages, 2000);
     const interval = setInterval(fetchUnreadMessages, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(interval);
+    };
   }, [fetchUnreadMessages]);
 
   // Get messages page path based on role

@@ -1758,7 +1758,10 @@ export default function CreateRfqPage() {
       }
       // Also pass pre-computed gemstone cost as fallback
       if (priceEstimate?.gemstoneCost && priceEstimate.gemstoneCost > 0) {
-        params.append("gemstoneCostFallback", String(Math.round(priceEstimate.gemstoneCost)));
+        params.append(
+          "gemstoneCostFallback",
+          String(Math.round(priceEstimate.gemstoneCost)),
+        );
       }
 
       // Priority 1: Use advanced filter values if set

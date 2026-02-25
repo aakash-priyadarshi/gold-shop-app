@@ -1,12 +1,21 @@
 import { HeroSection } from "@/components/home/HeroSection";
-import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { BRAND } from "@/config/brand";
 import { resolveHeroVideo } from "@/lib/geo";
 import { Gem, ShieldCheck, Truck } from "lucide-react";
+import dynamic from "next/dynamic";
 import { headers } from "next/headers";
 import Link from "next/link";
+
+// Lazy-load below-the-fold footer
+const DynamicFooter = dynamic(
+  () =>
+    import("@/components/layout/DynamicFooter").then((m) => ({
+      default: m.DynamicFooter,
+    })),
+  { ssr: false },
+);
 
 export default function HomePage() {
   // Server-side country detection via Cloudflare CF-IPCountry header
@@ -15,8 +24,15 @@ export default function HomePage() {
   const { videoSrc } = resolveHeroVideo(country);
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <Header />
+    <>
+      {/* Preconnect to video/image CDN for faster hero load */}
+      <link rel="preconnect" href="https://images.orivraa.com" />
+      <link rel="dns-prefetch" href="https://images.orivraa.com" />
+      {videoSrc && (
+        <link rel="preload" href={videoSrc} as="video" type="video/mp4" />
+      )}
+      <div className="flex min-h-screen flex-col">
+        <Header />
 
       <main className="flex-1">
         {/* Dynamic Hero Section with geo-based video */}
@@ -162,5 +178,6 @@ export default function HomePage() {
 
       <DynamicFooter />
     </div>
+    </>
   );
 }

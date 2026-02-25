@@ -2074,32 +2074,85 @@ export class ShopsService {
       let sellerGemstoneCost = 0;
       if (gemstones && gemstones.length > 0) {
         // System default gemstone prices per stone (NPR)
-        const SYSTEM_GEM_DEFAULTS: Record<string, Record<string, Record<string, number>>> = {
+        const SYSTEM_GEM_DEFAULTS: Record<
+          string,
+          Record<string, Record<string, number>>
+        > = {
           DIAMOND: {
-            "0.1-0.25ct": { LOW: 8000, MEDIUM: 15000, HIGH: 25000, PREMIUM: 30000 },
-            "0.25-0.5ct": { LOW: 25000, MEDIUM: 50000, HIGH: 80000, PREMIUM: 100000 },
-            "0.5-1ct": { LOW: 80000, MEDIUM: 150000, HIGH: 250000, PREMIUM: 350000 },
-            "1-2ct": { LOW: 200000, MEDIUM: 400000, HIGH: 700000, PREMIUM: 1000000 },
+            "0.1-0.25ct": {
+              LOW: 8000,
+              MEDIUM: 15000,
+              HIGH: 25000,
+              PREMIUM: 30000,
+            },
+            "0.25-0.5ct": {
+              LOW: 25000,
+              MEDIUM: 50000,
+              HIGH: 80000,
+              PREMIUM: 100000,
+            },
+            "0.5-1ct": {
+              LOW: 80000,
+              MEDIUM: 150000,
+              HIGH: 250000,
+              PREMIUM: 350000,
+            },
+            "1-2ct": {
+              LOW: 200000,
+              MEDIUM: 400000,
+              HIGH: 700000,
+              PREMIUM: 1000000,
+            },
           },
           DIAMOND_LAB: {
-            "0.1-0.25ct": { LOW: 5200, MEDIUM: 9750, HIGH: 16250, PREMIUM: 19500 },
-            "0.25-0.5ct": { LOW: 16250, MEDIUM: 32500, HIGH: 52000, PREMIUM: 65000 },
-            "0.5-1ct": { LOW: 52000, MEDIUM: 97500, HIGH: 162500, PREMIUM: 227500 },
+            "0.1-0.25ct": {
+              LOW: 5200,
+              MEDIUM: 9750,
+              HIGH: 16250,
+              PREMIUM: 19500,
+            },
+            "0.25-0.5ct": {
+              LOW: 16250,
+              MEDIUM: 32500,
+              HIGH: 52000,
+              PREMIUM: 65000,
+            },
+            "0.5-1ct": {
+              LOW: 52000,
+              MEDIUM: 97500,
+              HIGH: 162500,
+              PREMIUM: 227500,
+            },
           },
           RUBY: {
             "1-3mm": { LOW: 2000, MEDIUM: 5000, HIGH: 15000, PREMIUM: 40000 },
             "3-5mm": { LOW: 5000, MEDIUM: 15000, HIGH: 40000, PREMIUM: 100000 },
-            "5-8mm": { LOW: 15000, MEDIUM: 40000, HIGH: 100000, PREMIUM: 300000 },
+            "5-8mm": {
+              LOW: 15000,
+              MEDIUM: 40000,
+              HIGH: 100000,
+              PREMIUM: 300000,
+            },
           },
           SAPPHIRE: {
             "1-3mm": { LOW: 2000, MEDIUM: 5000, HIGH: 15000, PREMIUM: 35000 },
             "3-5mm": { LOW: 5000, MEDIUM: 15000, HIGH: 35000, PREMIUM: 90000 },
-            "5-8mm": { LOW: 15000, MEDIUM: 35000, HIGH: 90000, PREMIUM: 250000 },
+            "5-8mm": {
+              LOW: 15000,
+              MEDIUM: 35000,
+              HIGH: 90000,
+              PREMIUM: 250000,
+            },
           },
           EMERALD: {
             "1-3mm": { LOW: 3000, MEDIUM: 8000, HIGH: 20000, PREMIUM: 50000 },
             "3-5mm": { LOW: 8000, MEDIUM: 20000, HIGH: 50000, PREMIUM: 150000 },
-            "5-8mm": { LOW: 20000, MEDIUM: 50000, HIGH: 150000, PREMIUM: 400000 },
+            "5-8mm": {
+              LOW: 20000,
+              MEDIUM: 50000,
+              HIGH: 150000,
+              PREMIUM: 400000,
+            },
           },
           MOISSANITE: {
             "1-3mm": { LOW: 1500, MEDIUM: 3000, HIGH: 5000, PREMIUM: 8000 },
@@ -2124,8 +2177,13 @@ export class ShopsService {
 
         // Setting cost per stone (NPR)
         const SETTING_COSTS: Record<string, number> = {
-          PRONG: 150, BEZEL: 250, PAVE: 100, CHANNEL: 180,
-          HALO: 350, FLUSH: 200, TENSION: 400,
+          PRONG: 150,
+          BEZEL: 250,
+          PAVE: 100,
+          CHANNEL: 180,
+          HALO: 350,
+          FLUSH: 200,
+          TENSION: 400,
         };
 
         // Helper: map mm size to size category
