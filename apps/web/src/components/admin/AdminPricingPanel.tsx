@@ -1,20 +1,24 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -22,30 +26,28 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from "@/components/ui/tooltip";
+import { getApiUrl } from "@/lib/api";
 import {
-  Settings,
   DollarSign,
   Gem,
-  Palette,
-  Percent,
-  Save,
-  RefreshCw,
-  AlertCircle,
-  Check,
-  Store,
   Globe,
-  Loader2,
   HelpCircle,
-  TrendingUp,
-} from 'lucide-react';
-import { getApiUrl } from '@/lib/api';
+  Loader2,
+  Palette,
+  RefreshCw,
+  Save,
+  Settings,
+  Store,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 const API_URL = getApiUrl();
 
@@ -57,7 +59,7 @@ interface MetalPrice {
   overrideRate: number | null;
   marginPercent: number;
   finalRate: number;
-  source: 'API' | 'OVERRIDE' | 'HYBRID';
+  source: "API" | "OVERRIDE" | "HYBRID";
   isEnabled: boolean;
 }
 
@@ -71,9 +73,9 @@ interface GemstonePrice {
   sizeMax?: number;
   sizeUnit?: string;
   pricePerUnit: number;
-  unit: 'CARAT' | 'MM' | 'PIECE';
+  unit: "CARAT" | "MM" | "PIECE";
   currency?: string;
-  source: 'SYSTEM' | 'MANUAL';
+  source: "SYSTEM" | "MANUAL";
   note?: string;
 }
 
@@ -81,7 +83,7 @@ interface FinishPrice {
   finishType: string;
   tier: string;
   basePrice: number;
-  pricingModel: 'FIXED' | 'PERCENTAGE' | 'PER_GRAM';
+  pricingModel: "FIXED" | "PERCENTAGE" | "PER_GRAM";
   percentageValue?: number;
   perGramRate?: number;
 }
@@ -91,13 +93,13 @@ interface ShopOverride {
   shopName: string;
   overrideType: string;
   itemCode: string;
-  overrideMode: 'FIXED' | 'PERCENTAGE' | 'MULTIPLIER';
+  overrideMode: "FIXED" | "PERCENTAGE" | "MULTIPLIER";
   overrideValue: number;
   isActive: boolean;
 }
 
 export function AdminPricingPanel() {
-  const [activeTab, setActiveTab] = useState('metals');
+  const [activeTab, setActiveTab] = useState("metals");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -107,7 +109,7 @@ export function AdminPricingPanel() {
   const [finishPrices, setFinishPrices] = useState<FinishPrice[]>([]);
   const [shopOverrides, setShopOverrides] = useState<ShopOverride[]>([]);
   const [shops, setShops] = useState<{ id: string; name: string }[]>([]);
-  const [selectedShopId, setSelectedShopId] = useState<string>('');
+  const [selectedShopId, setSelectedShopId] = useState<string>("");
 
   // Global settings
   const [globalSettings, setGlobalSettings] = useState({
@@ -124,34 +126,41 @@ export function AdminPricingPanel() {
   const loadPricingData = async () => {
     setLoading(true);
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("token") : null;
       const headers: Record<string, string> = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
+      if (token) headers["Authorization"] = `Bearer ${token}`;
 
       // Fetch real gemstone prices from admin API; other tabs use mock for now
       const [gemRes] = await Promise.all([
-        fetch(`${API_URL}/pricing/admin/gemstones`, { headers }).catch(() => null),
+        fetch(`${API_URL}/pricing/admin/gemstones`, { headers }).catch(
+          () => null,
+        ),
       ]);
 
       setMetalPrices(getMockMetalPrices());
 
       if (gemRes && gemRes.ok) {
         const gemData = await gemRes.json();
-        const mapped: GemstonePrice[] = (gemData.prices || []).map((p: any) => ({
-          id: p.id,
-          stoneType: p.stoneType,
-          origin: p.origin || 'NATURAL',
-          qualityGrade: p.qualityTier,
-          sizeRange: `${p.sizeMin}-${p.sizeMax}${p.sizeUnit === 'CARAT' ? 'ct' : 'mm'}`,
-          sizeMin: p.sizeMin,
-          sizeMax: p.sizeMax,
-          sizeUnit: p.sizeUnit,
-          pricePerUnit: p.pricePerStone,
-          unit: p.sizeUnit === 'CARAT' ? 'CARAT' as const : 'MM' as const,
-          currency: p.currency || 'NPR',
-          source: (p.source === 'manual' ? 'MANUAL' : 'SYSTEM') as 'SYSTEM' | 'MANUAL',
-          note: p.note || '',
-        }));
+        const mapped: GemstonePrice[] = (gemData.prices || []).map(
+          (p: any) => ({
+            id: p.id,
+            stoneType: p.stoneType,
+            origin: p.origin || "NATURAL",
+            qualityGrade: p.qualityTier,
+            sizeRange: `${p.sizeMin}-${p.sizeMax}${p.sizeUnit === "CARAT" ? "ct" : "mm"}`,
+            sizeMin: p.sizeMin,
+            sizeMax: p.sizeMax,
+            sizeUnit: p.sizeUnit,
+            pricePerUnit: p.pricePerStone,
+            unit: p.sizeUnit === "CARAT" ? ("CARAT" as const) : ("MM" as const),
+            currency: p.currency || "NPR",
+            source: (p.source === "manual" ? "MANUAL" : "SYSTEM") as
+              | "SYSTEM"
+              | "MANUAL",
+            note: p.note || "",
+          }),
+        );
         setGemstonePrices(mapped.length > 0 ? mapped : getMockGemstonePrices());
       } else {
         setGemstonePrices(getMockGemstonePrices());
@@ -159,12 +168,12 @@ export function AdminPricingPanel() {
 
       setFinishPrices(getMockFinishPrices());
       setShops([
-        { id: 'shop-1', name: 'Ramesh Gold House' },
-        { id: 'shop-2', name: 'Suna Jewellers' },
+        { id: "shop-1", name: "Ramesh Gold House" },
+        { id: "shop-2", name: "Suna Jewellers" },
       ]);
       setShopOverrides(getMockShopOverrides());
     } catch (error) {
-      console.error('Failed to load pricing data:', error);
+      console.error("Failed to load pricing data:", error);
     } finally {
       setLoading(false);
     }
@@ -173,59 +182,73 @@ export function AdminPricingPanel() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
 
       // Save gemstone prices to API
       const gemPayload = gemstonePrices.map((g: any) => ({
         id: g.id || undefined,
         stoneType: g.stoneType,
         origin: g.origin,
-        sizeUnit: g.unit === 'CARAT' ? 'CARAT' : 'MM',
+        sizeUnit: g.unit === "CARAT" ? "CARAT" : "MM",
         sizeMin: g.sizeMin ?? 0,
         sizeMax: g.sizeMax ?? 0,
         qualityTier: g.qualityGrade,
         pricePerStone: g.pricePerUnit,
-        currency: g.currency || 'NPR',
-        note: g.note || '',
+        currency: g.currency || "NPR",
+        note: g.note || "",
       }));
 
       const res = await fetch(`${API_URL}/pricing/admin/gemstones`, {
-        method: 'PUT',
+        method: "PUT",
         headers,
         body: JSON.stringify({ prices: gemPayload }),
       });
 
       if (!res.ok) {
-        console.error('Failed to save gemstone prices:', await res.text());
+        console.error("Failed to save gemstone prices:", await res.text());
       }
 
-      console.log('Pricing data saved', { metalPrices, finishPrices, globalSettings });
+      console.log("Pricing data saved", {
+        metalPrices,
+        finishPrices,
+        globalSettings,
+      });
     } catch (error) {
-      console.error('Failed to save:', error);
+      console.error("Failed to save:", error);
     } finally {
       setSaving(false);
     }
   };
 
-  const updateMetalPrice = (code: string, field: keyof MetalPrice, value: any) => {
-    setMetalPrices(prev => prev.map(metal => {
-      if (metal.code !== code) return metal;
-      
-      const updated = { ...metal, [field]: value };
-      
-      // Recalculate final rate
-      if (updated.source === 'OVERRIDE' && updated.overrideRate !== null) {
-        updated.finalRate = updated.overrideRate;
-      } else if (updated.source === 'HYBRID') {
-        updated.finalRate = updated.apiRate * (1 + (updated.marginPercent / 100));
-      } else {
-        updated.finalRate = updated.apiRate;
-      }
-      
-      return updated;
-    }));
+  const updateMetalPrice = (
+    code: string,
+    field: keyof MetalPrice,
+    value: any,
+  ) => {
+    setMetalPrices((prev) =>
+      prev.map((metal) => {
+        if (metal.code !== code) return metal;
+
+        const updated = { ...metal, [field]: value };
+
+        // Recalculate final rate
+        if (updated.source === "OVERRIDE" && updated.overrideRate !== null) {
+          updated.finalRate = updated.overrideRate;
+        } else if (updated.source === "HYBRID") {
+          updated.finalRate =
+            updated.apiRate * (1 + updated.marginPercent / 100);
+        } else {
+          updated.finalRate = updated.apiRate;
+        }
+
+        return updated;
+      }),
+    );
   };
 
   if (loading) {
@@ -247,7 +270,8 @@ export function AdminPricingPanel() {
               Pricing Administration
             </h1>
             <p className="text-muted-foreground mt-1">
-              Configure system-wide pricing, API overrides, and seller-specific rates
+              Configure system-wide pricing, API overrides, and seller-specific
+              rates
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -290,7 +314,12 @@ export function AdminPricingPanel() {
                 </Label>
                 <Switch
                   checked={globalSettings.useApiForMetals}
-                  onCheckedChange={(v) => setGlobalSettings(prev => ({ ...prev, useApiForMetals: v }))}
+                  onCheckedChange={(v) =>
+                    setGlobalSettings((prev) => ({
+                      ...prev,
+                      useApiForMetals: v,
+                    }))
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -300,10 +329,12 @@ export function AdminPricingPanel() {
                   min={0}
                   max={50}
                   value={globalSettings.defaultMakingChargePercent}
-                  onChange={(e) => setGlobalSettings(prev => ({ 
-                    ...prev, 
-                    defaultMakingChargePercent: parseFloat(e.target.value) 
-                  }))}
+                  onChange={(e) =>
+                    setGlobalSettings((prev) => ({
+                      ...prev,
+                      defaultMakingChargePercent: parseFloat(e.target.value),
+                    }))
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -314,10 +345,12 @@ export function AdminPricingPanel() {
                   max={10}
                   step={0.1}
                   value={globalSettings.platformFeePercent}
-                  onChange={(e) => setGlobalSettings(prev => ({ 
-                    ...prev, 
-                    platformFeePercent: parseFloat(e.target.value) 
-                  }))}
+                  onChange={(e) =>
+                    setGlobalSettings((prev) => ({
+                      ...prev,
+                      platformFeePercent: parseFloat(e.target.value),
+                    }))
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -327,10 +360,12 @@ export function AdminPricingPanel() {
                   min={5}
                   max={1440}
                   value={globalSettings.autoSyncInterval}
-                  onChange={(e) => setGlobalSettings(prev => ({ 
-                    ...prev, 
-                    autoSyncInterval: parseInt(e.target.value) 
-                  }))}
+                  onChange={(e) =>
+                    setGlobalSettings((prev) => ({
+                      ...prev,
+                      autoSyncInterval: parseInt(e.target.value),
+                    }))
+                  }
                 />
               </div>
             </div>
@@ -364,7 +399,8 @@ export function AdminPricingPanel() {
               <CardHeader>
                 <CardTitle>Metal Pricing</CardTitle>
                 <CardDescription>
-                  Configure metal rates - API-driven, fixed override, or hybrid (API + margin)
+                  Configure metal rates - API-driven, fixed override, or hybrid
+                  (API + margin)
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -383,12 +419,16 @@ export function AdminPricingPanel() {
                   <TableBody>
                     {metalPrices.map((metal) => (
                       <TableRow key={metal.code}>
-                        <TableCell className="font-medium">{metal.displayName}</TableCell>
+                        <TableCell className="font-medium">
+                          {metal.displayName}
+                        </TableCell>
                         <TableCell>${metal.apiRate.toLocaleString()}</TableCell>
                         <TableCell>
                           <Select
                             value={metal.source}
-                            onValueChange={(v) => updateMetalPrice(metal.code, 'source', v)}
+                            onValueChange={(v) =>
+                              updateMetalPrice(metal.code, "source", v)
+                            }
                           >
                             <SelectTrigger className="w-28">
                               <SelectValue />
@@ -396,7 +436,9 @@ export function AdminPricingPanel() {
                             <SelectContent>
                               <SelectItem value="API">API Only</SelectItem>
                               <SelectItem value="OVERRIDE">Override</SelectItem>
-                              <SelectItem value="HYBRID">API + Margin</SelectItem>
+                              <SelectItem value="HYBRID">
+                                API + Margin
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                         </TableCell>
@@ -404,9 +446,15 @@ export function AdminPricingPanel() {
                           <Input
                             type="number"
                             className="w-24"
-                            disabled={metal.source === 'API'}
-                            value={metal.overrideRate || ''}
-                            onChange={(e) => updateMetalPrice(metal.code, 'overrideRate', parseFloat(e.target.value))}
+                            disabled={metal.source === "API"}
+                            value={metal.overrideRate || ""}
+                            onChange={(e) =>
+                              updateMetalPrice(
+                                metal.code,
+                                "overrideRate",
+                                parseFloat(e.target.value),
+                              )
+                            }
                             placeholder="—"
                           />
                         </TableCell>
@@ -414,9 +462,15 @@ export function AdminPricingPanel() {
                           <Input
                             type="number"
                             className="w-20"
-                            disabled={metal.source !== 'HYBRID'}
+                            disabled={metal.source !== "HYBRID"}
                             value={metal.marginPercent}
-                            onChange={(e) => updateMetalPrice(metal.code, 'marginPercent', parseFloat(e.target.value))}
+                            onChange={(e) =>
+                              updateMetalPrice(
+                                metal.code,
+                                "marginPercent",
+                                parseFloat(e.target.value),
+                              )
+                            }
                           />
                         </TableCell>
                         <TableCell className="font-semibold text-green-600">
@@ -425,7 +479,9 @@ export function AdminPricingPanel() {
                         <TableCell>
                           <Switch
                             checked={metal.isEnabled}
-                            onCheckedChange={(v) => updateMetalPrice(metal.code, 'isEnabled', v)}
+                            onCheckedChange={(v) =>
+                              updateMetalPrice(metal.code, "isEnabled", v)
+                            }
                           />
                         </TableCell>
                       </TableRow>
@@ -442,7 +498,8 @@ export function AdminPricingPanel() {
               <CardHeader>
                 <CardTitle>Gemstone Pricing</CardTitle>
                 <CardDescription>
-                  Configure base prices per carat/mm for each stone type and quality
+                  Configure base prices per carat/mm for each stone type and
+                  quality
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -460,9 +517,15 @@ export function AdminPricingPanel() {
                   <TableBody>
                     {gemstonePrices.map((gem, idx) => (
                       <TableRow key={idx}>
-                        <TableCell className="font-medium">{gem.stoneType}</TableCell>
+                        <TableCell className="font-medium">
+                          {gem.stoneType}
+                        </TableCell>
                         <TableCell>
-                          <Badge variant={gem.origin === 'LAB' ? 'secondary' : 'outline'}>
+                          <Badge
+                            variant={
+                              gem.origin === "LAB" ? "secondary" : "outline"
+                            }
+                          >
                             {gem.origin}
                           </Badge>
                         </TableCell>
@@ -475,7 +538,10 @@ export function AdminPricingPanel() {
                             value={gem.pricePerUnit}
                             onChange={(e) => {
                               const updated = [...gemstonePrices];
-                              updated[idx] = { ...gem, pricePerUnit: parseFloat(e.target.value) };
+                              updated[idx] = {
+                                ...gem,
+                                pricePerUnit: parseFloat(e.target.value),
+                              };
                               setGemstonePrices(updated);
                             }}
                           />
@@ -513,7 +579,9 @@ export function AdminPricingPanel() {
                   <TableBody>
                     {finishPrices.map((finish, idx) => (
                       <TableRow key={idx}>
-                        <TableCell className="font-medium">{finish.finishType}</TableCell>
+                        <TableCell className="font-medium">
+                          {finish.finishType}
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline">{finish.tier}</Badge>
                         </TableCell>
@@ -522,7 +590,10 @@ export function AdminPricingPanel() {
                             value={finish.pricingModel}
                             onValueChange={(v) => {
                               const updated = [...finishPrices];
-                              updated[idx] = { ...finish, pricingModel: v as any };
+                              updated[idx] = {
+                                ...finish,
+                                pricingModel: v as any,
+                              };
                               setFinishPrices(updated);
                             }}
                           >
@@ -531,7 +602,9 @@ export function AdminPricingPanel() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="FIXED">Fixed</SelectItem>
-                              <SelectItem value="PERCENTAGE">% of MC</SelectItem>
+                              <SelectItem value="PERCENTAGE">
+                                % of MC
+                              </SelectItem>
                               <SelectItem value="PER_GRAM">Per Gram</SelectItem>
                             </SelectContent>
                           </Select>
@@ -543,7 +616,10 @@ export function AdminPricingPanel() {
                             value={finish.basePrice}
                             onChange={(e) => {
                               const updated = [...finishPrices];
-                              updated[idx] = { ...finish, basePrice: parseFloat(e.target.value) };
+                              updated[idx] = {
+                                ...finish,
+                                basePrice: parseFloat(e.target.value),
+                              };
                               setFinishPrices(updated);
                             }}
                           />
@@ -552,11 +628,14 @@ export function AdminPricingPanel() {
                           <Input
                             type="number"
                             className="w-16"
-                            disabled={finish.pricingModel !== 'PERCENTAGE'}
-                            value={finish.percentageValue || ''}
+                            disabled={finish.pricingModel !== "PERCENTAGE"}
+                            value={finish.percentageValue || ""}
                             onChange={(e) => {
                               const updated = [...finishPrices];
-                              updated[idx] = { ...finish, percentageValue: parseFloat(e.target.value) };
+                              updated[idx] = {
+                                ...finish,
+                                percentageValue: parseFloat(e.target.value),
+                              };
                               setFinishPrices(updated);
                             }}
                           />
@@ -565,11 +644,14 @@ export function AdminPricingPanel() {
                           <Input
                             type="number"
                             className="w-16"
-                            disabled={finish.pricingModel !== 'PER_GRAM'}
-                            value={finish.perGramRate || ''}
+                            disabled={finish.pricingModel !== "PER_GRAM"}
+                            value={finish.perGramRate || ""}
                             onChange={(e) => {
                               const updated = [...finishPrices];
-                              updated[idx] = { ...finish, perGramRate: parseFloat(e.target.value) };
+                              updated[idx] = {
+                                ...finish,
+                                perGramRate: parseFloat(e.target.value),
+                              };
                               setFinishPrices(updated);
                             }}
                           />
@@ -590,10 +672,14 @@ export function AdminPricingPanel() {
                   <div>
                     <CardTitle>Seller Price Overrides</CardTitle>
                     <CardDescription>
-                      Configure shop-specific pricing that overrides system defaults
+                      Configure shop-specific pricing that overrides system
+                      defaults
                     </CardDescription>
                   </div>
-                  <Select value={selectedShopId} onValueChange={setSelectedShopId}>
+                  <Select
+                    value={selectedShopId}
+                    onValueChange={setSelectedShopId}
+                  >
                     <SelectTrigger className="w-[200px]">
                       <SelectValue placeholder="Select a shop..." />
                     </SelectTrigger>
@@ -621,22 +707,31 @@ export function AdminPricingPanel() {
                     </TableHeader>
                     <TableBody>
                       {shopOverrides
-                        .filter(o => o.shopId === selectedShopId)
+                        .filter((o) => o.shopId === selectedShopId)
                         .map((override, idx) => (
                           <TableRow key={idx}>
                             <TableCell>
-                              <Badge variant="outline">{override.overrideType}</Badge>
+                              <Badge variant="outline">
+                                {override.overrideType}
+                              </Badge>
                             </TableCell>
-                            <TableCell className="font-medium">{override.itemCode}</TableCell>
+                            <TableCell className="font-medium">
+                              {override.itemCode}
+                            </TableCell>
                             <TableCell>
                               <Select
                                 value={override.overrideMode}
                                 onValueChange={(v) => {
                                   const updated = [...shopOverrides];
                                   const realIdx = shopOverrides.findIndex(
-                                    o => o.shopId === selectedShopId && o.itemCode === override.itemCode
+                                    (o) =>
+                                      o.shopId === selectedShopId &&
+                                      o.itemCode === override.itemCode,
                                   );
-                                  updated[realIdx] = { ...override, overrideMode: v as any };
+                                  updated[realIdx] = {
+                                    ...override,
+                                    overrideMode: v as any,
+                                  };
                                   setShopOverrides(updated);
                                 }}
                               >
@@ -644,9 +739,15 @@ export function AdminPricingPanel() {
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="FIXED">Fixed Rate</SelectItem>
-                                  <SelectItem value="PERCENTAGE">% Addon</SelectItem>
-                                  <SelectItem value="MULTIPLIER">Multiplier</SelectItem>
+                                  <SelectItem value="FIXED">
+                                    Fixed Rate
+                                  </SelectItem>
+                                  <SelectItem value="PERCENTAGE">
+                                    % Addon
+                                  </SelectItem>
+                                  <SelectItem value="MULTIPLIER">
+                                    Multiplier
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                             </TableCell>
@@ -658,9 +759,14 @@ export function AdminPricingPanel() {
                                 onChange={(e) => {
                                   const updated = [...shopOverrides];
                                   const realIdx = shopOverrides.findIndex(
-                                    o => o.shopId === selectedShopId && o.itemCode === override.itemCode
+                                    (o) =>
+                                      o.shopId === selectedShopId &&
+                                      o.itemCode === override.itemCode,
                                   );
-                                  updated[realIdx] = { ...override, overrideValue: parseFloat(e.target.value) };
+                                  updated[realIdx] = {
+                                    ...override,
+                                    overrideValue: parseFloat(e.target.value),
+                                  };
                                   setShopOverrides(updated);
                                 }}
                               />
@@ -671,9 +777,14 @@ export function AdminPricingPanel() {
                                 onCheckedChange={(v) => {
                                   const updated = [...shopOverrides];
                                   const realIdx = shopOverrides.findIndex(
-                                    o => o.shopId === selectedShopId && o.itemCode === override.itemCode
+                                    (o) =>
+                                      o.shopId === selectedShopId &&
+                                      o.itemCode === override.itemCode,
                                   );
-                                  updated[realIdx] = { ...override, isActive: v };
+                                  updated[realIdx] = {
+                                    ...override,
+                                    isActive: v,
+                                  };
                                   setShopOverrides(updated);
                                 }}
                               />
@@ -700,52 +811,278 @@ export function AdminPricingPanel() {
 // Mock data generators
 function getMockMetalPrices(): MetalPrice[] {
   return [
-    { code: 'GOLD_24K', displayName: 'Gold 24K (999)', apiRate: 2350, overrideRate: null, marginPercent: 2, finalRate: 2397, source: 'HYBRID', isEnabled: true },
-    { code: 'GOLD_22K', displayName: 'Gold 22K (916)', apiRate: 2154, overrideRate: null, marginPercent: 2, finalRate: 2197, source: 'HYBRID', isEnabled: true },
-    { code: 'GOLD_18K', displayName: 'Gold 18K (750)', apiRate: 1763, overrideRate: null, marginPercent: 2, finalRate: 1798, source: 'HYBRID', isEnabled: true },
-    { code: 'SILVER_999', displayName: 'Silver 999', apiRate: 28, overrideRate: null, marginPercent: 3, finalRate: 28.84, source: 'HYBRID', isEnabled: true },
-    { code: 'SILVER_925', displayName: 'Silver 925', apiRate: 26, overrideRate: null, marginPercent: 3, finalRate: 26.78, source: 'HYBRID', isEnabled: true },
-    { code: 'PLATINUM_950', displayName: 'Platinum 950', apiRate: 980, overrideRate: null, marginPercent: 1, finalRate: 989.8, source: 'API', isEnabled: true },
+    {
+      code: "GOLD_24K",
+      displayName: "Gold 24K (999)",
+      apiRate: 2350,
+      overrideRate: null,
+      marginPercent: 2,
+      finalRate: 2397,
+      source: "HYBRID",
+      isEnabled: true,
+    },
+    {
+      code: "GOLD_22K",
+      displayName: "Gold 22K (916)",
+      apiRate: 2154,
+      overrideRate: null,
+      marginPercent: 2,
+      finalRate: 2197,
+      source: "HYBRID",
+      isEnabled: true,
+    },
+    {
+      code: "GOLD_18K",
+      displayName: "Gold 18K (750)",
+      apiRate: 1763,
+      overrideRate: null,
+      marginPercent: 2,
+      finalRate: 1798,
+      source: "HYBRID",
+      isEnabled: true,
+    },
+    {
+      code: "SILVER_999",
+      displayName: "Silver 999",
+      apiRate: 28,
+      overrideRate: null,
+      marginPercent: 3,
+      finalRate: 28.84,
+      source: "HYBRID",
+      isEnabled: true,
+    },
+    {
+      code: "SILVER_925",
+      displayName: "Silver 925",
+      apiRate: 26,
+      overrideRate: null,
+      marginPercent: 3,
+      finalRate: 26.78,
+      source: "HYBRID",
+      isEnabled: true,
+    },
+    {
+      code: "PLATINUM_950",
+      displayName: "Platinum 950",
+      apiRate: 980,
+      overrideRate: null,
+      marginPercent: 1,
+      finalRate: 989.8,
+      source: "API",
+      isEnabled: true,
+    },
   ];
 }
 
 function getMockGemstonePrices(): GemstonePrice[] {
   return [
-    { stoneType: 'DIAMOND_NATURAL', origin: 'NATURAL', qualityGrade: 'PREMIUM', sizeRange: '0.5-1ct', pricePerUnit: 5000, unit: 'CARAT', source: 'SYSTEM' },
-    { stoneType: 'DIAMOND_NATURAL', origin: 'NATURAL', qualityGrade: 'STANDARD', sizeRange: '0.5-1ct', pricePerUnit: 2000, unit: 'CARAT', source: 'SYSTEM' },
-    { stoneType: 'DIAMOND_LAB', origin: 'LAB', qualityGrade: 'PREMIUM', sizeRange: '0.5-1ct', pricePerUnit: 1000, unit: 'CARAT', source: 'SYSTEM' },
-    { stoneType: 'MOISSANITE', origin: 'LAB', qualityGrade: 'PREMIUM', sizeRange: '1-2ct', pricePerUnit: 300, unit: 'CARAT', source: 'SYSTEM' },
-    { stoneType: 'RUBY', origin: 'NATURAL', qualityGrade: 'PREMIUM', sizeRange: '3-5mm', pricePerUnit: 1000, unit: 'CARAT', source: 'SYSTEM' },
-    { stoneType: 'SAPPHIRE', origin: 'NATURAL', qualityGrade: 'PREMIUM', sizeRange: '3-5mm', pricePerUnit: 800, unit: 'CARAT', source: 'SYSTEM' },
-    { stoneType: 'EMERALD', origin: 'NATURAL', qualityGrade: 'PREMIUM', sizeRange: '3-5mm', pricePerUnit: 1200, unit: 'CARAT', source: 'SYSTEM' },
-    { stoneType: 'CUBIC_ZIRCONIA', origin: 'LAB', qualityGrade: 'STANDARD', sizeRange: '2-4mm', pricePerUnit: 5, unit: 'PIECE', source: 'SYSTEM' },
+    {
+      stoneType: "DIAMOND_NATURAL",
+      origin: "NATURAL",
+      qualityGrade: "PREMIUM",
+      sizeRange: "0.5-1ct",
+      pricePerUnit: 5000,
+      unit: "CARAT",
+      source: "SYSTEM",
+    },
+    {
+      stoneType: "DIAMOND_NATURAL",
+      origin: "NATURAL",
+      qualityGrade: "STANDARD",
+      sizeRange: "0.5-1ct",
+      pricePerUnit: 2000,
+      unit: "CARAT",
+      source: "SYSTEM",
+    },
+    {
+      stoneType: "DIAMOND_LAB",
+      origin: "LAB",
+      qualityGrade: "PREMIUM",
+      sizeRange: "0.5-1ct",
+      pricePerUnit: 1000,
+      unit: "CARAT",
+      source: "SYSTEM",
+    },
+    {
+      stoneType: "MOISSANITE",
+      origin: "LAB",
+      qualityGrade: "PREMIUM",
+      sizeRange: "1-2ct",
+      pricePerUnit: 300,
+      unit: "CARAT",
+      source: "SYSTEM",
+    },
+    {
+      stoneType: "RUBY",
+      origin: "NATURAL",
+      qualityGrade: "PREMIUM",
+      sizeRange: "3-5mm",
+      pricePerUnit: 1000,
+      unit: "CARAT",
+      source: "SYSTEM",
+    },
+    {
+      stoneType: "SAPPHIRE",
+      origin: "NATURAL",
+      qualityGrade: "PREMIUM",
+      sizeRange: "3-5mm",
+      pricePerUnit: 800,
+      unit: "CARAT",
+      source: "SYSTEM",
+    },
+    {
+      stoneType: "EMERALD",
+      origin: "NATURAL",
+      qualityGrade: "PREMIUM",
+      sizeRange: "3-5mm",
+      pricePerUnit: 1200,
+      unit: "CARAT",
+      source: "SYSTEM",
+    },
+    {
+      stoneType: "CUBIC_ZIRCONIA",
+      origin: "LAB",
+      qualityGrade: "STANDARD",
+      sizeRange: "2-4mm",
+      pricePerUnit: 5,
+      unit: "PIECE",
+      source: "SYSTEM",
+    },
   ];
 }
 
 function getMockFinishPrices(): FinishPrice[] {
   return [
-    { finishType: 'GOLD_PLATING', tier: 'LIGHT', basePrice: 5, pricingModel: 'PER_GRAM', perGramRate: 0.5 },
-    { finishType: 'GOLD_PLATING', tier: 'STANDARD', basePrice: 10, pricingModel: 'PER_GRAM', perGramRate: 1.0 },
-    { finishType: 'GOLD_PLATING', tier: 'PREMIUM', basePrice: 20, pricingModel: 'PER_GRAM', perGramRate: 2.0 },
-    { finishType: 'VERMEIL', tier: 'STANDARD', basePrice: 25, pricingModel: 'FIXED' },
-    { finishType: 'VERMEIL', tier: 'PREMIUM', basePrice: 40, pricingModel: 'FIXED' },
-    { finishType: 'RHODIUM_PLATING', tier: 'STANDARD', basePrice: 18, pricingModel: 'FIXED' },
-    { finishType: 'PVD_COATING', tier: 'STANDARD', basePrice: 15, pricingModel: 'FIXED' },
-    { finishType: 'MATTE', tier: 'STANDARD', basePrice: 3, pricingModel: 'FIXED' },
-    { finishType: 'BRUSHED', tier: 'STANDARD', basePrice: 4, pricingModel: 'FIXED' },
-    { finishType: 'HAMMERED', tier: 'STANDARD', basePrice: 0, pricingModel: 'PERCENTAGE', percentageValue: 5 },
-    { finishType: 'DIAMOND_CUT', tier: 'STANDARD', basePrice: 0, pricingModel: 'PERCENTAGE', percentageValue: 10 },
+    {
+      finishType: "GOLD_PLATING",
+      tier: "LIGHT",
+      basePrice: 5,
+      pricingModel: "PER_GRAM",
+      perGramRate: 0.5,
+    },
+    {
+      finishType: "GOLD_PLATING",
+      tier: "STANDARD",
+      basePrice: 10,
+      pricingModel: "PER_GRAM",
+      perGramRate: 1.0,
+    },
+    {
+      finishType: "GOLD_PLATING",
+      tier: "PREMIUM",
+      basePrice: 20,
+      pricingModel: "PER_GRAM",
+      perGramRate: 2.0,
+    },
+    {
+      finishType: "VERMEIL",
+      tier: "STANDARD",
+      basePrice: 25,
+      pricingModel: "FIXED",
+    },
+    {
+      finishType: "VERMEIL",
+      tier: "PREMIUM",
+      basePrice: 40,
+      pricingModel: "FIXED",
+    },
+    {
+      finishType: "RHODIUM_PLATING",
+      tier: "STANDARD",
+      basePrice: 18,
+      pricingModel: "FIXED",
+    },
+    {
+      finishType: "PVD_COATING",
+      tier: "STANDARD",
+      basePrice: 15,
+      pricingModel: "FIXED",
+    },
+    {
+      finishType: "MATTE",
+      tier: "STANDARD",
+      basePrice: 3,
+      pricingModel: "FIXED",
+    },
+    {
+      finishType: "BRUSHED",
+      tier: "STANDARD",
+      basePrice: 4,
+      pricingModel: "FIXED",
+    },
+    {
+      finishType: "HAMMERED",
+      tier: "STANDARD",
+      basePrice: 0,
+      pricingModel: "PERCENTAGE",
+      percentageValue: 5,
+    },
+    {
+      finishType: "DIAMOND_CUT",
+      tier: "STANDARD",
+      basePrice: 0,
+      pricingModel: "PERCENTAGE",
+      percentageValue: 10,
+    },
   ];
 }
 
 function getMockShopOverrides(): ShopOverride[] {
   return [
-    { shopId: 'shop-1', shopName: 'Ramesh Gold House', overrideType: 'METAL_RATE', itemCode: 'GOLD_24K', overrideMode: 'FIXED', overrideValue: 11500, isActive: true },
-    { shopId: 'shop-1', shopName: 'Ramesh Gold House', overrideType: 'METAL_RATE', itemCode: 'GOLD_22K', overrideMode: 'FIXED', overrideValue: 10800, isActive: true },
-    { shopId: 'shop-1', shopName: 'Ramesh Gold House', overrideType: 'MAKING_CHARGE', itemCode: 'DEFAULT', overrideMode: 'PERCENTAGE', overrideValue: 12, isActive: true },
-    { shopId: 'shop-2', shopName: 'Suna Jewellers', overrideType: 'METAL_RATE', itemCode: 'GOLD_24K', overrideMode: 'FIXED', overrideValue: 11300, isActive: true },
-    { shopId: 'shop-2', shopName: 'Suna Jewellers', overrideType: 'METAL_RATE', itemCode: 'GOLD_22K', overrideMode: 'FIXED', overrideValue: 10600, isActive: true },
-    { shopId: 'shop-2', shopName: 'Suna Jewellers', overrideType: 'MAKING_CHARGE', itemCode: 'DEFAULT', overrideMode: 'PERCENTAGE', overrideValue: 10, isActive: true },
+    {
+      shopId: "shop-1",
+      shopName: "Ramesh Gold House",
+      overrideType: "METAL_RATE",
+      itemCode: "GOLD_24K",
+      overrideMode: "FIXED",
+      overrideValue: 11500,
+      isActive: true,
+    },
+    {
+      shopId: "shop-1",
+      shopName: "Ramesh Gold House",
+      overrideType: "METAL_RATE",
+      itemCode: "GOLD_22K",
+      overrideMode: "FIXED",
+      overrideValue: 10800,
+      isActive: true,
+    },
+    {
+      shopId: "shop-1",
+      shopName: "Ramesh Gold House",
+      overrideType: "MAKING_CHARGE",
+      itemCode: "DEFAULT",
+      overrideMode: "PERCENTAGE",
+      overrideValue: 12,
+      isActive: true,
+    },
+    {
+      shopId: "shop-2",
+      shopName: "Suna Jewellers",
+      overrideType: "METAL_RATE",
+      itemCode: "GOLD_24K",
+      overrideMode: "FIXED",
+      overrideValue: 11300,
+      isActive: true,
+    },
+    {
+      shopId: "shop-2",
+      shopName: "Suna Jewellers",
+      overrideType: "METAL_RATE",
+      itemCode: "GOLD_22K",
+      overrideMode: "FIXED",
+      overrideValue: 10600,
+      isActive: true,
+    },
+    {
+      shopId: "shop-2",
+      shopName: "Suna Jewellers",
+      overrideType: "MAKING_CHARGE",
+      itemCode: "DEFAULT",
+      overrideMode: "PERCENTAGE",
+      overrideValue: 10,
+      isActive: true,
+    },
   ];
 }
 

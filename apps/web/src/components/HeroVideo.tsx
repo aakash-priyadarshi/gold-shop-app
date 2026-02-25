@@ -109,7 +109,7 @@ function HeroVideoInner({
         muted
         loop
         playsInline
-        preload="auto"
+        preload="metadata"
       />
 
       {/* Dark gradient overlay for text readability */}

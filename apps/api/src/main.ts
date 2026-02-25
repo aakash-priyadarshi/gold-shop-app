@@ -8,6 +8,7 @@ import { NestFactory } from "@nestjs/core";
 import { ValidationPipe, Logger } from "@nestjs/common";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { NestExpressApplication } from "@nestjs/platform-express";
+import * as compression from "compression";
 import * as dns from "dns";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
@@ -57,6 +58,12 @@ async function bootstrap() {
   // Increase limit for JSON payloads (for base64 encoded images)
   app.useBodyParser("json", { limit: "10mb" });
   app.useBodyParser("urlencoded", { limit: "10mb", extended: true });
+
+  // ======================
+  // Performance Middleware
+  // ======================
+  // Gzip/Brotli compression — reduces response sizes by 60-80%
+  app.use(compression());
 
   // ======================
   // Security Middleware

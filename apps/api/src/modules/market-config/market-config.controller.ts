@@ -7,7 +7,9 @@ import {
   Query,
   Headers,
   UseGuards,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { MarketConfigService } from './market-config.service';
 import { UpdateMarketConfigDto } from './dto/update-market-config.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -22,9 +24,16 @@ export class MarketConfigController {
   /**
    * Get market config by country code
    * GET /api/market/config?country=NP
+   * 
+   * Cached for 5 minutes — config rarely changes
    */
   @Get('config')
-  async getConfig(@Query('country') country?: string) {
+  async getConfig(
+    @Query('country') country?: string,
+    @Res({ passthrough: true }) res?: Response,
+  ) {
+    // Set Cache-Control so the browser/CDN caches this response
+    res?.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300, stale-while-revalidate=600');
     const countryCode = country || 'US';
     return this.marketConfigService.getConfig(countryCode);
   }
