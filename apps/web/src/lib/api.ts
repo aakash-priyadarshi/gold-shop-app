@@ -979,4 +979,10 @@ export const paymentGatewayApi = {
     api.post(`/orders/${orderId}/pay`, { preferredGateway }),
 };
 
+// ─── Metrics / Performance API ───
+export const metricsApi = {
+  getSummary: () => api.get("/metrics/summary"),
+  getJson: () => api.get("/metrics/json"),
+};
+
 export default api;
