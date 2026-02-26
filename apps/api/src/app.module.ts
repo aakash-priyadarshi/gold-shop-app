@@ -26,6 +26,7 @@ import { MarketConfigModule } from "./modules/market-config/market-config.module
 import { MarketRatesModule } from "./modules/market-rates/market-rates.module";
 import { MarketplaceIntelligenceModule } from "./modules/marketplace-intelligence/marketplace-intelligence.module";
 import { MaterialsModule } from "./modules/materials/materials.module";
+import { MetricsModule } from "./modules/metrics/metrics.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { OffersModule } from "./modules/offers/offers.module";
 import { OrdersModule } from "./modules/orders/orders.module";
@@ -100,6 +101,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     AuditModule,
     JobsModule,
     HealthModule,
+    MetricsModule,
     AdminModule,
     MarketConfigModule,
     CommissionModule,
