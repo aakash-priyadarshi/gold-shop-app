@@ -983,6 +983,15 @@ export const paymentGatewayApi = {
 export const metricsApi = {
   getSummary: () => api.get("/metrics/summary"),
   getJson: () => api.get("/metrics/json"),
+  getHistory: (hours?: number) =>
+    api.get(`/metrics/history${hours ? `?hours=${hours}` : ""}`),
+  getGrafanaSettings: () => api.get("/metrics/grafana-settings"),
+  updateGrafanaSettings: (data: {
+    enabled: boolean;
+    cloudUrl?: string;
+    orgSlug?: string;
+    dashboardUid?: string;
+  }) => api.patch("/metrics/grafana-settings", data),
 };
 
 export default api;

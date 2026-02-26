@@ -1,12 +1,12 @@
 import {
+  CallHandler,
+  ExecutionContext,
   Injectable,
   NestInterceptor,
-  ExecutionContext,
-  CallHandler,
-} from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
-import { MetricsService } from './metrics.service';
+} from "@nestjs/common";
+import { Observable } from "rxjs";
+import { tap } from "rxjs/operators";
+import { MetricsService } from "./metrics.service";
 
 @Injectable()
 export class MetricsInterceptor implements NestInterceptor {
@@ -18,7 +18,8 @@ export class MetricsInterceptor implements NestInterceptor {
     const { method } = request;
 
     // Normalize route — use the NestJS resolved route pattern when available
-    const route = request.route?.path || request.url?.split('?')[0] || 'unknown';
+    const route =
+      request.route?.path || request.url?.split("?")[0] || "unknown";
 
     // Track in-flight requests
     this.metricsService.httpRequestsInFlight.inc();
