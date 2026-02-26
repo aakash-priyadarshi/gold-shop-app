@@ -8,7 +8,7 @@ import { NestFactory } from "@nestjs/core";
 import { ValidationPipe, Logger } from "@nestjs/common";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { NestExpressApplication } from "@nestjs/platform-express";
-import * as compression from "compression";
+import compression from "compression";
 import * as dns from "dns";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
