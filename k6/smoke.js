@@ -7,8 +7,8 @@
  * Run: k6 run k6/smoke.js
  */
 
-import http from 'k6/http';
 import { check, sleep } from 'k6';
+import http from 'k6/http';
 
 const API_BASE = __ENV.API_BASE_URL || 'http://localhost:4000/api';
 const WEB_BASE = __ENV.WEB_BASE_URL || 'http://localhost:3000';

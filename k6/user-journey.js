@@ -9,8 +9,8 @@
  * Run: k6 run k6/user-journey.js
  */
 
+import { check, group, sleep } from 'k6';
 import http from 'k6/http';
-import { check, sleep, group, fail } from 'k6';
 import { Rate, Trend } from 'k6/metrics';
 
 const API_BASE = __ENV.API_BASE_URL || 'http://localhost:4000/api';

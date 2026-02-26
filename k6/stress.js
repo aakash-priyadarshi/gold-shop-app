@@ -7,9 +7,9 @@
  * Run: k6 run k6/stress.js
  */
 
+import { check, group, sleep } from 'k6';
 import http from 'k6/http';
-import { check, sleep, group } from 'k6';
-import { Rate, Counter } from 'k6/metrics';
+import { Counter, Rate } from 'k6/metrics';
 
 const API_BASE = __ENV.API_BASE_URL || 'http://localhost:4000/api';
 

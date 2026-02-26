@@ -1,12 +1,18 @@
-import { Controller, Get, Res, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { Response } from 'express';
-import { MetricsService } from './metrics.service';
+import { Body, Controller, Get, Patch, Query, Res } from "@nestjs/common";
+import { ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
+import { Response } from "express";
+import { PrismaService } from "../../prisma/prisma.service";
+import { MetricsSnapshotService } from "./metrics-snapshot.service";
+import { MetricsService } from "./metrics.service";
 
-@ApiTags('Metrics')
-@Controller('metrics')
+@ApiTags("Metrics")
+@Controller("metrics")
 export class MetricsController {
-  constructor(private readonly metricsService: MetricsService) {}
+  constructor(
+    private readonly metricsService: MetricsService,
+    private readonly snapshotService: MetricsSnapshotService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   /**
    * Prometheus scrape endpoint
@@ -14,13 +20,13 @@ export class MetricsController {
    */
   @Get()
   @ApiOperation({
-    summary: 'Prometheus metrics endpoint',
+    summary: "Prometheus metrics endpoint",
     description:
-      'Returns all application metrics in Prometheus text format for scraping',
+      "Returns all application metrics in Prometheus text format for scraping",
   })
   async getMetrics(@Res({ passthrough: true }) res: Response): Promise<string> {
-    res.set('Content-Type', this.metricsService.getContentType());
-    res.set('Cache-Control', 'no-store');
+    res.set("Content-Type", this.metricsService.getContentType());
+    res.set("Cache-Control", "no-store");
     return this.metricsService.getMetrics();
   }
 
@@ -28,11 +34,11 @@ export class MetricsController {
    * Admin summary endpoint — returns structured JSON
    * for the admin performance dashboard
    */
-  @Get('summary')
+  @Get("summary")
   @ApiOperation({
-    summary: 'Admin metrics summary',
+    summary: "Admin metrics summary",
     description:
-      'Returns key performance metrics as JSON for the admin dashboard',
+      "Returns key performance metrics as JSON for the admin dashboard",
   })
   async getAdminSummary() {
     return this.metricsService.getAdminSummary();
@@ -41,12 +47,73 @@ export class MetricsController {
   /**
    * Full metrics as JSON (for debugging or dashboards)
    */
-  @Get('json')
+  @Get("json")
   @ApiOperation({
-    summary: 'Metrics as JSON',
-    description: 'Returns all raw Prometheus metrics in JSON format',
+    summary: "Metrics as JSON",
+    description: "Returns all raw Prometheus metrics in JSON format",
   })
   async getMetricsJson() {
     return this.metricsService.getMetricsJson();
+  }
+
+  /**
+   * Historical metrics snapshots for trend charts
+   */
+  @Get("history")
+  @ApiOperation({
+    summary: "Historical metrics",
+    description: "Returns metrics snapshots for the specified time range",
+  })
+  @ApiQuery({ name: "hours", required: false, type: Number })
+  async getHistory(@Query("hours") hours?: string) {
+    const h = hours ? parseInt(hours, 10) : 24;
+    return this.snapshotService.getHistory(Math.min(h, 720)); // Max 30 days
+  }
+
+  /**
+   * Get Grafana Pro settings
+   */
+  @Get("grafana-settings")
+  @ApiOperation({
+    summary: "Get Grafana Pro settings",
+    description: "Returns whether Grafana Pro is enabled and its configuration",
+  })
+  async getGrafanaSettings() {
+    const config = await this.prisma.systemConfig.findUnique({
+      where: { key: "grafana_pro_settings" },
+    });
+    return (
+      config?.value || {
+        enabled: false,
+        cloudUrl: "",
+        orgSlug: "",
+        dashboardUid: "",
+      }
+    );
+  }
+
+  /**
+   * Update Grafana Pro settings
+   */
+  @Patch("grafana-settings")
+  @ApiOperation({
+    summary: "Update Grafana Pro settings",
+    description: "Enable/disable Grafana Pro and configure connection details",
+  })
+  async updateGrafanaSettings(
+    @Body()
+    body: {
+      enabled: boolean;
+      cloudUrl?: string;
+      orgSlug?: string;
+      dashboardUid?: string;
+    },
+  ) {
+    const result = await this.prisma.systemConfig.upsert({
+      where: { key: "grafana_pro_settings" },
+      update: { value: body as any },
+      create: { key: "grafana_pro_settings", value: body as any },
+    });
+    return result.value;
   }
 }

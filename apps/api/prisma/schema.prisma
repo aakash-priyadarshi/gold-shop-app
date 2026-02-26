@@ -2923,3 +2923,32 @@ enum RepricingType {
   TIME_BASED        // scheduled discounts (e.g. weekend sale)
   DEMAND_BASED      // AI-driven demand elasticity
 }
+
+// ─── Performance Monitoring ───
+
+// Stores periodic snapshots of Prometheus metrics for historical charts
+model MetricsSnapshot {
+  id          String   @id @default(uuid())
+  // Core request metrics
+  requests    Int      @default(0)
+  errors      Int      @default(0)
+  errorRate   Float    @default(0)     // percentage
+  // Latency in milliseconds
+  avgLatency  Float    @default(0)
+  p95Latency  Float    @default(0)
+  p99Latency  Float    @default(0)
+  // System metrics
+  memoryMB    Float    @default(0)
+  cpuSeconds  Float    @default(0)
+  // Business metrics
+  rfqsCreated    Int   @default(0)
+  ordersCreated  Int   @default(0)
+  // Connection metrics
+  wsConnections  Int   @default(0)
+  inFlight       Int   @default(0)
+  // Uptime
+  uptime      Float    @default(0)     // seconds
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}
