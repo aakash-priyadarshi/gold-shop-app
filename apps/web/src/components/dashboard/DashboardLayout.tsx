@@ -1,7 +1,6 @@
 "use client";
 
 import { BrandLogo } from "@/components/brand/BrandLogo";
-import { ChatPopupWidget } from "@/components/chat/ChatPopupWidget";
 import { ShopSwitcher } from "@/components/dashboard/ShopSwitcher";
 import { SuspendedOverlay } from "@/components/dashboard/SuspendedOverlay";
 import { MessageDropdown } from "@/components/notifications/MessageDropdown";
@@ -63,7 +62,17 @@ import {
   Wrench,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import dynamic from "next/dynamic";
 import Link from "next/link";
+
+// Lazy-load ChatPopupWidget + emoji-mart (~80KB saved on initial page load)
+const ChatPopupWidget = dynamic(
+  () =>
+    import("@/components/chat/ChatPopupWidget").then(
+      (mod) => mod.ChatPopupWidget,
+    ),
+  { ssr: false },
+);
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 

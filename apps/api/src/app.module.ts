@@ -3,6 +3,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
+import { ThrottlerStorageRedisService } from "@nest-lab/throttler-storage-redis";
 
 // Core modules
 import { HttpClientModule } from "./common/http-client";
@@ -55,13 +56,19 @@ import { PrismaModule } from "./prisma/prisma.module";
       envFilePath: [".env.local", ".env"],
     }),
 
-    // Rate limiting
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000, // 1 minute
-        limit: 100, // 100 requests per minute
-      },
-    ]),
+    // Rate limiting (Redis-backed for multi-instance deployments)
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          ttl: 60000, // 1 minute
+          limit: 100, // 100 requests per minute
+        },
+      ],
+      storage: new ThrottlerStorageRedisService({
+        host: process.env.REDIS_HOST || "localhost",
+        port: parseInt(process.env.REDIS_PORT || "6379"),
+      }),
+    }),
 
     // Redis/Bull queues for background jobs
     BullModule.forRoot({
