@@ -20,7 +20,6 @@
     "db:seed": "prisma db seed"
   },
   "dependencies": {
-    "@nest-lab/throttler-storage-redis": "^1.2.0",
     "@nestjs/bull": "^10.0.1",
     "@nestjs/common": "^10.3.0",
     "@nestjs/config": "^3.1.1",
@@ -31,7 +30,7 @@
     "@nestjs/platform-socket.io": "^10.3.0",
     "@nestjs/schedule": "^6.1.0",
     "@nestjs/swagger": "^7.1.17",
-    "@nestjs/throttler": "^6.5.0",
+    "@nestjs/throttler": "^5.1.1",
     "@nestjs/websockets": "^10.3.0",
     "@prisma/client": "^5.22.0",
     "@types/bcryptjs": "^3.0.0",
