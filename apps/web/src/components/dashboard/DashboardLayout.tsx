@@ -29,6 +29,7 @@ import { useAuth, UserRole } from "@/hooks/useAuth";
 import { adminApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
+  Activity,
   Award,
   BookOpen,
   Brain,
@@ -153,6 +154,12 @@ const navItems: NavItem[] = [
     label: "Billing & Plans",
     href: "/dashboard/admin/billing",
     icon: CreditCard,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Performance",
+    href: "/dashboard/admin/performance",
+    icon: Activity,
     roles: ["ADMIN"],
   },
 

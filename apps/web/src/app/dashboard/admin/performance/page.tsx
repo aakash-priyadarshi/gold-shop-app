@@ -729,9 +729,7 @@ export default function AdminPerformancePage() {
                         </h3>
                         <div className="grid gap-4">
                           <div className="grid gap-2">
-                            <Label htmlFor="cloudUrl">
-                              Grafana Cloud URL
-                            </Label>
+                            <Label htmlFor="cloudUrl">Grafana Cloud URL</Label>
                             <Input
                               id="cloudUrl"
                               placeholder="https://your-org.grafana.net"
@@ -750,9 +748,7 @@ export default function AdminPerformancePage() {
                           </div>
 
                           <div className="grid gap-2">
-                            <Label htmlFor="orgSlug">
-                              Organization Slug
-                            </Label>
+                            <Label htmlFor="orgSlug">Organization Slug</Label>
                             <Input
                               id="orgSlug"
                               placeholder="your-org"
@@ -767,9 +763,7 @@ export default function AdminPerformancePage() {
                           </div>
 
                           <div className="grid gap-2">
-                            <Label htmlFor="dashboardUid">
-                              Dashboard UID
-                            </Label>
+                            <Label htmlFor="dashboardUid">Dashboard UID</Label>
                             <Input
                               id="dashboardUid"
                               placeholder="abcdef123"
