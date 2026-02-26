@@ -3,8 +3,8 @@
  * Captures HTTP status codes to understand what's blocking requests
  */
 
-import http from 'k6/http';
 import { check, sleep } from 'k6';
+import http from 'k6/http';
 import { Counter } from 'k6/metrics';
 
 const API_BASE = __ENV.API_BASE_URL || 'http://localhost:4000/api';
