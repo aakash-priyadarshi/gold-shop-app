@@ -360,7 +360,7 @@ export default function TestingDashboardPage() {
                   <FlaskConical className="h-6 w-6" /> Testing Dashboard
                 </h1>
                 <p className="text-muted-foreground">
-                  Run and monitor smoke tests, browser E2E tests, and API integration tests.
+                  Run and monitor tests against your production servers (api.orivraa.com).
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -521,8 +521,8 @@ export default function TestingDashboardPage() {
                           <CardTitle>Smoke Test Results</CardTitle>
                           <CardDescription>
                             {smokeReport
-                              ? `${smokeReport.totalTests} tests in ${fmt(smokeReport.duration)} — ${new Date(smokeReport.timestamp).toLocaleString()}`
-                              : "Tests against your running API (localhost:4000). Start the API first!"}
+                              ? `${smokeReport.totalTests} tests in ${fmt(smokeReport.duration)} — ${smokeReport.environment} — ${new Date(smokeReport.timestamp).toLocaleString()}`
+                              : "Tests against your production API at api.orivraa.com."}
                           </CardDescription>
                         </div>
                         <Button size="sm" onClick={runSmoke} disabled={loadingSmoke}>
@@ -565,7 +565,7 @@ export default function TestingDashboardPage() {
                           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                             <Zap className="mb-3 h-12 w-12 opacity-20" />
                             <p className="text-sm font-medium">No smoke test results yet</p>
-                            <p className="mt-1 text-xs">Make sure the API is running on port 4000, then click Run.</p>
+                            <p className="mt-1 text-xs">Click Run to test your production API.</p>
                           </div>
                         )}
                       </CardContent>
@@ -604,10 +604,10 @@ export default function TestingDashboardPage() {
                         <CardTitle className="text-sm font-medium">How Smoke Tests Work</CardTitle>
                       </CardHeader>
                       <CardContent className="text-xs text-muted-foreground space-y-2">
-                        <p>Smoke tests make HTTP calls to your <strong>running API server</strong> on localhost:4000.</p>
+                        <p>Smoke tests make HTTP calls to your <strong>production API</strong> at api.orivraa.com.</p>
                         <p>They check: health endpoints, auth guards, public routes, error handling, and response times.</p>
                         <p className="font-medium text-foreground">
-                          Prerequisite: Run <code className="rounded bg-muted px-1">pnpm dev</code> to start the API first.
+                          These run against production by default. Set <code className="rounded bg-muted px-1">SMOKE_TEST_URL</code> env var to test locally.
                         </p>
                       </CardContent>
                     </Card>
@@ -626,7 +626,7 @@ export default function TestingDashboardPage() {
                           <CardDescription>
                             {e2eReport
                               ? `${e2eReport.totalTests} tests on ${e2eReport.browser} in ${fmt(e2eReport.duration)} — ${new Date(e2eReport.timestamp).toLocaleString()}`
-                              : "Playwright runs a real browser to test your frontend pages."}
+                              : "Playwright runs a real browser against www.orivraa.com."}
                           </CardDescription>
                         </div>
                         <Button size="sm" onClick={runE2E} disabled={loadingE2E}>

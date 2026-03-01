@@ -22,12 +22,12 @@ test.describe("Performance", () => {
     expect(criticalErrors).toHaveLength(0);
   });
 
-  test("API health endpoint should respond within 500ms", async ({ request }) => {
-    const apiBase = process.env.API_BASE_URL || "http://localhost:4000/api";
+  test("API health endpoint should respond within 2s", async ({ request }) => {
+    const apiBase = process.env.API_BASE_URL || "https://api.orivraa.com/api";
     const start = Date.now();
     const res = await request.get(`${apiBase}/health`);
     const duration = Date.now() - start;
     expect(res.status()).toBe(200);
-    expect(duration).toBeLessThan(500);
+    expect(duration).toBeLessThan(2000);
   });
 });

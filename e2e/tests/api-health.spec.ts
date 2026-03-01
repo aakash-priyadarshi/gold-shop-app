@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const API_BASE = process.env.API_BASE_URL || "http://localhost:4000/api";
+const API_BASE = process.env.API_BASE_URL || "https://api.orivraa.com/api";
 
 test.describe("API Health Checks", () => {
   test("GET /api/health should return 200", async ({ request }) => {
@@ -29,7 +29,7 @@ test.describe("API Health Checks", () => {
 
   test("API should handle CORS headers", async ({ request }) => {
     const res = await request.get(`${API_BASE}/health`, {
-      headers: { Origin: "http://localhost:3000" },
+      headers: { Origin: "https://www.orivraa.com" },
     });
     expect(res.status()).toBe(200);
   });

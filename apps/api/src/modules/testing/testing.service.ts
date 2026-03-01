@@ -2,7 +2,9 @@ import { Injectable, Logger } from "@nestjs/common";
 import { execSync } from "child_process";
 import * as fs from "fs";
 import * as http from "http";
+import * as https from "https";
 import * as path from "path";
+import { URL } from "url";
 
 export interface SmokeTestResult {
   name: string;
@@ -86,31 +88,45 @@ export class TestingService {
   private readonly logger = new Logger(TestingService.name);
   private testHistory: TestRunHistoryEntry[] = [];
 
+  /**
+   * Resolve the API base URL.
+   * Priority: SMOKE_TEST_URL env > API_URL env > production default
+   */
+  private getApiBaseUrl(): string {
+    return (
+      process.env.SMOKE_TEST_URL ||
+      process.env.API_URL ||
+      "https://api.orivraa.com"
+    );
+  }
+
   // ── Smoke Tests ──────────────────────────────────────────
 
   async runSmokeTests(): Promise<SmokeTestReport> {
     const start = Date.now();
     const results: SmokeTestResult[] = [];
+    const baseUrl = this.getApiBaseUrl();
+    this.logger.log(`Running smoke tests against: ${baseUrl}`);
 
     // Category: Health
-    results.push(await this.testEndpoint("Health Check", "health", "/api/health", 200));
-    results.push(await this.testEndpoint("Health Detailed", "health", "/api/health/detailed", 200));
+    results.push(await this.testEndpoint("Health Check", "health", "/api/health", 200, "GET", undefined, baseUrl));
+    results.push(await this.testEndpoint("Health Detailed", "health", "/api/health/detailed", 200, "GET", undefined, baseUrl));
 
     // Category: Metrics
-    results.push(await this.testEndpoint("Metrics Endpoint", "metrics", "/api/metrics", 200));
+    results.push(await this.testEndpoint("Metrics Endpoint", "metrics", "/api/metrics", 200, "GET", undefined, baseUrl));
 
     // Category: Auth
-    results.push(await this.testEndpoint("Auth - Login Page", "auth", "/api/auth/login", [400, 401, 405], "POST", "{}"));
-    results.push(await this.testEndpoint("Auth - Protected Route", "auth", "/api/users/me", 401));
+    results.push(await this.testEndpoint("Auth - Login Page", "auth", "/api/auth/login", [400, 401, 405], "POST", "{}", baseUrl));
+    results.push(await this.testEndpoint("Auth - Protected Route", "auth", "/api/users/me", 401, "GET", undefined, baseUrl));
 
     // Category: Public APIs
-    results.push(await this.testEndpoint("Market Rates", "public", "/api/market-rates", [200, 304]));
+    results.push(await this.testEndpoint("Market Rates", "public", "/api/market-rates", [200, 304], "GET", undefined, baseUrl));
 
     // Category: Error Handling
-    results.push(await this.testEndpoint("404 Unknown Route", "errors", "/api/nonexistent-test-route", 404));
+    results.push(await this.testEndpoint("404 Unknown Route", "errors", "/api/nonexistent-test-route", 404, "GET", undefined, baseUrl));
 
     // Category: Response Time
-    results.push(await this.testResponseTime("Health Response Time", "performance", "/api/health", 1000));
+    results.push(await this.testResponseTime("Health Response Time", "performance", "/api/health", 2000, baseUrl));
 
     const passed = results.filter((r) => r.status === "pass").length;
     const failed = results.filter((r) => r.status === "fail").length;
@@ -128,7 +144,7 @@ export class TestingService {
 
     const report: SmokeTestReport = {
       timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || "development",
+      environment: baseUrl.includes("localhost") || baseUrl.includes("127.0.0.1") ? "local" : "production",
       totalTests: results.length,
       passed,
       failed,
@@ -331,19 +347,27 @@ export class TestingService {
     expectedStatus: number | number[],
     method: "GET" | "POST" = "GET",
     body?: string,
+    baseUrl?: string,
   ): Promise<SmokeTestResult> {
     const expected = Array.isArray(expectedStatus) ? expectedStatus : [expectedStatus];
+    const base = baseUrl || this.getApiBaseUrl();
     return new Promise((resolve) => {
       const start = Date.now();
+      const fullUrl = new URL(urlPath, base);
+      const isHttps = fullUrl.protocol === "https:";
+      const transport = isHttps ? https : http;
       const options: http.RequestOptions = {
-        hostname: "127.0.0.1",
-        port: 4000,
-        path: urlPath,
+        hostname: fullUrl.hostname,
+        port: fullUrl.port || (isHttps ? 443 : 80),
+        path: fullUrl.pathname + fullUrl.search,
         method,
-        timeout: 5000,
-        headers: body ? { "Content-Type": "application/json" } : undefined,
+        timeout: 10000,
+        headers: {
+          ...(body ? { "Content-Type": "application/json" } : {}),
+          "User-Agent": "Orivraa-SmokeTest/1.0",
+        },
       };
-      const req = http.request(options, (res) => {
+      const req = transport.request(options, (res) => {
         let data = "";
         res.on("data", (chunk) => (data += chunk));
         res.on("end", () => {
@@ -377,7 +401,7 @@ export class TestingService {
           category,
           status: "fail",
           duration: Date.now() - start,
-          message: "Request timed out (>5s)",
+          message: "Request timed out (>10s)",
           expected: expected.join("|"),
           actual: "timeout",
         });
@@ -392,11 +416,23 @@ export class TestingService {
     category: string,
     urlPath: string,
     maxMs: number,
+    baseUrl?: string,
   ): Promise<SmokeTestResult> {
+    const base = baseUrl || this.getApiBaseUrl();
     return new Promise((resolve) => {
       const start = Date.now();
-      const req = http.request(
-        { hostname: "127.0.0.1", port: 4000, path: urlPath, method: "GET", timeout: maxMs + 1000 },
+      const fullUrl = new URL(urlPath, base);
+      const isHttps = fullUrl.protocol === "https:";
+      const transport = isHttps ? https : http;
+      const req = transport.request(
+        {
+          hostname: fullUrl.hostname,
+          port: fullUrl.port || (isHttps ? 443 : 80),
+          path: fullUrl.pathname,
+          method: "GET",
+          timeout: maxMs + 2000,
+          headers: { "User-Agent": "Orivraa-SmokeTest/1.0" },
+        },
         (res) => {
           res.resume();
           res.on("end", () => {
