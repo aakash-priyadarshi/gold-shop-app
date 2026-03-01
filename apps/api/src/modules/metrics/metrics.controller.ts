@@ -116,4 +116,42 @@ export class MetricsController {
     });
     return result.value;
   }
+
+  /**
+   * Database performance metrics
+   * Returns query stats, slow queries, per-model breakdown
+   */
+  @Get("db-performance")
+  @ApiOperation({
+    summary: "Database performance metrics",
+    description:
+      "Returns DB query counts, slow queries, per-model breakdown, and connection health",
+  })
+  async getDbPerformance() {
+    const [dbMetrics, dbHealth] = await Promise.all([
+      this.metricsService.getDbPerformance(),
+      this.checkDbHealth(),
+    ]);
+    return { ...dbMetrics, health: dbHealth };
+  }
+
+  /** Quick DB health check — measures a raw SELECT 1 round-trip */
+  private async checkDbHealth(): Promise<{
+    connected: boolean;
+    latencyMs: number;
+  }> {
+    const start = performance.now();
+    try {
+      await this.prisma.$queryRaw`SELECT 1`;
+      return {
+        connected: true,
+        latencyMs: Math.round((performance.now() - start) * 100) / 100,
+      };
+    } catch {
+      return {
+        connected: false,
+        latencyMs: Math.round((performance.now() - start) * 100) / 100,
+      };
+    }
+  }
 }

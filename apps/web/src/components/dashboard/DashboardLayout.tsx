@@ -64,6 +64,8 @@ import {
 import { useTheme } from "next-themes";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // Lazy-load ChatPopupWidget + emoji-mart (~80KB saved on initial page load)
 const ChatPopupWidget = dynamic(
@@ -73,8 +75,6 @@ const ChatPopupWidget = dynamic(
     ),
   { ssr: false },
 );
-import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
 
 interface NavItem {
   label: string;

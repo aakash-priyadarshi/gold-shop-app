@@ -992,6 +992,7 @@ export const metricsApi = {
     orgSlug?: string;
     dashboardUid?: string;
   }) => api.patch("/metrics/grafana-settings", data),
+  getDbPerformance: () => api.get("/metrics/db-performance"),
 };
 
 export default api;

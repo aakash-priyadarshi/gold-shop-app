@@ -1,10 +1,18 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import type { MetricsService } from '../modules/metrics/metrics.service';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
   private isConnected = false;
+
+  /** Injected lazily to avoid circular dependency (MetricsModule → PrismaModule → MetricsModule) */
+  private metricsService: MetricsService | null = null;
+
+  setMetricsService(ms: MetricsService): void {
+    this.metricsService = ms;
+  }
 
   constructor() {
     super({
@@ -18,11 +26,35 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       },
     });
 
-    // Add middleware to handle connection errors and reconnect
+    // Add middleware to time every query + handle connection errors
     this.$use(async (params, next) => {
+      const startTime = performance.now();
+      const model = params.model || 'unknown';
+      const action = params.action || 'unknown';
+
       try {
-        return await next(params);
+        const result = await next(params);
+        const durationMs = performance.now() - startTime;
+
+        // Feed into Prometheus metrics
+        if (this.metricsService) {
+          this.metricsService.recordDbQuery(model, action, durationMs);
+        }
+
+        return result;
       } catch (error: any) {
+        const durationMs = performance.now() - startTime;
+
+        // Record timing even on error
+        if (this.metricsService) {
+          this.metricsService.recordDbQuery(model, action, durationMs);
+          this.metricsService.recordDbError(
+            model,
+            action,
+            error.code || 'UNKNOWN',
+          );
+        }
+
         // Handle Neon connection closed errors
         if (
           error.message?.includes('Closed') ||

@@ -23,6 +23,7 @@ import {
   BarChart3,
   Clock,
   Cpu,
+  Database,
   ExternalLink,
   FileText,
   Globe,
@@ -31,6 +32,7 @@ import {
   Server,
   Settings,
   ShoppingCart,
+  Timer,
   TrendingUp,
   Wifi,
   Zap,
@@ -71,6 +73,40 @@ interface GrafanaSettings {
   cloudUrl: string;
   orgSlug: string;
   dashboardUid: string;
+}
+
+interface DbSlowQuery {
+  model: string;
+  action: string;
+  durationMs: number;
+  timestamp: string;
+}
+
+interface DbModelStat {
+  model: string;
+  action: string;
+  count: number;
+  avgMs: number;
+  maxMs: number;
+  totalMs: number;
+  errors: number;
+}
+
+interface DbPerformance {
+  timestamp: string;
+  summary: {
+    totalQueries: number;
+    totalSlowQueries: number;
+    totalErrors: number;
+    avgQueryMs: number;
+    slowQueryThresholdMs: number;
+  };
+  slowQueries: DbSlowQuery[];
+  modelBreakdown: DbModelStat[];
+  health: {
+    connected: boolean;
+    latencyMs: number;
+  };
 }
 
 export interface HistoryPoint {
@@ -150,6 +186,10 @@ export default function AdminPerformancePage() {
     dashboardUid: "",
   });
 
+  // Database Performance
+  const [dbPerf, setDbPerf] = useState<DbPerformance | null>(null);
+  const [dbLoading, setDbLoading] = useState(false);
+
   // ── Data Fetching ──
 
   const loadMetrics = useCallback(async () => {
@@ -190,20 +230,34 @@ export default function AdminPerformancePage() {
     }
   }, []);
 
+  const loadDbPerformance = useCallback(async () => {
+    setDbLoading(true);
+    try {
+      const res = await metricsApi.getDbPerformance();
+      setDbPerf(res.data);
+    } catch {
+      // DB metrics may not be available yet
+    } finally {
+      setDbLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadMetrics();
     loadHistory();
     loadGrafanaSettings();
-  }, [loadMetrics, loadHistory, loadGrafanaSettings]);
+    loadDbPerformance();
+  }, [loadMetrics, loadHistory, loadGrafanaSettings, loadDbPerformance]);
 
   useEffect(() => {
     if (!autoRefresh) return;
     const interval = setInterval(() => {
       loadMetrics();
       loadHistory();
+      loadDbPerformance();
     }, 10_000);
     return () => clearInterval(interval);
-  }, [autoRefresh, loadMetrics, loadHistory]);
+  }, [autoRefresh, loadMetrics, loadHistory, loadDbPerformance]);
 
   // ── Grafana Pro Toggle ──
 
@@ -321,6 +375,10 @@ export default function AdminPerformancePage() {
             <Tabs defaultValue="overview">
               <TabsList>
                 <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="database">
+                  <Database className="h-3.5 w-3.5 mr-1" />
+                  Database
+                </TabsTrigger>
                 <TabsTrigger value="trends">Trend Charts</TabsTrigger>
                 <TabsTrigger value="grafana">
                   <Settings className="h-3.5 w-3.5 mr-1" />
@@ -528,7 +586,354 @@ export default function AdminPerformancePage() {
                 </div>
               </TabsContent>
 
-              {/* ════════ Tab 2: Trend Charts ════════ */}
+              {/* ════════ Tab 2: Database Performance ════════ */}
+              <TabsContent value="database" className="space-y-4">
+                {dbLoading && !dbPerf ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[...Array(4)].map((_, i) => (
+                      <Card key={i} className="animate-pulse">
+                        <CardHeader className="pb-2">
+                          <div className="h-4 bg-muted rounded w-20" />
+                        </CardHeader>
+                        <CardContent>
+                          <div className="h-8 bg-muted rounded w-16" />
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : dbPerf ? (
+                  <>
+                    {/* DB Health Banner */}
+                    <Card>
+                      <CardContent className="pt-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`h-3 w-3 rounded-full ${dbPerf.health.connected ? "bg-green-500" : "bg-red-500"}`}
+                            />
+                            <span className="text-lg font-semibold">
+                              Database:{" "}
+                              {dbPerf.health.connected
+                                ? "Connected"
+                                : "Disconnected"}
+                            </span>
+                            <Badge variant="outline">
+                              <Timer className="h-3 w-3 mr-1" />
+                              Ping: {dbPerf.health.latencyMs}ms
+                            </Badge>
+                          </div>
+                          <Badge variant="secondary">
+                            <Database className="h-3 w-3 mr-1" />
+                            Neon PostgreSQL
+                          </Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <Card>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                          <CardTitle className="text-sm font-medium">
+                            Total Queries
+                          </CardTitle>
+                          <Database className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-2xl font-bold">
+                            {dbPerf.summary.totalQueries.toLocaleString()}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Since last restart
+                          </p>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                          <CardTitle className="text-sm font-medium">
+                            Avg Query Time
+                          </CardTitle>
+                          <Zap className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                          <div
+                            className={`text-2xl font-bold ${
+                              dbPerf.summary.avgQueryMs < 20
+                                ? "text-green-600"
+                                : dbPerf.summary.avgQueryMs < 100
+                                  ? "text-yellow-600"
+                                  : "text-red-600"
+                            }`}
+                          >
+                            {dbPerf.summary.avgQueryMs}ms
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Average across all models
+                          </p>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                          <CardTitle className="text-sm font-medium">
+                            Slow Queries
+                          </CardTitle>
+                          <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                          <div
+                            className={`text-2xl font-bold ${
+                              dbPerf.summary.totalSlowQueries === 0
+                                ? "text-green-600"
+                                : "text-amber-600"
+                            }`}
+                          >
+                            {dbPerf.summary.totalSlowQueries}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Queries &gt; {dbPerf.summary.slowQueryThresholdMs}ms
+                          </p>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                          <CardTitle className="text-sm font-medium">
+                            DB Errors
+                          </CardTitle>
+                          <AlertTriangle className="h-4 w-4 text-red-500" />
+                        </CardHeader>
+                        <CardContent>
+                          <div
+                            className={`text-2xl font-bold ${
+                              dbPerf.summary.totalErrors === 0
+                                ? "text-green-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {dbPerf.summary.totalErrors}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Connection or query errors
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Model Breakdown Table */}
+                    {dbPerf.modelBreakdown.length > 0 && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-sm font-medium flex items-center gap-2">
+                            <BarChart3 className="h-4 w-4" />
+                            Query Breakdown by Model
+                          </CardTitle>
+                          <CardDescription>
+                            Heaviest database operations, sorted by total time
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b text-left">
+                                  <th className="pb-2 font-medium">Model</th>
+                                  <th className="pb-2 font-medium">Action</th>
+                                  <th className="pb-2 font-medium text-right">
+                                    Count
+                                  </th>
+                                  <th className="pb-2 font-medium text-right">
+                                    Avg
+                                  </th>
+                                  <th className="pb-2 font-medium text-right">
+                                    Max
+                                  </th>
+                                  <th className="pb-2 font-medium text-right">
+                                    Total
+                                  </th>
+                                  <th className="pb-2 font-medium text-right">
+                                    Errors
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {dbPerf.modelBreakdown.map((row, i) => (
+                                  <tr
+                                    key={`${row.model}-${row.action}`}
+                                    className={
+                                      i % 2 === 0 ? "bg-muted/30" : ""
+                                    }
+                                  >
+                                    <td className="py-1.5 font-mono text-xs">
+                                      {row.model}
+                                    </td>
+                                    <td className="py-1.5">
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs"
+                                      >
+                                        {row.action}
+                                      </Badge>
+                                    </td>
+                                    <td className="py-1.5 text-right tabular-nums">
+                                      {row.count.toLocaleString()}
+                                    </td>
+                                    <td
+                                      className={`py-1.5 text-right tabular-nums ${
+                                        row.avgMs < 20
+                                          ? "text-green-600"
+                                          : row.avgMs < 100
+                                            ? "text-yellow-600"
+                                            : "text-red-600"
+                                      }`}
+                                    >
+                                      {row.avgMs}ms
+                                    </td>
+                                    <td
+                                      className={`py-1.5 text-right tabular-nums ${
+                                        row.maxMs < 100
+                                          ? "text-green-600"
+                                          : row.maxMs < 500
+                                            ? "text-yellow-600"
+                                            : "text-red-600"
+                                      }`}
+                                    >
+                                      {row.maxMs}ms
+                                    </td>
+                                    <td className="py-1.5 text-right tabular-nums">
+                                      {row.totalMs > 1000
+                                        ? `${(row.totalMs / 1000).toFixed(1)}s`
+                                        : `${row.totalMs}ms`}
+                                    </td>
+                                    <td className="py-1.5 text-right tabular-nums">
+                                      {row.errors > 0 ? (
+                                        <span className="text-red-600 font-medium">
+                                          {row.errors}
+                                        </span>
+                                      ) : (
+                                        <span className="text-muted-foreground">
+                                          0
+                                        </span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Slow Query Log */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          Slow Query Log
+                          <Badge variant="outline" className="text-xs">
+                            Last {dbPerf.slowQueries.length} of max 50
+                          </Badge>
+                        </CardTitle>
+                        <CardDescription>
+                          Queries that took longer than{" "}
+                          {dbPerf.summary.slowQueryThresholdMs}ms (newest first)
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {dbPerf.slowQueries.length === 0 ? (
+                          <div className="text-center py-6 text-muted-foreground">
+                            <Zap className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                            <p className="font-medium">
+                              No slow queries detected!
+                            </p>
+                            <p className="text-xs mt-1">
+                              All queries are executing under{" "}
+                              {dbPerf.summary.slowQueryThresholdMs}ms
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-1 max-h-80 overflow-y-auto">
+                            {dbPerf.slowQueries.map((q, i) => (
+                              <div
+                                key={i}
+                                className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-muted/50 text-xs"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-muted-foreground w-32 shrink-0">
+                                    {new Date(q.timestamp).toLocaleTimeString()}
+                                  </span>
+                                  <span className="font-mono font-medium">
+                                    {q.model}.{q.action}
+                                  </span>
+                                </div>
+                                <Badge
+                                  variant={
+                                    q.durationMs > 500
+                                      ? "destructive"
+                                      : "secondary"
+                                  }
+                                  className="text-xs tabular-nums"
+                                >
+                                  {q.durationMs}ms
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Tips Card */}
+                    <Card className="border-blue-200 bg-blue-50/30">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4" />
+                          How to Read This Data
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="text-sm space-y-2">
+                        <p>
+                          <strong>DB Ping</strong> — Raw round-trip time to
+                          Neon PostgreSQL. Under 50ms is excellent.
+                        </p>
+                        <p>
+                          <strong>Avg Query Time</strong> — Average time for
+                          Prisma operations. Under 20ms = fast, 20-100ms =
+                          normal, &gt;100ms = investigate.
+                        </p>
+                        <p>
+                          <strong>Model Breakdown</strong> — Shows which tables
+                          are hit most and which queries are slowest. Focus
+                          optimization on high-Total operations.
+                        </p>
+                        <p>
+                          <strong>Server-Timing</strong> — Open your browser
+                          DevTools → Network → click any API request → Timing
+                          tab. You'll see &quot;API Processing&quot; time that
+                          includes DB queries.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </>
+                ) : (
+                  <Card>
+                    <CardContent className="pt-8 pb-8 text-center">
+                      <Database className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                      <p className="text-lg font-medium">
+                        No database metrics yet
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        DB query tracking starts after the first request hits
+                        the API.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+
+              {/* ════════ Tab 3: Trend Charts ════════ */}
               <TabsContent value="trends" className="space-y-4">
                 {/* Time Range Selector */}
                 <div className="flex items-center gap-2">
