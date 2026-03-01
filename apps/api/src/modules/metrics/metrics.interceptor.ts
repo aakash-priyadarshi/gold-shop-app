@@ -15,6 +15,7 @@ export class MetricsInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const ctx = context.switchToHttp();
     const request = ctx.getRequest();
+    const response = ctx.getResponse();
     const { method } = request;
 
     // Normalize route — use the NestJS resolved route pattern when available
@@ -28,9 +29,9 @@ export class MetricsInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap({
         next: () => {
-          const response = ctx.getResponse();
           const statusCode = String(response.statusCode || 200);
           const durationSec = this.getDurationInSeconds(startTime);
+          const durationMs = Math.round(durationSec * 1000);
 
           this.metricsService.httpRequestsTotal.inc({
             method,
@@ -42,6 +43,15 @@ export class MetricsInterceptor implements NestInterceptor {
             durationSec,
           );
           this.metricsService.httpRequestsInFlight.dec();
+
+          // Server-Timing header — visible in browser DevTools > Network > Timing
+          // Shows total API processing time so users can see "how fast data loads"
+          if (!response.headersSent) {
+            response.setHeader(
+              "Server-Timing",
+              `api;dur=${durationMs};desc="API Processing"`,
+            );
+          }
         },
         error: (err: any) => {
           const statusCode = String(err?.status || err?.statusCode || 500);

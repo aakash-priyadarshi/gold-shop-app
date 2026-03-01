@@ -1,9 +1,18 @@
-import { Injectable, OnModuleInit } from "@nestjs/common";
+import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import * as client from "prom-client";
+
+/** Represents a tracked slow query */
+export interface SlowQueryEntry {
+  model: string;
+  action: string;
+  durationMs: number;
+  timestamp: string;
+}
 
 @Injectable()
 export class MetricsService implements OnModuleInit {
   private readonly register: client.Registry;
+  private readonly logger = new Logger(MetricsService.name);
 
   // HTTP metrics
   readonly httpRequestsTotal: client.Counter<string>;
@@ -18,9 +27,23 @@ export class MetricsService implements OnModuleInit {
 
   // System metrics
   readonly dbQueryDuration: client.Histogram<string>;
+  readonly dbQueryTotal: client.Counter<string>;
+  readonly dbSlowQueryTotal: client.Counter<string>;
+  readonly dbErrorTotal: client.Counter<string>;
   readonly cacheHitTotal: client.Counter<string>;
   readonly cacheMissTotal: client.Counter<string>;
   readonly websocketConnections: client.Gauge<string>;
+
+  // In-memory slow query log (last 50 queries > threshold)
+  private slowQueries: SlowQueryEntry[] = [];
+  private readonly SLOW_QUERY_THRESHOLD_MS = 100; // queries > 100ms
+  private readonly MAX_SLOW_QUERIES = 50;
+
+  // Per-model query stats (model → { count, totalMs, maxMs })
+  private modelStats: Map<
+    string,
+    { count: number; totalMs: number; maxMs: number; errors: number }
+  > = new Map();
 
   constructor() {
     this.register = new client.Registry();
@@ -87,8 +110,29 @@ export class MetricsService implements OnModuleInit {
     this.dbQueryDuration = new client.Histogram({
       name: "orivraa_db_query_duration_seconds",
       help: "Duration of database queries in seconds",
-      labelNames: ["operation"],
-      buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5],
+      labelNames: ["model", "action"],
+      buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
+      registers: [this.register],
+    });
+
+    this.dbQueryTotal = new client.Counter({
+      name: "orivraa_db_queries_total",
+      help: "Total number of database queries",
+      labelNames: ["model", "action"],
+      registers: [this.register],
+    });
+
+    this.dbSlowQueryTotal = new client.Counter({
+      name: "orivraa_db_slow_queries_total",
+      help: "Total number of slow database queries (>100ms)",
+      labelNames: ["model", "action"],
+      registers: [this.register],
+    });
+
+    this.dbErrorTotal = new client.Counter({
+      name: "orivraa_db_errors_total",
+      help: "Total number of database errors",
+      labelNames: ["model", "action", "code"],
       registers: [this.register],
     });
 
@@ -229,6 +273,153 @@ export class MetricsService implements OnModuleInit {
             0,
           ) || 0,
       },
+    };
+  }
+
+  // ═══════════════════════════════════════
+  // DATABASE PERFORMANCE TRACKING
+  // ═══════════════════════════════════════
+
+  /**
+   * Record a database query execution for metrics.
+   * Called by Prisma middleware in PrismaService.
+   */
+  recordDbQuery(model: string, action: string, durationMs: number): void {
+    const durationSec = durationMs / 1000;
+
+    // Prometheus metrics
+    this.dbQueryTotal.inc({ model, action });
+    this.dbQueryDuration.observe({ model, action }, durationSec);
+
+    // Track per-model stats
+    const key = `${model}.${action}`;
+    const existing = this.modelStats.get(key) || {
+      count: 0,
+      totalMs: 0,
+      maxMs: 0,
+      errors: 0,
+    };
+    existing.count++;
+    existing.totalMs += durationMs;
+    existing.maxMs = Math.max(existing.maxMs, durationMs);
+    this.modelStats.set(key, existing);
+
+    // Slow query tracking
+    if (durationMs > this.SLOW_QUERY_THRESHOLD_MS) {
+      this.dbSlowQueryTotal.inc({ model, action });
+      this.slowQueries.push({
+        model,
+        action,
+        durationMs: Math.round(durationMs * 100) / 100,
+        timestamp: new Date().toISOString(),
+      });
+      // Keep only the latest entries
+      if (this.slowQueries.length > this.MAX_SLOW_QUERIES) {
+        this.slowQueries = this.slowQueries.slice(-this.MAX_SLOW_QUERIES);
+      }
+      if (durationMs > 500) {
+        this.logger.warn(
+          `Slow DB query: ${model}.${action} took ${durationMs.toFixed(0)}ms`,
+        );
+      }
+    }
+  }
+
+  /**
+   * Record a database error
+   */
+  recordDbError(model: string, action: string, code: string): void {
+    this.dbErrorTotal.inc({ model, action, code });
+    const key = `${model}.${action}`;
+    const existing = this.modelStats.get(key) || {
+      count: 0,
+      totalMs: 0,
+      maxMs: 0,
+      errors: 0,
+    };
+    existing.errors++;
+    this.modelStats.set(key, existing);
+  }
+
+  /**
+   * Get full DB performance summary for admin dashboard
+   */
+  async getDbPerformance(): Promise<Record<string, any>> {
+    const metrics = await this.register.getMetricsAsJSON();
+    const findMetric = (name: string) =>
+      metrics.find((m: any) => m.name === name);
+
+    const dbDurationMetric = findMetric("orivraa_db_query_duration_seconds");
+    const dbQueryMetric = findMetric("orivraa_db_queries_total");
+    const dbSlowMetric = findMetric("orivraa_db_slow_queries_total");
+    const dbErrorMetric = findMetric("orivraa_db_errors_total");
+
+    // Total query count
+    let totalQueries = 0;
+    if (dbQueryMetric?.values) {
+      for (const v of dbQueryMetric.values) {
+        totalQueries += v.value || 0;
+      }
+    }
+
+    // Total slow queries
+    let totalSlowQueries = 0;
+    if (dbSlowMetric?.values) {
+      for (const v of dbSlowMetric.values) {
+        totalSlowQueries += v.value || 0;
+      }
+    }
+
+    // Total errors
+    let totalErrors = 0;
+    if (dbErrorMetric?.values) {
+      for (const v of dbErrorMetric.values) {
+        totalErrors += v.value || 0;
+      }
+    }
+
+    // Avg query duration from histogram
+    let avgQueryMs = 0;
+    if (dbDurationMetric?.values) {
+      const totalCount = dbDurationMetric.values.find((v: any) =>
+        v.metricName?.includes("count"),
+      );
+      const totalSum = dbDurationMetric.values.find((v: any) =>
+        v.metricName?.includes("sum"),
+      );
+      if (totalCount?.value && totalSum?.value) {
+        avgQueryMs = Math.round((totalSum.value / totalCount.value) * 1000);
+      }
+    }
+
+    // Per-model breakdown, sorted by total time (heaviest first)
+    const modelBreakdown = Array.from(this.modelStats.entries())
+      .map(([key, stats]) => {
+        const [model, action] = key.split(".");
+        return {
+          model,
+          action,
+          count: stats.count,
+          avgMs: Math.round((stats.totalMs / stats.count) * 100) / 100,
+          maxMs: Math.round(stats.maxMs * 100) / 100,
+          totalMs: Math.round(stats.totalMs),
+          errors: stats.errors,
+        };
+      })
+      .sort((a, b) => b.totalMs - a.totalMs)
+      .slice(0, 30); // Top 30 heaviest operations
+
+    return {
+      timestamp: new Date().toISOString(),
+      summary: {
+        totalQueries,
+        totalSlowQueries,
+        totalErrors,
+        avgQueryMs,
+        slowQueryThresholdMs: this.SLOW_QUERY_THRESHOLD_MS,
+      },
+      slowQueries: this.slowQueries.slice().reverse(), // newest first
+      modelBreakdown,
     };
   }
 }

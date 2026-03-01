@@ -1,5 +1,6 @@
-import { Global, Module } from "@nestjs/common";
+import { Global, Module, OnModuleInit } from "@nestjs/common";
 import { APP_INTERCEPTOR } from "@nestjs/core";
+import { PrismaService } from "../../prisma/prisma.service";
 import { PrismaModule } from "../../prisma/prisma.module";
 import { MetricsSnapshotService } from "./metrics-snapshot.service";
 import { MetricsController } from "./metrics.controller";
@@ -21,4 +22,15 @@ import { MetricsService } from "./metrics.service";
   ],
   exports: [MetricsService, MetricsSnapshotService],
 })
-export class MetricsModule {}
+export class MetricsModule implements OnModuleInit {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly metricsService: MetricsService,
+  ) {}
+
+  onModuleInit() {
+    // Wire MetricsService into PrismaService for DB query tracking
+    // (avoids circular dependency: MetricsModule imports PrismaModule)
+    this.prisma.setMetricsService(this.metricsService);
+  }
+}
