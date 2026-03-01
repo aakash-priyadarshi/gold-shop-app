@@ -1021,4 +1021,12 @@ export const securityApi = {
   getIpProfile: (ip: string) => api.get(`/security/ip-profile/${ip}`),
 };
 
+// ── Testing (admin-only) ────────────────────────────────
+export const testingApi = {
+  runSmokeTests: () => api.get("/testing/smoke"),
+  triggerSmokeTests: () => api.post("/testing/smoke"),
+  getGitInfo: () => api.get("/testing/git"),
+  getRuntimeInfo: () => api.get("/testing/runtime"),
+};
+
 export default api;

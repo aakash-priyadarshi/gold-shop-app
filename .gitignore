@@ -128,3 +128,9 @@ ai-context.md
 
 # document file
 docs/
+
+# Test results
+e2e-results/
+test-results/
+playwright-report/
+e2e/test-results/

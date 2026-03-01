@@ -14,11 +14,22 @@
     "db:seed": "cd apps/api && npx prisma db seed",
     "db:studio": "cd apps/api && npx prisma studio",
     "smoke-test": "npx tsx scripts/smoke-test-backend.ts",
+    "smoke-test:full": "npx tsx scripts/smoke-test-suite.ts",
+    "e2e": "cd e2e && npx playwright test",
+    "e2e:ui": "cd e2e && npx playwright test --ui",
+    "e2e:headed": "cd e2e && npx playwright test --headed",
+    "test:api": "cd apps/api && npx jest",
+    "test:api:e2e": "cd apps/api && npx jest --config test/jest-e2e.json",
+    "test:all": "pnpm test && pnpm smoke-test:full",
+    "prepare": "husky",
     "check-migrations": "npx tsx scripts/check-migrations-safe.ts",
     "clear-cache": "npx tsx scripts/clear-metal-cache.ts",
     "warm-cache": "npx tsx scripts/warm-market-cache.ts"
   },
   "devDependencies": {
+    "husky": "^9.1.0",
+    "lint-staged": "^15.5.0",
+    "prettier": "^3.8.0",
     "tsx": "^4.21.0",
     "turbo": "^2.0.0",
     "typescript": "^5.3.0"
