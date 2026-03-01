@@ -1023,8 +1023,19 @@ export const securityApi = {
 
 // ── Testing (admin-only) ────────────────────────────────
 export const testingApi = {
+  // Smoke tests
   runSmokeTests: () => api.get("/testing/smoke"),
   triggerSmokeTests: () => api.post("/testing/smoke"),
+  // E2E (Playwright)
+  runE2ETests: () => api.post("/testing/e2e"),
+  getLatestE2EReport: () => api.get("/testing/e2e"),
+  // Integration tests (Jest)
+  runIntegrationTests: () => api.post("/testing/integration"),
+  getLatestIntegrationReport: () => api.get("/testing/integration"),
+  // History
+  getTestHistory: () => api.get("/testing/history"),
+  clearTestHistory: () => api.delete("/testing/history"),
+  // Info
   getGitInfo: () => api.get("/testing/git"),
   getRuntimeInfo: () => api.get("/testing/runtime"),
 };

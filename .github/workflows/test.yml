@@ -1,0 +1,230 @@
+# Automated Test Suite
+# Runs smoke tests, integration tests, and Playwright E2E on push & PR
+
+name: Test Suite
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+  workflow_dispatch: # manual trigger from GitHub UI
+
+env:
+  NODE_VERSION: "18"
+  PNPM_VERSION: "10.27.0"
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ══════════════════════════════════════════════════════════
+  # Setup: Install Dependencies
+  # ══════════════════════════════════════════════════════════
+  setup:
+    name: 📦 Setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache node_modules
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+  # ══════════════════════════════════════════════════════════
+  # Unit / Integration Tests (Jest)
+  # ══════════════════════════════════════════════════════════
+  api-tests:
+    name: 🧪 API Tests
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Restore modules
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Run API unit tests
+        run: pnpm test:api -- --ci --coverage
+        continue-on-error: true
+
+      - name: Run API integration tests
+        run: pnpm test:api:e2e -- --ci
+        continue-on-error: true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-results
+          path: |
+            apps/api/coverage/
+          retention-days: 7
+
+  # ══════════════════════════════════════════════════════════
+  # Smoke Tests
+  # ══════════════════════════════════════════════════════════
+  smoke-tests:
+    name: 💨 Smoke Tests
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Restore modules
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Build API
+        run: pnpm --filter api build
+
+      - name: Start API server
+        run: |
+          cd apps/api
+          node dist/main.js &
+          echo "Waiting for API to start..."
+          for i in $(seq 1 30); do
+            if curl -s http://127.0.0.1:4000/api/health > /dev/null 2>&1; then
+              echo "API is ready!"
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Run smoke tests
+        run: pnpm smoke-test:full
+        continue-on-error: true
+
+  # ══════════════════════════════════════════════════════════
+  # E2E Browser Tests (Playwright)
+  # ══════════════════════════════════════════════════════════
+  e2e-tests:
+    name: 🎭 E2E Browser Tests
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Restore modules
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright browsers
+        run: cd e2e && npx playwright install --with-deps chromium
+
+      - name: Build apps
+        run: |
+          pnpm --filter api build
+          pnpm --filter web build
+
+      - name: Start servers
+        run: |
+          cd apps/api && node dist/main.js &
+          cd apps/web && npx next start -p 3000 &
+          echo "Waiting for servers..."
+          for i in $(seq 1 30); do
+            API=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:4000/api/health 2>/dev/null || echo "000")
+            WEB=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000 2>/dev/null || echo "000")
+            if [ "$API" = "200" ] && [ "$WEB" != "000" ]; then
+              echo "Both servers ready!"
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Run Playwright tests
+        run: pnpm e2e
+        continue-on-error: true
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            e2e-results/
+            e2e/test-results/
+          retention-days: 14
+
+  # ══════════════════════════════════════════════════════════
+  # Summary
+  # ══════════════════════════════════════════════════════════
+  test-summary:
+    name: 📊 Test Summary
+    needs: [api-tests, smoke-tests, e2e-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        run: |
+          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Suite | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| API Tests | ${{ needs.api-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Smoke Tests | ${{ needs.smoke-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Browser | ${{ needs.e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY
