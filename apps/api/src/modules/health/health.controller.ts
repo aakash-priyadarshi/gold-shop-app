@@ -1,9 +1,11 @@
 import { Controller, Get, HttpStatus, HttpCode } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { HealthService, HealthStatus } from './health.service';
+import { SkipSecurity } from '../security/security.guard';
 
 @ApiTags('Health')
 @Controller('health')
+@SkipSecurity()
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 

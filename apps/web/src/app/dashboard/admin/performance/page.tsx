@@ -761,9 +761,7 @@ export default function AdminPerformancePage() {
                                 {dbPerf.modelBreakdown.map((row, i) => (
                                   <tr
                                     key={`${row.model}-${row.action}`}
-                                    className={
-                                      i % 2 === 0 ? "bg-muted/30" : ""
-                                    }
+                                    className={i % 2 === 0 ? "bg-muted/30" : ""}
                                   >
                                     <td className="py-1.5 font-mono text-xs">
                                       {row.model}
@@ -895,8 +893,8 @@ export default function AdminPerformancePage() {
                       </CardHeader>
                       <CardContent className="text-sm space-y-2">
                         <p>
-                          <strong>DB Ping</strong> — Raw round-trip time to
-                          Neon PostgreSQL. Under 50ms is excellent.
+                          <strong>DB Ping</strong> — Raw round-trip time to Neon
+                          PostgreSQL. Under 50ms is excellent.
                         </p>
                         <p>
                           <strong>Avg Query Time</strong> — Average time for

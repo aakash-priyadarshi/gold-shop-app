@@ -2952,3 +2952,35 @@ model MetricsSnapshot {
 
   @@index([createdAt])
 }
+
+// ─── Security Shield ───────────────────────────────────────
+model SecurityEvent {
+  id        String   @id @default(cuid())
+  type      String   // AUTH_BRUTE_FORCE, INPUT_INJECTION, ENUM_SCRAPING, etc.
+  severity  String   // CRITICAL, HIGH, MEDIUM, LOW, INFO
+  ip        String
+  userId    String?
+  route     String
+  method    String
+  userAgent String?
+  details   Json?
+  blocked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([ip, createdAt])
+  @@index([type, createdAt])
+  @@index([severity, createdAt])
+}
+
+model BlockedIp {
+  id        String    @id @default(cuid())
+  ip        String    @unique
+  reason    String
+  severity  String    @default("HIGH")
+  autoBlock Boolean   @default(true)
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([ip])
+  @@index([expiresAt])
+}

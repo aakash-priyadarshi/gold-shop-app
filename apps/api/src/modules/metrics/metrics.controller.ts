@@ -4,9 +4,11 @@ import { Response } from "express";
 import { PrismaService } from "../../prisma/prisma.service";
 import { MetricsSnapshotService } from "./metrics-snapshot.service";
 import { MetricsService } from "./metrics.service";
+import { SkipSecurity } from "../security/security.guard";
 
 @ApiTags("Metrics")
 @Controller("metrics")
+@SkipSecurity()
 export class MetricsController {
   constructor(
     private readonly metricsService: MetricsService,
