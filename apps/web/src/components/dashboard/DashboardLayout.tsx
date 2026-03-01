@@ -55,6 +55,7 @@ import {
   ShieldCheck,
   ShoppingCart,
   Store,
+  FlaskConical,
   Sun,
   Ticket,
   TrendingUp,
@@ -176,6 +177,12 @@ const navItems: NavItem[] = [
     label: "Security",
     href: "/dashboard/admin/security",
     icon: ShieldCheck,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Testing",
+    href: "/dashboard/admin/testing",
+    icon: FlaskConical,
     roles: ["ADMIN"],
   },
 
