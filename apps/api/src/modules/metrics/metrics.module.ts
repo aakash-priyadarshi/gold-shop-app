@@ -1,7 +1,7 @@
 import { Global, Module, OnModuleInit } from "@nestjs/common";
 import { APP_INTERCEPTOR } from "@nestjs/core";
-import { PrismaService } from "../../prisma/prisma.service";
 import { PrismaModule } from "../../prisma/prisma.module";
+import { PrismaService } from "../../prisma/prisma.service";
 import { MetricsSnapshotService } from "./metrics-snapshot.service";
 import { MetricsController } from "./metrics.controller";
 import { MetricsInterceptor } from "./metrics.interceptor";

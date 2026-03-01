@@ -995,4 +995,30 @@ export const metricsApi = {
   getDbPerformance: () => api.get("/metrics/db-performance"),
 };
 
+// ─── Security Shield API ───
+export const securityApi = {
+  getDashboard: () => api.get("/security/dashboard"),
+  getEvents: (params?: {
+    page?: number;
+    limit?: number;
+    type?: string;
+    severity?: string;
+    ip?: string;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.page) query.set("page", String(params.page));
+    if (params?.limit) query.set("limit", String(params.limit));
+    if (params?.type) query.set("type", params.type);
+    if (params?.severity) query.set("severity", params.severity);
+    if (params?.ip) query.set("ip", params.ip);
+    const qs = query.toString();
+    return api.get(`/security/events${qs ? `?${qs}` : ""}`);
+  },
+  getBlockedIps: () => api.get("/security/blocked-ips"),
+  blockIp: (data: { ip: string; reason: string; durationMinutes?: number }) =>
+    api.post("/security/block", data),
+  unblockIp: (ip: string) => api.delete(`/security/unblock/${ip}`),
+  getIpProfile: (ip: string) => api.get(`/security/ip-profile/${ip}`),
+};
+
 export default api;

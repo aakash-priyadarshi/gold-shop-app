@@ -1,9 +1,17 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
-import type { MetricsService } from '../modules/metrics/metrics.service';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from "@nestjs/common";
+import { PrismaClient } from "@prisma/client";
+import type { MetricsService } from "../modules/metrics/metrics.service";
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(PrismaService.name);
   private isConnected = false;
 
@@ -16,9 +24,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
   constructor() {
     super({
-      log: process.env.NODE_ENV === 'development' 
-        ? ['query', 'info', 'warn', 'error']
-        : ['error'],
+      log:
+        process.env.NODE_ENV === "development"
+          ? ["query", "info", "warn", "error"]
+          : ["error"],
       datasources: {
         db: {
           url: process.env.DATABASE_URL,
@@ -29,8 +38,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     // Add middleware to time every query + handle connection errors
     this.$use(async (params, next) => {
       const startTime = performance.now();
-      const model = params.model || 'unknown';
-      const action = params.action || 'unknown';
+      const model = params.model || "unknown";
+      const action = params.action || "unknown";
 
       try {
         const result = await next(params);
@@ -51,19 +60,21 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
           this.metricsService.recordDbError(
             model,
             action,
-            error.code || 'UNKNOWN',
+            error.code || "UNKNOWN",
           );
         }
 
         // Handle Neon connection closed errors
         if (
-          error.message?.includes('Closed') ||
-          error.message?.includes('Connection') ||
-          error.code === 'P2024' ||
-          error.code === 'P1001' ||
-          error.code === 'P1002'
+          error.message?.includes("Closed") ||
+          error.message?.includes("Connection") ||
+          error.code === "P2024" ||
+          error.code === "P1001" ||
+          error.code === "P1002"
         ) {
-          this.logger.warn('Database connection lost, attempting to reconnect...');
+          this.logger.warn(
+            "Database connection lost, attempting to reconnect...",
+          );
           this.isConnected = false;
           await this.reconnect();
           // Retry the operation once after reconnect
@@ -88,14 +99,17 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       try {
         await this.$connect();
         this.isConnected = true;
-        this.logger.log('Database connected successfully');
+        this.logger.log("Database connected successfully");
         return;
       } catch (error: any) {
-        this.logger.error(`Database connection attempt ${i + 1}/${maxRetries} failed:`, error.message);
+        this.logger.error(
+          `Database connection attempt ${i + 1}/${maxRetries} failed:`,
+          error.message,
+        );
         if (i < maxRetries - 1) {
           const delay = Math.min(1000 * Math.pow(2, i), 10000); // Exponential backoff, max 10s
           this.logger.log(`Retrying in ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
         } else {
           throw error;
         }
@@ -113,27 +127,32 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   // Handle connection errors gracefully
-  async executeWithRetry<T>(operation: () => Promise<T>, retries = 3): Promise<T> {
+  async executeWithRetry<T>(
+    operation: () => Promise<T>,
+    retries = 3,
+  ): Promise<T> {
     for (let i = 0; i < retries; i++) {
       try {
         return await operation();
       } catch (error: any) {
         if (i === retries - 1) throw error;
         if (
-          error.code === 'P2024' || 
-          error.code === 'P1001' ||
-          error.code === 'P1002' ||
-          error.message?.includes('Connection') ||
-          error.message?.includes('Closed')
+          error.code === "P2024" ||
+          error.code === "P1001" ||
+          error.code === "P1002" ||
+          error.message?.includes("Connection") ||
+          error.message?.includes("Closed")
         ) {
-          this.logger.warn(`Database connection error, retrying... (${i + 1}/${retries})`);
+          this.logger.warn(
+            `Database connection error, retrying... (${i + 1}/${retries})`,
+          );
           await this.reconnect();
         } else {
           throw error;
         }
       }
     }
-    throw new Error('Max retries reached');
+    throw new Error("Max retries reached");
   }
 
   // Health check method
@@ -148,19 +167,19 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
   // Clean database for testing
   async cleanDatabase() {
-    if (process.env.NODE_ENV !== 'test') {
-      throw new Error('cleanDatabase can only be used in test environment');
+    if (process.env.NODE_ENV !== "test") {
+      throw new Error("cleanDatabase can only be used in test environment");
     }
-    
+
     const tablenames = await this.$queryRaw<
       Array<{ tablename: string }>
     >`SELECT tablename FROM pg_tables WHERE schemaname='public'`;
 
     const tables = tablenames
       .map(({ tablename }) => tablename)
-      .filter((name) => name !== '_prisma_migrations')
+      .filter((name) => name !== "_prisma_migrations")
       .map((name) => `"public"."${name}"`)
-      .join(', ');
+      .join(", ");
 
     try {
       await this.$executeRawUnsafe(`TRUNCATE TABLE ${tables} CASCADE;`);

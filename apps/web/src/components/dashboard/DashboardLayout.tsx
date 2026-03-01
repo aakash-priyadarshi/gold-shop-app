@@ -52,6 +52,7 @@ import {
   Settings,
   Shield,
   ShieldAlert,
+  ShieldCheck,
   ShoppingCart,
   Store,
   Sun,
@@ -169,6 +170,12 @@ const navItems: NavItem[] = [
     label: "Performance",
     href: "/dashboard/admin/performance",
     icon: Activity,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Security",
+    href: "/dashboard/admin/security",
+    icon: ShieldCheck,
     roles: ["ADMIN"],
   },
 

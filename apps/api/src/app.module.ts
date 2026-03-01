@@ -28,6 +28,7 @@ import { MarketplaceIntelligenceModule } from "./modules/marketplace-intelligenc
 import { MaterialsModule } from "./modules/materials/materials.module";
 import { MetricsModule } from "./modules/metrics/metrics.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
+import { SecurityModule } from "./modules/security/security.module";
 import { OffersModule } from "./modules/offers/offers.module";
 import { OrdersModule } from "./modules/orders/orders.module";
 import { PagesModule } from "./modules/pages/pages.module";
@@ -102,6 +103,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     JobsModule,
     HealthModule,
     MetricsModule,
+    SecurityModule,
     AdminModule,
     MarketConfigModule,
     CommissionModule,
