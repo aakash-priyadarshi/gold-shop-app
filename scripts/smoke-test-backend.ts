@@ -8,7 +8,7 @@
  *   pnpm smoke-test
  */
 
-const API_URL = process.argv[2] || process.env.API_URL || 'http://localhost:3001';
+const API_URL = process.argv[2] || process.env.API_URL || 'https://api.orivraa.com';
 
 interface TestResult {
   name: string;

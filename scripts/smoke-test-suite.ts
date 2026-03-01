@@ -1,18 +1,22 @@
 /**
  * Enhanced Smoke Test Suite
  *
- * Runs a comprehensive battery of checks against the running backend.
+ * Runs a comprehensive battery of checks against the API.
+ * Defaults to production (https://api.orivraa.com/api).
  *
  * Usage:  npx tsx scripts/smoke-test-suite.ts [baseUrl]
- * Default baseUrl: http://localhost:4000/api
+ * Examples:
+ *   npx tsx scripts/smoke-test-suite.ts                           # production
+ *   npx tsx scripts/smoke-test-suite.ts http://localhost:4000/api  # local dev
  */
 
 import * as http from "http";
+import * as https from "https";
 
 // ── Configuration ──────────────────────────────────────────
 
-const BASE = process.argv[2] || "http://localhost:4000/api";
-const TIMEOUT = 8_000;
+const BASE = process.argv[2] || process.env.SMOKE_TEST_URL || "https://api.orivraa.com/api";
+const TIMEOUT = 10_000;
 
 interface TestResult {
   name: string;
@@ -28,8 +32,10 @@ const results: TestResult[] = [];
 function get(path: string): Promise<{ status: number; body: string; duration: number }> {
   return new Promise((resolve, reject) => {
     const url = new URL(path, BASE);
+    const isHttps = url.protocol === "https:";
+    const transport = isHttps ? https : http;
     const start = Date.now();
-    const req = http.request(url, { method: "GET", timeout: TIMEOUT }, (res) => {
+    const req = transport.request(url, { method: "GET", timeout: TIMEOUT, headers: { "User-Agent": "Orivraa-SmokeTest/1.0" } }, (res) => {
       let data = "";
       res.on("data", (chunk) => (data += chunk));
       res.on("end", () =>
@@ -93,8 +99,10 @@ async function main() {
   // 4 — Auth rejects empty body
   await runTest("POST /auth/login with empty body → 400/401/422", async () => {
     const url = new URL("/auth/login", BASE);
+    const isHttps = url.protocol === "https:";
+    const transport = isHttps ? https : http;
     const { status } = await new Promise<{ status: number }>((resolve, reject) => {
-      const req = http.request(url, { method: "POST", timeout: TIMEOUT, headers: { "Content-Type": "application/json" } }, (res) => {
+      const req = transport.request(url, { method: "POST", timeout: TIMEOUT, headers: { "Content-Type": "application/json", "User-Agent": "Orivraa-SmokeTest/1.0" } }, (res) => {
         res.resume();
         res.on("end", () => resolve({ status: res.statusCode! }));
       });
@@ -117,10 +125,10 @@ async function main() {
     assert(status === 404, `Expected 404, got ${status}`);
   });
 
-  // 7 — Response time
-  await runTest("GET /health response < 1s", async () => {
+  // 7 — Response time (2s budget for production, network latency included)
+  await runTest("GET /health response < 2s", async () => {
     const { duration } = await get("/health");
-    assert(duration < 1000, `Health took ${duration}ms > 1000ms`);
+    assert(duration < 2000, `Health took ${duration}ms > 2000ms`);
   });
 
   // 8 — Market rates (public)

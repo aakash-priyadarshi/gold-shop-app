@@ -22,8 +22,8 @@ export default defineConfig({
   outputDir: "./test-results",
 
   use: {
-    /* Base URL for the frontend */
-    baseURL: process.env.BASE_URL || "http://localhost:3000",
+    /* Base URL for the frontend — defaults to production */
+    baseURL: process.env.BASE_URL || "https://www.orivraa.com",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
