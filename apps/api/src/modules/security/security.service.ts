@@ -1,27 +1,27 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
-import { PrismaService } from '../../prisma/prisma.service';
+import { Injectable, Logger } from "@nestjs/common";
+import { Cron, CronExpression } from "@nestjs/schedule";
+import { PrismaService } from "../../prisma/prisma.service";
 
 // ─── Types ──────────────────────────────────────────────────
 export enum ThreatType {
-  AUTH_BRUTE_FORCE = 'AUTH_BRUTE_FORCE',
-  AUTH_CREDENTIAL_STUFFING = 'AUTH_CREDENTIAL_STUFFING',
-  ACCESS_FORBIDDEN = 'ACCESS_FORBIDDEN',
-  ACCESS_IDOR_ATTEMPT = 'ACCESS_IDOR_ATTEMPT',
-  INPUT_INJECTION = 'INPUT_INJECTION',
-  ENUM_SCRAPING = 'ENUM_SCRAPING',
-  API_FUZZING = 'API_FUZZING',
-  RATE_EXCEEDED = 'RATE_EXCEEDED',
-  PRICE_TAMPERING = 'PRICE_TAMPERING',
-  SUSPICIOUS_AGENT = 'SUSPICIOUS_AGENT',
+  AUTH_BRUTE_FORCE = "AUTH_BRUTE_FORCE",
+  AUTH_CREDENTIAL_STUFFING = "AUTH_CREDENTIAL_STUFFING",
+  ACCESS_FORBIDDEN = "ACCESS_FORBIDDEN",
+  ACCESS_IDOR_ATTEMPT = "ACCESS_IDOR_ATTEMPT",
+  INPUT_INJECTION = "INPUT_INJECTION",
+  ENUM_SCRAPING = "ENUM_SCRAPING",
+  API_FUZZING = "API_FUZZING",
+  RATE_EXCEEDED = "RATE_EXCEEDED",
+  PRICE_TAMPERING = "PRICE_TAMPERING",
+  SUSPICIOUS_AGENT = "SUSPICIOUS_AGENT",
 }
 
 export enum Severity {
-  CRITICAL = 'CRITICAL',
-  HIGH = 'HIGH',
-  MEDIUM = 'MEDIUM',
-  LOW = 'LOW',
-  INFO = 'INFO',
+  CRITICAL = "CRITICAL",
+  HIGH = "HIGH",
+  MEDIUM = "MEDIUM",
+  LOW = "LOW",
+  INFO = "INFO",
 }
 
 export interface ThreatEvent {
@@ -45,7 +45,7 @@ export interface IpProfile {
   injectionAttempts: number;
   forbiddenHits: number;
   notFoundHits: number;
-  recentRequests: number[];  // timestamps of last N requests
+  recentRequests: number[]; // timestamps of last N requests
 }
 
 // ─── SQL / XSS injection patterns ──────────────────────────
@@ -67,9 +67,18 @@ const INJECTION_PATTERNS = [
 
 // Suspicious user agents
 const SUSPICIOUS_AGENTS = [
-  /sqlmap/i, /nikto/i, /havij/i, /nmap/i, /masscan/i,
-  /dirbuster/i, /gobuster/i, /wfuzz/i, /burpsuite/i,
-  /hydra/i, /metasploit/i, /^$/,
+  /sqlmap/i,
+  /nikto/i,
+  /havij/i,
+  /nmap/i,
+  /masscan/i,
+  /dirbuster/i,
+  /gobuster/i,
+  /wfuzz/i,
+  /burpsuite/i,
+  /hydra/i,
+  /metasploit/i,
+  /^$/,
 ];
 
 @Injectable()
@@ -166,8 +175,14 @@ export class SecurityService {
 
     // 5. Auto-block if score exceeds threshold
     if (profile.score >= this.BLOCK_SCORE_THRESHOLD) {
-      await this.blockIp(req.ip, `Auto-blocked: threat score ${profile.score}`, Severity.HIGH, true, this.TEMP_BAN_DURATION_MS);
-      threats.forEach(t => (t.blocked = true));
+      await this.blockIp(
+        req.ip,
+        `Auto-blocked: threat score ${profile.score}`,
+        Severity.HIGH,
+        true,
+        this.TEMP_BAN_DURATION_MS,
+      );
+      threats.forEach((t) => (t.blocked = true));
     }
 
     // 6. Persist threats
@@ -181,14 +196,19 @@ export class SecurityService {
   /**
    * Record a failed login attempt (called from AuthService or AuthController).
    */
-  async recordFailedLogin(ip: string, route: string, userId?: string, userAgent?: string): Promise<void> {
+  async recordFailedLogin(
+    ip: string,
+    route: string,
+    userId?: string,
+    userAgent?: string,
+  ): Promise<void> {
     const profile = this.getOrCreateProfile(ip);
     profile.failedLogins++;
     profile.score = Math.min(100, profile.score + 10);
 
     // Check brute force window
     const recentTimestamps = profile.recentRequests.filter(
-      ts => Date.now() - ts < this.BRUTE_FORCE_WINDOW_MS,
+      (ts) => Date.now() - ts < this.BRUTE_FORCE_WINDOW_MS,
     );
 
     if (profile.failedLogins >= this.BRUTE_FORCE_MAX_ATTEMPTS) {
@@ -198,7 +218,7 @@ export class SecurityService {
         ip,
         userId,
         route,
-        method: 'POST',
+        method: "POST",
         userAgent,
         details: {
           failedAttempts: profile.failedLogins,
@@ -208,7 +228,13 @@ export class SecurityService {
         blocked: true,
       };
       await this.persistEvents([event]);
-      await this.blockIp(ip, `Brute force: ${profile.failedLogins} failed logins`, Severity.HIGH, true, this.TEMP_BAN_DURATION_MS);
+      await this.blockIp(
+        ip,
+        `Brute force: ${profile.failedLogins} failed logins`,
+        Severity.HIGH,
+        true,
+        this.TEMP_BAN_DURATION_MS,
+      );
       profile.score = 100;
     } else {
       const event: ThreatEvent = {
@@ -217,7 +243,7 @@ export class SecurityService {
         ip,
         userId,
         route,
-        method: 'POST',
+        method: "POST",
         userAgent,
         details: { failedAttempts: profile.failedLogins },
       };
@@ -239,7 +265,13 @@ export class SecurityService {
   /**
    * Record a 403 Forbidden response.
    */
-  async recordForbidden(ip: string, route: string, method: string, userId?: string, userAgent?: string): Promise<void> {
+  async recordForbidden(
+    ip: string,
+    route: string,
+    method: string,
+    userId?: string,
+    userAgent?: string,
+  ): Promise<void> {
     const profile = this.getOrCreateProfile(ip);
     profile.forbiddenHits++;
     profile.score = Math.min(100, profile.score + 8);
@@ -257,20 +289,33 @@ export class SecurityService {
     await this.persistEvents([event]);
 
     if (profile.forbiddenHits >= 10) {
-      await this.blockIp(ip, `Repeated forbidden access: ${profile.forbiddenHits} hits`, Severity.HIGH, true, this.TEMP_BAN_DURATION_MS);
+      await this.blockIp(
+        ip,
+        `Repeated forbidden access: ${profile.forbiddenHits} hits`,
+        Severity.HIGH,
+        true,
+        this.TEMP_BAN_DURATION_MS,
+      );
     }
   }
 
   /**
    * Record a 404 response (for fuzzing detection).
    */
-  async recordNotFound(ip: string, route: string, method: string, userAgent?: string): Promise<void> {
+  async recordNotFound(
+    ip: string,
+    route: string,
+    method: string,
+    userAgent?: string,
+  ): Promise<void> {
     const profile = this.getOrCreateProfile(ip);
     profile.notFoundHits++;
 
     // Count recent 404s within the fuzzing window
     const now = Date.now();
-    const recent404s = profile.recentRequests.filter(ts => now - ts < this.FUZZING_WINDOW_MS).length;
+    const recent404s = profile.recentRequests.filter(
+      (ts) => now - ts < this.FUZZING_WINDOW_MS,
+    ).length;
 
     if (profile.notFoundHits >= this.FUZZING_MAX_404S) {
       profile.score = Math.min(100, profile.score + 25);
@@ -281,18 +326,32 @@ export class SecurityService {
         route,
         method,
         userAgent,
-        details: { notFoundCount: profile.notFoundHits, recentRequestsInWindow: recent404s },
+        details: {
+          notFoundCount: profile.notFoundHits,
+          recentRequestsInWindow: recent404s,
+        },
         blocked: true,
       };
       await this.persistEvents([event]);
-      await this.blockIp(ip, `API fuzzing detected: ${profile.notFoundHits} 404s`, Severity.HIGH, true, 60 * 60 * 1000); // 1 hour
+      await this.blockIp(
+        ip,
+        `API fuzzing detected: ${profile.notFoundHits} 404s`,
+        Severity.HIGH,
+        true,
+        60 * 60 * 1000,
+      ); // 1 hour
     }
   }
 
   /**
    * Record a rate-limit hit (429).
    */
-  async recordRateLimited(ip: string, route: string, method: string, userAgent?: string): Promise<void> {
+  async recordRateLimited(
+    ip: string,
+    route: string,
+    method: string,
+    userAgent?: string,
+  ): Promise<void> {
     const profile = this.getOrCreateProfile(ip);
     profile.score = Math.min(100, profile.score + 5);
 
@@ -334,7 +393,9 @@ export class SecurityService {
         update: { reason, severity, autoBlock, expiresAt },
       });
       this.blockedIpsCache.add(ip);
-      this.logger.warn(`🛡️ Blocked IP: ${ip} — ${reason} (expires: ${expiresAt?.toISOString() ?? 'never'})`);
+      this.logger.warn(
+        `🛡️ Blocked IP: ${ip} — ${reason} (expires: ${expiresAt?.toISOString() ?? "never"})`,
+      );
     } catch (err) {
       this.logger.error(`Failed to block IP ${ip}:`, err);
     }
@@ -358,10 +419,10 @@ export class SecurityService {
         },
         select: { ip: true },
       });
-      this.blockedIpsCache = new Set(blocked.map(b => b.ip));
+      this.blockedIpsCache = new Set(blocked.map((b) => b.ip));
       this.blockedIpsCacheUpdatedAt = Date.now();
     } catch (err) {
-      this.logger.error('Failed to refresh blocked IPs cache:', err);
+      this.logger.error("Failed to refresh blocked IPs cache:", err);
     }
   }
 
@@ -392,23 +453,27 @@ export class SecurityService {
       eventsByType,
       eventsBySeverity,
     ] = await Promise.all([
-      this.prisma.securityEvent.count({ where: { createdAt: { gte: since24h } } }),
-      this.prisma.securityEvent.count({ where: { createdAt: { gte: since24h }, severity: 'CRITICAL' } }),
+      this.prisma.securityEvent.count({
+        where: { createdAt: { gte: since24h } },
+      }),
+      this.prisma.securityEvent.count({
+        where: { createdAt: { gte: since24h }, severity: "CRITICAL" },
+      }),
       this.prisma.blockedIp.findMany({
         where: { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
       }),
       this.prisma.securityEvent.findMany({
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         take: 50,
       }),
       this.prisma.securityEvent.groupBy({
-        by: ['type'],
+        by: ["type"],
         where: { createdAt: { gte: since24h } },
         _count: true,
       }),
       this.prisma.securityEvent.groupBy({
-        by: ['severity'],
+        by: ["severity"],
         where: { createdAt: { gte: since24h } },
         _count: true,
       }),
@@ -416,10 +481,10 @@ export class SecurityService {
 
     // Top attacked routes
     const routeGroups = await this.prisma.securityEvent.groupBy({
-      by: ['route'],
+      by: ["route"],
       where: { createdAt: { gte: since24h } },
       _count: true,
-      orderBy: { _count: { route: 'desc' } },
+      orderBy: { _count: { route: "desc" } },
       take: 10,
     });
 
@@ -431,17 +496,26 @@ export class SecurityService {
 
     // Determine top threat type
     const threatsByType: Record<string, number> = {};
-    eventsByType.forEach(g => { threatsByType[g.type] = g._count; });
-    const topThreatType = Object.entries(threatsByType).sort((a, b) => b[1] - a[1])[0]?.[0] || 'NONE';
+    eventsByType.forEach((g) => {
+      threatsByType[g.type] = g._count;
+    });
+    const topThreatType =
+      Object.entries(threatsByType).sort((a, b) => b[1] - a[1])[0]?.[0] ||
+      "NONE";
 
     const threatsBySeverity: Record<string, number> = {};
-    eventsBySeverity.forEach(g => { threatsBySeverity[g.severity] = g._count; });
+    eventsBySeverity.forEach((g) => {
+      threatsBySeverity[g.severity] = g._count;
+    });
 
     // Average threat score across active profiles
     const profiles = Array.from(this.ipProfiles.values());
-    const avgScore = profiles.length > 0
-      ? Math.round(profiles.reduce((s, p) => s + p.score, 0) / profiles.length)
-      : 0;
+    const avgScore =
+      profiles.length > 0
+        ? Math.round(
+            profiles.reduce((s, p) => s + p.score, 0) / profiles.length,
+          )
+        : 0;
 
     return {
       summary: {
@@ -455,7 +529,10 @@ export class SecurityService {
       blockedIps,
       threatsByType,
       threatsBySeverity,
-      topAttackedRoutes: routeGroups.map(g => ({ route: g.route, count: g._count })),
+      topAttackedRoutes: routeGroups.map((g) => ({
+        route: g.route,
+        count: g._count,
+      })),
       topOffendingIps: topIps,
     };
   }
@@ -477,7 +554,7 @@ export class SecurityService {
     const [events, total] = await Promise.all([
       this.prisma.securityEvent.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         take: limit,
         skip: (page - 1) * limit,
       }),
@@ -490,7 +567,7 @@ export class SecurityService {
   async getBlockedIps(): Promise<any[]> {
     return this.prisma.blockedIp.findMany({
       where: { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 
@@ -520,7 +597,7 @@ export class SecurityService {
   }
 
   private detectInjection(body: any): string | null {
-    const bodyStr = typeof body === 'string' ? body : JSON.stringify(body);
+    const bodyStr = typeof body === "string" ? body : JSON.stringify(body);
     for (const pattern of INJECTION_PATTERNS) {
       if (pattern.test(bodyStr)) {
         return pattern.source.substring(0, 80);
@@ -530,13 +607,13 @@ export class SecurityService {
   }
 
   private isSuspiciousAgent(userAgent: string): boolean {
-    return SUSPICIOUS_AGENTS.some(pattern => pattern.test(userAgent));
+    return SUSPICIOUS_AGENTS.some((pattern) => pattern.test(userAgent));
   }
 
   private async persistEvents(events: ThreatEvent[]): Promise<void> {
     try {
       await this.prisma.securityEvent.createMany({
-        data: events.map(e => ({
+        data: events.map((e) => ({
           type: e.type,
           severity: e.severity,
           ip: e.ip,
@@ -559,7 +636,7 @@ export class SecurityService {
         this.recentEvents = this.recentEvents.slice(0, 200);
       }
     } catch (err) {
-      this.logger.error('Failed to persist security events:', err);
+      this.logger.error("Failed to persist security events:", err);
     }
   }
 
@@ -593,7 +670,7 @@ export class SecurityService {
         await this.refreshBlockedIpsCache();
       }
     } catch (err) {
-      this.logger.error('Failed to clean expired blocks:', err);
+      this.logger.error("Failed to clean expired blocks:", err);
     }
   }
 
@@ -609,7 +686,7 @@ export class SecurityService {
         this.logger.log(`🗑️ Purged ${result.count} old security events`);
       }
     } catch (err) {
-      this.logger.error('Failed to purge old security events:', err);
+      this.logger.error("Failed to purge old security events:", err);
     }
   }
 }

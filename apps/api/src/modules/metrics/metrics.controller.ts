@@ -2,9 +2,9 @@ import { Body, Controller, Get, Patch, Query, Res } from "@nestjs/common";
 import { ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { Response } from "express";
 import { PrismaService } from "../../prisma/prisma.service";
+import { SkipSecurity } from "../security/security.guard";
 import { MetricsSnapshotService } from "./metrics-snapshot.service";
 import { MetricsService } from "./metrics.service";
-import { SkipSecurity } from "../security/security.guard";
 
 @ApiTags("Metrics")
 @Controller("metrics")

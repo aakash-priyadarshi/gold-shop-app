@@ -1,10 +1,10 @@
-import { Global, Module } from '@nestjs/common';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { PrismaModule } from '../../prisma/prisma.module';
-import { SecurityService } from './security.service';
-import { SecurityGuard } from './security.guard';
-import { SecurityInterceptor } from './security.interceptor';
-import { SecurityController } from './security.controller';
+import { Global, Module } from "@nestjs/common";
+import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
+import { PrismaModule } from "../../prisma/prisma.module";
+import { SecurityController } from "./security.controller";
+import { SecurityGuard } from "./security.guard";
+import { SecurityInterceptor } from "./security.interceptor";
+import { SecurityService } from "./security.service";
 
 @Global()
 @Module({

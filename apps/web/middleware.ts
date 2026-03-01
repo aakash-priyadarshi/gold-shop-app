@@ -103,6 +103,38 @@ export function middleware(request: NextRequest) {
   // Add headers for API routes to access
   response.headers.set('x-orivraa-country', mappedCountry);
   response.headers.set('x-orivraa-geo-source', source);
+
+  // ===========================
+  // Content Security Policy
+  // ===========================
+  const cspDirectives = [
+    "default-src 'self'",
+    // Scripts: self + Vercel analytics/speed-insights + inline for Next.js hydration
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://vercel.live",
+    // Styles: self + inline (Tailwind/CSS-in-JS) + Google Fonts
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    // Images: self + data URIs + Cloudinary + orivraa CDN + blob for previews
+    "img-src 'self' data: blob: https://res.cloudinary.com https://*.cloudinary.com https://images.orivraa.com https://orivraa.com",
+    // Fonts: self + Google Fonts CDN
+    "font-src 'self' https://fonts.gstatic.com data:",
+    // API connections: self + API + Vercel analytics + Stripe
+    "connect-src 'self' https://api.orivraa.com https://*.vercel-insights.com https://va.vercel-scripts.com https://vercel.live https://*.stripe.com https://vitals.vercel-insights.com",
+    // Frames: self + Stripe (for 3D Secure)
+    "frame-src 'self' https://*.stripe.com https://vercel.live",
+    // Media
+    "media-src 'self' blob:",
+    // Objects: none (no Flash/Java)
+    "object-src 'none'",
+    // Base URI restriction
+    "base-uri 'self'",
+    // Form targets
+    "form-action 'self'",
+    // Frame ancestors (clickjacking protection)
+    "frame-ancestors 'self'",
+    // Upgrade HTTP → HTTPS in production
+    ...(process.env.NODE_ENV === 'production' ? ['upgrade-insecure-requests'] : []),
+  ];
+  response.headers.set('Content-Security-Policy', cspDirectives.join('; '));
   
   return response;
 }

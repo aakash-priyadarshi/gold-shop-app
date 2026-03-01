@@ -1,11 +1,12 @@
 import { BullModule } from "@nestjs/bull";
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { APP_GUARD } from "@nestjs/core";
+import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 
 // Core modules
 import { HttpClientModule } from "./common/http-client";
+import { RedisCacheInterceptor } from "./common/interceptors/cache.interceptor";
 import { RedisModule } from "./common/redis";
 import { AdminModule } from "./modules/admin/admin.module";
 import { AiCreditsModule } from "./modules/ai-credits/ai-credits.module";
@@ -28,7 +29,6 @@ import { MarketplaceIntelligenceModule } from "./modules/marketplace-intelligenc
 import { MaterialsModule } from "./modules/materials/materials.module";
 import { MetricsModule } from "./modules/metrics/metrics.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
-import { SecurityModule } from "./modules/security/security.module";
 import { OffersModule } from "./modules/offers/offers.module";
 import { OrdersModule } from "./modules/orders/orders.module";
 import { PagesModule } from "./modules/pages/pages.module";
@@ -40,6 +40,7 @@ import { PricingModule } from "./modules/pricing/pricing.module";
 import { ProductVariantsModule } from "./modules/product-variants/product-variants.module";
 import { RefundsModule } from "./modules/refunds/refunds.module";
 import { RfqModule } from "./modules/rfq/rfq.module";
+import { SecurityModule } from "./modules/security/security.module";
 import { SellerPerformanceModule } from "./modules/seller-performance/seller-performance.module";
 import { ShopQuotesModule } from "./modules/shop-quotes/shop-quotes.module";
 import { ShopsModule } from "./modules/shops/shops.module";
@@ -129,6 +130,11 @@ import { PrismaModule } from "./prisma/prisma.module";
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    // Global Redis response cache — only activates on endpoints with @CacheTTL()
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: RedisCacheInterceptor,
     },
   ],
 })
