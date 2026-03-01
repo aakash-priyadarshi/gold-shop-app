@@ -1,42 +1,41 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Delete,
-  Param,
-  Query,
   Body,
-  UseGuards,
+  Controller,
+  Delete,
+  Get,
   HttpCode,
   HttpStatus,
-} from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '@prisma/client';
-import { SecurityService } from './security.service';
-import { SkipSecurity } from './security.guard';
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from "@nestjs/common";
+import { UserRole } from "@prisma/client";
+import { Roles } from "../auth/decorators/roles.decorator";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RolesGuard } from "../auth/guards/roles.guard";
+import { SecurityService } from "./security.service";
 
-@Controller('security')
+@Controller("security")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 export class SecurityController {
   constructor(private readonly securityService: SecurityService) {}
 
   /** Full security dashboard data */
-  @Get('dashboard')
+  @Get("dashboard")
   async getDashboard() {
     return this.securityService.getDashboard();
   }
 
   /** Paginated security events */
-  @Get('events')
+  @Get("events")
   async getEvents(
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-    @Query('type') type?: string,
-    @Query('severity') severity?: string,
-    @Query('ip') ip?: string,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
+    @Query("type") type?: string,
+    @Query("severity") severity?: string,
+    @Query("ip") ip?: string,
   ) {
     return this.securityService.getEvents({
       page: page ? parseInt(page, 10) : 1,
@@ -48,22 +47,24 @@ export class SecurityController {
   }
 
   /** List currently blocked IPs */
-  @Get('blocked-ips')
+  @Get("blocked-ips")
   async getBlockedIps() {
     return this.securityService.getBlockedIps();
   }
 
   /** Manually block an IP */
-  @Post('block')
+  @Post("block")
   @HttpCode(HttpStatus.OK)
   async blockIp(
     @Body() body: { ip: string; reason: string; durationMinutes?: number },
   ) {
-    const duration = body.durationMinutes ? body.durationMinutes * 60 * 1000 : undefined;
+    const duration = body.durationMinutes
+      ? body.durationMinutes * 60 * 1000
+      : undefined;
     await this.securityService.blockIp(
       body.ip,
-      body.reason || 'Manual admin block',
-      'HIGH',
+      body.reason || "Manual admin block",
+      "HIGH",
       false,
       duration,
     );
@@ -71,16 +72,16 @@ export class SecurityController {
   }
 
   /** Unblock an IP */
-  @Delete('unblock/:ip')
+  @Delete("unblock/:ip")
   @HttpCode(HttpStatus.OK)
-  async unblockIp(@Param('ip') ip: string) {
+  async unblockIp(@Param("ip") ip: string) {
     await this.securityService.unblockIp(ip);
     return { success: true, message: `IP ${ip} unblocked` };
   }
 
   /** Get threat profile for a specific IP */
-  @Get('ip-profile/:ip')
-  async getIpProfile(@Param('ip') ip: string) {
+  @Get("ip-profile/:ip")
+  async getIpProfile(@Param("ip") ip: string) {
     const profile = this.securityService.getIpProfile(ip);
     const isBlocked = await this.securityService.isBlocked(ip);
     return { ip, profile, isBlocked };

@@ -7,6 +7,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CURRENCY_TO_DEFAULT_REGION, COUNTRY_CURRENCIES, REGION_TO_DEFAULT_CURRENCY } from './country-adjustments';
+import { CacheTTL } from '../../common';
 
 @ApiTags('Market Rates')
 @Controller('market-rates')
@@ -14,6 +15,7 @@ export class MarketRatesController {
   constructor(private readonly marketRatesService: MarketRatesService) {}
 
   @Get()
+  @CacheTTL(30) // Cache market rates for 30 seconds (volatile data)
   @ApiOperation({
     summary: 'Get current market rates',
     description: `Returns live metal prices per gram in specified currency with tax/duty adjustments.
@@ -162,6 +164,7 @@ export class MarketRatesController {
   }
 
   @Get('status')
+  @CacheTTL(300) // Cache status for 5 minutes
   @ApiOperation({
     summary: 'Get market rates API status',
     description: 'Check if the MetalpriceAPI is configured and get fallback values',
@@ -216,6 +219,7 @@ export class MarketRatesController {
   }
 
   @Get('compare')
+  @CacheTTL(30) // Cache comparative rates for 30 seconds
   @ApiOperation({
     summary: 'Get comparative rates for multiple regions',
     description: 'Returns market rates for India, Nepal, UAE, and USA with validation status',

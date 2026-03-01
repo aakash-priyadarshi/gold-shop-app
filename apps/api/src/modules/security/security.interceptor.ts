@@ -3,9 +3,9 @@ import {
   ExecutionContext,
   Injectable,
   NestInterceptor,
-} from '@nestjs/common';
-import { Observable, tap } from 'rxjs';
-import { SecurityService } from './security.service';
+} from "@nestjs/common";
+import { Observable, tap } from "rxjs";
+import { SecurityService } from "./security.service";
 
 /**
  * Intercepts responses to detect threats from response status codes:
@@ -23,9 +23,9 @@ export class SecurityInterceptor implements NestInterceptor {
     if (!request) return next.handle();
 
     const ip = this.extractIp(request);
-    const route = request.route?.path || request.url || '';
-    const method = request.method || 'GET';
-    const userAgent = request.headers?.['user-agent'] || '';
+    const route = request.route?.path || request.url || "";
+    const method = request.method || "GET";
+    const userAgent = request.headers?.["user-agent"] || "";
     const userId = request.user?.id;
 
     return next.handle().pipe(
@@ -35,13 +35,21 @@ export class SecurityInterceptor implements NestInterceptor {
 
           if (status === 401) {
             // Failed auth — may indicate brute force
-            this.securityService.recordFailedLogin(ip, route, userId, userAgent).catch(() => {});
+            this.securityService
+              .recordFailedLogin(ip, route, userId, userAgent)
+              .catch(() => {});
           } else if (status === 403) {
-            this.securityService.recordForbidden(ip, route, method, userId, userAgent).catch(() => {});
+            this.securityService
+              .recordForbidden(ip, route, method, userId, userAgent)
+              .catch(() => {});
           } else if (status === 404) {
-            this.securityService.recordNotFound(ip, route, method, userAgent).catch(() => {});
+            this.securityService
+              .recordNotFound(ip, route, method, userAgent)
+              .catch(() => {});
           } else if (status === 429) {
-            this.securityService.recordRateLimited(ip, route, method, userAgent).catch(() => {});
+            this.securityService
+              .recordRateLimited(ip, route, method, userAgent)
+              .catch(() => {});
           }
         },
       }),
@@ -50,12 +58,12 @@ export class SecurityInterceptor implements NestInterceptor {
 
   private extractIp(request: any): string {
     return (
-      request.headers?.['cf-connecting-ip'] ||
-      request.headers?.['x-real-ip'] ||
-      request.headers?.['x-forwarded-for']?.split(',')[0]?.trim() ||
+      request.headers?.["cf-connecting-ip"] ||
+      request.headers?.["x-real-ip"] ||
+      request.headers?.["x-forwarded-for"]?.split(",")[0]?.trim() ||
       request.ip ||
       request.connection?.remoteAddress ||
-      '0.0.0.0'
+      "0.0.0.0"
     );
   }
 }

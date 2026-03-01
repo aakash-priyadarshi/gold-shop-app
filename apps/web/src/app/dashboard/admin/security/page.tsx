@@ -13,8 +13,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { securityApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { securityApi } from "@/lib/api";
 import {
   Activity,
   AlertTriangle,
@@ -139,7 +139,8 @@ export default function SecurityDashboardPage() {
   }, [fetchDashboard]);
 
   const handleBlock = async () => {
-    if (!blockIp.trim()) return toast({ title: "Enter an IP address", variant: "destructive" });
+    if (!blockIp.trim())
+      return toast({ title: "Enter an IP address", variant: "destructive" });
     try {
       await securityApi.blockIp({
         ip: blockIp.trim(),
@@ -366,8 +367,12 @@ export default function SecurityDashboardPage() {
               {/* Event List */}
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Recent Security Events</CardTitle>
-                  <CardDescription>Last 50 events, auto-refreshes every 30s</CardDescription>
+                  <CardTitle className="text-base">
+                    Recent Security Events
+                  </CardTitle>
+                  <CardDescription>
+                    Last 50 events, auto-refreshes every 30s
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {filteredEvents.length === 0 ? (
@@ -386,7 +391,9 @@ export default function SecurityDashboardPage() {
                               : ""
                           }`}
                         >
-                          <Badge className={`${severityColor(event.severity)} text-xs shrink-0 mt-0.5`}>
+                          <Badge
+                            className={`${severityColor(event.severity)} text-xs shrink-0 mt-0.5`}
+                          >
                             {event.severity}
                           </Badge>
                           <div className="flex-1 min-w-0">
@@ -395,31 +402,41 @@ export default function SecurityDashboardPage() {
                                 {threatTypeLabel(event.type)}
                               </span>
                               {event.blocked && (
-                                <Badge variant="destructive" className="text-[10px] h-4">
+                                <Badge
+                                  variant="destructive"
+                                  className="text-[10px] h-4"
+                                >
                                   BLOCKED
                                 </Badge>
                               )}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-1">
                               <span>
-                                IP: <code className="text-foreground">{event.ip}</code>
+                                IP:{" "}
+                                <code className="text-foreground">
+                                  {event.ip}
+                                </code>
                               </span>
                               <span>
                                 {event.method}{" "}
-                                <code className="text-foreground">{event.route}</code>
+                                <code className="text-foreground">
+                                  {event.route}
+                                </code>
                               </span>
                               {event.userId && (
                                 <span>
-                                  User: <code>{event.userId.slice(0, 8)}...</code>
+                                  User:{" "}
+                                  <code>{event.userId.slice(0, 8)}...</code>
                                 </span>
                               )}
                               <span>{timeAgo(event.createdAt)}</span>
                             </div>
-                            {event.details && Object.keys(event.details).length > 0 && (
-                              <div className="mt-1 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1 font-mono">
-                                {JSON.stringify(event.details).slice(0, 200)}
-                              </div>
-                            )}
+                            {event.details &&
+                              Object.keys(event.details).length > 0 && (
+                                <div className="mt-1 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1 font-mono">
+                                  {JSON.stringify(event.details).slice(0, 200)}
+                                </div>
+                              )}
                           </div>
                         </div>
                       ))}
@@ -441,7 +458,7 @@ export default function SecurityDashboardPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {(!d?.blockedIps || d.blockedIps.length === 0) ? (
+                  {!d?.blockedIps || d.blockedIps.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <ShieldCheck className="h-10 w-10 mx-auto mb-2 text-green-500" />
                       <p>No IPs are currently blocked</p>
@@ -462,7 +479,10 @@ export default function SecurityDashboardPage() {
                         </thead>
                         <tbody>
                           {d.blockedIps.map((b) => (
-                            <tr key={b.id} className="border-b hover:bg-muted/50">
+                            <tr
+                              key={b.id}
+                              className="border-b hover:bg-muted/50"
+                            >
                               <td className="py-2 pr-4 font-mono font-medium">
                                 {b.ip}
                               </td>
@@ -470,12 +490,19 @@ export default function SecurityDashboardPage() {
                                 {b.reason}
                               </td>
                               <td className="py-2 pr-4">
-                                <Badge className={`${severityColor(b.severity)} text-xs`}>
+                                <Badge
+                                  className={`${severityColor(b.severity)} text-xs`}
+                                >
                                   {b.severity}
                                 </Badge>
                               </td>
                               <td className="py-2 pr-4">
-                                <Badge variant={b.autoBlock ? "secondary" : "outline"} className="text-xs">
+                                <Badge
+                                  variant={
+                                    b.autoBlock ? "secondary" : "outline"
+                                  }
+                                  className="text-xs"
+                                >
                                   {b.autoBlock ? "Auto" : "Manual"}
                                 </Badge>
                               </td>
@@ -514,7 +541,9 @@ export default function SecurityDashboardPage() {
                 {/* Threats by Type */}
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Threats by Type (24h)</CardTitle>
+                    <CardTitle className="text-base">
+                      Threats by Type (24h)
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     {d && Object.keys(d.threatsByType).length > 0 ? (
@@ -551,45 +580,54 @@ export default function SecurityDashboardPage() {
                 {/* Threats by Severity */}
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Threats by Severity (24h)</CardTitle>
+                    <CardTitle className="text-base">
+                      Threats by Severity (24h)
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     {d && Object.keys(d.threatsBySeverity).length > 0 ? (
                       <div className="space-y-3">
-                        {["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"].map((sev) => {
-                          const count = d.threatsBySeverity[sev] || 0;
-                          if (count === 0) return null;
-                          return (
-                            <div key={sev} className="flex items-center gap-3">
-                              <Badge className={`${severityColor(sev)} text-xs w-20 justify-center`}>
-                                {sev}
-                              </Badge>
-                              <div className="flex-1">
-                                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                                  <div
-                                    className={`h-full rounded-full transition-all ${
-                                      sev === "CRITICAL"
-                                        ? "bg-red-600"
-                                        : sev === "HIGH"
-                                          ? "bg-orange-500"
-                                          : sev === "MEDIUM"
-                                            ? "bg-yellow-500"
-                                            : sev === "LOW"
-                                              ? "bg-blue-500"
-                                              : "bg-gray-400"
-                                    }`}
-                                    style={{
-                                      width: `${Math.min(100, (count / Math.max(1, d.summary.totalEvents24h)) * 100)}%`,
-                                    }}
-                                  />
+                        {["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"].map(
+                          (sev) => {
+                            const count = d.threatsBySeverity[sev] || 0;
+                            if (count === 0) return null;
+                            return (
+                              <div
+                                key={sev}
+                                className="flex items-center gap-3"
+                              >
+                                <Badge
+                                  className={`${severityColor(sev)} text-xs w-20 justify-center`}
+                                >
+                                  {sev}
+                                </Badge>
+                                <div className="flex-1">
+                                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full transition-all ${
+                                        sev === "CRITICAL"
+                                          ? "bg-red-600"
+                                          : sev === "HIGH"
+                                            ? "bg-orange-500"
+                                            : sev === "MEDIUM"
+                                              ? "bg-yellow-500"
+                                              : sev === "LOW"
+                                                ? "bg-blue-500"
+                                                : "bg-gray-400"
+                                      }`}
+                                      style={{
+                                        width: `${Math.min(100, (count / Math.max(1, d.summary.totalEvents24h)) * 100)}%`,
+                                      }}
+                                    />
+                                  </div>
                                 </div>
+                                <span className="text-sm font-medium w-8 text-right">
+                                  {count}
+                                </span>
                               </div>
-                              <span className="text-sm font-medium w-8 text-right">
-                                {count}
-                              </span>
-                            </div>
-                          );
-                        })}
+                            );
+                          },
+                        )}
                       </div>
                     ) : (
                       <p className="text-muted-foreground text-sm py-4 text-center">
@@ -602,7 +640,9 @@ export default function SecurityDashboardPage() {
                 {/* Top Attacked Routes */}
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Top Attacked Routes</CardTitle>
+                    <CardTitle className="text-base">
+                      Top Attacked Routes
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     {d && d.topAttackedRoutes.length > 0 ? (
@@ -635,7 +675,9 @@ export default function SecurityDashboardPage() {
                 {/* Top Offending IPs */}
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Top Offending IPs</CardTitle>
+                    <CardTitle className="text-base">
+                      Top Offending IPs
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     {d && d.topOffendingIps.length > 0 ? (
@@ -723,7 +765,11 @@ export default function SecurityDashboardPage() {
                         onChange={(e) => setBlockDuration(e.target.value)}
                       />
                     </div>
-                    <Button onClick={handleBlock} className="w-full" variant="destructive">
+                    <Button
+                      onClick={handleBlock}
+                      className="w-full"
+                      variant="destructive"
+                    >
                       <Ban className="h-4 w-4 mr-2" />
                       Block IP
                     </Button>
@@ -795,7 +841,9 @@ export default function SecurityDashboardPage() {
                             }`}
                           />
                           <div>
-                            <div className="text-sm font-medium">{rule.label}</div>
+                            <div className="text-sm font-medium">
+                              {rule.label}
+                            </div>
                             <div className="text-xs text-muted-foreground">
                               {rule.desc}
                             </div>

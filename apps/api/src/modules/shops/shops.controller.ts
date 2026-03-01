@@ -22,6 +22,7 @@ import { OAuthShopSetupDto } from "./dto/oauth-shop-setup.dto";
 import { UpdateMetalRatesDto } from "./dto/update-metal-rates.dto";
 import { UpdateShopDto } from "./dto/update-shop.dto";
 import { ShopsService } from "./shops.service";
+import { CacheTTL } from '../../common';
 
 @ApiTags("shops")
 @Controller("shops")
@@ -33,6 +34,7 @@ export class ShopsController {
 
   // Public endpoint for verified shops listing (for /shops page)
   @Get("public")
+  @CacheTTL(120) // Cache public shops listing for 2 minutes
   @ApiOperation({ summary: "List all verified public shops" })
   async findPublicShops(
     @Query("country") country?: string,
