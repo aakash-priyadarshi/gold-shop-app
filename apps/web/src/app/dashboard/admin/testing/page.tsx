@@ -487,7 +487,14 @@ export default function TestingDashboardPage() {
     setError(null);
     try {
       const { data } = await testingApi.runE2ETests();
-      setE2EReport(data);
+      // On production this returns CITriggerResult instead of E2EReport
+      if (data && "success" in data && !("suites" in data)) {
+        const ci = data as unknown as CITriggerResult;
+        if (!ci.success) setError(ci.message);
+        setTimeout(() => fetchCIRuns(), 3000);
+      } else {
+        setE2EReport(data);
+      }
       fetchHistory();
     } catch (err: any) {
       setError(
@@ -496,14 +503,21 @@ export default function TestingDashboardPage() {
     } finally {
       setLoadingE2E(false);
     }
-  }, [fetchHistory]);
+  }, [fetchHistory, fetchCIRuns]);
 
   const runIntegration = useCallback(async () => {
     setLoadingIntegration(true);
     setError(null);
     try {
       const { data } = await testingApi.runIntegrationTests();
-      setIntegrationReport(data);
+      // On production this returns CITriggerResult instead of IntegrationReport
+      if (data && "success" in data && !("suites" in data)) {
+        const ci = data as unknown as CITriggerResult;
+        if (!ci.success) setError(ci.message);
+        setTimeout(() => fetchCIRuns(), 3000);
+      } else {
+        setIntegrationReport(data);
+      }
       fetchHistory();
     } catch (err: any) {
       setError(
@@ -514,7 +528,7 @@ export default function TestingDashboardPage() {
     } finally {
       setLoadingIntegration(false);
     }
-  }, [fetchHistory]);
+  }, [fetchHistory, fetchCIRuns]);
 
   const clearHistory = useCallback(async () => {
     try {
@@ -578,47 +592,20 @@ export default function TestingDashboardPage() {
                   ) : (
                     <Zap className="mr-2 h-4 w-4" />
                   )}
-                  Smoke
-                </Button>
-                <Button
-                  onClick={runE2E}
-                  disabled={loadingE2E}
-                  size="sm"
-                  variant="outline"
-                >
-                  {loadingE2E ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Globe className="mr-2 h-4 w-4" />
-                  )}
-                  E2E Browser
-                </Button>
-                <Button
-                  onClick={runIntegration}
-                  disabled={loadingIntegration}
-                  size="sm"
-                  variant="outline"
-                >
-                  {loadingIntegration ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <TestTube2 className="mr-2 h-4 w-4" />
-                  )}
-                  Integration
+                  Run Smoke
                 </Button>
                 <Button
                   onClick={() => triggerCI()}
                   disabled={loadingCITrigger}
                   size="sm"
-                  variant="outline"
-                  className="border-cyan-300 text-cyan-700 hover:bg-cyan-50 dark:border-cyan-700 dark:text-cyan-300 dark:hover:bg-cyan-950"
+                  className="border-cyan-300 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 dark:border-cyan-700 dark:bg-cyan-950 dark:text-cyan-300 dark:hover:bg-cyan-900"
                 >
                   {loadingCITrigger ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     <Rocket className="mr-2 h-4 w-4" />
                   )}
-                  Run CI
+                  Run All (CI)
                 </Button>
               </div>
             </div>
@@ -760,33 +747,24 @@ export default function TestingDashboardPage() {
             </div>
 
             {/* ── Tabs ───────────────────────────────────── */}
-            <Tabs defaultValue="smoke" className="space-y-4">
-              <TabsList className="grid w-full grid-cols-6">
-                <TabsTrigger value="smoke" className="gap-1">
-                  <Zap className="h-3.5 w-3.5" /> Smoke
-                </TabsTrigger>
-                <TabsTrigger value="e2e" className="gap-1">
-                  <Globe className="h-3.5 w-3.5" /> E2E
-                </TabsTrigger>
-                <TabsTrigger value="integration" className="gap-1">
-                  <TestTube2 className="h-3.5 w-3.5" /> Integration
+            <Tabs defaultValue="results" className="space-y-4">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="results" className="gap-1">
+                  <FlaskConical className="h-3.5 w-3.5" /> Results
                 </TabsTrigger>
                 <TabsTrigger value="ci" className="gap-1">
-                  <Rocket className="h-3.5 w-3.5" /> CI/CD
+                  <Rocket className="h-3.5 w-3.5" /> CI / CD
                   {ciStatus?.latest_run?.status === "in_progress" && (
                     <span className="ml-1 h-2 w-2 rounded-full bg-yellow-500 animate-pulse" />
                   )}
-                </TabsTrigger>
-                <TabsTrigger value="history" className="gap-1">
-                  <History className="h-3.5 w-3.5" /> History
                 </TabsTrigger>
                 <TabsTrigger value="system" className="gap-1">
                   <Monitor className="h-3.5 w-3.5" /> System
                 </TabsTrigger>
               </TabsList>
 
-              {/* ════ SMOKE TAB ════ */}
-              <TabsContent value="smoke">
+              {/* ════ RESULTS TAB (Smoke + E2E + Integration) ════ */}
+              <TabsContent value="results">
                 <div className="grid gap-4 lg:grid-cols-3">
                   {/* Left: results */}
                   <div className="lg:col-span-2">
@@ -945,6 +923,237 @@ export default function TestingDashboardPage() {
                     </Card>
                   </div>
                 </div>
+
+                {/* ── E2E Browser Results ── */}
+                <Card className="mt-2">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Globe className="h-5 w-5 text-purple-500" /> E2E
+                        Browser Tests
+                      </CardTitle>
+                      <CardDescription>
+                        {e2eReport
+                          ? `${e2eReport.totalTests} tests on ${e2eReport.browser} in ${fmt(e2eReport.duration)} — ${new Date(e2eReport.timestamp).toLocaleString()}`
+                          : "Playwright browser tests — run via CI on production"}
+                      </CardDescription>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      via CI
+                    </Badge>
+                  </CardHeader>
+                  <CardContent>
+                    {e2eReport ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-4">
+                          <span className="text-2xl font-bold">
+                            {passRate(e2eReport.passed, e2eReport.totalTests)}%
+                          </span>
+                          <Progress
+                            value={passRate(
+                              e2eReport.passed,
+                              e2eReport.totalTests,
+                            )}
+                            className="h-2 flex-1"
+                          />
+                          <div className="flex gap-3 text-xs">
+                            <span className="text-green-600">
+                              {e2eReport.passed} passed
+                            </span>
+                            <span className="text-red-600">
+                              {e2eReport.failed} failed
+                            </span>
+                            {e2eReport.skipped > 0 && (
+                              <span className="text-yellow-600">
+                                {e2eReport.skipped} skipped
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {e2eReport.suites?.length > 0 && (
+                          <ScrollArea className="h-[250px]">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="w-8"></TableHead>
+                                  <TableHead>Test</TableHead>
+                                  <TableHead>Suite</TableHead>
+                                  <TableHead className="text-right">
+                                    Duration
+                                  </TableHead>
+                                  <TableHead>Status</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {e2eReport.suites.flatMap((suite) =>
+                                  suite.tests.map((t, ti) => (
+                                    <TableRow
+                                      key={`${suite.name}-${ti}`}
+                                      className={
+                                        t.status === "failed"
+                                          ? "bg-red-50/50 dark:bg-red-950/20"
+                                          : ""
+                                      }
+                                    >
+                                      <TableCell>
+                                        {statusIcon(t.status)}
+                                      </TableCell>
+                                      <TableCell>
+                                        <div>
+                                          <span className="text-sm font-medium">
+                                            {t.name}
+                                          </span>
+                                          {t.error && (
+                                            <p className="mt-1 max-w-md truncate text-xs text-red-600">
+                                              {t.error}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="text-xs text-muted-foreground">
+                                        {suite.name || suite.file}
+                                      </TableCell>
+                                      <TableCell className="text-right font-mono text-xs">
+                                        {fmt(t.duration)}
+                                      </TableCell>
+                                      <TableCell>
+                                        {statusBadge(t.status)}
+                                      </TableCell>
+                                    </TableRow>
+                                  )),
+                                )}
+                              </TableBody>
+                            </Table>
+                          </ScrollArea>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                        <Globe className="mb-2 h-8 w-8 opacity-20" />
+                        <p className="text-sm">No E2E results yet</p>
+                        <p className="mt-1 text-xs">
+                          Click &quot;Run All (CI)&quot; to trigger E2E tests
+                          via GitHub Actions.
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* ── Integration Test Results ── */}
+                <Card className="mt-2">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <TestTube2 className="h-5 w-5 text-orange-500" /> API
+                        Integration Tests
+                      </CardTitle>
+                      <CardDescription>
+                        {integrationReport
+                          ? `${integrationReport.totalTests} tests in ${fmt(integrationReport.duration)} — ${new Date(integrationReport.timestamp).toLocaleString()}`
+                          : "Jest + Supertest tests — run via CI on production"}
+                      </CardDescription>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      via CI
+                    </Badge>
+                  </CardHeader>
+                  <CardContent>
+                    {integrationReport ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-4">
+                          <span className="text-2xl font-bold">
+                            {passRate(
+                              integrationReport.passed,
+                              integrationReport.totalTests,
+                            )}
+                            %
+                          </span>
+                          <Progress
+                            value={passRate(
+                              integrationReport.passed,
+                              integrationReport.totalTests,
+                            )}
+                            className="h-2 flex-1"
+                          />
+                          <div className="flex gap-3 text-xs">
+                            <span className="text-green-600">
+                              {integrationReport.passed} passed
+                            </span>
+                            <span className="text-red-600">
+                              {integrationReport.failed} failed
+                            </span>
+                          </div>
+                        </div>
+                        {integrationReport.suites?.length > 0 && (
+                          <ScrollArea className="h-[250px]">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="w-8"></TableHead>
+                                  <TableHead>Test</TableHead>
+                                  <TableHead>Suite</TableHead>
+                                  <TableHead className="text-right">
+                                    Duration
+                                  </TableHead>
+                                  <TableHead>Status</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {integrationReport.suites.flatMap((suite) =>
+                                  suite.tests.map((t, ti) => (
+                                    <TableRow
+                                      key={`${suite.name}-${ti}`}
+                                      className={
+                                        t.status === "failed"
+                                          ? "bg-red-50/50 dark:bg-red-950/20"
+                                          : ""
+                                      }
+                                    >
+                                      <TableCell>
+                                        {statusIcon(t.status)}
+                                      </TableCell>
+                                      <TableCell>
+                                        <div>
+                                          <span className="text-sm">
+                                            {t.name}
+                                          </span>
+                                          {t.error && (
+                                            <pre className="mt-1 max-w-md overflow-hidden truncate text-xs text-red-600">
+                                              {t.error.slice(0, 200)}
+                                            </pre>
+                                          )}
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="text-xs text-muted-foreground">
+                                        {suite.name.split("/").pop()}
+                                      </TableCell>
+                                      <TableCell className="text-right font-mono text-xs">
+                                        {fmt(t.duration)}
+                                      </TableCell>
+                                      <TableCell>
+                                        {statusBadge(t.status)}
+                                      </TableCell>
+                                    </TableRow>
+                                  )),
+                                )}
+                              </TableBody>
+                            </Table>
+                          </ScrollArea>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                        <TestTube2 className="mb-2 h-8 w-8 opacity-20" />
+                        <p className="text-sm">No integration results yet</p>
+                        <p className="mt-1 text-xs">
+                          Click &quot;Run All (CI)&quot; to trigger integration
+                          tests via GitHub Actions.
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </TabsContent>
 
               {/* ════ E2E BROWSER TAB ════ */}
@@ -1674,6 +1883,98 @@ export default function TestingDashboardPage() {
                     <GitHubTokenManager />
                   </div>
                 </div>
+
+                {/* ── Test Run History ── */}
+                <Card className="mt-4">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <History className="h-5 w-5" /> Test Run History
+                      </CardTitle>
+                      <CardDescription>
+                        {history.length} runs recorded this session
+                      </CardDescription>
+                    </div>
+                    {history.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={clearHistory}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" /> Clear
+                      </Button>
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    {history.length > 0 ? (
+                      <ScrollArea className="h-[280px]">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Type</TableHead>
+                              <TableHead>Time</TableHead>
+                              <TableHead>Branch</TableHead>
+                              <TableHead className="text-right">
+                                Duration
+                              </TableHead>
+                              <TableHead className="text-center">
+                                Passed
+                              </TableHead>
+                              <TableHead className="text-center">
+                                Failed
+                              </TableHead>
+                              <TableHead>Rate</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {history.map((h) => {
+                              const rate = passRate(h.passed, h.total);
+                              return (
+                                <TableRow key={h.id}>
+                                  <TableCell>{typeBadge(h.type)}</TableCell>
+                                  <TableCell className="text-xs">
+                                    {new Date(h.timestamp).toLocaleString()}
+                                  </TableCell>
+                                  <TableCell className="font-mono text-xs">
+                                    {h.branch}
+                                  </TableCell>
+                                  <TableCell className="text-right font-mono text-xs">
+                                    {fmt(h.duration)}
+                                  </TableCell>
+                                  <TableCell className="text-center text-green-600">
+                                    {h.passed}
+                                  </TableCell>
+                                  <TableCell className="text-center text-red-600">
+                                    {h.failed}
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-2">
+                                      <Progress
+                                        value={rate}
+                                        className="h-1.5 w-16"
+                                      />
+                                      <span className="text-xs font-medium">
+                                        {rate}%
+                                      </span>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </ScrollArea>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                        <History className="mb-2 h-8 w-8 opacity-20" />
+                        <p className="text-sm">No test runs recorded yet</p>
+                        <p className="mt-1 text-xs">
+                          Run any test to start building history.
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </TabsContent>
 
               {/* ════ HISTORY TAB ════ */}
