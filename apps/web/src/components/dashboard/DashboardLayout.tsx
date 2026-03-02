@@ -88,7 +88,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  // Admin routes
+  // ── Admin routes ──────────────────────────────────────
   {
     label: "Dashboard",
     href: "/dashboard/admin",
@@ -100,6 +100,14 @@ const navItems: NavItem[] = [
     href: "/dashboard/admin/messages",
     icon: MessageSquare,
     roles: ["ADMIN"],
+  },
+  {
+    label: "Tickets",
+    href: "/dashboard/admin/tickets",
+    icon: Ticket,
+    roles: ["ADMIN"],
+    badge: "dynamic",
+    badgeKey: "openTickets",
   },
   {
     label: "Chat Moderation",
@@ -144,27 +152,16 @@ const navItems: NavItem[] = [
     badgeKey: "openReports",
   },
   {
-    label: "Profile",
-    href: "/dashboard/admin/profile",
-    icon: UserCircle,
+    label: "Billing & Plans",
+    href: "/dashboard/admin/billing",
+    icon: CreditCard,
     roles: ["ADMIN"],
   },
-  {
-    label: "Settings",
-    href: "/dashboard/admin/settings",
-    icon: Settings,
-    roles: ["ADMIN"],
-  },
+  // ── Maintenance / Ops ──
   {
     label: "Intelligence",
     href: "/dashboard/admin/intelligence",
     icon: Brain,
-    roles: ["ADMIN"],
-  },
-  {
-    label: "Billing & Plans",
-    href: "/dashboard/admin/billing",
-    icon: CreditCard,
     roles: ["ADMIN"],
   },
   {
@@ -183,6 +180,19 @@ const navItems: NavItem[] = [
     label: "Testing",
     href: "/dashboard/admin/testing",
     icon: FlaskConical,
+    roles: ["ADMIN"],
+  },
+  // ── Account ──
+  {
+    label: "Profile",
+    href: "/dashboard/admin/profile",
+    icon: UserCircle,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Settings",
+    href: "/dashboard/admin/settings",
+    icon: Settings,
     roles: ["ADMIN"],
   },
 
@@ -404,16 +414,6 @@ const navItems: NavItem[] = [
     href: "/dashboard/support/profile",
     icon: UserCircle,
     roles: ["SUPPORT"],
-  },
-
-  // Admin tickets link
-  {
-    label: "Tickets",
-    href: "/dashboard/admin/tickets",
-    icon: Ticket,
-    roles: ["ADMIN"],
-    badge: "dynamic",
-    badgeKey: "openTickets",
   },
 
   // "Help & Support" for end users (creates/views their tickets)
