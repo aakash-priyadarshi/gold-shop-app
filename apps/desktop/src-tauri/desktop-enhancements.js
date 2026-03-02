@@ -424,5 +424,135 @@
   setTimeout(sendHeartbeat, 15000);
   setInterval(sendHeartbeat, 1800000);
 
+  // ─── 10. CLIENT-SIDE ERROR RECOVERY ───
+  // Detect "Application error" crash screens and offer recovery options.
+  // Next.js shows a full-screen error when an unhandled client exception occurs.
+  // Without this, the desktop app becomes completely stuck with no navigation.
+
+  var crashObserver = null;
+  var crashBannerShown = false;
+
+  function detectCrashScreen() {
+    // Next.js error overlay contains "Application error" text
+    var body = document.body;
+    if (!body) return false;
+
+    // Check for Next.js production error page
+    var hasError = body.textContent && body.textContent.indexOf('Application error') !== -1;
+    // Also check for the Next.js error digest element
+    if (!hasError) {
+      hasError = !!document.getElementById('__next-error');
+    }
+    // Also check for our own error boundary
+    if (!hasError) {
+      hasError = body.textContent && body.textContent.indexOf('Something went wrong') !== -1
+        && body.textContent.indexOf('Try again') !== -1;
+    }
+    return hasError;
+  }
+
+  function showCrashRecoveryBanner() {
+    if (crashBannerShown) return;
+    crashBannerShown = true;
+
+    var banner = document.createElement('div');
+    banner.id = 'orivraa-crash-recovery';
+    banner.style.cssText = [
+      'position: fixed; bottom: 0; left: 0; right: 0; z-index: 99999;',
+      'background: linear-gradient(135deg, #1a2744, #0f172a);',
+      'border-top: 1px solid rgba(212,175,55,0.3);',
+      'padding: 14px 20px;',
+      'display: flex; align-items: center; justify-content: space-between;',
+      'gap: 12px; flex-wrap: wrap;',
+      'box-shadow: 0 -4px 24px rgba(0,0,0,0.4);',
+      'animation: slideUp 0.3s ease-out;',
+    ].join('');
+    banner.innerHTML = [
+      '<div style="flex:1; min-width: 200px;">',
+      '  <div style="color: #f3dd99; font-size: 14px; font-weight: 600; margin-bottom: 2px;">',
+      '    \u26A0 This page encountered an error',
+      '  </div>',
+      '  <div style="color: rgba(255,255,255,0.5); font-size: 12px;">',
+      '    You can navigate away or reload to continue using the app.',
+      '  </div>',
+      '</div>',
+      '<div style="display: flex; gap: 8px; flex-shrink: 0;">',
+      '  <button id="crash-go-home" style="padding:8px 18px; background:linear-gradient(135deg,#e5a31e,#c9942a); color:#0f172a; border:none; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;">Go Home</button>',
+      '  <button id="crash-go-back" style="padding:8px 18px; background:transparent; color:rgba(212,175,55,0.8); border:1px solid rgba(212,175,55,0.3); border-radius:6px; font-size:12px; cursor:pointer;">Go Back</button>',
+      '  <button id="crash-reload" style="padding:8px 18px; background:transparent; color:rgba(255,255,255,0.5); border:1px solid rgba(255,255,255,0.15); border-radius:6px; font-size:12px; cursor:pointer;">Reload</button>',
+      '</div>',
+    ].join('');
+    document.body.appendChild(banner);
+
+    document.getElementById('crash-go-home').addEventListener('click', function() {
+      window.location.href = 'https://www.orivraa.com/';
+    });
+    document.getElementById('crash-go-back').addEventListener('click', function() {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.location.href = 'https://www.orivraa.com/';
+      }
+    });
+    document.getElementById('crash-reload').addEventListener('click', function() {
+      window.location.reload();
+    });
+  }
+
+  function removeCrashRecoveryBanner() {
+    var existing = document.getElementById('orivraa-crash-recovery');
+    if (existing) {
+      existing.remove();
+      crashBannerShown = false;
+    }
+  }
+
+  // Watch for crash screens via DOM mutation observer
+  function startCrashDetection() {
+    if (crashObserver) return;
+
+    // Check immediately
+    if (detectCrashScreen()) {
+      showCrashRecoveryBanner();
+    }
+
+    crashObserver = new MutationObserver(function() {
+      if (detectCrashScreen()) {
+        showCrashRecoveryBanner();
+      } else {
+        removeCrashRecoveryBanner();
+      }
+    });
+
+    crashObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+  }
+
+  // Also catch unhandled errors globally and show recovery
+  window.addEventListener('error', function(event) {
+    console.error('[Orivraa Desktop] Unhandled error:', event.error || event.message);
+    // Give Next.js error boundary time to render, then check
+    setTimeout(function() {
+      if (detectCrashScreen()) {
+        showCrashRecoveryBanner();
+      }
+    }, 500);
+  });
+
+  window.addEventListener('unhandledrejection', function(event) {
+    console.error('[Orivraa Desktop] Unhandled promise rejection:', event.reason);
+    setTimeout(function() {
+      if (detectCrashScreen()) {
+        showCrashRecoveryBanner();
+      }
+    }, 500);
+  });
+
+  // Start crash detection after a short delay (page needs to load first)
+  setTimeout(startCrashDetection, 1000);
+
   console.log('[Orivraa Desktop] Enhancements v2 loaded successfully');
 })();

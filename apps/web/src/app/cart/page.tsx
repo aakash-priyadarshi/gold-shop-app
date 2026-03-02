@@ -93,7 +93,7 @@ export default function CartPage() {
 
   // Currency from preferences
   const currency = usePreferencesStore((state) => state.currency);
-  const currencyInfo = CURRENCIES[currency];
+  const currencyInfo = CURRENCIES[currency] || CURRENCIES.USD;
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

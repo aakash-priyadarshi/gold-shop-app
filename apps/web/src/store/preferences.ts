@@ -316,11 +316,11 @@ export const usePreferencesStore = create<PreferencesState>()(
       formatPrice: (amount, options = {}) => {
         const { currency } = get();
         const { showSymbol = true } = options;
-        const info = CURRENCIES[currency];
+        const info = CURRENCIES[currency] || CURRENCIES.USD;
 
         const formatter = new Intl.NumberFormat(info.locale, {
           style: showSymbol ? "currency" : "decimal",
-          currency: currency,
+          currency: currency in CURRENCIES ? currency : "USD",
           minimumFractionDigits: 0,
           maximumFractionDigits: 2,
         });
@@ -330,17 +330,17 @@ export const usePreferencesStore = create<PreferencesState>()(
 
       getCurrencyInfo: () => {
         const { currency } = get();
-        return CURRENCIES[currency];
+        return CURRENCIES[currency] || CURRENCIES.USD;
       },
 
       getCountryInfo: () => {
         const { country } = get();
-        return COUNTRIES[country];
+        return COUNTRIES[country] || COUNTRIES.US;
       },
 
       getTaxInfo: () => {
         const { country } = get();
-        const countryInfo = COUNTRIES[country];
+        const countryInfo = COUNTRIES[country] || COUNTRIES.US;
         return {
           taxType: countryInfo.taxType,
           taxRate: countryInfo.taxRate,

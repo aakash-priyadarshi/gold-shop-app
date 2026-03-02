@@ -334,7 +334,7 @@ export function Header() {
 
   // Format price based on user's currency preference
   const formatPrice = (amount: number) => {
-    const currencyInfo = CURRENCIES[currency];
+    const currencyInfo = CURRENCIES[currency] || CURRENCIES.USD;
     return new Intl.NumberFormat(currencyInfo?.locale || "en-US", {
       style: "currency",
       currency: currency,

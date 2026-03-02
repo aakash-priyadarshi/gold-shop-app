@@ -98,7 +98,7 @@ export default function ProductDetailPage() {
 
   // Get currency and country from global preferences store
   const currency = usePreferencesStore((state) => state.currency);
-  const currencyInfo = CURRENCIES[currency];
+  const currencyInfo = CURRENCIES[currency] || CURRENCIES.USD;
   const country = usePreferencesStore((state) => state.country);
 
   // Fetch dynamic tax rules for customer's country
