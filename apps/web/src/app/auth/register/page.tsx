@@ -255,6 +255,14 @@ function RegisterForm() {
     setTurnstileError(true);
   }, []);
 
+  // ── Desktop OAuth: persist desktop_port in sessionStorage for oauth-callback ──
+  useEffect(() => {
+    const desktopPort = searchParams.get("desktop_port");
+    if (desktopPort) {
+      sessionStorage.setItem("orivraa_desktop_port", desktopPort);
+    }
+  }, [searchParams]);
+
   // Check if user has visited before (skip intro for returning users)
   useEffect(() => {
     const visited = sessionStorage.getItem("orivraa_visited");

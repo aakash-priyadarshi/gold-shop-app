@@ -6,7 +6,7 @@ pub mod commands;
 pub mod db;
 pub mod sync;
 
-use commands::SyncState;
+use commands::{AuthTokenReceiver, SyncState};
 use db::Database;
 use std::sync::Arc;
 use tokio::sync::Mutex as AsyncMutex;
@@ -35,6 +35,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(db)
         .manage(SyncState(Arc::new(AsyncMutex::new(None))))
+        .manage(AuthTokenReceiver(Arc::new(AsyncMutex::new(None))))
         // Inject desktop enhancements into orivraa.com pages after they load
         .on_page_load(|webview, payload| {
             if matches!(payload.event(), tauri::webview::PageLoadEvent::Finished) {
@@ -84,6 +85,11 @@ pub fn run() {
             // Desktop-specific
             commands::open_google_auth,
             commands::open_external_url,
+            commands::poll_auth_tokens,
+            // Updates
+            commands::check_for_updates,
+            commands::install_update,
+            commands::get_app_version,
         ])
         .run(tauri::generate_context!())
         .expect("Error while running Orivraa Desktop");

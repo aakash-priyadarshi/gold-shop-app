@@ -97,6 +97,14 @@ function LoginForm() {
     setTurnstileError(true);
   }, []);
 
+  // ── Desktop OAuth: persist desktop_port in sessionStorage for oauth-callback ──
+  useEffect(() => {
+    const desktopPort = searchParams.get("desktop_port");
+    if (desktopPort) {
+      sessionStorage.setItem("orivraa_desktop_port", desktopPort);
+    }
+  }, [searchParams]);
+
   // Check URL for error param (from OAuth redirect)
   useEffect(() => {
     const errorParam = searchParams.get("error");
