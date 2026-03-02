@@ -52,6 +52,9 @@ async function bootstrap() {
   });
   const logger = new Logger("Bootstrap");
 
+  // Trust Railway / Cloudflare reverse proxy — ensures correct req.hostname, req.ip
+  app.set("trust proxy", true);
+
   // ======================
   // Body Parser Configuration
   // ======================
@@ -91,6 +94,10 @@ async function bootstrap() {
     "api.orivraa.com",
     "localhost",
     "127.0.0.1",
+    // Railway internal / public domains
+    "railway.app",
+    "up.railway.app",
+    "railway.internal",
   ];
 
   // In production, enforce host validation

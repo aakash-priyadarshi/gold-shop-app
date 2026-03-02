@@ -90,9 +90,21 @@ jobs:
       - name: Verify production API is reachable
         run: |
           echo "Testing production API connectivity..."
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://api.orivraa.com/api/health)
+          echo "--- Response headers + body ---"
+          curl -sS -D - \
+            -H "Accept: application/json" \
+            -H "User-Agent: Mozilla/5.0 (compatible; Orivraa-SmokeTest/1.0; +https://orivraa.com)" \
+            "https://api.orivraa.com/api/health" | head -40
+          echo ""
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Accept: application/json" \
+            -H "User-Agent: Mozilla/5.0 (compatible; Orivraa-SmokeTest/1.0; +https://orivraa.com)" \
+            "https://api.orivraa.com/api/health")
           echo "API health status: $STATUS"
-          if [ "$STATUS" != "200" ]; then
+          if [ "$STATUS" = "403" ]; then
+            echo "⚠️ 403 Forbidden — likely Cloudflare Bot Fight Mode blocking CI runner IPs."
+            echo "Fix: add a WAF exception in Cloudflare dashboard, or set SMOKE_TEST_URL to Railway direct URL."
+          elif [ "$STATUS" != "200" ]; then
             echo "⚠️ Production API returned $STATUS — tests may fail"
           fi
 
