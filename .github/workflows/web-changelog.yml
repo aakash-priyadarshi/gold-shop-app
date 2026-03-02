@@ -34,6 +34,13 @@ jobs:
             COMMITS=$(git log --format="• %s" "${BEFORE}..${AFTER}" 2>/dev/null || git log --format="• %s" -5 "$AFTER")
           fi
 
+          # Skip if any commit contains [skip-changelog] or [no-changelog]
+          if echo "$COMMITS" | grep -qiE '\[(skip-changelog|no-changelog|skip changelog)\]'; then
+            echo "Commit contains skip-changelog tag, skipping"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           # Skip if only desktop files changed
           CHANGED_FILES=$(git diff --name-only "${BEFORE}..${AFTER}" 2>/dev/null || git diff --name-only HEAD~1 HEAD)
           WEB_CHANGES=$(echo "$CHANGED_FILES" | grep -v "^apps/desktop/" | grep -v "^\.github/workflows/desktop" || true)

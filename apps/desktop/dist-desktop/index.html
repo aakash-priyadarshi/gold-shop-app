@@ -1,361 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Orivraa</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orivraa — Loading...</title>
   <style>
-    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-    
-    html, body {
-      width: 100%; height: 100%;
-      background: #0f172a;
-      overflow: hidden;
-      display: flex; align-items: center; justify-content: center;
-      flex-direction: column;
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      -webkit-font-smoothing: antialiased;
+      background: #0a0a0a;
+      color: #fafafa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
     }
-
-    /* Subtle gold radial background glow */
-    body::before {
-      content: '';
-      position: fixed; top: 50%; left: 50%;
-      transform: translate(-50%, -55%);
-      width: 700px; height: 700px;
-      background: radial-gradient(circle, rgba(212,175,55,0.06) 0%, rgba(212,175,55,0.02) 40%, transparent 70%);
-      animation: bgPulse 4s ease-in-out infinite;
-      pointer-events: none;
+    .splash {
+      text-align: center;
+      animation: fadeIn 0.3s ease;
     }
-
-    /* Floating gold particles */
-    .particle {
-      position: fixed;
-      width: 2px; height: 2px;
-      background: #D4AF37;
-      border-radius: 50%;
-      opacity: 0;
-      pointer-events: none;
-    }
-    .particle:nth-child(1) { top: 30%; left: 20%; animation: float 6s ease-in-out 1s infinite; }
-    .particle:nth-child(2) { top: 60%; left: 75%; animation: float 8s ease-in-out 2s infinite; }
-    .particle:nth-child(3) { top: 45%; left: 40%; animation: float 7s ease-in-out 0.5s infinite; }
-    .particle:nth-child(4) { top: 70%; left: 55%; animation: float 5s ease-in-out 3s infinite; }
-    .particle:nth-child(5) { top: 25%; left: 65%; animation: float 9s ease-in-out 1.5s infinite; }
-    .particle:nth-child(6) { top: 55%; left: 30%; animation: float 6.5s ease-in-out 2.5s infinite; }
-
-    @keyframes bgPulse {
-      0%, 100% { opacity: 0.5; transform: translate(-50%, -55%) scale(1); }
-      50% { opacity: 1; transform: translate(-50%, -55%) scale(1.15); }
-    }
-
-    @keyframes float {
-      0%, 100% { opacity: 0; transform: translateY(0) scale(1); }
-      20% { opacity: 0.6; }
-      50% { opacity: 0.3; transform: translateY(-30px) scale(1.5); }
-      80% { opacity: 0.5; }
-    }
-
-    .splash-content {
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      transition: opacity 0.6s ease-out, transform 0.6s ease-out;
-    }
-
-    .splash-content.fade-out {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-
-    /* ─── Logo Container ─── */
-    .logo-container {
-      position: relative;
-      width: 160px; height: 130px;
-      display: flex; align-items: center; justify-content: center;
-    }
-
-    .logo-svg {
-      width: 160px; height: 130px;
-      overflow: visible;
-      filter: drop-shadow(0 0 30px rgba(212,175,55,0.15));
-    }
-
-    /* ─── Animation Classes ─── */
-    .path-right {
-      opacity: 0;
-      animation: pathRight 1.2s ease-out 0.5s forwards;
-    }
-    @keyframes pathRight {
-      from { opacity: 0; transform: translateX(8px); }
-      to { opacity: 1; transform: translateX(0); }
-    }
-
-    .path-left {
-      opacity: 0;
-      animation: pathLeft 1.2s ease-out 0.8s forwards;
-    }
-    @keyframes pathLeft {
-      from { opacity: 0; transform: translateX(-8px); }
-      to { opacity: 1; transform: translateX(0); }
-    }
-
-    .crown {
-      opacity: 0;
-      transform-origin: 50px 50px;
-      animation: crownReveal 1.8s cubic-bezier(0.34, 1.2, 0.64, 1) 0.5s forwards;
-    }
-    @keyframes crownReveal {
-      from { opacity: 0; transform: rotate(-180deg); }
-      to { opacity: 1; transform: rotate(0deg); }
-    }
-
-    .sparkle {
-      opacity: 0;
-      transform-origin: 52px 52px;
-      animation: sparklePing 0.8s ease-out 2.0s forwards;
-    }
-    @keyframes sparklePing {
-      0% { opacity: 0; transform: scale(0); }
-      40% { opacity: 1; transform: scale(1.6); filter: drop-shadow(0 0 12px rgba(255,254,238,0.9)); }
-      100% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 4px rgba(255,254,238,0.3)); }
-    }
-
-    /* ─── Brand Text ─── */
-    .brand-name {
-      font-size: 38px;
+    .logo {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 24px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #d4a843, #b8922e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
       font-weight: 700;
-      letter-spacing: 8px;
-      background: linear-gradient(135deg, #c9942a 0%, #f3dd99 45%, #e5a31e 55%, #f3dd99 100%);
-      background-size: 200% auto;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-top: 28px;
-      opacity: 0;
-      animation: textReveal 0.8s ease-out 2.4s forwards, shimmer 3s ease-in-out 3.2s infinite;
+      color: #0a0a0a;
+      letter-spacing: -1px;
     }
-
-    @keyframes textReveal {
-      from { opacity: 0; transform: translateY(12px); }
-      to { opacity: 1; transform: translateY(0); }
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
     }
-
-    @keyframes shimmer {
-      0% { background-position: 200% center; }
-      100% { background-position: -200% center; }
+    p {
+      color: #888;
+      font-size: 14px;
+      margin-bottom: 24px;
     }
-
-    .subtitle {
-      font-size: 11px;
-      color: rgba(212, 175, 55, 0.45);
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      margin-top: 10px;
-      opacity: 0;
-      animation: textReveal 0.8s ease-out 2.8s forwards;
-    }
-
-    /* ─── Loading Indicator: Golden Ring Spinner ─── */
-    @keyframes spinRing {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    .loading-spinner-container {
-      margin-top: 48px;
-      opacity: 0;
-      animation: textReveal 0.5s ease-out 3.2s forwards;
-      display: flex; flex-direction: column;
-      align-items: center; gap: 14px;
-    }
-
-    .golden-spinner {
-      width: 40px; height: 40px;
-      position: relative;
-    }
-    .golden-spinner::after {
-      content: ''; display: block;
-      width: 36px; height: 36px;
-      margin: 2px;
-      border-radius: 50%;
+    .spinner {
+      width: 32px;
+      height: 32px;
+      margin: 0 auto;
       border: 3px solid transparent;
-      border-top-color: #e5a31e;
-      border-right-color: #f3dd99;
-      animation: spinRing 0.9s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+      border-top-color: #d4a843;
+      border-right-color: #b8922e80;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
     }
-
-    .loading-text {
-      font-size: 11px;
-      color: rgba(212, 175, 55, 0.35);
-      letter-spacing: 1px;
-      margin-top: 12px;
-      opacity: 0;
-      animation: textReveal 0.5s ease-out 3.4s forwards;
-    }
-
-    /* ─── Version badge ─── */
-    .version {
-      position: fixed;
-      bottom: 20px; right: 24px;
-      font-size: 10px;
-      color: rgba(255, 255, 255, 0.15);
-      letter-spacing: 1px;
-    }
-
-    /* Respect reduced motion */
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-delay: 0.01ms !important;
-      }
-    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
   </style>
 </head>
 <body>
-  <!-- Floating particles -->
-  <div class="particle"></div>
-  <div class="particle"></div>
-  <div class="particle"></div>
-  <div class="particle"></div>
-  <div class="particle"></div>
-  <div class="particle"></div>
-
-  <div class="splash-content" id="splashContent">
-    <!-- Animated Orivraa Logo SVG -->
-    <div class="logo-container">
-      <svg class="logo-svg" viewBox="-40 -40 200 176.49" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <!-- Right O curve gradient -->
-          <linearGradient id="g1" x1="32.59" y1="46.69" x2="104.08" y2="46.69" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stop-color="#e5a31e"/>
-            <stop offset=".11" stop-color="#e5a626"/>
-            <stop offset=".29" stop-color="#e8b13c"/>
-            <stop offset=".51" stop-color="#ecc260"/>
-            <stop offset=".75" stop-color="#f2d992"/>
-            <stop offset=".78" stop-color="#f3dd99"/>
-          </linearGradient>
-
-          <!-- Left O curve gradient -->
-          <linearGradient id="g2" x1="0" y1="53.35" x2="79.08" y2="53.35" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stop-color="#e5a31e"/>
-            <stop offset=".05" stop-color="#e7af37"/>
-            <stop offset=".12" stop-color="#ebbf5a"/>
-            <stop offset=".2" stop-color="#efcc75"/>
-            <stop offset=".28" stop-color="#f1d589"/>
-            <stop offset=".36" stop-color="#f2db95"/>
-            <stop offset=".44" stop-color="#f3dd99"/>
-            <stop offset=".66" stop-color="#f1db97"/>
-            <stop offset=".74" stop-color="#edd491"/>
-            <stop offset=".8" stop-color="#e5c888"/>
-            <stop offset=".85" stop-color="#dab77a"/>
-            <stop offset=".89" stop-color="#cba168"/>
-            <stop offset=".92" stop-color="#ba8652"/>
-            <stop offset=".95" stop-color="#a46637"/>
-            <stop offset=".98" stop-color="#8c4119"/>
-            <stop offset="1" stop-color="#782200"/>
-          </linearGradient>
-
-          <!-- Crown gradients -->
-          <linearGradient id="g3" x1="99.66" y1="21.21" x2="120" y2="21.21" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stop-color="#e5a31e"/>
-            <stop offset=".5" stop-color="#f3dd99"/>
-            <stop offset="1" stop-color="#782200"/>
-          </linearGradient>
-          <linearGradient id="g4" x1="111.51" y1="9.94" x2="119.54" y2="9.94" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stop-color="#e5a31e"/>
-            <stop offset=".5" stop-color="#f3dd99"/>
-            <stop offset="1" stop-color="#782200"/>
-          </linearGradient>
-          <linearGradient id="g5" x1="85.89" y1="12.36" x2="111.51" y2="12.36" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stop-color="#e5a31e"/>
-            <stop offset=".5" stop-color="#f3dd99"/>
-            <stop offset="1" stop-color="#782200"/>
-          </linearGradient>
-          <linearGradient id="g6" x1="75.33" y1="9.58" x2="85.35" y2="9.58" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stop-color="#e5a31e"/>
-            <stop offset=".5" stop-color="#f3dd99"/>
-            <stop offset="1" stop-color="#782200"/>
-          </linearGradient>
-          <linearGradient id="g7" x1="77.17" y1="3.31" x2="89.02" y2="3.31" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stop-color="#e5a31e"/>
-            <stop offset=".5" stop-color="#f3dd99"/>
-            <stop offset="1" stop-color="#782200"/>
-          </linearGradient>
-
-          <!-- Diamond sparkle gradient -->
-          <radialGradient id="gs" cx="52.28" cy="51.73" fx="52.28" fy="51.73" r="15.19" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stop-color="#fffeee"/>
-            <stop offset=".28" stop-color="#f3f3e9"/>
-            <stop offset=".75" stop-color="#d7dade"/>
-            <stop offset=".88" stop-color="#dcd8d4"/>
-          </radialGradient>
-
-          <!-- Glow filter -->
-          <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="3" result="blur"/>
-            <feFlood flood-color="#D4AF37" flood-opacity="0.4"/>
-            <feComposite in2="blur" operator="in"/>
-            <feMerge>
-              <feMergeNode/>
-              <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          </filter>
-        </defs>
-
-        <!-- Right "O" curve -->
-        <path class="path-right" fill="url(#g1)" filter="url(#glow)"
-          d="M32.59,6.72c0-1.16,17.16-5.21,34.71,0,23.28,6.91,32.05,25.57,32.9,27.47,6.54,14.59,5.39,34.21-7.85,45.78-2.26,1.98-8.52,6.87-18.11,8.63-16.07,2.95-30.83-4.85-30.48-6.02.19-.62,4.6,1.13,11.47.26,10.33-1.31,19.77-7.74,24.81-15.73,4.28-6.77,4.41-13.11,4.44-16.17.07-8.95-3.65-15.43-5.89-19.22-1.76-2.98-6.71-11.12-17.25-17.16-.92-.53-4.98-2.81-10.94-4.7-10.29-3.25-17.81-2.63-17.81-3.14Z"/>
-
-        <!-- Left "O" curve -->
-        <path class="path-left" fill="url(#g2)" filter="url(#glow)"
-          d="M60.73,17.38c-.18.87-5.2-.56-11.59.55-7.45,1.29-12.51,5.33-14.74,7.04-2.03,1.56-11.84,9.38-13.58,22-2.65,19.17,15.23,32.48,18.86,35.18,3.74,2.78,9.81,7.3,18.86,8.58,10.73,1.51,20.22-2.31,20.52-1.51.23.59-4.84,2.98-10.74,4.62-3.99,1.11-19.27,5.36-35.75,0-3.38-1.1-28.25-10.63-32.29-35.34,0,0-3.69-22.55,15.01-40.05,4.43-4.15,12.3-7.93,16.61-7.93h0c4.22-.67,8.07-.09,10.3.24.83.12,1.59.26,2.31.41,2.28.48,4.04,1.03,5.11,1.39,4.39,1.47,11.31,3.79,11.09,4.82Z"/>
-
-        <!-- Crown ornament -->
-        <g class="crown">
-          <polygon fill="url(#g3)" points="99.66 27.64 120 17.23 111.66 14.78 99.66 27.64"/>
-          <polygon fill="url(#g4)" points="111.51 13.59 119.54 15.18 112.35 4.71 111.51 13.59"/>
-          <polygon fill="url(#g5)" points="96.52 24.72 110.59 14.78 104.4 6.76 111.51 5.17 91.01 0 96.06 4.13 86.58 8.02 85.89 12.36 91.4 19.35 88.87 9.54 106.31 13.85 96.52 24.72"/>
-          <polygon fill="url(#g6)" points="75.33 5.9 84.36 13.26 85.35 7.76 75.33 5.9"/>
-          <polygon fill="url(#g7)" points="77.17 4.71 85.35 6.63 89.02 0 77.17 4.71"/>
-        </g>
-
-        <!-- Center diamond sparkle -->
-        <path class="sparkle" fill="url(#gs)"
-          d="M36.23,51.73c0-1,6.92-.13,11.31-3.73,4.69-3.85,3.76-10.55,4.96-10.53,1.17.01.06,6.44,4.47,10.32,4.29,3.78,11.35,2.98,11.36,4.09,0,1.1-6.8.37-11.13,4.08-4.47,3.82-3.61,10.05-4.82,10.04-1.23-.01-.16-6.41-4.61-10.27-4.36-3.79-11.56-2.98-11.55-3.99Z"/>
-      </svg>
-    </div>
-
-    <!-- Brand text -->
-    <div class="brand-name">ORIVRAA</div>
-    <div class="subtitle">Jewellery Business Suite</div>
-
-    <!-- Golden round spinner -->
-    <div class="loading-spinner-container">
-      <div class="golden-spinner"></div>
-      <div class="loading-text">Preparing your workspace...</div>
-    </div>
+  <div class="splash">
+    <div class="logo">O</div>
+    <h1>Orivraa</h1>
+    <p>Connecting to Orivraa...</p>
+    <div class="spinner"></div>
   </div>
-
-  <div class="version">v0.1.0</div>
-
   <script>
-    // Navigate to login page after splash animation completes
-    var REDIRECT_DELAY = 5500; // ms — matches animation timing
-    var REDIRECT_URL = 'https://www.orivraa.com/auth/login';
-
+    // Redirect to the live site after a brief splash
     setTimeout(function() {
-      var content = document.getElementById('splashContent');
-      if (content) content.classList.add('fade-out');
-
-      setTimeout(function() {
-        window.location.href = REDIRECT_URL;
-      }, 600);
-    }, REDIRECT_DELAY);
-
-    // If Tauri is available, we can also listen for custom events
-    if (window.__TAURI_INTERNALS__) {
-      console.log('[Orivraa Desktop] Splash screen loaded, Tauri IPC available');
-    }
+      window.location.href = 'https://www.orivraa.com';
+    }, 800);
   </script>
 </body>
 </html>
