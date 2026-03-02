@@ -1,6 +1,7 @@
 "use client";
 
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { AnimatedThemeToggle } from "@/components/ui/animated-theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -68,18 +69,15 @@ import {
   HeartIcon,
   InformationCircleIcon,
   MapPinIcon,
-  MoonIcon,
   ShieldCheckIcon,
   ShoppingBagIcon,
   ShoppingCartIcon,
   SparklesIcon,
   Squares2X2Icon,
-  SunIcon,
   TrashIcon,
   TruckIcon,
   UserIcon,
 } from "@heroicons/react/24/outline";
-import { useTheme } from "next-themes";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
@@ -209,9 +207,6 @@ export function Header() {
     }>
   >([]);
 
-  // Use next-themes for theme management (more reliable)
-  const { theme, setTheme, resolvedTheme } = useTheme();
-
   // Sync auth state with preferences store
   useEffect(() => {
     setMounted(true);
@@ -334,17 +329,6 @@ export function Header() {
     { name: "Sellers", href: "/shops", icon: BuildingOffice2Icon },
     { name: "About", href: "/about", icon: InformationCircleIcon },
   ];
-
-  // Toggle theme between light/dark using next-themes
-  const toggleTheme = () => {
-    const newTheme = resolvedTheme === "dark" ? "light" : "dark";
-    setTheme(newTheme);
-    // Persist to server if authenticated
-    (window as any).__saveThemeToServer?.(newTheme);
-  };
-
-  // Determine current icon based on resolved theme
-  const isDark = resolvedTheme === "dark";
 
   // Format price based on user's currency preference
   const formatPrice = (amount: number) => {
@@ -504,18 +488,7 @@ export function Header() {
                     </Select>
 
                     {/* Theme Toggle */}
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-11 w-11 shrink-0 rounded-xl"
-                      onClick={toggleTheme}
-                    >
-                      {isDark ? (
-                        <SunIcon className="h-5 w-5" />
-                      ) : (
-                        <MoonIcon className="h-5 w-5" />
-                      )}
-                    </Button>
+                    <AnimatedThemeToggle size={44} className="shrink-0 border border-input" />
                   </div>
                 </div>
               )}
@@ -678,18 +651,7 @@ export function Header() {
               </Select>
 
               {/* Theme Toggle */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-lg"
-                onClick={toggleTheme}
-              >
-                {isDark ? (
-                  <SunIcon className="h-4 w-4" />
-                ) : (
-                  <MoonIcon className="h-4 w-4" />
-                )}
-              </Button>
+              <AnimatedThemeToggle size={36} className="rounded-lg" />
             </>
           )}
         </div>
