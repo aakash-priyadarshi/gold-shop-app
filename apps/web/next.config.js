@@ -1,12 +1,21 @@
 /** @type {import('next').NextConfig} */
+
+// When building for Tauri desktop, export static HTML (no Node server)
+const isTauriBuild = process.env.TAURI_BUILD === '1';
+
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@gold-shop/shared'],
+
+  // Static export for Tauri desktop builds
+  ...(isTauriBuild && { output: 'export', distDir: 'out' }),
 
   // Compress output for smaller bundles
   compress: true,
 
   images: {
+    // Static export requires unoptimized images (no server-side optimization)
+    ...(isTauriBuild && { unoptimized: true }),
     remotePatterns: [
       { protocol: 'https', hostname: 'res.cloudinary.com' },
       { protocol: 'https', hostname: 'images.orivraa.com' },
