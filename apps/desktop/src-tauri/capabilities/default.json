@@ -2,8 +2,14 @@
   "identifier": "com.orivraa.desktop",
   "description": "Orivraa desktop app capabilities",
   "windows": ["main"],
+  "remote": {
+    "urls": ["https://*.orivraa.com/*"]
+  },
   "permissions": [
     "core:default",
+    "core:window:default",
+    "core:window:allow-is-fullscreen",
+    "core:window:allow-set-fullscreen",
     "shell:allow-open",
     "store:default",
     "notification:default",

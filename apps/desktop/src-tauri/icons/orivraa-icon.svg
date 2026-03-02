@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Orivraa App Icon — Golden ring with crown on dark background -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <!-- Right O curve gradient -->
+    <linearGradient id="g1" x1="120" y1="215" x2="400" y2="215" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#e5a31e"/>
+      <stop offset=".11" stop-color="#e5a626"/>
+      <stop offset=".29" stop-color="#e8b13c"/>
+      <stop offset=".51" stop-color="#ecc260"/>
+      <stop offset=".75" stop-color="#f2d992"/>
+      <stop offset=".78" stop-color="#f3dd99"/>
+    </linearGradient>
+    <!-- Left O curve gradient -->
+    <linearGradient id="g2" x1="60" y1="250" x2="360" y2="250" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#e5a31e"/>
+      <stop offset=".05" stop-color="#e7af37"/>
+      <stop offset=".12" stop-color="#ebbf5a"/>
+      <stop offset=".2" stop-color="#efcc75"/>
+      <stop offset=".28" stop-color="#f1d589"/>
+      <stop offset=".36" stop-color="#f2db95"/>
+      <stop offset=".44" stop-color="#f3dd99"/>
+      <stop offset=".66" stop-color="#f1db97"/>
+      <stop offset=".74" stop-color="#edd491"/>
+      <stop offset=".8" stop-color="#e5c888"/>
+      <stop offset=".85" stop-color="#dab77a"/>
+      <stop offset=".89" stop-color="#cba168"/>
+      <stop offset=".92" stop-color="#ba8652"/>
+      <stop offset=".95" stop-color="#a46637"/>
+      <stop offset=".98" stop-color="#8c4119"/>
+      <stop offset="1" stop-color="#782200"/>
+    </linearGradient>
+    <!-- Crown gradient -->
+    <linearGradient id="gc" x1="280" y1="80" x2="420" y2="80" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#e5a31e"/>
+      <stop offset=".5" stop-color="#f3dd99"/>
+      <stop offset="1" stop-color="#782200"/>
+    </linearGradient>
+    <!-- Sparkle gradient -->
+    <radialGradient id="gs" cx="220" cy="250" fx="220" fy="250" r="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fffeee"/>
+      <stop offset=".28" stop-color="#f3f3e9"/>
+      <stop offset=".75" stop-color="#d7dade"/>
+      <stop offset=".88" stop-color="#dcd8d4"/>
+    </radialGradient>
+    <!-- Background gradient -->
+    <radialGradient id="bg" cx="256" cy="256" r="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1a2744"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </radialGradient>
+    <!-- Glow filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feFlood flood-color="#D4AF37" flood-opacity="0.35"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Dark background with rounded corners for icon -->
+  <rect width="512" height="512" rx="90" ry="90" fill="url(#bg)"/>
+
+  <!-- Transform the logo to fit centered in 512x512 with padding -->
+  <g transform="translate(100, 90) scale(3.5)">
+    <!-- Right "O" curve -->
+    <path fill="url(#g1)" filter="url(#glow)"
+      d="M32.59,6.72c0-1.16,17.16-5.21,34.71,0,23.28,6.91,32.05,25.57,32.9,27.47,6.54,14.59,5.39,34.21-7.85,45.78-2.26,1.98-8.52,6.87-18.11,8.63-16.07,2.95-30.83-4.85-30.48-6.02.19-.62,4.6,1.13,11.47.26,10.33-1.31,19.77-7.74,24.81-15.73,4.28-6.77,4.41-13.11,4.44-16.17.07-8.95-3.65-15.43-5.89-19.22-1.76-2.98-6.71-11.12-17.25-17.16-.92-.53-4.98-2.81-10.94-4.7-10.29-3.25-17.81-2.63-17.81-3.14Z"/>
+
+    <!-- Left "O" curve -->
+    <path fill="url(#g2)" filter="url(#glow)"
+      d="M60.73,17.38c-.18.87-5.2-.56-11.59.55-7.45,1.29-12.51,5.33-14.74,7.04-2.03,1.56-11.84,9.38-13.58,22-2.65,19.17,15.23,32.48,18.86,35.18,3.74,2.78,9.81,7.3,18.86,8.58,10.73,1.51,20.22-2.31,20.52-1.51.23.59-4.84,2.98-10.74,4.62-3.99,1.11-19.27,5.36-35.75,0-3.38-1.1-28.25-10.63-32.29-35.34,0,0-3.69-22.55,15.01-40.05,4.43-4.15,12.3-7.93,16.61-7.93h0c4.22-.67,8.07-.09,10.3.24.83.12,1.59.26,2.31.41,2.28.48,4.04,1.03,5.11,1.39,4.39,1.47,11.31,3.79,11.09,4.82Z"/>
+
+    <!-- Crown ornament -->
+    <g>
+      <polygon fill="url(#gc)" points="99.66 27.64 120 17.23 111.66 14.78 99.66 27.64"/>
+      <polygon fill="url(#gc)" points="111.51 13.59 119.54 15.18 112.35 4.71 111.51 13.59"/>
+      <polygon fill="url(#gc)" points="96.52 24.72 110.59 14.78 104.4 6.76 111.51 5.17 91.01 0 96.06 4.13 86.58 8.02 85.89 12.36 91.4 19.35 88.87 9.54 106.31 13.85 96.52 24.72"/>
+      <polygon fill="url(#gc)" points="75.33 5.9 84.36 13.26 85.35 7.76 75.33 5.9"/>
+      <polygon fill="url(#gc)" points="77.17 4.71 85.35 6.63 89.02 0 77.17 4.71"/>
+    </g>
+
+    <!-- Center diamond sparkle -->
+    <path fill="url(#gs)"
+      d="M36.23,51.73c0-1,6.92-.13,11.31-3.73,4.69-3.85,3.76-10.55,4.96-10.53,1.17.01.06,6.44,4.47,10.32,4.29,3.78,11.35,2.98,11.36,4.09,0,1.1-6.8.37-11.13,4.08-4.47,3.82-3.61,10.05-4.82,10.04-1.23-.01-.16-6.41-4.61-10.27-4.36-3.79-11.56-2.98-11.55-3.99Z"/>
+  </g>
+</svg>

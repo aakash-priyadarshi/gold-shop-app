@@ -1,4 +1,4 @@
-// ═══════════════════════════════════════════════════════════
+﻿// ═══════════════════════════════════════════════════════════
 // Orivraa Desktop — Library Entry Point
 // ═══════════════════════════════════════════════════════════
 
@@ -11,7 +11,16 @@ use db::Database;
 use std::sync::Arc;
 use tokio::sync::Mutex as AsyncMutex;
 
+/// JavaScript injected into orivraa.com pages for desktop enhancements:
+/// - Disables right-click context menu on non-input elements
+/// - Intercepts Google login to open in system browser
+/// - Adds keyboard shortcuts (F5 refresh, F11 fullscreen)
+/// - Opens external links in system browser
+/// - Shows offline connectivity banner
+const DESKTOP_ENHANCEMENTS_JS: &str = include_str!("../desktop-enhancements.js");
+
 /// Build the Tauri application with all plugins, state, and IPC handlers
+#[allow(deprecated)] // tauri_plugin_shell::open — will migrate to tauri-plugin-opener
 pub fn run() {
     let db = Arc::new(Database::new().expect("Failed to initialize local database"));
 
@@ -26,6 +35,18 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(db)
         .manage(SyncState(Arc::new(AsyncMutex::new(None))))
+        // Inject desktop enhancements into orivraa.com pages after they load
+        .on_page_load(|webview, payload| {
+            if matches!(payload.event(), tauri::webview::PageLoadEvent::Finished) {
+                let url = payload.url().to_string();
+
+                // Inject desktop enhancements on orivraa.com pages
+                if url.contains("orivraa.com") {
+                    let _ = webview.eval(DESKTOP_ENHANCEMENTS_JS);
+                    log::info!("Desktop enhancements injected for: {}", url);
+                }
+            }
+        })
         .setup(|_app| {
             env_logger::Builder::from_env(
                 env_logger::Env::default().default_filter_or("info"),
@@ -60,6 +81,9 @@ pub fn run() {
             // Stats & Maintenance
             commands::get_local_stats,
             commands::clear_local_data,
+            // Desktop-specific
+            commands::open_google_auth,
+            commands::open_external_url,
         ])
         .run(tauri::generate_context!())
         .expect("Error while running Orivraa Desktop");

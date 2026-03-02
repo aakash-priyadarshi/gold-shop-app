@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "com.orivraa.desktop",
   "build": {
-    "frontendDist": "https://www.orivraa.com",
+    "frontendDist": "../dist-desktop",
     "devUrl": "http://localhost:3000",
     "beforeDevCommand": "cd ../web && pnpm dev",
     "beforeBuildCommand": ""
@@ -30,7 +30,7 @@
       "tooltip": "Orivraa Desktop"
     },
     "security": {
-      "csp": "default-src 'self' https://*.orivraa.com; connect-src 'self' https://api.orivraa.com https://*.orivraa.com wss://api.orivraa.com; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://*.orivraa.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.orivraa.com; font-src 'self' data: https://*.orivraa.com; frame-src https://*.orivraa.com;"
+      "csp": "default-src 'self' 'unsafe-inline' https://*.orivraa.com; connect-src 'self' https://api.orivraa.com https://*.orivraa.com wss://api.orivraa.com https://accounts.google.com; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://*.orivraa.com https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.orivraa.com; font-src 'self' data: https://*.orivraa.com https://fonts.gstatic.com; frame-src https://*.orivraa.com https://accounts.google.com;"
     }
   },
   "bundle": {
@@ -73,7 +73,7 @@
       "dialog": true
     },
     "shell": {
-      "open": true
+      "open": "^https?://"
     }
   }
 }

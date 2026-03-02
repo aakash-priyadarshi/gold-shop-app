@@ -275,3 +275,46 @@ pub async fn init_sync_engine(
     log::info!("Sync engine initialized and background sync started");
     Ok(())
 }
+
+// ─── Desktop-Specific Commands ───────────────────────────
+
+/// Open Google OAuth in the system browser so existing sessions are available.
+/// The browser will handle the full OAuth flow with Google's consent screen.
+#[tauri::command]
+#[allow(deprecated)]
+pub async fn open_google_auth(
+    app: tauri::AppHandle,
+    role: String,
+    mode: String,
+) -> Result<(), String> {
+    let api_url = "https://api.orivraa.com/api";
+    let auth_url = format!("{}/auth/google?role={}&mode={}", api_url, role, mode);
+
+    log::info!("Opening Google auth in system browser: role={}, mode={}", role, mode);
+
+    tauri_plugin_shell::ShellExt::shell(&app)
+        .open(&auth_url, None)
+        .map_err(|e| format!("Failed to open browser: {}", e))?;
+
+    Ok(())
+}
+
+/// Open any external URL in the system browser.
+/// Used for links that should not load inside the desktop webview.
+#[tauri::command]
+#[allow(deprecated)]
+pub async fn open_external_url(
+    app: tauri::AppHandle,
+    url: String,
+) -> Result<(), String> {
+    // Basic URL validation
+    if !url.starts_with("http://") && !url.starts_with("https://") {
+        return Err("Invalid URL: must start with http:// or https://".into());
+    }
+
+    tauri_plugin_shell::ShellExt::shell(&app)
+        .open(&url, None)
+        .map_err(|e| format!("Failed to open URL: {}", e))?;
+
+    Ok(())
+}
