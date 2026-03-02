@@ -23,7 +23,9 @@ test.describe("Homepage", () => {
 
   test("should navigate to login page", async ({ page }) => {
     await page.goto("/");
-    const loginLink = page.getByRole("link", { name: /log\s?in|sign\s?in/i }).first();
+    const loginLink = page
+      .getByRole("link", { name: /log\s?in|sign\s?in/i })
+      .first();
     if (await loginLink.isVisible()) {
       await loginLink.click();
       await expect(page).toHaveURL(/login|signin|auth/i);

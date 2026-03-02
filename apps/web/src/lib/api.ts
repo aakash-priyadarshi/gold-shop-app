@@ -1038,6 +1038,15 @@ export const testingApi = {
   // Info
   getGitInfo: () => api.get("/testing/git"),
   getRuntimeInfo: () => api.get("/testing/runtime"),
+  // GitHub Actions CI
+  getCIStatus: () => api.get("/testing/ci/status"),
+  triggerCI: (branch?: string) =>
+    api.post(`/testing/ci/trigger${branch ? `?branch=${branch}` : ""}`),
+  getCIRuns: (limit?: number) =>
+    api.get(`/testing/ci/runs${limit ? `?limit=${limit}` : ""}`),
+  getCIRunDetail: (runId: number) => api.get(`/testing/ci/runs/${runId}`),
+  rerunCI: (runId: number) => api.post(`/testing/ci/runs/${runId}/rerun`),
+  cancelCI: (runId: number) => api.post(`/testing/ci/runs/${runId}/cancel`),
 };
 
 export default api;

@@ -30,7 +30,7 @@ export interface SmokeTestReport {
 
 export interface TestRunHistoryEntry {
   id: string;
-  type: "smoke" | "e2e" | "integration" | "full";
+  type: "smoke" | "e2e" | "integration" | "full" | "ci";
   timestamp: string;
   duration: number;
   passed: number;
@@ -80,7 +80,79 @@ export interface IntegrationReport {
 
 export interface IntegrationSuite {
   name: string;
-  tests: { name: string; status: "passed" | "failed"; duration: number; error?: string }[];
+  tests: {
+    name: string;
+    status: "passed" | "failed";
+    duration: number;
+    error?: string;
+  }[];
+}
+
+/* ── GitHub Actions CI Types ──────────────────────────────── */
+
+export interface CIWorkflowRun {
+  id: number;
+  name: string;
+  status: "queued" | "in_progress" | "completed" | "waiting";
+  conclusion:
+    | "success"
+    | "failure"
+    | "cancelled"
+    | "skipped"
+    | "timed_out"
+    | "action_required"
+    | null;
+  html_url: string;
+  run_number: number;
+  event: string;
+  branch: string;
+  commit_sha: string;
+  commit_message: string;
+  actor: string;
+  created_at: string;
+  updated_at: string;
+  run_started_at: string;
+  jobs: CIJob[];
+  artifacts_url: string;
+  duration?: number;
+}
+
+export interface CIJob {
+  id: number;
+  name: string;
+  status: "queued" | "in_progress" | "completed";
+  conclusion:
+    | "success"
+    | "failure"
+    | "cancelled"
+    | "skipped"
+    | "timed_out"
+    | null;
+  started_at: string | null;
+  completed_at: string | null;
+  html_url: string;
+  steps: CIStep[];
+}
+
+export interface CIStep {
+  name: string;
+  status: "queued" | "in_progress" | "completed";
+  conclusion: "success" | "failure" | "skipped" | null;
+  number: number;
+}
+
+export interface CITriggerResult {
+  success: boolean;
+  message: string;
+  run_id?: number;
+}
+
+export interface CIStatus {
+  configured: boolean;
+  repo: string;
+  workflow: string;
+  latest_run?: CIWorkflowRun;
+  recent_runs: CIWorkflowRun[];
 }
 
 @Injectable()
@@ -109,33 +181,118 @@ export class TestingService {
     this.logger.log(`Running smoke tests against: ${baseUrl}`);
 
     // Category: Health
-    results.push(await this.testEndpoint("Health Check", "health", "/api/health", 200, "GET", undefined, baseUrl));
-    results.push(await this.testEndpoint("Health Detailed", "health", "/api/health/detailed", 200, "GET", undefined, baseUrl));
+    results.push(
+      await this.testEndpoint(
+        "Health Check",
+        "health",
+        "/api/health",
+        200,
+        "GET",
+        undefined,
+        baseUrl,
+      ),
+    );
+    results.push(
+      await this.testEndpoint(
+        "Health Detailed",
+        "health",
+        "/api/health/detailed",
+        200,
+        "GET",
+        undefined,
+        baseUrl,
+      ),
+    );
 
     // Category: Metrics
-    results.push(await this.testEndpoint("Metrics Endpoint", "metrics", "/api/metrics", 200, "GET", undefined, baseUrl));
+    results.push(
+      await this.testEndpoint(
+        "Metrics Endpoint",
+        "metrics",
+        "/api/metrics",
+        200,
+        "GET",
+        undefined,
+        baseUrl,
+      ),
+    );
 
     // Category: Auth
-    results.push(await this.testEndpoint("Auth - Login Page", "auth", "/api/auth/login", [400, 401, 405], "POST", "{}", baseUrl));
-    results.push(await this.testEndpoint("Auth - Protected Route", "auth", "/api/users/me", 401, "GET", undefined, baseUrl));
+    results.push(
+      await this.testEndpoint(
+        "Auth - Login Page",
+        "auth",
+        "/api/auth/login",
+        [400, 401, 405],
+        "POST",
+        "{}",
+        baseUrl,
+      ),
+    );
+    results.push(
+      await this.testEndpoint(
+        "Auth - Protected Route",
+        "auth",
+        "/api/users/me",
+        401,
+        "GET",
+        undefined,
+        baseUrl,
+      ),
+    );
 
     // Category: Public APIs
-    results.push(await this.testEndpoint("Market Rates", "public", "/api/market-rates", [200, 304], "GET", undefined, baseUrl));
+    results.push(
+      await this.testEndpoint(
+        "Market Rates",
+        "public",
+        "/api/market-rates",
+        [200, 304],
+        "GET",
+        undefined,
+        baseUrl,
+      ),
+    );
 
     // Category: Error Handling
-    results.push(await this.testEndpoint("404 Unknown Route", "errors", "/api/nonexistent-test-route", 404, "GET", undefined, baseUrl));
+    results.push(
+      await this.testEndpoint(
+        "404 Unknown Route",
+        "errors",
+        "/api/nonexistent-test-route",
+        404,
+        "GET",
+        undefined,
+        baseUrl,
+      ),
+    );
 
     // Category: Response Time
-    results.push(await this.testResponseTime("Health Response Time", "performance", "/api/health", 2000, baseUrl));
+    results.push(
+      await this.testResponseTime(
+        "Health Response Time",
+        "performance",
+        "/api/health",
+        2000,
+        baseUrl,
+      ),
+    );
 
     const passed = results.filter((r) => r.status === "pass").length;
     const failed = results.filter((r) => r.status === "fail").length;
     const skipped = results.filter((r) => r.status === "skip").length;
 
     // Build category summary
-    const categoryMap = new Map<string, { passed: number; failed: number; total: number }>();
+    const categoryMap = new Map<
+      string,
+      { passed: number; failed: number; total: number }
+    >();
     for (const r of results) {
-      const cat = categoryMap.get(r.category) || { passed: 0, failed: 0, total: 0 };
+      const cat = categoryMap.get(r.category) || {
+        passed: 0,
+        failed: 0,
+        total: 0,
+      };
       cat.total++;
       if (r.status === "pass") cat.passed++;
       else if (r.status === "fail") cat.failed++;
@@ -144,13 +301,19 @@ export class TestingService {
 
     const report: SmokeTestReport = {
       timestamp: new Date().toISOString(),
-      environment: baseUrl.includes("localhost") || baseUrl.includes("127.0.0.1") ? "local" : "production",
+      environment:
+        baseUrl.includes("localhost") || baseUrl.includes("127.0.0.1")
+          ? "local"
+          : "production",
       totalTests: results.length,
       passed,
       failed,
       skipped,
       duration: Date.now() - start,
-      categories: Array.from(categoryMap.entries()).map(([name, data]) => ({ name, ...data })),
+      categories: Array.from(categoryMap.entries()).map(([name, data]) => ({
+        name,
+        ...data,
+      })),
       results,
     };
 
@@ -160,37 +323,322 @@ export class TestingService {
     return report;
   }
 
-  // ── E2E Tests (Playwright) ───────────────────────────────
+  // ── GitHub Actions CI ─────────────────────────────────────
 
-  async runE2ETests(): Promise<E2EReport> {
+  private readonly GH_REPO = "aakash-priyadarshi/gold-shop-app";
+  private readonly GH_WORKFLOW = "test.yml";
+  private readonly GH_API = "https://api.github.com";
+
+  private getGithubToken(): string | null {
+    return process.env.GITHUB_TOKEN || process.env.GH_TOKEN || null;
+  }
+
+  private async ghFetch<T = any>(
+    endpoint: string,
+    method: "GET" | "POST" = "GET",
+    body?: Record<string, unknown>,
+  ): Promise<T> {
+    const token = this.getGithubToken();
+    if (!token) {
+      throw new Error(
+        "GITHUB_TOKEN env var not configured. Add a Personal Access Token with actions:read and actions:write scopes.",
+      );
+    }
+
+    const url = new URL(endpoint, this.GH_API);
+
+    return new Promise((resolve, reject) => {
+      const payload = body ? JSON.stringify(body) : undefined;
+      const req = https.request(
+        {
+          hostname: url.hostname,
+          path: url.pathname + url.search,
+          method,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/vnd.github+json",
+            "User-Agent": "Orivraa-TestDashboard/1.0",
+            "X-GitHub-Api-Version": "2022-11-28",
+            ...(payload
+              ? { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload) }
+              : {}),
+          },
+          timeout: 15000,
+        },
+        (res) => {
+          let data = "";
+          res.on("data", (chunk) => (data += chunk));
+          res.on("end", () => {
+            if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+              // 204 No Content (e.g. workflow dispatch returns 204)
+              if (res.statusCode === 204 || !data) {
+                resolve({} as T);
+              } else {
+                try {
+                  resolve(JSON.parse(data));
+                } catch {
+                  resolve(data as unknown as T);
+                }
+              }
+            } else {
+              reject(
+                new Error(
+                  `GitHub API ${res.statusCode}: ${data.slice(0, 300)}`,
+                ),
+              );
+            }
+          });
+        },
+      );
+      req.on("error", reject);
+      req.on("timeout", () => {
+        req.destroy();
+        reject(new Error("GitHub API request timed out"));
+      });
+      if (payload) req.write(payload);
+      req.end();
+    });
+  }
+
+  /**
+   * Trigger the CI test workflow via GitHub Actions API.
+   * POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches
+   */
+  async triggerCIWorkflow(
+    branch: string = "master",
+  ): Promise<CITriggerResult> {
+    try {
+      await this.ghFetch(
+        `/repos/${this.GH_REPO}/actions/workflows/${this.GH_WORKFLOW}/dispatches`,
+        "POST",
+        { ref: branch },
+      );
+
+      this.logger.log(`CI workflow triggered on branch: ${branch}`);
+
+      // GitHub doesn't return the run_id from dispatch — poll for it
+      await new Promise((r) => setTimeout(r, 2000));
+      const runs = await this.getCIRuns(1);
+      const latest = runs[0];
+
+      this.addToHistory("ci", {
+        passed: 0,
+        failed: 0,
+        skipped: 0,
+        totalTests: 0,
+        duration: 0,
+        timestamp: new Date().toISOString(),
+      });
+
+      return {
+        success: true,
+        message: `Workflow dispatched on branch "${branch}". Check CI tab for progress.`,
+        run_id: latest?.id,
+      };
+    } catch (err: any) {
+      this.logger.error("Failed to trigger CI workflow", err?.message);
+      return {
+        success: false,
+        message: err?.message || "Failed to trigger CI workflow",
+      };
+    }
+  }
+
+  /**
+   * Get recent workflow runs.
+   * GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs
+   */
+  async getCIRuns(limit: number = 10): Promise<CIWorkflowRun[]> {
+    const data = await this.ghFetch<{ workflow_runs: any[] }>(
+      `/repos/${this.GH_REPO}/actions/workflows/${this.GH_WORKFLOW}/runs?per_page=${limit}`,
+    );
+
+    return (data.workflow_runs || []).map((r: any) => this.mapWorkflowRun(r));
+  }
+
+  /**
+   * Get a specific workflow run by ID, including its jobs.
+   * GET /repos/{owner}/{repo}/actions/runs/{run_id}
+   */
+  async getCIRunDetail(runId: number): Promise<CIWorkflowRun> {
+    const [run, jobsData] = await Promise.all([
+      this.ghFetch<any>(`/repos/${this.GH_REPO}/actions/runs/${runId}`),
+      this.ghFetch<{ jobs: any[] }>(
+        `/repos/${this.GH_REPO}/actions/runs/${runId}/jobs`,
+      ),
+    ]);
+
+    const mapped = this.mapWorkflowRun(run);
+    mapped.jobs = (jobsData.jobs || []).map((j: any) => ({
+      id: j.id,
+      name: j.name,
+      status: j.status,
+      conclusion: j.conclusion,
+      started_at: j.started_at,
+      completed_at: j.completed_at,
+      html_url: j.html_url,
+      steps: (j.steps || []).map((s: any) => ({
+        name: s.name,
+        status: s.status,
+        conclusion: s.conclusion,
+        number: s.number,
+      })),
+    }));
+
+    return mapped;
+  }
+
+  /**
+   * Get overall CI status including configuration check and latest runs.
+   */
+  async getCIStatus(): Promise<CIStatus> {
+    const token = this.getGithubToken();
+    if (!token) {
+      return {
+        configured: false,
+        repo: this.GH_REPO,
+        workflow: this.GH_WORKFLOW,
+        recent_runs: [],
+      };
+    }
+
+    try {
+      const runs = await this.getCIRuns(5);
+      return {
+        configured: true,
+        repo: this.GH_REPO,
+        workflow: this.GH_WORKFLOW,
+        latest_run: runs[0] || undefined,
+        recent_runs: runs,
+      };
+    } catch (err: any) {
+      this.logger.error("Failed to fetch CI status", err?.message);
+      return {
+        configured: true,
+        repo: this.GH_REPO,
+        workflow: this.GH_WORKFLOW,
+        recent_runs: [],
+      };
+    }
+  }
+
+  /**
+   * Re-run a failed workflow run.
+   * POST /repos/{owner}/{repo}/actions/runs/{run_id}/rerun
+   */
+  async rerunCIWorkflow(runId: number): Promise<CITriggerResult> {
+    try {
+      await this.ghFetch(
+        `/repos/${this.GH_REPO}/actions/runs/${runId}/rerun`,
+        "POST",
+        {},
+      );
+      return {
+        success: true,
+        message: `Re-run triggered for workflow run #${runId}`,
+        run_id: runId,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err?.message || "Failed to re-run workflow",
+      };
+    }
+  }
+
+  /**
+   * Cancel a running workflow.
+   * POST /repos/{owner}/{repo}/actions/runs/{run_id}/cancel
+   */
+  async cancelCIWorkflow(runId: number): Promise<CITriggerResult> {
+    try {
+      await this.ghFetch(
+        `/repos/${this.GH_REPO}/actions/runs/${runId}/cancel`,
+        "POST",
+        {},
+      );
+      return {
+        success: true,
+        message: `Workflow run #${runId} cancelled`,
+        run_id: runId,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err?.message || "Failed to cancel workflow",
+      };
+    }
+  }
+
+  private mapWorkflowRun(r: any): CIWorkflowRun {
+    const startedAt = r.run_started_at
+      ? new Date(r.run_started_at).getTime()
+      : null;
+    const updatedAt = r.updated_at ? new Date(r.updated_at).getTime() : null;
+    return {
+      id: r.id,
+      name: r.name,
+      status: r.status,
+      conclusion: r.conclusion,
+      html_url: r.html_url,
+      run_number: r.run_number,
+      event: r.event,
+      branch: r.head_branch,
+      commit_sha: r.head_sha?.substring(0, 7),
+      commit_message:
+        r.head_commit?.message?.split("\n")[0] || "No commit message",
+      actor: r.actor?.login || "unknown",
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+      run_started_at: r.run_started_at || r.created_at,
+      jobs: [],
+      artifacts_url: r.artifacts_url,
+      duration:
+        startedAt && updatedAt && r.status === "completed"
+          ? updatedAt - startedAt
+          : undefined,
+    };
+  }
+
+  // ── E2E Tests (via CI) ──────────────────────────────────
+
+  async runE2ETests(): Promise<E2EReport | CITriggerResult> {
+    // On production (Railway), E2E tests run via GitHub Actions CI
+    // since Playwright browsers aren't available on the server.
+    const token = this.getGithubToken();
+    if (token) {
+      this.logger.log("Triggering E2E tests via GitHub Actions CI...");
+      return this.triggerCIWorkflow() as any;
+    }
+
+    // Fallback: local execution (dev machine)
+    return this.runE2ETestsLocal();
+  }
+
+  async runE2ETestsLocal(): Promise<E2EReport> {
     const start = Date.now();
     const rootDir = this.getProjectRoot();
     const e2eDir = path.join(rootDir, "e2e");
     const reportPath = path.join(rootDir, "e2e-results", "results.json");
 
-    // Ensure result dir exists
     const resultDir = path.join(rootDir, "e2e-results");
     if (!fs.existsSync(resultDir)) {
       fs.mkdirSync(resultDir, { recursive: true });
     }
 
     try {
-      // Run Playwright with JSON reporter
-      execSync(
-        `npx playwright test --reporter=json`,
-        {
-          cwd: e2eDir,
-          env: { ...process.env, PLAYWRIGHT_JSON_OUTPUT_NAME: reportPath },
-          timeout: 120_000,
-          stdio: "pipe",
-        },
-      );
+      execSync(`npx playwright test --reporter=json`, {
+        cwd: e2eDir,
+        env: { ...process.env, PLAYWRIGHT_JSON_OUTPUT_NAME: reportPath },
+        timeout: 120_000,
+        stdio: "pipe",
+      });
     } catch {
-      // Playwright exits with code 1 on test failures, which is expected
-      this.logger.warn("Playwright exited with non-zero code (some tests may have failed)");
+      this.logger.warn(
+        "Playwright exited with non-zero code (some tests may have failed)",
+      );
     }
 
-    // Parse JSON report
     const report = this.parsePlaywrightReport(reportPath, Date.now() - start);
 
     this.addToHistory("e2e", {
@@ -212,9 +660,21 @@ export class TestingService {
     return this.parsePlaywrightReport(reportPath, 0);
   }
 
-  // ── Integration Tests (Jest) ─────────────────────────────
+  // ── Integration Tests (via CI) ──────────────────────────
 
-  async runIntegrationTests(): Promise<IntegrationReport> {
+  async runIntegrationTests(): Promise<IntegrationReport | CITriggerResult> {
+    // On production (Railway), integration tests run via GitHub Actions CI
+    const token = this.getGithubToken();
+    if (token) {
+      this.logger.log("Triggering integration tests via GitHub Actions CI...");
+      return this.triggerCIWorkflow() as any;
+    }
+
+    // Fallback: local execution
+    return this.runIntegrationTestsLocal();
+  }
+
+  async runIntegrationTestsLocal(): Promise<IntegrationReport> {
     const start = Date.now();
     const rootDir = this.getProjectRoot();
     const apiDir = path.join(rootDir, "apps", "api");
@@ -231,7 +691,9 @@ export class TestingService {
         { cwd: apiDir, timeout: 60_000, stdio: "pipe" },
       );
     } catch {
-      this.logger.warn("Jest exited with non-zero code (some tests may have failed)");
+      this.logger.warn(
+        "Jest exited with non-zero code (some tests may have failed)",
+      );
     }
 
     const report = this.parseJestReport(resultPath, Date.now() - start);
@@ -259,7 +721,9 @@ export class TestingService {
 
   getGitInfo(): Record<string, string> {
     try {
-      const branch = execSync("git rev-parse --abbrev-ref HEAD").toString().trim();
+      const branch = execSync("git rev-parse --abbrev-ref HEAD")
+        .toString()
+        .trim();
       const commit = execSync("git rev-parse --short HEAD").toString().trim();
       const commitFull = execSync("git rev-parse HEAD").toString().trim();
       const message = execSync("git log -1 --pretty=%B").toString().trim();
@@ -267,7 +731,14 @@ export class TestingService {
       const date = execSync("git log -1 --pretty=%ci").toString().trim();
       return { branch, commit, commitFull, message, author, date };
     } catch {
-      return { branch: "unknown", commit: "unknown", commitFull: "", message: "unable to read git info", author: "", date: "" };
+      return {
+        branch: "unknown",
+        commit: "unknown",
+        commitFull: "",
+        message: "unable to read git info",
+        author: "",
+        date: "",
+      };
     }
   }
 
@@ -308,7 +779,9 @@ export class TestingService {
         try {
           const content = JSON.parse(fs.readFileSync(pkg, "utf-8"));
           if (content.name === "gold-shop-app") return dir;
-        } catch { /* skip */ }
+        } catch {
+          /* skip */
+        }
       }
       dir = path.dirname(dir);
     }
@@ -317,7 +790,14 @@ export class TestingService {
 
   private addToHistory(
     type: TestRunHistoryEntry["type"],
-    data: { passed: number; failed: number; skipped?: number; totalTests: number; duration: number; timestamp: string },
+    data: {
+      passed: number;
+      failed: number;
+      skipped?: number;
+      totalTests: number;
+      duration: number;
+      timestamp: string;
+    },
   ): void {
     const git = this.getGitInfo();
     this.testHistory.push({
@@ -349,7 +829,9 @@ export class TestingService {
     body?: string,
     baseUrl?: string,
   ): Promise<SmokeTestResult> {
-    const expected = Array.isArray(expectedStatus) ? expectedStatus : [expectedStatus];
+    const expected = Array.isArray(expectedStatus)
+      ? expectedStatus
+      : [expectedStatus];
     const base = baseUrl || this.getApiBaseUrl();
     return new Promise((resolve) => {
       const start = Date.now();
@@ -464,7 +946,10 @@ export class TestingService {
     });
   }
 
-  private parsePlaywrightReport(filePath: string, fallbackDuration: number): E2EReport {
+  private parsePlaywrightReport(
+    filePath: string,
+    fallbackDuration: number,
+  ): E2EReport {
     const empty: E2EReport = {
       timestamp: new Date().toISOString(),
       browser: "chromium",
@@ -481,7 +966,9 @@ export class TestingService {
     try {
       const raw = JSON.parse(fs.readFileSync(filePath, "utf-8"));
       const suites: E2ESuite[] = [];
-      let passed = 0, failed = 0, skipped = 0;
+      let passed = 0,
+        failed = 0,
+        skipped = 0;
 
       for (const suite of raw.suites || []) {
         const tests: E2ETestCase[] = [];
@@ -495,7 +982,12 @@ export class TestingService {
 
             tests.push({
               name: spec.title,
-              status: status === "expected" ? "passed" : status === "unexpected" ? "failed" : status,
+              status:
+                status === "expected"
+                  ? "passed"
+                  : status === "unexpected"
+                    ? "failed"
+                    : status,
               duration: result?.duration || 0,
               error: result?.error?.message,
               retries: (test.results?.length || 1) - 1,
@@ -527,7 +1019,10 @@ export class TestingService {
     }
   }
 
-  private parseJestReport(filePath: string, fallbackDuration: number): IntegrationReport {
+  private parseJestReport(
+    filePath: string,
+    fallbackDuration: number,
+  ): IntegrationReport {
     const empty: IntegrationReport = {
       timestamp: new Date().toISOString(),
       totalTests: 0,
@@ -542,20 +1037,25 @@ export class TestingService {
     try {
       const raw = JSON.parse(fs.readFileSync(filePath, "utf-8"));
       const suites: IntegrationSuite[] = [];
-      let passed = 0, failed = 0;
+      let passed = 0,
+        failed = 0;
 
       for (const testResult of raw.testResults || []) {
         const tests = (testResult.assertionResults || []).map((ar: any) => {
           const ok = ar.status === "passed";
-          if (ok) passed++; else failed++;
+          if (ok) passed++;
+          else failed++;
           return {
             name: ar.ancestorTitles?.join(" > ") + " > " + ar.title,
-            status: ok ? "passed" as const : "failed" as const,
+            status: ok ? ("passed" as const) : ("failed" as const),
             duration: ar.duration || 0,
             error: ar.failureMessages?.join("\n"),
           };
         });
-        suites.push({ name: testResult.testFilePath || testResult.name, tests });
+        suites.push({
+          name: testResult.testFilePath || testResult.name,
+          tests,
+        });
       }
 
       return {

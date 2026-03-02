@@ -10,7 +10,9 @@ test.describe("API Health Checks", () => {
     expect(body).toHaveProperty("status");
   });
 
-  test("GET /api/health/detailed should return service info", async ({ request }) => {
+  test("GET /api/health/detailed should return service info", async ({
+    request,
+  }) => {
     const res = await request.get(`${API_BASE}/health/detailed`);
     expect(res.status()).toBe(200);
     const body = await res.json();

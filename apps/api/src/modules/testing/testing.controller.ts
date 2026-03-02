@@ -1,9 +1,12 @@
-import { Controller, Delete, Get, Post, UseGuards } from "@nestjs/common";
+import { Controller, Delete, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { UserRole } from "@prisma/client";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
-import { UserRole } from "@prisma/client";
 import {
+  CIStatus,
+  CITriggerResult,
+  CIWorkflowRun,
   E2EReport,
   IntegrationReport,
   SmokeTestReport,
@@ -33,9 +36,9 @@ export class TestingController {
 
   // ── E2E (Playwright) ──────────────────────────────────
 
-  /** POST /api/testing/e2e — Run Playwright E2E tests */
+  /** POST /api/testing/e2e — Run E2E tests (triggers CI on production) */
   @Post("e2e")
-  async runE2ETests(): Promise<E2EReport> {
+  async runE2ETests(): Promise<E2EReport | CITriggerResult> {
     return this.testingService.runE2ETests();
   }
 
@@ -47,9 +50,9 @@ export class TestingController {
 
   // ── Integration Tests (Jest) ──────────────────────────
 
-  /** POST /api/testing/integration — Run Jest integration tests */
+  /** POST /api/testing/integration — Run integration tests (triggers CI on production) */
   @Post("integration")
-  async runIntegrationTests(): Promise<IntegrationReport> {
+  async runIntegrationTests(): Promise<IntegrationReport | CITriggerResult> {
     return this.testingService.runIntegrationTests();
   }
 
@@ -57,6 +60,52 @@ export class TestingController {
   @Get("integration")
   getLatestIntegrationReport(): IntegrationReport | null {
     return this.testingService.getLatestIntegrationReport();
+  }
+
+  // ── GitHub Actions CI ─────────────────────────────────
+
+  /** GET /api/testing/ci/status — Get CI configuration and latest runs */
+  @Get("ci/status")
+  async getCIStatus(): Promise<CIStatus> {
+    return this.testingService.getCIStatus();
+  }
+
+  /** POST /api/testing/ci/trigger — Trigger the CI test workflow */
+  @Post("ci/trigger")
+  async triggerCI(
+    @Query("branch") branch?: string,
+  ): Promise<CITriggerResult> {
+    return this.testingService.triggerCIWorkflow(branch || "master");
+  }
+
+  /** GET /api/testing/ci/runs — Get recent CI workflow runs */
+  @Get("ci/runs")
+  async getCIRuns(
+    @Query("limit") limit?: string,
+  ): Promise<CIWorkflowRun[]> {
+    return this.testingService.getCIRuns(
+      Math.min(Number(limit) || 10, 30),
+    );
+  }
+
+  /** GET /api/testing/ci/runs/:id — Get details of a specific CI run */
+  @Get("ci/runs/:id")
+  async getCIRunDetail(
+    @Param("id") id: string,
+  ): Promise<CIWorkflowRun> {
+    return this.testingService.getCIRunDetail(Number(id));
+  }
+
+  /** POST /api/testing/ci/runs/:id/rerun — Re-run a failed workflow */
+  @Post("ci/runs/:id/rerun")
+  async rerunCI(@Param("id") id: string): Promise<CITriggerResult> {
+    return this.testingService.rerunCIWorkflow(Number(id));
+  }
+
+  /** POST /api/testing/ci/runs/:id/cancel — Cancel a running workflow */
+  @Post("ci/runs/:id/cancel")
+  async cancelCI(@Param("id") id: string): Promise<CITriggerResult> {
+    return this.testingService.cancelCIWorkflow(Number(id));
   }
 
   // ── History ───────────────────────────────────────────
