@@ -74,7 +74,10 @@ export function AnimatedThemeToggle({
             cy={isDark ? 8 : 10}
             r="6"
             fill="black"
-            style={{ transition: "cx 0.45s cubic-bezier(.4,0,.2,1), cy 0.45s cubic-bezier(.4,0,.2,1)" }}
+            style={{
+              transition:
+                "cx 0.45s cubic-bezier(.4,0,.2,1), cy 0.45s cubic-bezier(.4,0,.2,1)",
+            }}
           />
         </mask>
 

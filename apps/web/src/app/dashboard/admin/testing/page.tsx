@@ -1896,11 +1896,7 @@ export default function TestingDashboardPage() {
                       </CardDescription>
                     </div>
                     {history.length > 0 && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={clearHistory}
-                      >
+                      <Button size="sm" variant="ghost" onClick={clearHistory}>
                         <Trash2 className="mr-2 h-4 w-4" /> Clear
                       </Button>
                     )}

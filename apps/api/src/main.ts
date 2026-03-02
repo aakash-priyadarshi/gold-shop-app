@@ -4,10 +4,10 @@ if (typeof globalThis.crypto === "undefined") {
   (globalThis as any).crypto = webcrypto;
 }
 
+import { Logger, ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
-import { ValidationPipe, Logger } from "@nestjs/common";
-import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { NestExpressApplication } from "@nestjs/platform-express";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import compression from "compression";
 import * as dns from "dns";
 import helmet from "helmet";

@@ -488,7 +488,10 @@ export function Header() {
                     </Select>
 
                     {/* Theme Toggle */}
-                    <AnimatedThemeToggle size={44} className="shrink-0 border border-input" />
+                    <AnimatedThemeToggle
+                      size={44}
+                      className="shrink-0 border border-input"
+                    />
                   </div>
                 </div>
               )}
