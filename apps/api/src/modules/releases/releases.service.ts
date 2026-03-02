@@ -314,6 +314,17 @@ export class ReleasesService {
   }
 
   /**
+   * Delete a release (admin)
+   */
+  async delete(id: string) {
+    const existing = await this.prisma.appRelease.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException("Release not found");
+    await this.prisma.appRelease.delete({ where: { id } });
+    this.logger.log(`Deleted release: ${existing.platform} v${existing.version} (${id})`);
+    return { deleted: true, id };
+  }
+
+  /**
    * Get desktop session analytics (admin)
    */
   async getDesktopAnalytics() {

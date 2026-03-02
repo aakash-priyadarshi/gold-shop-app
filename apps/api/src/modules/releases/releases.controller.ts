@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
   Ip,
@@ -181,6 +182,19 @@ export class ReleasesController {
   @ApiOperation({ summary: "Publish a new release (sets as latest)" })
   async publish(@Body() dto: PublishReleaseDto) {
     return this.releasesService.publish(dto);
+  }
+
+  /**
+   * DELETE /api/releases/admin/:id
+   * Delete a release permanently (admin)
+   */
+  @Delete("admin/:id")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Delete release (admin)" })
+  async adminDelete(@Param("id") id: string) {
+    return this.releasesService.delete(id);
   }
 
   /**

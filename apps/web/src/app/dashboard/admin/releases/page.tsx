@@ -45,6 +45,7 @@ import {
   Server,
   Smartphone,
   Terminal,
+  Trash2,
   X,
   Zap,
 } from "lucide-react";
@@ -199,6 +200,17 @@ export default function AdminReleasesPage() {
       fetchData();
     } catch {
       toast({ title: "Failed", variant: "destructive" });
+    }
+  };
+
+  const handleDelete = async (id: string, version: string, platform: string) => {
+    if (!confirm(`Delete ${platform} v${version}? This cannot be undone.`)) return;
+    try {
+      await api.delete(`/releases/admin/${id}`);
+      toast({ title: "Deleted", description: `${platform} v${version} removed` });
+      fetchData();
+    } catch {
+      toast({ title: "Delete failed", variant: "destructive" });
     }
   };
 
@@ -747,6 +759,17 @@ export default function AdminReleasesPage() {
                                 ) : (
                                   <Check className="w-3.5 h-3.5 text-green-500" />
                                 )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                onClick={() =>
+                                  handleDelete(rel.id, rel.version, rel.platform)
+                                }
+                                title="Delete permanently"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 text-red-400 hover:text-red-600" />
                               </Button>
                             </div>
                           </div>
