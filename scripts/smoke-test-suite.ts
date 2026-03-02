@@ -15,7 +15,10 @@ import * as https from "https";
 
 // ── Configuration ──────────────────────────────────────────
 
-const BASE = process.argv[2] || process.env.SMOKE_TEST_URL || "https://api.orivraa.com/api";
+const BASE =
+  process.argv[2] ||
+  process.env.SMOKE_TEST_URL ||
+  "https://api.orivraa.com/api";
 const TIMEOUT = 10_000;
 
 interface TestResult {
@@ -29,19 +32,33 @@ const results: TestResult[] = [];
 
 // ── Helpers ────────────────────────────────────────────────
 
-function get(path: string): Promise<{ status: number; body: string; duration: number }> {
+function get(
+  path: string,
+): Promise<{ status: number; body: string; duration: number }> {
   return new Promise((resolve, reject) => {
     const url = new URL(path, BASE);
     const isHttps = url.protocol === "https:";
     const transport = isHttps ? https : http;
     const start = Date.now();
-    const req = transport.request(url, { method: "GET", timeout: TIMEOUT, headers: { "User-Agent": "Orivraa-SmokeTest/1.0" } }, (res) => {
-      let data = "";
-      res.on("data", (chunk) => (data += chunk));
-      res.on("end", () =>
-        resolve({ status: res.statusCode!, body: data, duration: Date.now() - start }),
-      );
-    });
+    const req = transport.request(
+      url,
+      {
+        method: "GET",
+        timeout: TIMEOUT,
+        headers: { "User-Agent": "Orivraa-SmokeTest/1.0" },
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk) => (data += chunk));
+        res.on("end", () =>
+          resolve({
+            status: res.statusCode!,
+            body: data,
+            duration: Date.now() - start,
+          }),
+        );
+      },
+    );
     req.on("error", (err) => reject(err));
     req.on("timeout", () => {
       req.destroy();
@@ -101,16 +118,32 @@ async function main() {
     const url = new URL("/auth/login", BASE);
     const isHttps = url.protocol === "https:";
     const transport = isHttps ? https : http;
-    const { status } = await new Promise<{ status: number }>((resolve, reject) => {
-      const req = transport.request(url, { method: "POST", timeout: TIMEOUT, headers: { "Content-Type": "application/json", "User-Agent": "Orivraa-SmokeTest/1.0" } }, (res) => {
-        res.resume();
-        res.on("end", () => resolve({ status: res.statusCode! }));
-      });
-      req.on("error", reject);
-      req.write("{}");
-      req.end();
-    });
-    assert([400, 401, 422].includes(status), `Expected 400/401/422, got ${status}`);
+    const { status } = await new Promise<{ status: number }>(
+      (resolve, reject) => {
+        const req = transport.request(
+          url,
+          {
+            method: "POST",
+            timeout: TIMEOUT,
+            headers: {
+              "Content-Type": "application/json",
+              "User-Agent": "Orivraa-SmokeTest/1.0",
+            },
+          },
+          (res) => {
+            res.resume();
+            res.on("end", () => resolve({ status: res.statusCode! }));
+          },
+        );
+        req.on("error", reject);
+        req.write("{}");
+        req.end();
+      },
+    );
+    assert(
+      [400, 401, 422].includes(status),
+      `Expected 400/401/422, got ${status}`,
+    );
   });
 
   // 5 — Protected route without token
@@ -151,7 +184,9 @@ async function main() {
   }
 
   console.log("\n" + "─".repeat(60));
-  console.log(`  Total: ${results.length}  |  ✅ ${passed}  |  ❌ ${failed}  |  ⏭️  ${skipped}`);
+  console.log(
+    `  Total: ${results.length}  |  ✅ ${passed}  |  ❌ ${failed}  |  ⏭️  ${skipped}`,
+  );
   console.log("─".repeat(60) + "\n");
 
   if (failed > 0) process.exit(1);

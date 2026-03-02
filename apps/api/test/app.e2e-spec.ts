@@ -13,7 +13,9 @@ describe("AppController (e2e)", () => {
 
     app = moduleFixture.createNestApplication();
     app.setGlobalPrefix("api");
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     await app.init();
   }, 30_000);
 
@@ -49,9 +51,7 @@ describe("AppController (e2e)", () => {
 
   describe("/api/metrics (GET)", () => {
     it("should return metrics", () => {
-      return request(app.getHttpServer())
-        .get("/api/metrics")
-        .expect(200);
+      return request(app.getHttpServer()).get("/api/metrics").expect(200);
     });
   });
 
@@ -83,9 +83,7 @@ describe("AppController (e2e)", () => {
 
   describe("Protected routes", () => {
     it("GET /api/users/me should return 401 without token", () => {
-      return request(app.getHttpServer())
-        .get("/api/users/me")
-        .expect(401);
+      return request(app.getHttpServer()).get("/api/users/me").expect(401);
     });
 
     it("GET /api/admin/dashboard should return 401 without token", () => {
@@ -95,9 +93,7 @@ describe("AppController (e2e)", () => {
     });
 
     it("GET /api/shops should return 401 without token", () => {
-      return request(app.getHttpServer())
-        .get("/api/shops")
-        .expect(401);
+      return request(app.getHttpServer()).get("/api/shops").expect(401);
     });
   });
 
