@@ -555,8 +555,7 @@ function SidebarContent({
             if (item.children && item.children.length > 0) {
               const isOpen = !!openGroups[item.label];
               const hasActiveChild = item.children.some(
-                (c) =>
-                  pathname === c.href || pathname.startsWith(c.href + "/"),
+                (c) => pathname === c.href || pathname.startsWith(c.href + "/"),
               );
               return (
                 <div key={item.label}>
@@ -583,7 +582,9 @@ function SidebarContent({
                   {isOpen && (
                     <div className="ml-4 mt-0.5 space-y-0.5 border-l-2 border-gray-100 dark:border-gray-800 pl-2">
                       {item.children.map((child) => {
-                        const isChildActive = pathname === child.href || pathname.startsWith(child.href + "/");
+                        const isChildActive =
+                          pathname === child.href ||
+                          pathname.startsWith(child.href + "/");
                         return (
                           <Link
                             key={child.href}
