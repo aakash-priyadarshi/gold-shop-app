@@ -1,7 +1,7 @@
 "use client";
 
-import { AdminGuard } from "@/components/auth/RouteGuard";
 import { GitHubTokenManager } from "@/components/admin/GitHubTokenManager";
+import { AdminGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -176,7 +176,13 @@ interface CIJob {
   id: number;
   name: string;
   status: "queued" | "in_progress" | "completed";
-  conclusion: "success" | "failure" | "cancelled" | "skipped" | "timed_out" | null;
+  conclusion:
+    | "success"
+    | "failure"
+    | "cancelled"
+    | "skipped"
+    | "timed_out"
+    | null;
   started_at: string | null;
   completed_at: string | null;
   html_url: string;
@@ -187,7 +193,14 @@ interface CIWorkflowRun {
   id: number;
   name: string;
   status: "queued" | "in_progress" | "completed" | "waiting";
-  conclusion: "success" | "failure" | "cancelled" | "skipped" | "timed_out" | "action_required" | null;
+  conclusion:
+    | "success"
+    | "failure"
+    | "cancelled"
+    | "skipped"
+    | "timed_out"
+    | "action_required"
+    | null;
   html_url: string;
   run_number: number;
   event: string;
@@ -388,47 +401,66 @@ export default function TestingDashboardPage() {
       const { data } = await testingApi.getCIRunDetail(runId);
       setCIRunDetail(data);
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "Failed to load run details");
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to load run details",
+      );
     }
   }, []);
 
-  const triggerCI = useCallback(async (branch?: string) => {
-    setLoadingCITrigger(true);
-    setError(null);
-    try {
-      const { data } = await testingApi.triggerCI(branch);
-      if (data.success) {
-        // Wait a moment, then refresh runs
-        setTimeout(() => fetchCIRuns(), 3000);
-      } else {
-        setError(data.message);
+  const triggerCI = useCallback(
+    async (branch?: string) => {
+      setLoadingCITrigger(true);
+      setError(null);
+      try {
+        const { data } = await testingApi.triggerCI(branch);
+        if (data.success) {
+          // Wait a moment, then refresh runs
+          setTimeout(() => fetchCIRuns(), 3000);
+        } else {
+          setError(data.message);
+        }
+      } catch (err: any) {
+        setError(
+          err?.response?.data?.message ||
+            err?.message ||
+            "Failed to trigger CI",
+        );
+      } finally {
+        setLoadingCITrigger(false);
       }
-    } catch (err: any) {
-      setError(
-        err?.response?.data?.message || err?.message || "Failed to trigger CI",
-      );
-    } finally {
-      setLoadingCITrigger(false);
-    }
-  }, [fetchCIRuns]);
+    },
+    [fetchCIRuns],
+  );
 
-  const rerunCI = useCallback(async (runId: number) => {
-    try {
-      await testingApi.rerunCI(runId);
-      setTimeout(() => fetchCIRuns(), 3000);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "Failed to re-run");
-    }
-  }, [fetchCIRuns]);
+  const rerunCI = useCallback(
+    async (runId: number) => {
+      try {
+        await testingApi.rerunCI(runId);
+        setTimeout(() => fetchCIRuns(), 3000);
+      } catch (err: any) {
+        setError(
+          err?.response?.data?.message || err?.message || "Failed to re-run",
+        );
+      }
+    },
+    [fetchCIRuns],
+  );
 
-  const cancelCI = useCallback(async (runId: number) => {
-    try {
-      await testingApi.cancelCI(runId);
-      setTimeout(() => fetchCIRuns(), 2000);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "Failed to cancel");
-    }
-  }, [fetchCIRuns]);
+  const cancelCI = useCallback(
+    async (runId: number) => {
+      try {
+        await testingApi.cancelCI(runId);
+        setTimeout(() => fetchCIRuns(), 2000);
+      } catch (err: any) {
+        setError(
+          err?.response?.data?.message || err?.message || "Failed to cancel",
+        );
+      }
+    },
+    [fetchCIRuns],
+  );
 
   // ── Runners ────────────────────────────────────────────
 
@@ -501,7 +533,13 @@ export default function TestingDashboardPage() {
     fetchHistory();
     fetchExistingReports();
     fetchCIStatus();
-  }, [fetchGitInfo, fetchRuntimeInfo, fetchHistory, fetchExistingReports, fetchCIStatus]);
+  }, [
+    fetchGitInfo,
+    fetchRuntimeInfo,
+    fetchHistory,
+    fetchExistingReports,
+    fetchCIStatus,
+  ]);
 
   // ── Aggregate stats ────────────────────────────────────
 
@@ -1415,7 +1453,8 @@ export default function TestingDashboardPage() {
                                             cancelCI(run.id);
                                           }}
                                         >
-                                          <Ban className="mr-1 h-3 w-3" /> Cancel
+                                          <Ban className="mr-1 h-3 w-3" />{" "}
+                                          Cancel
                                         </Button>
                                       )}
                                       {run.status === "completed" &&
@@ -1429,7 +1468,8 @@ export default function TestingDashboardPage() {
                                               rerunCI(run.id);
                                             }}
                                           >
-                                            <RotateCcw className="mr-1 h-3 w-3" /> Re-run
+                                            <RotateCcw className="mr-1 h-3 w-3" />{" "}
+                                            Re-run
                                           </Button>
                                         )}
                                       <a
@@ -1457,7 +1497,9 @@ export default function TestingDashboardPage() {
                                       <span>{fmt(run.duration)}</span>
                                     )}
                                     <span>
-                                      {new Date(run.created_at).toLocaleString()}
+                                      {new Date(
+                                        run.created_at,
+                                      ).toLocaleString()}
                                     </span>
                                   </div>
                                   <p className="mt-1 truncate text-xs text-muted-foreground">
@@ -1474,7 +1516,8 @@ export default function TestingDashboardPage() {
                               No CI runs found
                             </p>
                             <p className="mt-1 text-xs">
-                              Click &quot;Trigger Run&quot; to start a CI workflow.
+                              Click &quot;Trigger Run&quot; to start a CI
+                              workflow.
                             </p>
                           </div>
                         ) : (
@@ -1484,10 +1527,19 @@ export default function TestingDashboardPage() {
                               CI not configured
                             </p>
                             <p className="mt-1 max-w-xs text-center text-xs">
-                              Add <code className="rounded bg-muted px-1">GITHUB_TOKEN</code> env var
-                              to your Railway deployment with{" "}
-                              <code className="rounded bg-muted px-1">actions:read</code> and{" "}
-                              <code className="rounded bg-muted px-1">actions:write</code> scopes.
+                              Add{" "}
+                              <code className="rounded bg-muted px-1">
+                                GITHUB_TOKEN
+                              </code>{" "}
+                              env var to your Railway deployment with{" "}
+                              <code className="rounded bg-muted px-1">
+                                actions:read
+                              </code>{" "}
+                              and{" "}
+                              <code className="rounded bg-muted px-1">
+                                actions:write
+                              </code>{" "}
+                              scopes.
                             </p>
                           </div>
                         )}
@@ -1520,7 +1572,10 @@ export default function TestingDashboardPage() {
                           <ScrollArea className="h-[300px]">
                             <div className="space-y-3">
                               {ciRunDetail.jobs.map((job) => (
-                                <div key={job.id} className="rounded border p-2">
+                                <div
+                                  key={job.id}
+                                  className="rounded border p-2"
+                                >
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                       {job.conclusion === "success" ? (
@@ -1557,11 +1612,14 @@ export default function TestingDashboardPage() {
                                           <div className="flex items-center gap-1.5">
                                             {step.conclusion === "success" ? (
                                               <CheckCircle className="h-3 w-3 text-green-500" />
-                                            ) : step.conclusion === "failure" ? (
+                                            ) : step.conclusion ===
+                                              "failure" ? (
                                               <XCircle className="h-3 w-3 text-red-500" />
-                                            ) : step.conclusion === "skipped" ? (
+                                            ) : step.conclusion ===
+                                              "skipped" ? (
                                               <AlertTriangle className="h-3 w-3 text-gray-400" />
-                                            ) : step.status === "in_progress" ? (
+                                            ) : step.status ===
+                                              "in_progress" ? (
                                               <Loader2 className="h-3 w-3 text-yellow-500 animate-spin" />
                                             ) : (
                                               <Clock className="h-3 w-3 text-gray-400" />
@@ -1602,6 +1660,13 @@ export default function TestingDashboardPage() {
                           <li>Daily at 6:00 UTC (health monitoring)</li>
                           <li>Manual from this dashboard</li>
                         </ul>
+                        <Separator className="my-2" />
+                        <a
+                          href="/dashboard/admin/testing/github-token-guide"
+                          className="inline-flex items-center gap-1 text-cyan-600 underline hover:text-cyan-700 font-medium"
+                        >
+                          📖 Token setup guide →
+                        </a>
                       </CardContent>
                     </Card>
 

@@ -1,16 +1,9 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { testingApi } from "@/lib/api";
-import {
-  AlertTriangle,
-  ExternalLink,
-  ShieldAlert,
-} from "lucide-react";
+import { AlertTriangle, ExternalLink, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -32,7 +25,10 @@ export function GitHubTokenExpiryAlert() {
     testingApi
       .getGitHubTokenStatus()
       .then(({ data }) => {
-        if (data.expiryWarning === "critical" || data.expiryWarning === "warning") {
+        if (
+          data.expiryWarning === "critical" ||
+          data.expiryWarning === "warning"
+        ) {
           setAlert({
             daysUntilExpiry: data.daysUntilExpiry,
             isExpired: data.isExpired,

@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
@@ -73,27 +82,19 @@ export class TestingController {
 
   /** POST /api/testing/ci/trigger — Trigger the CI test workflow */
   @Post("ci/trigger")
-  async triggerCI(
-    @Query("branch") branch?: string,
-  ): Promise<CITriggerResult> {
+  async triggerCI(@Query("branch") branch?: string): Promise<CITriggerResult> {
     return this.testingService.triggerCIWorkflow(branch || "master");
   }
 
   /** GET /api/testing/ci/runs — Get recent CI workflow runs */
   @Get("ci/runs")
-  async getCIRuns(
-    @Query("limit") limit?: string,
-  ): Promise<CIWorkflowRun[]> {
-    return this.testingService.getCIRuns(
-      Math.min(Number(limit) || 10, 30),
-    );
+  async getCIRuns(@Query("limit") limit?: string): Promise<CIWorkflowRun[]> {
+    return this.testingService.getCIRuns(Math.min(Number(limit) || 10, 30));
   }
 
   /** GET /api/testing/ci/runs/:id — Get details of a specific CI run */
   @Get("ci/runs/:id")
-  async getCIRunDetail(
-    @Param("id") id: string,
-  ): Promise<CIWorkflowRun> {
+  async getCIRunDetail(@Param("id") id: string): Promise<CIWorkflowRun> {
     return this.testingService.getCIRunDetail(Number(id));
   }
 

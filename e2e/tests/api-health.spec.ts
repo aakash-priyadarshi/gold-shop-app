@@ -10,10 +10,10 @@ test.describe("API Health Checks", () => {
     expect(body).toHaveProperty("status");
   });
 
-  test("GET /api/health/detailed should return service info", async ({
+  test("GET /api/health/ready should return readiness info", async ({
     request,
   }) => {
-    const res = await request.get(`${API_BASE}/health/detailed`);
+    const res = await request.get(`${API_BASE}/health/ready`);
     expect(res.status()).toBe(200);
     const body = await res.json();
     expect(body).toHaveProperty("status");

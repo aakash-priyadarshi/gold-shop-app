@@ -35,6 +35,7 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 /* ── Types ──────────────────────────────────────────────── */
@@ -107,7 +108,10 @@ export function GitHubTokenManager() {
             ? "Your GitHub token has EXPIRED. CI/CD will stop working. Generate a new token immediately."
             : `Your GitHub token expires in ${data.daysUntilExpiry} day${data.daysUntilExpiry === 1 ? "" : "s"}. Generate a new token soon.`,
         });
-      } else if (data.expiryWarning === "warning" && data.daysUntilExpiry !== null) {
+      } else if (
+        data.expiryWarning === "warning" &&
+        data.daysUntilExpiry !== null
+      ) {
         toast({
           title: "GitHub Token Expiring Soon",
           description: `Your GitHub token expires in ${data.daysUntilExpiry} days. Plan to rotate it.`,
@@ -141,7 +145,8 @@ export function GitHubTokenManager() {
         toast({
           variant: "destructive",
           title: "Token Invalid",
-          description: data.message || "The token failed validation against GitHub API.",
+          description:
+            data.message || "The token failed validation against GitHub API.",
         });
       }
       // Refresh status after validation
@@ -150,7 +155,8 @@ export function GitHubTokenManager() {
       toast({
         variant: "destructive",
         title: "Validation Failed",
-        description: error.response?.data?.message || "Could not validate token.",
+        description:
+          error.response?.data?.message || "Could not validate token.",
       });
     } finally {
       setIsValidating(false);
@@ -195,7 +201,8 @@ export function GitHubTokenManager() {
       toast({
         variant: "destructive",
         title: "Registration Failed",
-        description: error.response?.data?.message || "Could not register token.",
+        description:
+          error.response?.data?.message || "Could not register token.",
       });
     } finally {
       setIsRegistering(false);
@@ -502,9 +509,7 @@ export function GitHubTokenManager() {
           {/* Env Var Status */}
           <Separator />
           <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">
-              GITHUB_TOKEN env var:
-            </span>
+            <span className="text-muted-foreground">GITHUB_TOKEN env var:</span>
             {tokenStatus?.envVarPresent ? (
               <Badge
                 variant="outline"
@@ -513,10 +518,7 @@ export function GitHubTokenManager() {
                 <CheckCircle className="mr-1 h-3 w-3" /> Set
               </Badge>
             ) : (
-              <Badge
-                variant="outline"
-                className="text-red-600 border-red-300"
-              >
+              <Badge variant="outline" className="text-red-600 border-red-300">
                 <XCircle className="mr-1 h-3 w-3" /> Not Set
               </Badge>
             )}
@@ -564,7 +566,10 @@ export function GitHubTokenManager() {
             >
               <div className="space-y-2">
                 <Label>Expiry Duration</Label>
-                <Select value={expiryDuration} onValueChange={setExpiryDuration}>
+                <Select
+                  value={expiryDuration}
+                  onValueChange={setExpiryDuration}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -639,15 +644,22 @@ export function GitHubTokenManager() {
       )}
 
       {/* Quick Actions */}
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
         <a
-          href="https://github.com/settings/tokens?type=beta"
+          href="https://github.com/settings/personal-access-tokens"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
         >
           Generate token <ExternalLink className="h-3 w-3" />
         </a>
+        <span>•</span>
+        <Link
+          href="/dashboard/admin/testing/github-token-guide"
+          className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+        >
+          Setup guide →
+        </Link>
         <span>•</span>
         <a
           href="https://github.com/aakash-priyadarshi/gold-shop-app/settings/secrets/actions"

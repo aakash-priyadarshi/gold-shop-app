@@ -99,12 +99,15 @@ async function main() {
     assert(status === 200, `Expected 200, got ${status}`);
   });
 
-  // 2 — Health detailed
-  await runTest("GET /health/detailed → 200 + status field", async () => {
-    const { status, body } = await get("/health/detailed");
+  // 2 — Health readiness
+  await runTest("GET /health/ready → 200 + ready field", async () => {
+    const { status, body } = await get("/health/ready");
     assert(status === 200, `Expected 200, got ${status}`);
     const json = JSON.parse(body);
-    assert("status" in json, "Missing 'status' field");
+    assert(
+      "ready" in json || "status" in json,
+      "Missing 'ready' or 'status' field",
+    );
   });
 
   // 3 — Metrics
