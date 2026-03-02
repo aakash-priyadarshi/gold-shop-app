@@ -15,10 +15,13 @@ export function isTauri(): boolean {
   return !!(window as any).__TAURI_INTERNALS__;
 }
 
-/** Lazy-load the Tauri invoke function */
-async function getTauriInvoke(): Promise<InvokeFn> {
-  const { invoke } = await import('@tauri-apps/api/core');
-  return invoke;
+/** Get the Tauri invoke function from the global window object.
+ *  With `withGlobalTauri: true` in tauri.conf.json, Tauri injects
+ *  `window.__TAURI__` at runtime — no npm import needed. */
+function getTauriInvoke(): InvokeFn {
+  const tauri = (window as any).__TAURI_INTERNALS__;
+  if (!tauri?.invoke) throw new Error('Tauri IPC not available');
+  return tauri.invoke;
 }
 
 // ─── Types ───────────────────────────────────────────────
@@ -102,7 +105,7 @@ export function useDesktop(): DesktopState & DesktopActions {
   const invoke = useCallback(
     async <T = unknown>(cmd: string, args?: Record<string, unknown>): Promise<T> => {
       if (!isDesktop) throw new Error('Not running in desktop mode');
-      const fn = await getTauriInvoke();
+      const fn = getTauriInvoke();
       return fn(cmd, args) as Promise<T>;
     },
     [isDesktop]
