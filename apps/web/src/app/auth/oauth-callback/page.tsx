@@ -51,28 +51,46 @@ function OAuthCallbackHandler() {
       if (desktopPort) {
         sessionStorage.removeItem("orivraa_desktop_port");
         localStorage.removeItem("orivraa_desktop_port");
+
+        // Store tokens first so api.get("/auth/me") works 
+        localStorage.setItem(TOKEN_KEY, accessToken);
+        localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+
+        let userJson: string | undefined;
         try {
-          // Fetch user profile to include with token payload
-          localStorage.setItem(TOKEN_KEY, accessToken);
-          localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
-          let userJson: string | undefined;
+          const response = await api.get("/auth/me");
+          userJson = JSON.stringify(response.data);
+        } catch (_) {
+          // User profile fetch failed — still send tokens
+        }
+
+        // Try sending tokens to the desktop app with retries
+        let desktopSendSuccess = false;
+        for (let attempt = 0; attempt < 3; attempt++) {
           try {
-            const response = await api.get("/auth/me");
-            userJson = JSON.stringify(response.data);
+            if (attempt > 0) {
+              // Wait before retry (500ms, 1000ms)
+              await new Promise((r) => setTimeout(r, attempt * 500));
+            }
+            const resp = await fetch(`http://127.0.0.1:${desktopPort}/auth-callback`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+                user_json: userJson || null,
+              }),
+            });
+            if (resp.ok) {
+              desktopSendSuccess = true;
+              break;
+            }
           } catch (_) {
-            // User profile fetch failed — still send tokens
+            console.warn(`[Desktop OAuth] Attempt ${attempt + 1} failed to reach desktop app`);
           }
+        }
 
-          await fetch(`http://127.0.0.1:${desktopPort}/auth-callback`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-              user_json: userJson || null,
-            }),
-          });
-
+        if (desktopSendSuccess) {
           // Show desktop-specific success message (the browser tab can be closed)
           const overlay = document.createElement("div");
           overlay.style.cssText =
@@ -91,9 +109,14 @@ function OAuthCallbackHandler() {
             } catch (_) {}
           }, 2000);
           return;
-        } catch (err) {
-          console.error("Failed to send tokens to desktop app:", err);
-          // Fall through to normal web flow
+        } else {
+          // Desktop app was unreachable — show helpful message and continue to web flow
+          console.error("Failed to send tokens to desktop app after 3 attempts");
+          toast({
+            title: "Desktop app not detected",
+            description: "Signed in on the web instead. Return to the desktop app and try again if needed.",
+          });
+          // Fall through to normal web flow below
         }
       }
 
