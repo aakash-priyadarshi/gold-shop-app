@@ -31,9 +31,14 @@ export class ReleasesService {
    */
   async getLatestForPlatform(platform: string) {
     const release = await this.prisma.appRelease.findFirst({
-      where: { platform: platform.toUpperCase(), isLatest: true, isActive: true },
+      where: {
+        platform: platform.toUpperCase(),
+        isLatest: true,
+        isActive: true,
+      },
     });
-    if (!release) throw new NotFoundException(`No release found for ${platform}`);
+    if (!release)
+      throw new NotFoundException(`No release found for ${platform}`);
     return this.serializeRelease(release);
   }
 
@@ -132,7 +137,10 @@ export class ReleasesService {
       }
     }
 
-    return { isLatest, latestVersion: latestWindows?.version || latestMacos?.version };
+    return {
+      isLatest,
+      latestVersion: latestWindows?.version || latestMacos?.version,
+    };
   }
 
   /**
@@ -159,7 +167,9 @@ export class ReleasesService {
         lastSeen: s.lastSeen,
         firstSeen: s.firstSeen,
       })),
-      latestVersion: latestRelease ? this.serializeRelease(latestRelease) : null,
+      latestVersion: latestRelease
+        ? this.serializeRelease(latestRelease)
+        : null,
       hasDesktop: sessions.length > 0,
       isUpToDate: sessions.some((s) => s.isLatest),
     };
@@ -250,11 +260,15 @@ export class ReleasesService {
       where: { id },
       data: {
         ...(dto.changelog !== undefined && { changelog: dto.changelog }),
-        ...(dto.changelogSource !== undefined && { changelogSource: dto.changelogSource }),
+        ...(dto.changelogSource !== undefined && {
+          changelogSource: dto.changelogSource,
+        }),
         ...(dto.isLatest !== undefined && { isLatest: dto.isLatest }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
         ...(dto.downloadUrl !== undefined && { downloadUrl: dto.downloadUrl }),
-        ...(dto.fileSize !== undefined && { fileSize: dto.fileSize ? BigInt(dto.fileSize) : null }),
+        ...(dto.fileSize !== undefined && {
+          fileSize: dto.fileSize ? BigInt(dto.fileSize) : null,
+        }),
         ...(dto.minOs !== undefined && { minOs: dto.minOs }),
         ...(dto.minRam !== undefined && { minRam: dto.minRam }),
         ...(dto.minDisk !== undefined && { minDisk: dto.minDisk }),
@@ -280,15 +294,21 @@ export class ReleasesService {
         version: dto.version,
         platform: dto.platform,
         channel: "stable",
-        downloadUrl: dto.downloadUrl || (dto.platform === "WEB" ? "https://www.orivraa.com" : null),
+        downloadUrl:
+          dto.downloadUrl ||
+          (dto.platform === "WEB" ? "https://www.orivraa.com" : null),
         fileSize: dto.fileSize ? BigInt(dto.fileSize) : null,
         fileName: dto.fileName,
         changelog: dto.changelog || null,
         changelogSource: "github",
         isLatest: true,
         isActive: true,
-        minOs: dto.minOs || (dto.platform === "WINDOWS" ? "Windows 10 (1809+)" : "macOS 12+"),
-        architecture: dto.architecture || (dto.platform === "WINDOWS" ? "x64" : "universal"),
+        minOs:
+          dto.minOs ||
+          (dto.platform === "WINDOWS" ? "Windows 10 (1809+)" : "macOS 12+"),
+        architecture:
+          dto.architecture ||
+          (dto.platform === "WINDOWS" ? "x64" : "universal"),
         minRam: "4 GB",
         minDisk: "200 MB",
       },
@@ -306,7 +326,9 @@ export class ReleasesService {
         where: { id: { in: toDeactivate } },
         data: { isActive: false },
       });
-      this.logger.log(`Deactivated ${toDeactivate.length} old releases for ${dto.platform}`);
+      this.logger.log(
+        `Deactivated ${toDeactivate.length} old releases for ${dto.platform}`,
+      );
     }
 
     this.logger.log(`Published: ${dto.platform} v${dto.version} (latest)`);
@@ -320,7 +342,9 @@ export class ReleasesService {
     const existing = await this.prisma.appRelease.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException("Release not found");
     await this.prisma.appRelease.delete({ where: { id } });
-    this.logger.log(`Deleted release: ${existing.platform} v${existing.version} (${id})`);
+    this.logger.log(
+      `Deleted release: ${existing.platform} v${existing.version} (${id})`,
+    );
     return { deleted: true, id };
   }
 
@@ -380,7 +404,9 @@ export class ReleasesService {
   }) {
     if (r.changelogSource === "manual" && r.changelog) return r.changelog;
     if (r.changelogSource === "merged") {
-      return [r.changelog, r.githubChangelog].filter(Boolean).join("\n\n---\n\n");
+      return [r.changelog, r.githubChangelog]
+        .filter(Boolean)
+        .join("\n\n---\n\n");
     }
     return r.githubChangelog || r.changelog || "No changelog available.";
   }

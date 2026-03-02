@@ -117,8 +117,8 @@ export function middleware(request: NextRequest) {
     "img-src 'self' data: blob: https://res.cloudinary.com https://*.cloudinary.com https://images.orivraa.com https://orivraa.com",
     // Fonts: self + Google Fonts CDN
     "font-src 'self' https://fonts.gstatic.com data:",
-    // API connections: self + API + Vercel analytics + Stripe
-    "connect-src 'self' https://api.orivraa.com https://*.vercel-insights.com https://va.vercel-scripts.com https://vercel.live https://*.stripe.com https://vitals.vercel-insights.com",
+    // API connections: self + API + Vercel analytics + Stripe + localhost (desktop OAuth callback)
+    "connect-src 'self' https://api.orivraa.com https://*.vercel-insights.com https://va.vercel-scripts.com https://vercel.live https://*.stripe.com https://vitals.vercel-insights.com http://127.0.0.1:* http://localhost:*",
     // Frames: self + Stripe (for 3D Secure)
     "frame-src 'self' https://*.stripe.com https://vercel.live",
     // Media

@@ -52,7 +52,7 @@ function OAuthCallbackHandler() {
         sessionStorage.removeItem("orivraa_desktop_port");
         localStorage.removeItem("orivraa_desktop_port");
 
-        // Store tokens first so api.get("/auth/me") works 
+        // Store tokens first so api.get("/auth/me") works
         localStorage.setItem(TOKEN_KEY, accessToken);
         localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
 
@@ -72,21 +72,26 @@ function OAuthCallbackHandler() {
               // Wait before retry (500ms, 1000ms)
               await new Promise((r) => setTimeout(r, attempt * 500));
             }
-            const resp = await fetch(`http://127.0.0.1:${desktopPort}/auth-callback`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                access_token: accessToken,
-                refresh_token: refreshToken,
-                user_json: userJson || null,
-              }),
-            });
+            const resp = await fetch(
+              `http://127.0.0.1:${desktopPort}/auth-callback`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  access_token: accessToken,
+                  refresh_token: refreshToken,
+                  user_json: userJson || null,
+                }),
+              },
+            );
             if (resp.ok) {
               desktopSendSuccess = true;
               break;
             }
           } catch (_) {
-            console.warn(`[Desktop OAuth] Attempt ${attempt + 1} failed to reach desktop app`);
+            console.warn(
+              `[Desktop OAuth] Attempt ${attempt + 1} failed to reach desktop app`,
+            );
           }
         }
 
@@ -111,10 +116,13 @@ function OAuthCallbackHandler() {
           return;
         } else {
           // Desktop app was unreachable — show helpful message and continue to web flow
-          console.error("Failed to send tokens to desktop app after 3 attempts");
+          console.error(
+            "Failed to send tokens to desktop app after 3 attempts",
+          );
           toast({
             title: "Desktop app not detected",
-            description: "Signed in on the web instead. Return to the desktop app and try again if needed.",
+            description:
+              "Signed in on the web instead. Return to the desktop app and try again if needed.",
           });
           // Fall through to normal web flow below
         }

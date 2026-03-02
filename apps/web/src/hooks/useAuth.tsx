@@ -451,9 +451,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // mode='login' - requires existing account, redirects to register if not found
       // mode='register' - creates account if not exists
       // If desktop_port is in sessionStorage, pass it through the OAuth flow
-      const desktopPort = typeof window !== "undefined"
-        ? (sessionStorage.getItem("orivraa_desktop_port") || localStorage.getItem("orivraa_desktop_port"))
-        : null;
+      const desktopPort =
+        typeof window !== "undefined"
+          ? sessionStorage.getItem("orivraa_desktop_port") ||
+            localStorage.getItem("orivraa_desktop_port")
+          : null;
       const portParam = desktopPort ? `&desktop_port=${desktopPort}` : "";
       window.location.href = `${baseUrl}/auth/google?role=${role}&mode=${mode}${portParam}`;
     },
