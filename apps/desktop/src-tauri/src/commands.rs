@@ -322,6 +322,13 @@ pub async fn open_google_auth(
         .open(&login_url, None)
         .map_err(|e| format!("Failed to open browser: {}", e))?;
 
+    // Clear any stale tokens from previous auth attempts
+    {
+        let mut guard = token_receiver.0.lock().await;
+        *guard = None;
+    }
+    let _ = db.set_auth("oauth_fresh", "false", None);
+
     // Clone what we need for the async task
     let db_clone = db.inner().clone();
     let receiver_clone = token_receiver.0.clone();
@@ -341,16 +348,20 @@ pub async fn open_google_auth(
 
             match accept_result {
                 Ok(Ok((mut stream, addr))) => {
-                    let mut buf = vec![0u8; 16384];
+                    // Read the initial chunk of the HTTP request
+                    let mut data = Vec::with_capacity(32768);
+                    let mut buf = [0u8; 16384];
                     let n = stream.read(&mut buf).await.unwrap_or(0);
                     if n == 0 { continue; }
-                    let request = String::from_utf8_lossy(&buf[..n]).to_string();
+                    data.extend_from_slice(&buf[..n]);
 
+                    let first_line = String::from_utf8_lossy(&data[..data.len().min(64)])
+                        .lines().next().unwrap_or("?").to_string();
                     log::info!("Auth callback received from {}: {} bytes, method: {}",
-                        addr, n, request.lines().next().unwrap_or("?"));
+                        addr, n, first_line);
 
                     // ── CORS preflight (OPTIONS) ──
-                    if request.starts_with("OPTIONS") {
+                    if data.starts_with(b"OPTIONS") {
                         let response = "HTTP/1.1 204 No Content\r\n\
                             Access-Control-Allow-Origin: https://www.orivraa.com\r\n\
                             Access-Control-Allow-Methods: POST, OPTIONS\r\n\
@@ -361,21 +372,58 @@ pub async fn open_google_auth(
                             Connection: close\r\n\r\n";
                         let _ = stream.write_all(response.as_bytes()).await;
                         let _ = stream.shutdown().await;
-                        // Continue loop to accept the actual POST on a new connection
                         continue;
                     }
 
                     // ── POST with tokens ──
-                    if request.starts_with("POST") {
-                        if let Some(body_start) = request.find("\r\n\r\n") {
-                            let body = &request[body_start + 4..];
-                            process_auth_tokens(body, &db_clone, &receiver_clone).await;
+                    if data.starts_with(b"POST") {
+                        // Find the header/body boundary (\r\n\r\n)
+                        if let Some(header_end) = data.windows(4).position(|w| w == b"\r\n\r\n") {
+                            let body_start = header_end + 4;
+
+                            // Parse Content-Length from headers
+                            let header_str = String::from_utf8_lossy(&data[..header_end]);
+                            let content_length: usize = header_str
+                                .lines()
+                                .find(|l| l.to_ascii_lowercase().starts_with("content-length:"))
+                                .and_then(|l| l.split(':').nth(1))
+                                .and_then(|v| v.trim().parse().ok())
+                                .unwrap_or(0);
+
+                            log::info!("Auth callback POST: Content-Length={}, body so far={}",
+                                content_length, data.len().saturating_sub(body_start));
+
+                            // Keep reading until we have the full body
+                            while data.len().saturating_sub(body_start) < content_length {
+                                match tokio::time::timeout(
+                                    std::time::Duration::from_secs(5),
+                                    stream.read(&mut buf),
+                                ).await {
+                                    Ok(Ok(m)) if m > 0 => {
+                                        data.extend_from_slice(&buf[..m]);
+                                        log::info!("Auth callback: read {} more bytes, total body={}/{}",
+                                            m, data.len().saturating_sub(body_start), content_length);
+                                    }
+                                    _ => {
+                                        log::warn!("Auth callback: read stalled at {}/{} body bytes",
+                                            data.len().saturating_sub(body_start), content_length);
+                                        break;
+                                    }
+                                }
+                            }
+
+                            let body = String::from_utf8_lossy(&data[body_start..]);
+                            log::info!("Auth callback: processing body ({} bytes)", body.len());
+                            process_auth_tokens(&body, &db_clone, &receiver_clone).await;
+                        } else {
+                            log::error!("Auth callback POST: no header/body boundary found");
                         }
+
                         let response = success_response();
                         let _ = stream.write_all(response.as_bytes()).await;
                         let _ = stream.shutdown().await;
                         log::info!("Auth callback: tokens processed, server closing");
-                        break; // Done — tokens received
+                        break;
                     }
 
                     // ── Unknown method — respond 405 and keep listening ──
@@ -422,7 +470,8 @@ async fn process_auth_tokens(
 ) {
     match serde_json::from_str::<AuthTokenPayload>(body) {
         Ok(payload) => {
-            log::info!("Received auth tokens from browser OAuth");
+            log::info!("Received auth tokens from browser OAuth (token len: {}, refresh len: {})",
+                payload.access_token.len(), payload.refresh_token.len());
 
             // Store in local DB
             let _ = db.set_auth("access_token", &payload.access_token, None);
@@ -430,25 +479,57 @@ async fn process_auth_tokens(
             if let Some(ref user_json) = payload.user_json {
                 let _ = db.set_auth("user", user_json, None);
             }
+            // Mark tokens as fresh so poll_auth_tokens DB fallback can find them
+            let _ = db.set_auth("oauth_fresh", "true", None);
 
             // Store in receiver for the frontend to pick up
             let mut guard = receiver.lock().await;
             *guard = Some(payload);
+            log::info!("Auth tokens stored in receiver for polling");
         }
         Err(e) => {
-            log::error!("Failed to parse auth tokens: {} — body: {}", e, &body[..body.len().min(200)]);
+            log::error!("Failed to parse auth tokens: {} — body preview: {}", e, &body[..body.len().min(500)]);
         }
     }
 }
 
 /// Check if auth tokens have been received from browser OAuth.
 /// Called by the desktop enhancements JS polling loop.
+/// Checks in-memory receiver first, then falls back to local DB.
 #[tauri::command]
 pub async fn poll_auth_tokens(
+    db: State<'_, Arc<Database>>,
     token_receiver: State<'_, AuthTokenReceiver>,
 ) -> Result<Option<AuthTokenPayload>, String> {
+    // Primary: check in-memory receiver
     let mut guard = token_receiver.0.lock().await;
-    Ok(guard.take()) // Returns and clears the stored tokens
+    if let Some(payload) = guard.take() {
+        log::info!("poll_auth_tokens: found tokens in memory receiver");
+        return Ok(Some(payload));
+    }
+    drop(guard);
+
+    // Fallback: check local DB (in case memory receiver was missed)
+    if let Some(flag) = db.get_auth("oauth_fresh").unwrap_or(None) {
+        if flag == "true" {
+            if let (Some(at), Some(rt)) = (
+                db.get_auth("access_token").unwrap_or(None),
+                db.get_auth("refresh_token").unwrap_or(None),
+            ) {
+                log::info!("poll_auth_tokens: found fresh tokens in DB fallback");
+                // Clear the flag so we don't return them again
+                let _ = db.set_auth("oauth_fresh", "false", None);
+                let user_json = db.get_auth("user").unwrap_or(None);
+                return Ok(Some(AuthTokenPayload {
+                    access_token: at,
+                    refresh_token: rt,
+                    user_json,
+                }));
+            }
+        }
+    }
+
+    Ok(None)
 }
 
 /// Open any external URL in the system browser.

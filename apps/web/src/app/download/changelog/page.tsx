@@ -100,7 +100,8 @@ export default function ChangelogPage() {
               Changelog
             </h1>
             <p className="text-muted-foreground mb-8">
-              What&apos;s new across Orivraa — desktop and web releases combined.
+              What&apos;s new across Orivraa — desktop and web releases
+              combined.
             </p>
 
             {/* Platform Filter */}

@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   Headers,
-  Ip,
   Logger,
   Param,
   Patch,

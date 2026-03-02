@@ -203,11 +203,19 @@ export default function AdminReleasesPage() {
     }
   };
 
-  const handleDelete = async (id: string, version: string, platform: string) => {
-    if (!confirm(`Delete ${platform} v${version}? This cannot be undone.`)) return;
+  const handleDelete = async (
+    id: string,
+    version: string,
+    platform: string,
+  ) => {
+    if (!confirm(`Delete ${platform} v${version}? This cannot be undone.`))
+      return;
     try {
       await api.delete(`/releases/admin/${id}`);
-      toast({ title: "Deleted", description: `${platform} v${version} removed` });
+      toast({
+        title: "Deleted",
+        description: `${platform} v${version} removed`,
+      });
       fetchData();
     } catch {
       toast({ title: "Delete failed", variant: "destructive" });
@@ -765,7 +773,11 @@ export default function AdminReleasesPage() {
                                 size="sm"
                                 className="h-7 w-7 p-0"
                                 onClick={() =>
-                                  handleDelete(rel.id, rel.version, rel.platform)
+                                  handleDelete(
+                                    rel.id,
+                                    rel.version,
+                                    rel.platform,
+                                  )
                                 }
                                 title="Delete permanently"
                               >
