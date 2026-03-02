@@ -63,6 +63,7 @@ import {
   Cog6ToothIcon,
   CreditCardIcon,
   CubeIcon,
+  ComputerDesktopIcon,
   CurrencyDollarIcon,
   DocumentTextIcon,
   GlobeAltIcon,
@@ -327,6 +328,7 @@ export function Header() {
     { name: "Designs", href: "/designs", icon: HeartIcon },
     { name: "Custom Order", href: "/rfq/create", icon: SparklesIcon },
     { name: "Sellers", href: "/shops", icon: BuildingOffice2Icon },
+    { name: "Download", href: "/download", icon: ComputerDesktopIcon },
     { name: "About", href: "/about", icon: InformationCircleIcon },
   ];
 

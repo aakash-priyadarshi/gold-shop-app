@@ -532,3 +532,41 @@ pub async fn install_update(
 pub fn get_app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
+
+/// Send a heartbeat to the server with version info.
+/// Called periodically by the desktop enhancements script.
+#[tauri::command]
+pub async fn send_heartbeat(
+    db: State<'_, Arc<Database>>,
+) -> Result<String, String> {
+    let version = env!("CARGO_PKG_VERSION").to_string();
+    let os_info = std::env::consts::OS.to_string();
+    let arch = std::env::consts::ARCH.to_string();
+
+    let os_display = match os_info.as_str() {
+        "windows" => "Windows".to_string(),
+        "macos" => "macOS".to_string(),
+        "linux" => "Linux".to_string(),
+        other => other.to_string(),
+    };
+
+    // Get auth token if available
+    let token = db.get_auth("access_token").unwrap_or(None);
+
+    let client = reqwest::Client::new();
+    let mut req = client
+        .post("https://api.orivraa.com/releases/heartbeat")
+        .json(&serde_json::json!({
+            "appVersion": version,
+            "os": os_display,
+            "arch": arch,
+        }));
+
+    if let Some(t) = token {
+        req = req.header("Authorization", format!("Bearer {}", t));
+    }
+
+    let resp = req.send().await.map_err(|e| format!("Heartbeat failed: {}", e))?;
+    let body = resp.text().await.unwrap_or_default();
+    Ok(body)
+}
