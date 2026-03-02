@@ -280,7 +280,7 @@ export class ReleasesService {
         version: dto.version,
         platform: dto.platform,
         channel: "stable",
-        downloadUrl: dto.downloadUrl,
+        downloadUrl: dto.downloadUrl || (dto.platform === "WEB" ? "https://www.orivraa.com" : null),
         fileSize: dto.fileSize ? BigInt(dto.fileSize) : null,
         fileName: dto.fileName,
         changelog: dto.changelog || null,

@@ -135,7 +135,8 @@ export class PublishReleaseDto {
   platform: ReleasePlatform;
 
   @IsString()
-  downloadUrl: string;
+  @IsOptional()
+  downloadUrl?: string;
 
   @IsNumber()
   @IsOptional()

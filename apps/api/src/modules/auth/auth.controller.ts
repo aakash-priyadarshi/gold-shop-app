@@ -271,6 +271,7 @@ export class AuthController {
     try {
       const requestedRole = req.user?.requestedRole || "CUSTOMER";
       const mode = req.user?.mode || "login";
+      const desktopPort = req.user?.desktopPort;
       const result = await this.authService.googleAuth(
         req.user,
         ipAddress,
@@ -286,6 +287,7 @@ export class AuthController {
           expiresIn: result.expiresIn.toString(),
           setupRequired: "shop",
         });
+        if (desktopPort) params.set("desktop_port", desktopPort);
         res.redirect(`${frontendUrl}/auth/oauth-callback?${params.toString()}`);
       } else {
         // Normal flow - redirect with tokens
@@ -294,6 +296,7 @@ export class AuthController {
           refreshToken: result.refreshToken,
           expiresIn: result.expiresIn.toString(),
         });
+        if (desktopPort) params.set("desktop_port", desktopPort);
         res.redirect(`${frontendUrl}/auth/oauth-callback?${params.toString()}`);
       }
     } catch (error) {

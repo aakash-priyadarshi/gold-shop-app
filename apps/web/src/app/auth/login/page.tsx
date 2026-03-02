@@ -97,11 +97,12 @@ function LoginForm() {
     setTurnstileError(true);
   }, []);
 
-  // ── Desktop OAuth: persist desktop_port in sessionStorage for oauth-callback ──
+  // ── Desktop OAuth: persist desktop_port for oauth-callback ──
   useEffect(() => {
     const desktopPort = searchParams.get("desktop_port");
     if (desktopPort) {
       sessionStorage.setItem("orivraa_desktop_port", desktopPort);
+      localStorage.setItem("orivraa_desktop_port", desktopPort);
     }
   }, [searchParams]);
 

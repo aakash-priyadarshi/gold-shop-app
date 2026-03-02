@@ -45,7 +45,6 @@ import {
   Server,
   Smartphone,
   Terminal,
-  Users,
   X,
   Zap,
 } from "lucide-react";
@@ -163,7 +162,10 @@ export default function AdminReleasesPage() {
           ? parseInt(publishData.fileSize)
           : undefined,
       });
-      toast({ title: "Published", description: `v${publishForm.version} released` });
+      toast({
+        title: "Published",
+        description: `v${publishForm.version} released`,
+      });
       setShowPublish(false);
       setPublishForm({
         version: "",
@@ -263,41 +265,90 @@ export default function AdminReleasesPage() {
               <CardContent className="text-sm text-muted-foreground space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="font-medium text-foreground mb-1">Releases Tab</p>
+                    <p className="font-medium text-foreground mb-1">
+                      Releases Tab
+                    </p>
                     <ul className="space-y-1 text-xs list-disc pl-4">
-                      <li>All published desktop and web releases with version, platform, channel, date, and file size</li>
-                      <li>Click a release row to expand and see full details: download URL, changelog, system requirements, architecture</li>
-                      <li><Badge className="bg-green-500/10 text-green-600 border-0 text-[10px] px-1">Latest</Badge> badge marks the current version shown on the download page</li>
-                      <li>Toggle active/inactive with the <X className="w-3 h-3 inline text-red-500" />/<Check className="w-3 h-3 inline text-green-500" /> button — inactive releases are hidden from public pages</li>
+                      <li>
+                        All published desktop and web releases with version,
+                        platform, channel, date, and file size
+                      </li>
+                      <li>
+                        Click a release row to expand and see full details:
+                        download URL, changelog, system requirements,
+                        architecture
+                      </li>
+                      <li>
+                        <Badge className="bg-green-500/10 text-green-600 border-0 text-[10px] px-1">
+                          Latest
+                        </Badge>{" "}
+                        badge marks the current version shown on the download
+                        page
+                      </li>
+                      <li>
+                        Toggle active/inactive with the{" "}
+                        <X className="w-3 h-3 inline text-red-500" />/
+                        <Check className="w-3 h-3 inline text-green-500" />{" "}
+                        button — inactive releases are hidden from public pages
+                      </li>
                     </ul>
                   </div>
                   <div>
-                    <p className="font-medium text-foreground mb-1">Desktop Analytics Tab</p>
+                    <p className="font-medium text-foreground mb-1">
+                      Desktop Analytics Tab
+                    </p>
                     <ul className="space-y-1 text-xs list-disc pl-4">
-                      <li><strong>Total Devices</strong> — all desktop installations that have ever sent a heartbeat</li>
-                      <li><strong>Active (24h / 7d)</strong> — devices that checked in within the last 24 hours or 7 days</li>
-                      <li><strong>Up to Date / Outdated</strong> — how many run the latest version vs older</li>
-                      <li><strong>Version Distribution</strong> — bar chart showing how many devices run each version</li>
-                      <li><strong>OS Distribution</strong> — breakdown by operating system (windows, macos, linux)</li>
+                      <li>
+                        <strong>Total Devices</strong> — all desktop
+                        installations that have ever sent a heartbeat
+                      </li>
+                      <li>
+                        <strong>Active (24h / 7d)</strong> — devices that
+                        checked in within the last 24 hours or 7 days
+                      </li>
+                      <li>
+                        <strong>Up to Date / Outdated</strong> — how many run
+                        the latest version vs older
+                      </li>
+                      <li>
+                        <strong>Version Distribution</strong> — bar chart
+                        showing how many devices run each version
+                      </li>
+                      <li>
+                        <strong>OS Distribution</strong> — breakdown by
+                        operating system (windows, macos, linux)
+                      </li>
                     </ul>
                   </div>
                 </div>
                 <div className="border-t border-border/50 pt-3">
-                  <p className="font-medium text-foreground mb-1">Publishing Flow</p>
+                  <p className="font-medium text-foreground mb-1">
+                    Publishing Flow
+                  </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                     <div className="flex gap-2">
                       <Terminal className="w-4 h-4 shrink-0 text-blue-500 mt-0.5" />
                       <div>
-                        <strong>Automatic (local build):</strong> After running <code className="px-1 py-0.5 bg-muted rounded text-[10px]">cargo tauri build</code>,
-                        run <code className="px-1 py-0.5 bg-muted rounded text-[10px]">.\apps\desktop\scripts\publish-release.ps1</code> — it reads version from Cargo.toml,
-                        finds the installer, copies it, and calls the publish API automatically.
+                        <strong>Automatic (local build):</strong> After running{" "}
+                        <code className="px-1 py-0.5 bg-muted rounded text-[10px]">
+                          cargo tauri build
+                        </code>
+                        , run{" "}
+                        <code className="px-1 py-0.5 bg-muted rounded text-[10px]">
+                          .\apps\desktop\scripts\publish-release.ps1
+                        </code>{" "}
+                        — it reads version from Cargo.toml, finds the installer,
+                        copies it, and calls the publish API automatically.
                       </div>
                     </div>
                     <div className="flex gap-2">
                       <Plus className="w-4 h-4 shrink-0 text-blue-500 mt-0.5" />
                       <div>
-                        <strong>Manual:</strong> Click &quot;Publish Release&quot; button above and fill in version, platform, download URL, file size,
-                        and changelog. The system auto-sets it as latest and deactivates releases beyond the 6-version limit.
+                        <strong>Manual:</strong> Click &quot;Publish
+                        Release&quot; button above and fill in version,
+                        platform, download URL, file size, and changelog. The
+                        system auto-sets it as latest and deactivates releases
+                        beyond the 6-version limit.
                       </div>
                     </div>
                   </div>
@@ -316,7 +367,9 @@ export default function AdminReleasesPage() {
                   </div>
                   <div>
                     <p className="text-lg font-bold">{releases.length}</p>
-                    <p className="text-[10px] text-muted-foreground">Total Releases</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Total Releases
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -326,8 +379,12 @@ export default function AdminReleasesPage() {
                     <Zap className="w-4 h-4 text-green-500" />
                   </div>
                   <div>
-                    <p className="text-lg font-bold">{releases.filter(r => r.isLatest).length}</p>
-                    <p className="text-[10px] text-muted-foreground">Latest Versions</p>
+                    <p className="text-lg font-bold">
+                      {releases.filter((r) => r.isLatest).length}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Latest Versions
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -338,7 +395,9 @@ export default function AdminReleasesPage() {
                   </div>
                   <div>
                     <p className="text-lg font-bold">{analytics?.total || 0}</p>
-                    <p className="text-[10px] text-muted-foreground">Desktop Devices</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Desktop Devices
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -348,8 +407,12 @@ export default function AdminReleasesPage() {
                     <Activity className="w-4 h-4 text-amber-500" />
                   </div>
                   <div>
-                    <p className="text-lg font-bold">{analytics?.activeLast24h || 0}</p>
-                    <p className="text-[10px] text-muted-foreground">Active Today</p>
+                    <p className="text-lg font-bold">
+                      {analytics?.activeLast24h || 0}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Active Today
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -377,7 +440,10 @@ export default function AdminReleasesPage() {
                       placeholder="1.0.0"
                       value={publishForm.version}
                       onChange={(e) =>
-                        setPublishForm({ ...publishForm, version: e.target.value })
+                        setPublishForm({
+                          ...publishForm,
+                          version: e.target.value,
+                        })
                       }
                     />
                   </div>
@@ -423,7 +489,10 @@ export default function AdminReleasesPage() {
                       placeholder="https://releases.orivraa.com/desktop/v1.0.0/..."
                       value={publishForm.downloadUrl}
                       onChange={(e) =>
-                        setPublishForm({ ...publishForm, downloadUrl: e.target.value })
+                        setPublishForm({
+                          ...publishForm,
+                          downloadUrl: e.target.value,
+                        })
                       }
                     />
                   </div>
@@ -434,7 +503,10 @@ export default function AdminReleasesPage() {
                       placeholder="52428800"
                       value={publishForm.fileSize}
                       onChange={(e) =>
-                        setPublishForm({ ...publishForm, fileSize: e.target.value })
+                        setPublishForm({
+                          ...publishForm,
+                          fileSize: e.target.value,
+                        })
                       }
                     />
                   </div>
@@ -444,7 +516,10 @@ export default function AdminReleasesPage() {
                       placeholder="Orivraa_1.0.0_x64-setup.exe"
                       value={publishForm.fileName}
                       onChange={(e) =>
-                        setPublishForm({ ...publishForm, fileName: e.target.value })
+                        setPublishForm({
+                          ...publishForm,
+                          fileName: e.target.value,
+                        })
                       }
                     />
                   </div>
@@ -453,7 +528,10 @@ export default function AdminReleasesPage() {
                     <Input
                       value={publishForm.minOs}
                       onChange={(e) =>
-                        setPublishForm({ ...publishForm, minOs: e.target.value })
+                        setPublishForm({
+                          ...publishForm,
+                          minOs: e.target.value,
+                        })
                       }
                     />
                   </div>
@@ -462,7 +540,10 @@ export default function AdminReleasesPage() {
                     <Input
                       value={publishForm.minRam}
                       onChange={(e) =>
-                        setPublishForm({ ...publishForm, minRam: e.target.value })
+                        setPublishForm({
+                          ...publishForm,
+                          minRam: e.target.value,
+                        })
                       }
                     />
                   </div>
@@ -485,7 +566,10 @@ export default function AdminReleasesPage() {
                       placeholder="What's new in this release..."
                       value={publishForm.changelog}
                       onChange={(e) =>
-                        setPublishForm({ ...publishForm, changelog: e.target.value })
+                        setPublishForm({
+                          ...publishForm,
+                          changelog: e.target.value,
+                        })
                       }
                     />
                   </div>
@@ -546,8 +630,9 @@ export default function AdminReleasesPage() {
                 <span className="text-sm text-muted-foreground">
                   {filteredReleases.length} release
                   {filteredReleases.length !== 1 ? "s" : ""}
-                  {filteredReleases.filter(r => r.isActive).length !== filteredReleases.length &&
-                    ` (${filteredReleases.filter(r => r.isActive).length} active)`}
+                  {filteredReleases.filter((r) => r.isActive).length !==
+                    filteredReleases.length &&
+                    ` (${filteredReleases.filter((r) => r.isActive).length} active)`}
                 </span>
               </div>
 
@@ -583,7 +668,9 @@ export default function AdminReleasesPage() {
                           {/* Collapsed row */}
                           <div
                             className="flex items-center gap-4 py-3 cursor-pointer"
-                            onClick={() => setExpandedRelease(isExpanded ? null : rel.id)}
+                            onClick={() =>
+                              setExpandedRelease(isExpanded ? null : rel.id)
+                            }
                           >
                             {isExpanded ? (
                               <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -600,22 +687,35 @@ export default function AdminReleasesPage() {
                                 </Badge>
                               )}
                               {!rel.isActive && (
-                                <Badge variant="outline" className="text-[10px]">
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px]"
+                                >
                                   Inactive
                                 </Badge>
                               )}
                             </div>
                             <Badge variant="outline" className="text-[10px]">
-                              {rel.platform === "WINDOWS" ? "🪟" : rel.platform === "MACOS" ? "🍎" : "🌐"} {rel.platform}
+                              {rel.platform === "WINDOWS"
+                                ? "🪟"
+                                : rel.platform === "MACOS"
+                                  ? "🍎"
+                                  : "🌐"}{" "}
+                              {rel.platform}
                             </Badge>
                             <Badge variant="outline" className="text-[10px]">
                               {rel.channel}
                             </Badge>
                             <span className="text-xs text-muted-foreground flex-1">
                               {formatDate(rel.publishedAt)}
-                              {rel.fileSize ? ` · ${formatBytes(rel.fileSize)}` : ""}
+                              {rel.fileSize
+                                ? ` · ${formatBytes(rel.fileSize)}`
+                                : ""}
                             </span>
-                            <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            <div
+                              className="flex items-center gap-1.5"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               {rel.downloadUrl && (
                                 <Button
                                   variant="ghost"
@@ -637,7 +737,9 @@ export default function AdminReleasesPage() {
                                 variant="ghost"
                                 size="sm"
                                 className="h-7 w-7 p-0"
-                                onClick={() => handleToggleActive(rel.id, rel.isActive)}
+                                onClick={() =>
+                                  handleToggleActive(rel.id, rel.isActive)
+                                }
                                 title={rel.isActive ? "Deactivate" : "Activate"}
                               >
                                 {rel.isActive ? (
@@ -654,20 +756,38 @@ export default function AdminReleasesPage() {
                             <div className="pb-4 pt-1 pl-8 border-t border-border/30 space-y-3">
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                                 <div>
-                                  <span className="text-muted-foreground">File Name</span>
-                                  <p className="font-medium truncate">{rel.fileName || "—"}</p>
+                                  <span className="text-muted-foreground">
+                                    File Name
+                                  </span>
+                                  <p className="font-medium truncate">
+                                    {rel.fileName || "—"}
+                                  </p>
                                 </div>
                                 <div>
-                                  <span className="text-muted-foreground">File Size</span>
-                                  <p className="font-medium">{rel.fileSize ? formatBytes(rel.fileSize) : "—"}</p>
+                                  <span className="text-muted-foreground">
+                                    File Size
+                                  </span>
+                                  <p className="font-medium">
+                                    {rel.fileSize
+                                      ? formatBytes(rel.fileSize)
+                                      : "—"}
+                                  </p>
                                 </div>
                                 <div>
-                                  <span className="text-muted-foreground">Architecture</span>
-                                  <p className="font-medium">{rel.architecture || "—"}</p>
+                                  <span className="text-muted-foreground">
+                                    Architecture
+                                  </span>
+                                  <p className="font-medium">
+                                    {rel.architecture || "—"}
+                                  </p>
                                 </div>
                                 <div>
-                                  <span className="text-muted-foreground">Published</span>
-                                  <p className="font-medium">{formatDate(rel.publishedAt)}</p>
+                                  <span className="text-muted-foreground">
+                                    Published
+                                  </span>
+                                  <p className="font-medium">
+                                    {formatDate(rel.publishedAt)}
+                                  </p>
                                 </div>
                               </div>
                               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
@@ -675,26 +795,40 @@ export default function AdminReleasesPage() {
                                   <span className="text-muted-foreground flex items-center gap-1">
                                     <Server className="w-3 h-3" /> Min OS
                                   </span>
-                                  <p className="font-medium">{rel.minOs || "Not specified"}</p>
+                                  <p className="font-medium">
+                                    {rel.minOs || "Not specified"}
+                                  </p>
                                 </div>
                                 <div>
                                   <span className="text-muted-foreground flex items-center gap-1">
                                     <Cpu className="w-3 h-3" /> Min RAM
                                   </span>
-                                  <p className="font-medium">{rel.minRam || "Not specified"}</p>
+                                  <p className="font-medium">
+                                    {rel.minRam || "Not specified"}
+                                  </p>
                                 </div>
                                 <div>
                                   <span className="text-muted-foreground flex items-center gap-1">
                                     <HardDrive className="w-3 h-3" /> Min Disk
                                   </span>
-                                  <p className="font-medium">{rel.minDisk || "Not specified"}</p>
+                                  <p className="font-medium">
+                                    {rel.minDisk || "Not specified"}
+                                  </p>
                                 </div>
                               </div>
                               {rel.downloadUrl && (
                                 <div className="text-xs">
-                                  <span className="text-muted-foreground">Download URL</span>
+                                  <span className="text-muted-foreground">
+                                    Download URL
+                                  </span>
                                   <p className="font-mono text-[11px] break-all text-blue-500">
-                                    <a href={rel.downloadUrl} target="_blank" rel="noreferrer">{rel.downloadUrl}</a>
+                                    <a
+                                      href={rel.downloadUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                    >
+                                      {rel.downloadUrl}
+                                    </a>
                                   </p>
                                 </div>
                               )}
@@ -702,15 +836,23 @@ export default function AdminReleasesPage() {
                                 <div className="text-xs">
                                   <span className="text-muted-foreground flex items-center gap-1 mb-1">
                                     <FileText className="w-3 h-3" /> Changelog
-                                    <Badge variant="outline" className="text-[9px] ml-1">{rel.changelogSource}</Badge>
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[9px] ml-1"
+                                    >
+                                      {rel.changelogSource}
+                                    </Badge>
                                   </span>
                                   <div className="bg-muted/50 rounded-lg p-3 whitespace-pre-line text-[11px] leading-relaxed max-h-40 overflow-y-auto">
-                                    {rel.changelog || rel.githubChangelog || "No changelog"}
+                                    {rel.changelog ||
+                                      rel.githubChangelog ||
+                                      "No changelog"}
                                   </div>
                                 </div>
                               )}
                               <div className="text-[10px] text-muted-foreground">
-                                ID: {rel.id} · Created: {formatDate(rel.createdAt)}
+                                ID: {rel.id} · Created:{" "}
+                                {formatDate(rel.createdAt)}
                               </div>
                             </div>
                           )}
@@ -735,11 +877,16 @@ export default function AdminReleasesPage() {
                     <CardContent className="py-3 flex items-start gap-3">
                       <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
                       <div className="text-xs text-muted-foreground">
-                        <p className="font-medium text-foreground mb-1">How Desktop Analytics Works</p>
+                        <p className="font-medium text-foreground mb-1">
+                          How Desktop Analytics Works
+                        </p>
                         <p>
-                          Every desktop app sends a <strong>heartbeat</strong> every 30 minutes containing its version, OS, and architecture.
-                          The first heartbeat fires 15 seconds after launch. This data powers the stats below.
-                          Devices are identified by user ID + IP address combination.
+                          Every desktop app sends a <strong>heartbeat</strong>{" "}
+                          every 30 minutes containing its version, OS, and
+                          architecture. The first heartbeat fires 15 seconds
+                          after launch. This data powers the stats below.
+                          Devices are identified by user ID + IP address
+                          combination.
                         </p>
                       </div>
                     </CardContent>
@@ -786,12 +933,16 @@ export default function AdminReleasesPage() {
                     ].map((stat, i) => (
                       <Card key={i} className="border-border/50">
                         <CardContent className="py-4">
-                          <div className={`w-8 h-8 rounded-lg ${stat.color} flex items-center justify-center mb-2`}>
+                          <div
+                            className={`w-8 h-8 rounded-lg ${stat.color} flex items-center justify-center mb-2`}
+                          >
                             <stat.icon className="w-4 h-4" />
                           </div>
                           <p className="text-2xl font-bold">{stat.value}</p>
                           <p className="text-xs font-medium">{stat.label}</p>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">{stat.desc}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            {stat.desc}
+                          </p>
                         </CardContent>
                       </Card>
                     ))}
@@ -801,7 +952,9 @@ export default function AdminReleasesPage() {
                   {analytics.total > 0 && (
                     <Card className="border-border/50">
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Update Adoption</CardTitle>
+                        <CardTitle className="text-sm">
+                          Update Adoption
+                        </CardTitle>
                         <CardDescription className="text-xs">
                           Percentage of devices running the latest version
                         </CardDescription>
@@ -811,16 +964,23 @@ export default function AdminReleasesPage() {
                           <div className="flex-1 h-4 bg-muted rounded-full overflow-hidden">
                             <div
                               className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full transition-all"
-                              style={{ width: `${Math.round((analytics.upToDate / analytics.total) * 100)}%` }}
+                              style={{
+                                width: `${Math.round((analytics.upToDate / analytics.total) * 100)}%`,
+                              }}
                             />
                           </div>
                           <span className="text-lg font-bold w-16 text-right">
-                            {Math.round((analytics.upToDate / analytics.total) * 100)}%
+                            {Math.round(
+                              (analytics.upToDate / analytics.total) * 100,
+                            )}
+                            %
                           </span>
                         </div>
                         <p className="text-[10px] text-muted-foreground mt-2">
-                          {analytics.upToDate} of {analytics.total} devices are up to date
-                          {analytics.outdated > 0 && ` · ${analytics.outdated} will be prompted to update on next launch`}
+                          {analytics.upToDate} of {analytics.total} devices are
+                          up to date
+                          {analytics.outdated > 0 &&
+                            ` · ${analytics.outdated} will be prompted to update on next launch`}
                         </p>
                       </CardContent>
                     </Card>
@@ -845,11 +1005,17 @@ export default function AdminReleasesPage() {
                       ) : (
                         <div className="space-y-2">
                           {analytics.versionDistribution.map((item) => {
-                            const pct = analytics.total > 0
-                              ? Math.round((item.count / analytics.total) * 100)
-                              : 0;
+                            const pct =
+                              analytics.total > 0
+                                ? Math.round(
+                                    (item.count / analytics.total) * 100,
+                                  )
+                                : 0;
                             return (
-                              <div key={item.version} className="flex items-center gap-3">
+                              <div
+                                key={item.version}
+                                className="flex items-center gap-3"
+                              >
                                 <span className="text-sm font-mono w-20 shrink-0">
                                   v{item.version}
                                 </span>
@@ -859,12 +1025,15 @@ export default function AdminReleasesPage() {
                                     style={{ width: `${Math.max(pct, 5)}%` }}
                                   >
                                     {pct >= 15 && (
-                                      <span className="text-[10px] text-white font-medium">{pct}%</span>
+                                      <span className="text-[10px] text-white font-medium">
+                                        {pct}%
+                                      </span>
                                     )}
                                   </div>
                                 </div>
                                 <span className="text-xs text-muted-foreground w-20 text-right shrink-0">
-                                  {item.count} device{item.count !== 1 ? "s" : ""}
+                                  {item.count} device
+                                  {item.count !== 1 ? "s" : ""}
                                 </span>
                               </div>
                             );
@@ -893,17 +1062,33 @@ export default function AdminReleasesPage() {
                       ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                           {analytics.osDistribution.map((item) => {
-                            const pct = analytics.total > 0
-                              ? Math.round((item.count / analytics.total) * 100)
-                              : 0;
-                            const osEmoji = item.os === "windows" ? "🪟" : item.os === "macos" ? "🍎" : item.os === "linux" ? "🐧" : "💻";
+                            const pct =
+                              analytics.total > 0
+                                ? Math.round(
+                                    (item.count / analytics.total) * 100,
+                                  )
+                                : 0;
+                            const osEmoji =
+                              item.os === "windows"
+                                ? "🪟"
+                                : item.os === "macos"
+                                  ? "🍎"
+                                  : item.os === "linux"
+                                    ? "🐧"
+                                    : "💻";
                             return (
                               <Card key={item.os} className="border-border/50">
                                 <CardContent className="py-3 text-center">
                                   <span className="text-2xl">{osEmoji}</span>
-                                  <p className="text-sm font-medium capitalize mt-1">{item.os}</p>
-                                  <p className="text-lg font-bold">{item.count}</p>
-                                  <p className="text-[10px] text-muted-foreground">{pct}% of devices</p>
+                                  <p className="text-sm font-medium capitalize mt-1">
+                                    {item.os}
+                                  </p>
+                                  <p className="text-lg font-bold">
+                                    {item.count}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {pct}% of devices
+                                  </p>
                                 </CardContent>
                               </Card>
                             );
