@@ -85,6 +85,7 @@ interface NavItem {
   roles: UserRole[];
   badge?: number | "dynamic";
   badgeKey?: string;
+  children?: NavItem[];
 }
 
 const navItems: NavItem[] = [
@@ -157,30 +158,38 @@ const navItems: NavItem[] = [
     icon: CreditCard,
     roles: ["ADMIN"],
   },
-  // ── Maintenance / Ops ──
+  // ── Maintenance / Ops (collapsible group) ──
   {
-    label: "Intelligence",
+    label: "Maintenance",
     href: "/dashboard/admin/intelligence",
-    icon: Brain,
+    icon: Wrench,
     roles: ["ADMIN"],
-  },
-  {
-    label: "Performance",
-    href: "/dashboard/admin/performance",
-    icon: Activity,
-    roles: ["ADMIN"],
-  },
-  {
-    label: "Security",
-    href: "/dashboard/admin/security",
-    icon: ShieldCheck,
-    roles: ["ADMIN"],
-  },
-  {
-    label: "Testing",
-    href: "/dashboard/admin/testing",
-    icon: FlaskConical,
-    roles: ["ADMIN"],
+    children: [
+      {
+        label: "Intelligence",
+        href: "/dashboard/admin/intelligence",
+        icon: Brain,
+        roles: ["ADMIN"],
+      },
+      {
+        label: "Performance",
+        href: "/dashboard/admin/performance",
+        icon: Activity,
+        roles: ["ADMIN"],
+      },
+      {
+        label: "Security",
+        href: "/dashboard/admin/security",
+        icon: ShieldCheck,
+        roles: ["ADMIN"],
+      },
+      {
+        label: "Testing",
+        href: "/dashboard/admin/testing",
+        icon: FlaskConical,
+        roles: ["ADMIN"],
+      },
+    ],
   },
   // ── Account ──
   {
@@ -490,6 +499,27 @@ function SidebarContent({
     });
   }, [pathname]);
 
+  // Track which collapsible groups are open
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+
+  // Auto-expand group if a child is currently active
+  useEffect(() => {
+    const expanded: Record<string, boolean> = {};
+    for (const item of userNavItems) {
+      if (item.children) {
+        const childActive = item.children.some(
+          (c) => pathname === c.href || pathname.startsWith(c.href + "/"),
+        );
+        if (childActive) expanded[item.label] = true;
+      }
+    }
+    setOpenGroups((prev) => ({ ...prev, ...expanded }));
+  }, [pathname, userNavItems]);
+
+  const toggleGroup = (label: string) => {
+    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+  };
+
   if (!user) return null;
 
   return (
@@ -535,6 +565,69 @@ function SidebarContent({
           className="h-full p-3 space-y-1 overflow-y-auto scrollbar-thin"
         >
           {userNavItems.map((item) => {
+            // ── Collapsible group ──
+            if (item.children && item.children.length > 0) {
+              const isOpen = !!openGroups[item.label];
+              const hasActiveChild = item.children.some(
+                (c) =>
+                  pathname === c.href || pathname.startsWith(c.href + "/"),
+              );
+              return (
+                <div key={item.label}>
+                  <button
+                    onClick={() => toggleGroup(item.label)}
+                    className={cn(
+                      "flex w-full items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 touch-target",
+                      hasActiveChild
+                        ? "bg-gold-50 dark:bg-gold-950/30 text-gold-700 dark:text-gold-400"
+                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 active:scale-[0.98]",
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <item.icon className="h-5 w-5" />
+                      <span>{item.label}</span>
+                    </div>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 transition-transform duration-200",
+                        isOpen && "rotate-180",
+                      )}
+                    />
+                  </button>
+                  {isOpen && (
+                    <div className="ml-4 mt-0.5 space-y-0.5 border-l-2 border-gray-100 dark:border-gray-800 pl-2">
+                      {item.children.map((child) => {
+                        const isChildActive = pathname === child.href || pathname.startsWith(child.href + "/");
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            onClick={onNavClick}
+                            data-active={isChildActive}
+                            className={cn(
+                              "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200",
+                              isChildActive
+                                ? "bg-gradient-to-r from-gold-500 to-gold-600 text-white shadow-md shadow-gold-500/25"
+                                : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100",
+                            )}
+                          >
+                            <child.icon
+                              className={cn(
+                                "h-4 w-4",
+                                isChildActive && "text-white",
+                              )}
+                            />
+                            <span>{child.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // ── Regular nav item ──
             const isActive = pathname === item.href;
             const badgeCount =
               item.badge === "dynamic" && item.badgeKey
