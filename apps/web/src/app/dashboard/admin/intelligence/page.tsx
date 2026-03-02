@@ -351,34 +351,36 @@ export default function IntelligenceDashboardPage() {
                   <CardContent>
                     {(dashboard.topJewelleryTypes ?? []).length > 0 ? (
                       <div className="space-y-3">
-                        {(dashboard.topJewelleryTypes ?? []).map((item, idx) => (
-                          <div
-                            key={item.rfqJewelleryType}
-                            className="flex items-center justify-between"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-gray-500 dark:text-gray-400 w-4">
-                                {idx + 1}.
-                              </span>
-                              <span className="font-medium">
-                                {item.rfqJewelleryType}
-                              </span>
+                        {(dashboard.topJewelleryTypes ?? []).map(
+                          (item, idx) => (
+                            <div
+                              key={item.rfqJewelleryType}
+                              className="flex items-center justify-between"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 w-4">
+                                  {idx + 1}.
+                                </span>
+                                <span className="font-medium">
+                                  {item.rfqJewelleryType}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-sm text-gray-500 dark:text-gray-400">
+                                  {item._count.id} RFQs
+                                </span>
+                                {item._avg.avgOfferPrice && (
+                                  <Badge variant="outline">
+                                    ~NPR{" "}
+                                    {Math.round(
+                                      item._avg.avgOfferPrice,
+                                    ).toLocaleString()}
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <span className="text-sm text-gray-500 dark:text-gray-400">
-                                {item._count.id} RFQs
-                              </span>
-                              {item._avg.avgOfferPrice && (
-                                <Badge variant="outline">
-                                  ~NPR{" "}
-                                  {Math.round(
-                                    item._avg.avgOfferPrice,
-                                  ).toLocaleString()}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        ))}
+                          ),
+                        )}
                       </div>
                     ) : (
                       <p className="text-sm text-gray-400">

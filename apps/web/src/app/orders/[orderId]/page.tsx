@@ -461,14 +461,16 @@ export default function OrderTrackingPage() {
                               </p>
                               {(milestone.evidenceUrls?.length || 0) > 0 && (
                                 <div className="flex gap-2 mt-2">
-                                  {(milestone.evidenceUrls || []).map((url, i) => (
-                                    <img
-                                      key={i}
-                                      src={url}
-                                      alt={`Evidence ${i + 1}`}
-                                      className="w-16 h-16 object-cover rounded border"
-                                    />
-                                  ))}
+                                  {(milestone.evidenceUrls || []).map(
+                                    (url, i) => (
+                                      <img
+                                        key={i}
+                                        src={url}
+                                        alt={`Evidence ${i + 1}`}
+                                        className="w-16 h-16 object-cover rounded border"
+                                      />
+                                    ),
+                                  )}
                                 </div>
                               )}
                             </div>

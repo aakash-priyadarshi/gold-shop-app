@@ -2070,7 +2070,7 @@ export default function CreateRfqPage() {
       country: country,
       currency: currency,
       marketRates: {
-        metals: marketRates.metals,
+        metals: marketRates?.metals,
         fx: marketRates.fx,
       },
       makingChargePercent: 12,
@@ -2655,15 +2655,15 @@ export default function CreateRfqPage() {
     const token =
       typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-    // Check both token AND session status for authentication
+    // Check both token AND auth state for authentication
     console.log(
       "[RFQ Submit] Auth check - token exists:",
       !!token,
-      "session status:",
-      status,
+      "isAuthenticated:",
+      isAuthenticated,
     );
 
-    if (!token && status !== "authenticated") {
+    if (!token && !isAuthenticated) {
       console.log("[RFQ Submit] Not authenticated, redirecting to login");
       router.push("/auth/login?callbackUrl=/rfq/create");
       return;
@@ -2972,7 +2972,7 @@ export default function CreateRfqPage() {
       ? { finishType: formData.surfaceFinish }
       : undefined,
     marketRates: marketRates
-      ? { metals: marketRates.metals, fx: marketRates.fx }
+      ? { metals: marketRates?.metals, fx: marketRates?.fx }
       : undefined,
   });
 
@@ -3158,9 +3158,9 @@ export default function CreateRfqPage() {
                                 : null;
 
                         const selectedPrice = selectedKey
-                          ? marketRates.metals[
+                          ? marketRates?.metals?.[
                               selectedKey as keyof typeof marketRates.metals
-                            ]
+                            ] ?? null
                           : null;
 
                         const selectedLabel = selectedKey
@@ -3246,7 +3246,7 @@ export default function CreateRfqPage() {
                                 >
                                   {currencyInfo.symbol}
                                   {Math.round(
-                                    marketRates.metals[
+                                    marketRates?.metals?.[
                                       key as keyof typeof marketRates.metals
                                     ] || 0,
                                   ).toLocaleString()}
@@ -3300,7 +3300,7 @@ export default function CreateRfqPage() {
                                 >
                                   {currencyInfo.symbol}
                                   {Math.round(
-                                    marketRates.metals[
+                                    marketRates?.metals?.[
                                       key as keyof typeof marketRates.metals
                                     ] || 0,
                                   ).toLocaleString()}
@@ -3351,7 +3351,7 @@ export default function CreateRfqPage() {
                                 >
                                   {currencyInfo.symbol}
                                   {Math.round(
-                                    marketRates.metals[
+                                    marketRates?.metals?.[
                                       key as keyof typeof marketRates.metals
                                     ] || 0,
                                   ).toLocaleString()}
@@ -3376,7 +3376,7 @@ export default function CreateRfqPage() {
                             <span className="font-mono font-semibold text-blue-700 dark:text-blue-300 whitespace-nowrap">
                               {currencyInfo.symbol}
                               {Math.round(
-                                marketRates.metals.PALLADIUM_PD950 || 0,
+                                marketRates?.metals?.PALLADIUM_PD950 || 0,
                               ).toLocaleString()}
                             </span>
                           </div>

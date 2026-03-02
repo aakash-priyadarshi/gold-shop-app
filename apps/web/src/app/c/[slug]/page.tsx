@@ -814,7 +814,9 @@ export default function PublicCataloguePage() {
     try {
       const t = tkn || token || undefined;
       const res = await catalogueApi.getPublicItems(slug, t);
-      setItems((res.data || []).filter((i: CatalogueItemPublic) => !i.isHidden));
+      setItems(
+        (res.data || []).filter((i: CatalogueItemPublic) => !i.isHidden),
+      );
     } catch {
       setError("Failed to load items.");
     }
