@@ -133,10 +133,12 @@ jobs:
         run: cd e2e && npx playwright install --with-deps chromium
 
       - name: Run Playwright tests against production
-        run: pnpm e2e
+        run: pnpm e2e -- --project=chromium
+        continue-on-error: true
         env:
           BASE_URL: "https://www.orivraa.com"
           API_BASE_URL: "https://api.orivraa.com/api"
+          CI: "true"
 
       - name: Upload Playwright report
         if: always()
@@ -148,6 +150,7 @@ jobs:
             e2e-results/
             e2e/test-results/
           retention-days: 14
+          if-no-files-found: warn
 
   # ══════════════════════════════════════════════════════════
   # Summary

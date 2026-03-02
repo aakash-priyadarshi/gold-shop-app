@@ -36,10 +36,10 @@ describe("AppController (e2e)", () => {
     });
   });
 
-  describe("/api/health/detailed (GET)", () => {
-    it("should return detailed health info", () => {
+  describe("/api/health/ready (GET)", () => {
+    it("should return readiness status", () => {
       return request(app.getHttpServer())
-        .get("/api/health/detailed")
+        .get("/api/health/ready")
         .expect(200)
         .expect((res) => {
           expect(res.body).toHaveProperty("status");

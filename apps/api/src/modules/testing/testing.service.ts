@@ -222,9 +222,9 @@ export class TestingService {
     );
     results.push(
       await this.testEndpoint(
-        "Health Detailed",
+        "Health Readiness",
         "health",
-        "/api/health/detailed",
+        "/api/health/ready",
         200,
         "GET",
         undefined,
@@ -388,7 +388,10 @@ export class TestingService {
             "User-Agent": "Orivraa-TestDashboard/1.0",
             "X-GitHub-Api-Version": "2022-11-28",
             ...(payload
-              ? { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload) }
+              ? {
+                  "Content-Type": "application/json",
+                  "Content-Length": Buffer.byteLength(payload),
+                }
               : {}),
           },
           timeout: 15000,
@@ -397,7 +400,11 @@ export class TestingService {
           let data = "";
           res.on("data", (chunk) => (data += chunk));
           res.on("end", () => {
-            if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            if (
+              res.statusCode &&
+              res.statusCode >= 200 &&
+              res.statusCode < 300
+            ) {
               // 204 No Content (e.g. workflow dispatch returns 204)
               if (res.statusCode === 204 || !data) {
                 resolve({} as T);
@@ -432,9 +439,7 @@ export class TestingService {
    * Trigger the CI test workflow via GitHub Actions API.
    * POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches
    */
-  async triggerCIWorkflow(
-    branch: string = "master",
-  ): Promise<CITriggerResult> {
+  async triggerCIWorkflow(branch: string = "master"): Promise<CITriggerResult> {
     try {
       await this.ghFetch(
         `/repos/${this.GH_REPO}/actions/workflows/${this.GH_WORKFLOW}/dispatches`,
@@ -748,6 +753,7 @@ export class TestingService {
   // ── Git Info ─────────────────────────────────────────────
 
   getGitInfo(): Record<string, string> {
+    // First try local git (works in dev / CI runners)
     try {
       const branch = execSync("git rev-parse --abbrev-ref HEAD")
         .toString()
@@ -759,11 +765,44 @@ export class TestingService {
       const date = execSync("git log -1 --pretty=%ci").toString().trim();
       return { branch, commit, commitFull, message, author, date };
     } catch {
+      // No .git directory (Railway / Docker) — try fetching from GitHub API
+      return this.getGitInfoFallback();
+    }
+  }
+
+  private getGitInfoFallback(): Record<string, string> {
+    const token = this.getGithubToken();
+    if (!token) {
       return {
-        branch: "unknown",
-        commit: "unknown",
+        branch: "master",
+        commit: "N/A",
         commitFull: "",
-        message: "unable to read git info",
+        message: "Git info unavailable — no .git dir and no GITHUB_TOKEN",
+        author: "",
+        date: "",
+      };
+    }
+
+    // Synchronous HTTPS fetch via child_process so the return type stays sync
+    try {
+      const curlCmd = `curl -sS -H "Authorization: Bearer ${token}" -H "Accept: application/vnd.github+json" -H "User-Agent: Orivraa-TestDashboard/1.0" "https://api.github.com/repos/${this.GH_REPO}/commits/master?per_page=1"`;
+      const raw = execSync(curlCmd, { timeout: 8000 }).toString().trim();
+      const data = JSON.parse(raw);
+      return {
+        branch: "master",
+        commit: (data.sha || "").substring(0, 7),
+        commitFull: data.sha || "",
+        message: data.commit?.message || "",
+        author: data.commit?.author?.name || data.commit?.committer?.name || "",
+        date: data.commit?.author?.date || data.commit?.committer?.date || "",
+      };
+    } catch (e) {
+      this.logger.warn("GitHub API fallback for git info failed", e);
+      return {
+        branch: "master",
+        commit: "N/A",
+        commitFull: "",
+        message: "Unable to fetch git info from GitHub API",
         author: "",
         date: "",
       };
@@ -1271,7 +1310,9 @@ export class TestingService {
               scopes,
               rateLimit,
               user,
-              message: valid ? undefined : `GitHub API returned ${res.statusCode}`,
+              message: valid
+                ? undefined
+                : `GitHub API returned ${res.statusCode}`,
             });
           });
         },
