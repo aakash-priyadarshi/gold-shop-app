@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
@@ -8,6 +8,7 @@ import {
   CITriggerResult,
   CIWorkflowRun,
   E2EReport,
+  GitHubTokenStatus,
   IntegrationReport,
   SmokeTestReport,
   TestRunHistoryEntry,
@@ -135,5 +136,33 @@ export class TestingController {
   @Get("runtime")
   getRuntimeInfo(): Record<string, unknown> {
     return this.testingService.getRuntimeInfo();
+  }
+
+  // ── GitHub Token Management ───────────────────────────
+
+  /** GET /api/testing/github-token — Get GitHub token status with expiry info */
+  @Get("github-token")
+  async getGitHubTokenStatus(): Promise<GitHubTokenStatus> {
+    return this.testingService.getGitHubTokenStatus();
+  }
+
+  /** POST /api/testing/github-token — Register GitHub token metadata for expiry tracking */
+  @Post("github-token")
+  async registerGitHubToken(
+    @Body() body: { tokenName: string; tokenPrefix: string; expiresAt: string },
+  ): Promise<GitHubTokenStatus> {
+    return this.testingService.registerGitHubToken(body);
+  }
+
+  /** POST /api/testing/github-token/validate — Validate the token against GitHub API */
+  @Post("github-token/validate")
+  async validateGitHubToken() {
+    return this.testingService.validateGitHubToken();
+  }
+
+  /** DELETE /api/testing/github-token — Remove stored GitHub token config */
+  @Delete("github-token")
+  async deleteGitHubTokenConfig() {
+    return this.testingService.deleteGitHubTokenConfig();
   }
 }

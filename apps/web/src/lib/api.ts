@@ -1047,6 +1047,15 @@ export const testingApi = {
   getCIRunDetail: (runId: number) => api.get(`/testing/ci/runs/${runId}`),
   rerunCI: (runId: number) => api.post(`/testing/ci/runs/${runId}/rerun`),
   cancelCI: (runId: number) => api.post(`/testing/ci/runs/${runId}/cancel`),
+  // GitHub Token Management
+  getGitHubTokenStatus: () => api.get("/testing/github-token"),
+  registerGitHubToken: (data: {
+    tokenName: string;
+    tokenPrefix: string;
+    expiresAt: string;
+  }) => api.post("/testing/github-token", data),
+  validateGitHubToken: () => api.post("/testing/github-token/validate"),
+  deleteGitHubTokenConfig: () => api.delete("/testing/github-token"),
 };
 
 export default api;
