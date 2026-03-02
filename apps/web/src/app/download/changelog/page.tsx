@@ -19,6 +19,7 @@ interface ChangelogEntry {
   version: string;
   platform: string;
   changelog: string;
+  displayChangelog: string;
   publishedAt: string;
 }
 
@@ -191,9 +192,9 @@ export default function ChangelogPage() {
                               {formatDate(entry.publishedAt)}
                             </span>
                           </div>
-                          {entry.changelog && (
+                          {(entry.displayChangelog || entry.changelog) && (
                             <div className="mt-2 text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
-                              {entry.changelog}
+                              {entry.displayChangelog || entry.changelog}
                             </div>
                           )}
                         </div>

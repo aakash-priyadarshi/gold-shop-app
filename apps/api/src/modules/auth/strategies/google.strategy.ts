@@ -26,16 +26,18 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   ): Promise<any> {
     const { name, emails, photos, id } = profile;
     
-    // Decode role and mode from state parameter (preserved through OAuth flow)
+    // Decode role, mode, and desktop_port from state parameter (preserved through OAuth flow)
     let role = 'CUSTOMER';
     let mode = 'login';
+    let desktopPort: string | undefined;
     
     if (req.query?.state) {
       try {
         const stateData = JSON.parse(Buffer.from(req.query.state, 'base64').toString());
         role = stateData.role || 'CUSTOMER';
         mode = stateData.mode || 'login';
-        this.logger.log(`Decoded OAuth state: role=${role}, mode=${mode}`);
+        desktopPort = stateData.desktop_port;
+        this.logger.log(`Decoded OAuth state: role=${role}, mode=${mode}, desktop_port=${desktopPort || 'none'}`);
       } catch (error) {
         this.logger.warn(`Failed to decode OAuth state: ${error.message}`);
       }
@@ -50,6 +52,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       accessToken,
       requestedRole: role, // Pass the requested role
       mode, // Pass the mode (login/register)
+      desktopPort, // Pass the desktop port for OAuth callback
     };
 
     this.logger.log(`Google OAuth user: ${user.email}, requested role: ${role}, mode: ${mode}`);

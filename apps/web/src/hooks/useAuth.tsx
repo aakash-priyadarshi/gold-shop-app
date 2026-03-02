@@ -450,7 +450,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Pass role and mode as query params so backend knows what type of account to create
       // mode='login' - requires existing account, redirects to register if not found
       // mode='register' - creates account if not exists
-      window.location.href = `${baseUrl}/auth/google?role=${role}&mode=${mode}`;
+      // If desktop_port is in sessionStorage, pass it through the OAuth flow
+      const desktopPort = typeof window !== "undefined"
+        ? (sessionStorage.getItem("orivraa_desktop_port") || localStorage.getItem("orivraa_desktop_port"))
+        : null;
+      const portParam = desktopPort ? `&desktop_port=${desktopPort}` : "";
+      window.location.href = `${baseUrl}/auth/google?role=${role}&mode=${mode}${portParam}`;
     },
     [],
   );

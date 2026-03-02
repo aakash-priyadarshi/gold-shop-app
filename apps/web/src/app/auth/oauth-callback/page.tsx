@@ -43,9 +43,14 @@ function OAuthCallbackHandler() {
       }
 
       // ── Desktop OAuth: send tokens back to Orivraa Desktop via localhost ──
-      const desktopPort = sessionStorage.getItem("orivraa_desktop_port");
+      // desktop_port comes from: 1) URL param (passed through OAuth state), 2) sessionStorage, 3) localStorage
+      const desktopPort =
+        searchParams.get("desktop_port") ||
+        sessionStorage.getItem("orivraa_desktop_port") ||
+        localStorage.getItem("orivraa_desktop_port");
       if (desktopPort) {
         sessionStorage.removeItem("orivraa_desktop_port");
+        localStorage.removeItem("orivraa_desktop_port");
         try {
           // Fetch user profile to include with token payload
           localStorage.setItem(TOKEN_KEY, accessToken);
@@ -81,7 +86,9 @@ function OAuthCallbackHandler() {
 
           // Try to auto-close the tab
           setTimeout(() => {
-            try { window.close(); } catch (_) {}
+            try {
+              window.close();
+            } catch (_) {}
           }, 2000);
           return;
         } catch (err) {

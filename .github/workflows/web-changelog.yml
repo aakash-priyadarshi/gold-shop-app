@@ -1,0 +1,85 @@
+# Auto-publish WEB changelog on push to master
+# Collects commit messages and creates a WEB release entry
+# so website changes appear in the changelog page
+
+name: Web Changelog
+
+on:
+  push:
+    branches: [master]
+
+env:
+  API_URL: ${{ secrets.PRODUCTION_API_URL }}
+
+jobs:
+  publish-web-changelog:
+    name: 📝 Publish Web Changelog
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 50 # Enough to get commit messages
+
+      - name: Collect commit messages
+        id: changelog
+        run: |
+          # Get commits from this push
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
+
+          # Handle first push (before is all zeros)
+          if [[ "$BEFORE" == "0000000000000000000000000000000000000000" ]]; then
+            COMMITS=$(git log --format="• %s" -10 "$AFTER")
+          else
+            COMMITS=$(git log --format="• %s" "${BEFORE}..${AFTER}" 2>/dev/null || git log --format="• %s" -5 "$AFTER")
+          fi
+
+          # Skip if only desktop files changed
+          CHANGED_FILES=$(git diff --name-only "${BEFORE}..${AFTER}" 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+          WEB_CHANGES=$(echo "$CHANGED_FILES" | grep -v "^apps/desktop/" | grep -v "^\.github/workflows/desktop" || true)
+
+          if [[ -z "$WEB_CHANGES" ]]; then
+            echo "Only desktop files changed, skipping web changelog"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "skip=false" >> $GITHUB_OUTPUT
+
+          # Store changelog in a file (avoids multi-line shell issues)
+          echo "$COMMITS" > /tmp/changelog.txt
+          echo "--- Commits in this push ---"
+          cat /tmp/changelog.txt
+
+      - name: Publish WEB release
+        if: steps.changelog.outputs.skip != 'true'
+        run: |
+          VERSION="1.0.${{ github.run_number }}"
+          CHANGELOG=$(cat /tmp/changelog.txt)
+
+          # Escape for JSON
+          CHANGELOG_JSON=$(echo "$CHANGELOG" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read().strip()))')
+
+          echo "Publishing WEB v${VERSION}..."
+
+          HTTP_CODE=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer ${{ secrets.ADMIN_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            "${API_URL}/releases/publish" \
+            -d "{
+              \"version\": \"${VERSION}\",
+              \"platform\": \"WEB\",
+              \"downloadUrl\": \"https://www.orivraa.com\",
+              \"changelog\": ${CHANGELOG_JSON}
+            }")
+
+          echo "Response code: $HTTP_CODE"
+          cat /tmp/response.json
+
+          if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
+            echo "::notice::✅ Web changelog published: v${VERSION}"
+          else
+            echo "::warning::⚠️ Failed to publish web changelog (HTTP $HTTP_CODE)"
+            # Don't fail the workflow — changelog is non-critical
+          fi

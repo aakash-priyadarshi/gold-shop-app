@@ -328,71 +328,72 @@ pub async fn open_google_auth(
 
     // Listen for the callback in a background task (timeout: 5 minutes)
     tokio::spawn(async move {
-        let timeout = tokio::time::timeout(
-            std::time::Duration::from_secs(300),
-            listener.accept(),
-        ).await;
+        let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(300);
 
-        match timeout {
-            Ok(Ok((mut stream, _addr))) => {
-                let mut buf = vec![0u8; 8192];
-                let n = stream.read(&mut buf).await.unwrap_or(0);
-                let request = String::from_utf8_lossy(&buf[..n]).to_string();
+        loop {
+            let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+            if remaining.is_zero() {
+                log::warn!("Auth callback server timed out after 5 minutes");
+                break;
+            }
 
-                // Parse the POST body (tokens as JSON)
-                if let Some(body_start) = request.find("\r\n\r\n") {
-                    let body = &request[body_start + 4..];
+            let accept_result = tokio::time::timeout(remaining, listener.accept()).await;
 
-                    // CORS preflight response
+            match accept_result {
+                Ok(Ok((mut stream, addr))) => {
+                    let mut buf = vec![0u8; 16384];
+                    let n = stream.read(&mut buf).await.unwrap_or(0);
+                    if n == 0 { continue; }
+                    let request = String::from_utf8_lossy(&buf[..n]).to_string();
+
+                    log::info!("Auth callback received from {}: {} bytes, method: {}",
+                        addr, n, request.lines().next().unwrap_or("?"));
+
+                    // ── CORS preflight (OPTIONS) ──
                     if request.starts_with("OPTIONS") {
                         let response = "HTTP/1.1 204 No Content\r\n\
                             Access-Control-Allow-Origin: https://www.orivraa.com\r\n\
                             Access-Control-Allow-Methods: POST, OPTIONS\r\n\
                             Access-Control-Allow-Headers: Content-Type\r\n\
+                            Access-Control-Allow-Private-Network: true\r\n\
                             Access-Control-Max-Age: 86400\r\n\
-                            Content-Length: 0\r\n\r\n";
+                            Content-Length: 0\r\n\
+                            Connection: close\r\n\r\n";
                         let _ = stream.write_all(response.as_bytes()).await;
-
-                        // Wait for the actual POST
-                        let mut buf2 = vec![0u8; 8192];
-                        let n2 = stream.read(&mut buf2).await.unwrap_or(0);
-                        if n2 == 0 {
-                            // Try accepting another connection for the POST
-                            if let Ok(Ok((mut stream2, _))) = tokio::time::timeout(
-                                std::time::Duration::from_secs(30),
-                                listener.accept(),
-                            ).await {
-                                let mut buf3 = vec![0u8; 8192];
-                                let n3 = stream2.read(&mut buf3).await.unwrap_or(0);
-                                let request2 = String::from_utf8_lossy(&buf3[..n3]).to_string();
-                                if let Some(body_start2) = request2.find("\r\n\r\n") {
-                                    let body2 = &request2[body_start2 + 4..];
-                                    process_auth_tokens(body2, &db_clone, &receiver_clone).await;
-                                }
-                                let resp = success_response();
-                                let _ = stream2.write_all(resp.as_bytes()).await;
-                            }
-                            return;
-                        }
-                        let request2 = String::from_utf8_lossy(&buf2[..n2]).to_string();
-                        if let Some(body_start2) = request2.find("\r\n\r\n") {
-                            process_auth_tokens(&request2[body_start2 + 4..], &db_clone, &receiver_clone).await;
-                        }
-                        return;
+                        let _ = stream.shutdown().await;
+                        // Continue loop to accept the actual POST on a new connection
+                        continue;
                     }
 
-                    // Handle POST with tokens
-                    process_auth_tokens(body, &db_clone, &receiver_clone).await;
+                    // ── POST with tokens ──
+                    if request.starts_with("POST") {
+                        if let Some(body_start) = request.find("\r\n\r\n") {
+                            let body = &request[body_start + 4..];
+                            process_auth_tokens(body, &db_clone, &receiver_clone).await;
+                        }
+                        let response = success_response();
+                        let _ = stream.write_all(response.as_bytes()).await;
+                        let _ = stream.shutdown().await;
+                        log::info!("Auth callback: tokens processed, server closing");
+                        break; // Done — tokens received
+                    }
 
-                    let response = success_response();
-                    let _ = stream.write_all(response.as_bytes()).await;
+                    // ── Unknown method — respond 405 and keep listening ──
+                    let resp = "HTTP/1.1 405 Method Not Allowed\r\n\
+                        Access-Control-Allow-Origin: https://www.orivraa.com\r\n\
+                        Content-Length: 0\r\n\
+                        Connection: close\r\n\r\n";
+                    let _ = stream.write_all(resp.as_bytes()).await;
+                    let _ = stream.shutdown().await;
                 }
-            }
-            Ok(Err(e)) => {
-                log::error!("Auth callback server accept error: {}", e);
-            }
-            Err(_) => {
-                log::warn!("Auth callback server timed out after 5 minutes");
+                Ok(Err(e)) => {
+                    log::error!("Auth callback server accept error: {}", e);
+                    break;
+                }
+                Err(_) => {
+                    log::warn!("Auth callback server timed out");
+                    break;
+                }
             }
         }
     });
@@ -405,6 +406,7 @@ fn success_response() -> String {
     format!(
         "HTTP/1.1 200 OK\r\n\
         Access-Control-Allow-Origin: https://www.orivraa.com\r\n\
+        Access-Control-Allow-Private-Network: true\r\n\
         Content-Type: text/html; charset=utf-8\r\n\
         Content-Length: {}\r\n\
         Connection: close\r\n\r\n{}",
