@@ -1033,7 +1033,8 @@ export default function AdminReleasesPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      {(!analytics.versionDistribution || analytics.versionDistribution.length === 0) ? (
+                      {!analytics.versionDistribution ||
+                      analytics.versionDistribution.length === 0 ? (
                         <p className="text-sm text-muted-foreground py-4 text-center">
                           No data yet — waiting for first heartbeat
                         </p>
@@ -1090,7 +1091,8 @@ export default function AdminReleasesPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      {(!analytics.osDistribution || analytics.osDistribution.length === 0) ? (
+                      {!analytics.osDistribution ||
+                      analytics.osDistribution.length === 0 ? (
                         <p className="text-sm text-muted-foreground py-4 text-center">
                           No data yet
                         </p>

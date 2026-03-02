@@ -98,53 +98,34 @@
   ].join('\n');
   document.head.appendChild(style);
 
-  // ─── 1. REPLACE DEFAULT LOADING SPINNERS WITH GOLDEN ONES ───
-  function replaceSpinners() {
-    // Find all animate-spin elements (Next.js/Tailwind loading spinners)
-    var spinners = document.querySelectorAll('.animate-spin, [class*="animate-spin"]');
-    spinners.forEach(function(el) {
-      if (el.dataset.orivraaReplaced) return;
-      el.dataset.orivraaReplaced = 'true';
-
-      // Create a golden spinner replacement
-      var golden = document.createElement('div');
-      golden.className = 'orivraa-golden-spinner';
-
-      // Match size
-      var rect = el.getBoundingClientRect();
-      if (rect.width <= 24) golden.className += ' orivraa-golden-spinner-sm';
-      else if (rect.width >= 48) golden.className += ' orivraa-golden-spinner-lg';
-
-      if (el.parentNode) {
-        el.parentNode.replaceChild(golden, el);
-      }
-    });
-
-    // Also find the animate-pulse loading boxes on auth pages
-    var pulseBoxes = document.querySelectorAll('.animate-pulse');
-    pulseBoxes.forEach(function(el) {
-      if (el.dataset.orivraaReplaced) return;
-      var rect = el.getBoundingClientRect();
-      // Only replace small square pulse elements (loading indicators)
-      if (rect.width > 10 && rect.width < 80 && Math.abs(rect.width - rect.height) < 10) {
-        el.dataset.orivraaReplaced = 'true';
-        var golden = document.createElement('div');
-        golden.className = 'orivraa-golden-spinner';
-        if (rect.width <= 24) golden.className += ' orivraa-golden-spinner-sm';
-        else if (rect.width >= 48) golden.className += ' orivraa-golden-spinner-lg';
-        if (el.parentNode) {
-          el.parentNode.replaceChild(golden, el);
-        }
-      }
-    });
-  }
-
-  // Run on load and observe DOM changes
-  replaceSpinners();
-  var spinnerObserver = new MutationObserver(function() {
-    replaceSpinners();
-  });
-  spinnerObserver.observe(document.body, { childList: true, subtree: true });
+  // ─── 1. GOLDEN SPINNERS VIA CSS-ONLY (no DOM replacement) ───
+  // Previous approach replaced React-managed DOM nodes, breaking reconciliation.
+  // Now we use pure CSS to restyle animate-spin elements as golden spinners.
+  var spinnerOverrideStyle = document.createElement('style');
+  spinnerOverrideStyle.id = 'orivraa-spinner-override';
+  spinnerOverrideStyle.textContent = [
+    '/* Override Tailwind animate-spin with golden spinner */',
+    '.animate-spin, [class*="animate-spin"] {',
+    '  color: transparent !important;',
+    '  background: transparent !important;',
+    '  border-color: transparent !important;',
+    '  border-top-color: #e5a31e !important;',
+    '  border-right-color: #f3dd99 !important;',
+    '  border-radius: 50% !important;',
+    '  animation: orivraaSpinRing 0.9s cubic-bezier(0.5, 0, 0.5, 1) infinite !important;',
+    '}',
+    '.animate-spin > *, [class*="animate-spin"] > * {',
+    '  visibility: hidden !important;',
+    '}',
+    '',
+    '/* Override Tailwind animate-pulse small loading indicators */',
+    '.animate-pulse {',
+    '  background: linear-gradient(90deg, transparent 25%, rgba(212,175,55,0.1) 50%, transparent 75%) !important;',
+    '  background-size: 200% 100% !important;',
+    '  animation: orivraaShimmer 1.5s ease-in-out infinite !important;',
+    '}',
+  ].join('\n');
+  document.head.appendChild(spinnerOverrideStyle);
 
   // ─── 2. DISABLE BROWSER CONTEXT MENU ───
   document.addEventListener('contextmenu', function(e) {

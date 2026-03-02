@@ -33,9 +33,11 @@ import { VerifyEmailDto } from "./dto/verify-email.dto";
 import { GoogleAuthGuard } from "./guards/google-auth.guard";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import { TurnstileService } from "./turnstile.service";
+import { SkipSecurity } from "../security/security.guard";
 
 @ApiTags("auth")
 @Controller("auth")
+@SkipSecurity() // Auth endpoints must remain accessible even when an IP is temporarily blocked
 export class AuthController {
   constructor(
     private authService: AuthService,

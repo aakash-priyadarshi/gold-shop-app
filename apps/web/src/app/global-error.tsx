@@ -65,24 +65,38 @@ export default function GlobalError({
             An unexpected error occurred. You can try again or go back to the
             home page.
           </p>
-          {process.env.NODE_ENV === "development" && error?.message && (
-            <pre
-              style={{
-                textAlign: "left",
-                background: "rgba(0,0,0,0.3)",
-                padding: "0.75rem 1rem",
-                borderRadius: 8,
-                fontSize: "0.75rem",
-                color: "#fca5a5",
-                overflow: "auto",
-                maxHeight: 120,
-                margin: "0 0 1.5rem",
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-              }}
-            >
-              {error.message}
-            </pre>
+          {error?.message && (
+            <details style={{ marginBottom: "1.5rem", textAlign: "left" }}>
+              <summary
+                style={{
+                  background: "rgba(0,0,0,0.3)",
+                  padding: "0.5rem 1rem",
+                  borderRadius: "8px 8px 0 0",
+                  fontSize: "0.75rem",
+                  color: "#fca5a5",
+                  cursor: "pointer",
+                  userSelect: "none",
+                }}
+              >
+                Error details (click to expand)
+              </summary>
+              <pre
+                style={{
+                  background: "rgba(0,0,0,0.3)",
+                  padding: "0.75rem 1rem",
+                  borderRadius: "0 0 8px 8px",
+                  fontSize: "0.75rem",
+                  color: "#fca5a5",
+                  overflow: "auto",
+                  maxHeight: 200,
+                  margin: 0,
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                }}
+              >
+                {error.message}
+              </pre>
+            </details>
           )}
           <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
             <button

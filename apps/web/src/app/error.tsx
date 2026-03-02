@@ -49,12 +49,17 @@ export default function Error({
           navigate to the home page.
         </p>
 
-        {/* Dev-only error details */}
-        {process.env.NODE_ENV === "development" && error?.message && (
-          <pre className="mb-6 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/40 p-3 text-left text-xs text-red-600 dark:text-red-400 overflow-auto max-h-32 whitespace-pre-wrap break-words">
-            {error.message}
-            {error.stack && `\n\n${error.stack}`}
-          </pre>
+        {/* Error details — always shown as collapsible so users can report bugs */}
+        {error?.message && (
+          <details className="mb-6 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/40 text-left">
+            <summary className="px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 cursor-pointer select-none hover:bg-red-100/50 dark:hover:bg-red-900/30 rounded-t-lg">
+              Error details (click to expand)
+            </summary>
+            <pre className="px-3 pb-3 text-xs text-red-600 dark:text-red-400 overflow-auto max-h-48 whitespace-pre-wrap break-words">
+              {error.message}
+              {process.env.NODE_ENV === "development" && error.stack && `\n\n${error.stack}`}
+            </pre>
+          </details>
         )}
 
         <div className="flex items-center justify-center gap-3">
