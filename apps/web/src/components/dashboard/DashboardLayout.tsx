@@ -5,6 +5,7 @@ import { ShopSwitcher } from "@/components/dashboard/ShopSwitcher";
 import { SuspendedOverlay } from "@/components/dashboard/SuspendedOverlay";
 import { MessageDropdown } from "@/components/notifications/MessageDropdown";
 import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
+import { AnimatedThemeToggle } from "@/components/ui/animated-theme-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,7 +46,6 @@ import {
   LogOut,
   Menu,
   MessageSquare,
-  Moon,
   Package,
   Receipt,
   ScanLine,
@@ -56,14 +56,12 @@ import {
   ShieldCheck,
   ShoppingCart,
   Store,
-  Sun,
   Ticket,
   TrendingUp,
   UserCircle,
   Users,
   Wrench,
 } from "lucide-react";
-import { useTheme } from "next-themes";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -709,12 +707,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
-  const { theme, setTheme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Fetch dynamic badge counts for admin
   useEffect(() => {
@@ -819,22 +811,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Mobile Actions */}
           <div className="flex items-center gap-1">
             {/* Mobile Theme Toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                const newTheme = resolvedTheme === "dark" ? "light" : "dark";
-                setTheme(newTheme);
-                (window as any).__saveThemeToServer?.(newTheme);
-              }}
-              className="touch-target text-gray-500 dark:text-gray-400"
-            >
-              {mounted && resolvedTheme === "dark" ? (
-                <Sun className="h-5 w-5" />
-              ) : (
-                <Moon className="h-5 w-5" />
-              )}
-            </Button>
+            <AnimatedThemeToggle size={36} className="touch-target" />
             <MessageDropdown />
             <NotificationDropdown />
             <DropdownMenu>
@@ -927,22 +904,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
             <div className="flex items-center gap-3">
               {/* Theme Toggle */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  const newTheme = resolvedTheme === "dark" ? "light" : "dark";
-                  setTheme(newTheme);
-                  (window as any).__saveThemeToServer?.(newTheme);
-                }}
-                className="rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-              >
-                {mounted && resolvedTheme === "dark" ? (
-                  <Sun className="h-5 w-5" />
-                ) : (
-                  <Moon className="h-5 w-5" />
-                )}
-              </Button>
+              <AnimatedThemeToggle size={40} />
 
               <MessageDropdown />
               <NotificationDropdown />
