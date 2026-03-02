@@ -39,6 +39,7 @@ import { PosModule } from "./modules/pos/pos.module";
 import { PricingModule } from "./modules/pricing/pricing.module";
 import { ProductVariantsModule } from "./modules/product-variants/product-variants.module";
 import { RefundsModule } from "./modules/refunds/refunds.module";
+import { ReleasesModule } from "./modules/releases/releases.module";
 import { RfqModule } from "./modules/rfq/rfq.module";
 import { SecurityModule } from "./modules/security/security.module";
 import { SellerPerformanceModule } from "./modules/seller-performance/seller-performance.module";
@@ -118,6 +119,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     ChatModule,
     CatalogueModule,
     RefundsModule,
+    ReleasesModule,
     SupportModule,
     ProductVariantsModule,
     PosModule,

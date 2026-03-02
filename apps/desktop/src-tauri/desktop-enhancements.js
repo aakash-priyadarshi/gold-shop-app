@@ -409,5 +409,20 @@
     }
   }).catch(function() {});
 
+  // ─── 9. HEARTBEAT — report version to server periodically ───
+  function sendHeartbeat() {
+    TAURI.invoke('send_heartbeat').then(function(resp) {
+      try {
+        var data = JSON.parse(resp);
+        if (data.isLatest === false && data.latestVersion) {
+          console.log('[Orivraa Desktop] Not on latest version. Latest:', data.latestVersion);
+        }
+      } catch(e) {}
+    }).catch(function() {});
+  }
+  // Send heartbeat after 15s, then every 30 minutes
+  setTimeout(sendHeartbeat, 15000);
+  setInterval(sendHeartbeat, 1800000);
+
   console.log('[Orivraa Desktop] Enhancements v2 loaded successfully');
 })();

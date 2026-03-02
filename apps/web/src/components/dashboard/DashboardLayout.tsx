@@ -187,6 +187,12 @@ const navItems: NavItem[] = [
         icon: FlaskConical,
         roles: ["ADMIN"],
       },
+      {
+        label: "Releases",
+        href: "/dashboard/admin/releases",
+        icon: Package,
+        roles: ["ADMIN"],
+      },
     ],
   },
   // ── Account ──
@@ -274,6 +280,12 @@ const navItems: NavItem[] = [
     label: "Tools",
     href: "/dashboard/shop/tools",
     icon: Wrench,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Desktop App",
+    href: "/dashboard/shop/desktop",
+    icon: Activity,
     roles: ["SHOPKEEPER"],
   },
   {

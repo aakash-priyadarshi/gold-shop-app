@@ -90,6 +90,7 @@ pub fn run() {
             commands::check_for_updates,
             commands::install_update,
             commands::get_app_version,
+            commands::send_heartbeat,
         ])
         .run(tauri::generate_context!())
         .expect("Error while running Orivraa Desktop");

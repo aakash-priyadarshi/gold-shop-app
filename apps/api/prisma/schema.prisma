@@ -70,6 +70,8 @@ model User {
   aiCreditLedger       AiCreditLedger[]
   // Enterprise staff
   staffAccounts        StaffAccount[]
+  // Desktop app sessions
+  desktopSessions      DesktopSession[]
 
   @@index([email])
   @@index([phone])
@@ -2983,4 +2985,58 @@ model BlockedIp {
 
   @@index([ip])
   @@index([expiresAt])
+}
+
+// ─── App Releases & Desktop Tracking ───────────────────────
+model AppRelease {
+  id          String   @id @default(cuid())
+  version     String   // semver e.g. "0.2.0"
+  platform    String   // WINDOWS | MACOS | WEB
+  channel     String   @default("stable") // stable | beta
+  downloadUrl String?  // direct download link (Windows/macOS installers)
+  fileSize    BigInt?  // bytes
+  fileName    String?  // e.g. "Orivraa_0.2.0_x64-setup.exe"
+
+  // Changelog — admin can override GitHub-sourced notes
+  changelog       String? @db.Text // markdown
+  githubChangelog String? @db.Text // auto-pulled from GitHub release body
+  changelogSource String  @default("github") // github | manual | merged
+
+  // Version management
+  isLatest   Boolean  @default(false) // only ONE per platform should be true
+  isActive   Boolean  @default(true)  // false = hidden from download page
+
+  // System requirements
+  minOs         String?  // e.g. "Windows 10 (1809+)"
+  minRam        String?  // e.g. "4 GB"
+  minDisk       String?  // e.g. "200 MB"
+  architecture  String?  // x64 | arm64 | universal
+
+  // Metadata
+  publishedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([version, platform])
+  @@index([platform, isLatest])
+  @@index([platform, isActive, publishedAt])
+}
+
+model DesktopSession {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  ipAddress String
+  appVersion String  // e.g. "0.1.0"
+  os        String   // e.g. "Windows 11", "macOS 14"
+  arch      String?  // x64, arm64
+  isLatest  Boolean  @default(false) // computed on heartbeat
+  lastSeen  DateTime @default(now())
+  firstSeen DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@unique([userId, ipAddress])
+  @@index([userId])
+  @@index([appVersion])
+  @@index([lastSeen])
 }
