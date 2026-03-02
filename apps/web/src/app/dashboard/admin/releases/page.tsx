@@ -155,8 +155,8 @@ export default function AdminReleasesPage() {
     }
     setPublishing(true);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { channel, ...publishData } = publishForm;
+      const { channel: _channel, ...publishData } = publishForm;
+      void _channel;
       await api.post("/releases/publish", {
         ...publishData,
         fileSize: publishData.fileSize
