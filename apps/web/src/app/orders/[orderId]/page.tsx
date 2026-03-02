@@ -118,7 +118,7 @@ export default function OrderTrackingPage() {
 
   // Currency from preferences
   const { currency } = usePreferencesStore();
-  const currencyInfo = CURRENCIES[currency];
+  const currencyInfo = CURRENCIES[currency] || CURRENCIES.USD;
 
   // State
   const [mounted, setMounted] = useState(false);

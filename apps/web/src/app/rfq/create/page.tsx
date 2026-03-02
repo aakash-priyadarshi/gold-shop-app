@@ -566,13 +566,13 @@ export default function CreateRfqPage() {
   // IMPORTANT: Currency is for DISPLAY only (FX conversion)
   const currency = usePreferencesStore((state) => state.currency);
   const setCurrency = usePreferencesStore((state) => state.setCurrency);
-  const currencyInfo = CURRENCIES[currency];
+  const currencyInfo = CURRENCIES[currency] || CURRENCIES.USD;
 
   // Get country from global preferences store (persisted across navigation)
   // IMPORTANT: Country determines TAX jurisdiction (VAT/GST rates)
   const country = usePreferencesStore((state) => state.country);
   const detectedCountry = usePreferencesStore((state) => state.detectedCountry);
-  const countryInfo = COUNTRIES[country];
+  const countryInfo = COUNTRIES[country] || COUNTRIES.US;
 
   // Get weight unit from market context (country-specific default)
   const {
@@ -985,7 +985,8 @@ export default function CreateRfqPage() {
               (img: string) => img !== draft.designPreviewUrl,
             ),
           };
-          setFormData(cleanedFormData);
+          // Merge onto defaults to prevent crashes from stale drafts missing newer fields
+          setFormData((prev) => ({ ...prev, ...cleanedFormData }));
         }
         if (draft.designPreviewUrl) {
           setDesignPreviewUrl(draft.designPreviewUrl);
@@ -6595,7 +6596,7 @@ export default function CreateRfqPage() {
                                         <div className="text-xs text-gray-500 dark:text-gray-400">
                                           Material:{" "}
                                           {currencyInfo?.symbol || "Rs."}
-                                          {seller.materialCost.toLocaleString()}
+                                          {(seller.materialCost || 0).toLocaleString()}
                                           <br />
                                           Making ({totalMakingPercent}%):{" "}
                                           {currencyInfo?.symbol || "Rs."}
@@ -6605,7 +6606,7 @@ export default function CreateRfqPage() {
                                               <br />
                                               Finish/Components:{" "}
                                               {currencyInfo?.symbol || "Rs."}
-                                              {seller.componentCost.toLocaleString()}
+                                              {(seller.componentCost || 0).toLocaleString()}
                                             </>
                                           )}
                                           {(seller.gemstoneCost || 0) > 0 && (
@@ -6613,7 +6614,7 @@ export default function CreateRfqPage() {
                                               <br />
                                               Gemstones:{" "}
                                               {currencyInfo?.symbol || "Rs."}
-                                              {seller.gemstoneCost.toLocaleString()}
+                                              {(seller.gemstoneCost || 0).toLocaleString()}
                                             </>
                                           )}
                                           {taxRate > 0 && (
@@ -6816,7 +6817,7 @@ export default function CreateRfqPage() {
                                 <span>Material Cost</span>
                                 <span>
                                   {sym}
-                                  {selectedSeller.materialCost.toLocaleString()}
+                                  {(selectedSeller.materialCost || 0).toLocaleString()}
                                 </span>
                               </div>
                               <div className="flex justify-between">
@@ -6825,7 +6826,7 @@ export default function CreateRfqPage() {
                                 </span>
                                 <span>
                                   {sym}
-                                  {totalMakingCharge.toLocaleString()}
+                                  {(totalMakingCharge || 0).toLocaleString()}
                                 </span>
                               </div>
                               {(selectedSeller.componentCost || 0) > 0 && (
@@ -6833,7 +6834,7 @@ export default function CreateRfqPage() {
                                   <span>Finish / Components</span>
                                   <span>
                                     {sym}
-                                    {selectedSeller.componentCost.toLocaleString()}
+                                    {(selectedSeller.componentCost || 0).toLocaleString()}
                                   </span>
                                 </div>
                               )}

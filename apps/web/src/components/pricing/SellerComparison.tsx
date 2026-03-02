@@ -109,7 +109,7 @@ export function SellerComparison({
   const [error, setError] = useState<string | null>(null);
   const [selectedSellerId, setSelectedSellerId] = useState<string | null>(null);
 
-  const countryInfo = COUNTRIES[country];
+  const countryInfo = COUNTRIES[country] || COUNTRIES.US;
 
   useEffect(() => {
     const fetchSellerPrices = async () => {

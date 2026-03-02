@@ -83,7 +83,7 @@ export default function ShopPage() {
   
   // Get currency from global preferences store
   const currency = usePreferencesStore((state) => state.currency);
-  const currencyInfo = CURRENCIES[currency];
+  const currencyInfo = CURRENCIES[currency] || CURRENCIES.USD;
 
   useEffect(() => {
     setMounted(true);
