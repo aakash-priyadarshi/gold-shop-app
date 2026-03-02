@@ -1,6 +1,6 @@
 "use client";
 
-import { DynamicFooter } from '@/components/layout/DynamicFooter';
+import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

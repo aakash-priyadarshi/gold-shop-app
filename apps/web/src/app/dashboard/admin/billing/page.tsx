@@ -2442,7 +2442,7 @@ function GatewaysTab() {
           </div>
         )}
         <div className="flex flex-wrap gap-1">
-          {config.supportedMethods.map((m) => (
+          {(config.supportedMethods ?? []).map((m) => (
             <Badge key={m} variant="outline" className="text-xs">
               {m}
             </Badge>

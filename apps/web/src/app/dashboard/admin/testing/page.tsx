@@ -872,9 +872,9 @@ export default function TestingDashboardPage() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        {smokeReport?.categories.length ? (
+                        {smokeReport?.categories?.length ? (
                           <div className="space-y-3">
-                            {smokeReport.categories.map((cat) => (
+                            {(smokeReport.categories ?? []).map((cat) => (
                               <div key={cat.name}>
                                 <div className="mb-1 flex items-center justify-between text-sm">
                                   <span className="capitalize">{cat.name}</span>
@@ -1183,7 +1183,7 @@ export default function TestingDashboardPage() {
                         </Button>
                       </CardHeader>
                       <CardContent>
-                        {e2eReport && e2eReport.suites.length > 0 ? (
+                        {e2eReport && (e2eReport.suites?.length ?? 0) > 0 ? (
                           <ScrollArea className="h-[400px]">
                             <div className="space-y-4">
                               {e2eReport.suites.map((suite, si) => (
@@ -1407,7 +1407,7 @@ export default function TestingDashboardPage() {
                       </CardHeader>
                       <CardContent>
                         {integrationReport &&
-                        integrationReport.suites.length > 0 ? (
+                        (integrationReport.suites?.length ?? 0) > 0 ? (
                           <ScrollArea className="h-[400px]">
                             <div className="space-y-4">
                               {integrationReport.suites.map((suite, si) => (

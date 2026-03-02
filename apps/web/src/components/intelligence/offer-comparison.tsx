@@ -111,7 +111,7 @@ export function OfferComparison({
     );
   }
 
-  if (!data || data.offers.length === 0) {
+  if (!data || !data.offers || data.offers.length === 0) {
     return (
       <Card>
         <CardContent className="py-8 text-center text-gray-400">

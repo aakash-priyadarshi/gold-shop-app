@@ -244,13 +244,13 @@ export default function CustomerOrdersPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                {purchaseStats && purchaseStats.currencyBreakdown.length > 0 ? (
+                {purchaseStats && (purchaseStats.currencyBreakdown?.length ?? 0) > 0 ? (
                   <div className="space-y-1">
                     {purchaseStats.currencyBreakdown.map((stat) => (
                       <div key={stat.currency} className="flex items-center justify-between">
                         <span className="text-lg font-bold">
                           {CURRENCY_SYMBOLS[stat.currency as keyof typeof CURRENCY_SYMBOLS] || stat.currency}
-                          {stat.totalSpent.toLocaleString('en', { maximumFractionDigits: 0 })}
+                          {(stat.totalSpent ?? 0).toLocaleString('en', { maximumFractionDigits: 0 })}
                         </span>
                         <span className="text-xs text-muted-foreground">
                           ({stat.orderCount} {stat.orderCount === 1 ? 'order' : 'orders'})
@@ -260,7 +260,7 @@ export default function CustomerOrdersPage() {
                   </div>
                 ) : (
                   <>
-                    <p className="text-2xl font-bold">{currencySymbol}{stats.totalSpent.toLocaleString('en', { maximumFractionDigits: 0 })}</p>
+                    <p className="text-2xl font-bold">{currencySymbol}{(stats.totalSpent ?? 0).toLocaleString('en', { maximumFractionDigits: 0 })}</p>
                     <p className="text-xs text-muted-foreground">in {selectedCurrency}</p>
                   </>
                 )}

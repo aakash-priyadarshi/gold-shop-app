@@ -618,7 +618,7 @@ function EnterpriseContent() {
                     api.post("/enterprise/repricing/evaluate").then((res) => {
                       toast({
                         title: "Evaluation complete",
-                        description: `${res.data.filter((r: any) => r.triggered).length} rules triggered.`,
+                        description: `${(res.data || []).filter((r: any) => r.triggered).length} rules triggered.`,
                       });
                     });
                   }}

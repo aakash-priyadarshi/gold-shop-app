@@ -1,6 +1,6 @@
 "use client";
 
-import { DynamicFooter } from '@/components/layout/DynamicFooter';
+import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -826,15 +826,21 @@ function CheckoutPageContent() {
                 {/* Totals */}
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-500 dark:text-gray-400">Subtotal</span>
+                    <span className="text-gray-500 dark:text-gray-400">
+                      Subtotal
+                    </span>
                     <span>{formatPrice(subtotal)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500 dark:text-gray-400">{taxLabel}</span>
+                    <span className="text-gray-500 dark:text-gray-400">
+                      {taxLabel}
+                    </span>
                     <span>{formatPrice(tax)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500 dark:text-gray-400">Shipping</span>
+                    <span className="text-gray-500 dark:text-gray-400">
+                      Shipping
+                    </span>
                     <span className="text-emerald-600">Free</span>
                   </div>
                   <Separator />

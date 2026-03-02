@@ -278,7 +278,7 @@ export default function AdminMarketSettingsPage() {
                         {market.defaultCurrency}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        (+{market.supportedCurrencies.length - 1} more)
+                        (+{(market.supportedCurrencies?.length || 1) - 1} more)
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
@@ -288,14 +288,14 @@ export default function AdminMarketSettingsPage() {
                         {market.defaultWeightUnit}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        (+{market.supportedWeightUnits.length - 1} more)
+                        (+{(market.supportedWeightUnits?.length || 1) - 1} more)
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <CheckCircle className="h-4 w-4 text-muted-foreground" />
                       <span className="text-muted-foreground">Payments:</span>
                       <span className="font-medium">
-                        {market.supportedPaymentMethods.length} methods
+                        {market.supportedPaymentMethods?.length || 0} methods
                       </span>
                     </div>
                     {market.contactEmail && (

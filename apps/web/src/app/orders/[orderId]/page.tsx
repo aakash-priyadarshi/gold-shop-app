@@ -1,6 +1,6 @@
 "use client";
 
-import { DynamicFooter } from '@/components/layout/DynamicFooter';
+import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import {
   OrderStatusBadge,
@@ -297,7 +297,7 @@ export default function OrderTrackingPage() {
     "Custom Jewellery";
 
   // Build status history from milestones
-  const statusHistory = order.milestones.map((m) => ({
+  const statusHistory = (order.milestones || []).map((m) => ({
     status: m.type,
     timestamp: m.completedAt,
   }));
@@ -422,7 +422,9 @@ export default function OrderTrackingPage() {
                         <Store className="h-5 w-5 text-amber-600" />
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Sold by</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Sold by
+                        </p>
                         <p className="font-medium">{order.shop.shopName}</p>
                       </div>
                     </div>
@@ -437,13 +439,13 @@ export default function OrderTrackingPage() {
                     <CardTitle className="text-lg">Order Timeline</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {order.milestones.length > 0 ? (
+                    {(order.milestones?.length || 0) > 0 ? (
                       <div className="space-y-4">
-                        {order.milestones.map((milestone, index) => (
+                        {(order.milestones || []).map((milestone, index) => (
                           <div key={milestone.id} className="flex gap-4">
                             <div className="flex flex-col items-center">
                               <div className="w-3 h-3 bg-amber-500 rounded-full" />
-                              {index < order.milestones.length - 1 && (
+                              {index < (order.milestones?.length || 0) - 1 && (
                                 <div className="w-0.5 h-full bg-amber-200 dark:bg-amber-800 mt-1" />
                               )}
                             </div>
@@ -457,9 +459,9 @@ export default function OrderTrackingPage() {
                               <p className="text-xs text-gray-400 mt-1">
                                 {formatDateTime(milestone.completedAt)}
                               </p>
-                              {milestone.evidenceUrls.length > 0 && (
+                              {(milestone.evidenceUrls?.length || 0) > 0 && (
                                 <div className="flex gap-2 mt-2">
-                                  {milestone.evidenceUrls.map((url, i) => (
+                                  {(milestone.evidenceUrls || []).map((url, i) => (
                                     <img
                                       key={i}
                                       src={url}
@@ -591,7 +593,9 @@ export default function OrderTrackingPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-500 dark:text-gray-400">Status</span>
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Status
+                  </span>
                   <Badge className={getPaymentStatusColor(order.paymentStatus)}>
                     {order.paidAtShopRequested
                       ? "Pay at Shop"
@@ -618,7 +622,9 @@ export default function OrderTrackingPage() {
 
                 {order.paymentMethod && (
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-500 dark:text-gray-400">Method</span>
+                    <span className="text-gray-500 dark:text-gray-400">
+                      Method
+                    </span>
                     <span className="capitalize">
                       {order.paymentMethod.toLowerCase().replace("_", " ")}
                     </span>
@@ -629,15 +635,21 @@ export default function OrderTrackingPage() {
 
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-500 dark:text-gray-400">Subtotal</span>
+                    <span className="text-gray-500 dark:text-gray-400">
+                      Subtotal
+                    </span>
                     <span>{formatPrice(order.subtotalNpr)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500 dark:text-gray-400">Tax</span>
+                    <span className="text-gray-500 dark:text-gray-400">
+                      Tax
+                    </span>
                     <span>{formatPrice(order.taxNpr)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500 dark:text-gray-400">Shipping</span>
+                    <span className="text-gray-500 dark:text-gray-400">
+                      Shipping
+                    </span>
                     <span>
                       {order.shippingNpr === 0
                         ? "Free"
