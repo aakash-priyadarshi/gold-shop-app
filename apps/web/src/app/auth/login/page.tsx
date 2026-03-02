@@ -166,6 +166,30 @@ function LoginForm() {
   // Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated && user) {
+      // ── Desktop OAuth: user is already logged in on the browser ──
+      // Send existing tokens to the desktop app via localhost callback
+      const desktopPort =
+        searchParams.get("desktop_port") ||
+        sessionStorage.getItem("orivraa_desktop_port") ||
+        localStorage.getItem("orivraa_desktop_port");
+
+      if (desktopPort) {
+        const accessToken = localStorage.getItem("token");
+        const refreshToken = localStorage.getItem("refreshToken");
+        if (accessToken && refreshToken) {
+          // Redirect to oauth-callback with the tokens so it handles the desktop handoff
+          sessionStorage.removeItem("orivraa_desktop_port");
+          localStorage.removeItem("orivraa_desktop_port");
+          const params = new URLSearchParams({
+            accessToken,
+            refreshToken,
+            desktop_port: desktopPort,
+          });
+          window.location.href = `/auth/oauth-callback?${params.toString()}`;
+          return;
+        }
+      }
+
       // Check if shopkeeper needs to complete shop setup
       if (user.role === "SHOPKEEPER" && !user.shop?.id) {
         router.push("/auth/complete-shop-setup");
