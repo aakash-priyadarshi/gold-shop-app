@@ -235,11 +235,11 @@ export function TrustProfileCard({
         </div>
 
         {/* Badges */}
-        {data.badges.length > 0 && (
+        {(data.badges?.length ?? 0) > 0 && (
           <div className="mb-4">
             <p className="text-xs text-gray-400 mb-2">Achievements</p>
             <div className="flex flex-wrap gap-1.5">
-              {data.badges.map((badge) => (
+              {(data.badges ?? []).map((badge) => (
                 <Badge
                   key={badge}
                   variant="secondary"

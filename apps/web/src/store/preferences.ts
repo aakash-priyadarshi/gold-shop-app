@@ -429,7 +429,7 @@ async function initializeFromGeo() {
       "orivraa_user_country_choice",
     );
     if (!userChoseCountry) {
-      const countryInfo = COUNTRIES[detected];
+      const countryInfo = COUNTRIES[detected] || COUNTRIES.US;
       usePreferencesStore.setState({
         country: detected,
         currency: countryInfo.defaultCurrency,

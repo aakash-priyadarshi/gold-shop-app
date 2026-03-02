@@ -1,6 +1,6 @@
 "use client";
 
-import { DynamicFooter } from '@/components/layout/DynamicFooter';
+import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -382,7 +382,9 @@ export default function ProductDetailPage() {
                   {item.nameEn}
                 </h1>
                 {item.nameNe && (
-                  <p className="text-lg text-gray-600 dark:text-gray-300">{item.nameNe}</p>
+                  <p className="text-lg text-gray-600 dark:text-gray-300">
+                    {item.nameNe}
+                  </p>
                 )}
               </div>
 
@@ -400,12 +402,16 @@ export default function ProductDetailPage() {
                     />
                   ))}
                 </div>
-                <span className="text-gray-600 dark:text-gray-300">4.0 (24 reviews)</span>
+                <span className="text-gray-600 dark:text-gray-300">
+                  4.0 (24 reviews)
+                </span>
               </div>
 
               {/* Price */}
               <div className="bg-gold-50 rounded-xl p-4">
-                <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Price</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">
+                  Price
+                </p>
                 <p className="text-3xl font-bold text-gold-600">
                   {formatPrice(item.totalPriceNpr)}
                 </p>
@@ -458,7 +464,9 @@ export default function ProductDetailPage() {
               {/* Quantity & Actions */}
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <span className="text-gray-600 dark:text-gray-300">Quantity:</span>
+                  <span className="text-gray-600 dark:text-gray-300">
+                    Quantity:
+                  </span>
                   <div className="flex items-center gap-2">
                     <Button
                       size="icon"
@@ -512,15 +520,21 @@ export default function ProductDetailPage() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <Shield className="h-6 w-6 mx-auto text-green-600 mb-1" />
-                  <p className="text-xs text-gray-600 dark:text-gray-300">Certified Purity</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    Certified Purity
+                  </p>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <Truck className="h-6 w-6 mx-auto text-blue-600 mb-1" />
-                  <p className="text-xs text-gray-600 dark:text-gray-300">Secure Delivery</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    Secure Delivery
+                  </p>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <Phone className="h-6 w-6 mx-auto text-gold-600 mb-1" />
-                  <p className="text-xs text-gray-600 dark:text-gray-300">Support</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    Support
+                  </p>
                 </div>
               </div>
             </div>
@@ -575,7 +589,9 @@ export default function ProductDetailPage() {
                           <p className="text-2xl font-bold text-gray-900 dark:text-white">
                             {getMetalInfo().purity || "N/A"}
                           </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Karatage</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Karatage
+                          </p>
                         </div>
                         <div className="text-center">
                           <p className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -589,19 +605,25 @@ export default function ProductDetailPage() {
                           <p className="text-2xl font-bold text-gray-900 dark:text-white">
                             {item.totalWeightGrams}g
                           </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Gross Weight</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Gross Weight
+                          </p>
                         </div>
                         <div className="text-center">
                           <p className="text-2xl font-bold text-gray-900 dark:text-white">
                             {getMetalInfo().metal || "Gold"}
                           </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Metal</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Metal
+                          </p>
                         </div>
                         <div className="text-center">
                           <p className="text-2xl font-bold text-gray-900 dark:text-white">
                             {item.size || "Standard"}
                           </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Size</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Size
+                          </p>
                         </div>
                       </div>
                     </CardContent>
@@ -722,25 +744,33 @@ export default function ProductDetailPage() {
                           <p className="text-2xl font-bold text-gray-900 dark:text-white">
                             {item.shop.shopName}
                           </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Brand</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Brand
+                          </p>
                         </div>
                         <div className="text-center">
                           <p className="text-2xl font-bold text-gray-900 dark:text-white">
                             {item.collection || "Classic"}
                           </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Collection</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Collection
+                          </p>
                         </div>
                         <div className="text-center">
                           <p className="text-2xl font-bold text-gray-900 dark:text-white capitalize">
                             {item.gender || "Unisex"}
                           </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Gender</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Gender
+                          </p>
                         </div>
                         <div className="text-center">
                           <p className="text-2xl font-bold text-gray-900 dark:text-white capitalize">
                             {item.occasion || "All Occasions"}
                           </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Occasion</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Occasion
+                          </p>
                         </div>
                       </div>
                     </CardContent>

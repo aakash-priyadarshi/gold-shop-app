@@ -156,9 +156,9 @@ export function OrderProtectionTimeline({
 
         {/* Timeline */}
         <div className="relative">
-          {data.stages.map((stage, idx) => {
+          {(data.stages ?? []).map((stage, idx) => {
             const colors = statusColors[stage.status];
-            const isLast = idx === data.stages.length - 1;
+            const isLast = idx === (data.stages ?? []).length - 1;
 
             return (
               <div key={stage.id} className="relative flex gap-4">

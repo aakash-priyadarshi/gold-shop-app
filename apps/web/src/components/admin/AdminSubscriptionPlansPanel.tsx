@@ -110,12 +110,13 @@ export function AdminSubscriptionPlansPanel() {
       const params: Record<string, string> = {};
       if (countryFilter !== "all") params.country = countryFilter;
       const res = await subscriptionPlansApi.list(params);
-      setPlans(res.data);
+      const plansData = res.data || [];
+      setPlans(plansData);
 
       // Load subscriber counts in parallel
       const counts: Record<string, number> = {};
       await Promise.all(
-        res.data.map(async (plan: SubscriptionPlan) => {
+        plansData.map(async (plan: SubscriptionPlan) => {
           try {
             const countRes = await subscriptionPlansApi.getSubscriberCount(
               plan.id,

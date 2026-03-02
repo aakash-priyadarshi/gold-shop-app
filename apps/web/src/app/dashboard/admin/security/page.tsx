@@ -645,9 +645,9 @@ export default function SecurityDashboardPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {d && d.topAttackedRoutes.length > 0 ? (
+                    {d && (d.topAttackedRoutes?.length ?? 0) > 0 ? (
                       <div className="space-y-2">
-                        {d.topAttackedRoutes.map((r, i) => (
+                        {(d.topAttackedRoutes ?? []).map((r, i) => (
                           <div
                             key={r.route}
                             className="flex items-center justify-between text-sm"
@@ -680,9 +680,9 @@ export default function SecurityDashboardPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {d && d.topOffendingIps.length > 0 ? (
+                    {d && (d.topOffendingIps?.length ?? 0) > 0 ? (
                       <div className="space-y-2">
-                        {d.topOffendingIps.map((ip) => (
+                        {(d.topOffendingIps ?? []).map((ip) => (
                           <div
                             key={ip.ip}
                             className="flex items-center justify-between text-sm"

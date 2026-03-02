@@ -137,7 +137,7 @@ export default function CatalogueDetailPage() {
         limit: 20,
       });
       const existing = new Set(
-        catalogue?.items.map((i) => i.inventoryItemId) || [],
+        catalogue?.items?.map((i) => i.inventoryItemId) ?? [],
       );
       setAvailableItems(
         (res.data.items || res.data.data || res.data || []).filter(
@@ -545,7 +545,7 @@ export default function CatalogueDetailPage() {
           )}
 
           {/* Items */}
-          {catalogue.items.length === 0 ? (
+          {(!catalogue.items || catalogue.items.length === 0) ? (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
               <p className="text-sm">No items in this catalogue yet.</p>
               <p className="text-xs mt-1">

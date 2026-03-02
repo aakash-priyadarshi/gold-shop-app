@@ -349,9 +349,9 @@ export default function IntelligenceDashboardPage() {
                     <CardDescription>Most requested categories</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {dashboard.topJewelleryTypes.length > 0 ? (
+                    {(dashboard.topJewelleryTypes ?? []).length > 0 ? (
                       <div className="space-y-3">
-                        {dashboard.topJewelleryTypes.map((item, idx) => (
+                        {(dashboard.topJewelleryTypes ?? []).map((item, idx) => (
                           <div
                             key={item.rfqJewelleryType}
                             className="flex items-center justify-between"
@@ -396,9 +396,9 @@ export default function IntelligenceDashboardPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {dashboard.lossReasonBreakdown.length > 0 ? (
+                    {(dashboard.lossReasonBreakdown ?? []).length > 0 ? (
                       <div className="space-y-3">
-                        {dashboard.lossReasonBreakdown.map((item) => (
+                        {(dashboard.lossReasonBreakdown ?? []).map((item) => (
                           <div
                             key={item.lossReasonCategory}
                             className="flex items-center justify-between"
@@ -427,7 +427,7 @@ export default function IntelligenceDashboardPage() {
           {/* Milestones Tab */}
           {activeTab === "milestones" && dashboard && (
             <div className="space-y-4">
-              {dashboard.milestones.map((milestone) => (
+              {(dashboard.milestones ?? []).map((milestone) => (
                 <Card
                   key={milestone.id}
                   className={`${milestone.isReached ? "border-green-200 bg-green-50/30" : "border-gray-200"}`}

@@ -1,39 +1,18 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { Header } from '@/components/layout/header';
-import { DynamicFooter } from '@/components/layout/DynamicFooter';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { 
+import { DynamicFooter } from "@/components/layout/DynamicFooter";
+import { Header } from "@/components/layout/header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { 
-  Card, 
-  CardContent,
-  CardFooter,
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
-import { 
-  Search, 
-  Filter, 
-  Grid3X3, 
-  List,
-  Heart,
-  ShoppingCart,
-  Star,
-  Gem,
-  Loader2,
-  SlidersHorizontal,
-  X,
-  Sparkles,
-} from 'lucide-react';
+} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -41,9 +20,25 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '@/components/ui/sheet';
-import { usePreferencesStore, CURRENCIES } from '@/store/preferences';
-import { getImageUrl } from '@/lib/image-upload';
+} from "@/components/ui/sheet";
+import { Slider } from "@/components/ui/slider";
+import { getImageUrl } from "@/lib/image-upload";
+import { CURRENCIES, usePreferencesStore } from "@/store/preferences";
+import {
+  Gem,
+  Grid3X3,
+  Heart,
+  List,
+  Loader2,
+  Search,
+  ShoppingCart,
+  SlidersHorizontal,
+  Sparkles,
+  Star,
+  X,
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 interface InventoryItem {
   id: string;
@@ -65,22 +60,22 @@ interface InventoryItem {
   };
 }
 
-import { getApiUrl } from '@/lib/api';
+import { getApiUrl } from "@/lib/api";
 const API_URL = getApiUrl();
 
 export default function ShopPage() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [recommendedItems, setRecommendedItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [category, setCategory] = useState('all');
-  const [metalType, setMetalType] = useState('all');
-  const [sortBy, setSortBy] = useState('newest');
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [category, setCategory] = useState("all");
+  const [metalType, setMetalType] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 500000]);
   const [filterOpen, setFilterOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  
+
   // Get currency from global preferences store
   const currency = usePreferencesStore((state) => state.currency);
   const currencyInfo = CURRENCIES[currency] || CURRENCIES.USD;
@@ -102,19 +97,19 @@ export default function ShopPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (category !== 'all') params.append('jewelleryType', category);
-      
+      if (category !== "all") params.append("jewelleryType", category);
+
       // Map frontend sort values to database columns
       const sortMapping: Record<string, { field: string; order: string }> = {
-        'newest': { field: 'createdAt', order: 'desc' },
-        'price_low': { field: 'totalPriceNpr', order: 'asc' },
-        'price_high': { field: 'totalPriceNpr', order: 'desc' },
-        'popular': { field: 'createdAt', order: 'desc' },
+        newest: { field: "createdAt", order: "desc" },
+        price_low: { field: "totalPriceNpr", order: "asc" },
+        price_high: { field: "totalPriceNpr", order: "desc" },
+        popular: { field: "createdAt", order: "desc" },
       };
-      const sort = sortMapping[sortBy] || sortMapping['newest'];
-      params.append('sortBy', sort.field);
-      params.append('sortOrder', sort.order);
-      params.append('status', 'AVAILABLE');
+      const sort = sortMapping[sortBy] || sortMapping["newest"];
+      params.append("sortBy", sort.field);
+      params.append("sortOrder", sort.order);
+      params.append("status", "AVAILABLE");
 
       const response = await fetch(`${API_URL}/inventory?${params}`);
       if (response.ok) {
@@ -122,7 +117,7 @@ export default function ShopPage() {
         setItems(data.items || []);
       }
     } catch (error) {
-      console.error('Failed to fetch items:', error);
+      console.error("Failed to fetch items:", error);
     } finally {
       setLoading(false);
     }
@@ -131,10 +126,10 @@ export default function ShopPage() {
   const fetchRecommendations = async () => {
     try {
       const params = new URLSearchParams();
-      params.append('sortBy', 'createdAt');
-      params.append('sortOrder', 'desc');
-      params.append('status', 'AVAILABLE');
-      params.append('limit', '4');
+      params.append("sortBy", "createdAt");
+      params.append("sortOrder", "desc");
+      params.append("status", "AVAILABLE");
+      params.append("limit", "4");
 
       const response = await fetch(`${API_URL}/inventory?${params}`);
       if (response.ok) {
@@ -142,68 +137,73 @@ export default function ShopPage() {
         setRecommendedItems(data.items || []);
       }
     } catch (error) {
-      console.error('Failed to fetch recommendations:', error);
+      console.error("Failed to fetch recommendations:", error);
     }
   };
 
   const getMetalFromComposition = (composition: any) => {
-    const metal = composition?.baseAlloy?.metal || composition?.metal || '';
-    const purity = composition?.baseAlloy?.purity || composition?.purity || '';
-    return metal && purity ? `${metal} ${purity}` : metal || 'N/A';
+    const metal = composition?.baseAlloy?.metal || composition?.metal || "";
+    const purity = composition?.baseAlloy?.purity || composition?.purity || "";
+    return metal && purity ? `${metal} ${purity}` : metal || "N/A";
   };
 
-  const filteredItems = items.filter(item => {
+  const filteredItems = items.filter((item) => {
     // Text search
-    const matchesSearch = !searchQuery || 
+    const matchesSearch =
+      !searchQuery ||
       item.nameEn.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.descriptionEn?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     // Price range
-    const matchesPrice = item.totalPriceNpr >= priceRange[0] && 
+    const matchesPrice =
+      item.totalPriceNpr >= priceRange[0] &&
       item.totalPriceNpr <= priceRange[1];
-    
+
     // Metal type filter (check composition)
     const itemMetal = getMetalFromComposition(item.composition);
-    const matchesMetal = metalType === 'all' || 
-      itemMetal.toLowerCase().includes(metalType.toLowerCase().replace('_', ' '));
-    
+    const matchesMetal =
+      metalType === "all" ||
+      itemMetal
+        .toLowerCase()
+        .includes(metalType.toLowerCase().replace("_", " "));
+
     return matchesSearch && matchesPrice && matchesMetal;
   });
 
   const formatPrice = (priceNpr: number) => {
     // Use user's preferred currency for display
     if (!mounted) {
-      return new Intl.NumberFormat('ne-NP', {
-        style: 'currency',
-        currency: 'NPR',
+      return new Intl.NumberFormat("ne-NP", {
+        style: "currency",
+        currency: "NPR",
         minimumFractionDigits: 0,
       }).format(priceNpr);
     }
-    
-    return new Intl.NumberFormat(currencyInfo?.locale || 'en-US', {
-      style: 'currency',
+
+    return new Intl.NumberFormat(currencyInfo?.locale || "en-US", {
+      style: "currency",
       currency: currency,
       minimumFractionDigits: 0,
     }).format(priceNpr);
   };
 
   const clearFilters = () => {
-    setSearchQuery('');
-    setCategory('all');
-    setMetalType('all');
+    setSearchQuery("");
+    setCategory("all");
+    setMetalType("all");
     setPriceRange([0, 500000]);
   };
 
   const activeFiltersCount = [
-    category !== 'all',
-    metalType !== 'all',
+    category !== "all",
+    metalType !== "all",
     priceRange[0] > 0 || priceRange[1] < 500000,
   ].filter(Boolean).length;
 
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      
+
       <main className="flex-1 bg-gray-50 dark:bg-gray-950">
         {/* Page Header */}
         <section className="bg-gradient-to-r from-gold-50 to-amber-50 dark:from-gray-900 dark:to-gray-900 border-b">
@@ -243,8 +243,12 @@ export default function ShopPage() {
                         )}
                       </div>
                       <CardContent className="p-3">
-                        <p className="font-medium text-sm line-clamp-1">{item.nameEn}</p>
-                        <p className="text-gold-600 font-bold text-sm">{formatPrice(item.totalPriceNpr)}</p>
+                        <p className="font-medium text-sm line-clamp-1">
+                          {item.nameEn}
+                        </p>
+                        <p className="text-gold-600 font-bold text-sm">
+                          {formatPrice(item.totalPriceNpr)}
+                        </p>
                       </CardContent>
                     </Card>
                   </Link>
@@ -340,10 +344,14 @@ export default function ShopPage() {
                   <div className="py-6 space-y-6">
                     {/* Price Range */}
                     <div className="space-y-4">
-                      <label className="text-sm font-medium">Price Range (NPR)</label>
+                      <label className="text-sm font-medium">
+                        Price Range (NPR)
+                      </label>
                       <Slider
                         value={priceRange}
-                        onValueChange={(v) => setPriceRange(v as [number, number])}
+                        onValueChange={(v) =>
+                          setPriceRange(v as [number, number])
+                        }
                         min={0}
                         max={500000}
                         step={5000}
@@ -356,7 +364,11 @@ export default function ShopPage() {
                     </div>
 
                     {/* Clear Filters */}
-                    <Button variant="outline" onClick={clearFilters} className="w-full">
+                    <Button
+                      variant="outline"
+                      onClick={clearFilters}
+                      className="w-full"
+                    >
                       <X className="h-4 w-4 mr-2" />
                       Clear All Filters
                     </Button>
@@ -367,16 +379,16 @@ export default function ShopPage() {
               {/* View Toggle */}
               <div className="flex items-center gap-1 border rounded-lg p-1 ml-auto">
                 <Button
-                  variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                  variant={viewMode === "grid" ? "secondary" : "ghost"}
                   size="sm"
-                  onClick={() => setViewMode('grid')}
+                  onClick={() => setViewMode("grid")}
                 >
                   <Grid3X3 className="h-4 w-4" />
                 </Button>
                 <Button
-                  variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                  variant={viewMode === "list" ? "secondary" : "ghost"}
                   size="sm"
-                  onClick={() => setViewMode('list')}
+                  onClick={() => setViewMode("list")}
                 >
                   <List className="h-4 w-4" />
                 </Button>
@@ -386,22 +398,31 @@ export default function ShopPage() {
             {/* Active filters tags */}
             {activeFiltersCount > 0 && (
               <div className="flex flex-wrap gap-2 mt-3">
-                {category !== 'all' && (
+                {category !== "all" && (
                   <Badge variant="secondary" className="gap-1">
-                    {category.replace(/_/g, ' ')}
-                    <X className="h-3 w-3 cursor-pointer" onClick={() => setCategory('all')} />
+                    {category.replace(/_/g, " ")}
+                    <X
+                      className="h-3 w-3 cursor-pointer"
+                      onClick={() => setCategory("all")}
+                    />
                   </Badge>
                 )}
-                {metalType !== 'all' && (
+                {metalType !== "all" && (
                   <Badge variant="secondary" className="gap-1">
-                    {metalType.replace(/_/g, ' ')}
-                    <X className="h-3 w-3 cursor-pointer" onClick={() => setMetalType('all')} />
+                    {metalType.replace(/_/g, " ")}
+                    <X
+                      className="h-3 w-3 cursor-pointer"
+                      onClick={() => setMetalType("all")}
+                    />
                   </Badge>
                 )}
                 {(priceRange[0] > 0 || priceRange[1] < 500000) && (
                   <Badge variant="secondary" className="gap-1">
                     {formatPrice(priceRange[0])} - {formatPrice(priceRange[1])}
-                    <X className="h-3 w-3 cursor-pointer" onClick={() => setPriceRange([0, 500000])} />
+                    <X
+                      className="h-3 w-3 cursor-pointer"
+                      onClick={() => setPriceRange([0, 500000])}
+                    />
                   </Badge>
                 )}
               </div>
@@ -414,7 +435,8 @@ export default function ShopPage() {
           <div className="container mx-auto px-4">
             {/* Results count */}
             <p className="text-sm text-muted-foreground mb-4">
-              {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'items'} found
+              {filteredItems.length}{" "}
+              {filteredItems.length === 1 ? "item" : "items"} found
             </p>
 
             {loading ? (
@@ -430,17 +452,21 @@ export default function ShopPage() {
                 <p className="text-gray-600 dark:text-gray-300 mb-6">
                   Try adjusting your filters or search query
                 </p>
-                <Button onClick={clearFilters}>
-                  Clear Filters
-                </Button>
+                <Button onClick={clearFilters}>Clear Filters</Button>
               </div>
             ) : (
-              <div className={viewMode === 'grid' 
-                ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
-                : 'space-y-4'
-              }>
+              <div
+                className={
+                  viewMode === "grid"
+                    ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                    : "space-y-4"
+                }
+              >
                 {filteredItems.map((item) => (
-                  <Card key={item.id} className="overflow-hidden group hover:shadow-lg transition-shadow">
+                  <Card
+                    key={item.id}
+                    className="overflow-hidden group hover:shadow-lg transition-shadow"
+                  >
                     <div className="relative aspect-square bg-gray-100">
                       {item.images?.[0] ? (
                         <img
@@ -472,20 +498,20 @@ export default function ShopPage() {
                           {getMetalFromComposition(item.composition)}
                         </Badge>
                         <Badge variant="secondary" className="text-xs">
-                          {item.jewelleryType?.replace(/_/g, ' ')}
+                          {item.jewelleryType?.replace(/_/g, " ")}
                         </Badge>
                       </div>
                       <h3 className="font-semibold text-gray-900 dark:text-white mb-1 line-clamp-1">
                         {item.nameEn}
                       </h3>
                       <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                        {item.shop?.shopName || 'Unknown Shop'}
+                        {item.shop?.shopName || "Unknown Shop"}
                         {item.shop?.city && ` • ${item.shop.city}`}
                       </p>
                       <div className="flex items-center gap-1 mb-2">
                         <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                         <span className="text-sm text-gray-600 dark:text-gray-300">
-                          {item.shop?.ratingAvg?.toFixed(1) || '4.8'}
+                          {item.shop?.ratingAvg?.toFixed(1) || "4.8"}
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-300">

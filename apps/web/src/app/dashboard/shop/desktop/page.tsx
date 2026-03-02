@@ -187,7 +187,7 @@ export default function DesktopAppPage() {
               <div>
                 <h2 className="text-lg font-semibold mb-3">Your Devices</h2>
                 <div className="space-y-3">
-                  {status.sessions.map((session) => (
+                  {(status.sessions || []).map((session) => (
                     <Card key={session.id} className="border-border/50">
                       <CardContent className="flex items-center gap-4 py-4">
                         <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0">

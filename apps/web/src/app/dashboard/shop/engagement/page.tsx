@@ -1448,7 +1448,7 @@ export default function ShopEngagementPage() {
                     </CardContent>
                   </Card>
 
-                  {rfqFunnel.periodBreakdown.length > 0 && (
+                  {(rfqFunnel.periodBreakdown?.length ?? 0) > 0 && (
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-sm">

@@ -666,7 +666,7 @@ export default function CustomerProfilePage() {
                                         </span>
                                       </div>
                                       <span className="font-bold text-amber-600">
-                                        {ps.totalSpent.toLocaleString()}
+                                        {(ps.totalSpent ?? 0).toLocaleString()}
                                       </span>
                                     </div>
                                   ))}
