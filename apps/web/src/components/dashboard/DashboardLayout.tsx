@@ -487,13 +487,22 @@ function SidebarContent({
     };
   }, [checkScroll]);
 
-  // Scroll the active nav item into view on pathname change
+  // Scroll the active nav item into view ONLY when it's off-screen
   useEffect(() => {
     requestAnimationFrame(() => {
-      const el = navRef.current;
-      if (!el) return;
-      const active = el.querySelector('[data-active="true"]') as HTMLElement;
-      if (active) {
+      const container = navRef.current;
+      if (!container) return;
+      const active = container.querySelector(
+        '[data-active="true"]',
+      ) as HTMLElement;
+      if (!active) return;
+
+      const cRect = container.getBoundingClientRect();
+      const aRect = active.getBoundingClientRect();
+      // Only scroll if the active item is outside the visible area
+      const isAbove = aRect.top < cRect.top;
+      const isBelow = aRect.bottom > cRect.bottom;
+      if (isAbove || isBelow) {
         active.scrollIntoView({ block: "nearest", behavior: "smooth" });
       }
     });
