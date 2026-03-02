@@ -155,32 +155,33 @@
       animation: textReveal 0.8s ease-out 2.8s forwards;
     }
 
-    /* ─── Loading Indicator ─── */
-    .loading-bar-container {
+    /* ─── Loading Indicator: Golden Ring Spinner ─── */
+    @keyframes spinRing {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading-spinner-container {
       margin-top: 48px;
-      width: 200px;
-      height: 2px;
-      background: rgba(212, 175, 55, 0.1);
-      border-radius: 2px;
-      overflow: hidden;
       opacity: 0;
       animation: textReveal 0.5s ease-out 3.2s forwards;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 14px;
     }
 
-    .loading-bar {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, #e5a31e, #f3dd99, #e5a31e);
-      border-radius: 2px;
-      animation: loadProgress 2s ease-in-out 3.5s forwards;
+    .golden-spinner {
+      width: 40px; height: 40px;
+      position: relative;
     }
-
-    @keyframes loadProgress {
-      0% { width: 0%; }
-      30% { width: 45%; }
-      60% { width: 70%; }
-      80% { width: 85%; }
-      100% { width: 100%; }
+    .golden-spinner::after {
+      content: ''; display: block;
+      width: 36px; height: 36px;
+      margin: 2px;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      border-top-color: #e5a31e;
+      border-right-color: #f3dd99;
+      animation: spinRing 0.9s cubic-bezier(0.5, 0, 0.5, 1) infinite;
     }
 
     .loading-text {
@@ -328,11 +329,11 @@
     <div class="brand-name">ORIVRAA</div>
     <div class="subtitle">Jewellery Business Suite</div>
 
-    <!-- Loading bar -->
-    <div class="loading-bar-container">
-      <div class="loading-bar"></div>
+    <!-- Golden round spinner -->
+    <div class="loading-spinner-container">
+      <div class="golden-spinner"></div>
+      <div class="loading-text">Preparing your workspace...</div>
     </div>
-    <div class="loading-text">Preparing your workspace...</div>
   </div>
 
   <div class="version">v0.1.0</div>
