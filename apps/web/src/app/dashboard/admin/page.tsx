@@ -1,6 +1,7 @@
 "use client";
 
 import { ApiTokenManager } from "@/components/admin/ApiTokenManager";
+import { GitHubTokenExpiryAlert } from "@/components/admin/GitHubTokenExpiryAlert";
 import { AdminGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
@@ -577,6 +578,9 @@ export default function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
+
+          {/* GitHub Token Expiry Alert (shows only when expiring/expired) */}
+          <GitHubTokenExpiryAlert />
 
           {/* API Token Management */}
           <ApiTokenManager />

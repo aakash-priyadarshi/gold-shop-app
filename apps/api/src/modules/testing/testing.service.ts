@@ -5,6 +5,7 @@ import * as http from "http";
 import * as https from "https";
 import * as path from "path";
 import { URL } from "url";
+import { PrismaService } from "../../prisma/prisma.service";
 
 export interface SmokeTestResult {
   name: string;
@@ -155,10 +156,37 @@ export interface CIStatus {
   recent_runs: CIWorkflowRun[];
 }
 
+// ── GitHub Token Management Types ───────────────────────
+
+export interface GitHubTokenConfig {
+  tokenName: string;
+  tokenPrefix: string;
+  expiresAt: string;
+  registeredAt: string;
+  lastValidatedAt: string | null;
+  isValid: boolean;
+}
+
+export interface GitHubTokenStatus {
+  configured: boolean;
+  tokenName: string | null;
+  tokenPrefix: string | null;
+  expiresAt: string | null;
+  registeredAt: string | null;
+  lastValidatedAt: string | null;
+  isValid: boolean;
+  isExpired: boolean;
+  daysUntilExpiry: number | null;
+  expiryWarning: "critical" | "warning" | "notice" | null;
+  envVarPresent: boolean;
+}
+
 @Injectable()
 export class TestingService {
   private readonly logger = new Logger(TestingService.name);
   private testHistory: TestRunHistoryEntry[] = [];
+
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Resolve the API base URL.
@@ -1071,6 +1099,208 @@ export class TestingService {
     } catch (err) {
       this.logger.error("Failed to parse Jest report", err);
       return empty;
+    }
+  }
+
+  // ── GitHub Token Management ─────────────────────────────
+
+  private readonly GH_TOKEN_CONFIG_KEY = "github_token_config";
+
+  /**
+   * Register GitHub token metadata for expiry tracking.
+   * The actual token value lives in GITHUB_TOKEN env var — we only store metadata.
+   */
+  async registerGitHubToken(input: {
+    tokenName: string;
+    tokenPrefix: string;
+    expiresAt: string;
+  }): Promise<GitHubTokenStatus> {
+    const config: GitHubTokenConfig = {
+      tokenName: input.tokenName,
+      tokenPrefix: input.tokenPrefix,
+      expiresAt: input.expiresAt,
+      registeredAt: new Date().toISOString(),
+      lastValidatedAt: null,
+      isValid: true,
+    };
+
+    await this.prisma.systemConfig.upsert({
+      where: { key: this.GH_TOKEN_CONFIG_KEY },
+      update: { value: config as any, updatedAt: new Date() },
+      create: { key: this.GH_TOKEN_CONFIG_KEY, value: config as any },
+    });
+
+    return this.getGitHubTokenStatus();
+  }
+
+  /**
+   * Get the current GitHub token status with expiry info and warnings.
+   */
+  async getGitHubTokenStatus(): Promise<GitHubTokenStatus> {
+    const envVarPresent = !!this.getGithubToken();
+
+    const record = await this.prisma.systemConfig.findUnique({
+      where: { key: this.GH_TOKEN_CONFIG_KEY },
+    });
+
+    if (!record) {
+      return {
+        configured: envVarPresent,
+        tokenName: null,
+        tokenPrefix: null,
+        expiresAt: null,
+        registeredAt: null,
+        lastValidatedAt: null,
+        isValid: envVarPresent,
+        isExpired: false,
+        daysUntilExpiry: null,
+        expiryWarning: null,
+        envVarPresent,
+      };
+    }
+
+    const config = record.value as unknown as GitHubTokenConfig;
+    const now = new Date();
+    const expiresAt = new Date(config.expiresAt);
+    const daysUntilExpiry = Math.ceil(
+      (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    const isExpired = daysUntilExpiry <= 0;
+
+    let expiryWarning: "critical" | "warning" | "notice" | null = null;
+    if (isExpired) expiryWarning = "critical";
+    else if (daysUntilExpiry <= 7) expiryWarning = "critical";
+    else if (daysUntilExpiry <= 14) expiryWarning = "warning";
+    else if (daysUntilExpiry <= 30) expiryWarning = "notice";
+
+    return {
+      configured: envVarPresent,
+      tokenName: config.tokenName,
+      tokenPrefix: config.tokenPrefix,
+      expiresAt: config.expiresAt,
+      registeredAt: config.registeredAt,
+      lastValidatedAt: config.lastValidatedAt,
+      isValid: config.isValid && !isExpired,
+      isExpired,
+      daysUntilExpiry,
+      expiryWarning,
+      envVarPresent,
+    };
+  }
+
+  /**
+   * Validate the GitHub token by calling the GitHub API.
+   * Updates the stored config with validation result.
+   */
+  async validateGitHubToken(): Promise<{
+    valid: boolean;
+    scopes: string[];
+    rateLimit: { remaining: number; limit: number; reset: string };
+    user: string;
+    message?: string;
+  }> {
+    const token = this.getGithubToken();
+    if (!token) {
+      return {
+        valid: false,
+        scopes: [],
+        rateLimit: { remaining: 0, limit: 0, reset: "" },
+        user: "",
+        message: "GITHUB_TOKEN environment variable is not set",
+      };
+    }
+
+    return new Promise((resolve) => {
+      const req = https.request(
+        {
+          hostname: "api.github.com",
+          path: "/user",
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/vnd.github+json",
+            "User-Agent": "Orivraa-TestDashboard/1.0",
+          },
+        },
+        (res) => {
+          let body = "";
+          res.on("data", (chunk) => (body += chunk));
+          res.on("end", async () => {
+            const valid = res.statusCode === 200;
+            const scopes = (res.headers["x-oauth-scopes"] || "")
+              .toString()
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
+            const rateLimit = {
+              remaining: Number(res.headers["x-ratelimit-remaining"] || 0),
+              limit: Number(res.headers["x-ratelimit-limit"] || 0),
+              reset: res.headers["x-ratelimit-reset"]
+                ? new Date(
+                    Number(res.headers["x-ratelimit-reset"]) * 1000,
+                  ).toISOString()
+                : "",
+            };
+
+            let user = "";
+            try {
+              const data = JSON.parse(body);
+              user = data.login || "";
+            } catch {}
+
+            // Update stored config with validation result
+            try {
+              const record = await this.prisma.systemConfig.findUnique({
+                where: { key: this.GH_TOKEN_CONFIG_KEY },
+              });
+              if (record) {
+                const config = record.value as unknown as GitHubTokenConfig;
+                config.lastValidatedAt = new Date().toISOString();
+                config.isValid = valid;
+                await this.prisma.systemConfig.update({
+                  where: { key: this.GH_TOKEN_CONFIG_KEY },
+                  data: { value: config as any },
+                });
+              }
+            } catch (e) {
+              this.logger.warn("Failed to update token validation status", e);
+            }
+
+            resolve({
+              valid,
+              scopes,
+              rateLimit,
+              user,
+              message: valid ? undefined : `GitHub API returned ${res.statusCode}`,
+            });
+          });
+        },
+      );
+
+      req.on("error", (err) => {
+        resolve({
+          valid: false,
+          scopes: [],
+          rateLimit: { remaining: 0, limit: 0, reset: "" },
+          user: "",
+          message: err.message,
+        });
+      });
+      req.end();
+    });
+  }
+
+  /**
+   * Delete the stored GitHub token config (does NOT remove the env var).
+   */
+  async deleteGitHubTokenConfig(): Promise<{ success: boolean }> {
+    try {
+      await this.prisma.systemConfig.delete({
+        where: { key: this.GH_TOKEN_CONFIG_KEY },
+      });
+      return { success: true };
+    } catch {
+      return { success: true }; // Already deleted or doesn't exist
     }
   }
 }

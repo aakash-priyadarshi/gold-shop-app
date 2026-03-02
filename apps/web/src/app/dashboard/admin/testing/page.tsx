@@ -1,6 +1,7 @@
 "use client";
 
 import { AdminGuard } from "@/components/auth/RouteGuard";
+import { GitHubTokenManager } from "@/components/admin/GitHubTokenManager";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1601,46 +1602,11 @@ export default function TestingDashboardPage() {
                           <li>Daily at 6:00 UTC (health monitoring)</li>
                           <li>Manual from this dashboard</li>
                         </ul>
-                        <Separator className="my-2" />
-                        <p className="font-medium text-foreground">
-                          Setup (one-time):
-                        </p>
-                        <ol className="list-decimal pl-4 space-y-1">
-                          <li>
-                            Create a GitHub Personal Access Token with{" "}
-                            <code className="rounded bg-muted px-1">
-                              actions:read
-                            </code>{" "}
-                            and{" "}
-                            <code className="rounded bg-muted px-1">
-                              actions:write
-                            </code>{" "}
-                            scopes
-                          </li>
-                          <li>
-                            Add it as{" "}
-                            <code className="rounded bg-muted px-1">
-                              GITHUB_TOKEN
-                            </code>{" "}
-                            in Railway environment variables
-                          </li>
-                          <li>Redeploy your API server</li>
-                        </ol>
-                        <Separator className="my-2" />
-                        <p>
-                          View full logs on{" "}
-                          <a
-                            href="https://github.com/aakash-priyadarshi/gold-shop-app/actions"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-cyan-600 underline hover:text-cyan-700"
-                          >
-                            GitHub Actions
-                            <ExternalLink className="ml-0.5 inline h-3 w-3" />
-                          </a>
-                        </p>
                       </CardContent>
                     </Card>
+
+                    {/* GitHub Token Expiry Tracker */}
+                    <GitHubTokenManager />
                   </div>
                 </div>
               </TabsContent>
