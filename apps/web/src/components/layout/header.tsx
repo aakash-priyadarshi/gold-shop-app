@@ -667,26 +667,30 @@ export function Header() {
               </svg>
             </button>
             {sellerDropdownOpen && (
-              <div className="absolute top-full left-0 mt-1 w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-2 z-50">
-                {sellerNavItems.map((item) => (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                    onClick={() => setSellerDropdownOpen(false)}
-                  >
-                    <item.icon className="h-5 w-5 text-gold-500 mt-0.5 shrink-0" />
-                    <div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        {item.name}
+              <>
+                {/* Invisible bridge to prevent gap hover loss */}
+                <div className="absolute top-full left-0 h-2 w-full" />
+                <div className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-2 z-50">
+                  {sellerNavItems.map((item) => (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      onClick={() => setSellerDropdownOpen(false)}
+                    >
+                      <item.icon className="h-5 w-5 text-gold-500 mt-0.5 shrink-0" />
+                      <div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {item.name}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {item.desc}
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {item.desc}
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+                    </Link>
+                  ))}
+                </div>
+              </>
             )}
           </div>
 
