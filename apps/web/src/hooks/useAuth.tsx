@@ -1,6 +1,7 @@
 "use client";
 
 import { api } from "@/lib/api";
+import OrivraaLoader from "@/components/ui/OrivraaLoader";
 import { usePathname, useRouter } from "next/navigation";
 import React, {
   createContext,
@@ -543,11 +544,7 @@ export function withAuth<P extends object>(
     }, [isAuthenticated, isLoading, user, router]);
 
     if (isLoading) {
-      return (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-600"></div>
-        </div>
-      );
+      return <OrivraaLoader />;
     }
 
     if (!isAuthenticated) {

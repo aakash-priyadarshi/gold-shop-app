@@ -2,6 +2,7 @@
 
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { ShopSwitcher } from "@/components/dashboard/ShopSwitcher";
+import OrivraaLoader from "@/components/ui/OrivraaLoader";
 import { SuspendedOverlay } from "@/components/dashboard/SuspendedOverlay";
 import { MessageDropdown } from "@/components/notifications/MessageDropdown";
 import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
@@ -746,19 +747,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [user?.role]);
 
   if (isLoading || !user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gold-50/30 dark:from-[#0B0C10] dark:to-[#0B0C10]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 animate-pulse"></div>
-            <div className="absolute inset-0 w-16 h-16 rounded-2xl border-4 border-gold-200 dark:border-gold-800 animate-spin border-t-transparent"></div>
-          </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-            Loading...
-          </p>
-        </div>
-      </div>
-    );
+    return <OrivraaLoader />;
   }
 
   // Filter nav items for user's role
