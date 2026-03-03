@@ -9,8 +9,6 @@ import {
   CheckCircle2,
   Crown,
   Globe,
-  Handshake,
-  HeartHandshake,
   LayoutDashboard,
   Megaphone,
   Package,
@@ -162,7 +160,7 @@ export default function PartnerPage() {
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-100/40 via-transparent to-transparent dark:from-amber-900/10" />
           <div className="relative max-w-4xl mx-auto px-4 text-center">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-sm font-medium mb-6">
-              <Handshake className="h-4 w-4" />
+              <Users className="h-4 w-4" />
               Partner Programme
             </div>
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white tracking-tight">
@@ -356,7 +354,7 @@ export default function PartnerPage() {
         {/* ── CTA ──────────────────────────────────────────── */}
         <section className="max-w-4xl mx-auto px-4 pb-20 text-center">
           <div className="p-10 rounded-3xl bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 border border-gray-700">
-            <HeartHandshake className="h-10 w-10 text-amber-400 mx-auto mb-4" />
+            <Users className="h-10 w-10 text-amber-400 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-white">
               Ready to Partner With Us?
             </h2>
