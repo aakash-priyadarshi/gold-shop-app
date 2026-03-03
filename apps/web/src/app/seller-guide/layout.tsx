@@ -1,9 +1,9 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Seller Guide — Start Selling Jewellery Online",
+  title: "Seller Guide — Start Selling Jewellery Online | Orivraa",
   description:
-    "Complete guide for jewellery sellers on Orivraa. Learn how to set up your shop, list gold & diamond products, manage inventory, and sell to buyers in Nepal, India, Dubai, USA & UK.",
+    "Complete step-by-step guide for jewellery sellers on Orivraa. Learn how to set up your online shop, list gold & diamond products, manage inventory, and sell to B2B buyers in Nepal, India, Dubai, USA & UK.",
   keywords: [
     "sell jewellery online",
     "jewellery seller guide",
@@ -11,13 +11,20 @@ export const metadata: Metadata = {
     "start jewellery business online",
     "sell gold India",
     "sell jewellery UK",
+    "jewellery marketplace seller",
+    "gold business online Nepal",
+    "B2B jewellery platform",
+    "list jewellery products",
+    "jewellery inventory management",
+    "sell diamonds online UAE",
   ],
   alternates: { canonical: "/seller-guide" },
   openGraph: {
     title: "Seller Guide | Orivraa Jewellery Marketplace",
     description:
-      "Start selling jewellery online to buyers worldwide — step-by-step guide for gold, silver & diamond sellers.",
+      "Everything you need to launch your jewellery business online — from registration to your first sale. Reach buyers across Nepal, India, Dubai, USA & UK.",
     url: "https://www.orivraa.com/seller-guide",
+    type: "article",
   },
 };
 
