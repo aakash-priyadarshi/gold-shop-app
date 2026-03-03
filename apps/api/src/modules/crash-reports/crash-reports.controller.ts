@@ -17,7 +17,10 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { SkipSecurity } from "../security/security.guard";
-import { CrashReportsService, SubmitCrashReportDto } from "./crash-reports.service";
+import {
+  CrashReportsService,
+  SubmitCrashReportDto,
+} from "./crash-reports.service";
 
 @Controller("crash-reports")
 export class CrashReportsController {

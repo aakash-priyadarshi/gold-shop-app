@@ -38,8 +38,7 @@ export default function GlobalError({
 
       // Determine API base URL from env or fallback
       const apiUrl =
-        (typeof process !== "undefined" &&
-          process.env?.NEXT_PUBLIC_API_URL) ||
+        (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL) ||
         "https://api.orivraa.com/api";
       const base = apiUrl.endsWith("/api") ? apiUrl : `${apiUrl}/api`;
 
@@ -153,7 +152,14 @@ export default function GlobalError({
               </pre>
             </details>
           )}
-          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+              justifyContent: "center",
+              flexWrap: "wrap",
+            }}
+          >
             <button
               onClick={reset}
               style={{
@@ -211,8 +217,7 @@ export default function GlobalError({
                   reportStatus === "sending" || reportStatus === "sent"
                     ? "default"
                     : "pointer",
-                opacity:
-                  reportStatus === "sending" ? 0.6 : 1,
+                opacity: reportStatus === "sending" ? 0.6 : 1,
               }}
             >
               {reportStatus === "sending"

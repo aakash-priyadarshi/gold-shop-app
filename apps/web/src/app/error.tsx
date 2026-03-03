@@ -6,9 +6,9 @@
  * so it has access to the theme, fonts, and navigation.
  */
 
+import { crashReportApi } from "@/lib/api";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { crashReportApi } from "@/lib/api";
 
 export default function Error({
   error,
@@ -44,9 +44,7 @@ export default function Error({
         errorMessage: error.message || "Unknown error",
         errorStack: error.stack,
         page: window.location.pathname + window.location.search,
-        userAction: document.title
-          ? `Viewing: ${document.title}`
-          : undefined,
+        userAction: document.title ? `Viewing: ${document.title}` : undefined,
         platform: (window as any).__TAURI__ ? "desktop" : "web",
         userRole,
         userId,
