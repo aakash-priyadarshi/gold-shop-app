@@ -45,18 +45,30 @@ Disallow: /
 User-agent: Claude-Web
 Disallow: /
 
-# Block known bad bots
+# SEO analysis bots (allow — they help with backlink discovery & indexing)
 User-agent: AhrefsBot
-Disallow: /
+Allow: /
+Crawl-delay: 10
 
 User-agent: SemrushBot
-Disallow: /
+Allow: /
+Crawl-delay: 10
 
+# Block known bad/spam bots
 User-agent: MJ12bot
 Disallow: /
 
 User-agent: DotBot
 Disallow: /
+
+# Allow international search engines
+User-agent: YandexBot
+Allow: /
+Crawl-delay: 5
+
+User-agent: Baiduspider
+Allow: /
+Crawl-delay: 10
 
 # Sitemap location
 Sitemap: https://www.orivraa.com/sitemap.xml

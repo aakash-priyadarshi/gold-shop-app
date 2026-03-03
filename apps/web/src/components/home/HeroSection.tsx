@@ -27,7 +27,7 @@ export function HeroSection({ videoSrc }: HeroSectionProps) {
     "Discover Exquisite Jewellery From Trusted Artisans";
   const subheadline =
     config?.heroSubheadline ||
-    "Connect with verified local jewellers, browse ready-made pieces, or get custom jewellery crafted exactly to your specifications.";
+    "Connect with verified jewellers across Nepal, India, Dubai, USA & UK. Browse ready-made gold, silver & diamond pieces, or get custom jewellery crafted to your specifications.";
 
   // Market-specific badge text
   const badgeTextMap: Record<MarketRegion, string> = {

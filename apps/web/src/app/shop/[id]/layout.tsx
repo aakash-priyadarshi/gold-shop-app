@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         metal && purity ? `${purity} ${metal}` : metal,
         shopName ? `from ${shopName}` : "",
         price ? `at ${price}` : "",
-        "on Orivraa — Premium Jewellery Marketplace",
+        "| Buy online on Orivraa. Ships to Nepal, India, Dubai, USA & UK.",
       ]
         .filter(Boolean)
         .join(" ");
@@ -55,9 +55,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   return {
-    title: "Jewellery Item",
+    title: "Jewellery Item | Buy Online",
     description:
-      "Explore this jewellery piece on Orivraa — the premium jewellery marketplace with verified quality.",
+      "Explore this jewellery piece on Orivraa — verified quality, trusted artisans. Gold, silver & diamond jewellery available for Nepal, India, Dubai, USA & UK.",
     alternates: { canonical: `/shop/${id}` },
   };
 }

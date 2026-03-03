@@ -27,7 +27,8 @@ export function DynamicFooter() {
               </span>
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed">
-              {BRAND.tagline}. Connecting customers with trusted local artisans.
+              {BRAND.tagline}. Connecting buyers with verified jewellers across
+              Nepal, India, Dubai, USA & UK.
             </p>
             {/* Social Links */}
             <div className="flex items-center gap-3 pt-2">

@@ -18,6 +18,10 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://www.orivraa.com"),
   alternates: {
     canonical: "/",
+    languages: {
+      "en": "https://www.orivraa.com",
+      "x-default": "https://www.orivraa.com",
+    },
   },
   title: {
     default: BRAND.seo.title,
@@ -31,6 +35,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
+    alternateLocale: ["en_GB", "en_IN"],
     url: "https://www.orivraa.com",
     siteName: BRAND.name,
     title: BRAND.seo.title,
@@ -118,6 +123,14 @@ export default function RootLayout({
                     addressLocality: "Kathmandu",
                     addressCountry: "NP",
                   },
+                  areaServed: [
+                    { "@type": "Country", name: "Nepal" },
+                    { "@type": "Country", name: "India" },
+                    { "@type": "Country", name: "United Arab Emirates" },
+                    { "@type": "Country", name: "United States" },
+                    { "@type": "Country", name: "United Kingdom" },
+                  ],
+                  knowsLanguage: ["en", "hi", "ne"],
                   sameAs: [
                     BRAND.social?.instagram,
                     BRAND.social?.twitter,

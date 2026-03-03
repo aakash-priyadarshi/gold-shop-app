@@ -21,8 +21,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       const location = [city, country].filter(Boolean).join(", ");
 
       return {
-        title: `${shopName}${location ? ` — ${location}` : ""}`,
-        description: `Shop gold, silver, and custom jewellery from ${shopName}${location ? ` in ${location}` : ""}. Verified seller on Orivraa with quality guaranteed products.`,
+        title: `${shopName}${location ? ` — ${location}` : ""} | Gold & Jewellery Shop`,
+        description: `Shop gold, silver, diamond & custom jewellery from ${shopName}${location ? ` in ${location}` : ""}. Verified seller on Orivraa with quality guaranteed products. Ships to Nepal, India, Dubai, USA & UK.`,
         alternates: { canonical: `/shops/${id}` },
         openGraph: {
           title: `${shopName} | Orivraa`,
@@ -46,9 +46,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   return {
-    title: "Jewellery Shop",
+    title: "Verified Jewellery Shop | Orivraa",
     description:
-      "Browse jewellery from a verified shop on Orivraa — the premium jewellery marketplace.",
+      "Browse gold, silver & diamond jewellery from a verified shop on Orivraa. Trusted jewellers serving Nepal, India, Dubai, USA & UK.",
     alternates: { canonical: `/shops/${id}` },
   };
 }
