@@ -1,5 +1,6 @@
 import { GeoMismatchBanner } from "@/components/layout/GeoMismatchBanner";
 import { Providers } from "@/components/providers";
+import InitialLoadScreen from "@/components/ui/InitialLoadScreen";
 import { Toaster } from "@/components/ui/toaster";
 import { BRAND } from "@/config/brand";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -75,10 +76,12 @@ export default function RootLayout({
         className={`${inter.className} antialiased bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100`}
       >
         <Providers>
-          <GeoMismatchBanner />
-          {children}
-          <Toaster />
-          <SpeedInsights />
+          <InitialLoadScreen>
+            <GeoMismatchBanner />
+            {children}
+            <Toaster />
+            <SpeedInsights />
+          </InitialLoadScreen>
         </Providers>
       </body>
     </html>
