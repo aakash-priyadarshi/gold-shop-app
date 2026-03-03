@@ -1,14 +1,14 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "About Us",
+  title: "About Orivraa | Trusted Jewellery Marketplace",
   description:
-    "Learn about Orivraa — the premium jewellery marketplace connecting trusted artisans with discerning buyers. Founded in 2024, based in Kathmandu, Nepal.",
+    "Learn about Orivraa — the premium jewellery marketplace connecting trusted artisans with discerning buyers across Nepal, India, Dubai, USA & UK. Founded in 2024, headquartered in Kathmandu.",
   alternates: { canonical: "/about" },
   openGraph: {
     title: "About Orivraa | Premium Jewellery Marketplace",
     description:
-      "Connecting trusted jewellery artisans with discerning buyers worldwide. Learn our story.",
+      "Connecting trusted jewellery artisans with buyers worldwide. Serving Nepal, India, Dubai, USA & UK.",
     url: "https://www.orivraa.com/about",
   },
 };

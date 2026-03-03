@@ -1,14 +1,14 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Become a Partner",
+  title: "Become a Partner | Join Our Jewellery Network",
   description:
-    "Partner with Orivraa to grow your jewellery business. Join our marketplace network and reach thousands of buyers across Nepal, India, and beyond.",
+    "Partner with Orivraa to grow your jewellery business internationally. Join our marketplace network and reach buyers across Nepal, India, Dubai, USA & UK.",
   alternates: { canonical: "/partner" },
   openGraph: {
     title: "Become a Partner | Orivraa",
     description:
-      "Join Orivraa's partner network and expand your jewellery business reach.",
+      "Expand your jewellery business internationally with Orivraa's partner network across 5+ countries.",
     url: "https://www.orivraa.com/partner",
   },
 };

@@ -67,17 +67,51 @@ export const BRAND: {
   
   // SEO
   seo: {
-    title: 'Orivraa - Premium Jewellery Marketplace',
+    title: 'Orivraa - Premium Jewellery Marketplace | Gold & Diamond Jewellery Online',
     titleTemplate: '%s | Orivraa',
-    defaultDescription: 'Discover and customize exquisite jewellery from trusted artisans. Shop gold, silver, and precious gemstone jewellery with verified quality. Buy 22K gold necklaces, rings, earrings & custom designs from verified jewellers in Nepal, India & worldwide.',
+    defaultDescription: 'Shop gold, silver & diamond jewellery from verified artisans worldwide. Buy 22K gold necklaces, rings, earrings & custom designs online. Trusted jewellers in Nepal, India, Dubai, USA & UK. Free quality verification on every purchase.',
     keywords: [
-      'jewellery', 'jewelry', 'gold', 'silver', 'custom jewellery', 'marketplace',
-      'buy gold online', 'gold jewellery online', 'custom gold ring', '22K gold necklace',
-      'gold earrings', 'diamond jewellery', 'gemstone jewellery', 'handmade jewellery',
-      'verified jewellers', 'gold shop near me', 'jewellery marketplace',
-      'Nepal jewellery', 'India gold jewellery', 'buy jewellery online',
-      'gold price today', 'silver jewellery', 'bridal jewellery', 'wedding gold',
-      'Orivraa', 'premium jewellery', 'trusted artisans',
+      // Core terms (both spellings for US/UK coverage)
+      'jewellery', 'jewelry', 'gold', 'silver', 'diamond', 'gemstone',
+      'custom jewellery', 'handmade jewellery', 'jewellery marketplace',
+      'buy gold online', 'gold jewellery online', 'buy jewellery online',
+      'premium jewellery', 'Orivraa', 'trusted artisans', 'verified jewellers',
+
+      // Product types
+      '22K gold necklace', 'gold ring', 'gold earrings', 'gold bangles',
+      'diamond ring', 'diamond necklace', 'silver jewellery', 'platinum jewellery',
+      'bridal jewellery', 'wedding gold', 'engagement ring', 'mangalsutra',
+      'gold chain', 'gold pendant', 'kundan jewellery', 'temple jewellery',
+      'antique jewellery', 'polki jewellery',
+
+      // Nepal
+      'jewellery shop in Nepal', 'gold shop in Nepal', 'jewellers in Kathmandu',
+      'best jewellery shop Kathmandu', 'Nepal gold jewellery', 'nepali jewellery',
+
+      // India
+      'jewellery shop in India', 'gold jewellery India', 'buy gold India',
+      'jewellers in Delhi', 'jewellers in Mumbai', 'jewellers in Jaipur',
+      'tanishq alternative', 'Indian gold jewellery online', 'hallmarked gold jewellery',
+      'BIS hallmark gold', '22 carat gold jewellery India', 'gold rate today India',
+
+      // Dubai / UAE
+      'gold jewellery Dubai', 'Dubai gold souk online', 'buy gold Dubai',
+      'jewellery shop Dubai', 'gold shop UAE', 'Dubai jewellers',
+      '22K gold Dubai', 'gold rate Dubai', 'diamond jewellery Dubai',
+
+      // USA
+      'jewelry store USA', 'buy gold jewelry online USA', 'gold jewelry near me',
+      'custom jewelry USA', 'Indian jewelry store USA', 'gold chain USA',
+      '22K gold jewelry USA', 'handmade jewelry online',
+
+      // UK
+      'jewellery shop UK', 'gold jewellery UK', 'buy gold online UK',
+      'Indian jewellery UK', 'hallmarked jewellery UK', 'gold shop London',
+      'Asian jewellery UK', 'bespoke jewellery UK',
+
+      // Commercial intent
+      'gold price today', 'gold shop near me', 'jewellery shop near me',
+      'custom gold ring online', 'order jewellery online', 'jewellery delivery worldwide',
     ],
   },
   

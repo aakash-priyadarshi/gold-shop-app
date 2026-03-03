@@ -46,8 +46,9 @@ export default function HomePage() {
                 Why Choose {BRAND.name}?
               </h2>
               <p className="text-gray-600 dark:text-gray-300 text-sm lg:text-base">
-                We connect you with verified jewellers who craft authentic,
-                high-quality pieces with complete transparency.
+                We connect you with verified jewellers across Nepal, India,
+                Dubai, USA & UK who craft authentic, high-quality pieces with
+                complete transparency.
               </p>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-8">
@@ -83,8 +84,9 @@ export default function HomePage() {
                   Secure Delivery
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300 text-sm lg:text-base">
-                  Insured shipping with real-time tracking. Pay on delivery
-                  option available for your peace of mind.
+                  Insured worldwide shipping to Nepal, India, Dubai, USA & UK
+                  with real-time tracking. Pay on delivery option available for
+                  your peace of mind.
                 </p>
               </div>
             </div>
@@ -149,8 +151,8 @@ export default function HomePage() {
               Ready to Find Your Perfect Piece?
             </h2>
             <p className="text-gold-100 mb-6 lg:mb-8 max-w-xl mx-auto text-sm lg:text-base">
-              Join thousands of happy customers who found their dream jewellery
-              through {BRAND.name}.
+              Join thousands of happy customers across Nepal, India, Dubai, USA
+              & UK who found their dream jewellery through {BRAND.name}.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link href="/auth/register">
