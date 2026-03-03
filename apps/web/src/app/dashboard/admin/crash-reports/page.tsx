@@ -1,6 +1,6 @@
 "use client";
 
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { crashReportApi } from "@/lib/api";
 import {
   Bug,
@@ -136,9 +136,7 @@ export default function CrashReportsPage() {
     try {
       await crashReportApi.update(id, { adminNotes: notesText });
       setReports((prev) =>
-        prev.map((r) =>
-          r.id === id ? { ...r, adminNotes: notesText } : r,
-        ),
+        prev.map((r) => (r.id === id ? { ...r, adminNotes: notesText } : r)),
       );
       setEditingNotes(null);
     } catch (err) {
@@ -207,10 +205,26 @@ export default function CrashReportsPage() {
         {stats && (
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
             {[
-              { label: "Total", value: stats.total, color: "text-gray-700 dark:text-gray-300" },
-              { label: "New", value: stats.new, color: "text-red-600 dark:text-red-400" },
-              { label: "Reviewed", value: stats.reviewed, color: "text-yellow-600 dark:text-yellow-400" },
-              { label: "Resolved", value: stats.resolved, color: "text-green-600 dark:text-green-400" },
+              {
+                label: "Total",
+                value: stats.total,
+                color: "text-gray-700 dark:text-gray-300",
+              },
+              {
+                label: "New",
+                value: stats.new,
+                color: "text-red-600 dark:text-red-400",
+              },
+              {
+                label: "Reviewed",
+                value: stats.reviewed,
+                color: "text-yellow-600 dark:text-yellow-400",
+              },
+              {
+                label: "Resolved",
+                value: stats.resolved,
+                color: "text-green-600 dark:text-green-400",
+              },
               {
                 label: "Desktop",
                 value: stats.byPlatform?.desktop || 0,
@@ -398,7 +412,10 @@ export default function CrashReportsPage() {
                       </div>
                       <div>
                         <p className="text-gray-400">User Agent</p>
-                        <p className="text-gray-700 dark:text-gray-300 font-medium truncate max-w-[200px]" title={report.userAgent || ""}>
+                        <p
+                          className="text-gray-700 dark:text-gray-300 font-medium truncate max-w-[200px]"
+                          title={report.userAgent || ""}
+                        >
                           {report.userAgent
                             ? report.userAgent.slice(0, 60) + "..."
                             : "—"}
