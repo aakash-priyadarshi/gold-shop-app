@@ -1,7 +1,7 @@
 "use client";
 
+import OrivraaLoader, { useMinLoadingTime } from "@/components/ui/OrivraaLoader";
 import { api } from "@/lib/api";
-import OrivraaLoader from "@/components/ui/OrivraaLoader";
 import { usePathname, useRouter } from "next/navigation";
 import React, {
   createContext,
@@ -528,6 +528,7 @@ export function withAuth<P extends object>(
   return function ProtectedRoute(props: P) {
     const { user, isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
+    const showLoader = useMinLoadingTime(isLoading);
 
     useEffect(() => {
       if (!isLoading) {
@@ -543,7 +544,7 @@ export function withAuth<P extends object>(
       }
     }, [isAuthenticated, isLoading, user, router]);
 
-    if (isLoading) {
+    if (showLoader) {
       return <OrivraaLoader />;
     }
 

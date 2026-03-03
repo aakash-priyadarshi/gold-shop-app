@@ -1,8 +1,6 @@
 "use client";
 
-import { AuthBackground } from "@/components/auth/AuthBackground";
 import { GoldenUnveil } from "@/components/auth/GoldenUnveil";
-import OrivraaLoader from "@/components/ui/OrivraaLoader";
 import { Turnstile } from "@/components/auth/Turnstile";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import OrivraaLoader, { useMinLoadingTime } from "@/components/ui/OrivraaLoader";
 import {
   FlagImage,
   needsCountryCode,
@@ -563,8 +562,9 @@ function RegisterForm() {
     }
   };
 
-  // Don't render form if already authenticated
-  if (authLoading) {
+  // Don't render form if already authenticated — hold for minimum 3s so animation plays
+  const showLoader = useMinLoadingTime(authLoading);
+  if (showLoader) {
     return <OrivraaLoader />;
   }
 

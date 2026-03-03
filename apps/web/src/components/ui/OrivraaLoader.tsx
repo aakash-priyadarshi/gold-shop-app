@@ -3,6 +3,25 @@
 import { animate, motion, useMotionValue, useTransform } from "framer-motion";
 import { useEffect, useState } from "react";
 
+// ─── MINIMUM DISPLAY TIME HOOK ─────────────────────────────────
+// Ensures the loader stays visible for at least `minMs` from mount.
+// If `isLoading` was false at mount, returns false immediately (no loader flash).
+// If `isLoading` was true at mount, holds true for at least `minMs` even after
+// the actual loading finishes.
+export function useMinLoadingTime(isLoading: boolean, minMs = 3000): boolean {
+  const [initiallyLoading] = useState(() => isLoading);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(!isLoading);
+
+  useEffect(() => {
+    if (!initiallyLoading) return;
+    const timer = setTimeout(() => setMinTimeElapsed(true), minMs);
+    return () => clearTimeout(timer);
+  }, [initiallyLoading, minMs]);
+
+  // Still actually loading, or minimum display time hasn't passed yet
+  return isLoading || !minTimeElapsed;
+}
+
 // ─── DIAMOND SVG — outline + facets (viewBox 0 0 24 24) ────────
 const DIAMOND_OUTLINE =
   "M6.23607 1C5.09976 1 4.06097 1.64201 3.55279 2.65836L1.14806 7.46782C0.647975 8.46799 0.745665 9.66329 1.40152 10.569L9.57018 21.8495C10.7679 23.5035 13.2321 23.5035 14.4298 21.8495L22.5985 10.569C23.2543 9.66329 23.352 8.468 22.852 7.46782L20.4472 2.65836C19.939 1.64201 18.9003 1 17.7639 1H6.23607Z";
@@ -223,7 +242,10 @@ export default function OrivraaLoader() {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3 }}
       >
-        <span className="text-[10px] uppercase tracking-[0.3em] font-bold" style={{ color: "#D4AF37" }}>
+        <span
+          className="text-[10px] uppercase tracking-[0.3em] font-bold"
+          style={{ color: "#D4AF37" }}
+        >
           Smart Quote Construction
         </span>
 
