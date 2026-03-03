@@ -48,6 +48,10 @@ export class SecurityGuard implements CanActivate {
     const userAgent = request.headers?.["user-agent"] || "";
     const userId = request.user?.id;
 
+    // Whitelisted IPs bypass all security checks
+    const whitelisted = await this.securityService.isWhitelisted(ip);
+    if (whitelisted) return true;
+
     // Quick check: is IP blocked?
     const blocked = await this.securityService.isBlocked(ip);
     if (blocked) {

@@ -2987,6 +2987,16 @@ model BlockedIp {
   @@index([expiresAt])
 }
 
+model WhitelistedIp {
+  id        String   @id @default(cuid())
+  ip        String   @unique
+  label     String   @default("") // e.g. "Admin Home", "Office VPN"
+  addedBy   String?  // userId of admin who added it
+  createdAt DateTime @default(now())
+
+  @@index([ip])
+}
+
 // ─── App Releases & Desktop Tracking ───────────────────────
 model AppRelease {
   id          String   @id @default(cuid())

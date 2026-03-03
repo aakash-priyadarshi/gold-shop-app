@@ -8,6 +8,7 @@ import {
   Param,
   Post,
   Query,
+  Req,
   UseGuards,
 } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
@@ -84,6 +85,39 @@ export class SecurityController {
   async getIpProfile(@Param("ip") ip: string) {
     const profile = this.securityService.getIpProfile(ip);
     const isBlocked = await this.securityService.isBlocked(ip);
-    return { ip, profile, isBlocked };
+    const isWhitelisted = await this.securityService.isWhitelisted(ip);
+    return { ip, profile, isBlocked, isWhitelisted };
+  }
+
+  // ─── IP Whitelist ──────────────────────────────────────────
+
+  /** List whitelisted IPs */
+  @Get("whitelisted-ips")
+  async getWhitelistedIps() {
+    return this.securityService.getWhitelistedIps();
+  }
+
+  /** Whitelist an IP (also unblocks if blocked) */
+  @Post("whitelist")
+  @HttpCode(HttpStatus.OK)
+  async whitelistIp(
+    @Body() body: { ip: string; label?: string },
+    @Req() req: any,
+  ) {
+    const addedBy = req.user?.id;
+    await this.securityService.whitelistIp(
+      body.ip,
+      body.label || "",
+      addedBy,
+    );
+    return { success: true, message: `IP ${body.ip} whitelisted` };
+  }
+
+  /** Remove an IP from the whitelist */
+  @Delete("whitelist/:ip")
+  @HttpCode(HttpStatus.OK)
+  async removeWhitelistedIp(@Param("ip") ip: string) {
+    await this.securityService.removeWhitelistedIp(ip);
+    return { success: true, message: `IP ${ip} removed from whitelist` };
   }
 }
