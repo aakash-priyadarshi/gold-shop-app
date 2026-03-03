@@ -2,18 +2,32 @@
 
 import { useEffect, useState } from "react";
 
+// ─── MODULE FLAG ────────────────────────────────────────────────
+// Resets on every hard page load / reload (JS re-executes).
+// Persists during SPA navigation (same JS context).
+let _initialAnimationPlayed = false;
+
 // ─── MINIMUM DISPLAY TIME HOOK ─────────────────────────────────
-export function useMinLoadingTime(isLoading: boolean, minMs = 3000): boolean {
-  const [initiallyLoading] = useState(() => isLoading);
-  const [minTimeElapsed, setMinTimeElapsed] = useState(!isLoading);
+// First load / reload → shows loader for full animation (4s default).
+// SPA navigation      → returns false immediately (no loader needed).
+export function useMinLoadingTime(isLoading: boolean, minMs = 4000): boolean {
+  const [isFirstLoad] = useState(() => !_initialAnimationPlayed);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
 
   useEffect(() => {
-    if (!initiallyLoading) return;
-    const timer = setTimeout(() => setMinTimeElapsed(true), minMs);
+    if (!isFirstLoad) return;
+    const timer = setTimeout(() => {
+      setMinTimeElapsed(true);
+      _initialAnimationPlayed = true;
+    }, minMs);
     return () => clearTimeout(timer);
-  }, [initiallyLoading, minMs]);
+  }, [isFirstLoad, minMs]);
 
-  return isLoading || !minTimeElapsed;
+  // SPA navigation: skip loader entirely
+  if (!isFirstLoad) return false;
+
+  // First load: hold until BOTH the animation finishes AND real loading is done
+  return !minTimeElapsed || isLoading;
 }
 
 // ─── SVG PATH DATA ─────────────────────────────────────────────
