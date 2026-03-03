@@ -7,7 +7,8 @@
  */
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { crashReportApi } from "@/lib/api";
 
 export default function Error({
   error,
@@ -16,9 +17,46 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const [reportStatus, setReportStatus] = useState<
+    "idle" | "sending" | "sent" | "error"
+  >("idle");
+
   useEffect(() => {
     console.error("[Orivraa Error Boundary]", error);
   }, [error]);
+
+  const handleReport = async () => {
+    setReportStatus("sending");
+    try {
+      // Gather user info from localStorage if available
+      let userRole = "guest";
+      let userId: string | undefined;
+      try {
+        const userJson = localStorage.getItem("user");
+        if (userJson) {
+          const user = JSON.parse(userJson);
+          userRole = user.role || "guest";
+          userId = user.id;
+        }
+      } catch {}
+
+      await crashReportApi.submit({
+        errorMessage: error.message || "Unknown error",
+        errorStack: error.stack,
+        page: window.location.pathname + window.location.search,
+        userAction: document.title
+          ? `Viewing: ${document.title}`
+          : undefined,
+        platform: (window as any).__TAURI__ ? "desktop" : "web",
+        userRole,
+        userId,
+        userAgent: navigator.userAgent,
+      });
+      setReportStatus("sent");
+    } catch {
+      setReportStatus("error");
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-content bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900">
@@ -57,12 +95,14 @@ export default function Error({
             </summary>
             <pre className="px-3 pb-3 text-xs text-red-600 dark:text-red-400 overflow-auto max-h-48 whitespace-pre-wrap break-words">
               {error.message}
-              {process.env.NODE_ENV === "development" && error.stack && `\n\n${error.stack}`}
+              {process.env.NODE_ENV === "development" &&
+                error.stack &&
+                `\n\n${error.stack}`}
             </pre>
           </details>
         )}
 
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-3">
           <button
             onClick={reset}
             className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-gold-500 to-gold-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-gold-600 hover:to-gold-700 transition-all"
@@ -96,6 +136,39 @@ export default function Error({
           >
             Home
           </Link>
+
+          <button
+            onClick={handleReport}
+            disabled={reportStatus === "sending" || reportStatus === "sent"}
+            className={`inline-flex items-center gap-2 rounded-lg border px-5 py-2.5 text-sm font-medium transition-all ${
+              reportStatus === "sent"
+                ? "border-green-300 dark:border-green-700 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20"
+                : reportStatus === "error"
+                  ? "border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 cursor-pointer"
+                  : "border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            }`}
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 9v3.75m0-10.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.25-8.25-3.286Z"
+              />
+            </svg>
+            {reportStatus === "sending"
+              ? "Sending..."
+              : reportStatus === "sent"
+                ? "Reported ✓"
+                : reportStatus === "error"
+                  ? "Retry Report"
+                  : "Report Error"}
+          </button>
         </div>
       </div>
     </div>

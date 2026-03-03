@@ -366,7 +366,10 @@ export default function SecurityDashboardPage() {
               <TabsTrigger value="whitelist">
                 Whitelist
                 {whitelistedIps.length > 0 && (
-                  <Badge variant="secondary" className="ml-1.5 text-[10px] h-4 px-1">
+                  <Badge
+                    variant="secondary"
+                    className="ml-1.5 text-[10px] h-4 px-1"
+                  >
                     {whitelistedIps.length}
                   </Badge>
                 )}

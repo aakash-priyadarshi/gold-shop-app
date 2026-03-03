@@ -33,6 +33,7 @@ import {
   Award,
   BookOpen,
   Brain,
+  Bug,
   Calculator,
   ChevronDown,
   ClipboardList,
@@ -185,6 +186,12 @@ const navItems: NavItem[] = [
         label: "Testing",
         href: "/dashboard/admin/testing",
         icon: FlaskConical,
+        roles: ["ADMIN"],
+      },
+      {
+        label: "Crash Reports",
+        href: "/dashboard/admin/crash-reports",
+        icon: Bug,
         roles: ["ADMIN"],
       },
       {

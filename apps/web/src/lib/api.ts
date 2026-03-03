@@ -1023,8 +1023,52 @@ export const securityApi = {
   getWhitelistedIps: () => api.get("/security/whitelisted-ips"),
   whitelistIp: (data: { ip: string; label?: string }) =>
     api.post("/security/whitelist", data),
-  removeWhitelistedIp: (ip: string) =>
-    api.delete(`/security/whitelist/${ip}`),
+  removeWhitelistedIp: (ip: string) => api.delete(`/security/whitelist/${ip}`),
+};
+
+// ─── Crash Reports API ──────────────────────────────────
+export const crashReportApi = {
+  /** Submit a crash report (public — no auth needed) */
+  submit: (data: {
+    errorMessage: string;
+    errorStack?: string;
+    page: string;
+    userAction?: string;
+    platform: "web" | "desktop";
+    userRole?: string;
+    userId?: string;
+    userAgent?: string;
+    appVersion?: string;
+  }) => api.post("/crash-reports", data),
+
+  /** Get paginated crash reports (admin) */
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    platform?: string;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.page) query.set("page", String(params.page));
+    if (params?.limit) query.set("limit", String(params.limit));
+    if (params?.status) query.set("status", params.status);
+    if (params?.platform) query.set("platform", params.platform);
+    const qs = query.toString();
+    return api.get(`/crash-reports${qs ? `?${qs}` : ""}`);
+  },
+
+  /** Get crash report stats (admin) */
+  getStats: () => api.get("/crash-reports/stats"),
+
+  /** Get a single report */
+  getById: (id: string) => api.get(`/crash-reports/${id}`),
+
+  /** Update status or admin notes */
+  update: (id: string, data: { status?: string; adminNotes?: string }) =>
+    api.patch(`/crash-reports/${id}`, data),
+
+  /** Delete a crash report */
+  remove: (id: string) => api.delete(`/crash-reports/${id}`),
 };
 
 // ── Testing (admin-only) ────────────────────────────────

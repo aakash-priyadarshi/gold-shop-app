@@ -413,6 +413,9 @@
   var crashObserver = null;
   var crashBannerShown = false;
 
+  // Track the last captured error for crash reporting
+  var lastCapturedError = null;
+
   function detectCrashScreen() {
     // Next.js error overlay contains "Application error" text
     var body = document.body;
@@ -461,6 +464,7 @@
       '  <button id="crash-go-home" style="padding:8px 18px; background:linear-gradient(135deg,#e5a31e,#c9942a); color:#0f172a; border:none; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;">Go Home</button>',
       '  <button id="crash-go-back" style="padding:8px 18px; background:transparent; color:rgba(212,175,55,0.8); border:1px solid rgba(212,175,55,0.3); border-radius:6px; font-size:12px; cursor:pointer;">Go Back</button>',
       '  <button id="crash-reload" style="padding:8px 18px; background:transparent; color:rgba(255,255,255,0.5); border:1px solid rgba(255,255,255,0.15); border-radius:6px; font-size:12px; cursor:pointer;">Reload</button>',
+      '  <button id="crash-report" style="padding:8px 18px; background:transparent; color:#93c5fd; border:1px solid rgba(147,197,253,0.3); border-radius:6px; font-size:12px; cursor:pointer;">\uD83D\uDEE1 Report Error</button>',
       '</div>',
     ].join('');
     document.body.appendChild(banner);
@@ -477,6 +481,73 @@
     });
     document.getElementById('crash-reload').addEventListener('click', function() {
       window.location.reload();
+    });
+
+    document.getElementById('crash-report').addEventListener('click', function() {
+      var btn = document.getElementById('crash-report');
+      if (!btn || btn.dataset.sent === 'true') return;
+      btn.textContent = 'Sending...';
+      btn.style.opacity = '0.6';
+
+      var userRole = 'guest';
+      var userId = null;
+      try {
+        var userJson = localStorage.getItem('user');
+        if (userJson) {
+          var user = JSON.parse(userJson);
+          userRole = user.role || 'guest';
+          userId = user.id || null;
+        }
+      } catch(e) {}
+
+      var errorInfo = lastCapturedError || {
+        message: 'Desktop crash detected (no error object captured)',
+        stack: '',
+        timestamp: new Date().toISOString(),
+      };
+
+      var appVersion = 'unknown';
+      try {
+        if (window.__TAURI__ && window.__TAURI__.app) {
+          window.__TAURI__.app.getVersion().then(function(v) { appVersion = v; });
+        }
+      } catch(e) {}
+
+      // Small delay to let version resolve
+      setTimeout(function() {
+        var token = null;
+        try { token = localStorage.getItem('token'); } catch(e) {}
+
+        var headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+
+        fetch('https://api.orivraa.com/api/crash-reports', {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify({
+            errorMessage: errorInfo.message,
+            errorStack: errorInfo.stack,
+            page: window.location.pathname + window.location.search,
+            userAction: 'Desktop app crash on page: ' + window.location.pathname,
+            platform: 'desktop',
+            userRole: userRole,
+            userId: userId,
+            userAgent: navigator.userAgent,
+            appVersion: appVersion,
+          }),
+        }).then(function() {
+          btn.textContent = 'Reported \u2713';
+          btn.style.color = '#4ade80';
+          btn.style.borderColor = 'rgba(34,197,94,0.3)';
+          btn.style.opacity = '1';
+          btn.dataset.sent = 'true';
+        }).catch(function() {
+          btn.textContent = 'Failed - Retry';
+          btn.style.color = '#f87171';
+          btn.style.borderColor = 'rgba(248,113,113,0.3)';
+          btn.style.opacity = '1';
+        });
+      }, 100);
     });
   }
 
@@ -515,6 +586,11 @@
   // Also catch unhandled errors globally and show recovery
   window.addEventListener('error', function(event) {
     console.error('[Orivraa Desktop] Unhandled error:', event.error || event.message);
+    lastCapturedError = {
+      message: (event.error && event.error.message) || event.message || 'Unknown error',
+      stack: (event.error && event.error.stack) || '',
+      timestamp: new Date().toISOString(),
+    };
     // Give Next.js error boundary time to render, then check
     setTimeout(function() {
       if (detectCrashScreen()) {
@@ -525,6 +601,12 @@
 
   window.addEventListener('unhandledrejection', function(event) {
     console.error('[Orivraa Desktop] Unhandled promise rejection:', event.reason);
+    var reason = event.reason;
+    lastCapturedError = {
+      message: (reason && reason.message) || String(reason) || 'Unhandled promise rejection',
+      stack: (reason && reason.stack) || '',
+      timestamp: new Date().toISOString(),
+    };
     setTimeout(function() {
       if (detectCrashScreen()) {
         showCrashRecoveryBanner();
