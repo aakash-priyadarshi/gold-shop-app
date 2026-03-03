@@ -32,11 +32,16 @@ export default function Error({
       let userRole = "guest";
       let userId: string | undefined;
       try {
-        const userJson = localStorage.getItem("user");
-        if (userJson) {
-          const user = JSON.parse(userJson);
-          userRole = user.role || "guest";
-          userId = user.id;
+        const token = localStorage.getItem("token");
+        if (token) {
+          const parts = token.split(".");
+          if (parts.length === 3) {
+            const payload = JSON.parse(
+              atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")),
+            );
+            userRole = payload.role || "guest";
+            userId = payload.sub;
+          }
         }
       } catch {}
 
