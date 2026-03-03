@@ -19,6 +19,43 @@
 
   console.log('[Orivraa Desktop] Injecting desktop enhancements v2');
 
+  // ─── DOM SAFETY PATCH ─────────────────────────────────
+  // Monkey-patch removeChild/insertBefore to prevent React crashes when
+  // this script (or Tauri internals) modifies DOM nodes that React tracks.
+  // React's commit phase calls removeChild on nodes it expects to own;
+  // if anything external moved/removed them first, React throws
+  // "Failed to execute 'removeChild' on 'Node'". This patch catches
+  // and suppresses that error gracefully.
+  if (typeof Node !== 'undefined' && Node.prototype) {
+    var _origRemoveChild = Node.prototype.removeChild;
+    Node.prototype.removeChild = function(child) {
+      if (child && child.parentNode !== this) {
+        // Node was already moved/removed by external code — return silently.
+        return child;
+      }
+      return _origRemoveChild.apply(this, arguments);
+    };
+
+    var _origInsertBefore = Node.prototype.insertBefore;
+    Node.prototype.insertBefore = function(newNode, refNode) {
+      if (refNode && refNode.parentNode !== this) {
+        // Reference node no longer belongs to this parent — skip silently.
+        return newNode;
+      }
+      return _origInsertBefore.apply(this, arguments);
+    };
+  }
+
+  // ─── JWT HELPER — decode token payload for user info ───
+  function parseJwtPayload(token) {
+    try {
+      var parts = token.split('.');
+      if (parts.length !== 3) return null;
+      var b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      return JSON.parse(atob(b64));
+    } catch (e) { return null; }
+  }
+
   // ─── STYLES ────────────────────────────────────────────
   var style = document.createElement('style');
   style.id = 'orivraa-desktop-styles';
@@ -383,10 +420,16 @@
     }).catch(function() {});
   }, 10000); // 10s after page load
 
-  // ─── 8. APP VERSION IN WINDOW TITLE ───
+  // ─── 8. APP VERSION ───────────────────────────────────
+  // Store version for use in crash reports / UI, but do NOT modify
+  // document.title — Next.js manages <title> via React's reconciler,
+  // and changing it externally causes "removeChild" crashes on every
+  // page navigation.
+  var desktopAppVersion = 'unknown';
   TAURI.invoke('get_app_version').then(function(version) {
     if (version) {
-      document.title = document.title.replace(/Orivraa/, 'Orivraa v' + version);
+      desktopAppVersion = version;
+      console.log('[Orivraa Desktop] App version:', version);
     }
   }).catch(function() {});
 
@@ -492,11 +535,13 @@
       var userRole = 'guest';
       var userId = null;
       try {
-        var userJson = localStorage.getItem('user');
-        if (userJson) {
-          var user = JSON.parse(userJson);
-          userRole = user.role || 'guest';
-          userId = user.id || null;
+        var token = localStorage.getItem('token');
+        if (token) {
+          var payload = parseJwtPayload(token);
+          if (payload) {
+            userRole = payload.role || 'guest';
+            userId = payload.sub || null;
+          }
         }
       } catch(e) {}
 
@@ -506,20 +551,12 @@
         timestamp: new Date().toISOString(),
       };
 
-      var appVersion = 'unknown';
-      try {
-        if (window.__TAURI__ && window.__TAURI__.app) {
-          window.__TAURI__.app.getVersion().then(function(v) { appVersion = v; });
-        }
-      } catch(e) {}
-
-      // Small delay to let version resolve
       setTimeout(function() {
-        var token = null;
-        try { token = localStorage.getItem('token'); } catch(e) {}
+        var authToken = null;
+        try { authToken = localStorage.getItem('token'); } catch(e) {}
 
         var headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = 'Bearer ' + token;
+        if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
 
         fetch('https://api.orivraa.com/api/crash-reports', {
           method: 'POST',
@@ -533,7 +570,7 @@
             userRole: userRole,
             userId: userId,
             userAgent: navigator.userAgent,
-            appVersion: appVersion,
+            appVersion: desktopAppVersion,
           }),
         }).then(function() {
           btn.textContent = 'Reported \u2713';
