@@ -5,6 +5,7 @@ const isTauriBuild = process.env.TAURI_BUILD === '1';
 
 const nextConfig = {
   reactStrictMode: true,
+  poweredByHeader: false,
   transpilePackages: ['@gold-shop/shared'],
 
   // Static export for Tauri desktop builds

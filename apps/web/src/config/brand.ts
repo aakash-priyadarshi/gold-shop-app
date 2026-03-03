@@ -69,8 +69,16 @@ export const BRAND: {
   seo: {
     title: 'Orivraa - Premium Jewellery Marketplace',
     titleTemplate: '%s | Orivraa',
-    defaultDescription: 'Discover and customize exquisite jewellery from trusted artisans. Shop gold, silver, and precious gemstone jewellery with verified quality.',
-    keywords: ['jewellery', 'gold', 'silver', 'custom jewellery', 'marketplace', 'Nepal', 'India'],
+    defaultDescription: 'Discover and customize exquisite jewellery from trusted artisans. Shop gold, silver, and precious gemstone jewellery with verified quality. Buy 22K gold necklaces, rings, earrings & custom designs from verified jewellers in Nepal, India & worldwide.',
+    keywords: [
+      'jewellery', 'jewelry', 'gold', 'silver', 'custom jewellery', 'marketplace',
+      'buy gold online', 'gold jewellery online', 'custom gold ring', '22K gold necklace',
+      'gold earrings', 'diamond jewellery', 'gemstone jewellery', 'handmade jewellery',
+      'verified jewellers', 'gold shop near me', 'jewellery marketplace',
+      'Nepal jewellery', 'India gold jewellery', 'buy jewellery online',
+      'gold price today', 'silver jewellery', 'bridal jewellery', 'wedding gold',
+      'Orivraa', 'premium jewellery', 'trusted artisans',
+    ],
   },
   
   // Colors (matching Tailwind config)
