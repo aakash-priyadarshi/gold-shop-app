@@ -27,14 +27,28 @@ import {
   Edit,
   ExternalLink,
   Eye,
+  EyeOff,
   FileText,
+  Heading1,
+  Heading2,
+  Heading3,
+  Image as ImageIcon,
+  Italic,
+  Link2,
+  List,
+  ListOrdered,
   Loader2,
+  Minus,
+  MousePointerClick,
+  Palette,
   Plus,
   RefreshCw,
   Save,
   Trash2,
+  Type,
+  Underline,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface StaticPage {
   id: string;
@@ -69,6 +83,43 @@ export function PagesManagerTab() {
     Partial<StaticPage> & { isNew?: boolean }
   >({});
   const [pageToDelete, setPageToDelete] = useState<StaticPage | null>(null);
+  const [textColor, setTextColor] = useState("#C9A227");
+  const [showPreview, setShowPreview] = useState(true);
+  const contentRef = useRef<HTMLTextAreaElement>(null);
+
+  /* ── Editor toolbar helpers ──────────────────────────── */
+  const wrapSelection = (before: string, after: string = "") => {
+    const ta = contentRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const text = editingPage.content || "";
+    const selected = text.substring(start, end);
+    const newContent =
+      text.substring(0, start) + before + selected + after + text.substring(end);
+    setEditingPage({ ...editingPage, content: newContent });
+    setTimeout(() => {
+      ta.focus();
+      ta.setSelectionRange(
+        start + before.length,
+        start + before.length + selected.length,
+      );
+    }, 0);
+  };
+
+  const insertSnippet = (snippet: string) => {
+    const ta = contentRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const text = editingPage.content || "";
+    const newContent =
+      text.substring(0, start) + snippet + text.substring(start);
+    setEditingPage({ ...editingPage, content: newContent });
+    setTimeout(() => {
+      ta.focus();
+      ta.setSelectionRange(start + snippet.length, start + snippet.length);
+    }, 0);
+  };
 
   const fetchPages = async () => {
     setLoading(true);
@@ -376,19 +427,214 @@ export function PagesManagerTab() {
 
             <div className="space-y-2">
               <Label>Content (HTML) *</Label>
+              {/* ── Formatting Toolbar ── */}
+              <div className="flex flex-wrap items-center gap-1 p-2 border rounded-t-lg bg-muted/40">
+                {/* Text formatting */}
+                <button
+                  type="button"
+                  title="Bold"
+                  onClick={() => wrapSelection("<strong>", "</strong>")}
+                  className="p-1.5 rounded hover:bg-background transition-colors border border-transparent hover:border-border"
+                >
+                  <Type className="h-3.5 w-3.5" strokeWidth={3} />
+                </button>
+                <button
+                  type="button"
+                  title="Italic"
+                  onClick={() => wrapSelection("<em>", "</em>")}
+                  className="p-1.5 rounded hover:bg-background transition-colors border border-transparent hover:border-border"
+                >
+                  <Italic className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  title="Underline"
+                  onClick={() =>
+                    wrapSelection(
+                      '<span style="text-decoration:underline">',
+                      "</span>",
+                    )
+                  }
+                  className="p-1.5 rounded hover:bg-background transition-colors border border-transparent hover:border-border"
+                >
+                  <Underline className="h-3.5 w-3.5" />
+                </button>
+
+                <div className="w-px h-5 bg-border mx-1" />
+
+                {/* Headings */}
+                <button
+                  type="button"
+                  title="Heading 1"
+                  onClick={() => wrapSelection("<h1>", "</h1>")}
+                  className="p-1.5 rounded hover:bg-background transition-colors border border-transparent hover:border-border"
+                >
+                  <Heading1 className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  title="Heading 2"
+                  onClick={() => wrapSelection("<h2>", "</h2>")}
+                  className="p-1.5 rounded hover:bg-background transition-colors border border-transparent hover:border-border"
+                >
+                  <Heading2 className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  title="Heading 3"
+                  onClick={() => wrapSelection("<h3>", "</h3>")}
+                  className="p-1.5 rounded hover:bg-background transition-colors border border-transparent hover:border-border"
+                >
+                  <Heading3 className="h-3.5 w-3.5" />
+                </button>
+
+                <div className="w-px h-5 bg-border mx-1" />
+
+                {/* Lists */}
+                <button
+                  type="button"
+                  title="Bullet List"
+                  onClick={() =>
+                    insertSnippet(
+                      "\n<ul>\n  <li>Item</li>\n  <li>Item</li>\n</ul>\n",
+                    )
+                  }
+                  className="p-1.5 rounded hover:bg-background transition-colors border border-transparent hover:border-border"
+                >
+                  <List className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  title="Ordered List"
+                  onClick={() =>
+                    insertSnippet(
+                      "\n<ol>\n  <li>Item</li>\n  <li>Item</li>\n</ol>\n",
+                    )
+                  }
+                  className="p-1.5 rounded hover:bg-background transition-colors border border-transparent hover:border-border"
+                >
+                  <ListOrdered className="h-3.5 w-3.5" />
+                </button>
+
+                <div className="w-px h-5 bg-border mx-1" />
+
+                {/* Link */}
+                <button
+                  type="button"
+                  title="Insert Link"
+                  onClick={() => {
+                    const url = prompt("Enter URL:", "https://");
+                    if (url)
+                      wrapSelection(
+                        `<a href="${url}" class="text-amber-600 underline hover:text-amber-700">`,
+                        "</a>",
+                      );
+                  }}
+                  className="p-1.5 rounded hover:bg-background transition-colors border border-transparent hover:border-border"
+                >
+                  <Link2 className="h-3.5 w-3.5" />
+                </button>
+
+                {/* Image */}
+                <button
+                  type="button"
+                  title="Insert Image"
+                  onClick={() => {
+                    const url = prompt("Image URL:", "https://");
+                    if (url) {
+                      const alt = prompt("Alt text:", "Image") || "Image";
+                      insertSnippet(
+                        `<img src="${url}" alt="${alt}" class="rounded-lg max-w-full" />`,
+                      );
+                    }
+                  }}
+                  className="p-1.5 rounded hover:bg-background transition-colors border border-transparent hover:border-border"
+                >
+                  <ImageIcon className="h-3.5 w-3.5" />
+                </button>
+
+                <div className="w-px h-5 bg-border mx-1" />
+
+                {/* Color picker */}
+                <div className="relative flex items-center gap-1">
+                  <label
+                    title="Pick text color"
+                    className="p-1.5 rounded hover:bg-background transition-colors border border-transparent hover:border-border cursor-pointer flex items-center gap-1"
+                  >
+                    <Palette className="h-3.5 w-3.5" />
+                    <div
+                      className="w-3 h-3 rounded-sm border border-border"
+                      style={{ backgroundColor: textColor }}
+                    />
+                    <input
+                      type="color"
+                      value={textColor}
+                      onChange={(e) => setTextColor(e.target.value)}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    title="Apply text color to selection"
+                    onClick={() =>
+                      wrapSelection(
+                        `<span style="color:${textColor}">`,
+                        "</span>",
+                      )
+                    }
+                    className="px-2 py-1 rounded text-[10px] font-semibold hover:bg-background transition-colors border border-transparent hover:border-border"
+                    style={{ color: textColor }}
+                  >
+                    A
+                  </button>
+                </div>
+
+                <div className="w-px h-5 bg-border mx-1" />
+
+                {/* Call-to-action button */}
+                <button
+                  type="button"
+                  title="Insert CTA Button"
+                  onClick={() => {
+                    const url = prompt("Button link URL:", "/pricing");
+                    const text = prompt("Button text:", "Get Started");
+                    if (url && text) {
+                      insertSnippet(
+                        `<a href="${url}" style="display:inline-block;padding:12px 28px;background:#C9A227;color:#fff;border-radius:8px;font-weight:600;text-decoration:none;text-align:center;">${text}</a>`,
+                      );
+                    }
+                  }}
+                  className="p-1.5 rounded hover:bg-background transition-colors border border-transparent hover:border-border"
+                >
+                  <MousePointerClick className="h-3.5 w-3.5" />
+                </button>
+
+                {/* Horizontal rule */}
+                <button
+                  type="button"
+                  title="Horizontal Rule"
+                  onClick={() => insertSnippet("\n<hr />\n")}
+                  className="p-1.5 rounded hover:bg-background transition-colors border border-transparent hover:border-border"
+                >
+                  <Minus className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
+              {/* Textarea */}
               <Textarea
+                ref={contentRef}
                 value={editingPage.content || ""}
                 onChange={(e) =>
                   setEditingPage({ ...editingPage, content: e.target.value })
                 }
-                placeholder="<h1>Page Title</h1><p>Content here...</p>"
+                placeholder="<h1>Page Title</h1>\n<p>Start writing your content...</p>"
                 rows={16}
-                className="font-mono text-sm"
+                className="font-mono text-sm rounded-t-none -mt-2 focus-visible:ring-1"
               />
               <p className="text-xs text-muted-foreground">
-                Use HTML tags: &lt;h1&gt;, &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;,
-                &lt;ol&gt;, &lt;li&gt;, &lt;strong&gt;, &lt;em&gt;, &lt;a
-                href=&quot;...&quot;&gt;, &lt;img src=&quot;...&quot;&gt;
+                Select text then click a toolbar button to wrap it, or click
+                to insert at cursor. Tip: use the color picker to set
+                a color, then click &quot;A&quot; to apply it.
               </p>
             </div>
 
@@ -419,22 +665,35 @@ export function PagesManagerTab() {
             </div>
 
             {/* Live Preview */}
-            {editingPage.content && (
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setShowPreview((v) => !v)}
+                className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showPreview ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
                   <Eye className="h-4 w-4" />
-                  Preview
-                </Label>
-                <div className="border rounded-lg p-6 bg-white dark:bg-gray-900 max-h-64 overflow-y-auto">
+                )}
+                {showPreview ? "Hide Preview" : "Show Preview"}
+              </button>
+              {showPreview && editingPage.content && (
+                <div className="border rounded-lg p-6 bg-white dark:bg-gray-900 max-h-[400px] overflow-y-auto">
                   <div
-                    className="prose prose-sm dark:prose-invert max-w-none"
+                    className="prose prose-lg dark:prose-invert max-w-none"
                     dangerouslySetInnerHTML={{
                       __html: editingPage.content,
                     }}
                   />
                 </div>
-              </div>
-            )}
+              )}
+              {showPreview && !editingPage.content && (
+                <div className="border rounded-lg p-6 bg-white dark:bg-gray-900 text-center text-muted-foreground text-sm">
+                  Start typing to see a live preview
+                </div>
+              )}
+            </div>
           </div>
 
           <DialogFooter>

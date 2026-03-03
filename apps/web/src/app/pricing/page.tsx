@@ -654,7 +654,16 @@ export default function PricingPage() {
                   }`}
                   title={COUNTRIES[code].name}
                 >
-                  {code === "EU" ? "EU" : COUNTRIES[code].name.split(" ")[0]}
+                  {(
+                    {
+                      NP: "Nepal",
+                      IN: "India",
+                      AE: "UAE",
+                      UK: "UK",
+                      EU: "EU",
+                      US: "USA",
+                    } as Record<string, string>
+                  )[code] ?? code}
                 </button>
               ))}
             </div>
