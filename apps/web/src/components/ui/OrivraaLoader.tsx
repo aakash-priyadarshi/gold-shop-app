@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
 import {
+  animate,
   motion,
   useMotionValue,
   useTransform,
-  animate,
   type Variants,
 } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
 
 // ─── SVG PATH DATA ──────────────────────────────────────────────
 // Diamond wireframe (extracted from diamond SVG)
@@ -116,9 +116,9 @@ const shimmerVariant: Variants = {
 
 // ─── COMPONENT ──────────────────────────────────────────────────
 export default function OrivraaLoader() {
-  const [phase, setPhase] = useState<
-    "constructing" | "shimmer" | "complete"
-  >("constructing");
+  const [phase, setPhase] = useState<"constructing" | "shimmer" | "complete">(
+    "constructing",
+  );
   const [activeMarket, setActiveMarket] = useState(0);
   const [activeSvg, setActiveSvg] = useState<"diamond" | "pendant" | "store">(
     "diamond",
@@ -194,8 +194,7 @@ export default function OrivraaLoader() {
           style={{
             width: p.size,
             height: p.size,
-            background:
-              "radial-gradient(circle, #D4AF37 0%, #D4AF3700 70%)",
+            background: "radial-gradient(circle, #D4AF37 0%, #D4AF3700 70%)",
             boxShadow: "0 0 6px 1px rgba(212,175,55,0.4)",
           }}
         />

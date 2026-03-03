@@ -2,6 +2,7 @@
 
 import { AuthBackground } from "@/components/auth/AuthBackground";
 import { GoldenUnveil } from "@/components/auth/GoldenUnveil";
+import OrivraaLoader from "@/components/ui/OrivraaLoader";
 import { Turnstile } from "@/components/auth/Turnstile";
 import { Button } from "@/components/ui/button";
 import {
@@ -564,18 +565,7 @@ function RegisterForm() {
 
   // Don't render form if already authenticated
   if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <AuthBackground />
-        <div className="flex flex-col items-center gap-4 z-10">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 animate-pulse"></div>
-            <div className="absolute inset-0 w-16 h-16 rounded-2xl border-4 border-gold-200 animate-spin border-t-transparent"></div>
-          </div>
-          <p className="text-sm text-gray-500">Loading...</p>
-        </div>
-      </div>
-    );
+    return <OrivraaLoader />;
   }
 
   // Show OTP Verification Screen
@@ -1581,18 +1571,7 @@ function RegisterForm() {
 }
 
 function RegisterLoading() {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <AuthBackground />
-      <div className="flex flex-col items-center gap-4 z-10">
-        <div className="relative">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 animate-pulse"></div>
-          <div className="absolute inset-0 w-16 h-16 rounded-2xl border-4 border-gold-200 animate-spin border-t-transparent"></div>
-        </div>
-        <p className="text-sm text-gray-500">Loading...</p>
-      </div>
-    </div>
-  );
+  return <OrivraaLoader />;
 }
 
 export default function RegisterPage() {
