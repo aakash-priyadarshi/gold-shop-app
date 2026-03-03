@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
     languages: {
-      "en": "https://www.orivraa.com",
+      en: "https://www.orivraa.com",
       "x-default": "https://www.orivraa.com",
     },
   },

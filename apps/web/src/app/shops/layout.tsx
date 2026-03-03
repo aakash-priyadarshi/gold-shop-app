@@ -5,9 +5,15 @@ export const metadata: Metadata = {
   description:
     "Discover verified jewellery shops from Nepal, India, Dubai, USA & UK on Orivraa. Browse gold, silver, diamond & gemstone shops from trusted artisans. Find the best jewellers near you.",
   keywords: [
-    "jewellery shops", "gold shops", "verified jewellers", "jewellers near me",
-    "gold shop Nepal", "jewellery shop India", "gold souk Dubai",
-    "jewelry store USA", "jewellery shop UK",
+    "jewellery shops",
+    "gold shops",
+    "verified jewellers",
+    "jewellers near me",
+    "gold shop Nepal",
+    "jewellery shop India",
+    "gold souk Dubai",
+    "jewelry store USA",
+    "jewellery shop UK",
   ],
   alternates: { canonical: "/shops" },
   openGraph: {

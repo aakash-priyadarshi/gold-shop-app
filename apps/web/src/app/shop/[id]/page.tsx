@@ -352,7 +352,7 @@ export default function ProductDetailPage() {
                     >
                       <img
                         src={getImageUrl(img)}
-                        alt={`${item?.title || 'Product'} - Image ${idx + 1}`}
+                        alt={`${item?.title || "Product"} - Image ${idx + 1}`}
                         className="w-full h-full object-cover"
                       />
                     </button>
