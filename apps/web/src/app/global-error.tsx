@@ -4,7 +4,13 @@
  * Global Error Boundary — catches errors in the root layout itself.
  * This is the last line of defense; it renders its own <html> shell
  * because the root layout may have crashed.
+ *
+ * Cannot use any imports (Tailwind, api.ts) — must use inline styles
+ * and raw fetch() for crash reporting.
  */
+
+import { useState } from "react";
+
 export default function GlobalError({
   error,
   reset,
@@ -12,6 +18,55 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const [reportStatus, setReportStatus] = useState<
+    "idle" | "sending" | "sent" | "error"
+  >("idle");
+
+  const handleReport = async () => {
+    setReportStatus("sending");
+    try {
+      let userRole = "guest";
+      let userId: string | undefined;
+      try {
+        const userJson = localStorage.getItem("user");
+        if (userJson) {
+          const user = JSON.parse(userJson);
+          userRole = user.role || "guest";
+          userId = user.id;
+        }
+      } catch {}
+
+      // Determine API base URL from env or fallback
+      const apiUrl =
+        (typeof process !== "undefined" &&
+          process.env?.NEXT_PUBLIC_API_URL) ||
+        "https://api.orivraa.com/api";
+      const base = apiUrl.endsWith("/api") ? apiUrl : `${apiUrl}/api`;
+
+      const token = localStorage.getItem("token");
+
+      await fetch(`${base}/crash-reports`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          errorMessage: error?.message || "Unknown fatal error",
+          errorStack: error?.stack,
+          page: window.location.pathname + window.location.search,
+          userAction: "Fatal error (root layout crashed)",
+          platform: (window as any).__TAURI__ ? "desktop" : "web",
+          userRole,
+          userId,
+          userAgent: navigator.userAgent,
+        }),
+      });
+      setReportStatus("sent");
+    } catch {
+      setReportStatus("error");
+    }
+  };
   return (
     <html lang="en">
       <body
@@ -98,7 +153,7 @@ export default function GlobalError({
               </pre>
             </details>
           )}
-          <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
             <button
               onClick={reset}
               style={{
@@ -127,6 +182,46 @@ export default function GlobalError({
               }}
             >
               Go home
+            </button>
+            <button
+              onClick={handleReport}
+              disabled={reportStatus === "sending" || reportStatus === "sent"}
+              style={{
+                padding: "10px 24px",
+                background:
+                  reportStatus === "sent"
+                    ? "rgba(34,197,94,0.15)"
+                    : "transparent",
+                color:
+                  reportStatus === "sent"
+                    ? "#4ade80"
+                    : reportStatus === "error"
+                      ? "#f87171"
+                      : "#93c5fd",
+                border: `1px solid ${
+                  reportStatus === "sent"
+                    ? "rgba(34,197,94,0.3)"
+                    : reportStatus === "error"
+                      ? "rgba(248,113,113,0.3)"
+                      : "rgba(147,197,253,0.3)"
+                }`,
+                borderRadius: 8,
+                fontSize: "0.875rem",
+                cursor:
+                  reportStatus === "sending" || reportStatus === "sent"
+                    ? "default"
+                    : "pointer",
+                opacity:
+                  reportStatus === "sending" ? 0.6 : 1,
+              }}
+            >
+              {reportStatus === "sending"
+                ? "Sending..."
+                : reportStatus === "sent"
+                  ? "Reported \u2713"
+                  : reportStatus === "error"
+                    ? "Retry Report"
+                    : "\uD83D\uDEE1 Report Error"}
             </button>
           </div>
         </div>

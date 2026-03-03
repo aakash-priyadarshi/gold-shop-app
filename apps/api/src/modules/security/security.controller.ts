@@ -105,11 +105,7 @@ export class SecurityController {
     @Req() req: any,
   ) {
     const addedBy = req.user?.id;
-    await this.securityService.whitelistIp(
-      body.ip,
-      body.label || "",
-      addedBy,
-    );
+    await this.securityService.whitelistIp(body.ip, body.label || "", addedBy);
     return { success: true, message: `IP ${body.ip} whitelisted` };
   }
 

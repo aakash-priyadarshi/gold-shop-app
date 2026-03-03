@@ -2997,6 +2997,29 @@ model WhitelistedIp {
   @@index([ip])
 }
 
+// ─── Crash Reports (client-side error reporting) ───────────
+model CrashReport {
+  id            String   @id @default(cuid())
+  errorMessage  String   @db.Text
+  errorStack    String?  @db.Text
+  page          String   // URL/path where the crash happened
+  userAction    String?  @db.Text // what the user was doing (button click, navigation, etc.)
+  platform      String   // "web" | "desktop"
+  userRole      String?  // ADMIN | CUSTOMER | SHOPKEEPER | guest
+  userId        String?  // if logged in
+  userAgent     String?  @db.Text
+  appVersion    String?  // desktop app version
+  ip            String?  // client IP address (recorded server-side)
+  status        String   @default("new") // new | reviewed | resolved
+  adminNotes    String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([platform, createdAt])
+  @@index([userId])
+}
+
 // ─── App Releases & Desktop Tracking ───────────────────────
 model AppRelease {
   id          String   @id @default(cuid())

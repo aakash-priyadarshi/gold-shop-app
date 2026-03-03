@@ -3158,9 +3158,9 @@ export default function CreateRfqPage() {
                                 : null;
 
                         const selectedPrice = selectedKey
-                          ? marketRates?.metals?.[
+                          ? (marketRates?.metals?.[
                               selectedKey as keyof typeof marketRates.metals
-                            ] ?? null
+                            ] ?? null)
                           : null;
 
                         const selectedLabel = selectedKey

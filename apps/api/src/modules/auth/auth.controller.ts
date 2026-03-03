@@ -21,6 +21,7 @@ import {
 } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import { Response } from "express";
+import { SkipSecurity } from "../security/security.guard";
 import { AuthResponse, AuthService, RegisterResponse } from "./auth.service";
 import { CurrentUser } from "./decorators/current-user.decorator";
 import { ForgotPasswordDto } from "./dto/forgot-password.dto";
@@ -33,7 +34,6 @@ import { VerifyEmailDto } from "./dto/verify-email.dto";
 import { GoogleAuthGuard } from "./guards/google-auth.guard";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import { TurnstileService } from "./turnstile.service";
-import { SkipSecurity } from "../security/security.guard";
 
 @ApiTags("auth")
 @Controller("auth")
