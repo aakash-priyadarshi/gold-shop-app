@@ -2,7 +2,6 @@
 
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { ShopSwitcher } from "@/components/dashboard/ShopSwitcher";
-import OrivraaLoader from "@/components/ui/OrivraaLoader";
 import { SuspendedOverlay } from "@/components/dashboard/SuspendedOverlay";
 import { MessageDropdown } from "@/components/notifications/MessageDropdown";
 import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
@@ -17,6 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import OrivraaLoader, { useMinLoadingTime } from "@/components/ui/OrivraaLoader";
 import {
   Sheet,
   SheetContent,
@@ -746,9 +746,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   }, [user?.role]);
 
-  if (isLoading || !user) {
+  const showLoader = useMinLoadingTime(isLoading || !user);
+
+  if (showLoader) {
     return <OrivraaLoader />;
   }
+
+  // TypeScript narrowing: user is guaranteed non-null after loader gate
+  if (!user) return null;
 
   // Filter nav items for user's role
   const userNavItems = navItems.filter((item) =>
