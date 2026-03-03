@@ -19,12 +19,14 @@ import {
   Activity,
   AlertTriangle,
   Ban,
+  CheckCircle,
   Eye,
   RefreshCw,
   Search,
   Shield,
   ShieldAlert,
   ShieldCheck,
+  ShieldPlus,
   Unlock,
   XCircle,
 } from "lucide-react";
@@ -68,6 +70,14 @@ interface BlockedIp {
   severity: string;
   autoBlock: boolean;
   expiresAt?: string;
+  createdAt: string;
+}
+
+interface WhitelistedIp {
+  id: string;
+  ip: string;
+  label: string;
+  addedBy?: string;
   createdAt: string;
 }
 
@@ -115,6 +125,9 @@ export default function SecurityDashboardPage() {
   const [blockIp, setBlockIp] = useState("");
   const [blockReason, setBlockReason] = useState("");
   const [blockDuration, setBlockDuration] = useState("15");
+  const [whitelistIpInput, setWhitelistIpInput] = useState("");
+  const [whitelistLabel, setWhitelistLabel] = useState("");
+  const [whitelistedIps, setWhitelistedIps] = useState<WhitelistedIp[]>([]);
   const [filterType, setFilterType] = useState("");
   const [filterSeverity, setFilterSeverity] = useState("");
   const [filterIp, setFilterIp] = useState("");
@@ -123,8 +136,12 @@ export default function SecurityDashboardPage() {
   const fetchDashboard = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await securityApi.getDashboard();
-      setDashboard(res.data);
+      const [dashRes, whitelistRes] = await Promise.all([
+        securityApi.getDashboard(),
+        securityApi.getWhitelistedIps(),
+      ]);
+      setDashboard(dashRes.data);
+      setWhitelistedIps(whitelistRes.data || []);
     } catch (err) {
       console.error("Failed to fetch security dashboard:", err);
     } finally {
@@ -163,6 +180,49 @@ export default function SecurityDashboardPage() {
       fetchDashboard();
     } catch (err) {
       toast({ title: "Failed to unblock IP", variant: "destructive" });
+    }
+  };
+
+  const handleWhitelist = async () => {
+    if (!whitelistIpInput.trim())
+      return toast({
+        title: "Enter an IP address",
+        variant: "destructive",
+      });
+    try {
+      await securityApi.whitelistIp({
+        ip: whitelistIpInput.trim(),
+        label: whitelistLabel || undefined,
+      });
+      toast({ title: `Whitelisted ${whitelistIpInput}` });
+      setWhitelistIpInput("");
+      setWhitelistLabel("");
+      fetchDashboard();
+    } catch (err) {
+      toast({ title: "Failed to whitelist IP", variant: "destructive" });
+    }
+  };
+
+  const handleRemoveWhitelist = async (ip: string) => {
+    try {
+      await securityApi.removeWhitelistedIp(ip);
+      toast({ title: `Removed ${ip} from whitelist` });
+      fetchDashboard();
+    } catch (err) {
+      toast({
+        title: "Failed to remove from whitelist",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUnblockAndWhitelist = async (ip: string) => {
+    try {
+      await securityApi.whitelistIp({ ip, label: "Unblocked & whitelisted" });
+      toast({ title: `Unblocked & whitelisted ${ip}` });
+      fetchDashboard();
+    } catch (err) {
+      toast({ title: "Failed to whitelist IP", variant: "destructive" });
     }
   };
 
@@ -303,6 +363,14 @@ export default function SecurityDashboardPage() {
             <TabsList>
               <TabsTrigger value="events">Threat Feed</TabsTrigger>
               <TabsTrigger value="blocked">Blocked IPs</TabsTrigger>
+              <TabsTrigger value="whitelist">
+                Whitelist
+                {whitelistedIps.length > 0 && (
+                  <Badge variant="secondary" className="ml-1.5 text-[10px] h-4 px-1">
+                    {whitelistedIps.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
               <TabsTrigger value="analytics">Analytics</TabsTrigger>
               <TabsTrigger value="actions">Actions</TabsTrigger>
             </TabsList>
@@ -515,14 +583,185 @@ export default function SecurityDashboardPage() {
                                 {timeAgo(b.createdAt)}
                               </td>
                               <td className="py-2">
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 text-xs text-blue-600 hover:text-blue-800"
+                                    onClick={() => handleUnblock(b.ip)}
+                                  >
+                                    <Unlock className="h-3 w-3 mr-1" />
+                                    Unblock
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 text-xs text-green-600 hover:text-green-800"
+                                    onClick={() =>
+                                      handleUnblockAndWhitelist(b.ip)
+                                    }
+                                  >
+                                    <ShieldPlus className="h-3 w-3 mr-1" />
+                                    Whitelist
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* ─── Whitelist ──────────────────────────────────── */}
+            <TabsContent value="whitelist" className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* Add to whitelist */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <ShieldPlus className="h-4 w-4 text-green-600" />
+                      Add Trusted IP
+                    </CardTitle>
+                    <CardDescription>
+                      Whitelisted IPs bypass all security checks and are never
+                      blocked
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">
+                        IP Address
+                      </label>
+                      <Input
+                        placeholder="e.g. 223.235.96.152"
+                        value={whitelistIpInput}
+                        onChange={(e) => setWhitelistIpInput(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Label (optional)
+                      </label>
+                      <Input
+                        placeholder="e.g. Admin Home, Office VPN"
+                        value={whitelistLabel}
+                        onChange={(e) => setWhitelistLabel(e.target.value)}
+                      />
+                    </div>
+                    <Button
+                      onClick={handleWhitelist}
+                      className="w-full bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Add to Whitelist
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Info */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-green-600" />
+                      How Whitelisting Works
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3 text-sm text-muted-foreground">
+                      <div className="flex items-start gap-2 p-2 rounded-lg bg-green-50 dark:bg-green-950/30">
+                        <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                        <span>
+                          Whitelisted IPs skip all threat detection, injection
+                          scanning, and rate analysis
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-2 p-2 rounded-lg bg-green-50 dark:bg-green-950/30">
+                        <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                        <span>
+                          Adding an IP to the whitelist automatically unblocks
+                          it if currently blocked
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-2 p-2 rounded-lg bg-green-50 dark:bg-green-950/30">
+                        <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                        <span>
+                          A whitelisted IP can never be auto-blocked by the
+                          security system
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-2 p-2 rounded-lg bg-yellow-50 dark:bg-yellow-950/30">
+                        <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 shrink-0" />
+                        <span>
+                          Only whitelist IPs you fully trust — your own IP,
+                          office VPN, etc.
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Whitelisted IPs list */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">
+                    Whitelisted IPs ({whitelistedIps.length})
+                  </CardTitle>
+                  <CardDescription>
+                    These IPs are excluded from all security checks
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {whitelistedIps.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Shield className="h-10 w-10 mx-auto mb-2 text-gray-400" />
+                      <p>No IPs are whitelisted</p>
+                      <p className="text-xs mt-1">
+                        Add your own IP to prevent false blocks
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-left text-xs text-muted-foreground">
+                            <th className="pb-2 pr-4">IP Address</th>
+                            <th className="pb-2 pr-4">Label</th>
+                            <th className="pb-2 pr-4">Added</th>
+                            <th className="pb-2">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {whitelistedIps.map((w) => (
+                            <tr
+                              key={w.id}
+                              className="border-b hover:bg-muted/50"
+                            >
+                              <td className="py-2 pr-4 font-mono font-medium">
+                                <div className="flex items-center gap-2">
+                                  <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                                  {w.ip}
+                                </div>
+                              </td>
+                              <td className="py-2 pr-4 text-muted-foreground">
+                                {w.label || "—"}
+                              </td>
+                              <td className="py-2 pr-4 text-xs text-muted-foreground">
+                                {timeAgo(w.createdAt)}
+                              </td>
+                              <td className="py-2">
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-7 text-xs text-blue-600 hover:text-blue-800"
-                                  onClick={() => handleUnblock(b.ip)}
+                                  className="h-7 text-xs text-red-600 hover:text-red-800"
+                                  onClick={() => handleRemoveWhitelist(w.ip)}
                                 >
-                                  <Unlock className="h-3 w-3 mr-1" />
-                                  Unblock
+                                  <XCircle className="h-3 w-3 mr-1" />
+                                  Remove
                                 </Button>
                               </td>
                             </tr>

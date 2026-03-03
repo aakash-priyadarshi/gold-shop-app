@@ -102,8 +102,13 @@ export class SecurityService {
   private blockedIpsCacheUpdatedAt = 0;
   private readonly CACHE_TTL_MS = 30_000; // 30s
 
+  // Whitelisted IPs cache (trusted IPs that skip all security checks)
+  private whitelistedIpsCache = new Set<string>();
+  private whitelistedIpsCacheUpdatedAt = 0;
+
   constructor(private readonly prisma: PrismaService) {
     this.refreshBlockedIpsCache();
+    this.refreshWhitelistedIpsCache();
   }
 
   // ─── Public Analysis Methods ────────────────────────────────
@@ -128,6 +133,11 @@ export class SecurityService {
     profile.recentRequests.push(Date.now());
     if (profile.recentRequests.length > 200) profile.recentRequests.shift();
     profile.lastSeen = Date.now();
+
+    // 0. Whitelisted IPs skip all threat analysis
+    if (await this.isWhitelisted(req.ip)) {
+      return { blocked: false, threats: [] };
+    }
 
     // 1. Check if IP is blocked
     if (await this.isBlocked(req.ip)) {
@@ -370,11 +380,20 @@ export class SecurityService {
   // ─── IP Blocking ───────────────────────────────────────────
 
   async isBlocked(ip: string): Promise<boolean> {
+    // Whitelisted IPs are never blocked
+    if (await this.isWhitelisted(ip)) return false;
     // Refresh cache if stale
     if (Date.now() - this.blockedIpsCacheUpdatedAt > this.CACHE_TTL_MS) {
       await this.refreshBlockedIpsCache();
     }
     return this.blockedIpsCache.has(ip);
+  }
+
+  async isWhitelisted(ip: string): Promise<boolean> {
+    if (Date.now() - this.whitelistedIpsCacheUpdatedAt > this.CACHE_TTL_MS) {
+      await this.refreshWhitelistedIpsCache();
+    }
+    return this.whitelistedIpsCache.has(ip);
   }
 
   async blockIp(
@@ -384,6 +403,14 @@ export class SecurityService {
     autoBlock: boolean = true,
     durationMs?: number,
   ): Promise<void> {
+    // Never block whitelisted IPs
+    if (await this.isWhitelisted(ip)) {
+      this.logger.log(
+        `⚪ Skipped blocking whitelisted IP: ${ip} (reason: ${reason})`,
+      );
+      return;
+    }
+
     const expiresAt = durationMs ? new Date(Date.now() + durationMs) : null;
 
     try {
@@ -405,10 +432,57 @@ export class SecurityService {
     try {
       await this.prisma.blockedIp.deleteMany({ where: { ip } });
       this.blockedIpsCache.delete(ip);
+      // Also reset in-memory threat score so the IP doesn't get re-blocked instantly
+      const profile = this.ipProfiles.get(ip);
+      if (profile) {
+        profile.score = 0;
+        profile.forbiddenHits = 0;
+        profile.failedLogins = 0;
+      }
       this.logger.log(`✅ Unblocked IP: ${ip}`);
     } catch (err) {
       this.logger.error(`Failed to unblock IP ${ip}:`, err);
     }
+  }
+
+  // ─── IP Whitelist ──────────────────────────────────────────
+
+  async whitelistIp(
+    ip: string,
+    label: string = "",
+    addedBy?: string,
+  ): Promise<void> {
+    try {
+      await this.prisma.whitelistedIp.upsert({
+        where: { ip },
+        create: { ip, label, addedBy },
+        update: { label, addedBy },
+      });
+      this.whitelistedIpsCache.add(ip);
+      // Also unblock if currently blocked
+      if (this.blockedIpsCache.has(ip)) {
+        await this.unblockIp(ip);
+      }
+      this.logger.log(`✅ Whitelisted IP: ${ip} (${label || "no label"})`);
+    } catch (err) {
+      this.logger.error(`Failed to whitelist IP ${ip}:`, err);
+    }
+  }
+
+  async removeWhitelistedIp(ip: string): Promise<void> {
+    try {
+      await this.prisma.whitelistedIp.deleteMany({ where: { ip } });
+      this.whitelistedIpsCache.delete(ip);
+      this.logger.log(`🗑️ Removed whitelisted IP: ${ip}`);
+    } catch (err) {
+      this.logger.error(`Failed to remove whitelisted IP ${ip}:`, err);
+    }
+  }
+
+  async getWhitelistedIps(): Promise<any[]> {
+    return this.prisma.whitelistedIp.findMany({
+      orderBy: { createdAt: "desc" },
+    });
   }
 
   private async refreshBlockedIpsCache(): Promise<void> {
@@ -423,6 +497,18 @@ export class SecurityService {
       this.blockedIpsCacheUpdatedAt = Date.now();
     } catch (err) {
       this.logger.error("Failed to refresh blocked IPs cache:", err);
+    }
+  }
+
+  private async refreshWhitelistedIpsCache(): Promise<void> {
+    try {
+      const whitelisted = await this.prisma.whitelistedIp.findMany({
+        select: { ip: true },
+      });
+      this.whitelistedIpsCache = new Set(whitelisted.map((w) => w.ip));
+      this.whitelistedIpsCacheUpdatedAt = Date.now();
+    } catch (err) {
+      this.logger.error("Failed to refresh whitelisted IPs cache:", err);
     }
   }
 

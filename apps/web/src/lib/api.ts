@@ -1019,6 +1019,12 @@ export const securityApi = {
     api.post("/security/block", data),
   unblockIp: (ip: string) => api.delete(`/security/unblock/${ip}`),
   getIpProfile: (ip: string) => api.get(`/security/ip-profile/${ip}`),
+  // Whitelist
+  getWhitelistedIps: () => api.get("/security/whitelisted-ips"),
+  whitelistIp: (data: { ip: string; label?: string }) =>
+    api.post("/security/whitelist", data),
+  removeWhitelistedIp: (ip: string) =>
+    api.delete(`/security/whitelist/${ip}`),
 };
 
 // ── Testing (admin-only) ────────────────────────────────

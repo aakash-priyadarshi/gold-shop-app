@@ -39,8 +39,18 @@ export class SecurityInterceptor implements NestInterceptor {
               .recordFailedLogin(ip, route, userId, userAgent)
               .catch(() => {});
           } else if (status === 403) {
+            // Only record forbidden if the IP isn't already blocked by the guard.
+            // Otherwise we create a feedback loop: guard blocks → 403 → recordForbidden
+            // → score increases → more events logged → repeat on every request.
             this.securityService
-              .recordForbidden(ip, route, method, userId, userAgent)
+              .isBlocked(ip)
+              .then((blocked) => {
+                if (!blocked) {
+                  this.securityService
+                    .recordForbidden(ip, route, method, userId, userAgent)
+                    .catch(() => {});
+                }
+              })
               .catch(() => {});
           } else if (status === 404) {
             this.securityService
