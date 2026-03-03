@@ -17,21 +17,24 @@ export default function InitialLoadScreen({
 }: {
   children: React.ReactNode;
 }) {
-  // Atomically claim — only the first caller since page load gets true
+  // Own flag — independent of useMinLoadingTime
   const [isFirstLoad] = useState(() => claimInitialAnimation());
   const [showOverlay, setShowOverlay] = useState(isFirstLoad);
 
   useEffect(() => {
     if (!isFirstLoad) return;
-    // Full animation duration: price counter 3.5s + buffer
-    const timer = setTimeout(() => setShowOverlay(false), 4000);
+    // Full animation (price counter 3.5s + buffer)
+    const timer = setTimeout(() => setShowOverlay(false), 4200);
     return () => clearTimeout(timer);
   }, [isFirstLoad]);
 
   return (
     <>
       {showOverlay && <OrivraaLoader />}
-      {children}
+      {/* Hide underlying content while overlay is active to prevent flash */}
+      <div style={showOverlay ? { visibility: "hidden" } : undefined}>
+        {children}
+      </div>
     </>
   );
 }

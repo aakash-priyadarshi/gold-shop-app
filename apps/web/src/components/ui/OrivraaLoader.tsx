@@ -2,29 +2,31 @@
 
 import { useEffect, useState } from "react";
 
-// ─── MODULE FLAG ────────────────────────────────────────────────
-// Resets on every hard page load / reload (JS re-executes).
-// Persists during SPA navigation (same JS context).
-let _initialAnimationPlayed = false;
+// ─── INDEPENDENT MODULE FLAGS ───────────────────────────────────
+// Each resets on hard page load / reload (JS re-executes).
+// Each persists during SPA navigation (same JS context).
+// They are SEPARATE so root overlay and page-level hooks
+// don't race against each other.
+let _overlayPlayed = false;   // for InitialLoadScreen
+let _hookLoaderPlayed = false; // for useMinLoadingTime
 
-// Atomically claim the initial animation. Returns true if this is the
-// first call since page load (the caller should show the loader).
+// Called by InitialLoadScreen. Returns true once per page load.
 export function claimInitialAnimation(): boolean {
-  if (_initialAnimationPlayed) return false;
-  _initialAnimationPlayed = true;
+  if (_overlayPlayed) return false;
+  _overlayPlayed = true;
   return true;
 }
 
 // ─── MINIMUM DISPLAY TIME HOOK ─────────────────────────────────
-// • First load / reload: holds loader for full 4s animation, then
-//   waits for actual loading to finish too.
-// • SPA navigation: returns false immediately (no loader flash).
-//
-// Works standalone AND alongside InitialLoadScreen. On first load
-// both may render a loader — the root overlay (z-index 99999) sits
-// on top, so you always see one smooth animation.
+// Uses its OWN flag (_hookLoaderPlayed) — independent of the
+// root overlay. Both play on first load (the overlay covers the
+// page-level loader visually). On SPA navigation both skip.
 export function useMinLoadingTime(isLoading: boolean, minMs = 4000): boolean {
-  const [isFirstLoad] = useState(() => !_initialAnimationPlayed);
+  const [isFirstLoad] = useState(() => {
+    if (_hookLoaderPlayed) return false;
+    _hookLoaderPlayed = true;
+    return true;
+  });
   const [minTimeElapsed, setMinTimeElapsed] = useState(!isFirstLoad);
 
   useEffect(() => {
@@ -90,8 +92,7 @@ export default function OrivraaLoader() {
     const tick = (now: number) => {
       const elapsed = now - start;
       const t = Math.min(elapsed / duration, 1);
-      const eased =
-        t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
       let val = Math.round(eased * 75000);
       if (t > 0.05 && t < 0.9) {
         val += Math.round((Math.random() - 0.5) * 1500 * (1 - t));
@@ -178,7 +179,9 @@ export default function OrivraaLoader() {
 
         {/* ── PRICE COUNTER with rotating currency ── */}
         <div className="ovr-price">
-          <span className="ovr-currency" key={label}>{symbol}</span>
+          <span className="ovr-currency" key={label}>
+            {symbol}
+          </span>
           {formattedNumber}
         </div>
 
