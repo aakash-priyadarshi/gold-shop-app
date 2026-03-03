@@ -5,8 +5,12 @@ export const metadata: Metadata = {
   description:
     "Complete guide for jewellery sellers on Orivraa. Learn how to set up your shop, list gold & diamond products, manage inventory, and sell to buyers in Nepal, India, Dubai, USA & UK.",
   keywords: [
-    "sell jewellery online", "jewellery seller guide", "how to sell gold online",
-    "start jewellery business online", "sell gold India", "sell jewellery UK",
+    "sell jewellery online",
+    "jewellery seller guide",
+    "how to sell gold online",
+    "start jewellery business online",
+    "sell gold India",
+    "sell jewellery UK",
   ],
   alternates: { canonical: "/seller-guide" },
   openGraph: {

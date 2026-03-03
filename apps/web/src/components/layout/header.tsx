@@ -323,14 +323,28 @@ export function Header() {
     }
   };
 
+  // Primary nav links (flat)
   const navigation = [
-    { name: "Shop", href: "/shop", icon: ShoppingBagIcon },
+    { name: "Shops", href: "/shops", icon: BuildingStorefrontIcon },
     { name: "Designs", href: "/designs", icon: HeartIcon },
     { name: "Custom Order", href: "/rfq/create", icon: SparklesIcon },
-    { name: "Sellers", href: "/shops", icon: BuildingOffice2Icon },
-    { name: "Download", href: "/download", icon: ComputerDesktopIcon },
-    { name: "About", href: "/about", icon: InformationCircleIcon },
   ];
+
+  // "For Sellers" dropdown items
+  const sellerNavItems = [
+    { name: "Pricing & Plans", href: "/pricing", icon: CreditCardIcon, desc: "Subscription plans for your shop" },
+    { name: "Seller Guide", href: "/seller-guide", icon: DocumentTextIcon, desc: "How to set up & grow your shop" },
+    { name: "Become a Partner", href: "/partner", icon: BuildingOffice2Icon, desc: "Join our jeweller network" },
+  ];
+
+  // More menu items
+  const moreNavItems = [
+    { name: "About", href: "/about", icon: InformationCircleIcon },
+    { name: "Download App", href: "/download", icon: ComputerDesktopIcon },
+  ];
+
+  // State for "For Sellers" dropdown
+  const [sellerDropdownOpen, setSellerDropdownOpen] = useState(false);
 
   // Format price based on user's currency preference
   const formatPrice = (amount: number) => {
@@ -403,7 +417,8 @@ export function Header() {
             </SheetHeader>
             <div className="flex flex-col h-[calc(100%-65px)]">
               {/* Mobile Navigation */}
-              <div className="flex-1 p-4 space-y-1">
+              <div className="flex-1 p-4 space-y-1 overflow-y-auto">
+                {/* Browse */}
                 {navigation.map((item) => (
                   <Link
                     key={item.name}
@@ -415,6 +430,39 @@ export function Header() {
                     {item.name}
                   </Link>
                 ))}
+
+                {/* For Sellers Section */}
+                <div className="pt-3 mt-2 border-t border-gray-100 dark:border-gray-800">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-3 mb-2">
+                    For Sellers
+                  </p>
+                  {sellerNavItems.map((item) => (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors touch-target"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <item.icon className="h-5 w-5 text-gold-500" />
+                      {item.name}
+                    </Link>
+                  ))}
+                </div>
+
+                {/* More */}
+                <div className="pt-3 mt-2 border-t border-gray-100 dark:border-gray-800">
+                  {moreNavItems.map((item) => (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors touch-target"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <item.icon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+                      {item.name}
+                    </Link>
+                  ))}
+                </div>
               </div>
 
               {/* Mobile Preferences */}
@@ -577,6 +625,49 @@ export function Header() {
               {item.name}
             </Link>
           ))}
+
+          {/* For Sellers Dropdown */}
+          <div
+            className="relative"
+            onMouseEnter={() => setSellerDropdownOpen(true)}
+            onMouseLeave={() => setSellerDropdownOpen(false)}
+          >
+            <button
+              className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors inline-flex items-center gap-1"
+              onClick={() => setSellerDropdownOpen(!sellerDropdownOpen)}
+            >
+              For Sellers
+              <svg className={`h-3.5 w-3.5 transition-transform ${sellerDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+              </svg>
+            </button>
+            {sellerDropdownOpen && (
+              <div className="absolute top-full left-0 mt-1 w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-2 z-50">
+                {sellerNavItems.map((item) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    onClick={() => setSellerDropdownOpen(false)}
+                  >
+                    <item.icon className="h-5 w-5 text-gold-500 mt-0.5 shrink-0" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">{item.name}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{item.desc}</div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* About link */}
+          <Link
+            href="/about"
+            className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+          >
+            About
+          </Link>
         </div>
 
         {/* Desktop Preferences Controls */}

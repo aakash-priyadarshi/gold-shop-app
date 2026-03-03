@@ -5,8 +5,13 @@ export const metadata: Metadata = {
   description:
     "Explore AI-generated jewellery design ideas on Orivraa. Get inspired with unique gold, silver, diamond ring, necklace & earring designs. Custom jewellery design tool for buyers worldwide.",
   keywords: [
-    "jewellery design", "AI jewellery design", "gold ring design", "necklace design",
-    "custom jewellery design", "diamond ring design", "earring design ideas",
+    "jewellery design",
+    "AI jewellery design",
+    "gold ring design",
+    "necklace design",
+    "custom jewellery design",
+    "diamond ring design",
+    "earring design ideas",
   ],
   alternates: { canonical: "/designs" },
   openGraph: {
