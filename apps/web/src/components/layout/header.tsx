@@ -332,9 +332,24 @@ export function Header() {
 
   // "For Sellers" dropdown items
   const sellerNavItems = [
-    { name: "Pricing & Plans", href: "/pricing", icon: CreditCardIcon, desc: "Subscription plans for your shop" },
-    { name: "Seller Guide", href: "/seller-guide", icon: DocumentTextIcon, desc: "How to set up & grow your shop" },
-    { name: "Become a Partner", href: "/partner", icon: BuildingOffice2Icon, desc: "Join our jeweller network" },
+    {
+      name: "Pricing & Plans",
+      href: "/pricing",
+      icon: CreditCardIcon,
+      desc: "Subscription plans for your shop",
+    },
+    {
+      name: "Seller Guide",
+      href: "/seller-guide",
+      icon: DocumentTextIcon,
+      desc: "How to set up & grow your shop",
+    },
+    {
+      name: "Become a Partner",
+      href: "/partner",
+      icon: BuildingOffice2Icon,
+      desc: "Join our jeweller network",
+    },
   ];
 
   // More menu items
@@ -637,8 +652,18 @@ export function Header() {
               onClick={() => setSellerDropdownOpen(!sellerDropdownOpen)}
             >
               For Sellers
-              <svg className={`h-3.5 w-3.5 transition-transform ${sellerDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+              <svg
+                className={`h-3.5 w-3.5 transition-transform ${sellerDropdownOpen ? "rotate-180" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="m19.5 8.25-7.5 7.5-7.5-7.5"
+                />
               </svg>
             </button>
             {sellerDropdownOpen && (
@@ -652,8 +677,12 @@ export function Header() {
                   >
                     <item.icon className="h-5 w-5 text-gold-500 mt-0.5 shrink-0" />
                     <div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">{item.name}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">{item.desc}</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        {item.name}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {item.desc}
+                      </div>
                     </div>
                   </Link>
                 ))}

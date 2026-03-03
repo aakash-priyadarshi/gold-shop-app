@@ -167,9 +167,10 @@ export default function HomePage() {
                   Your Complete Shop Management Platform
                 </h2>
                 <p className="text-gray-600 dark:text-gray-300 text-sm lg:text-lg">
-                  Take your jewellery business online with Orivraa&apos;s powerful CMS.
-                  Manage inventory, accept orders, and reach buyers across Nepal,
-                  India, Dubai, USA & UK — all from one dashboard.
+                  Take your jewellery business online with Orivraa&apos;s
+                  powerful CMS. Manage inventory, accept orders, and reach
+                  buyers across Nepal, India, Dubai, USA & UK — all from one
+                  dashboard.
                 </p>
               </div>
 
