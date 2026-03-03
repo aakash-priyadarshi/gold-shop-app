@@ -16,7 +16,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import OrivraaLoader, { useMinLoadingTime } from "@/components/ui/OrivraaLoader";
+import OrivraaLoader, {
+  useMinLoadingTime,
+} from "@/components/ui/OrivraaLoader";
 import {
   Sheet,
   SheetContent,

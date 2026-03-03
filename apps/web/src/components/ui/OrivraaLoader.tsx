@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 // Each persists during SPA navigation (same JS context).
 // They are SEPARATE so root overlay and page-level hooks
 // don't race against each other.
-let _overlayPlayed = false;   // for InitialLoadScreen
+let _overlayPlayed = false; // for InitialLoadScreen
 let _hookLoaderPlayed = false; // for useMinLoadingTime
 
 // Called by InitialLoadScreen. Returns true once per page load.

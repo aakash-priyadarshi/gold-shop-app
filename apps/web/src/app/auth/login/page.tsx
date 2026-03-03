@@ -13,7 +13,9 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import OrivraaLoader, { useMinLoadingTime } from "@/components/ui/OrivraaLoader";
+import OrivraaLoader, {
+  useMinLoadingTime,
+} from "@/components/ui/OrivraaLoader";
 import {
   Tooltip,
   TooltipContent,

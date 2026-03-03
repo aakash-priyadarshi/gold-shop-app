@@ -1,6 +1,8 @@
 "use client";
 
-import OrivraaLoader, { useMinLoadingTime } from "@/components/ui/OrivraaLoader";
+import OrivraaLoader, {
+  useMinLoadingTime,
+} from "@/components/ui/OrivraaLoader";
 import { api } from "@/lib/api";
 import { usePathname, useRouter } from "next/navigation";
 import React, {

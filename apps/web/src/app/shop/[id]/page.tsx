@@ -352,7 +352,7 @@ export default function ProductDetailPage() {
                     >
                       <img
                         src={getImageUrl(img)}
-                        alt=""
+                        alt={`${item?.title || 'Product'} - Image ${idx + 1}`}
                         className="w-full h-full object-cover"
                       />
                     </button>
@@ -429,7 +429,7 @@ export default function ProductDetailPage() {
                       {item.shop.logoUrl ? (
                         <img
                           src={item.shop.logoUrl}
-                          alt=""
+                          alt={`${item.shop.shopName} logo`}
                           className="w-full h-full rounded-full"
                         />
                       ) : (

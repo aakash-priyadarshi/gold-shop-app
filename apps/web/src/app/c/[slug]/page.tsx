@@ -185,7 +185,7 @@ function WalkInRfqModal({
                     <img
                       src={si.item.inventoryItem.images[0]}
                       className="w-12 h-12 rounded-lg object-cover"
-                      alt=""
+                      alt={`${si.item.inventoryItem.title} thumbnail`}
                     />
                   ) : (
                     <div className="w-12 h-12 rounded-lg bg-gray-200 dark:bg-gray-700" />
@@ -712,7 +712,7 @@ function ShowroomView({
                     <img
                       src={si.inventoryItem.images[0]}
                       className="w-10 h-10 rounded object-cover"
-                      alt=""
+                      alt={`${si.inventoryItem.title} thumbnail`}
                     />
                   ) : (
                     <div className="w-10 h-10 rounded bg-gray-700" />
