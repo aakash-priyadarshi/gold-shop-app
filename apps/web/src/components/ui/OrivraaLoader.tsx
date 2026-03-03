@@ -16,11 +16,28 @@ export function claimInitialAnimation(): boolean {
 }
 
 // ─── MINIMUM DISPLAY TIME HOOK ─────────────────────────────────
-// The root InitialLoadScreen handles the premiere 4s animation.
-// This hook just gates rendering until actual loading completes.
-// On SPA navigation, auth context is cached → isLoading = false → instant.
-export function useMinLoadingTime(isLoading: boolean): boolean {
-  return isLoading;
+// • First load / reload: holds loader for full 4s animation, then
+//   waits for actual loading to finish too.
+// • SPA navigation: returns false immediately (no loader flash).
+//
+// Works standalone AND alongside InitialLoadScreen. On first load
+// both may render a loader — the root overlay (z-index 99999) sits
+// on top, so you always see one smooth animation.
+export function useMinLoadingTime(isLoading: boolean, minMs = 4000): boolean {
+  const [isFirstLoad] = useState(() => !_initialAnimationPlayed);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(!isFirstLoad);
+
+  useEffect(() => {
+    if (!isFirstLoad) return;
+    const timer = setTimeout(() => setMinTimeElapsed(true), minMs);
+    return () => clearTimeout(timer);
+  }, [isFirstLoad, minMs]);
+
+  // SPA navigation: skip loader entirely
+  if (!isFirstLoad) return false;
+
+  // First load: hold until BOTH the animation finishes AND real loading is done
+  return !minTimeElapsed || isLoading;
 }
 
 // ─── SVG PATH DATA ─────────────────────────────────────────────
