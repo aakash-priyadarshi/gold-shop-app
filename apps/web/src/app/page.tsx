@@ -2,10 +2,14 @@ import { HeroSection } from "@/components/home/HeroSection";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { BRAND } from "@/config/brand";
+import { BLOG_POSTS } from "@/data/blog-posts";
 import { resolveHeroVideo } from "@/lib/geo";
 import {
   ArrowRight,
   BarChart3,
+  BookOpen,
+  Calendar,
+  Clock,
   Gem,
   Globe,
   LayoutDashboard,
@@ -249,6 +253,63 @@ export default function HomePage() {
                     className="h-12 px-8 rounded-xl text-base"
                   >
                     Read Seller Guide
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </section>
+
+          {/* Latest from Blog */}
+          <section className="py-12 lg:py-20 bg-stone-50 dark:bg-stone-900/40">
+            <div className="container mx-auto px-4">
+              <div className="text-center mb-8 lg:mb-12">
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gold-600 dark:text-gold-400 mb-2">
+                  <BookOpen className="h-3.5 w-3.5" />
+                  From the Blog
+                </span>
+                <h2 className="text-2xl lg:text-4xl font-bold text-gray-900 dark:text-white">
+                  Guides, Tips & Industry Insights
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400 mt-2 max-w-lg mx-auto text-sm lg:text-base">
+                  Practical resources to help jewellery businesses grow online and optimise their operations.
+                </p>
+              </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
+                {BLOG_POSTS.slice(0, 3).map((post) => (
+                  <Link
+                    key={post.slug}
+                    href={`/blog/${post.slug}`}
+                    className="group rounded-2xl border border-gray-200 dark:border-gray-800 hover:border-gold-300 dark:hover:border-gold-700 hover:shadow-lg hover:shadow-gold-500/5 transition-all overflow-hidden bg-white dark:bg-gray-950"
+                  >
+                    <div className="p-5 lg:p-6">
+                      <span className="text-xs font-medium text-gold-600 dark:text-gold-400 uppercase tracking-wide">
+                        {post.category}
+                      </span>
+                      <h3 className="text-base lg:text-lg font-semibold text-gray-900 dark:text-white mt-2 mb-2 line-clamp-2 group-hover:text-gold-600 dark:group-hover:text-gold-400 transition-colors">
+                        {post.title}
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-4">
+                        {post.description}
+                      </p>
+                      <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {new Date(post.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {post.readTime}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              <div className="text-center mt-8">
+                <Link href="/blog">
+                  <Button variant="outline" className="rounded-xl h-11 px-6">
+                    View All Posts
+                    <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
               </div>

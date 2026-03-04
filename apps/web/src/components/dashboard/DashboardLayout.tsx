@@ -41,6 +41,7 @@ import {
   ChevronDown,
   ClipboardList,
   CreditCard,
+  FileEdit,
   FileText,
   FlaskConical,
   Heart,
@@ -158,6 +159,12 @@ const navItems: NavItem[] = [
     label: "Billing & Plans",
     href: "/dashboard/admin/billing",
     icon: CreditCard,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Blog",
+    href: "/dashboard/admin/blog",
+    icon: FileEdit,
     roles: ["ADMIN"],
   },
   // ── Maintenance / Ops (collapsible group) ──
