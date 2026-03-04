@@ -232,8 +232,8 @@ export default function SellerGuidePage() {
                 Powerful Tools for Sellers
               </h2>
               <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-                Everything you need to manage and grow your jewellery business
-                — all in one dashboard
+                Everything you need to manage and grow your jewellery business —
+                all in one dashboard
               </p>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">

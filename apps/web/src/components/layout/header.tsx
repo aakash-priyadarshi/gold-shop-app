@@ -333,6 +333,12 @@ export function Header() {
   // "For Sellers" dropdown items
   const sellerNavItems = [
     {
+      name: "Jewellery Shop Software",
+      href: "/jewellery-shop-software",
+      icon: Squares2X2Icon,
+      desc: "Free shop management platform",
+    },
+    {
       name: "Pricing & Plans",
       href: "/pricing",
       icon: CreditCardIcon,
