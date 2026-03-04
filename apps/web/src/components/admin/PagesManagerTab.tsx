@@ -96,7 +96,11 @@ export function PagesManagerTab() {
     const text = editingPage.content || "";
     const selected = text.substring(start, end);
     const newContent =
-      text.substring(0, start) + before + selected + after + text.substring(end);
+      text.substring(0, start) +
+      before +
+      selected +
+      after +
+      text.substring(end);
     setEditingPage({ ...editingPage, content: newContent });
     setTimeout(() => {
       ta.focus();
@@ -632,9 +636,9 @@ export function PagesManagerTab() {
                 className="font-mono text-sm rounded-t-none -mt-2 focus-visible:ring-1"
               />
               <p className="text-xs text-muted-foreground">
-                Select text then click a toolbar button to wrap it, or click
-                to insert at cursor. Tip: use the color picker to set
-                a color, then click &quot;A&quot; to apply it.
+                Select text then click a toolbar button to wrap it, or click to
+                insert at cursor. Tip: use the color picker to set a color, then
+                click &quot;A&quot; to apply it.
               </p>
             </div>
 
