@@ -510,6 +510,39 @@ export const pagesApi = {
   seed: () => api.get("/pages/admin/seed"),
 };
 
+// Blog Posts API
+export const blogApi = {
+  // Public
+  list: () => api.get("/blog"),
+  getBySlug: (slug: string) => api.get(`/blog/${slug}`),
+  // Admin
+  adminList: () => api.get("/blog/admin/list"),
+  adminGet: (id: string) => api.get(`/blog/admin/${id}`),
+  create: (data: {
+    slug: string;
+    title: string;
+    content: string;
+    excerpt?: string;
+    coverImage?: string;
+    metaTitle?: string;
+    metaDescription?: string;
+    metaKeywords?: string[];
+    canonicalUrl?: string;
+    category?: string;
+    tags?: string[];
+    author?: string;
+    authorRole?: string;
+    readTime?: string;
+    isPublished?: boolean;
+    featured?: boolean;
+    publishedAt?: string;
+  }) => api.post("/blog/admin", data),
+  update: (id: string, data: Record<string, any>) =>
+    api.patch(`/blog/admin/${id}`, data),
+  delete: (id: string) => api.delete(`/blog/admin/${id}`),
+  seed: () => api.get("/blog/admin/seed"),
+};
+
 // Seller Performance API
 export const sellerPerformanceApi = {
   getMyDashboard: (targetTier?: string) =>

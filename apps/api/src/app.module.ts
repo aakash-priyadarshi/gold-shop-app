@@ -27,6 +27,7 @@ import { MailModule } from "./modules/mail/mail.module";
 import { MarketConfigModule } from "./modules/market-config/market-config.module";
 import { MarketRatesModule } from "./modules/market-rates/market-rates.module";
 import { MarketplaceIntelligenceModule } from "./modules/marketplace-intelligence/marketplace-intelligence.module";
+import { BlogModule } from "./modules/blog/blog.module";
 import { MaterialsModule } from "./modules/materials/materials.module";
 import { MetricsModule } from "./modules/metrics/metrics.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
@@ -97,6 +98,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     OffersModule,
     OrdersModule,
     PagesModule,
+    BlogModule,
     InvoicesModule,
     PaymentsModule,
     NotificationsModule,
