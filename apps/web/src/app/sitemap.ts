@@ -1,4 +1,5 @@
 import { MetadataRoute } from "next";
+import { BLOG_POSTS } from "@/data/blog-posts";
 
 const BASE_URL = "https://www.orivraa.com";
 
@@ -131,5 +132,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error("Error fetching shops for sitemap:", error);
   }
 
-  return [...staticPages, ...shopPages];
+  // ─── DYNAMIC: Blog posts ──────────────────────────────────────
+  const blogIndex: MetadataRoute.Sitemap = [
+    {
+      url: `${BASE_URL}/blog`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+  ];
+
+  const blogPages: MetadataRoute.Sitemap = BLOG_POSTS.map((post) => ({
+    url: `${BASE_URL}/blog/${post.slug}`,
+    lastModified: post.updated ? new Date(post.updated) : new Date(post.date),
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+  }));
+
+  return [...staticPages, ...shopPages, ...blogIndex, ...blogPages];
 }

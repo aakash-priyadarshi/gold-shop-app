@@ -55,6 +55,7 @@ import {
   ArrowRightOnRectangleIcon,
   Bars3Icon,
   BellIcon,
+  BookOpenIcon,
   BuildingOffice2Icon,
   BuildingStorefrontIcon,
   ChatBubbleLeftRightIcon,
@@ -360,6 +361,7 @@ export function Header() {
 
   // More menu items
   const moreNavItems = [
+    { name: "Blog", href: "/blog", icon: BookOpenIcon },
     { name: "About", href: "/about", icon: InformationCircleIcon },
     { name: "Download App", href: "/download", icon: ComputerDesktopIcon },
   ];
