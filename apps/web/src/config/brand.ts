@@ -194,6 +194,15 @@ export const BRAND: {
       "Zoho alternative jewellery",
       "Marg ERP alternative",
       "Vyapar alternative jewellery",
+
+      // Blog & content marketing
+      "jewellery business blog",
+      "jewellery inventory management guide",
+      "GST for jewellery shops",
+      "jewellery GST billing",
+      "sell jewellery online guide",
+      "jewellery software comparison",
+      "gold shop management tips",
     ],
   },
 
