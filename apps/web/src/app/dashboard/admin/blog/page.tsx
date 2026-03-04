@@ -1,5 +1,7 @@
 "use client";
 
+import { AdminGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -370,7 +372,7 @@ export default function AdminBlogPage() {
     setLoading(true);
     try {
       const res = await blogApi.adminList();
-      setPosts(res.data);
+      setPosts(Array.isArray(res.data) ? res.data : []);
     } catch {
       toast({
         variant: "destructive",
@@ -591,6 +593,8 @@ export default function AdminBlogPage() {
 
   /* ── Render ────────────────────────────────────────────── */
   return (
+    <AdminGuard>
+      <DashboardLayout>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -1581,5 +1585,7 @@ export default function AdminBlogPage() {
         </DialogContent>
       </Dialog>
     </div>
+      </DashboardLayout>
+    </AdminGuard>
   );
 }
