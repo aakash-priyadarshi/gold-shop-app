@@ -22,7 +22,7 @@ export default function BlogPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-gradient-to-b from-amber-50/40 to-white">
+      <main className="min-h-screen bg-gradient-to-b from-amber-50/40 to-white dark:from-stone-950 dark:to-stone-900">
         {/* ── Hero ────────────────────────────────────────────── */}
         <section className="relative overflow-hidden bg-gradient-to-br from-stone-900 via-stone-800 to-amber-900 text-white">
           <div className="absolute inset-0 opacity-10">
@@ -50,16 +50,16 @@ export default function BlogPage() {
           {/* ── Featured Post ──────────────────────────────────── */}
           {featured && (
             <section className="mb-16">
-              <h2 className="mb-6 text-sm font-semibold uppercase tracking-wider text-amber-600">
+              <h2 className="mb-6 text-sm font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
                 Featured Article
               </h2>
               <Link
                 href={`/blog/${featured.slug}`}
-                className="group block overflow-hidden rounded-2xl border border-amber-200/60 bg-white shadow-sm transition-all hover:shadow-lg hover:border-amber-300"
+                className="group block overflow-hidden rounded-2xl border border-amber-200/60 dark:border-stone-700 bg-white dark:bg-stone-800/60 shadow-sm transition-all hover:shadow-lg hover:border-amber-300 dark:hover:border-amber-700"
               >
                 <div className="p-8 sm:p-10">
-                  <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-stone-500">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
+                    <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-stone-500 dark:text-stone-400">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/40 px-3 py-1 text-xs font-medium text-amber-800 dark:text-amber-300">
                       <Tag className="h-3 w-3" />
                       {featured.category}
                     </span>
@@ -76,13 +76,13 @@ export default function BlogPage() {
                       {featured.readTime}
                     </span>
                   </div>
-                  <h3 className="text-2xl font-bold text-stone-900 group-hover:text-amber-700 transition-colors sm:text-3xl">
+                  <h3 className="text-2xl font-bold text-stone-900 dark:text-white group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors sm:text-3xl">
                     {featured.title}
                   </h3>
-                  <p className="mt-3 text-stone-600 leading-relaxed line-clamp-3">
+                  <p className="mt-3 text-stone-600 dark:text-stone-300 leading-relaxed line-clamp-3">
                     {featured.description}
                   </p>
-                  <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-amber-600 group-hover:gap-3 transition-all">
+                  <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-amber-600 dark:text-amber-400 group-hover:gap-3 transition-all">
                     Read article
                     <ArrowRight className="h-4 w-4" />
                   </div>
@@ -93,7 +93,7 @@ export default function BlogPage() {
 
           {/* ── All Posts Grid ─────────────────────────────────── */}
           <section>
-            <h2 className="mb-8 text-sm font-semibold uppercase tracking-wider text-stone-500">
+            <h2 className="mb-8 text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
               All Articles
             </h2>
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
@@ -101,11 +101,11 @@ export default function BlogPage() {
                 <Link
                   key={post.slug}
                   href={`/blog/${post.slug}`}
-                  className="group flex flex-col overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm transition-all hover:shadow-md hover:border-amber-200"
+                  className="group flex flex-col overflow-hidden rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800/60 shadow-sm transition-all hover:shadow-md hover:border-amber-200 dark:hover:border-amber-700"
                 >
                   <div className="flex flex-1 flex-col p-6">
-                    <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-stone-500">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2.5 py-0.5 font-medium text-stone-700">
+                    <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-stone-500 dark:text-stone-400">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 dark:bg-stone-700 px-2.5 py-0.5 font-medium text-stone-700 dark:text-stone-300">
                         {post.category}
                       </span>
                       <span className="inline-flex items-center gap-1">
@@ -113,21 +113,21 @@ export default function BlogPage() {
                         {post.readTime}
                       </span>
                     </div>
-                    <h3 className="text-lg font-bold text-stone-900 group-hover:text-amber-700 transition-colors leading-snug">
+                    <h3 className="text-lg font-bold text-stone-900 dark:text-white group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors leading-snug">
                       {post.title}
                     </h3>
-                    <p className="mt-2 flex-1 text-sm text-stone-500 line-clamp-3 leading-relaxed">
+                    <p className="mt-2 flex-1 text-sm text-stone-500 dark:text-stone-400 line-clamp-3 leading-relaxed">
                       {post.description}
                     </p>
                     <div className="mt-4 flex items-center justify-between">
-                      <span className="text-xs text-stone-400">
+                      <span className="text-xs text-stone-400 dark:text-stone-500">
                         {new Date(post.date).toLocaleDateString("en-US", {
                           year: "numeric",
                           month: "short",
                           day: "numeric",
                         })}
                       </span>
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 group-hover:gap-2 transition-all">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400 group-hover:gap-2 transition-all">
                         Read
                         <ArrowRight className="h-3 w-3" />
                       </span>
