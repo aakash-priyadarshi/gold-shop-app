@@ -1,11 +1,11 @@
-# robots.txt for Orivraa Gold Shop
-# https://www.orivraa.com
+# ─── Orivraa Custom Rules ─────────────────────────────────────────
+# NOTE: Cloudflare prepends its own managed section above this file
+# with AI training bot blocks and Content-Signal headers.
+# Our rules below extend the Cloudflare-managed User-agent: * block.
+# Do NOT add another "User-agent: *" / "Allow: /" here — Cloudflare handles it.
 
-# ─── Default rules for all bots ──────────────────────────────────
+# Disallow sensitive/private areas (applies to all crawlers)
 User-agent: *
-Allow: /
-
-# Disallow sensitive/private areas
 Disallow: /api/
 Disallow: /dashboard/
 Disallow: /auth/
