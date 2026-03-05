@@ -1,22 +1,9 @@
 # robots.txt for Orivraa Gold Shop
 # https://www.orivraa.com
 
-# Allow all legitimate search engines
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: DuckDuckBot
-Allow: /
-
-# Default rules for all bots
+# ─── Default rules for all bots ──────────────────────────────────
 User-agent: *
 Allow: /
-Allow: /shops
-Allow: /shop/*
-Allow: /about
 
 # Disallow sensitive/private areas
 Disallow: /api/
@@ -26,49 +13,17 @@ Disallow: /cart
 Disallow: /checkout
 Disallow: /orders
 Disallow: /notifications
-Disallow: /_next/
 Disallow: /admin/
 
-# Block AI training bots (optional - prevents content scraping)
-User-agent: GPTBot
-Disallow: /
+# NOTE: Do NOT disallow /_next/ — Googlebot needs /_next/static/
+# to render JavaScript and see page content for proper indexing.
 
-User-agent: ChatGPT-User
-Disallow: /
-
-User-agent: CCBot
-Disallow: /
-
-User-agent: anthropic-ai
-Disallow: /
-
-User-agent: Claude-Web
-Disallow: /
-
-# SEO analysis bots (allow — they help with backlink discovery & indexing)
-User-agent: AhrefsBot
-Allow: /
-Crawl-delay: 10
-
-User-agent: SemrushBot
-Allow: /
-Crawl-delay: 10
-
-# Block known bad/spam bots
+# ─── Block known bad/spam bots ───────────────────────────────────
 User-agent: MJ12bot
 Disallow: /
 
 User-agent: DotBot
 Disallow: /
 
-# Allow international search engines
-User-agent: YandexBot
-Allow: /
-Crawl-delay: 5
-
-User-agent: Baiduspider
-Allow: /
-Crawl-delay: 10
-
-# Sitemap location
+# ─── Sitemap ─────────────────────────────────────────────────────
 Sitemap: https://www.orivraa.com/sitemap.xml

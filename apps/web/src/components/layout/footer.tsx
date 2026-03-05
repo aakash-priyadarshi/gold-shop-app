@@ -1,7 +1,15 @@
-import Link from 'next/link';
-import { Mail, Phone, MapPin, Facebook, Instagram, Twitter, Youtube } from 'lucide-react';
-import { BrandLogo } from '@/components/brand/BrandLogo';
-import { BRAND } from '@/config/brand';
+import { BrandLogo } from "@/components/brand/BrandLogo";
+import { BRAND } from "@/config/brand";
+import {
+  Facebook,
+  Instagram,
+  Mail,
+  MapPin,
+  Phone,
+  Twitter,
+  Youtube,
+} from "lucide-react";
+import Link from "next/link";
 
 export function Footer() {
   return (
@@ -12,25 +20,35 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1 space-y-4">
             <Link href="/" className="flex items-center gap-2">
               <BrandLogo variant="icon" size="md" theme="dark" />
-              <span className="text-xl font-bold text-white">
-                {BRAND.name}
-              </span>
+              <span className="text-xl font-bold text-white">{BRAND.name}</span>
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed">
               {BRAND.tagline}. Connecting customers with trusted local artisans.
             </p>
             {/* Social Links */}
             <div className="flex items-center gap-3 pt-2">
-              <a href="#" className="w-9 h-9 bg-gray-800 hover:bg-gold-500 rounded-lg flex items-center justify-center transition-colors">
+              <a
+                href="#"
+                className="w-9 h-9 bg-gray-800 hover:bg-gold-500 rounded-lg flex items-center justify-center transition-colors"
+              >
                 <Facebook className="h-4 w-4" />
               </a>
-              <a href="#" className="w-9 h-9 bg-gray-800 hover:bg-gold-500 rounded-lg flex items-center justify-center transition-colors">
+              <a
+                href="#"
+                className="w-9 h-9 bg-gray-800 hover:bg-gold-500 rounded-lg flex items-center justify-center transition-colors"
+              >
                 <Instagram className="h-4 w-4" />
               </a>
-              <a href="#" className="w-9 h-9 bg-gray-800 hover:bg-gold-500 rounded-lg flex items-center justify-center transition-colors">
+              <a
+                href="#"
+                className="w-9 h-9 bg-gray-800 hover:bg-gold-500 rounded-lg flex items-center justify-center transition-colors"
+              >
                 <Twitter className="h-4 w-4" />
               </a>
-              <a href="#" className="w-9 h-9 bg-gray-800 hover:bg-gold-500 rounded-lg flex items-center justify-center transition-colors">
+              <a
+                href="#"
+                className="w-9 h-9 bg-gray-800 hover:bg-gold-500 rounded-lg flex items-center justify-center transition-colors"
+              >
                 <Youtube className="h-4 w-4" />
               </a>
             </div>
@@ -38,25 +56,47 @@ export function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-white font-semibold mb-3 lg:mb-4 text-sm uppercase tracking-wide">Quick Links</h3>
+            <h3 className="text-white font-semibold mb-3 lg:mb-4 text-sm uppercase tracking-wide">
+              Quick Links
+            </h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/shop" className="hover:text-gold-400 transition-colors">
-                  Browse Shop
+                <Link
+                  href="/shops"
+                  className="hover:text-gold-400 transition-colors"
+                >
+                  Browse Shops
                 </Link>
               </li>
               <li>
-                <Link href="/rfq/create" className="hover:text-gold-400 transition-colors">
+                <Link
+                  href="/designs"
+                  className="hover:text-gold-400 transition-colors"
+                >
+                  Explore Designs
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/rfq/create"
+                  className="hover:text-gold-400 transition-colors"
+                >
                   Custom Order
                 </Link>
               </li>
               <li>
-                <Link href="/shops" className="hover:text-gold-400 transition-colors">
-                  Find Sellers
+                <Link
+                  href="/blog"
+                  className="hover:text-gold-400 transition-colors"
+                >
+                  Blog
                 </Link>
               </li>
               <li>
-                <Link href="/about" className="hover:text-gold-400 transition-colors">
+                <Link
+                  href="/about"
+                  className="hover:text-gold-400 transition-colors"
+                >
                   About Us
                 </Link>
               </li>
@@ -65,25 +105,47 @@ export function Footer() {
 
           {/* For Businesses */}
           <div>
-            <h3 className="text-white font-semibold mb-3 lg:mb-4 text-sm uppercase tracking-wide">For Jewellers</h3>
+            <h3 className="text-white font-semibold mb-3 lg:mb-4 text-sm uppercase tracking-wide">
+              For Jewellers
+            </h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/partner" className="hover:text-gold-400 transition-colors">
+                <Link
+                  href="/jewellery-shop-software"
+                  className="hover:text-gold-400 transition-colors"
+                >
+                  Shop Software
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/partner"
+                  className="hover:text-gold-400 transition-colors"
+                >
                   Become a Partner
                 </Link>
               </li>
               <li>
-                <Link href="/seller-guide" className="hover:text-gold-400 transition-colors">
+                <Link
+                  href="/seller-guide"
+                  className="hover:text-gold-400 transition-colors"
+                >
                   Seller Guide
                 </Link>
               </li>
               <li>
-                <Link href="/pricing" className="hover:text-gold-400 transition-colors">
+                <Link
+                  href="/pricing"
+                  className="hover:text-gold-400 transition-colors"
+                >
                   Pricing
                 </Link>
               </li>
               <li>
-                <Link href="/support" className="hover:text-gold-400 transition-colors">
+                <Link
+                  href="/support"
+                  className="hover:text-gold-400 transition-colors"
+                >
                   Support
                 </Link>
               </li>
@@ -92,7 +154,9 @@ export function Footer() {
 
           {/* Contact */}
           <div>
-            <h3 className="text-white font-semibold mb-3 lg:mb-4 text-sm uppercase tracking-wide">Contact Us</h3>
+            <h3 className="text-white font-semibold mb-3 lg:mb-4 text-sm uppercase tracking-wide">
+              Contact Us
+            </h3>
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 text-gold-400 mt-0.5 shrink-0" />
@@ -104,7 +168,9 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-gold-400 shrink-0" />
-                <span className="text-gray-400">{BRAND.contact.supportEmail}</span>
+                <span className="text-gray-400">
+                  {BRAND.contact.supportEmail}
+                </span>
               </li>
             </ul>
           </div>
@@ -115,13 +181,22 @@ export function Footer() {
             © {new Date().getFullYear()} {BRAND.name}. All rights reserved.
           </p>
           <div className="flex flex-wrap justify-center gap-4 md:gap-6 text-sm">
-            <Link href="/privacy" className="text-gray-400 hover:text-gold-400 transition-colors">
+            <Link
+              href="/privacy"
+              className="text-gray-400 hover:text-gold-400 transition-colors"
+            >
               Privacy Policy
             </Link>
-            <Link href="/terms" className="text-gray-400 hover:text-gold-400 transition-colors">
+            <Link
+              href="/terms"
+              className="text-gray-400 hover:text-gold-400 transition-colors"
+            >
               Terms of Service
             </Link>
-            <Link href="/refund" className="text-gray-400 hover:text-gold-400 transition-colors">
+            <Link
+              href="/refund"
+              className="text-gray-400 hover:text-gold-400 transition-colors"
+            >
               Refund Policy
             </Link>
           </div>

@@ -2,13 +2,7 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { BRAND } from "@/config/brand";
 import { BLOG_POSTS } from "@/data/blog-posts";
-import {
-  ArrowRight,
-  BookOpen,
-  Calendar,
-  Clock,
-  Tag,
-} from "lucide-react";
+import { ArrowRight, BookOpen, Calendar, Clock, Tag } from "lucide-react";
 import Link from "next/link";
 
 /* ────────────────────────────────────────────────────────────── */
@@ -58,7 +52,7 @@ export default function BlogPage() {
                 className="group block overflow-hidden rounded-2xl border border-amber-200/60 dark:border-stone-700 bg-white dark:bg-stone-800/60 shadow-sm transition-all hover:shadow-lg hover:border-amber-300 dark:hover:border-amber-700"
               >
                 <div className="p-8 sm:p-10">
-                    <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-stone-500 dark:text-stone-400">
+                  <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-stone-500 dark:text-stone-400">
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/40 px-3 py-1 text-xs font-medium text-amber-800 dark:text-amber-300">
                       <Tag className="h-3 w-3" />
                       {featured.category}

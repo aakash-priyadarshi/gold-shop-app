@@ -367,8 +367,18 @@ export function Header() {
 
   // More menu items
   const moreNavItems = [
-    { name: "Blog", href: "/blog", icon: BookOpenIcon, desc: "Guides, tips & industry insights" },
-    { name: "About", href: "/about", icon: InformationCircleIcon, desc: "Our story & mission" },
+    {
+      name: "Blog",
+      href: "/blog",
+      icon: BookOpenIcon,
+      desc: "Guides, tips & industry insights",
+    },
+    {
+      name: "About",
+      href: "/about",
+      icon: InformationCircleIcon,
+      desc: "Our story & mission",
+    },
   ];
 
   // State for "For Sellers" dropdown

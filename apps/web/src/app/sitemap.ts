@@ -1,41 +1,44 @@
-import { MetadataRoute } from "next";
 import { BLOG_POSTS } from "@/data/blog-posts";
+import { MetadataRoute } from "next";
 
 const BASE_URL = "https://www.orivraa.com";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const now = new Date();
+  // Use a fixed reference date for pages that don't have dynamic content.
+  // Update these dates ONLY when you actually modify the page content.
+  // Google distrust lastmod values that always show "now" — it looks like spam.
+  const SITE_LAUNCH = "2025-01-15"; // approximate site launch date
 
   // ─── STATIC PAGES ─────────────────────────────────────────────
   const staticPages: MetadataRoute.Sitemap = [
     // Core pages
     {
       url: BASE_URL,
-      lastModified: now,
+      lastModified: new Date(), // homepage updates frequently (latest products, blog posts)
       changeFrequency: "daily",
       priority: 1.0,
     },
     {
       url: `${BASE_URL}/shops`,
-      lastModified: now,
+      lastModified: new Date(), // shop listings change frequently
       changeFrequency: "daily",
       priority: 0.9,
     },
     {
       url: `${BASE_URL}/designs`,
-      lastModified: now,
+      lastModified: new Date(), // designs may update daily
       changeFrequency: "daily",
       priority: 0.85,
     },
     {
       url: `${BASE_URL}/pricing`,
-      lastModified: now,
+      lastModified: new Date("2025-02-15"),
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
       url: `${BASE_URL}/rfq/create`,
-      lastModified: now,
+      lastModified: new Date("2025-02-01"),
       changeFrequency: "monthly",
       priority: 0.7,
     },
@@ -43,43 +46,43 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Informational pages
     {
       url: `${BASE_URL}/about`,
-      lastModified: now,
+      lastModified: new Date("2025-02-01"),
       changeFrequency: "monthly",
       priority: 0.7,
     },
     {
       url: `${BASE_URL}/jewellery-shop-software`,
-      lastModified: now,
+      lastModified: new Date("2025-03-01"),
       changeFrequency: "weekly",
       priority: 0.9,
     },
     {
       url: `${BASE_URL}/help`,
-      lastModified: now,
+      lastModified: new Date("2025-02-01"),
       changeFrequency: "monthly",
       priority: 0.6,
     },
     {
       url: `${BASE_URL}/support`,
-      lastModified: now,
+      lastModified: new Date("2025-02-01"),
       changeFrequency: "monthly",
       priority: 0.5,
     },
     {
       url: `${BASE_URL}/seller-guide`,
-      lastModified: now,
+      lastModified: new Date("2025-02-20"),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/partner`,
+      lastModified: new Date("2025-02-15"),
       changeFrequency: "monthly",
       priority: 0.6,
     },
     {
-      url: `${BASE_URL}/partner`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.5,
-    },
-    {
       url: `${BASE_URL}/download`,
-      lastModified: now,
+      lastModified: new Date("2025-02-01"),
       changeFrequency: "monthly",
       priority: 0.5,
     },
@@ -87,25 +90,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Legal pages
     {
       url: `${BASE_URL}/privacy`,
-      lastModified: now,
+      lastModified: new Date(SITE_LAUNCH),
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
       url: `${BASE_URL}/terms`,
-      lastModified: now,
+      lastModified: new Date(SITE_LAUNCH),
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
       url: `${BASE_URL}/refund`,
-      lastModified: now,
+      lastModified: new Date(SITE_LAUNCH),
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
       url: `${BASE_URL}/platform-guidelines`,
-      lastModified: now,
+      lastModified: new Date(SITE_LAUNCH),
       changeFrequency: "yearly",
       priority: 0.3,
     },
@@ -123,7 +126,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const shops = data.shops || data || [];
       shopPages = shops.map((shop: { id: string; updatedAt?: string }) => ({
         url: `${BASE_URL}/shops/${shop.id}`,
-        lastModified: shop.updatedAt ? new Date(shop.updatedAt) : now,
+        lastModified: shop.updatedAt ? new Date(shop.updatedAt) : new Date(),
         changeFrequency: "weekly" as const,
         priority: 0.8,
       }));
@@ -136,7 +139,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const blogIndex: MetadataRoute.Sitemap = [
     {
       url: `${BASE_URL}/blog`,
-      lastModified: now,
+      lastModified: new Date("2025-03-01"), // update when you publish new blog posts
       changeFrequency: "weekly",
       priority: 0.8,
     },
