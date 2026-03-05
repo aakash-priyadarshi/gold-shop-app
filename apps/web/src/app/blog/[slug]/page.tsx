@@ -7,13 +7,12 @@ import {
   ArrowRight,
   Calendar,
   Clock,
-  Share2,
   Tag,
   User,
 } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { Metadata } from "next";
 
 /* ────────────────────────────────────────────────────────────── */
 /*  STATIC PARAMS                                                 */
@@ -62,11 +61,7 @@ export async function generateMetadata({
 /*  PAGE                                                          */
 /* ────────────────────────────────────────────────────────────── */
 
-export default function BlogPostPage({
-  params,
-}: {
-  params: { slug: string };
-}) {
+export default function BlogPostPage({ params }: { params: { slug: string } }) {
   const post = getBlogPost(params.slug);
   if (!post) notFound();
 
@@ -214,8 +209,12 @@ export default function BlogPostPage({
                 <User className="h-4 w-4" />
               </div>
               <div>
-                <p className="font-medium text-stone-700 dark:text-stone-200">{post.author}</p>
-                <p className="text-xs text-stone-400 dark:text-stone-500">{post.authorRole}</p>
+                <p className="font-medium text-stone-700 dark:text-stone-200">
+                  {post.author}
+                </p>
+                <p className="text-xs text-stone-400 dark:text-stone-500">
+                  {post.authorRole}
+                </p>
               </div>
             </div>
           </header>
