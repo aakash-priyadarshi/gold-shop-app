@@ -361,13 +361,14 @@ export function Header() {
 
   // More menu items
   const moreNavItems = [
-    { name: "Blog", href: "/blog", icon: BookOpenIcon },
-    { name: "About", href: "/about", icon: InformationCircleIcon },
-    { name: "Download App", href: "/download", icon: ComputerDesktopIcon },
+    { name: "Blog", href: "/blog", icon: BookOpenIcon, desc: "Guides, tips & industry insights" },
+    { name: "About", href: "/about", icon: InformationCircleIcon, desc: "Our story & mission" },
+    { name: "Download App", href: "/download", icon: ComputerDesktopIcon, desc: "Desktop & mobile apps" },
   ];
 
   // State for "For Sellers" dropdown
   const [sellerDropdownOpen, setSellerDropdownOpen] = useState(false);
+  const [companyDropdownOpen, setCompanyDropdownOpen] = useState(false);
 
   // Format price based on user's currency preference
   const formatPrice = (amount: number) => {
@@ -474,6 +475,9 @@ export function Header() {
 
                 {/* More */}
                 <div className="pt-3 mt-2 border-t border-gray-100 dark:border-gray-800">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-3 mb-2">
+                    Company
+                  </p>
                   {moreNavItems.map((item) => (
                     <Link
                       key={item.name}
@@ -703,12 +707,56 @@ export function Header() {
           </div>
 
           {/* About link */}
-          <Link
-            href="/about"
-            className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+          <div
+            className="relative"
+            onMouseEnter={() => setCompanyDropdownOpen(true)}
+            onMouseLeave={() => setCompanyDropdownOpen(false)}
           >
-            About
-          </Link>
+            <button
+              className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors inline-flex items-center gap-1"
+              onClick={() => setCompanyDropdownOpen(!companyDropdownOpen)}
+            >
+              Company
+              <svg
+                className={`h-3.5 w-3.5 transition-transform ${companyDropdownOpen ? "rotate-180" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="m19.5 8.25-7.5 7.5-7.5-7.5"
+                />
+              </svg>
+            </button>
+            {companyDropdownOpen && (
+              <>
+                <div className="absolute top-full left-0 h-2 w-full" />
+                <div className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-2 z-50">
+                  {moreNavItems.map((item) => (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      onClick={() => setCompanyDropdownOpen(false)}
+                    >
+                      <item.icon className="h-5 w-5 text-gold-500 mt-0.5 shrink-0" />
+                      <div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {item.name}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {item.desc}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Desktop Preferences Controls */}
