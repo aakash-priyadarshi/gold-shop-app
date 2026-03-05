@@ -357,13 +357,18 @@ export function Header() {
       icon: BuildingOffice2Icon,
       desc: "Join our jeweller network",
     },
+    {
+      name: "Download App",
+      href: "/download",
+      icon: ComputerDesktopIcon,
+      desc: "Desktop & mobile apps for sellers",
+    },
   ];
 
   // More menu items
   const moreNavItems = [
     { name: "Blog", href: "/blog", icon: BookOpenIcon, desc: "Guides, tips & industry insights" },
     { name: "About", href: "/about", icon: InformationCircleIcon, desc: "Our story & mission" },
-    { name: "Download App", href: "/download", icon: ComputerDesktopIcon, desc: "Desktop & mobile apps" },
   ];
 
   // State for "For Sellers" dropdown
