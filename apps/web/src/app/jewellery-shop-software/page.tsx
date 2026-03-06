@@ -62,28 +62,28 @@ const softwareJsonLd = {
         },
         {
           "@type": "Offer",
-          price: "29",
+          price: "12.99",
           priceCurrency: "USD",
           name: "Pro Plan",
           priceSpecification: {
             "@type": "UnitPriceSpecification",
-            price: "29",
+            price: "12.99",
             priceCurrency: "USD",
             billingDuration: "P1M",
             unitText: "per month",
           },
           description:
-            "Full CRM suite — unlimited products, inventory management, invoicing, customer management, bulk upload, advanced analytics, custom branding, and priority support.",
+            "Full CRM suite — unlimited products, inventory management, invoicing, customer management, bulk upload, advanced analytics, custom branding, and priority support. AI credits at $0.06/credit.",
           url: "https://www.orivraa.com/pricing",
         },
         {
           "@type": "Offer",
-          price: "49",
+          price: "24.99",
           priceCurrency: "USD",
           name: "Pro+ Plan (Most Popular)",
           priceSpecification: {
             "@type": "UnitPriceSpecification",
-            price: "49",
+            price: "24.99",
             priceCurrency: "USD",
             billingDuration: "P1M",
             unitText: "per month",

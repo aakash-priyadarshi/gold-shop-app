@@ -368,14 +368,15 @@ function currencySymbol(code: CurrencyCode): string {
 function formatPrice(amount: number, currency: CurrencyCode): string {
   const sym = currencySymbol(currency);
   if (amount === 0) return `${sym}0`;
-  // For large amounts like NPR, INR — use locale formatting
+  // Show decimals when the amount has them (e.g. $12.99, $0.06)
+  const hasDecimals = amount % 1 !== 0;
   try {
     const locale = CURRENCIES[currency]?.locale ?? "en-US";
     return new Intl.NumberFormat(locale, {
       style: "currency",
       currency: currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      minimumFractionDigits: hasDecimals ? 2 : 0,
+      maximumFractionDigits: hasDecimals ? 2 : 0,
     }).format(amount);
   } catch {
     return `${sym}${amount.toLocaleString()}`;
@@ -795,7 +796,7 @@ export default function PricingPage() {
                               {formatPrice(
                                 billing === "monthly"
                                   ? plan.monthlyPrice
-                                  : Math.round(plan.annualPrice / 12),
+                                  : plan.annualPrice / 12,
                                 plan.currency,
                               )}
                             </span>
