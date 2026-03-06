@@ -4,7 +4,7 @@ export const metadata: Metadata = {
   title:
     "Orivraa Pricing & Plans 2026 | Free Jewellery Shop Software — From $0/month",
   description:
-    "Orivraa jewellery software pricing: Free plan ($0), Pro ($29/mo), Pro+ ($49/mo), Enterprise (custom). Includes inventory management, billing, POS, AI tools, digital catalogues & marketplace. Compare plans for jewellery sellers in Nepal, India, Dubai, USA & UK. Start free — no credit card needed.",
+    "Orivraa jewellery software pricing: Free plan ($0), Pro ($12.99/mo), Pro+ ($24.99/mo), Enterprise (custom). Includes inventory management, billing, POS, AI tools, digital catalogues & marketplace. AI credits at $0.06 each. Compare plans for jewellery sellers in Nepal, India, Dubai, USA & UK. Start free — no credit card needed.",
   keywords: [
     "orivraa pricing",
     "jewellery software pricing",
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Orivraa Pricing — Free Jewellery Shop Software | Plans from $0/month",
     description:
-      "Compare Orivraa plans: Free ($0), Pro ($29/mo), Pro+ ($49/mo), Enterprise. Full jewellery shop management with inventory, billing, AI tools & marketplace. Start free today.",
+      "Compare Orivraa plans: Free ($0), Pro ($12.99/mo), Pro+ ($24.99/mo), Enterprise. Full jewellery shop management with inventory, billing, AI tools & marketplace. Start free today.",
     url: "https://www.orivraa.com/pricing",
   },
 };
@@ -60,27 +60,27 @@ const pricingJsonLd = {
         {
           "@type": "Offer",
           name: "Pro Plan",
-          price: "29",
+          price: "12.99",
           priceCurrency: "USD",
           priceSpecification: {
             "@type": "UnitPriceSpecification",
-            price: "29",
+            price: "12.99",
             priceCurrency: "USD",
             billingDuration: "P1M",
             unitText: "per month",
           },
           description:
-            "Full CRM suite — unlimited products, inventory management, invoicing & billing, customer management, bulk upload, advanced analytics, custom branding, and priority support. AI credits purchasable separately.",
+            "Full CRM suite — unlimited products, inventory management, invoicing & billing, customer management, bulk upload, advanced analytics, custom branding, and priority support. AI credits at $0.06/credit.",
           url: "https://www.orivraa.com/pricing",
         },
         {
           "@type": "Offer",
           name: "Pro+ Plan (Most Popular)",
-          price: "49",
+          price: "24.99",
           priceCurrency: "USD",
           priceSpecification: {
             "@type": "UnitPriceSpecification",
-            price: "49",
+            price: "24.99",
             priceCurrency: "USD",
             billingDuration: "P1M",
             unitText: "per month",
@@ -92,8 +92,6 @@ const pricingJsonLd = {
         {
           "@type": "Offer",
           name: "Enterprise Plan",
-          price: "0",
-          priceCurrency: "USD",
           description:
             "Custom pricing for large jewellery businesses. Includes unlimited everything, lowest commission rate, dedicated account manager, API access, white-label option, multi-branch support, and custom integrations. Contact sales for a quote.",
           url: "https://www.orivraa.com/pricing",
@@ -115,7 +113,7 @@ const pricingJsonLd = {
           name: "How much does Orivraa jewellery software cost?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Orivraa offers 4 plans: Free ($0/month — up to 15 products), Pro ($29/month — unlimited products, full CRM), Pro+ ($49/month — includes AI tools and priority listing), and Enterprise (custom pricing). Annual billing saves 20%. All plans include marketplace access. Local currency pricing available for Nepal (NPR), India (INR), UAE (AED), UK (GBP), and USA (USD).",
+            text: "Orivraa offers 4 plans: Free ($0/month — up to 15 products), Pro ($12.99/month — unlimited products, full CRM), Pro+ ($24.99/month — includes AI tools and priority listing), and Enterprise (custom pricing). Annual billing saves 20%. All plans include marketplace access. AI credits available at $0.06/credit. Local currency pricing available for Nepal (NPR), India (INR), UAE (AED), UK (GBP), and USA (USD).",
           },
         },
         {
@@ -123,7 +121,7 @@ const pricingJsonLd = {
           name: "Is Orivraa jewellery software free?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes! Orivraa has a free-forever plan that includes marketplace listing for up to 15 products, basic inventory management, customer messaging, and analytics. No credit card required. You can upgrade to Pro ($29/mo) or Pro+ ($49/mo) anytime for unlimited products and advanced features.",
+            text: "Yes! Orivraa has a free-forever plan that includes marketplace listing for up to 15 products, basic inventory management, customer messaging, and analytics. No credit card required. You can upgrade to Pro ($12.99/mo) or Pro+ ($24.99/mo) anytime for unlimited products and advanced features.",
           },
         },
         {
@@ -131,7 +129,7 @@ const pricingJsonLd = {
           name: "What is included in Orivraa Pro plan?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Orivraa Pro ($29/month) includes: unlimited product listings, full inventory management by weight & purity, invoicing & billing, customer management, bulk product upload, advanced analytics, custom branding, staff accounts, and priority support. AI credits can be purchased separately.",
+            text: "Orivraa Pro ($12.99/month) includes: unlimited product listings, full inventory management by weight & purity, invoicing & billing, customer management, bulk product upload, advanced analytics, custom branding, staff accounts, and priority support. AI credits can be purchased at $0.06/credit.",
           },
         },
         {
@@ -139,7 +137,7 @@ const pricingJsonLd = {
           name: "What is the best plan for a jewellery shop?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "For most jewellery shops, Pro+ ($49/month) is the best value — it includes everything in Pro plus AI-powered design generation, smart recommendations, price optimization, demand forecasting, and monthly AI credits. If you're just starting out, begin with the Free plan and upgrade as your business grows.",
+            text: "For most jewellery shops, Pro+ ($24.99/month) is the best value — it includes everything in Pro plus AI-powered design generation, smart recommendations, price optimization, demand forecasting, and monthly AI credits. If you're just starting out, begin with the Free plan and upgrade as your business grows.",
           },
         },
       ],
@@ -149,7 +147,7 @@ const pricingJsonLd = {
       "@id": "https://www.orivraa.com/pricing",
       name: "Orivraa Pricing & Plans",
       description:
-        "Compare Orivraa jewellery software plans. Free, Pro ($29/mo), Pro+ ($49/mo), Enterprise. Manage gold, silver & diamond inventory with AI-powered tools.",
+        "Compare Orivraa jewellery software plans. Free, Pro ($12.99/mo), Pro+ ($24.99/mo), Enterprise. Manage gold, silver & diamond inventory with AI-powered tools.",
       isPartOf: { "@id": "https://www.orivraa.com/#website" },
       breadcrumb: {
         "@type": "BreadcrumbList",
