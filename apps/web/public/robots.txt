@@ -18,6 +18,12 @@ Disallow: /admin/
 # NOTE: Do NOT disallow /_next/ — Googlebot needs /_next/static/
 # to render JavaScript and see page content for proper indexing.
 
+# ─── Allow Google AI (Gemini) to read content ────────────────────
+# Cloudflare blocks Google-Extended by default for AI training.
+# Override: explicitly allow it so Gemini can understand & cite Orivraa.
+User-agent: Google-Extended
+Allow: /
+
 # ─── Block known bad/spam bots ───────────────────────────────────
 User-agent: MJ12bot
 Disallow: /

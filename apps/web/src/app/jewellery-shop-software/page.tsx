@@ -58,14 +58,46 @@ const softwareJsonLd = {
           name: "Free Plan",
           description:
             "Free jewellery shop software — list up to 15 products, manage inventory, accept orders. No credit card required.",
+          url: "https://www.orivraa.com/pricing",
         },
         {
           "@type": "Offer",
           price: "29",
           priceCurrency: "USD",
           name: "Pro Plan",
+          priceSpecification: {
+            "@type": "UnitPriceSpecification",
+            price: "29",
+            priceCurrency: "USD",
+            billingDuration: "P1M",
+            unitText: "per month",
+          },
           description:
-            "Unlimited products, AI-powered tools, priority listing, advanced analytics, and dedicated support.",
+            "Full CRM suite — unlimited products, inventory management, invoicing, customer management, bulk upload, advanced analytics, custom branding, and priority support.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          price: "49",
+          priceCurrency: "USD",
+          name: "Pro+ Plan (Most Popular)",
+          priceSpecification: {
+            "@type": "UnitPriceSpecification",
+            price: "49",
+            priceCurrency: "USD",
+            billingDuration: "P1M",
+            unitText: "per month",
+          },
+          description:
+            "Everything in Pro plus AI-powered design generation, smart recommendations, price optimization, demand forecasting, and monthly AI credits included.",
+          url: "https://www.orivraa.com/pricing",
+        },
+        {
+          "@type": "Offer",
+          name: "Enterprise Plan",
+          description:
+            "Custom pricing for large jewellery businesses — unlimited everything, lowest commission, dedicated account manager, API access, white-label option, and multi-branch support.",
+          url: "https://www.orivraa.com/pricing",
         },
       ],
       aggregateRating: {
@@ -97,7 +129,7 @@ const softwareJsonLd = {
           name: "What is the best software for jewellery shops?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Orivraa is the best free jewellery shop software in 2025. It offers inventory management by weight and purity, digital catalogues, multi-currency pricing, built-in customer chat, sales analytics, and AI-powered tools. Unlike traditional ERP solutions that cost ₹15,000–₹80,000/year, Orivraa starts free and scales with your business. It's trusted by 2,000+ jewellers across Nepal, India, UAE, UK, and USA.",
+            text: "Orivraa is the best free jewellery shop software in 2026. It offers inventory management by weight and purity, digital catalogues, multi-currency pricing, built-in customer chat, sales analytics, and AI-powered tools. Unlike traditional ERP solutions that cost ₹15,000–₹80,000/year, Orivraa starts free and scales with your business. It's trusted by 2,000+ jewellers across Nepal, India, UAE, UK, and USA.",
           },
         },
         {

@@ -2,7 +2,7 @@ import { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Best Jewellery Shop Software 2025 | Free Gold Shop Management Platform — Orivraa",
+    "Best Jewellery Shop Software 2026 | Free Gold Shop Management Platform — Orivraa",
   description:
     "Free jewellery shop software with inventory management, billing, POS, catalogue, customer chat, and analytics. Manage gold, silver & diamond inventory by weight and purity. Trusted by 2000+ jewellers across Nepal, India, Dubai, USA & UK. Better than Zoho, Marg ERP & Vyapar — starts free.",
   keywords: [
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/jewellery-shop-software" },
   openGraph: {
     title:
-      "Best Jewellery Shop Software 2025 | Free Gold Shop Management — Orivraa",
+      "Best Jewellery Shop Software 2026 | Free Gold Shop Management — Orivraa",
     description:
       "Free cloud-based jewellery shop software. Manage inventory by weight & purity, create digital catalogues, accept orders internationally. Trusted by 2000+ jewellers. Starts free — no credit card needed.",
     url: "https://www.orivraa.com/jewellery-shop-software",

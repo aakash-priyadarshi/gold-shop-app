@@ -32,9 +32,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     {
       url: `${BASE_URL}/pricing`,
-      lastModified: new Date("2025-02-15"),
+      lastModified: new Date("2025-03-05"),
       changeFrequency: "weekly",
-      priority: 0.8,
+      priority: 0.9,
     },
     {
       url: `${BASE_URL}/rfq/create`,
