@@ -254,6 +254,9 @@ export class MarketConfigService {
    * Update market config (admin)
    */
   async updateConfig(countryCode: string, dto: UpdateMarketConfigDto) {
+    // Invalidate cache so next GET returns fresh data
+    this.configCache.delete(countryCode);
+
     // Check if exists in database
     const existing = await this.prisma.marketConfig.findUnique({
       where: { countryCode: countryCode as MarketRegion },
