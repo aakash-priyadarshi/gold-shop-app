@@ -263,6 +263,8 @@ export class MarketConfigService {
       return this.prisma.marketConfig.update({
         where: { countryCode: countryCode as MarketRegion },
         data: {
+          countryName: dto.countryName,
+          defaultCurrency: dto.defaultCurrency,
           heroHeadline: dto.heroHeadline,
           heroSubheadline: dto.heroSubheadline,
           footerContactTitle: dto.footerContactTitle,
@@ -277,6 +279,7 @@ export class MarketConfigService {
           customOrdersEnabled: dto.customOrdersEnabled,
           taxPercentage: dto.taxPercentage,
           taxName: dto.taxName,
+          priceMultiplier: dto.priceMultiplier,
           isActive: dto.isActive,
           updatedAt: new Date(),
         },

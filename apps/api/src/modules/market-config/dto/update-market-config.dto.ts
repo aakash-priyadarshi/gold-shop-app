@@ -4,6 +4,14 @@ import { CurrencyCode, WeightUnit, PaymentMethod } from '@prisma/client';
 export class UpdateMarketConfigDto {
   @IsOptional()
   @IsString()
+  countryName?: string;
+
+  @IsOptional()
+  @IsEnum(CurrencyCode)
+  defaultCurrency?: CurrencyCode;
+
+  @IsOptional()
+  @IsString()
   heroHeadline?: string;
 
   @IsOptional()
@@ -60,6 +68,10 @@ export class UpdateMarketConfigDto {
   @IsOptional()
   @IsString()
   taxName?: string;
+
+  @IsOptional()
+  @IsNumber()
+  priceMultiplier?: number;
 
   @IsOptional()
   @IsBoolean()
