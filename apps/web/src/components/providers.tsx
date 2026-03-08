@@ -5,7 +5,9 @@ import { CartProvider } from "@/contexts/CartContext";
 import { ChatPopupProvider } from "@/contexts/ChatPopupContext";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { MarketProvider, useMarket } from "@/hooks/useMarket";
+import { TranslationProvider } from "@/providers/translation-provider";
 import {
+  LANGUAGES,
   usePreferencesStore,
   type CountryCode,
   type CurrencyCode,
@@ -151,6 +153,22 @@ function MarketPreferencesSync({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * Sync document dir attribute for RTL languages (Arabic)
+ */
+function DirectionSync({ children }: { children: React.ReactNode }) {
+  const language = usePreferencesStore((s) => s.language);
+
+  React.useEffect(() => {
+    const langInfo = LANGUAGES[language];
+    const dir = langInfo?.dir === "rtl" ? "rtl" : "ltr";
+    document.documentElement.dir = dir;
+    document.documentElement.lang = language;
+  }, [language]);
+
+  return <>{children}</>;
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
@@ -161,7 +179,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
               <CartProvider>
                 <MarketProvider>
                   <ChatPopupProvider>
-                    <MarketPreferencesSync>{children}</MarketPreferencesSync>
+                    <TranslationProvider>
+                      <DirectionSync>
+                        <MarketPreferencesSync>{children}</MarketPreferencesSync>
+                      </DirectionSync>
+                    </TranslationProvider>
                   </ChatPopupProvider>
                 </MarketProvider>
               </CartProvider>

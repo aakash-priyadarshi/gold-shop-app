@@ -2,6 +2,8 @@
 
 import { HeroVideo } from "@/components/HeroVideo";
 import { Button } from "@/components/ui/button";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { MarketRegion, useMarket } from "@/hooks/useMarket";
 import {
   ArrowRight,
@@ -20,6 +22,7 @@ interface HeroSectionProps {
 
 export function HeroSection({ videoSrc }: HeroSectionProps) {
   const { config, selectedCountry, isLoading } = useMarket();
+  const t = useT();
 
   // Default content for server rendering / loading state
   const headline =
@@ -69,36 +72,21 @@ export function HeroSection({ videoSrc }: HeroSectionProps) {
               }`}
             >
               <Sparkles className="h-4 w-4" />
-              {badgeText}
+              {t(badgeText)}
             </div>
             <h1
               className={`text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight ${
                 videoSrc ? "text-white drop-shadow-lg" : "text-gray-900"
               }`}
             >
-              {headline.includes("Jewellery") ? (
-                <>
-                  {headline.split("Jewellery")[0]}
-                  <span
-                    className={
-                      videoSrc ? "text-gold-300" : "gold-text-gradient"
-                    }
-                  >
-                    {" "}
-                    Jewellery
-                  </span>
-                  {headline.split("Jewellery")[1]}
-                </>
-              ) : (
-                headline
-              )}
+              {t(headline)}
             </h1>
             <p
               className={`text-base lg:text-lg max-w-lg mx-auto lg:mx-0 ${
                 videoSrc ? "text-gray-200" : "text-gray-600"
               }`}
             >
-              {subheadline}
+              {t(subheadline)}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
               <Link href="/shop">
@@ -106,7 +94,7 @@ export function HeroSection({ videoSrc }: HeroSectionProps) {
                   size="lg"
                   className="w-full sm:w-auto gold-gradient text-white h-12 px-8 rounded-xl text-base"
                 >
-                  Browse Collection
+                  <T>Browse Collection</T>
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
@@ -120,7 +108,7 @@ export function HeroSection({ videoSrc }: HeroSectionProps) {
                       : ""
                   }`}
                 >
-                  Custom Order
+                  <T>Custom Order</T>
                 </Button>
               </Link>
             </div>
@@ -155,7 +143,7 @@ export function HeroSection({ videoSrc }: HeroSectionProps) {
                   <p
                     className={`text-xs lg:text-sm ${videoSrc ? "text-gray-300" : "text-gray-600"}`}
                   >
-                    Unique Designs
+                    <T>Unique Designs</T>
                   </p>
                 </div>
                 <div
@@ -176,7 +164,7 @@ export function HeroSection({ videoSrc }: HeroSectionProps) {
                   <p
                     className={`text-xs lg:text-sm ${videoSrc ? "text-gray-300" : "text-gray-600"}`}
                   >
-                    Certified Pure
+                    <T>Certified Pure</T>
                   </p>
                 </div>
                 <div
@@ -197,7 +185,7 @@ export function HeroSection({ videoSrc }: HeroSectionProps) {
                   <p
                     className={`text-xs lg:text-sm ${videoSrc ? "text-gray-300" : "text-gray-600"}`}
                   >
-                    Trusted Sellers
+                    <T>Trusted Sellers</T>
                   </p>
                 </div>
                 <div
@@ -218,7 +206,7 @@ export function HeroSection({ videoSrc }: HeroSectionProps) {
                   <p
                     className={`text-xs lg:text-sm ${videoSrc ? "text-gray-300" : "text-gray-600"}`}
                   >
-                    Avg. Rating
+                    <T>Avg. Rating</T>
                   </p>
                 </div>
               </div>

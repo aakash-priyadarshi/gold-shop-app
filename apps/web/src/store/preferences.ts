@@ -23,7 +23,7 @@ export type CountryCode = "NP" | "IN" | "AE" | "UK" | "EU" | "US";
 
 export type ThemeMode = "light" | "dark" | "system";
 
-export type Language = "en" | "ne" | "hi";
+export type Language = "en" | "fr" | "de" | "hi" | "es" | "ar" | "ne";
 
 // Currency metadata (for DISPLAY only)
 export const CURRENCIES: Record<
@@ -105,11 +105,15 @@ export const COUNTRIES: Record<
 };
 
 // Language metadata
-export const LANGUAGES: Record<Language, { name: string; nativeName: string }> =
+export const LANGUAGES: Record<Language, { name: string; nativeName: string; dir?: "rtl" }> =
   {
     en: { name: "English", nativeName: "English" },
-    ne: { name: "Nepali", nativeName: "नेपाली" },
+    fr: { name: "French", nativeName: "Français" },
+    de: { name: "German", nativeName: "Deutsch" },
     hi: { name: "Hindi", nativeName: "हिन्दी" },
+    es: { name: "Spanish", nativeName: "Español" },
+    ar: { name: "Arabic", nativeName: "العربية", dir: "rtl" },
+    ne: { name: "Nepali", nativeName: "नेपाली" },
   };
 
 interface PreferencesState {

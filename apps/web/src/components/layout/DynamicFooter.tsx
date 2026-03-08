@@ -13,6 +13,7 @@ import {
   Youtube,
 } from "lucide-react";
 import Link from "next/link";
+import { T } from "@/components/ui/T";
 
 export function DynamicFooter() {
   const { config } = useMarket();
@@ -33,8 +34,7 @@ export function DynamicFooter() {
               <span className="text-xl font-bold text-white">{BRAND.name}</span>
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed">
-              {BRAND.tagline}. Connecting buyers with verified jewellers across
-              Nepal, India, Dubai, USA & UK.
+              <T>Connecting buyers with verified jewellers across Nepal, India, Dubai, USA & UK.</T>
             </p>
             {/* Social Links */}
             <div className="flex items-center gap-3 pt-2">
@@ -68,7 +68,7 @@ export function DynamicFooter() {
           {/* Quick Links */}
           <div>
             <h3 className="text-white font-semibold mb-3 lg:mb-4 text-sm uppercase tracking-wide">
-              Quick Links
+              <T>Quick Links</T>
             </h3>
             <ul className="space-y-2 text-sm">
               <li>
@@ -76,7 +76,7 @@ export function DynamicFooter() {
                   href="/shop"
                   className="hover:text-gold-400 transition-colors"
                 >
-                  Browse Shop
+                  <T>Browse Shop</T>
                 </Link>
               </li>
               <li>
@@ -84,7 +84,7 @@ export function DynamicFooter() {
                   href="/rfq/create"
                   className="hover:text-gold-400 transition-colors"
                 >
-                  Custom Order
+                  <T>Custom Order</T>
                 </Link>
               </li>
               <li>
@@ -92,7 +92,7 @@ export function DynamicFooter() {
                   href="/shops"
                   className="hover:text-gold-400 transition-colors"
                 >
-                  Find Sellers
+                  <T>Find Sellers</T>
                 </Link>
               </li>
               <li>
@@ -100,7 +100,7 @@ export function DynamicFooter() {
                   href="/about"
                   className="hover:text-gold-400 transition-colors"
                 >
-                  About Us
+                  <T>About Us</T>
                 </Link>
               </li>
               <li>
@@ -108,7 +108,7 @@ export function DynamicFooter() {
                   href="/blog"
                   className="hover:text-gold-400 transition-colors"
                 >
-                  Blog
+                  <T>Blog</T>
                 </Link>
               </li>
             </ul>
@@ -117,7 +117,7 @@ export function DynamicFooter() {
           {/* For Businesses */}
           <div>
             <h3 className="text-white font-semibold mb-3 lg:mb-4 text-sm uppercase tracking-wide">
-              For Jewellers
+              <T>For Jewellers</T>
             </h3>
             <ul className="space-y-2 text-sm">
               <li>
@@ -125,7 +125,7 @@ export function DynamicFooter() {
                   href="/partner"
                   className="hover:text-gold-400 transition-colors"
                 >
-                  Become a Partner
+                  <T>Become a Partner</T>
                 </Link>
               </li>
               <li>
@@ -133,7 +133,7 @@ export function DynamicFooter() {
                   href="/seller-guide"
                   className="hover:text-gold-400 transition-colors"
                 >
-                  Seller Guide
+                  <T>Seller Guide</T>
                 </Link>
               </li>
               <li>
@@ -141,7 +141,7 @@ export function DynamicFooter() {
                   href="/pricing"
                   className="hover:text-gold-400 transition-colors"
                 >
-                  Pricing
+                  <T>Pricing</T>
                 </Link>
               </li>
               <li>
@@ -149,7 +149,7 @@ export function DynamicFooter() {
                   href="/support"
                   className="hover:text-gold-400 transition-colors"
                 >
-                  Support
+                  <T>Support</T>
                 </Link>
               </li>
             </ul>
@@ -158,7 +158,7 @@ export function DynamicFooter() {
           {/* Contact - Now using dynamic market config */}
           <div>
             <h3 className="text-white font-semibold mb-3 lg:mb-4 text-sm uppercase tracking-wide">
-              Contact Us
+              <T>Contact Us</T>
             </h3>
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-2">
@@ -189,26 +189,26 @@ export function DynamicFooter() {
 
         <div className="border-t border-gray-800 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-gray-500 text-center md:text-left">
-            © {new Date().getFullYear()} {BRAND.name}. All rights reserved.
+            © {new Date().getFullYear()} {BRAND.name}. <T>All rights reserved.</T>
           </p>
           <div className="flex flex-wrap justify-center gap-4 md:gap-6 text-sm">
             <Link
               href="/privacy"
               className="text-gray-400 hover:text-gold-400 transition-colors"
             >
-              Privacy Policy
+              <T>Privacy Policy</T>
             </Link>
             <Link
               href="/terms"
               className="text-gray-400 hover:text-gold-400 transition-colors"
             >
-              Terms of Service
+              <T>Terms of Service</T>
             </Link>
             <Link
               href="/refund"
               className="text-gray-400 hover:text-gold-400 transition-colors"
             >
-              Refund Policy
+              <T>Refund Policy</T>
             </Link>
           </div>
         </div>

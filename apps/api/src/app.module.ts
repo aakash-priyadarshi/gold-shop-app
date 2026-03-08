@@ -50,6 +50,7 @@ import { ShopsModule } from "./modules/shops/shops.module";
 import { SubscriptionPlansModule } from "./modules/subscriptions/subscription-plans.module";
 import { SupportModule } from "./modules/support/support.module";
 import { TestingModule } from "./modules/testing/testing.module";
+import { TranslationModule } from "./modules/translation/translation.module";
 import { UsersModule } from "./modules/users/users.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
@@ -131,6 +132,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     AiCreditsModule,
     PaymentGatewayModule,
     EnterpriseModule,
+    TranslationModule,
     TestingModule,
   ],
   providers: [
