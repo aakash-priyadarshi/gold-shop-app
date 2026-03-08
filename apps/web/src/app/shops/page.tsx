@@ -195,8 +195,8 @@ export default function ShopsPage() {
     if (!isAuthenticated) {
       toast({
         variant: "destructive",
-        title: "Login Required",
-        description: "Please login to message this shop",
+        title: t("Login Required"),
+        description: t("Please login to message this shop"),
       });
       router.push(`/auth/login?redirect=/shops`);
       return;
@@ -204,8 +204,8 @@ export default function ShopsPage() {
     if (user?.role !== "CUSTOMER") {
       toast({
         variant: "destructive",
-        title: "Not Allowed",
-        description: "Only customers can initiate conversations with shops",
+        title: t("Not Allowed"),
+        description: t("Only customers can initiate conversations with shops"),
       });
       return;
     }
@@ -224,9 +224,9 @@ export default function ShopsPage() {
       }
       toast({
         variant: "destructive",
-        title: "Error",
+        title: t("Error"),
         description:
-          err.response?.data?.message || "Failed to start conversation",
+          err.response?.data?.message || t("Failed to start conversation"),
       });
     } finally {
       setMessagingShopId(null);
@@ -381,7 +381,7 @@ export default function ShopsPage() {
                   variant="secondary"
                   className="ml-1 bg-amber-500 text-white"
                 >
-                  Active
+                  <T>Active</T>
                 </Badge>
               )}
             </Button>
@@ -414,7 +414,7 @@ export default function ShopsPage() {
                 {/* Country Filter */}
                 <div>
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5 block">
-                    Country
+                    <T>Country</T>
                   </label>
                   <Select
                     value={filters.country}
@@ -446,7 +446,7 @@ export default function ShopsPage() {
                 {/* State Filter */}
                 <div>
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5 block">
-                    State/Province
+                    <T>State/Province</T>
                   </label>
                   <Select
                     value={filters.state}
@@ -472,7 +472,7 @@ export default function ShopsPage() {
                 {/* City Filter */}
                 <div>
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5 block">
-                    City
+                    <T>City</T>
                   </label>
                   <Input
                     placeholder={t("Filter by city...")}
@@ -486,7 +486,7 @@ export default function ShopsPage() {
                 {/* Verified Filter */}
                 <div>
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5 block">
-                    Verification
+                    <T>Verification</T>
                   </label>
                   <Select
                     value={filters.verified}
@@ -612,7 +612,7 @@ export default function ShopsPage() {
                     ))}
                     {(shop.supportedMaterials?.length || 0) > 3 && (
                       <Badge variant="secondary" className="text-xs">
-                        +{(shop.supportedMaterials?.length || 0) - 3} more
+                        +{(shop.supportedMaterials?.length || 0) - 3} {t("more")}
                       </Badge>
                     )}
                   </div>

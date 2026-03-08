@@ -2,6 +2,8 @@
 
 import { DynamicFooter } from '@/components/layout/DynamicFooter';
 import { Header } from "@/components/layout/header";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -152,6 +154,7 @@ export default function ShopDetailPage() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
   const { addToCart } = useCart();
+  const t = useT();
   const shopId = params.id as string;
 
   const [shop, setShop] = useState<Shop | null>(null);
@@ -298,8 +301,8 @@ export default function ShopDetailPage() {
     if (isShopOwner) {
       toast({
         variant: "destructive",
-        title: "Cannot Add to Cart",
-        description: "You cannot purchase products from your own shop",
+        title: t("Cannot Add to Cart"),
+        description: t("You cannot purchase products from your own shop"),
       });
       return;
     }
@@ -319,14 +322,14 @@ export default function ShopDetailPage() {
         },
       });
       toast({
-        title: "Added to Cart",
-        description: `${product.nameEn} added to your cart`,
+        title: t("Added to Cart"),
+        description: `${product.nameEn} ${t("added to your cart")}`,
       });
     } catch (err) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to add item to cart",
+        title: t("Error"),
+        description: t("Failed to add item to cart"),
       });
     }
   };
@@ -335,8 +338,8 @@ export default function ShopDetailPage() {
     if (!isAuthenticated) {
       toast({
         variant: "destructive",
-        title: "Login Required",
-        description: "Please login to place a custom order",
+        title: t("Login Required"),
+        description: t("Please login to place a custom order"),
       });
       router.push("/auth/login");
       return;
@@ -345,8 +348,8 @@ export default function ShopDetailPage() {
     if (!customOrderForm.jewelleryType || !customOrderForm.weightGrams) {
       toast({
         variant: "destructive",
-        title: "Missing Fields",
-        description: "Please fill in required fields",
+        title: t("Missing Fields"),
+        description: t("Please fill in required fields"),
       });
       return;
     }
@@ -368,8 +371,8 @@ export default function ShopDetailPage() {
       });
 
       toast({
-        title: "Custom Order Submitted!",
-        description: "The shop will respond to your request soon.",
+        title: t("Custom Order Submitted!"),
+        description: t("The shop will respond to your request soon."),
       });
       setCustomOrderOpen(false);
       setCustomOrderForm({
@@ -383,8 +386,8 @@ export default function ShopDetailPage() {
     } catch (err: any) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: err.response?.data?.message || "Failed to submit order",
+        title: t("Error"),
+        description: err.response?.data?.message || t("Failed to submit order"),
       });
     } finally {
       setSubmittingOrder(false);
@@ -395,8 +398,8 @@ export default function ShopDetailPage() {
     if (!isAuthenticated) {
       toast({
         variant: "destructive",
-        title: "Login Required",
-        description: "Please login to message this shop",
+        title: t("Login Required"),
+        description: t("Please login to message this shop"),
       });
       router.push(`/auth/login?redirect=/shops/${shopId}`);
       return;
@@ -404,8 +407,8 @@ export default function ShopDetailPage() {
     if (user?.role !== "CUSTOMER") {
       toast({
         variant: "destructive",
-        title: "Not Allowed",
-        description: "Only customers can initiate conversations with shops",
+        title: t("Not Allowed"),
+        description: t("Only customers can initiate conversations with shops"),
       });
       return;
     }
@@ -423,9 +426,9 @@ export default function ShopDetailPage() {
       }
       toast({
         variant: "destructive",
-        title: "Error",
+        title: t("Error"),
         description:
-          err.response?.data?.message || "Failed to start conversation",
+          err.response?.data?.message || t("Failed to start conversation"),
       });
     } finally {
       setStartingChat(false);
@@ -439,7 +442,7 @@ export default function ShopDetailPage() {
         <main className="flex-1 flex items-center justify-center">
           <div className="flex items-center gap-2">
             <Loader2 className="h-6 w-6 animate-spin" />
-            <span>Loading shop details...</span>
+            <span><T>Loading shop details...</T></span>
           </div>
         </main>
         <DynamicFooter />
@@ -455,14 +458,14 @@ export default function ShopDetailPage() {
           <Card className="max-w-md mx-auto">
             <CardContent className="pt-6 text-center">
               <BuildingStorefrontIcon className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h2 className="text-xl font-semibold mb-2">Shop Not Found</h2>
+              <h2 className="text-xl font-semibold mb-2"><T>Shop Not Found</T></h2>
               <p className="text-muted-foreground mb-4">
                 {error ||
-                  "The shop you are looking for does not exist or has been removed."}
+                  t("The shop you are looking for does not exist or has been removed.")}
               </p>
               <Button onClick={() => router.push("/shops")}>
                 <ChevronLeftIcon className="h-4 w-4 mr-2" />
-                Browse All Shops
+                <T>Browse All Shops</T>
               </Button>
             </CardContent>
           </Card>
@@ -486,7 +489,7 @@ export default function ShopDetailPage() {
               <div className="flex items-center gap-2">
                 <BuildingStorefrontIcon className="h-5 w-5" />
                 <span className="font-medium">
-                  You are viewing your own shop
+                  <T>You are viewing your own shop</T>
                 </span>
               </div>
               <Button
@@ -494,7 +497,7 @@ export default function ShopDetailPage() {
                 size="sm"
                 onClick={() => router.push("/dashboard/shop")}
               >
-                Go to Dashboard
+                <T>Go to Dashboard</T>
               </Button>
             </div>
           </div>
@@ -523,7 +526,7 @@ export default function ShopDetailPage() {
               onClick={() => router.push("/shops")}
             >
               <ChevronLeftIcon className="h-4 w-4 mr-1" />
-              All Shops
+              <T>All Shops</T>
             </Button>
 
             <div className="flex flex-col md:flex-row md:items-end gap-6">
@@ -548,7 +551,7 @@ export default function ShopDetailPage() {
                   {shop.isVerified && (
                     <Badge className="bg-green-500 text-white">
                       <CheckBadgeIcon className="h-4 w-4 mr-1" />
-                      Verified
+                      <T>Verified</T>
                     </Badge>
                   )}
                   {shop.sellerTier && shop.sellerTier !== "STANDARD" && (
@@ -586,7 +589,7 @@ export default function ShopDetailPage() {
                       </div>
                       <span className="ml-1">
                         {shop.averageRating.toFixed(1)} (
-                        {shop.totalRatings || 0} reviews)
+                        {shop.totalRatings || 0} {t("reviews")})
                       </span>
                     </div>
                   )}
@@ -604,21 +607,21 @@ export default function ShopDetailPage() {
                       className="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-amber-950 font-semibold shadow-lg hover:shadow-xl hover:from-amber-400 hover:via-yellow-300 hover:to-amber-400 border border-amber-300/50 transition-all duration-200"
                     >
                       <SparklesIcon className="h-5 w-5 mr-2" />
-                      Custom Order
+                      <T>Custom Order</T>
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-lg">
                     <DialogHeader>
-                      <DialogTitle>Create Custom Order</DialogTitle>
+                      <DialogTitle><T>Create Custom Order</T></DialogTitle>
                       <DialogDescription>
-                        Request a custom jewellery piece from {shop.shopName}
+                        {t("Request a custom jewellery piece from")} {shop.shopName}
                       </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label>Jewellery Type *</Label>
+                          <Label><T>Jewellery Type *</T></Label>
                           <Select
                             value={customOrderForm.jewelleryType}
                             onValueChange={(v) =>
@@ -629,7 +632,7 @@ export default function ShopDetailPage() {
                             }
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Select type" />
+                              <SelectValue placeholder={t("Select type")} />
                             </SelectTrigger>
                             <SelectContent>
                               {JEWELLERY_TYPES.map((type) => (
@@ -642,7 +645,7 @@ export default function ShopDetailPage() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label>Metal Type</Label>
+                          <Label><T>Metal Type</T></Label>
                           <Select
                             value={customOrderForm.metalType}
                             onValueChange={(v) =>
@@ -656,9 +659,9 @@ export default function ShopDetailPage() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="GOLD">Gold</SelectItem>
-                              <SelectItem value="SILVER">Silver</SelectItem>
-                              <SelectItem value="PLATINUM">Platinum</SelectItem>
+                              <SelectItem value="GOLD"><T>Gold</T></SelectItem>
+                              <SelectItem value="SILVER"><T>Silver</T></SelectItem>
+                              <SelectItem value="PLATINUM"><T>Platinum</T></SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -666,7 +669,7 @@ export default function ShopDetailPage() {
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label>Purity</Label>
+                          <Label><T>Purity</T></Label>
                           <Select
                             value={customOrderForm.purity}
                             onValueChange={(v) =>
@@ -680,17 +683,17 @@ export default function ShopDetailPage() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="24K">24K (Pure)</SelectItem>
+                              <SelectItem value="24K"><T>24K (Pure)</T></SelectItem>
                               <SelectItem value="22K">22K</SelectItem>
                               <SelectItem value="18K">18K</SelectItem>
                               <SelectItem value="14K">14K</SelectItem>
-                              <SelectItem value="925">925 Sterling</SelectItem>
+                              <SelectItem value="925"><T>925 Sterling</T></SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
 
                         <div className="space-y-2">
-                          <Label>Approx. Weight (grams) *</Label>
+                          <Label><T>Approx. Weight (grams) *</T></Label>
                           <Input
                             type="number"
                             step="0.01"
@@ -707,7 +710,7 @@ export default function ShopDetailPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Description & Requirements</Label>
+                        <Label><T>Description & Requirements</T></Label>
                         <Textarea
                           value={customOrderForm.description}
                           onChange={(e) =>
@@ -716,7 +719,7 @@ export default function ShopDetailPage() {
                               description: e.target.value,
                             })
                           }
-                          placeholder="Describe your design requirements, preferences, etc."
+                          placeholder={t("Describe your design requirements, preferences, etc.")}
                           rows={4}
                         />
                       </div>
@@ -727,7 +730,7 @@ export default function ShopDetailPage() {
                         variant="outline"
                         onClick={() => setCustomOrderOpen(false)}
                       >
-                        Cancel
+                        <T>Cancel</T>
                       </Button>
                       <Button
                         onClick={handleCustomOrder}
@@ -736,12 +739,12 @@ export default function ShopDetailPage() {
                         {submittingOrder ? (
                           <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Submitting...
+                            <T>Submitting...</T>
                           </>
                         ) : (
                           <>
                             <SparklesIcon className="h-4 w-4 mr-2" />
-                            Submit Request
+                            <T>Submit Request</T>
                           </>
                         )}
                       </Button>
@@ -763,7 +766,7 @@ export default function ShopDetailPage() {
                     ) : (
                       <ChatBubbleLeftRightIcon className="h-5 w-5 mr-2" />
                     )}
-                    Message Shop
+                    <T>Message Shop</T>
                   </Button>
                 )}
 
@@ -775,7 +778,7 @@ export default function ShopDetailPage() {
                       className="bg-white dark:bg-gray-900/10 border-white/30 text-white hover:bg-white dark:bg-gray-900/20"
                     >
                       <PhoneIcon className="h-5 w-5 mr-2" />
-                      Call Now
+                      <T>Call Now</T>
                     </Button>
                   </a>
                 )}
@@ -793,10 +796,10 @@ export default function ShopDetailPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Package className="h-5 w-5" />
-                    Available Products
+                    <T>Available Products</T>
                   </CardTitle>
                   <CardDescription>
-                    Ready-to-buy jewellery items from this shop
+                    <T>Ready-to-buy jewellery items from this shop</T>
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -807,9 +810,9 @@ export default function ShopDetailPage() {
                   ) : products.length === 0 ? (
                     <div className="text-center py-12 text-muted-foreground">
                       <ShoppingBag className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No products available at the moment</p>
+                      <p><T>No products available at the moment</T></p>
                       <p className="text-sm mt-2">
-                        Try placing a custom order instead!
+                        <T>Try placing a custom order instead!</T>
                       </p>
                     </div>
                   ) : (
@@ -900,7 +903,7 @@ export default function ShopDetailPage() {
                                   variant="secondary"
                                   disabled
                                 >
-                                  Your Product
+                                <T>Your Product</T>
                                 </Button>
                               ) : (
                                 <Button
@@ -909,7 +912,7 @@ export default function ShopDetailPage() {
                                   disabled={product.stockQuantity <= 0}
                                 >
                                   <ShoppingCartIcon className="h-4 w-4 mr-2" />
-                                  Add to Cart
+                                  <T>Add to Cart</T>
                                 </Button>
                               )}
                             </div>
@@ -925,7 +928,7 @@ export default function ShopDetailPage() {
               {shop.about && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>About Us</CardTitle>
+                    <CardTitle><T>About Us</T></CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-muted-foreground whitespace-pre-line">
@@ -982,7 +985,7 @@ export default function ShopDetailPage() {
                             {review.sellerReply && (
                               <div className="mt-3 ml-4 pl-4 border-l-2 border-amber-200 bg-amber-50/50 rounded-r-lg p-3">
                                 <p className="text-xs font-medium text-amber-700 mb-1">
-                                  Seller Reply
+                                  <T>Seller Reply</T>
                                 </p>
                                 <p className="text-sm text-amber-900">
                                   {review.sellerReply}
@@ -1009,13 +1012,13 @@ export default function ShopDetailPage() {
               {/* Contact Info */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Shop Information</CardTitle>
+                  <CardTitle><T>Shop Information</T></CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-start gap-3">
                     <MapPinIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
-                      <p className="font-medium">Location</p>
+                      <p className="font-medium"><T>Location</T></p>
                       <p className="text-sm text-muted-foreground">
                         {shop.city}
                         {shop.state && `, ${shop.state}`}
@@ -1032,7 +1035,7 @@ export default function ShopDetailPage() {
                     <div className="flex items-start gap-3">
                       <PhoneIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                       <div>
-                        <p className="font-medium">Phone</p>
+                        <p className="font-medium"><T>Phone</T></p>
                         <a
                           href={`tel:${shop.contactPhone}`}
                           className="text-sm text-amber-600 hover:underline"
@@ -1047,7 +1050,7 @@ export default function ShopDetailPage() {
                     <div className="flex items-start gap-3">
                       <EnvelopeIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                       <div>
-                        <p className="font-medium">Email</p>
+                        <p className="font-medium"><T>Email</T></p>
                         <a
                           href={`mailto:${shop.contactEmail}`}
                           className="text-sm text-amber-600 hover:underline"
@@ -1062,7 +1065,7 @@ export default function ShopDetailPage() {
                   {!isShopOwner && (
                     <div className="bg-amber-50 rounded-lg p-3 text-center space-y-2">
                       <p className="text-sm text-muted-foreground">
-                        Have questions? Message this shop directly.
+                        <T>Have questions? Message this shop directly.</T>
                       </p>
                       <Button
                         size="sm"
@@ -1075,7 +1078,7 @@ export default function ShopDetailPage() {
                         ) : (
                           <ChatBubbleLeftRightIcon className="h-4 w-4 mr-2" />
                         )}
-                        Message Shop
+                        <T>Message Shop</T>
                       </Button>
                     </div>
                   )}
@@ -1084,14 +1087,14 @@ export default function ShopDetailPage() {
                     <div className="flex items-start gap-3">
                       <GlobeAltIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                       <div>
-                        <p className="font-medium">Website</p>
+                        <p className="font-medium"><T>Website</T></p>
                         <a
                           href={shop.websiteUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-sm text-amber-600 hover:underline"
                         >
-                          Visit Website
+                          <T>Visit Website</T>
                         </a>
                       </div>
                     </div>
@@ -1101,7 +1104,7 @@ export default function ShopDetailPage() {
                     <div className="flex items-start gap-3">
                       <ClockIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                       <div>
-                        <p className="font-medium">Business Hours</p>
+                        <p className="font-medium"><T>Business Hours</T></p>
                         <p className="text-sm text-muted-foreground">
                           {shop.businessHours}
                         </p>
@@ -1118,10 +1121,10 @@ export default function ShopDetailPage() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <TrendingUp className="h-5 w-5 text-amber-600" />
-                        Materials & Making Charges
+                        <T>Materials & Making Charges</T>
                       </CardTitle>
                       <p className="text-sm text-muted-foreground">
-                        Compare pricing per gram to find the best deal
+                        <T>Compare pricing per gram to find the best deal</T>
                       </p>
                     </CardHeader>
                     <CardContent>
@@ -1129,15 +1132,15 @@ export default function ShopDetailPage() {
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="border-b text-left">
-                              <th className="pb-2 font-medium">Material</th>
+                              <th className="pb-2 font-medium"><T>Material</T></th>
                               <th className="pb-2 font-medium text-right">
-                                Market Rate /g
+                                <T>Market Rate /g</T>
                               </th>
                               <th className="pb-2 font-medium text-right">
-                                Making Charge /g
+                                <T>Making Charge /g</T>
                               </th>
                               <th className="pb-2 font-medium text-right">
-                                Total /g
+                                <T>Total /g</T>
                               </th>
                             </tr>
                           </thead>
@@ -1212,11 +1215,11 @@ export default function ShopDetailPage() {
                       {shop.makingChargePercent !== undefined && (
                         <p className="mt-3 text-xs text-muted-foreground">
                           <DollarSign className="inline h-3 w-3 mr-1" />
-                          Default making charge rate:{" "}
+                          {t("Default making charge rate:")}{" "}
                           <span className="font-medium">
                             {shop.makingChargePercent}%
                           </span>{" "}
-                          of metal rate
+                          {t("of metal rate")}
                         </p>
                       )}
                     </CardContent>
@@ -1228,7 +1231,7 @@ export default function ShopDetailPage() {
                 shop.supportedJewelleryTypes.length > 0 && (
                   <Card>
                     <CardHeader>
-                      <CardTitle>Jewellery Types</CardTitle>
+                      <CardTitle><T>Jewellery Types</T></CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-wrap gap-2">

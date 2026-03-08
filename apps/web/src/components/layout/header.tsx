@@ -1196,7 +1196,7 @@ export function Header() {
                     </Link>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Dashboard</p>
+                    <p>{t("Dashboard")}</p>
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -1440,7 +1440,7 @@ export function Header() {
                                     )}
                                   </div>
                                   <p className="text-xs text-muted-foreground truncate mt-0.5">
-                                    {conv.lastMessage || "No messages yet"}
+                                    {conv.lastMessage || t("No messages yet")}
                                   </p>
                                   {conv.lastMessageAt && (
                                     <p className="text-xs text-gray-400 mt-0.5">
@@ -1491,7 +1491,7 @@ export function Header() {
                     </PopoverTrigger>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Cart ({mounted ? itemCount : 0})</p>
+                    <p>{t("Cart")} ({mounted ? itemCount : 0})</p>
                   </TooltipContent>
                 </Tooltip>
                 <PopoverContent className="w-80 p-0" align="end">
