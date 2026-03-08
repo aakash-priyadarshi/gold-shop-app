@@ -1,3 +1,6 @@
+"use client";
+
+import { T } from "@/components/ui/T";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { BRAND } from "@/config/brand";
@@ -408,40 +411,31 @@ export default function JewelleryShopSoftwarePage() {
           <div className="relative max-w-5xl mx-auto px-4 text-center">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-sm font-medium mb-6">
               <Zap className="h-4 w-4" />
-              Free Plan Available — No Credit Card Required
+              <T>Free Plan Available — No Credit Card Required</T>
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-tight">
-              The Best{" "}
-              <span className="text-amber-600 dark:text-amber-400">
-                Jewellery Shop Software
-              </span>{" "}
-              for Gold, Silver & Diamond Businesses
+              <T>The Best Jewellery Shop Software for Gold, Silver and Diamond Businesses</T>
             </h1>
             <p className="mt-6 text-lg lg:text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto leading-relaxed">
-              Free cloud-based software to manage your jewellery shop —
-              inventory by weight &amp; purity, billing, digital catalogues,
-              customer chat, and analytics. Trusted by{" "}
-              <strong>2,000+ jewellers</strong> across Nepal, India, Dubai, USA
-              &amp; UK. Better than Zoho, Marg ERP &amp; Vyapar — and it starts{" "}
-              <strong>free</strong>.
+              <T>Free cloud-based software to manage your jewellery shop — inventory by weight and purity, billing, digital catalogues, customer chat, and analytics. Trusted by 2,000+ jewellers across Nepal, India, Dubai, USA and UK. Better than Zoho, Marg ERP and Vyapar — and it starts free.</T>
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Link
                 href="/auth/register"
                 className="inline-flex items-center gap-2 px-8 py-3.5 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-semibold text-lg transition-colors shadow-lg shadow-amber-500/25"
               >
-                Start Free — No Credit Card
+                <T>Start Free — No Credit Card</T>
                 <ArrowRight className="h-5 w-5" />
               </Link>
               <Link
                 href="/pricing"
                 className="inline-flex items-center gap-2 px-8 py-3.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-full font-semibold text-lg border border-gray-200 dark:border-gray-700 hover:border-amber-300 dark:hover:border-amber-600 transition-colors"
               >
-                View Pricing Plans
+                <T>View Pricing Plans</T>
               </Link>
             </div>
             <p className="mt-4 text-sm text-gray-500">
-              No setup fees · No contracts · Cancel anytime
+              <T>No setup fees · No contracts · Cancel anytime</T>
             </p>
           </div>
         </section>
@@ -455,7 +449,7 @@ export default function JewelleryShopSoftwarePage() {
                   {s.value}
                 </div>
                 <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  {s.label}
+                  <T>{s.label}</T>
                 </div>
               </div>
             ))}
@@ -466,11 +460,10 @@ export default function JewelleryShopSoftwarePage() {
         <section className="max-w-6xl mx-auto px-4 py-20">
           <div className="text-center mb-14">
             <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white">
-              Everything Your Jewellery Shop Needs
+              <T>Everything Your Jewellery Shop Needs</T>
             </h2>
             <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Comprehensive jewellery shop management software with features
-              designed specifically for gold, silver, and diamond businesses
+              <T>Comprehensive jewellery shop management software with features designed specifically for gold, silver, and diamond businesses</T>
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -483,10 +476,10 @@ export default function JewelleryShopSoftwarePage() {
                   <f.icon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {f.title}
+                  <T>{f.title}</T>
                 </h3>
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {f.desc}
+                  <T>{f.desc}</T>
                 </p>
               </div>
             ))}
@@ -498,11 +491,10 @@ export default function JewelleryShopSoftwarePage() {
           <div className="max-w-6xl mx-auto px-4 py-20">
             <div className="text-center mb-14">
               <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white">
-                Orivraa vs Other Jewellery Software
+                <T>Orivraa vs Other Jewellery Software</T>
               </h2>
               <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                See how Orivraa compares to Zoho, Marg ERP, and Vyapar for
-                jewellery shop management
+                <T>See how Orivraa compares to Zoho, Marg ERP, and Vyapar for jewellery shop management</T>
               </p>
             </div>
             <div className="overflow-x-auto">
@@ -510,7 +502,7 @@ export default function JewelleryShopSoftwarePage() {
                 <thead>
                   <tr className="border-b-2 border-gray-200 dark:border-gray-700">
                     <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-white">
-                      Feature
+                      <T>Feature</T>
                     </th>
                     <th className="text-center py-4 px-4 font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/10 rounded-t-lg min-w-[140px]">
                       <div className="flex items-center justify-center gap-1">
@@ -538,19 +530,19 @@ export default function JewelleryShopSoftwarePage() {
                       }`}
                     >
                       <td className="py-3 px-4 font-medium text-gray-900 dark:text-white">
-                        {row.feature}
+                        <T>{row.feature}</T>
                       </td>
                       <td className="py-3 px-4 text-center bg-amber-50/50 dark:bg-amber-900/5 font-medium text-gray-900 dark:text-white">
-                        {row.orivraa}
+                        <T>{row.orivraa}</T>
                       </td>
                       <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">
-                        {row.zoho}
+                        <T>{row.zoho}</T>
                       </td>
                       <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">
-                        {row.marg}
+                        <T>{row.marg}</T>
                       </td>
                       <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">
-                        {row.vyapar}
+                        <T>{row.vyapar}</T>
                       </td>
                     </tr>
                   ))}
@@ -562,7 +554,7 @@ export default function JewelleryShopSoftwarePage() {
                 href="/pricing"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-semibold transition-colors shadow-lg shadow-amber-500/25"
               >
-                See Full Pricing Details
+                <T>See Full Pricing Details</T>
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
@@ -573,11 +565,10 @@ export default function JewelleryShopSoftwarePage() {
         <section className="max-w-6xl mx-auto px-4 py-20">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Built for Every Type of Jewellery Business
+              <T>Built for Every Type of Jewellery Business</T>
             </h2>
             <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-              Whether you&apos;re a retail shop, wholesale dealer, or custom
-              designer — Orivraa adapts to your workflow
+              <T>Whether you are a retail shop, wholesale dealer, or custom designer — Orivraa adapts to your workflow</T>
             </p>
           </div>
           <div className="grid sm:grid-cols-2 gap-6">
@@ -591,10 +582,10 @@ export default function JewelleryShopSoftwarePage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {uc.title}
+                    <T>{uc.title}</T>
                   </h3>
                   <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {uc.desc}
+                    <T>{uc.desc}</T>
                   </p>
                 </div>
               </div>
@@ -606,7 +597,7 @@ export default function JewelleryShopSoftwarePage() {
         <section className="bg-gradient-to-r from-amber-500 to-amber-600 dark:from-amber-600 dark:to-amber-700">
           <div className="max-w-5xl mx-auto px-4 py-16">
             <h2 className="text-2xl lg:text-3xl font-bold text-white text-center mb-10">
-              Get Started in Under 5 Minutes
+              <T>Get Started in Under 5 Minutes</T>
             </h2>
             <div className="grid md:grid-cols-4 gap-8 text-center">
               {[
@@ -635,8 +626,8 @@ export default function JewelleryShopSoftwarePage() {
                   <div className="w-10 h-10 rounded-full bg-white/20 text-white font-bold flex items-center justify-center mx-auto mb-3 text-lg">
                     {s.step}
                   </div>
-                  <h3 className="text-white font-semibold">{s.title}</h3>
-                  <p className="text-amber-100 text-sm mt-1">{s.desc}</p>
+                  <h3 className="text-white font-semibold"><T>{s.title}</T></h3>
+                  <p className="text-amber-100 text-sm mt-1"><T>{s.desc}</T></p>
                 </div>
               ))}
             </div>
@@ -647,7 +638,7 @@ export default function JewelleryShopSoftwarePage() {
         <section className="max-w-5xl mx-auto px-4 py-20">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Why 2,000+ Jewellers Choose Orivraa
+              <T>Why 2,000+ Jewellers Choose Orivraa</T>
             </h2>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -707,7 +698,7 @@ export default function JewelleryShopSoftwarePage() {
               >
                 <item.icon className="h-5 w-5 text-amber-500 flex-shrink-0" />
                 <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  {item.text}
+                  <T>{item.text}</T>
                 </span>
               </div>
             ))}
@@ -719,7 +710,7 @@ export default function JewelleryShopSoftwarePage() {
           <div className="max-w-3xl mx-auto px-4 py-20">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Frequently Asked Questions About Jewellery Shop Software
+                <T>Frequently Asked Questions About Jewellery Shop Software</T>
               </h2>
             </div>
             <div className="space-y-3">
@@ -730,13 +721,13 @@ export default function JewelleryShopSoftwarePage() {
                   {...(i === 0 ? { open: true } : {})}
                 >
                   <summary className="flex items-center justify-between cursor-pointer px-6 py-4 font-medium text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors list-none [&::-webkit-details-marker]:hidden">
-                    {faq.q}
+                    <T>{faq.q}</T>
                     <span className="ml-4 text-gray-400 group-open:rotate-180 transition-transform">
                       ▾
                     </span>
                   </summary>
                   <div className="px-6 pb-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {faq.a}
+                    <T>{faq.a}</T>
                   </div>
                 </details>
               ))}
@@ -749,31 +740,28 @@ export default function JewelleryShopSoftwarePage() {
           <div className="p-10 lg:p-14 rounded-3xl bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 border border-gray-700">
             <Store className="h-12 w-12 text-amber-400 mx-auto mb-4" />
             <h2 className="text-2xl lg:text-3xl font-bold text-white">
-              Ready to Modernise Your Jewellery Shop?
+              <T>Ready to Modernise Your Jewellery Shop?</T>
             </h2>
             <p className="mt-3 text-gray-400 max-w-lg mx-auto">
-              Join 2,000+ jewellers using {BRAND.name} to manage inventory,
-              reach buyers, and grow sales. Free to start — no credit card, no
-              contracts.
+              <T>Join 2,000+ jewellers using Orivraa to manage inventory, reach buyers, and grow sales. Free to start — no credit card, no contracts.</T>
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Link
                 href="/auth/register"
                 className="inline-flex items-center gap-2 px-8 py-3.5 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-semibold text-lg transition-colors shadow-lg shadow-amber-500/25"
               >
-                Start Free Today
+                <T>Start Free Today</T>
                 <ArrowRight className="h-5 w-5" />
               </Link>
               <Link
                 href="/seller-guide"
                 className="inline-flex items-center gap-2 px-8 py-3.5 text-white rounded-full font-semibold border border-gray-600 hover:border-amber-500 transition-colors"
               >
-                Read Seller Guide
+                <T>Read Seller Guide</T>
               </Link>
             </div>
             <p className="mt-4 text-xs text-gray-500">
-              Free plan includes: 15 products · Marketplace listing · Customer
-              chat · Digital catalogues · Analytics
+              <T>Free plan includes: 15 products · Marketplace listing · Customer chat · Digital catalogues · Analytics</T>
             </p>
           </div>
         </section>
