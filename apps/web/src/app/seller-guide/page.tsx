@@ -1,5 +1,8 @@
+"use client";
+
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
 import {
   ArrowRight,
@@ -161,32 +164,30 @@ export default function SellerGuidePage() {
           <div className="relative max-w-4xl mx-auto px-4 text-center">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-sm font-medium mb-6">
               <Store className="h-4 w-4" />
-              Seller Guide
+              <T>Seller Guide</T>
             </div>
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white tracking-tight">
-              Start Selling Jewellery on{" "}
+              <T>Start Selling Jewellery on</T>{" "}
               <span className="text-amber-600 dark:text-amber-400">
                 {BRAND.name}
               </span>
             </h1>
             <p className="mt-6 text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
-              Everything you need to launch and grow your jewellery business
-              online. From registration to your first sale — this guide walks
-              you through every step.
+              <T>Everything you need to launch and grow your jewellery business online. From registration to your first sale — this guide walks you through every step.</T>
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Link
                 href="/auth/register"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-semibold transition-colors shadow-lg shadow-amber-500/25"
               >
-                Register Your Shop
+                <T>Register Your Shop</T>
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/pricing"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-full font-semibold border border-gray-200 dark:border-gray-700 hover:border-amber-300 dark:hover:border-amber-600 transition-colors"
               >
-                View Pricing Plans
+                <T>View Pricing Plans</T>
               </Link>
             </div>
           </div>
@@ -196,10 +197,10 @@ export default function SellerGuidePage() {
         <section className="max-w-6xl mx-auto px-4 py-20">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-              How It Works
+              <T>How It Works</T>
             </h2>
             <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-              Go from sign-up to your first sale in four simple steps
+              <T>Go from sign-up to your first sale in four simple steps</T>
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -213,10 +214,10 @@ export default function SellerGuidePage() {
                     Step {s.step}
                   </span>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {s.title}
+                    <T>{s.title}</T>
                   </h3>
                   <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {s.desc}
+                    <T>{s.desc}</T>
                   </p>
                 </div>
               </div>
@@ -229,11 +230,10 @@ export default function SellerGuidePage() {
           <div className="max-w-6xl mx-auto px-4 py-20">
             <div className="text-center mb-14">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Powerful Tools for Sellers
+                <T>Powerful Tools for Sellers</T>
               </h2>
               <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-                Everything you need to manage and grow your jewellery business —
-                all in one dashboard
+                <T>Everything you need to manage and grow your jewellery business — all in one dashboard</T>
               </p>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -246,10 +246,10 @@ export default function SellerGuidePage() {
                     <f.icon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                   </div>
                   <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                    {f.title}
+                    <T>{f.title}</T>
                   </h3>
                   <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {f.desc}
+                    <T>{f.desc}</T>
                   </p>
                 </div>
               ))}
@@ -261,11 +261,10 @@ export default function SellerGuidePage() {
         <section className="max-w-6xl mx-auto px-4 py-20">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Tips for Success
+              <T>Tips for Success</T>
             </h2>
             <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-              Follow these best practices to maximize your sales and build a
-              thriving jewellery business
+              <T>Follow these best practices to maximize your sales and build a thriving jewellery business</T>
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -279,10 +278,10 @@ export default function SellerGuidePage() {
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {t.title}
+                    <T>{t.title}</T>
                   </h3>
                   <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {t.desc}
+                    <T>{t.desc}</T>
                   </p>
                 </div>
               </div>
@@ -294,18 +293,16 @@ export default function SellerGuidePage() {
         <section className="bg-gradient-to-r from-amber-500 to-amber-600 dark:from-amber-600 dark:to-amber-700">
           <div className="max-w-4xl mx-auto px-4 py-14 text-center">
             <h2 className="text-2xl font-bold text-white">
-              Flexible Plans for Every Stage
+              <T>Flexible Plans for Every Stage</T>
             </h2>
             <p className="mt-3 text-amber-100 max-w-2xl mx-auto">
-              Start free with up to 15 product listings. Upgrade to Pro for
-              unlimited products, AI tools, priority listing, and dedicated
-              support. Enterprise plans available for large operations.
+              <T>Start free with up to 15 product listings. Upgrade to Pro for unlimited products, AI tools, priority listing, and dedicated support. Enterprise plans available for large operations.</T>
             </p>
             <Link
               href="/pricing"
               className="inline-flex items-center gap-2 mt-6 px-6 py-3 bg-white text-amber-600 rounded-full font-semibold hover:bg-amber-50 transition-colors"
             >
-              Compare Plans & Pricing
+                <T>Compare Plans & Pricing</T>
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -315,7 +312,7 @@ export default function SellerGuidePage() {
         <section className="max-w-3xl mx-auto px-4 py-20">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Frequently Asked Questions
+              <T>Frequently Asked Questions</T>
             </h2>
           </div>
           <div className="space-y-3">
@@ -325,13 +322,13 @@ export default function SellerGuidePage() {
                 className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden"
               >
                 <summary className="flex items-center justify-between cursor-pointer px-6 py-4 font-medium text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors list-none [&::-webkit-details-marker]:hidden">
-                  {faq.q}
+                  <T>{faq.q}</T>
                   <span className="ml-4 text-gray-400 group-open:rotate-180 transition-transform">
                     ▾
                   </span>
                 </summary>
                 <div className="px-6 pb-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {faq.a}
+                  <T>{faq.a}</T>
                 </div>
               </details>
             ))}
@@ -343,25 +340,24 @@ export default function SellerGuidePage() {
           <div className="p-10 rounded-3xl bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 border border-gray-700">
             <CheckCircle2 className="h-10 w-10 text-amber-400 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-white">
-              Ready to Grow Your Jewellery Business?
+              <T>Ready to Grow Your Jewellery Business?</T>
             </h2>
             <p className="mt-3 text-gray-400 max-w-lg mx-auto">
-              Join thousands of jewellers selling on {BRAND.name}. Free to
-              start, no contracts, cancel anytime.
+              <T>Join thousands of jewellers selling on {BRAND.name}. Free to start, no contracts, cancel anytime.</T>
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Link
                 href="/auth/register"
                 className="inline-flex items-center gap-2 px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-semibold transition-colors shadow-lg shadow-amber-500/25"
               >
-                Start Selling Today
+                <T>Start Selling Today</T>
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/partner"
                 className="inline-flex items-center gap-2 px-8 py-3 text-white rounded-full font-semibold border border-gray-600 hover:border-amber-500 transition-colors"
               >
-                Become a Partner
+                <T>Become a Partner</T>
               </Link>
             </div>
           </div>
