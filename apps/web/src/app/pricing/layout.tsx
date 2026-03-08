@@ -23,7 +23,8 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/pricing" },
   openGraph: {
-    title: "Orivraa Pricing — Free Jewellery Shop Software | Plans from $0/month",
+    title:
+      "Orivraa Pricing — Free Jewellery Shop Software | Plans from $0/month",
     description:
       "Compare Orivraa plans: Free ($0), Pro ($12.99/mo), Pro+ ($24.99/mo), Enterprise. Full jewellery shop management with inventory, billing, AI tools & marketplace. Start free today.",
     url: "https://www.orivraa.com/pricing",

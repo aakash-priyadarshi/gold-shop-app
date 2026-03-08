@@ -5,7 +5,6 @@ import {
   ArrowRight,
   BarChart3,
   BookOpen,
-  Check,
   Cloud,
   Crown,
   Globe,
@@ -16,11 +15,9 @@ import {
   Palette,
   Receipt,
   Scale,
-  Search,
   ShieldCheck,
   Smartphone,
   Sparkles,
-  Star,
   Store,
   TrendingUp,
   Users,
@@ -537,9 +534,7 @@ export default function JewelleryShopSoftwarePage() {
                     <tr
                       key={row.feature}
                       className={`border-b border-gray-100 dark:border-gray-800 ${
-                        i % 2 === 0
-                          ? "bg-gray-50/50 dark:bg-gray-900/50"
-                          : ""
+                        i % 2 === 0 ? "bg-gray-50/50 dark:bg-gray-900/50" : ""
                       }`}
                     >
                       <td className="py-3 px-4 font-medium text-gray-900 dark:text-white">

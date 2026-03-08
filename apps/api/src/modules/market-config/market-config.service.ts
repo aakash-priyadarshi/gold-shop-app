@@ -1,126 +1,166 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { MarketRegion, CurrencyCode, WeightUnit, PaymentMethod } from '@prisma/client';
-import { UpdateMarketConfigDto } from './dto/update-market-config.dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  CurrencyCode,
+  MarketRegion,
+  PaymentMethod,
+  WeightUnit,
+} from "@prisma/client";
+import { PrismaService } from "../../prisma/prisma.service";
+import { UpdateMarketConfigDto } from "./dto/update-market-config.dto";
 
 // Default market configurations
-const DEFAULT_CONFIGS: Record<string, {
-  countryName: string;
-  defaultCurrency: CurrencyCode;
-  supportedCurrencies: CurrencyCode[];
-  defaultWeightUnit: WeightUnit;
-  supportedWeightUnits: WeightUnit[];
-  supportedPaymentMethods: PaymentMethod[];
-  heroHeadline: string;
-  heroSubheadline: string;
-  contactEmail: string;
-  contactPhone: string;
-  contactAddress: string;
-  taxPercentage: number;
-  taxName: string;
-  priceMultiplier: number;
-  codEnabled: boolean;
-}> = {
+const DEFAULT_CONFIGS: Record<
+  string,
+  {
+    countryName: string;
+    defaultCurrency: CurrencyCode;
+    supportedCurrencies: CurrencyCode[];
+    defaultWeightUnit: WeightUnit;
+    supportedWeightUnits: WeightUnit[];
+    supportedPaymentMethods: PaymentMethod[];
+    heroHeadline: string;
+    heroSubheadline: string;
+    contactEmail: string;
+    contactPhone: string;
+    contactAddress: string;
+    taxPercentage: number;
+    taxName: string;
+    priceMultiplier: number;
+    codEnabled: boolean;
+  }
+> = {
   NP: {
-    countryName: 'Nepal',
-    defaultCurrency: 'NPR',
-    supportedCurrencies: ['NPR', 'USD', 'INR'],
-    defaultWeightUnit: 'TOLA',
-    supportedWeightUnits: ['GRAM', 'TOLA', 'LAAL'],
-    supportedPaymentMethods: ['CARD', 'BANK_TRANSFER', 'CASH', 'ESEWA', 'KHALTI', 'CONNECTIPS', 'PAID_AT_SHOP'],
+    countryName: "Nepal",
+    defaultCurrency: "NPR",
+    supportedCurrencies: ["NPR", "USD", "INR"],
+    defaultWeightUnit: "TOLA",
+    supportedWeightUnits: ["GRAM", "TOLA", "LAAL"],
+    supportedPaymentMethods: [
+      "CARD",
+      "BANK_TRANSFER",
+      "CASH",
+      "ESEWA",
+      "KHALTI",
+      "CONNECTIPS",
+      "PAID_AT_SHOP",
+    ],
     heroHeadline: "Nepal's No.1 Jewellery Marketplace",
-    heroSubheadline: 'Trusted by thousands of customers across Nepal',
-    contactEmail: 'nepal@orivraa.com',
-    contactPhone: '+977-1-4XXXXXX',
-    contactAddress: 'Kathmandu, Nepal',
+    heroSubheadline: "Trusted by thousands of customers across Nepal",
+    contactEmail: "nepal@orivraa.com",
+    contactPhone: "+977-1-4XXXXXX",
+    contactAddress: "Kathmandu, Nepal",
     taxPercentage: 13,
-    taxName: 'VAT',
+    taxName: "VAT",
     priceMultiplier: 1.245,
     codEnabled: true,
   },
   IN: {
-    countryName: 'India',
-    defaultCurrency: 'INR',
-    supportedCurrencies: ['INR', 'USD'],
-    defaultWeightUnit: 'GRAM',
-    supportedWeightUnits: ['GRAM', 'KILOGRAM', 'TOLA'],
-    supportedPaymentMethods: ['CARD', 'BANK_TRANSFER', 'CASH', 'UPI', 'PAID_AT_SHOP'],
+    countryName: "India",
+    defaultCurrency: "INR",
+    supportedCurrencies: ["INR", "USD"],
+    defaultWeightUnit: "GRAM",
+    supportedWeightUnits: ["GRAM", "KILOGRAM", "TOLA"],
+    supportedPaymentMethods: [
+      "CARD",
+      "BANK_TRANSFER",
+      "CASH",
+      "UPI",
+      "PAID_AT_SHOP",
+    ],
     heroHeadline: "India's Premium Jewellery Destination",
-    heroSubheadline: 'Exquisite craftsmanship, timeless elegance',
-    contactEmail: 'india@orivraa.com',
-    contactPhone: '+91-XXXXXXXXXX',
-    contactAddress: 'Mumbai, India',
+    heroSubheadline: "Exquisite craftsmanship, timeless elegance",
+    contactEmail: "india@orivraa.com",
+    contactPhone: "+91-XXXXXXXXXX",
+    contactAddress: "Mumbai, India",
     taxPercentage: 3,
-    taxName: 'GST',
-    priceMultiplier: 1.100,
+    taxName: "GST",
+    priceMultiplier: 1.1,
     codEnabled: true,
   },
   US: {
-    countryName: 'United States',
-    defaultCurrency: 'USD',
-    supportedCurrencies: ['USD'],
-    defaultWeightUnit: 'OUNCE',
-    supportedWeightUnits: ['GRAM', 'OUNCE', 'POUND'],
-    supportedPaymentMethods: ['CARD', 'BANK_TRANSFER', 'PAYPAL', 'STRIPE', 'PAID_AT_SHOP'],
-    heroHeadline: 'Discover Authentic South Asian Jewellery',
-    heroSubheadline: 'Handcrafted pieces shipped worldwide',
-    contactEmail: 'usa@orivraa.com',
-    contactPhone: '+1-XXX-XXX-XXXX',
-    contactAddress: 'New York, USA',
+    countryName: "United States",
+    defaultCurrency: "USD",
+    supportedCurrencies: ["USD"],
+    defaultWeightUnit: "OUNCE",
+    supportedWeightUnits: ["GRAM", "OUNCE", "POUND"],
+    supportedPaymentMethods: [
+      "CARD",
+      "BANK_TRANSFER",
+      "PAYPAL",
+      "STRIPE",
+      "PAID_AT_SHOP",
+    ],
+    heroHeadline: "Discover Authentic South Asian Jewellery",
+    heroSubheadline: "Handcrafted pieces shipped worldwide",
+    contactEmail: "usa@orivraa.com",
+    contactPhone: "+1-XXX-XXX-XXXX",
+    contactAddress: "New York, USA",
     taxPercentage: 0,
-    taxName: 'Sales Tax',
-    priceMultiplier: 1.000,
+    taxName: "Sales Tax",
+    priceMultiplier: 1.0,
     codEnabled: false,
   },
   UK: {
-    countryName: 'United Kingdom',
-    defaultCurrency: 'GBP',
-    supportedCurrencies: ['GBP', 'USD', 'EUR'],
-    defaultWeightUnit: 'GRAM',
-    supportedWeightUnits: ['GRAM', 'KILOGRAM', 'OUNCE'],
-    supportedPaymentMethods: ['CARD', 'BANK_TRANSFER', 'PAYPAL', 'STRIPE', 'PAID_AT_SHOP'],
-    heroHeadline: 'Luxury Jewellery from the Himalayas',
-    heroSubheadline: 'Traditional artistry meets modern elegance',
-    contactEmail: 'uk@orivraa.com',
-    contactPhone: '+44-XXXX-XXXXXX',
-    contactAddress: 'London, United Kingdom',
+    countryName: "United Kingdom",
+    defaultCurrency: "GBP",
+    supportedCurrencies: ["GBP", "USD", "EUR"],
+    defaultWeightUnit: "GRAM",
+    supportedWeightUnits: ["GRAM", "KILOGRAM", "OUNCE"],
+    supportedPaymentMethods: [
+      "CARD",
+      "BANK_TRANSFER",
+      "PAYPAL",
+      "STRIPE",
+      "PAID_AT_SHOP",
+    ],
+    heroHeadline: "Luxury Jewellery from the Himalayas",
+    heroSubheadline: "Traditional artistry meets modern elegance",
+    contactEmail: "uk@orivraa.com",
+    contactPhone: "+44-XXXX-XXXXXX",
+    contactAddress: "London, United Kingdom",
     taxPercentage: 20,
-    taxName: 'VAT',
-    priceMultiplier: 1.010,
+    taxName: "VAT",
+    priceMultiplier: 1.01,
     codEnabled: false,
   },
   EU: {
-    countryName: 'Europe',
-    defaultCurrency: 'EUR',
-    supportedCurrencies: ['EUR', 'USD', 'GBP'],
-    defaultWeightUnit: 'GRAM',
-    supportedWeightUnits: ['GRAM', 'KILOGRAM'],
-    supportedPaymentMethods: ['CARD', 'BANK_TRANSFER', 'PAYPAL', 'STRIPE', 'PAID_AT_SHOP'],
-    heroHeadline: 'Authentic Asian Jewellery Collection',
-    heroSubheadline: 'Discover unique pieces from master artisans',
-    contactEmail: 'europe@orivraa.com',
-    contactPhone: '+49-XXX-XXXXXXX',
-    contactAddress: 'Berlin, Germany',
+    countryName: "Europe",
+    defaultCurrency: "EUR",
+    supportedCurrencies: ["EUR", "USD", "GBP"],
+    defaultWeightUnit: "GRAM",
+    supportedWeightUnits: ["GRAM", "KILOGRAM"],
+    supportedPaymentMethods: [
+      "CARD",
+      "BANK_TRANSFER",
+      "PAYPAL",
+      "STRIPE",
+      "PAID_AT_SHOP",
+    ],
+    heroHeadline: "Authentic Asian Jewellery Collection",
+    heroSubheadline: "Discover unique pieces from master artisans",
+    contactEmail: "europe@orivraa.com",
+    contactPhone: "+49-XXX-XXXXXXX",
+    contactAddress: "Berlin, Germany",
     taxPercentage: 19,
-    taxName: 'VAT',
-    priceMultiplier: 1.010,
+    taxName: "VAT",
+    priceMultiplier: 1.01,
     codEnabled: false,
   },
   AE: {
-    countryName: 'United Arab Emirates',
-    defaultCurrency: 'AED',
-    supportedCurrencies: ['AED', 'USD'],
-    defaultWeightUnit: 'GRAM',
-    supportedWeightUnits: ['GRAM', 'TOLA', 'OUNCE'],
-    supportedPaymentMethods: ['CARD', 'BANK_TRANSFER', 'CASH', 'PAID_AT_SHOP'],
-    heroHeadline: 'Premium Gold & Diamond Jewellery',
-    heroSubheadline: 'Experience luxury craftsmanship in Dubai',
-    contactEmail: 'dubai@orivraa.com',
-    contactPhone: '+971-X-XXXXXXX',
-    contactAddress: 'Dubai, UAE',
+    countryName: "United Arab Emirates",
+    defaultCurrency: "AED",
+    supportedCurrencies: ["AED", "USD"],
+    defaultWeightUnit: "GRAM",
+    supportedWeightUnits: ["GRAM", "TOLA", "OUNCE"],
+    supportedPaymentMethods: ["CARD", "BANK_TRANSFER", "CASH", "PAID_AT_SHOP"],
+    heroHeadline: "Premium Gold & Diamond Jewellery",
+    heroSubheadline: "Experience luxury craftsmanship in Dubai",
+    contactEmail: "dubai@orivraa.com",
+    contactPhone: "+971-X-XXXXXXX",
+    contactAddress: "Dubai, UAE",
     taxPercentage: 5,
-    taxName: 'VAT',
-    priceMultiplier: 1.020,
+    taxName: "VAT",
+    priceMultiplier: 1.02,
     codEnabled: true,
   },
 };
@@ -149,7 +189,10 @@ export class MarketConfigService {
     });
 
     if (dbConfig) {
-      this.configCache.set(countryCode, { data: dbConfig, timestamp: Date.now() });
+      this.configCache.set(countryCode, {
+        data: dbConfig,
+        timestamp: Date.now(),
+      });
       return dbConfig;
     }
 
@@ -167,12 +210,15 @@ export class MarketConfigService {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      this.configCache.set(countryCode, { data: result, timestamp: Date.now() });
+      this.configCache.set(countryCode, {
+        data: result,
+        timestamp: Date.now(),
+      });
       return result;
     }
 
     // If unsupported country, return US config
-    return this.getConfig('US');
+    return this.getConfig("US");
   }
 
   /**
@@ -180,49 +226,75 @@ export class MarketConfigService {
    */
   detectCountryFromHeaders(headers: Record<string, string>): string {
     // Vercel header
-    const vercelCountry = headers['x-vercel-ip-country'];
+    const vercelCountry = headers["x-vercel-ip-country"];
     if (vercelCountry) {
       return this.mapToSupportedMarket(vercelCountry);
     }
 
     // Cloudflare header
-    const cfCountry = headers['cf-ipcountry'];
+    const cfCountry = headers["cf-ipcountry"];
     if (cfCountry) {
       return this.mapToSupportedMarket(cfCountry);
     }
 
     // Default to US
-    return 'US';
+    return "US";
   }
 
   /**
    * Map any country code to a supported market
    */
   mapToSupportedMarket(countryCode: string): string {
-    const supportedMarkets = ['NP', 'IN', 'US', 'UK', 'EU', 'AE'];
-    
+    const supportedMarkets = ["NP", "IN", "US", "UK", "EU", "AE"];
+
     if (supportedMarkets.includes(countryCode)) {
       return countryCode;
     }
 
     // European countries → EU
     const europeanCountries = [
-      'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR',
-      'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL',
-      'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'CH', 'NO',
+      "AT",
+      "BE",
+      "BG",
+      "HR",
+      "CY",
+      "CZ",
+      "DK",
+      "EE",
+      "FI",
+      "FR",
+      "DE",
+      "GR",
+      "HU",
+      "IE",
+      "IT",
+      "LV",
+      "LT",
+      "LU",
+      "MT",
+      "NL",
+      "PL",
+      "PT",
+      "RO",
+      "SK",
+      "SI",
+      "ES",
+      "SE",
+      "CH",
+      "NO",
     ];
     if (europeanCountries.includes(countryCode)) {
-      return 'EU';
+      return "EU";
     }
 
     // Middle East → AE
-    const middleEastCountries = ['BH', 'KW', 'OM', 'QA', 'SA'];
+    const middleEastCountries = ["BH", "KW", "OM", "QA", "SA"];
     if (middleEastCountries.includes(countryCode)) {
-      return 'AE';
+      return "AE";
     }
 
     // Default fallback
-    return 'US';
+    return "US";
   }
 
   /**
@@ -230,15 +302,15 @@ export class MarketConfigService {
    */
   async getAllConfigs() {
     const dbConfigs = await this.prisma.marketConfig.findMany({
-      orderBy: { countryCode: 'asc' },
+      orderBy: { countryCode: "asc" },
     });
 
     // Merge with defaults for any missing configs
-    const allMarkets = ['NP', 'IN', 'US', 'UK', 'EU', 'AE'];
+    const allMarkets = ["NP", "IN", "US", "UK", "EU", "AE"];
     const result: any[] = [];
 
     for (const market of allMarkets) {
-      const dbConfig = dbConfigs.find(c => c.countryCode === market);
+      const dbConfig = dbConfigs.find((c) => c.countryCode === market);
       if (dbConfig) {
         result.push(dbConfig);
       } else {
@@ -300,10 +372,13 @@ export class MarketConfigService {
         countryCode: countryCode as MarketRegion,
         countryName: defaultConfig.countryName,
         defaultCurrency: defaultConfig.defaultCurrency,
-        supportedCurrencies: dto.supportedCurrencies || defaultConfig.supportedCurrencies,
+        supportedCurrencies:
+          dto.supportedCurrencies || defaultConfig.supportedCurrencies,
         defaultWeightUnit: defaultConfig.defaultWeightUnit,
-        supportedWeightUnits: dto.supportedWeightUnits || defaultConfig.supportedWeightUnits,
-        supportedPaymentMethods: dto.supportedPaymentMethods || defaultConfig.supportedPaymentMethods,
+        supportedWeightUnits:
+          dto.supportedWeightUnits || defaultConfig.supportedWeightUnits,
+        supportedPaymentMethods:
+          dto.supportedPaymentMethods || defaultConfig.supportedPaymentMethods,
         heroHeadline: dto.heroHeadline || defaultConfig.heroHeadline,
         heroSubheadline: dto.heroSubheadline || defaultConfig.heroSubheadline,
         footerContactTitle: dto.footerContactTitle,
