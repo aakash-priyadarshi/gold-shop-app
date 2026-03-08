@@ -2,6 +2,7 @@
 
 import { GoldenUnveil } from "@/components/auth/GoldenUnveil";
 import { Turnstile } from "@/components/auth/Turnstile";
+import { T } from "@/components/ui/T";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -68,6 +69,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { useT } from "@/providers/translation-provider";
 
 // Customer registration schema
 const customerSchema = z
@@ -191,6 +193,7 @@ function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const t = useT();
   const {
     register: registerUser,
     verifyEmail,
@@ -248,8 +251,8 @@ function RegisterForm() {
     setTurnstileError(true);
     toast({
       variant: "destructive",
-      title: "Verification failed",
-      description: "Please try again or refresh the page.",
+      title: t("Verification failed"),
+      description: t("Please try again or refresh the page."),
     });
   }, [toast]);
   const handleTurnstileExpire = useCallback(() => {
@@ -383,8 +386,8 @@ function RegisterForm() {
     if (!turnstileToken && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
       toast({
         variant: "destructive",
-        title: "Verification required",
-        description: "Please complete the security check.",
+        title: t("Verification required"),
+        description: t("Please complete the security check."),
       });
       return;
     }
@@ -409,14 +412,14 @@ function RegisterForm() {
       setResendCooldown(60); // 60 second cooldown before resend
 
       toast({
-        title: "Verification code sent!",
-        description: `Please check your email (${response.email}) for the 6-digit code.`,
+        title: t("Verification code sent!"),
+        description: t(`Please check your email for the 6-digit code.`),
       });
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Registration failed",
-        description: error.message || "Something went wrong",
+        title: t("Registration failed"),
+        description: t(error.message || "Something went wrong"),
       });
     } finally {
       setIsLoading(false);
@@ -428,8 +431,8 @@ function RegisterForm() {
     if (!turnstileToken && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
       toast({
         variant: "destructive",
-        title: "Verification required",
-        description: "Please complete the security check.",
+        title: t("Verification required"),
+        description: t("Please complete the security check."),
       });
       return;
     }
@@ -465,14 +468,14 @@ function RegisterForm() {
       setResendCooldown(60);
 
       toast({
-        title: "Verification code sent!",
-        description: `Please check your email (${response.email}) for the 6-digit code.`,
+        title: t("Verification code sent!"),
+        description: t(`Please check your email for the 6-digit code.`),
       });
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Registration failed",
-        description: error.message || "Something went wrong",
+        title: t("Registration failed"),
+        description: t(error.message || "Something went wrong"),
       });
     } finally {
       setIsLoading(false);
@@ -531,8 +534,8 @@ function RegisterForm() {
     try {
       await verifyEmail(registrationData.userId, code);
       toast({
-        title: "Email verified!",
-        description: `Welcome to ${BRAND.name}!`,
+        title: t("Email verified!"),
+        description: t(`Welcome to ${BRAND.name}!`),
       });
     } catch (error: any) {
       setOtpError(error.message || "Invalid code. Please try again.");
@@ -552,13 +555,13 @@ function RegisterForm() {
       setOtpCode(["", "", "", "", "", ""]);
       setOtpError("");
       toast({
-        title: "Code resent!",
-        description: "Please check your email for the new verification code.",
+        title: t("Code resent!"),
+        description: t("Please check your email for the new verification code."),
       });
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Failed to resend code",
+        title: t("Failed to resend code"),
         description: error.message,
       });
     }
@@ -583,10 +586,10 @@ function RegisterForm() {
               <EnvelopeIcon className="w-8 h-8 text-gold-600" />
             </div>
             <CardTitle className="text-2xl font-bold">
-              Verify your email
+              <T>Verify your email</T>
             </CardTitle>
             <CardDescription className="text-base">
-              We've sent a 6-digit code to
+              <T>We've sent a 6-digit code to</T>
               <br />
               <span className="font-medium text-gray-900 dark:text-gray-100">
                 {registrationData.email}
@@ -639,12 +642,12 @@ function RegisterForm() {
               {isLoading ? (
                 <span className="flex items-center gap-2">
                   <span className="spinner spinner-sm border-white/30 border-t-white" />
-                  Verifying...
+                  <T>Verifying...</T>
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
                   <CheckCircleIcon className="w-5 h-5" />
-                  Verify Email
+                  <T>Verify Email</T>
                 </span>
               )}
             </Button>
@@ -652,7 +655,7 @@ function RegisterForm() {
             {/* Resend Code */}
             <div className="text-center">
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                Didn't receive the code?
+                <T>Didn't receive the code?</T>
               </p>
               <Button
                 variant="ghost"
@@ -668,7 +671,7 @@ function RegisterForm() {
                 ) : (
                   <span className="flex items-center gap-1">
                     <ArrowPathIcon className="w-4 h-4" />
-                    Resend Code
+                    <T>Resend Code</T>
                   </span>
                 )}
               </Button>
@@ -686,7 +689,7 @@ function RegisterForm() {
                 }}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
-                ← Back to registration
+                <T>← Back to registration</T>
               </Button>
             </div>
           </CardContent>
@@ -703,10 +706,10 @@ function RegisterForm() {
       <Card className="w-full max-w-lg border-0 shadow-2xl shadow-gold-500/10 bg-white/95 dark:bg-[#161B22]/95 backdrop-blur-sm login-form-item">
         <CardHeader className="space-y-1 text-center pb-2">
           <CardTitle className="text-2xl font-bold">
-            Create an account
+            <T>Create an account</T>
           </CardTitle>
           <CardDescription className="text-base">
-            Join as a customer or register your jewellery shop
+            <T>Join as a customer or register your jewellery shop</T>
           </CardDescription>
         </CardHeader>
 
@@ -721,14 +724,14 @@ function RegisterForm() {
                 className="flex items-center gap-2 rounded-lg data-[state=active]:shadow-sm data-[state=active]:bg-white dark:data-[state=active]:bg-[#0B0C10]"
               >
                 <UserIcon className="h-4 w-4" />
-                Customer
+                <T>Customer</T>
               </TabsTrigger>
               <TabsTrigger
                 value="shopkeeper"
                 className="flex items-center gap-2 rounded-lg data-[state=active]:shadow-sm data-[state=active]:bg-white dark:data-[state=active]:bg-[#0B0C10]"
               >
                 <BuildingStorefrontIcon className="h-4 w-4" />
-                Seller
+                <T>Seller</T>
               </TabsTrigger>
             </TabsList>
 
@@ -747,7 +750,7 @@ function RegisterForm() {
               >
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="customer-firstName">First Name</Label>
+                    <Label htmlFor="customer-firstName"><T>First Name</T></Label>
                     <div className="relative">
                       <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                       <Input
@@ -765,7 +768,7 @@ function RegisterForm() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="customer-lastName">Last Name</Label>
+                    <Label htmlFor="customer-lastName"><T>Last Name</T></Label>
                     <Input
                       id="customer-lastName"
                       placeholder={placeholders.lastName}
@@ -781,7 +784,7 @@ function RegisterForm() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="customer-email">Email</Label>
+                  <Label htmlFor="customer-email"><T>Email</T></Label>
                   <div className="relative">
                     <EnvelopeIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                     <Input
@@ -823,24 +826,24 @@ function RegisterForm() {
                   {emailCheckState.exists === true && (
                     <p className="text-sm text-red-500 flex items-center gap-1">
                       <ExclamationCircleIcon className="h-3.5 w-3.5" />
-                      This email is already registered.{" "}
+                      <T>This email is already registered.</T>{" "}
                       <Link
                         href="/auth/login"
                         className="underline font-medium"
                       >
-                        Login instead?
+                        <T>Login instead?</T>
                       </Link>
                     </p>
                   )}
                   {emailCheckState.exists === false && (
                     <p className="text-sm text-green-600 flex items-center gap-1">
                       <CheckCircleIcon className="h-3.5 w-3.5" />
-                      Email is available
+                      <T>Email is available</T>
                     </p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="customer-phone">Phone (Optional)</Label>
+                  <Label htmlFor="customer-phone"><T>Phone (Optional)</T></Label>
                   <div className="relative">
                     <PhoneInput
                       id="customer-phone"
@@ -878,12 +881,12 @@ function RegisterForm() {
                   {phoneCheckState.exists === true && (
                     <p className="text-sm text-red-500 flex items-center gap-1">
                       <ExclamationCircleIcon className="h-3.5 w-3.5" />
-                      This phone number is already registered
+                      <T>This phone number is already registered</T>
                     </p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="customer-password">Password</Label>
+                  <Label htmlFor="customer-password"><T>Password</T></Label>
                   <div className="relative">
                     <LockClosedIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                     <Input
@@ -917,7 +920,7 @@ function RegisterForm() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="customer-confirmPassword">
-                    Confirm Password
+                    <T>Confirm Password</T>
                   </Label>
                   <div className="relative">
                     <LockClosedIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
@@ -1001,11 +1004,11 @@ function RegisterForm() {
                       {isLoading ? (
                         <span className="flex items-center gap-2">
                           <span className="spinner spinner-sm border-white/30 border-t-white" />
-                          Creating account...
+                          <T>Creating account...</T>
                         </span>
                       ) : (
                         <span className="flex items-center gap-2">
-                          Create Customer Account
+                          <T>Create Customer Account</T>
                           <ArrowRightIcon className="h-4 w-4" />
                         </span>
                       )}
@@ -1042,7 +1045,7 @@ function RegisterForm() {
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
                     <span className="bg-white dark:bg-[#161B22] px-2 text-gray-500 dark:text-gray-400">
-                      Or continue with
+                      <T>Or continue with</T>
                     </span>
                   </div>
                 </div>
@@ -1070,12 +1073,12 @@ function RegisterForm() {
                       fill="#EA4335"
                     />
                   </svg>
-                  Sign up with Google
+                  <T>Sign up with Google</T>
                 </Button>
               </form>
             </TabsContent>
 
-            {/* Shopkeeper Registration Form */}
+            {/* Shopkeeper Registration Form */}}
             <TabsContent value="shopkeeper">
               <form
                 onSubmit={shopkeeperForm.handleSubmit(onShopkeeperSubmit)}
@@ -1083,11 +1086,11 @@ function RegisterForm() {
               >
                 <div className="border-b dark:border-gray-700 pb-4 mb-4">
                   <h3 className="font-semibold text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                    Personal Details
+                    <T>Personal Details</T>
                   </h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="shop-firstName">First Name</Label>
+                      <Label htmlFor="shop-firstName"><T>First Name</T></Label>
                       <div className="relative">
                         <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                         <Input
@@ -1105,7 +1108,7 @@ function RegisterForm() {
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="shop-lastName">Last Name</Label>
+                      <Label htmlFor="shop-lastName"><T>Last Name</T></Label>
                       <Input
                         id="shop-lastName"
                         placeholder={placeholders.lastName}
@@ -1122,7 +1125,7 @@ function RegisterForm() {
                   </div>
                   <div className="grid grid-cols-2 gap-4 mt-4">
                     <div className="space-y-2">
-                      <Label htmlFor="shop-email">Email</Label>
+                      <Label htmlFor="shop-email"><T>Email</T></Label>
                       <div className="relative">
                         <EnvelopeIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                         <Input
@@ -1165,12 +1168,12 @@ function RegisterForm() {
                       {emailCheckState.exists === true && (
                         <p className="text-sm text-red-500 flex items-center gap-1">
                           <ExclamationCircleIcon className="h-3.5 w-3.5" />
-                          Email already registered
+                          <T>Email already registered</T>
                         </p>
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="shop-phone">Phone</Label>
+                      <Label htmlFor="shop-phone"><T>Phone</T></Label>
                       <div className="relative">
                         <PhoneInput
                           id="shop-phone"
@@ -1218,14 +1221,14 @@ function RegisterForm() {
                       {phoneCheckState.exists === true && (
                         <p className="text-sm text-red-500 flex items-center gap-1">
                           <ExclamationCircleIcon className="h-3.5 w-3.5" />
-                          Phone already registered
+                          <T>Phone already registered</T>
                         </p>
                       )}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4 mt-4">
                     <div className="space-y-2">
-                      <Label htmlFor="shop-password">Password</Label>
+                      <Label htmlFor="shop-password"><T>Password</T></Label>
                       <div className="relative">
                         <LockClosedIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                         <Input
@@ -1259,7 +1262,7 @@ function RegisterForm() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="shop-confirmPassword">
-                        Confirm Password
+                        <T>Confirm Password</T>
                       </Label>
                       <div className="relative">
                         <LockClosedIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
@@ -1304,11 +1307,11 @@ function RegisterForm() {
 
                 <div>
                   <h3 className="font-semibold text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                    Shop Details
+                    <T>Shop Details</T>
                   </h3>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="shop-name">Shop Name</Label>
+                      <Label htmlFor="shop-name"><T>Shop Name</T></Label>
                       <div className="relative">
                         <BuildingStorefrontIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                         <Input
@@ -1327,7 +1330,7 @@ function RegisterForm() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="shop-country">Country</Label>
+                        <Label htmlFor="shop-country"><T>Country</T></Label>
                         <Select
                           onValueChange={(value) =>
                             shopkeeperForm.setValue("country", value as any)
@@ -1361,7 +1364,7 @@ function RegisterForm() {
                         )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="shop-city">City</Label>
+                        <Label htmlFor="shop-city"><T>City</T></Label>
                         <div className="relative">
                           <MapPinIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                           <Input
@@ -1380,7 +1383,7 @@ function RegisterForm() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="shop-address">Address (Optional)</Label>
+                      <Label htmlFor="shop-address"><T>Address (Optional)</T></Label>
                       <div className="relative">
                         <MapPinIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                         <Input
@@ -1393,7 +1396,7 @@ function RegisterForm() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="shop-shopPhone">
-                        Shop Phone (Optional)
+                        <T>Shop Phone (Optional)</T>
                       </Label>
                       <div className="relative">
                         <PhoneIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
@@ -1412,9 +1415,9 @@ function RegisterForm() {
                 <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-xl p-4 text-sm text-amber-800 dark:text-amber-200 flex items-start gap-3">
                   <InformationCircleIcon className="h-5 w-5 shrink-0 mt-0.5 text-amber-500" />
                   <div>
-                    <strong>Note:</strong> Shop registrations require
+                    <strong><T>Note:</T></strong> <T>Shop registrations require
                     verification. Your account will be active after admin
-                    approval.
+                    approval.</T>
                   </div>
                 </div>
 
@@ -1466,11 +1469,11 @@ function RegisterForm() {
                       {isLoading ? (
                         <span className="flex items-center gap-2">
                           <span className="spinner spinner-sm border-white/30 border-t-white" />
-                          Registering shop...
+                          <T>Registering shop...</T>
                         </span>
                       ) : (
                         <span className="flex items-center gap-2">
-                          Register Shop
+                          <T>Register Shop</T>
                           <ArrowRightIcon className="h-4 w-4" />
                         </span>
                       )}
@@ -1507,7 +1510,7 @@ function RegisterForm() {
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
                     <span className="bg-white dark:bg-[#161B22] px-2 text-gray-500 dark:text-gray-400">
-                      Or continue with
+                      <T>Or continue with</T>
                     </span>
                   </div>
                 </div>
@@ -1535,11 +1538,11 @@ function RegisterForm() {
                       fill="#EA4335"
                     />
                   </svg>
-                  Sign up with Google
+                  <T>Sign up with Google</T>
                 </Button>
                 <p className="text-xs text-center text-amber-600 mt-2">
                   <InformationCircleIcon className="h-3.5 w-3.5 inline mr-1" />
-                  You'll need to complete shop details after Google sign-up
+                  <T>You'll need to complete shop details after Google sign-up</T>
                 </p>
               </form>
             </TabsContent>
@@ -1548,22 +1551,22 @@ function RegisterForm() {
 
         <CardFooter className="flex flex-col space-y-4 border-t pt-6 login-form-item">
           <p className="text-sm text-center text-muted-foreground">
-            Already have an account?{" "}
+            <T>Already have an account?</T>{" "}
             <Link
               href="/auth/login"
               className="text-gold-600 hover:underline font-medium"
             >
-              Sign in
+              <T>Sign in</T>
             </Link>
           </p>
           <p className="text-xs text-center text-muted-foreground">
-            By creating an account, you agree to our{" "}
+            <T>By creating an account, you agree to our</T>{" "}
             <Link href="/terms" className="underline hover:text-gold-600">
-              Terms of Service
+              <T>Terms of Service</T>
             </Link>{" "}
-            and{" "}
+            <T>and</T>{" "}
             <Link href="/privacy" className="underline hover:text-gold-600">
-              Privacy Policy
+              <T>Privacy Policy</T>
             </Link>
           </p>
         </CardFooter>

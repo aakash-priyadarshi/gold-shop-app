@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { T } from "@/components/ui/T";
 import { FlagImage, type FlagCode } from "@/components/ui/phone-input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
@@ -54,6 +55,7 @@ import { Banknote, CreditCard, Loader2, Store } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { useT } from "@/providers/translation-provider";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
@@ -158,6 +160,7 @@ const PAYMENT_METHODS_BY_COUNTRY: Record<
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function CheckoutPageContent() {
+  const t = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -295,8 +298,8 @@ function CheckoutPageContent() {
       !newAddress.pincode
     ) {
       toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields",
+        title: t("Missing Information"),
+        description: t("Please fill in all required fields"),
         variant: "destructive",
       });
       return;
@@ -307,13 +310,13 @@ function CheckoutPageContent() {
       await addAddress(newAddress);
       setAddressDialogOpen(false);
       toast({
-        title: "Address Saved",
-        description: "Your delivery address has been saved",
+        title: t("Address Saved"),
+        description: t("Your delivery address has been saved"),
       });
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to save address",
+        title: t("Error"),
+        description: t("Failed to save address"),
         variant: "destructive",
       });
     } finally {
@@ -325,8 +328,8 @@ function CheckoutPageContent() {
   const handlePlaceOrder = async () => {
     if (!selectedAddress) {
       toast({
-        title: "Select Address",
-        description: "Please select a delivery address",
+        title: t("Select Address"),
+        description: t("Please select a delivery address"),
         variant: "destructive",
       });
       return;
@@ -334,8 +337,8 @@ function CheckoutPageContent() {
 
     if (!payAtShop && !selectedPaymentMethod) {
       toast({
-        title: "Select Payment",
-        description: "Please select a payment method",
+        title: t("Select Payment"),
+        description: t("Please select a payment method"),
         variant: "destructive",
       });
       return;
@@ -414,16 +417,16 @@ function CheckoutPageContent() {
       }
 
       toast({
-        title: "Order Placed!",
-        description: "Your order has been placed successfully",
+        title: t("Order Placed!"),
+        description: t("Your order has been placed successfully"),
       });
 
       setStep("confirm");
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
       toast({
-        title: "Order Failed",
-        description: err.response?.data?.message || "Failed to place order",
+        title: t("Order Failed"),
+        description: err.response?.data?.message || t("Failed to place order"),
         variant: "destructive",
       });
     } finally {
@@ -462,27 +465,27 @@ function CheckoutPageContent() {
                 <CheckCircleIcon className="h-10 w-10 text-emerald-600" />
               </div>
               <CardTitle className="text-2xl text-emerald-700 dark:text-emerald-400">
-                Order Placed Successfully!
+                <T>Order Placed Successfully!</T>
               </CardTitle>
               <CardDescription className="text-lg">
-                Order Number:{" "}
-                <span className="font-mono font-semibold">{orderCreated}</span>
+                <T>Order Number:</T>
+                {" "}<span className="font-mono font-semibold">{orderCreated}</span>
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-gray-600 dark:text-gray-400">
-                Thank you for your order! You will receive a confirmation email
-                shortly.
+                <T>Thank you for your order! You will receive a confirmation email
+                shortly.</T>
               </p>
               {payAtShop && (
                 <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800">
                   <Store className="h-4 w-4 text-amber-600" />
                   <AlertTitle className="text-amber-800 dark:text-amber-400">
-                    Pay at Shop Selected
+                    <T>Pay at Shop Selected</T>
                   </AlertTitle>
                   <AlertDescription className="text-amber-700 dark:text-amber-300">
-                    Please visit the shop to complete your payment. Your order
-                    will be held for 48 hours.
+                    <T>Please visit the shop to complete your payment. Your order
+                    will be held for 48 hours.</T>
                   </AlertDescription>
                 </Alert>
               )}
@@ -491,11 +494,11 @@ function CheckoutPageContent() {
               <Button asChild variant="outline">
                 <Link href="/dashboard/customer">
                   <ShoppingCartIcon className="h-4 w-4 mr-2" />
-                  View My Orders
+                  <T>View My Orders</T>
                 </Link>
               </Button>
               <Button asChild className="bg-amber-600 hover:bg-amber-700">
-                <Link href="/shops">Continue Shopping</Link>
+                <Link href="/shops"><T>Continue Shopping</T></Link>
               </Button>
             </CardFooter>
           </Card>
@@ -513,7 +516,7 @@ function CheckoutPageContent() {
         {/* Back button */}
         <Button variant="ghost" className="mb-4" onClick={() => router.back()}>
           <ArrowLeftIcon className="h-4 w-4 mr-2" />
-          Back
+          <T>Back</T>
         </Button>
 
         <div className="grid lg:grid-cols-3 gap-8">
@@ -537,7 +540,7 @@ function CheckoutPageContent() {
                 >
                   1
                 </div>
-                <span className="hidden sm:inline">Address</span>
+                <span className="hidden sm:inline"><T>Address</T></span>
               </div>
               <div className="flex-1 h-0.5 bg-gray-200 dark:bg-gray-700" />
               <div
@@ -556,7 +559,7 @@ function CheckoutPageContent() {
                 >
                   2
                 </div>
-                <span className="hidden sm:inline">Payment</span>
+                <span className="hidden sm:inline"><T>Payment</T></span>
               </div>
             </div>
 
@@ -566,10 +569,10 @@ function CheckoutPageContent() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <MapPinIcon className="h-5 w-5" />
-                    Delivery Address
+                    <T>Delivery Address</T>
                   </CardTitle>
                   <CardDescription>
-                    Select or add a delivery address
+                    <T>Select or add a delivery address</T>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -629,8 +632,8 @@ function CheckoutPageContent() {
                   ) : (
                     <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                       <MapPinIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                      <p>No saved addresses</p>
-                      <p className="text-sm">Add an address to continue</p>
+                      <p><T>No saved addresses</T></p>
+                      <p className="text-sm"><T>Add an address to continue</T></p>
                     </div>
                   )}
 
@@ -640,7 +643,7 @@ function CheckoutPageContent() {
                     onClick={() => setAddressDialogOpen(true)}
                   >
                     <MapPinIcon className="h-4 w-4 mr-2" />
-                    Add New Address
+                    <T>Add New Address</T>
                   </Button>
                 </CardContent>
                 <CardFooter>
@@ -649,7 +652,7 @@ function CheckoutPageContent() {
                     disabled={!selectedAddressId}
                     onClick={() => setStep("payment")}
                   >
-                    Continue to Payment
+                    <T>Continue to Payment</T>
                   </Button>
                 </CardFooter>
               </Card>
@@ -661,10 +664,10 @@ function CheckoutPageContent() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <CreditCardIcon className="h-5 w-5" />
-                    Payment Method
+                    <T>Payment Method</T>
                   </CardTitle>
                   <CardDescription>
-                    Select how you would like to pay
+                    <T>Select how you would like to pay</T>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -686,11 +689,11 @@ function CheckoutPageContent() {
                             className="font-medium cursor-pointer flex items-center gap-2"
                           >
                             <Store className="h-4 w-4" />
-                            Pay at Shop
+                            <T>Pay at Shop</T>
                           </label>
                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            Visit the shop to pay in person. Only available
-                            because you're in the same city as the shop.
+                            <T>Visit the shop to pay in person. Only available
+                            because you're in the same city as the shop.</T>
                           </p>
                         </div>
                       </div>
@@ -751,13 +754,13 @@ function CheckoutPageContent() {
                   <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-4">
                     <ShieldCheckIcon className="h-4 w-4" />
                     <span>
-                      Your payment information is secure and encrypted
+                      <T>Your payment information is secure and encrypted</T>
                     </span>
                   </div>
                 </CardContent>
                 <CardFooter className="flex gap-3">
                   <Button variant="outline" onClick={() => setStep("address")}>
-                    Back
+                    <T>Back</T>
                   </Button>
                   <Button
                     className="flex-1 bg-amber-600 hover:bg-amber-700"
@@ -767,12 +770,12 @@ function CheckoutPageContent() {
                     {isProcessing ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Processing...
+                        <T>Processing...</T>
                       </>
                     ) : (
                       <>
                         <LockClosedIcon className="h-4 w-4 mr-2" />
-                        Place Order - {formatPrice(total)}
+                        <T>Place Order</T> - {formatPrice(total)}
                       </>
                     )}
                   </Button>
@@ -787,7 +790,7 @@ function CheckoutPageContent() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <ShoppingCartIcon className="h-5 w-5" />
-                  Order Summary
+                  <T>Order Summary</T>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -827,7 +830,7 @@ function CheckoutPageContent() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-500 dark:text-gray-400">
-                      Subtotal
+                      <T>Subtotal</T>
                     </span>
                     <span>{formatPrice(subtotal)}</span>
                   </div>
@@ -839,13 +842,13 @@ function CheckoutPageContent() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500 dark:text-gray-400">
-                      Shipping
+                      <T>Shipping</T>
                     </span>
-                    <span className="text-emerald-600">Free</span>
+                    <span className="text-emerald-600"><T>Free</T></span>
                   </div>
                   <Separator />
                   <div className="flex justify-between text-lg font-semibold">
-                    <span>Total</span>
+                    <span><T>Total</T></span>
                     <span className="text-amber-600">{formatPrice(total)}</span>
                   </div>
                 </div>
@@ -855,10 +858,10 @@ function CheckoutPageContent() {
                   <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm">
                     <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                       <TruckIcon className="h-4 w-4" />
-                      <span>Delivering to {selectedAddress.city}</span>
+                      <span><T>Delivering to</T> {selectedAddress.city}</span>
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Estimated delivery: 3-7 business days
+                      <T>Estimated delivery: 3-7 business days</T>
                     </p>
                   </div>
                 )}
@@ -872,15 +875,15 @@ function CheckoutPageContent() {
       <Dialog open={addressDialogOpen} onOpenChange={setAddressDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Delivery Address</DialogTitle>
+            <DialogTitle><T>Add Delivery Address</T></DialogTitle>
             <DialogDescription>
-              Enter your delivery address details
+              <T>Enter your delivery address details</T>
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="label">Address Label</Label>
+                <Label htmlFor="label"><T>Address Label</T></Label>
                 <Select
                   value={newAddress.label}
                   onValueChange={(value) =>
@@ -898,7 +901,7 @@ function CheckoutPageContent() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="country">Country</Label>
+                <Label htmlFor="country"><T>Country</T></Label>
                 <Select
                   value={newAddress.country}
                   onValueChange={(value) =>
@@ -922,7 +925,7 @@ function CheckoutPageContent() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name *</Label>
+              <Label htmlFor="fullName"><T>Full Name *</T></Label>
               <Input
                 id="fullName"
                 value={newAddress.fullName}
@@ -933,7 +936,7 @@ function CheckoutPageContent() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number *</Label>
+              <Label htmlFor="phone"><T>Phone Number *</T></Label>
               <Input
                 id="phone"
                 value={newAddress.phone}
@@ -944,7 +947,7 @@ function CheckoutPageContent() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="addressLine1">Address Line 1 *</Label>
+              <Label htmlFor="addressLine1"><T>Address Line 1 *</T></Label>
               <Input
                 id="addressLine1"
                 value={newAddress.addressLine1}
@@ -955,7 +958,7 @@ function CheckoutPageContent() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="addressLine2">Address Line 2</Label>
+              <Label htmlFor="addressLine2"><T>Address Line 2</T></Label>
               <Input
                 id="addressLine2"
                 value={newAddress.addressLine2 || ""}
@@ -967,7 +970,7 @@ function CheckoutPageContent() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="city">City *</Label>
+                <Label htmlFor="city"><T>City *</T></Label>
                 <Input
                   id="city"
                   value={newAddress.city}
@@ -978,7 +981,7 @@ function CheckoutPageContent() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="state">State/Province</Label>
+                <Label htmlFor="state"><T>State/Province</T></Label>
                 <Input
                   id="state"
                   value={newAddress.state}
@@ -990,7 +993,7 @@ function CheckoutPageContent() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="pincode">PIN/ZIP Code *</Label>
+              <Label htmlFor="pincode"><T>PIN/ZIP Code *</T></Label>
               <Input
                 id="pincode"
                 value={newAddress.pincode}
@@ -1012,7 +1015,7 @@ function CheckoutPageContent() {
                 }
               />
               <label htmlFor="isDefault" className="text-sm cursor-pointer">
-                Set as default address
+                <T>Set as default address</T>
               </label>
             </div>
           </div>
@@ -1021,16 +1024,16 @@ function CheckoutPageContent() {
               variant="outline"
               onClick={() => setAddressDialogOpen(false)}
             >
-              Cancel
+              <T>Cancel</T>
             </Button>
             <Button onClick={handleSaveAddress} disabled={savingAddress}>
               {savingAddress ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
+                  <T>Saving...</T>
                 </>
               ) : (
-                "Save Address"
+                t("Save Address")
               )}
             </Button>
           </DialogFooter>

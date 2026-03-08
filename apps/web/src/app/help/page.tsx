@@ -2,6 +2,7 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Button } from "@/components/ui/button";
+import { T } from "@/components/ui/T";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -39,6 +40,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useT } from "@/providers/translation-provider";
 
 // ─── Types ───
 interface ChatMessage {
@@ -95,6 +97,7 @@ const HELP_TOPICS = [
 export default function HelpPage() {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
+  const t = useT();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
@@ -169,20 +172,20 @@ export default function HelpPage() {
             </Link>
             <div className="flex items-center gap-2">
               <LifeBuoy className="h-5 w-5 text-amber-600" />
-              <h1 className="font-bold text-lg">Help Center</h1>
+              <h1 className="font-bold text-lg"><T>Help Center</T></h1>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {isAuthenticated ? (
               <Link href={`/dashboard/${user?.role?.toLowerCase()}/support`}>
                 <Button variant="outline" size="sm">
-                  <Ticket className="h-4 w-4 mr-1" /> My Tickets
+                  <Ticket className="h-4 w-4 mr-1" /> <T>My Tickets</T>
                 </Button>
               </Link>
             ) : (
               <Link href="/auth/login">
                 <Button variant="outline" size="sm">
-                  Sign In
+                  <T>Sign In</T>
                 </Button>
               </Link>
             )}
@@ -202,9 +205,9 @@ export default function HelpPage() {
               }
             >
               <topic.icon className="h-5 w-5 text-amber-600 mb-2" />
-              <h3 className="font-medium text-sm">{topic.title}</h3>
+              <h3 className="font-medium text-sm">{t(topic.title)}</h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {topic.desc}
+                {t(topic.desc)}
               </p>
             </Card>
           ))}
@@ -215,7 +218,7 @@ export default function HelpPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Bot className="h-5 w-5 text-amber-600" />
-              AI Support Assistant
+              <T>AI Support Assistant</T>
               <span className="text-xs text-muted-foreground font-normal">
                 Powered by Gemini
               </span>
@@ -256,7 +259,7 @@ export default function HelpPage() {
                       <div className="flex justify-start mt-2 ml-2">
                         <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm max-w-[80%]">
                           <p className="font-medium text-blue-800 dark:text-blue-300 mb-2">
-                            🎫 Want to connect with a human support agent?
+                            <T>Want to connect with a human support agent?</T>
                           </p>
                           <Button
                             size="sm"
@@ -267,8 +270,8 @@ export default function HelpPage() {
                               setShowTicketForm(true);
                             }}
                           >
-                            <Ticket className="h-3 w-3 mr-1" /> Create Support
-                            Ticket
+                            <Ticket className="h-3 w-3 mr-1" /> <T>Create Support
+                            Ticket</T>
                           </Button>
                         </div>
                       </div>
@@ -331,13 +334,13 @@ export default function HelpPage() {
                 size="sm"
                 onClick={() => setShowTicketForm(true)}
               >
-                <Ticket className="h-4 w-4 mr-1" /> Create a Ticket
+                <Ticket className="h-4 w-4 mr-1" /> <T>Create a Ticket</T>
               </Button>
               <Link
                 href="/platform-guidelines"
                 className="text-muted-foreground hover:text-primary flex items-center gap-1"
               >
-                Platform Guidelines <ExternalLink className="h-3 w-3" />
+                <T>Platform Guidelines</T> <ExternalLink className="h-3 w-3" />
               </Link>
             </div>
           </CardContent>
@@ -348,7 +351,7 @@ export default function HelpPage() {
       <Dialog open={showTicketForm} onOpenChange={setShowTicketForm}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Create Support Ticket</DialogTitle>
+            <DialogTitle><T>Create Support Ticket</T></DialogTitle>
             <DialogDescription>
               {isAuthenticated
                 ? "Our support team will review your issue and respond as soon as possible."
@@ -514,7 +517,7 @@ function HelpTicketForm({
 
       <Button type="submit" className="w-full" disabled={submitting}>
         {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-        Submit Ticket
+        <T>Submit Ticket</T>
       </Button>
     </form>
   );

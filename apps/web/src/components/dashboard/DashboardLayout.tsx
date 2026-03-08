@@ -8,6 +8,7 @@ import { NotificationDropdown } from "@/components/notifications/NotificationDro
 import { AnimatedThemeToggle } from "@/components/ui/animated-theme-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { T } from "@/components/ui/T";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -71,6 +72,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useT } from "@/providers/translation-provider";
 
 // Lazy-load ChatPopupWidget + emoji-mart (~80KB saved on initial page load)
 const ChatPopupWidget = dynamic(
@@ -493,6 +495,7 @@ function SidebarContent({
 }) {
   const navRef = useRef<HTMLElement>(null);
   const [canScrollDown, setCanScrollDown] = useState(false);
+  const t = useT();
 
   const checkScroll = useCallback(() => {
     const el = navRef.current;
@@ -561,12 +564,12 @@ function SidebarContent({
         {user.shop && (
           <div className="mt-3 p-3 bg-gradient-to-r from-gold-50 to-amber-50 dark:from-amber-950/30 dark:to-yellow-950/20 rounded-xl border border-gold-100 dark:border-amber-800/30">
             <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2">
-              Active Shop
+              <T>Active Shop</T>
             </p>
             <ShopSwitcher currentShopId={user.shop.id} />
             {!user.shop.isVerified && (
               <span className="inline-flex items-center mt-2 px-2 py-0.5 text-xs font-medium text-orange-700 bg-orange-100 rounded-full">
-                Pending verification
+                <T>Pending verification</T>
               </span>
             )}
           </div>
@@ -599,7 +602,7 @@ function SidebarContent({
                   >
                     <div className="flex items-center gap-3">
                       <item.icon className="h-5 w-5" />
-                      <span>{item.label}</span>
+                      <span>{t(item.label)}</span>
                     </div>
                     <ChevronDown
                       className={cn(
@@ -633,7 +636,7 @@ function SidebarContent({
                                 isChildActive && "text-white",
                               )}
                             />
-                            <span>{child.label}</span>
+                            <span>{t(child.label)}</span>
                           </Link>
                         );
                       })}
@@ -666,7 +669,7 @@ function SidebarContent({
                   <item.icon
                     className={cn("h-5 w-5", isActive && "text-white")}
                   />
-                  <span>{item.label}</span>
+                  <span>{t(item.label)}</span>
                 </div>
                 {badgeCount && Number(badgeCount) > 0 && (
                   <span
@@ -711,14 +714,14 @@ function SidebarContent({
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors touch-target"
         >
           <Home className="h-5 w-5" />
-          <span>Browse Marketplace</span>
+          <span><T>Browse Marketplace</T></span>
         </Link>
         <button
           onClick={onLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors touch-target"
         >
           <LogOut className="h-5 w-5" />
-          <span>Sign out</span>
+          <span><T>Sign out</T></span>
         </button>
       </div>
 
@@ -772,15 +775,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const getRoleBadge = (role: UserRole) => {
     switch (role) {
       case "ADMIN":
-        return <span className="status-badge status-badge-purple">Admin</span>;
+        return <span className="status-badge status-badge-purple"><T>Admin</T></span>;
       case "SHOPKEEPER":
-        return <span className="status-badge status-badge-blue">Seller</span>;
+        return <span className="status-badge status-badge-blue"><T>Seller</T></span>;
       case "CUSTOMER":
         return (
-          <span className="status-badge status-badge-green">Customer</span>
+          <span className="status-badge status-badge-green"><T>Customer</T></span>
         );
       case "SALES":
-        return <span className="status-badge status-badge-yellow">Sales</span>;
+        return <span className="status-badge status-badge-yellow"><T>Sales</T></span>;
     }
   };
 
@@ -862,13 +865,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <DropdownMenuItem asChild>
                   <Link href={`/dashboard/${user.role.toLowerCase()}/settings`}>
                     <Settings className="h-4 w-4 mr-2" />
-                    Settings
+                    <T>Settings</T>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/">
                     <Store className="h-4 w-4 mr-2" />
-                    Browse Marketplace
+                    <T>Browse Marketplace</T>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -877,7 +880,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   className="text-red-600 dark:text-red-400"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
-                  Sign out
+                  <T>Sign out</T>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -971,13 +974,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                       href={`/dashboard/${user.role.toLowerCase()}/settings`}
                     >
                       <Settings className="h-4 w-4 mr-2" />
-                      Settings
+                      <T>Settings</T>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/">
                       <Store className="h-4 w-4 mr-2" />
-                      Browse Marketplace
+                      <T>Browse Marketplace</T>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -986,7 +989,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     className="text-red-600 dark:text-red-400"
                   >
                     <LogOut className="h-4 w-4 mr-2" />
-                    Sign out
+                    <T>Sign out</T>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

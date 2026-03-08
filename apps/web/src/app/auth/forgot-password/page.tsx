@@ -2,6 +2,7 @@
 
 import { AuthBackground } from "@/components/auth/AuthBackground";
 import { GoldenUnveil } from "@/components/auth/GoldenUnveil";
+import { T } from "@/components/ui/T";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -32,6 +33,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { useT } from "@/providers/translation-provider";
 
 const emailSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -61,6 +63,7 @@ function ForgotPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const t = useT();
   const { forgotPassword, resetPassword } = useAuth();
 
   const [step, setStep] = useState<Step>("email");
@@ -110,15 +113,15 @@ function ForgotPasswordForm() {
       setStep("otp");
       setResendCooldown(60);
       toast({
-        title: "Code sent!",
+        title: t("Code sent!"),
         description:
-          "If an account exists with this email, you will receive a reset code.",
+          t("If an account exists with this email, you will receive a reset code."),
       });
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to send reset code.",
+        title: t("Error"),
+        description: t(error.message || "Failed to send reset code."),
       });
     } finally {
       setIsLoading(false);
@@ -174,13 +177,13 @@ function ForgotPasswordForm() {
       setOtpCode(["", "", "", "", "", ""]);
       setOtpError("");
       toast({
-        title: "Code resent!",
-        description: "Please check your email for the new reset code.",
+        title: t("Code resent!"),
+        description: t("Please check your email for the new reset code."),
       });
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error",
+        title: t("Error"),
         description: error.message,
       });
     } finally {
@@ -196,8 +199,8 @@ function ForgotPasswordForm() {
       await resetPassword(email, code, data.newPassword);
       setStep("success");
       toast({
-        title: "Password reset!",
-        description: "Your password has been successfully changed.",
+        title: t("Password reset!"),
+        description: t("Your password has been successfully changed."),
       });
     } catch (error: any) {
       if (
@@ -212,8 +215,8 @@ function ForgotPasswordForm() {
       } else {
         toast({
           variant: "destructive",
-          title: "Error",
-          description: error.message || "Failed to reset password.",
+          title: t("Error"),
+          description: t(error.message || "Failed to reset password."),
         });
       }
     } finally {
@@ -232,10 +235,10 @@ function ForgotPasswordForm() {
                 <KeyIcon className="w-8 h-8 text-gold-600" />
               </div>
               <CardTitle className="text-2xl font-bold">
-                Forgot password?
+                <T>Forgot password?</T>
               </CardTitle>
               <CardDescription className="text-base">
-                No worries! Enter your email and we'll send you a reset code.
+                <T>No worries! Enter your email and we'll send you a reset code.</T>
               </CardDescription>
             </CardHeader>
 
@@ -245,7 +248,7 @@ function ForgotPasswordForm() {
                 className="space-y-6"
               >
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email address</Label>
+                  <Label htmlFor="email"><T>Email address</T></Label>
                   <div className="relative">
                     <EnvelopeIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
                     <Input
@@ -272,10 +275,10 @@ function ForgotPasswordForm() {
                   {isLoading ? (
                     <span className="flex items-center gap-2">
                       <span className="spinner spinner-sm border-white/30 border-t-white" />
-                      Sending...
+                      <T>Sending...</T>
                     </span>
                   ) : (
-                    "Send Reset Code"
+                    <T>Send Reset Code</T>
                   )}
                 </Button>
 
@@ -285,7 +288,7 @@ function ForgotPasswordForm() {
                     className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 inline-flex items-center gap-1"
                   >
                     <ArrowLeftIcon className="w-4 h-4" />
-                    Back to login
+                    <T>Back to login</T>
                   </Link>
                 </div>
               </form>
@@ -301,10 +304,10 @@ function ForgotPasswordForm() {
                 <EnvelopeIcon className="w-8 h-8 text-gold-600" />
               </div>
               <CardTitle className="text-2xl font-bold">
-                Check your email
+                <T>Check your email</T>
               </CardTitle>
               <CardDescription className="text-base">
-                We sent a 6-digit code to
+                <T>We sent a 6-digit code to</T>
                 <br />
                 <span className="font-medium text-gray-900 dark:text-gray-100">
                   {email}
@@ -351,12 +354,12 @@ function ForgotPasswordForm() {
                 disabled={otpCode.join("").length !== 6}
                 className="w-full h-12 rounded-xl gold-gradient text-white font-semibold"
               >
-                Continue
+                <T>Continue</T>
               </Button>
 
               <div className="text-center">
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                  Didn't receive the code?
+                  <T>Didn't receive the code?</T>
                 </p>
                 <Button
                   variant="ghost"
@@ -370,7 +373,7 @@ function ForgotPasswordForm() {
                   ) : (
                     <span className="flex items-center gap-1">
                       <ArrowPathIcon className="w-4 h-4" />
-                      Resend Code
+                      <T>Resend Code</T>
                     </span>
                   )}
                 </Button>
@@ -382,7 +385,7 @@ function ForgotPasswordForm() {
                   onClick={() => setStep("email")}
                   className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 >
-                  ← Use different email
+                  <T>← Use different email</T>
                 </Button>
               </div>
             </CardContent>
@@ -397,10 +400,10 @@ function ForgotPasswordForm() {
                 <LockClosedIcon className="w-8 h-8 text-gold-600" />
               </div>
               <CardTitle className="text-2xl font-bold">
-                Set new password
+                <T>Set new password</T>
               </CardTitle>
               <CardDescription className="text-base">
-                Create a strong password for your account
+                <T>Create a strong password for your account</T>
               </CardDescription>
             </CardHeader>
 
@@ -410,7 +413,7 @@ function ForgotPasswordForm() {
                 className="space-y-6"
               >
                 <div className="space-y-2">
-                  <Label htmlFor="newPassword">New Password</Label>
+                  <Label htmlFor="newPassword"><T>New Password</T></Label>
                   <div className="relative">
                     <LockClosedIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
                     <Input
@@ -441,7 +444,7 @@ function ForgotPasswordForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Label htmlFor="confirmPassword"><T>Confirm Password</T></Label>
                   <div className="relative">
                     <LockClosedIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
                     <Input
@@ -474,12 +477,12 @@ function ForgotPasswordForm() {
                 </div>
 
                 <div className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg">
-                  Password must contain:
+                  <T>Password must contain:</T>
                   <ul className="list-disc list-inside mt-1 space-y-0.5">
-                    <li>At least 8 characters</li>
-                    <li>One uppercase letter</li>
-                    <li>One lowercase letter</li>
-                    <li>One number</li>
+                    <li><T>At least 8 characters</T></li>
+                    <li><T>One uppercase letter</T></li>
+                    <li><T>One lowercase letter</T></li>
+                    <li><T>One number</T></li>
                   </ul>
                 </div>
 
@@ -491,10 +494,10 @@ function ForgotPasswordForm() {
                   {isLoading ? (
                     <span className="flex items-center gap-2">
                       <span className="spinner spinner-sm border-white/30 border-t-white" />
-                      Resetting...
+                      <T>Resetting...</T>
                     </span>
                   ) : (
-                    "Reset Password"
+                    <T>Reset Password</T>
                   )}
                 </Button>
               </form>
@@ -510,19 +513,19 @@ function ForgotPasswordForm() {
                 <CheckCircleIcon className="w-8 h-8 text-green-600" />
               </div>
               <CardTitle className="text-2xl font-bold">
-                Password reset!
+                <T>Password reset!</T>
               </CardTitle>
               <CardDescription className="text-base">
-                Your password has been successfully changed.
+                <T>Your password has been successfully changed.</T>
                 <br />
-                You can now sign in with your new password.
+                <T>You can now sign in with your new password.</T>
               </CardDescription>
             </CardHeader>
 
             <CardContent>
               <Link href="/auth/login">
                 <Button className="w-full h-12 rounded-xl gold-gradient text-white font-semibold">
-                  Sign in
+                  <T>Sign in</T>
                 </Button>
               </Link>
             </CardContent>

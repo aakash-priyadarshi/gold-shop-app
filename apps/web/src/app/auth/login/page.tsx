@@ -2,6 +2,7 @@
 
 import { GoldenUnveil } from "@/components/auth/GoldenUnveil";
 import { Turnstile } from "@/components/auth/Turnstile";
+import { T } from "@/components/ui/T";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -41,6 +42,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { useT } from "@/providers/translation-provider";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -90,8 +92,8 @@ function LoginForm() {
     setTurnstileError(true);
     toast({
       variant: "destructive",
-      title: "Verification failed",
-      description: "Please try again or refresh the page.",
+      title: t("Verification failed"),
+      description: t("Please try again or refresh the page."),
     });
   }, [toast]);
   const handleTurnstileExpire = useCallback(() => {
@@ -118,10 +120,10 @@ function LoginForm() {
       // Google OAuth login with non-existent account
       toast({
         variant: "destructive",
-        title: "Account not found",
+        title: t("Account not found"),
         description:
           messageParam ||
-          "No account found with this email. Please register first.",
+          t("No account found with this email. Please register first."),
         duration: 6000,
       });
       // Redirect to register page after short delay
@@ -135,8 +137,8 @@ function LoginForm() {
     } else if (errorParam) {
       toast({
         variant: "destructive",
-        title: "Login failed",
-        description: errorParam,
+        title: t("Login failed"),
+        description: t(errorParam),
       });
     }
   }, [searchParams, toast, router]);
@@ -226,8 +228,8 @@ function LoginForm() {
     if (!turnstileToken && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
       toast({
         variant: "destructive",
-        title: "Verification required",
-        description: "Please complete the security check.",
+        title: t("Verification required"),
+        description: t("Please complete the security check."),
       });
       return;
     }
@@ -238,8 +240,8 @@ function LoginForm() {
     try {
       await login(data.email, data.password, turnstileToken, rememberMe);
       toast({
-        title: "Welcome back!",
-        description: "You have successfully signed in.",
+        title: t("Welcome back!"),
+        description: t("You have successfully signed in."),
       });
     } catch (error: any) {
       // Check if email not verified
@@ -253,21 +255,21 @@ function LoginForm() {
           await resendVerificationOtp(error.email);
           setResendCooldown(60);
           toast({
-            title: "Verification required",
-            description: "A verification code has been sent to your email.",
+            title: t("Verification required"),
+            description: t("A verification code has been sent to your email."),
           });
         } catch {
           toast({
             variant: "destructive",
-            title: "Error",
-            description: "Failed to send verification code. Please try again.",
+            title: t("Error"),
+            description: t("Failed to send verification code. Please try again."),
           });
         }
       } else {
         toast({
           variant: "destructive",
-          title: "Login failed",
-          description: error.message || "Invalid credentials",
+          title: t("Login failed"),
+          description: t(error.message || "Invalid credentials"),
         });
       }
     } finally {
@@ -315,8 +317,8 @@ function LoginForm() {
     try {
       await verifyEmail(verificationUserId, code);
       toast({
-        title: "Email verified!",
-        description: "Welcome! You are now signed in.",
+        title: t("Email verified!"),
+        description: t("Welcome! You are now signed in."),
       });
     } catch (error: any) {
       setOtpError(error.message || "Invalid code. Please try again.");
@@ -335,13 +337,13 @@ function LoginForm() {
       setOtpCode(["", "", "", "", "", ""]);
       setOtpError("");
       toast({
-        title: "Code resent!",
-        description: "Please check your email for the new verification code.",
+        title: t("Code resent!"),
+        description: t("Please check your email for the new verification code."),
       });
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Failed to resend code",
+        title: t("Failed to resend code"),
         description: error.message,
       });
     }
@@ -366,12 +368,12 @@ function LoginForm() {
               <EnvelopeIcon className="w-8 h-8 text-gold-600" />
             </div>
             <CardTitle className="text-2xl font-bold">
-              Verify your email
+              <T>Verify your email</T>
             </CardTitle>
             <CardDescription className="text-base">
-              Your email hasn't been verified yet.
+              <T>Your email hasn't been verified yet.</T>
               <br />
-              Enter the 6-digit code sent to
+              <T>Enter the 6-digit code sent to</T>
               <br />
               <span className="font-medium text-gray-900 dark:text-gray-100">
                 {verificationEmail}
@@ -421,19 +423,19 @@ function LoginForm() {
               {isLoading ? (
                 <span className="flex items-center gap-2">
                   <span className="spinner spinner-sm border-white/30 border-t-white" />
-                  Verifying...
+                  <T>Verifying...</T>
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
                   <CheckCircleIcon className="w-5 h-5" />
-                  Verify & Sign In
+                  <T>Verify & Sign In</T>
                 </span>
               )}
             </Button>
 
             <div className="text-center">
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                Didn't receive the code?
+                <T>Didn't receive the code?</T>
               </p>
               <Button
                 variant="ghost"
@@ -447,7 +449,7 @@ function LoginForm() {
                 ) : (
                   <span className="flex items-center gap-1">
                     <ArrowPathIcon className="w-4 h-4" />
-                    Resend Code
+                    <T>Resend Code</T>
                   </span>
                 )}
               </Button>
@@ -465,7 +467,7 @@ function LoginForm() {
                 }}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
-                ← Back to login
+                <T>← Back to login</T>
               </Button>
             </div>
           </CardContent>
@@ -481,9 +483,9 @@ function LoginForm() {
     >
       <Card className="border-0 shadow-2xl shadow-gold-500/10 bg-white/95 dark:bg-[#161B22]/95 backdrop-blur-sm login-form-item">
         <CardHeader className="space-y-1 text-center pb-2">
-          <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+          <CardTitle className="text-2xl font-bold"><T>Welcome back</T></CardTitle>
           <CardDescription className="text-base">
-            Sign in to continue your jewellery journey
+            <T>Sign in to continue your jewellery journey</T>
           </CardDescription>
         </CardHeader>
 
@@ -513,7 +515,7 @@ function LoginForm() {
                 fill="#EA4335"
               />
             </svg>
-            Continue with Google
+            <T>Continue with Google</T>
           </Button>
 
           <div className="relative">
@@ -522,7 +524,7 @@ function LoginForm() {
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-white dark:bg-[#161B22] px-2 text-gray-500 dark:text-gray-400">
-                Or continue with email
+                <T>Or continue with email</T>
               </span>
             </div>
           </div>
@@ -541,7 +543,7 @@ function LoginForm() {
             {/* Email Field */}
             <div className="space-y-2 login-form-item">
               <Label htmlFor="email" className="text-sm font-medium">
-                Email address
+                <T>Email address</T>
               </Label>
               <div className="relative">
                 <EnvelopeIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
@@ -574,13 +576,13 @@ function LoginForm() {
             <div className="space-y-2 login-form-item">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password" className="text-sm font-medium">
-                  Password
+                  <T>Password</T>
                 </Label>
                 <Link
                   href="/auth/forgot-password"
                   className="text-sm text-gold-600 hover:text-gold-700 hover:underline font-medium"
                 >
-                  Forgot password?
+                  <T>Forgot password?</T>
                 </Link>
               </div>
               <div className="relative">
@@ -637,7 +639,7 @@ function LoginForm() {
                 htmlFor="rememberMe"
                 className="text-sm text-gray-600 dark:text-gray-300 cursor-pointer select-none"
               >
-                Remember me for 30 days
+                <T>Remember me for 30 days</T>
               </Label>
             </div>
 
@@ -653,13 +655,13 @@ function LoginForm() {
               {turnstileError && (
                 <p className="text-sm text-amber-600 flex items-center gap-1">
                   <ExclamationCircleIcon className="h-4 w-4" />
-                  Captcha expired or failed.{" "}
+                  <T>Captcha expired or failed.</T>{" "}
                   <button
                     type="button"
                     onClick={() => window.location.reload()}
                     className="underline font-medium hover:text-amber-700"
                   >
-                    Reload page
+                    <T>Reload page</T>
                   </button>
                 </p>
               )}
@@ -682,11 +684,11 @@ function LoginForm() {
                   {isLoading ? (
                     <span className="flex items-center gap-2">
                       <span className="spinner spinner-sm border-white/30 border-t-white" />
-                      Signing in...
+                      <T>Signing in...</T>
                     </span>
                   ) : (
                     <span className="flex items-center gap-2">
-                      Sign in
+                      <T>Sign in</T>
                       <ArrowRightIcon className="h-4 w-4" />
                     </span>
                   )}
@@ -703,16 +705,7 @@ function LoginForm() {
                       </TooltipTrigger>
                       <TooltipContent side="top" className="max-w-[250px]">
                         <p className="text-sm">
-                          Please complete the security captcha above. If it's
-                          not visible, try{" "}
-                          <button
-                            type="button"
-                            onClick={() => window.location.reload()}
-                            className="underline font-medium"
-                          >
-                            reloading the page
-                          </button>
-                          .
+                          <T>Please complete the security captcha above. If it's not visible, try reloading the page.</T>
                         </p>
                       </TooltipContent>
                     </Tooltip>
@@ -724,12 +717,12 @@ function LoginForm() {
             })()}
 
             <p className="text-sm text-center text-muted-foreground">
-              Don&apos;t have an account?{" "}
+              <T>Don't have an account?</T>{" "}
               <Link
                 href="/auth/register"
                 className="text-gold-600 font-semibold hover:text-gold-700 hover:underline"
               >
-                Create one
+                <T>Create one</T>
               </Link>
             </p>
           </CardFooter>

@@ -18,6 +18,8 @@ import {
 } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 
 const stats = [
   { label: "Verified Sellers", value: "500+", icon: BuildingStorefrontIcon },
@@ -90,6 +92,7 @@ const team = [
 ];
 
 export default function AboutPage() {
+  const t = useT();
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
       <Header />
@@ -104,11 +107,10 @@ export default function AboutPage() {
             className="max-w-3xl mx-auto text-center"
           >
             <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              About Orivraa
+              <T>About Orivraa</T>
             </h1>
             <p className="text-xl md:text-2xl text-amber-100 mb-8">
-              Your trusted marketplace for authentic gold and silver jewelry.
-              Connecting skilled artisans with jewelry lovers worldwide.
+              <T>Your trusted marketplace for authentic gold and silver jewelry. Connecting skilled artisans with jewelry lovers worldwide.</T>
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
@@ -117,7 +119,7 @@ export default function AboutPage() {
                 asChild
               >
                 <Link href="/shops">
-                  Browse Sellers
+                  <T>Browse Sellers</T>
                   <ArrowRightIcon className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -127,7 +129,7 @@ export default function AboutPage() {
                 className="border-white text-white bg-transparent hover:bg-white hover:text-amber-700"
                 asChild
               >
-                <Link href="/rfq/create">Create Custom Order</Link>
+                <Link href="/rfq/create"><T>Create Custom Order</T></Link>
               </Button>
             </div>
           </motion.div>
@@ -151,7 +153,7 @@ export default function AboutPage() {
                   {stat.value}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-300">
-                  {stat.label}
+                  {t(stat.label)}
                 </div>
               </motion.div>
             ))}
@@ -164,7 +166,7 @@ export default function AboutPage() {
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Our Story
+              <T>Our Story</T>
             </h2>
             <div className="h-1 w-20 bg-amber-500 mx-auto mb-6" />
           </div>
@@ -172,23 +174,13 @@ export default function AboutPage() {
           <div className="max-w-4xl mx-auto">
             <div className="prose prose-lg mx-auto text-gray-600 dark:text-gray-300">
               <p className="text-lg leading-relaxed mb-6">
-                Orivraa was born from a simple idea: make it easy for people to
-                find and purchase authentic, high-quality gold and silver
-                jewelry from trusted artisans around the world.
+                <T>Orivraa was born from a simple idea: make it easy for people to find and purchase authentic, high-quality gold and silver jewelry from trusted artisans around the world.</T>
               </p>
               <p className="text-lg leading-relaxed mb-6">
-                In many countries, buying gold jewelry involves visiting
-                multiple shops, comparing prices manually, and often dealing
-                with unclear pricing. We wanted to change that by creating a
-                transparent marketplace where buyers can see real-time gold
-                prices, compare sellers, and order custom jewelry with
-                confidence.
+                <T>In many countries, buying gold jewelry involves visiting multiple shops, comparing prices manually, and often dealing with unclear pricing. We wanted to change that by creating a transparent marketplace where buyers can see real-time gold prices, compare sellers, and order custom jewelry with confidence.</T>
               </p>
               <p className="text-lg leading-relaxed">
-                Today, Orivraa connects thousands of customers with verified
-                jewelers across Nepal, India, UAE, and beyond. Whether you're
-                looking for a traditional wedding set or a modern custom design,
-                we help you find the perfect piece at a fair price.
+                <T>Today, Orivraa connects thousands of customers with verified jewelers across Nepal, India, UAE, and beyond. Whether you're looking for a traditional wedding set or a modern custom design, we help you find the perfect piece at a fair price.</T>
               </p>
             </div>
           </div>
@@ -200,11 +192,11 @@ export default function AboutPage() {
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Our Values
+              <T>Our Values</T>
             </h2>
             <div className="h-1 w-20 bg-amber-500 mx-auto mb-6" />
             <p className="text-lg text-gray-600 dark:text-gray-300">
-              The principles that guide everything we do
+              <T>The principles that guide everything we do</T>
             </p>
           </div>
 
@@ -225,10 +217,10 @@ export default function AboutPage() {
                       </div>
                       <div>
                         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                          {value.title}
+                          {t(value.title)}
                         </h3>
                         <p className="text-gray-600 dark:text-gray-300">
-                          {value.description}
+                          {t(value.description)}
                         </p>
                       </div>
                     </div>
@@ -245,11 +237,11 @@ export default function AboutPage() {
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Why Choose Orivraa?
+              <T>Why Choose Orivraa?</T>
             </h2>
             <div className="h-1 w-20 bg-amber-500 mx-auto mb-6" />
             <p className="text-lg text-gray-600 dark:text-gray-300">
-              Features that make us the trusted choice for gold jewelry
+              <T>Features that make us the trusted choice for gold jewelry</T>
             </p>
           </div>
 
@@ -267,10 +259,10 @@ export default function AboutPage() {
                   <feature.icon className="h-8 w-8 text-amber-600" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  {feature.title}
+                  {t(feature.title)}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300 text-sm">
-                  {feature.description}
+                  {t(feature.description)}
                 </p>
               </motion.div>
             ))}
@@ -285,13 +277,11 @@ export default function AboutPage() {
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div>
                 <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                  Become a Seller
+                  <T>Become a Seller</T>
                 </h2>
                 <div className="h-1 w-20 bg-amber-500 mb-6" />
                 <p className="text-lg text-gray-300 mb-6">
-                  Join our marketplace and reach thousands of customers looking
-                  for quality gold and silver jewelry. We handle the platform,
-                  you focus on your craft.
+                  <T>Join our marketplace and reach thousands of customers looking for quality gold and silver jewelry. We handle the platform, you focus on your craft.</T>
                 </p>
                 <ul className="space-y-3 mb-8">
                   {[
@@ -303,13 +293,13 @@ export default function AboutPage() {
                   ].map((item, index) => (
                     <li key={index} className="flex items-center gap-3">
                       <CheckBadgeIcon className="h-5 w-5 text-amber-500" />
-                      <span className="text-gray-200">{item}</span>
+                      <span className="text-gray-200">{t(item)}</span>
                     </li>
                   ))}
                 </ul>
                 <Button size="lg" className="gold-gradient text-white" asChild>
                   <Link href="/register?role=seller">
-                    Register as Seller
+                    <T>Register as Seller</T>
                     <ArrowRightIcon className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
@@ -325,7 +315,7 @@ export default function AboutPage() {
                           500+ Sellers
                         </h3>
                         <p className="text-gray-400">
-                          Already trust Orivraa to grow their business
+                          <T>Already trust Orivraa to grow their business</T>
                         </p>
                       </div>
                     </CardContent>
@@ -342,19 +332,18 @@ export default function AboutPage() {
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Get in Touch
+              <T>Get in Touch</T>
             </h2>
             <div className="h-1 w-20 bg-amber-500 mx-auto mb-6" />
             <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
-              Have questions? We'd love to hear from you. Send us a message and
-              we'll respond as soon as possible.
+              <T>Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.</T>
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <Card className="flex-1">
                 <CardContent className="p-6">
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-                    Email Us
+                    <T>Email Us</T>
                   </h3>
                   <a
                     href="mailto:support@orivraa.com"
@@ -367,7 +356,7 @@ export default function AboutPage() {
               <Card className="flex-1">
                 <CardContent className="p-6">
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-                    For Sellers
+                    <T>For Sellers</T>
                   </h3>
                   <a
                     href="mailto:sellers@orivraa.com"
@@ -380,7 +369,7 @@ export default function AboutPage() {
             </div>
 
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              © {new Date().getFullYear()} Orivraa. All rights reserved.
+              © {new Date().getFullYear()} Orivraa. <T>All rights reserved.</T>
             </p>
           </div>
         </div>
