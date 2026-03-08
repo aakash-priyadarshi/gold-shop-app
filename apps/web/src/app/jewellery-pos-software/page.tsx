@@ -1,3 +1,5 @@
+"use client";
+
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import {
@@ -13,6 +15,7 @@ import {
   ScanBarcode,
 } from "lucide-react";
 import Link from "next/link";
+import { T } from "@/components/ui/T";
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -154,37 +157,29 @@ export default function JewelleryPosSoftwarePage() {
         <section className="relative overflow-hidden bg-gradient-to-br from-amber-50 via-white to-yellow-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 py-16 lg:py-24">
           <div className="container mx-auto px-4 max-w-6xl text-center">
             <span className="inline-block text-xs font-semibold tracking-widest uppercase text-amber-700 dark:text-gold-400 mb-4">
-              Point of Sale
+              <T>Point of Sale</T>
             </span>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 dark:text-white leading-tight mb-6">
-              Jewellery POS Software{" "}
+              <T>Jewellery POS Software</T>{" "}
               <span className="text-amber-600 dark:text-gold-400">
-                Built for Gold & Diamond Shops
+                <T>Built for Gold & Diamond Shops</T>
               </span>
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
-              Stop struggling with generic POS systems. Orivraa's point-of-sale
-              module handles
-              <strong>
-                {" "}
-                weight-based billing, making charges, old gold exchange, barcode
-                scanning
-              </strong>
-              , and GST/VAT-compliant invoicing — all designed specifically for
-              jewellery businesses.
+              <T>Stop struggling with generic POS systems. Orivraa's point-of-sale module handles weight-based billing, making charges, old gold exchange, barcode scanning, and GST/VAT-compliant invoicing — all designed specifically for jewellery businesses.</T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 href="/auth/register?role=SELLER"
                 className="px-8 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-semibold text-base transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
               >
-                Try Free POS <ArrowRight className="h-4 w-4" />
+                <T>Try Free POS</T> <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/pricing"
                 className="px-8 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-xl font-semibold text-base hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
               >
-                View Pricing
+                <T>View Pricing</T>
               </Link>
             </div>
           </div>
@@ -194,47 +189,31 @@ export default function JewelleryPosSoftwarePage() {
         <section className="py-16 lg:py-20 bg-white dark:bg-gray-950">
           <div className="container mx-auto px-4 max-w-5xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-6">
-              Why Generic POS Systems Fail Jewellery Shops
+              <T>Why Generic POS Systems Fail Jewellery Shops</T>
             </h2>
             <div className="prose prose-lg dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
               <p>
-                Most POS systems are designed for retail stores selling items at
-                fixed prices. A grocery store scans a barcode and the price pops
-                up. Simple. But jewellery is different:
+                <T>Most POS systems are designed for retail stores selling items at fixed prices. A grocery store scans a barcode and the price pops up. Simple. But jewellery is different:</T>
               </p>
               <ul>
                 <li>
-                  <strong>Prices change daily</strong> — Gold and silver rates
-                  fluctuate every day, sometimes multiple times a day. Your POS
-                  needs to pull live rates or accept manual rate entry.
+                  <T>Prices change daily — Gold and silver rates fluctuate every day, sometimes multiple times a day. Your POS needs to pull live rates or accept manual rate entry.</T>
                 </li>
                 <li>
-                  <strong>Billing is by weight, not unit</strong> — A gold
-                  necklace isn't priced at "₹50,000." It's priced at "22K gold ×
-                  15.3 grams × today's rate + making charges + stone charges −
-                  old gold exchange."
+                  <T>Billing is by weight, not unit — A gold necklace isn't priced at "₹50,000." It's priced at "22K gold × 15.3 grams × today's rate + making charges + stone charges − old gold exchange."</T>
                 </li>
                 <li>
-                  <strong>Making charges vary</strong> — Different items have
-                  different making charges (per gram, per piece, or flat fee). A
-                  POS must support all these structures.
+                  <T>Making charges vary — Different items have different making charges (per gram, per piece, or flat fee). A POS must support all these structures.</T>
                 </li>
                 <li>
-                  <strong>Old gold exchange</strong> — Customers frequently
-                  trade in old jewellery. The POS needs to calculate the
-                  exchange value based on weight and purity, then adjust the
-                  bill.
+                  <T>Old gold exchange — Customers frequently trade in old jewellery. The POS needs to calculate the exchange value based on weight and purity, then adjust the bill.</T>
                 </li>
                 <li>
-                  <strong>Purity grading</strong> — You sell 24K, 22K, 18K, and
-                  14K gold. Each has a different base price. Generic POS systems
-                  have no concept of this.
+                  <T>Purity grading — You sell 24K, 22K, 18K, and 14K gold. Each has a different base price. Generic POS systems have no concept of this.</T>
                 </li>
               </ul>
               <p>
-                Orivraa's jewellery POS handles all of this natively. No
-                workarounds. No spreadsheets. Just fast, accurate billing
-                designed for how jewellery shops actually work.
+                <T>Orivraa's jewellery POS handles all of this natively. No workarounds. No spreadsheets. Just fast, accurate billing designed for how jewellery shops actually work.</T>
               </p>
             </div>
           </div>
@@ -244,11 +223,10 @@ export default function JewelleryPosSoftwarePage() {
         <section className="py-16 lg:py-20 bg-gray-50 dark:bg-gray-900">
           <div className="container mx-auto px-4 max-w-6xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-4">
-              POS Features Designed for Jewellers
+              <T>POS Features Designed for Jewellers</T>
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-12">
-              Every feature you need to bill customers accurately and
-              efficiently at the jewellery counter.
+              <T>Every feature you need to bill customers accurately and efficiently at the jewellery counter.</T>
             </p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {POS_FEATURES.map((f) => (
@@ -258,10 +236,10 @@ export default function JewelleryPosSoftwarePage() {
                 >
                   <f.icon className="h-8 w-8 text-amber-600 dark:text-gold-400 mb-3" />
                   <h3 className="font-bold text-gray-900 dark:text-white mb-2">
-                    {f.title}
+                    <T>{f.title}</T>
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {f.desc}
+                    <T>{f.desc}</T>
                   </p>
                 </div>
               ))}
@@ -273,7 +251,7 @@ export default function JewelleryPosSoftwarePage() {
         <section className="py-16 lg:py-20 bg-white dark:bg-gray-950">
           <div className="container mx-auto px-4 max-w-5xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-12">
-              How Jewellery Billing Works in Orivraa
+              <T>How Jewellery Billing Works in Orivraa</T>
             </h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {WORKFLOW.map((s) => (
@@ -282,10 +260,10 @@ export default function JewelleryPosSoftwarePage() {
                     {s.step}
                   </div>
                   <h3 className="font-bold text-gray-900 dark:text-white mb-2">
-                    {s.title}
+                    <T>{s.title}</T>
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {s.desc}
+                    <T>{s.desc}</T>
                   </p>
                 </div>
               ))}
@@ -297,24 +275,23 @@ export default function JewelleryPosSoftwarePage() {
         <section className="py-16 lg:py-20 bg-gray-50 dark:bg-gray-900">
           <div className="container mx-auto px-4 max-w-4xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-4">
-              Orivraa POS vs Generic POS Systems
+              <T>Orivraa POS vs Generic POS Systems</T>
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-10">
-              Here's what you get with a jewellery-specific POS vs trying to
-              make a generic system work.
+              <T>Here's what you get with a jewellery-specific POS vs trying to make a generic system work.</T>
             </p>
             <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-800">
                     <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-200">
-                      Capability
+                      <T>Capability</T>
                     </th>
                     <th className="px-4 py-3 font-semibold text-amber-700 dark:text-gold-400">
-                      Orivraa POS
+                      <T>Orivraa POS</T>
                     </th>
                     <th className="px-4 py-3 font-semibold text-gray-500">
-                      Generic POS
+                      <T>Generic POS</T>
                     </th>
                   </tr>
                 </thead>
@@ -342,7 +319,7 @@ export default function JewelleryPosSoftwarePage() {
                       }
                     >
                       <td className="px-4 py-3 text-gray-700 dark:text-gray-300">
-                        {feature as string}
+                        <T>{feature as string}</T>
                       </td>
                       <td className="px-4 py-3 text-center">
                         {orivraa ? "✅" : "❌"}
@@ -362,7 +339,7 @@ export default function JewelleryPosSoftwarePage() {
         <section className="py-16 lg:py-20 bg-white dark:bg-gray-950">
           <div className="container mx-auto px-4 max-w-3xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-10">
-              Frequently Asked Questions
+              <T>Frequently Asked Questions</T>
             </h2>
             <div className="space-y-4">
               {[
@@ -396,11 +373,11 @@ export default function JewelleryPosSoftwarePage() {
                   className="group bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
                 >
                   <summary className="flex items-center justify-between px-6 py-4 cursor-pointer font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-750">
-                    {faq.q}
+                    <T>{faq.q}</T>
                     <ArrowRight className="h-4 w-4 text-gray-400 group-open:rotate-90 transition-transform shrink-0 ml-4" />
                   </summary>
                   <p className="px-6 pb-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {faq.a}
+                    <T>{faq.a}</T>
                   </p>
                 </details>
               ))}
@@ -412,24 +389,23 @@ export default function JewelleryPosSoftwarePage() {
         <section className="py-16 lg:py-20 bg-gradient-to-r from-amber-600 to-yellow-500 text-white">
           <div className="container mx-auto px-4 max-w-3xl text-center">
             <h2 className="text-2xl lg:text-3xl font-bold mb-4">
-              Upgrade Your Jewellery Shop Counter
+              <T>Upgrade Your Jewellery Shop Counter</T>
             </h2>
             <p className="text-lg text-amber-100 mb-8">
-              Fast, accurate billing designed for gold and diamond shops. Free
-              to start — no credit card required.
+              <T>Fast, accurate billing designed for gold and diamond shops. Free to start — no credit card required.</T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 href="/auth/register?role=SELLER"
                 className="px-8 py-3 bg-white text-amber-700 rounded-xl font-semibold hover:bg-amber-50 transition-all shadow-lg flex items-center gap-2"
               >
-                Start Free Today <ArrowRight className="h-4 w-4" />
+                <T>Start Free Today</T> <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/jewellery-shop-software"
                 className="px-8 py-3 border-2 border-white/50 text-white rounded-xl font-semibold hover:bg-white/10 transition-all"
               >
-                Full Feature List
+                <T>Full Feature List</T>
               </Link>
             </div>
           </div>

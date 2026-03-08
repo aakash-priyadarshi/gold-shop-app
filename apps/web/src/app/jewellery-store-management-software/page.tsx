@@ -1,3 +1,6 @@
+"use client";
+
+import { T } from "@/components/ui/T";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import {
@@ -256,33 +259,29 @@ export default function JewelleryStoreManagementSoftwarePage() {
         <section className="relative overflow-hidden bg-gradient-to-br from-amber-50 via-white to-yellow-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 py-16 lg:py-24">
           <div className="container mx-auto px-4 max-w-6xl text-center">
             <span className="inline-block text-xs font-semibold tracking-widest uppercase text-amber-700 dark:text-gold-400 mb-4">
-              Complete Store Management
+              <T>Complete Store Management</T>
             </span>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 dark:text-white leading-tight mb-6">
-              Jewellery Store Management Software{" "}
+              <T>Jewellery Store Management Software</T>{" "}
               <span className="text-amber-600 dark:text-gold-400">
-                for Modern Shops
+                <T>for Modern Shops</T>
               </span>
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
-              Manage your entire jewellery business from one platform —
-              inventory tracking by weight and purity, billing with making
-              charges, customer management, analytics, and an online
-              marketplace. Trusted by <strong>2,000+ jewellers</strong> across 6
-              countries. <strong>Starts free.</strong>
+              <T>Manage your entire jewellery business from one platform — inventory tracking by weight and purity, billing with making charges, customer management, analytics, and an online marketplace. Trusted by 2,000+ jewellers across 6 countries. Starts free.</T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 href="/auth/register?role=SELLER"
                 className="px-8 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-semibold text-base transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
               >
-                Start Free <ArrowRight className="h-4 w-4" />
+                <T>Start Free</T> <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/pricing"
                 className="px-8 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-xl font-semibold text-base hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
               >
-                View Pricing
+                <T>View Pricing</T>
               </Link>
             </div>
           </div>
@@ -301,7 +300,7 @@ export default function JewelleryStoreManagementSoftwarePage() {
                 <div className="text-2xl lg:text-3xl font-bold text-gold-400">
                   {s.n}
                 </div>
-                <div className="text-sm text-gray-400 mt-1">{s.l}</div>
+                <div className="text-sm text-gray-400 mt-1"><T>{s.l}</T></div>
               </div>
             ))}
           </div>
@@ -311,30 +310,17 @@ export default function JewelleryStoreManagementSoftwarePage() {
         <section className="py-16 lg:py-20 bg-white dark:bg-gray-950">
           <div className="container mx-auto px-4 max-w-5xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-6">
-              Why Jewellery Stores Need Dedicated Management Software
+              <T>Why Jewellery Stores Need Dedicated Management Software</T>
             </h2>
             <div className="prose prose-lg dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
               <p>
-                Running a jewellery store is fundamentally different from
-                running a general retail shop. You deal with
-                <strong> precious metals tracked by weight and purity</strong>,
-                custom orders with making charges, old gold exchange, karigar
-                (artisan) management, and compliance with hallmarking
-                regulations.
+                <T>Running a jewellery store is fundamentally different from running a general retail shop. You deal with precious metals tracked by weight and purity, custom orders with making charges, old gold exchange, karigar (artisan) management, and compliance with hallmarking regulations.</T>
               </p>
               <p>
-                Generic retail software like Shopify or Square simply cannot
-                handle the nuances of jewellery — they don't support
-                weight-based inventory, purity grading, or making-charge
-                calculations. That's why{" "}
-                <strong>jewellery-specific store management software</strong>{" "}
-                like Orivraa exists.
+                <T>Generic retail software like Shopify or Square simply cannot handle the nuances of jewellery — they don't support weight-based inventory, purity grading, or making-charge calculations. That's why jewellery-specific store management software like Orivraa exists.</T>
               </p>
               <p>
-                With Orivraa, you get a purpose-built platform that understands
-                the jewellery business from the ground up — from 22K gold
-                necklaces to diamond solitaires, from wholesale dealers to
-                retail customers, from local markets to international buyers.
+                <T>With Orivraa, you get a purpose-built platform that understands the jewellery business from the ground up — from 22K gold necklaces to diamond solitaires, from wholesale dealers to retail customers, from local markets to international buyers.</T>
               </p>
             </div>
           </div>
@@ -344,11 +330,10 @@ export default function JewelleryStoreManagementSoftwarePage() {
         <section className="py-16 lg:py-20 bg-gray-50 dark:bg-gray-900">
           <div className="container mx-auto px-4 max-w-6xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-4">
-              Everything You Need to Run Your Jewellery Store
+              <T>Everything You Need to Run Your Jewellery Store</T>
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-12">
-              From inventory to invoicing, customer management to analytics —
-              one platform does it all.
+              <T>From inventory to invoicing, customer management to analytics — one platform does it all.</T>
             </p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {FEATURES.map((f) => (
@@ -358,10 +343,10 @@ export default function JewelleryStoreManagementSoftwarePage() {
                 >
                   <f.icon className="h-8 w-8 text-amber-600 dark:text-gold-400 mb-3" />
                   <h3 className="font-bold text-gray-900 dark:text-white mb-2">
-                    {f.title}
+                    <T>{f.title}</T>
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {f.desc}
+                    <T>{f.desc}</T>
                   </p>
                 </div>
               ))}
@@ -373,18 +358,17 @@ export default function JewelleryStoreManagementSoftwarePage() {
         <section className="py-16 lg:py-20 bg-white dark:bg-gray-950">
           <div className="container mx-auto px-4 max-w-5xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-4">
-              How Orivraa Compares to Other Store Management Software
+              <T>How Orivraa Compares to Other Store Management Software</T>
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-10">
-              See why jewellers are switching to Orivraa for modern store
-              management.
+              <T>See why jewellers are switching to Orivraa for modern store management.</T>
             </p>
             <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-800">
                     <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-200">
-                      Feature
+                      <T>Feature</T>
                     </th>
                     <th className="px-4 py-3 font-semibold text-amber-700 dark:text-gold-400">
                       Orivraa
@@ -411,7 +395,7 @@ export default function JewelleryStoreManagementSoftwarePage() {
                       }
                     >
                       <td className="px-4 py-3 text-gray-700 dark:text-gray-300">
-                        {row.feature}
+                        <T>{row.feature}</T>
                       </td>
                       <td className="px-4 py-3 text-center">
                         {row.orivraa ? "✅" : "❌"}
@@ -437,7 +421,7 @@ export default function JewelleryStoreManagementSoftwarePage() {
         <section className="py-16 lg:py-20 bg-gray-50 dark:bg-gray-900">
           <div className="container mx-auto px-4 max-w-5xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-12">
-              Get Started in 4 Simple Steps
+              <T>Get Started in 4 Simple Steps</T>
             </h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {STEPS.map((s) => (
@@ -449,10 +433,10 @@ export default function JewelleryStoreManagementSoftwarePage() {
                     STEP {s.step}
                   </div>
                   <h3 className="font-bold text-gray-900 dark:text-white mb-2">
-                    {s.title}
+                    <T>{s.title}</T>
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {s.desc}
+                    <T>{s.desc}</T>
                   </p>
                 </div>
               ))}
@@ -464,7 +448,7 @@ export default function JewelleryStoreManagementSoftwarePage() {
         <section className="py-16 lg:py-20 bg-white dark:bg-gray-950">
           <div className="container mx-auto px-4 max-w-5xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-10">
-              Built for Every Type of Jewellery Business
+              <T>Built for Every Type of Jewellery Business</T>
             </h2>
             <div className="grid sm:grid-cols-2 gap-6">
               {[
@@ -496,10 +480,10 @@ export default function JewelleryStoreManagementSoftwarePage() {
                   <c.icon className="h-8 w-8 text-amber-600 dark:text-gold-400 shrink-0 mt-1" />
                   <div>
                     <h3 className="font-bold text-gray-900 dark:text-white mb-1">
-                      {c.title}
+                      <T>{c.title}</T>
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {c.desc}
+                      <T>{c.desc}</T>
                     </p>
                   </div>
                 </div>
@@ -512,7 +496,7 @@ export default function JewelleryStoreManagementSoftwarePage() {
         <section className="py-16 lg:py-20 bg-gray-50 dark:bg-gray-900">
           <div className="container mx-auto px-4 max-w-3xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-10">
-              Frequently Asked Questions
+              <T>Frequently Asked Questions</T>
             </h2>
             <div className="space-y-4">
               {[
@@ -554,11 +538,11 @@ export default function JewelleryStoreManagementSoftwarePage() {
                   className="group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
                 >
                   <summary className="flex items-center justify-between px-6 py-4 cursor-pointer font-semibold text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-750">
-                    {faq.q}
+                    <T>{faq.q}</T>
                     <ArrowRight className="h-4 w-4 text-gray-400 group-open:rotate-90 transition-transform shrink-0 ml-4" />
                   </summary>
                   <p className="px-6 pb-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {faq.a}
+                    <T>{faq.a}</T>
                   </p>
                 </details>
               ))}
@@ -570,24 +554,23 @@ export default function JewelleryStoreManagementSoftwarePage() {
         <section className="py-16 lg:py-20 bg-gradient-to-r from-amber-600 to-yellow-500 text-white">
           <div className="container mx-auto px-4 max-w-3xl text-center">
             <h2 className="text-2xl lg:text-3xl font-bold mb-4">
-              Ready to Modernise Your Jewellery Store?
+              <T>Ready to Modernise Your Jewellery Store?</T>
             </h2>
             <p className="text-lg text-amber-100 mb-8">
-              Join 2,000+ jewellers already managing their stores with Orivraa.
-              Free forever plan — no credit card required.
+              <T>Join 2,000+ jewellers already managing their stores with Orivraa. Free forever plan — no credit card required.</T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 href="/auth/register?role=SELLER"
                 className="px-8 py-3 bg-white text-amber-700 rounded-xl font-semibold hover:bg-amber-50 transition-all shadow-lg flex items-center gap-2"
               >
-                Start Free Today <ArrowRight className="h-4 w-4" />
+                <T>Start Free Today</T> <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/jewellery-shop-software"
                 className="px-8 py-3 border-2 border-white/50 text-white rounded-xl font-semibold hover:bg-white/10 transition-all"
               >
-                Learn More
+                <T>Learn More</T>
               </Link>
             </div>
           </div>

@@ -1,3 +1,6 @@
+"use client";
+
+import { T } from "@/components/ui/T";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import {
@@ -145,35 +148,30 @@ export default function JewellerBillingSoftwarePage() {
         <section className="relative overflow-hidden bg-gradient-to-br from-amber-50 via-white to-yellow-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 py-16 lg:py-24">
           <div className="container mx-auto px-4 max-w-6xl text-center">
             <span className="inline-block text-xs font-semibold tracking-widest uppercase text-amber-700 dark:text-gold-400 mb-4">
-              Billing & Invoicing
+              <T>Billing & Invoicing</T>
             </span>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 dark:text-white leading-tight mb-6">
-              Jewellery Shop Billing Software{" "}
+              <T>Jewellery Shop Billing Software</T>{" "}
               <span className="text-amber-600 dark:text-gold-400">
-                — Accurate Invoices, Faster Checkout
+                <T>— Accurate Invoices, Faster Checkout</T>
               </span>
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
-              Generate professional GST/VAT-compliant invoices with{" "}
-              <strong>
-                making charges, old gold exchange, weight-based pricing, and
-                barcode scanning
-              </strong>
-              . Designed specifically for gold, silver, and diamond jewellery
-              shops. Trusted by <strong>2,000+ jewellers</strong>. Starts free.
+              <T>Generate professional GST/VAT-compliant invoices with making charges, old gold exchange, weight-based pricing, and barcode scanning. Designed specifically for gold, silver, and diamond jewellery shops.</T>{" "}
+              <T>Trusted by 2,000+ jewellers. Starts free.</T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 href="/auth/register?role=SELLER"
                 className="px-8 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-semibold text-base transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
               >
-                Start Free Billing <ArrowRight className="h-4 w-4" />
+                <T>Start Free Billing</T> <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/pricing"
                 className="px-8 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-xl font-semibold text-base hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
               >
-                View Pricing
+                <T>View Pricing</T>
               </Link>
             </div>
           </div>
@@ -183,15 +181,14 @@ export default function JewellerBillingSoftwarePage() {
         <section className="py-16 lg:py-20 bg-white dark:bg-gray-950">
           <div className="container mx-auto px-4 max-w-3xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-4">
-              How a Jewellery Invoice Actually Works
+              <T>How a Jewellery Invoice Actually Works</T>
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-xl mx-auto mb-10">
-              Here's a real example of a 22K gold necklace invoice — this is
-              what Orivraa generates automatically.
+              <T>Here's a real example of a 22K gold necklace invoice — this is what Orivraa generates automatically.</T>
             </p>
             <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="bg-amber-600 text-white px-6 py-3 text-sm font-semibold">
-                Sample Invoice — 22K Gold Necklace
+                <T>Sample Invoice — 22K Gold Necklace</T>
               </div>
               <div className="p-6 space-y-3">
                 {INVOICE_COMPONENTS.map((row, i) => (
@@ -207,15 +204,14 @@ export default function JewellerBillingSoftwarePage() {
                             : "text-gray-700 dark:text-gray-300"
                     }`}
                   >
-                    <span className="text-sm">{row.label}</span>
+                    <span className="text-sm"><T>{row.label}</T></span>
                     <span className="text-sm font-mono">{row.value}</span>
                   </div>
                 ))}
               </div>
             </div>
             <p className="text-xs text-center text-gray-400 mt-4">
-              Orivraa calculates all of this automatically — just scan the
-              product and enter old gold details.
+              <T>Orivraa calculates all of this automatically — just scan the product and enter old gold details.</T>
             </p>
           </div>
         </section>
@@ -224,11 +220,10 @@ export default function JewellerBillingSoftwarePage() {
         <section className="py-16 lg:py-20 bg-gray-50 dark:bg-gray-900">
           <div className="container mx-auto px-4 max-w-6xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-4">
-              Billing Features Built for Jewellers
+              <T>Billing Features Built for Jewellers</T>
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-12">
-              Every billing scenario your jewellery shop faces — handled
-              natively.
+              <T>Every billing scenario your jewellery shop faces — handled natively.</T>
             </p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {FEATURES.map((f) => (
@@ -238,10 +233,10 @@ export default function JewellerBillingSoftwarePage() {
                 >
                   <f.icon className="h-8 w-8 text-amber-600 dark:text-gold-400 mb-3" />
                   <h3 className="font-bold text-gray-900 dark:text-white mb-2">
-                    {f.title}
+                    <T>{f.title}</T>
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {f.desc}
+                    <T>{f.desc}</T>
                   </p>
                 </div>
               ))}
@@ -253,11 +248,10 @@ export default function JewellerBillingSoftwarePage() {
         <section className="py-16 lg:py-20 bg-white dark:bg-gray-950">
           <div className="container mx-auto px-4 max-w-4xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-4">
-              Tax-Compliant Billing for Every Market
+              <T>Tax-Compliant Billing for Every Market</T>
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-10">
-              Orivraa automatically applies the correct tax rules based on your
-              shop's location.
+              <T>Orivraa automatically applies the correct tax rules based on your shop's location.</T>
             </p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
@@ -311,14 +305,14 @@ export default function JewellerBillingSoftwarePage() {
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-2xl">{c.flag}</span>
                     <h3 className="font-bold text-gray-900 dark:text-white">
-                      {c.country}
+                      <T>{c.country}</T>
                     </h3>
                     <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-gold-400 px-2 py-0.5 rounded-full font-semibold">
                       {c.tax}
                     </span>
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {c.details}
+                    <T>{c.details}</T>
                   </p>
                 </div>
               ))}
@@ -330,7 +324,7 @@ export default function JewellerBillingSoftwarePage() {
         <section className="py-16 lg:py-20 bg-gray-50 dark:bg-gray-900">
           <div className="container mx-auto px-4 max-w-3xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-10">
-              Frequently Asked Questions
+              <T>Frequently Asked Questions</T>
             </h2>
             <div className="space-y-4">
               {[
@@ -364,11 +358,11 @@ export default function JewellerBillingSoftwarePage() {
                   className="group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
                 >
                   <summary className="flex items-center justify-between px-6 py-4 cursor-pointer font-semibold text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-750">
-                    {faq.q}
+                    <T>{faq.q}</T>
                     <ArrowRight className="h-4 w-4 text-gray-400 group-open:rotate-90 transition-transform shrink-0 ml-4" />
                   </summary>
                   <p className="px-6 pb-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {faq.a}
+                    <T>{faq.a}</T>
                   </p>
                 </details>
               ))}
@@ -380,24 +374,23 @@ export default function JewellerBillingSoftwarePage() {
         <section className="py-16 lg:py-20 bg-gradient-to-r from-amber-600 to-yellow-500 text-white">
           <div className="container mx-auto px-4 max-w-3xl text-center">
             <h2 className="text-2xl lg:text-3xl font-bold mb-4">
-              Professional Billing for Your Jewellery Shop
+              <T>Professional Billing for Your Jewellery Shop</T>
             </h2>
             <p className="text-lg text-amber-100 mb-8">
-              GST/VAT-compliant invoices with making charges, old gold exchange,
-              and barcode scanning. Free to start.
+              <T>GST/VAT-compliant invoices with making charges, old gold exchange, and barcode scanning. Free to start.</T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 href="/auth/register?role=SELLER"
                 className="px-8 py-3 bg-white text-amber-700 rounded-xl font-semibold hover:bg-amber-50 transition-all shadow-lg flex items-center gap-2"
               >
-                Start Free Billing <ArrowRight className="h-4 w-4" />
+                <T>Start Free Billing</T> <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/jewellery-shop-software"
                 className="px-8 py-3 border-2 border-white/50 text-white rounded-xl font-semibold hover:bg-white/10 transition-all"
               >
-                Full Feature List
+                <T>Full Feature List</T>
               </Link>
             </div>
           </div>

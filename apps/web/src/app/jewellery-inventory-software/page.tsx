@@ -1,3 +1,6 @@
+"use client";
+
+import { T } from "@/components/ui/T";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import {
@@ -154,36 +157,29 @@ export default function JewelleryInventorySoftwarePage() {
         <section className="relative overflow-hidden bg-gradient-to-br from-amber-50 via-white to-yellow-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 py-16 lg:py-24">
           <div className="container mx-auto px-4 max-w-6xl text-center">
             <span className="inline-block text-xs font-semibold tracking-widest uppercase text-amber-700 dark:text-gold-400 mb-4">
-              Inventory Management
+              <T>Inventory Management</T>
             </span>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 dark:text-white leading-tight mb-6">
-              Jewellery Inventory Software{" "}
+              <T>Jewellery Inventory Software</T>{" "}
               <span className="text-amber-600 dark:text-gold-400">
-                — Track Every Gram, Every Karat
+                <T>— Track Every Gram, Every Karat</T>
               </span>
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
-              Stop using spreadsheets to track gold. Orivraa's inventory
-              management tracks your{" "}
-              <strong>
-                gold, silver, diamond, and gemstone inventory by weight, purity,
-                and category
-              </strong>{" "}
-              with automatic stock alerts, bulk upload, and real-time valuation.
-              Trusted by <strong>2,000+ jewellers</strong>.
+              <T>Stop using spreadsheets to track gold. Orivraa's inventory management tracks your gold, silver, diamond, and gemstone inventory by weight, purity, and category with automatic stock alerts, bulk upload, and real-time valuation. Trusted by 2,000+ jewellers.</T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 href="/auth/register?role=SELLER"
                 className="px-8 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-semibold text-base transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
               >
-                Start Free <ArrowRight className="h-4 w-4" />
+                <T>Start Free</T> <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/pricing"
                 className="px-8 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-xl font-semibold text-base hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
               >
-                View Pricing
+                <T>View Pricing</T>
               </Link>
             </div>
           </div>
@@ -202,7 +198,7 @@ export default function JewelleryInventorySoftwarePage() {
                 <div className="text-2xl lg:text-3xl font-bold text-gold-400">
                   {s.n}
                 </div>
-                <div className="text-sm text-gray-400 mt-1">{s.l}</div>
+                <div className="text-sm text-gray-400 mt-1"><T>{s.l}</T></div>
               </div>
             ))}
           </div>
@@ -212,32 +208,17 @@ export default function JewelleryInventorySoftwarePage() {
         <section className="py-16 lg:py-20 bg-white dark:bg-gray-950">
           <div className="container mx-auto px-4 max-w-5xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-6">
-              Why Spreadsheets and Generic Software Fail for Jewellery Inventory
+              <T>Why Spreadsheets and Generic Software Fail for Jewellery Inventory</T>
             </h2>
             <div className="prose prose-lg dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
               <p>
-                Jewellery inventory isn't about counting units on a shelf. A
-                single gold necklace has attributes that most software can't
-                handle:{" "}
-                <strong>
-                  gross weight, net weight (after stones), gold purity, stone
-                  weight, stone type, making charges per gram, HUID number,
-                  hallmark certification
-                </strong>
-                , and more.
+                <T>Jewellery inventory isn't about counting units on a shelf. A single gold necklace has attributes that most software can't handle: gross weight, net weight (after stones), gold purity, stone weight, stone type, making charges per gram, HUID number, hallmark certification, and more.</T>
               </p>
               <p>
-                Using a spreadsheet or generic inventory app means you're
-                constantly creating workarounds — extra columns, manual
-                calculations, no automated alerts. One misplaced decimal and
-                your inventory valuation is off by lakhs.
+                <T>Using a spreadsheet or generic inventory app means you're constantly creating workarounds — extra columns, manual calculations, no automated alerts. One misplaced decimal and your inventory valuation is off by lakhs.</T>
               </p>
               <p>
-                Orivraa was built from day one for jewellery businesses. Every
-                field, every calculation, every report is designed around how{" "}
-                <strong>gold, silver, and diamond inventory</strong> actually
-                works. Whether you're a single-store retailer or a multi-branch
-                wholesaler, your inventory stays accurate down to the milligram.
+                <T>Orivraa was built from day one for jewellery businesses. Every field, every calculation, every report is designed around how gold, silver, and diamond inventory actually works. Whether you're a single-store retailer or a multi-branch wholesaler, your inventory stays accurate down to the milligram.</T>
               </p>
             </div>
           </div>
@@ -247,7 +228,7 @@ export default function JewelleryInventorySoftwarePage() {
         <section className="py-16 lg:py-20 bg-gray-50 dark:bg-gray-900">
           <div className="container mx-auto px-4 max-w-5xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-10">
-              Track Every Type of Jewellery Inventory
+              <T>Track Every Type of Jewellery Inventory</T>
             </h2>
             <div className="grid sm:grid-cols-2 gap-6">
               {INVENTORY_TYPES.map((t) => (
@@ -258,10 +239,10 @@ export default function JewelleryInventorySoftwarePage() {
                   <span className="text-3xl shrink-0">{t.icon}</span>
                   <div>
                     <h3 className="font-bold text-gray-900 dark:text-white mb-1">
-                      {t.title}
+                      <T>{t.title}</T>
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t.desc}
+                      <T>{t.desc}</T>
                     </p>
                   </div>
                 </div>
@@ -274,11 +255,10 @@ export default function JewelleryInventorySoftwarePage() {
         <section className="py-16 lg:py-20 bg-white dark:bg-gray-950">
           <div className="container mx-auto px-4 max-w-6xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-4">
-              Powerful Inventory Features for Jewellers
+              <T>Powerful Inventory Features for Jewellers</T>
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-12">
-              From weight tracking to stock valuation — everything you need to
-              manage precious inventory.
+              <T>From weight tracking to stock valuation — everything you need to manage precious inventory.</T>
             </p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {FEATURES.map((f) => (
@@ -288,10 +268,10 @@ export default function JewelleryInventorySoftwarePage() {
                 >
                   <f.icon className="h-8 w-8 text-amber-600 dark:text-gold-400 mb-3" />
                   <h3 className="font-bold text-gray-900 dark:text-white mb-2">
-                    {f.title}
+                    <T>{f.title}</T>
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {f.desc}
+                    <T>{f.desc}</T>
                   </p>
                 </div>
               ))}
@@ -303,7 +283,7 @@ export default function JewelleryInventorySoftwarePage() {
         <section className="py-16 lg:py-20 bg-gray-50 dark:bg-gray-900">
           <div className="container mx-auto px-4 max-w-3xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-10">
-              Frequently Asked Questions
+              <T>Frequently Asked Questions</T>
             </h2>
             <div className="space-y-4">
               {[
@@ -341,11 +321,11 @@ export default function JewelleryInventorySoftwarePage() {
                   className="group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
                 >
                   <summary className="flex items-center justify-between px-6 py-4 cursor-pointer font-semibold text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-750">
-                    {faq.q}
+                    <T>{faq.q}</T>
                     <ArrowRight className="h-4 w-4 text-gray-400 group-open:rotate-90 transition-transform shrink-0 ml-4" />
                   </summary>
                   <p className="px-6 pb-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {faq.a}
+                    <T>{faq.a}</T>
                   </p>
                 </details>
               ))}
@@ -357,24 +337,23 @@ export default function JewelleryInventorySoftwarePage() {
         <section className="py-16 lg:py-20 bg-gradient-to-r from-amber-600 to-yellow-500 text-white">
           <div className="container mx-auto px-4 max-w-3xl text-center">
             <h2 className="text-2xl lg:text-3xl font-bold mb-4">
-              Take Control of Your Jewellery Inventory
+              <T>Take Control of Your Jewellery Inventory</T>
             </h2>
             <p className="text-lg text-amber-100 mb-8">
-              Stop guessing. Track every gram, every karat, every piece with
-              cloud-based inventory software. Free to start.
+              <T>Stop guessing. Track every gram, every karat, every piece with cloud-based inventory software. Free to start.</T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 href="/auth/register?role=SELLER"
                 className="px-8 py-3 bg-white text-amber-700 rounded-xl font-semibold hover:bg-amber-50 transition-all shadow-lg flex items-center gap-2"
               >
-                Start Free Today <ArrowRight className="h-4 w-4" />
+                <T>Start Free Today</T> <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/jewellery-shop-software"
                 className="px-8 py-3 border-2 border-white/50 text-white rounded-xl font-semibold hover:bg-white/10 transition-all"
               >
-                Full Feature List
+                <T>Full Feature List</T>
               </Link>
             </div>
           </div>

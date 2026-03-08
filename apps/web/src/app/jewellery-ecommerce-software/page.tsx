@@ -1,5 +1,7 @@
+"use client";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { T } from "@/components/ui/T";
 import {
   ArrowRight,
   BarChart3,
@@ -154,34 +156,29 @@ export default function JewelleryEcommerceSoftwarePage() {
         <section className="relative overflow-hidden bg-gradient-to-br from-amber-50 via-white to-yellow-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 py-16 lg:py-24">
           <div className="container mx-auto px-4 max-w-6xl text-center">
             <span className="inline-block text-xs font-semibold tracking-widest uppercase text-amber-700 dark:text-gold-400 mb-4">
-              Ecommerce for Jewellers
+              <T>Ecommerce for Jewellers</T>
             </span>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 dark:text-white leading-tight mb-6">
-              Sell Jewellery Online{" "}
+              <T>Sell Jewellery Online</T>{" "}
               <span className="text-amber-600 dark:text-gold-400">
-                Without Building a Website
+                <T>Without Building a Website</T>
               </span>
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
-              Orivraa gives your jewellery shop an{" "}
-              <strong>instant online presence</strong>. List your products on
-              our marketplace, create shareable digital catalogues, and reach
-              buyers across{" "}
-              <strong>Nepal, India, Dubai, USA, UK & Europe</strong>. No website
-              development needed. Starts free.
+              <T>Orivraa gives your jewellery shop an instant online presence. List your products on our marketplace, create shareable digital catalogues, and reach buyers across Nepal, India, Dubai, USA, UK & Europe. No website development needed. Starts free.</T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 href="/auth/register?role=SELLER"
                 className="px-8 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-semibold text-base transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
               >
-                Start Selling Free <ArrowRight className="h-4 w-4" />
+                <T>Start Selling Free</T> <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/shops"
                 className="px-8 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-xl font-semibold text-base hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
               >
-                Browse Marketplace
+                <T>Browse Marketplace</T>
               </Link>
             </div>
           </div>
@@ -200,7 +197,7 @@ export default function JewelleryEcommerceSoftwarePage() {
                 <div className="text-2xl lg:text-3xl font-bold text-gold-400">
                   {s.n}
                 </div>
-                <div className="text-sm text-gray-400 mt-1">{s.l}</div>
+                <div className="text-sm text-gray-400 mt-1"><T>{s.l}</T></div>
               </div>
             ))}
           </div>
@@ -210,48 +207,31 @@ export default function JewelleryEcommerceSoftwarePage() {
         <section className="py-16 lg:py-20 bg-white dark:bg-gray-950">
           <div className="container mx-auto px-4 max-w-5xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-6">
-              Why Traditional Jewellery Shops Struggle to Sell Online
+              <T>Why Traditional Jewellery Shops Struggle to Sell Online</T>
             </h2>
             <div className="prose prose-lg dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
               <p>
-                Most jewellers know they need to sell online, but the barriers
-                are real:
+                <T>Most jewellers know they need to sell online, but the barriers are real:</T>
               </p>
               <ul>
                 <li>
-                  <strong>Website development is expensive</strong> — Building a
-                  custom jewellery ecommerce site costs ₹2-10 lakhs, plus
-                  ongoing maintenance. Shopify and WooCommerce don't handle
-                  weight-based pricing or purity tracking.
+                  <T>Website development is expensive — Building a custom jewellery ecommerce site costs ₹2-10 lakhs, plus ongoing maintenance. Shopify and WooCommerce don't handle weight-based pricing or purity tracking.</T>
                 </li>
                 <li>
-                  <strong>Photography is challenging</strong> — Jewellery
-                  photography needs proper lighting and angles. Most jewellers
-                  don't have professional setup or photo editing skills.
+                  <T>Photography is challenging — Jewellery photography needs proper lighting and angles. Most jewellers don't have professional setup or photo editing skills.</T>
                 </li>
                 <li>
-                  <strong>Product descriptions take time</strong> — Writing
-                  compelling descriptions for hundreds of products in multiple
-                  languages is tedious and expensive.
+                  <T>Product descriptions take time — Writing compelling descriptions for hundreds of products in multiple languages is tedious and expensive.</T>
                 </li>
                 <li>
-                  <strong>Payment and shipping are complex</strong> — Handling
-                  international payments, customs duties, and secure shipping
-                  for high-value items requires expertise.
+                  <T>Payment and shipping are complex — Handling international payments, customs duties, and secure shipping for high-value items requires expertise.</T>
                 </li>
                 <li>
-                  <strong>Driving traffic is hard</strong> — Even with a
-                  website, getting buyers to visit requires SEO knowledge,
-                  advertising budgets, and social media marketing.
+                  <T>Driving traffic is hard — Even with a website, getting buyers to visit requires SEO knowledge, advertising budgets, and social media marketing.</T>
                 </li>
               </ul>
               <p>
-                Orivraa solves all of these. You upload your products, and we
-                handle the marketplace, discovery, AI-generated descriptions,
-                secure payments, and international reach.{" "}
-                <strong>
-                  You focus on your jewellery — we handle the ecommerce.
-                </strong>
+                <T>Orivraa solves all of these. You upload your products, and we handle the marketplace, discovery, AI-generated descriptions, secure payments, and international reach. You focus on your jewellery — we handle the ecommerce.</T>
               </p>
             </div>
           </div>
@@ -261,7 +241,7 @@ export default function JewelleryEcommerceSoftwarePage() {
         <section className="py-16 lg:py-20 bg-gray-50 dark:bg-gray-900">
           <div className="container mx-auto px-4 max-w-5xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-12">
-              Start Selling Online in 4 Steps
+              <T>Start Selling Online in 4 Steps</T>
             </h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {SELLING_STEPS.map((s) => (
@@ -270,10 +250,10 @@ export default function JewelleryEcommerceSoftwarePage() {
                     {s.step}
                   </div>
                   <h3 className="font-bold text-gray-900 dark:text-white mb-2">
-                    {s.title}
+                    <T>{s.title}</T>
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {s.desc}
+                    <T>{s.desc}</T>
                   </p>
                 </div>
               ))}
@@ -285,11 +265,10 @@ export default function JewelleryEcommerceSoftwarePage() {
         <section className="py-16 lg:py-20 bg-white dark:bg-gray-950">
           <div className="container mx-auto px-4 max-w-6xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-4">
-              Everything You Need to Sell Jewellery Online
+              <T>Everything You Need to Sell Jewellery Online</T>
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-12">
-              From product listing to order delivery — Orivraa handles the
-              complete ecommerce workflow.
+              <T>From product listing to order delivery — Orivraa handles the complete ecommerce workflow.</T>
             </p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {FEATURES.map((f) => (
@@ -299,10 +278,10 @@ export default function JewelleryEcommerceSoftwarePage() {
                 >
                   <f.icon className="h-8 w-8 text-amber-600 dark:text-gold-400 mb-3" />
                   <h3 className="font-bold text-gray-900 dark:text-white mb-2">
-                    {f.title}
+                    <T>{f.title}</T>
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {f.desc}
+                    <T>{f.desc}</T>
                   </p>
                 </div>
               ))}
@@ -314,24 +293,23 @@ export default function JewelleryEcommerceSoftwarePage() {
         <section className="py-16 lg:py-20 bg-gray-50 dark:bg-gray-900">
           <div className="container mx-auto px-4 max-w-4xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-4">
-              Orivraa vs Building Your Own Jewellery Website
+              <T>Orivraa vs Building Your Own Jewellery Website</T>
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-10">
-              Why spend lakhs on a custom website when you can start selling
-              today?
+              <T>Why spend lakhs on a custom website when you can start selling today?</T>
             </p>
             <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-800">
                     <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-200">
-                      Aspect
+                      <T>Aspect</T>
                     </th>
                     <th className="px-4 py-3 font-semibold text-amber-700 dark:text-gold-400">
                       Orivraa
                     </th>
                     <th className="px-4 py-3 font-semibold text-gray-500">
-                      Custom Website
+                      <T>Custom Website</T>
                     </th>
                   </tr>
                 </thead>
@@ -379,13 +357,13 @@ export default function JewelleryEcommerceSoftwarePage() {
                       }
                     >
                       <td className="px-4 py-3 text-gray-700 dark:text-gray-300 font-medium">
-                        {aspect}
+                        <T>{aspect}</T>
                       </td>
                       <td className="px-4 py-3 text-center text-amber-700 dark:text-gold-400 font-medium">
-                        {orivraa}
+                        <T>{orivraa}</T>
                       </td>
                       <td className="px-4 py-3 text-center text-gray-500">
-                        {custom}
+                        <T>{custom}</T>
                       </td>
                     </tr>
                   ))}
@@ -399,7 +377,7 @@ export default function JewelleryEcommerceSoftwarePage() {
         <section className="py-16 lg:py-20 bg-white dark:bg-gray-950">
           <div className="container mx-auto px-4 max-w-3xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-10">
-              Frequently Asked Questions
+              <T>Frequently Asked Questions</T>
             </h2>
             <div className="space-y-4">
               {[
@@ -433,11 +411,11 @@ export default function JewelleryEcommerceSoftwarePage() {
                   className="group bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
                 >
                   <summary className="flex items-center justify-between px-6 py-4 cursor-pointer font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-750">
-                    {faq.q}
+                    <T>{faq.q}</T>
                     <ArrowRight className="h-4 w-4 text-gray-400 group-open:rotate-90 transition-transform shrink-0 ml-4" />
                   </summary>
                   <p className="px-6 pb-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {faq.a}
+                    <T>{faq.a}</T>
                   </p>
                 </details>
               ))}
@@ -449,24 +427,23 @@ export default function JewelleryEcommerceSoftwarePage() {
         <section className="py-16 lg:py-20 bg-gradient-to-r from-amber-600 to-yellow-500 text-white">
           <div className="container mx-auto px-4 max-w-3xl text-center">
             <h2 className="text-2xl lg:text-3xl font-bold mb-4">
-              Start Selling Jewellery Online Today
+              <T>Start Selling Jewellery Online Today</T>
             </h2>
             <p className="text-lg text-amber-100 mb-8">
-              Join 2,000+ jewellers already selling on Orivraa. Free to list —
-              reach buyers worldwide.
+              <T>Join 2,000+ jewellers already selling on Orivraa. Free to list — reach buyers worldwide.</T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 href="/auth/register?role=SELLER"
                 className="px-8 py-3 bg-white text-amber-700 rounded-xl font-semibold hover:bg-amber-50 transition-all shadow-lg flex items-center gap-2"
               >
-                Start Selling Free <ArrowRight className="h-4 w-4" />
+                <T>Start Selling Free</T> <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/pricing"
                 className="px-8 py-3 border-2 border-white/50 text-white rounded-xl font-semibold hover:bg-white/10 transition-all"
               >
-                View Pricing
+                <T>View Pricing</T>
               </Link>
             </div>
           </div>
