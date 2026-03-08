@@ -1,6 +1,10 @@
+"use client";
+
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
+import { useT } from "@/providers/translation-provider";
 import {
   ArrowRight,
   Award,
@@ -148,6 +152,7 @@ const STATS = [
 /* ────────────────────────────────────────────────────────────── */
 
 export default function PartnerPage() {
+  const t = useT();
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Header />
@@ -159,32 +164,32 @@ export default function PartnerPage() {
           <div className="relative max-w-4xl mx-auto px-4 text-center">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-sm font-medium mb-6">
               <Users className="h-4 w-4" />
-              Partner Programme
+              <T>Partner Programme</T>
             </div>
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white tracking-tight">
-              Grow Your Jewellery Business{" "}
+              <T>Grow Your Jewellery Business</T>{" "}
               <span className="text-amber-600 dark:text-amber-400">
-                Together
+                <T>Together</T>
               </span>
             </h1>
             <p className="mt-6 text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
-              Join {BRAND.name}&apos;s partner network and reach thousands of
+              <T>Join Orivraa&apos;s partner network and reach thousands of
               jewellery buyers across 6+ countries. Get premium tools, dedicated
-              support, and co-marketing to accelerate your growth.
+              support, and co-marketing to accelerate your growth.</T>
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Link
                 href="/auth/register"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-semibold transition-colors shadow-lg shadow-amber-500/25"
               >
-                Apply to Partner
+                <T>Apply to Partner</T>
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/seller-guide"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-full font-semibold border border-gray-200 dark:border-gray-700 hover:border-amber-300 dark:hover:border-amber-600 transition-colors"
               >
-                Read Seller Guide
+                <T>Read Seller Guide</T>
               </Link>
             </div>
           </div>
@@ -199,7 +204,7 @@ export default function PartnerPage() {
                   {s.value}
                 </div>
                 <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  {s.label}
+                  {t(s.label)}
                 </div>
               </div>
             ))}
@@ -210,11 +215,11 @@ export default function PartnerPage() {
         <section className="max-w-6xl mx-auto px-4 py-20">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Why Partner With {BRAND.name}?
+              <T>Why Partner With Orivraa?</T>
             </h2>
             <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-              We provide everything you need to take your jewellery business to
-              the next level
+              <T>We provide everything you need to take your jewellery business to
+              the next level</T>
             </p>
           </div>
           <div className="grid sm:grid-cols-2 gap-6">
@@ -228,10 +233,10 @@ export default function PartnerPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {b.title}
+                    {t(b.title)}
                   </h3>
                   <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {b.desc}
+                    {t(b.desc)}
                   </p>
                 </div>
               </div>
@@ -244,10 +249,10 @@ export default function PartnerPage() {
           <div className="max-w-6xl mx-auto px-4 py-20">
             <div className="text-center mb-14">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Partnership Types
+                <T>Partnership Types</T>
               </h2>
               <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-                Choose the partnership model that fits your business
+                <T>Choose the partnership model that fits your business</T>
               </p>
             </div>
             <div className="grid sm:grid-cols-2 gap-6">
@@ -260,13 +265,13 @@ export default function PartnerPage() {
                     <pt.icon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {pt.title}
+                    {t(pt.title)}
                   </h3>
                   <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {pt.desc}
+                    {t(pt.desc)}
                   </p>
                   <p className="mt-3 text-xs text-amber-600 dark:text-amber-400 font-medium">
-                    Ideal for: {pt.ideal}
+                    <T>Ideal for:</T> {t(pt.ideal)}
                   </p>
                 </div>
               ))}
@@ -278,7 +283,7 @@ export default function PartnerPage() {
         <section className="max-w-4xl mx-auto px-4 py-20">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-              How to Become a Partner
+              <T>How to Become a Partner</T>
             </h2>
           </div>
           <div className="space-y-6">
@@ -289,10 +294,10 @@ export default function PartnerPage() {
                 </div>
                 <div className="flex-1 pt-1">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {s.title}
+                    {t(s.title)}
                   </h3>
                   <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {s.desc}
+                    {t(s.desc)}
                   </p>
                 </div>
               </div>
@@ -304,7 +309,7 @@ export default function PartnerPage() {
         <section className="bg-gradient-to-r from-amber-500 to-amber-600 dark:from-amber-600 dark:to-amber-700">
           <div className="max-w-5xl mx-auto px-4 py-14">
             <h2 className="text-2xl font-bold text-white text-center mb-8">
-              What Partners Get
+              <T>What Partners Get</T>
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {PERKS.map((p) => (
@@ -314,7 +319,7 @@ export default function PartnerPage() {
                 >
                   <p.icon className="h-4 w-4 text-amber-100 flex-shrink-0" />
                   <span className="text-sm text-white font-medium">
-                    {p.text}
+                    {t(p.text)}
                   </span>
                 </div>
               ))}
@@ -326,7 +331,7 @@ export default function PartnerPage() {
         <section className="max-w-3xl mx-auto px-4 py-20">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Frequently Asked Questions
+              <T>Frequently Asked Questions</T>
             </h2>
           </div>
           <div className="space-y-3">
@@ -336,13 +341,13 @@ export default function PartnerPage() {
                 className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden"
               >
                 <summary className="flex items-center justify-between cursor-pointer px-6 py-4 font-medium text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors list-none [&::-webkit-details-marker]:hidden">
-                  {faq.q}
+                  {t(faq.q)}
                   <span className="ml-4 text-gray-400 group-open:rotate-180 transition-transform">
                     ▾
                   </span>
                 </summary>
                 <div className="px-6 pb-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {faq.a}
+                  {t(faq.a)}
                 </div>
               </details>
             ))}
@@ -354,25 +359,25 @@ export default function PartnerPage() {
           <div className="p-10 rounded-3xl bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 border border-gray-700">
             <Users className="h-10 w-10 text-amber-400 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-white">
-              Ready to Partner With Us?
+              <T>Ready to Partner With Us?</T>
             </h2>
             <p className="mt-3 text-gray-400 max-w-lg mx-auto">
-              Join the fastest-growing jewellery marketplace. No upfront costs,
-              dedicated support, and tools to help you succeed internationally.
+              <T>Join the fastest-growing jewellery marketplace. No upfront costs,
+              dedicated support, and tools to help you succeed internationally.</T>
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Link
                 href="/auth/register"
                 className="inline-flex items-center gap-2 px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-semibold transition-colors shadow-lg shadow-amber-500/25"
               >
-                Apply Now
+                <T>Apply Now</T>
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href={`mailto:${BRAND.salesEmail}`}
                 className="inline-flex items-center gap-2 px-8 py-3 text-white rounded-full font-semibold border border-gray-600 hover:border-amber-500 transition-colors"
               >
-                Contact Sales
+                <T>Contact Sales</T>
               </Link>
             </div>
           </div>

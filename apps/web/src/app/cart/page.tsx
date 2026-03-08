@@ -4,6 +4,7 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { T } from "@/components/ui/T";
 import {
   Card,
   CardContent,
@@ -54,6 +55,7 @@ import {
 import { Loader2, Package } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useT } from "@/providers/translation-provider";
 
 const COUNTRIES = [
   { code: "NP", name: "Nepal" },
@@ -73,6 +75,7 @@ interface ShopInfo {
 
 export default function CartPage() {
   const router = useRouter();
+  const t = useT();
   const { user, isAuthenticated } = useAuth();
   const {
     items,
@@ -206,8 +209,8 @@ export default function CartPage() {
     ) {
       toast({
         variant: "destructive",
-        title: "Missing Fields",
-        description: "Please fill in all required fields",
+        title: t("Missing Fields"),
+        description: t("Please fill in all required fields"),
       });
       return;
     }
@@ -216,8 +219,8 @@ export default function CartPage() {
     try {
       await addAddress(newAddress);
       toast({
-        title: "Address Added",
-        description: "Your delivery address has been saved",
+        title: t("Address Added"),
+        description: t("Your delivery address has been saved"),
       });
       setAddressDialogOpen(false);
       setNewAddress({
@@ -235,8 +238,8 @@ export default function CartPage() {
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to save address",
+        title: t("Error"),
+        description: t("Failed to save address"),
       });
     } finally {
       setSavingAddress(false);
@@ -247,8 +250,8 @@ export default function CartPage() {
     if (!isAuthenticated) {
       toast({
         variant: "destructive",
-        title: "Login Required",
-        description: "Please login to proceed with checkout",
+        title: t("Login Required"),
+        description: t("Please login to proceed with checkout"),
       });
       router.push("/auth/login");
       return;
@@ -257,8 +260,8 @@ export default function CartPage() {
     if (!selectedAddressId) {
       toast({
         variant: "destructive",
-        title: "Address Required",
-        description: "Please add a delivery address",
+        title: t("Address Required"),
+        description: t("Please add a delivery address"),
       });
       return;
     }
@@ -290,12 +293,12 @@ export default function CartPage() {
           <Card className="max-w-md mx-auto text-center">
             <CardContent className="pt-8 pb-6">
               <ShoppingCartIcon className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-              <h2 className="text-xl font-semibold mb-2">Your Cart is Empty</h2>
+              <h2 className="text-xl font-semibold mb-2"><T>Your Cart is Empty</T></h2>
               <p className="text-muted-foreground mb-6">
-                Browse our verified jewelers and add items to your cart
+                <T>Browse our verified jewelers and add items to your cart</T>
               </p>
               <Button onClick={() => router.push("/shops")}>
-                Browse Shops
+                <T>Browse Shops</T>
               </Button>
             </CardContent>
           </Card>
@@ -318,7 +321,7 @@ export default function CartPage() {
             Shopping Cart ({itemCount} items)
           </h1>
           <Button variant="outline" onClick={clearCart}>
-            Clear Cart
+            <T>Clear Cart</T>
           </Button>
         </div>
 
@@ -459,7 +462,7 @@ export default function CartPage() {
                             onClick={() => removeFromCart(item.id)}
                           >
                             <TrashIcon className="h-4 w-4 mr-1" />
-                            Remove
+                            <T>Remove</T>
                           </Button>
                         </div>
                       </div>
@@ -477,7 +480,7 @@ export default function CartPage() {
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <MapPinIcon className="h-5 w-5" />
-                  Delivery Address
+                  <T>Delivery Address</T>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -485,7 +488,7 @@ export default function CartPage() {
                   <div className="text-center py-4">
                     <MapPinIcon className="h-8 w-8 mx-auto text-gray-300 mb-2" />
                     <p className="text-sm text-muted-foreground mb-3">
-                      No delivery address added
+                      <T>No delivery address added</T>
                     </p>
                     <Dialog
                       open={addressDialogOpen}
@@ -494,21 +497,21 @@ export default function CartPage() {
                       <DialogTrigger asChild>
                         <Button size="sm">
                           <PlusIcon className="h-4 w-4 mr-1" />
-                          Add Address
+                          <T>Add Address</T>
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="max-w-md">
                         <DialogHeader>
-                          <DialogTitle>Add Delivery Address</DialogTitle>
+                          <DialogTitle><T>Add Delivery Address</T></DialogTitle>
                           <DialogDescription>
-                            Enter your delivery address for order shipment
+                            <T>Enter your delivery address for order shipment</T>
                           </DialogDescription>
                         </DialogHeader>
 
                         <div className="space-y-4 py-4">
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label>Label</Label>
+                              <Label><T>Label</T></Label>
                               <Input
                                 placeholder="e.g., Home, Office"
                                 value={newAddress.label}
@@ -521,7 +524,7 @@ export default function CartPage() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label>Full Name *</Label>
+                              <Label><T>Full Name *</T></Label>
                               <Input
                                 value={newAddress.fullName}
                                 onChange={(e) =>
@@ -535,7 +538,7 @@ export default function CartPage() {
                           </div>
 
                           <div className="space-y-2">
-                            <Label>Phone *</Label>
+                            <Label><T>Phone *</T></Label>
                             <Input
                               value={newAddress.phone}
                               onChange={(e) =>
@@ -548,7 +551,7 @@ export default function CartPage() {
                           </div>
 
                           <div className="space-y-2">
-                            <Label>Address Line 1 *</Label>
+                            <Label><T>Address Line 1 *</T></Label>
                             <Input
                               value={newAddress.addressLine1}
                               onChange={(e) =>
@@ -561,7 +564,7 @@ export default function CartPage() {
                           </div>
 
                           <div className="space-y-2">
-                            <Label>Address Line 2</Label>
+                            <Label><T>Address Line 2</T></Label>
                             <Input
                               value={newAddress.addressLine2}
                               onChange={(e) =>
@@ -575,7 +578,7 @@ export default function CartPage() {
 
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label>City *</Label>
+                              <Label><T>City *</T></Label>
                               <Input
                                 value={newAddress.city}
                                 onChange={(e) =>
@@ -587,7 +590,7 @@ export default function CartPage() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label>State/Province</Label>
+                              <Label><T>State/Province</T></Label>
                               <Input
                                 value={newAddress.state}
                                 onChange={(e) =>
@@ -602,7 +605,7 @@ export default function CartPage() {
 
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label>Country *</Label>
+                              <Label><T>Country *</T></Label>
                               <Select
                                 value={newAddress.country}
                                 onValueChange={(v) =>
@@ -628,7 +631,7 @@ export default function CartPage() {
                               </Select>
                             </div>
                             <div className="space-y-2">
-                              <Label>Pincode/ZIP *</Label>
+                              <Label><T>Pincode/ZIP *</T></Label>
                               <Input
                                 value={newAddress.pincode}
                                 onChange={(e) =>
@@ -654,7 +657,7 @@ export default function CartPage() {
                               }
                             />
                             <Label htmlFor="isDefault" className="text-sm">
-                              Set as default address
+                              <T>Set as default address</T>
                             </Label>
                           </div>
                         </div>
@@ -664,7 +667,7 @@ export default function CartPage() {
                             variant="outline"
                             onClick={() => setAddressDialogOpen(false)}
                           >
-                            Cancel
+                            <T>Cancel</T>
                           </Button>
                           <Button
                             onClick={handleAddAddress}
@@ -673,7 +676,7 @@ export default function CartPage() {
                             {savingAddress ? (
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             ) : null}
-                            Save Address
+                            <T>Save Address</T>
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -746,7 +749,7 @@ export default function CartPage() {
                       <DialogTrigger asChild>
                         <Button variant="outline" size="sm" className="w-full">
                           <PlusIcon className="h-4 w-4 mr-1" />
-                          Add New Address
+                          <T>Add New Address</T>
                         </Button>
                       </DialogTrigger>
                       {/* Same dialog content as above */}
@@ -759,7 +762,7 @@ export default function CartPage() {
             {/* Order Summary */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Order Summary</CardTitle>
+                <CardTitle className="text-lg"><T>Order Summary</T></CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between text-sm">
@@ -767,20 +770,20 @@ export default function CartPage() {
                   <span>{formatPrice(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Shipping</span>
+                  <span><T>Shipping</T></span>
                   <span className="text-muted-foreground">
-                    Calculated at checkout
+                    <T>Calculated at checkout</T>
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Tax</span>
+                  <span><T>Tax</T></span>
                   <span className="text-muted-foreground">
-                    Calculated at checkout
+                    <T>Calculated at checkout</T>
                   </span>
                 </div>
                 <Separator />
                 <div className="flex justify-between font-semibold text-lg">
-                  <span>Total</span>
+                  <span><T>Total</T></span>
                   <span>{formatPrice(subtotal)}+</span>
                 </div>
               </CardContent>
@@ -791,7 +794,7 @@ export default function CartPage() {
                   onClick={handleCheckout}
                   disabled={!selectedAddressId}
                 >
-                  Proceed to Checkout
+                  <T>Proceed to Checkout</T>
                 </Button>
               </CardFooter>
             </Card>

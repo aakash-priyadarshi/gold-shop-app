@@ -37,6 +37,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 
 /* ────────────────────────────────────────────────────────────── */
 /*  TYPES                                                         */
@@ -560,6 +562,7 @@ export default function PricingPage() {
   const [showComparison, setShowComparison] = useState(false);
   const [plans, setPlans] = useState<PlanFromAPI[]>([]);
   const [loading, setLoading] = useState(true);
+  const t = useT();
 
   const country = usePreferencesStore((s) => s.country);
   const setCountry = usePreferencesStore((s) => s.setCountry);
@@ -625,19 +628,17 @@ export default function PricingPage() {
             className="mb-4 border-amber-300 text-amber-700 dark:border-amber-600 dark:text-amber-400 px-4 py-1.5"
           >
             <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-            Seller Plans
+            <T>Seller Plans</T>
           </Badge>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white tracking-tight">
-            Grow Your Jewellery Business
+            <T>Grow Your Jewellery Business</T>
             <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-700 dark:from-amber-400 dark:to-amber-600">
-              with the Right Plan
+              <T>with the Right Plan</T>
             </span>
           </h1>
           <p className="mt-6 text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto leading-relaxed">
-            From free marketplace listings to a full AI-powered CRM — choose the
-            plan that fits your business today and upgrade as you grow. No
-            contracts, cancel anytime.
+            <T>From free marketplace listings to a full AI-powered CRM — choose the plan that fits your business today and upgrade as you grow. No contracts, cancel anytime.</T>
           </p>
 
           {/* Country selector + Billing toggle */}
@@ -679,7 +680,7 @@ export default function PricingPage() {
                     : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                 }`}
               >
-                Monthly
+                <T>Monthly</T>
               </button>
               <button
                 onClick={() => setBilling("annual")}
@@ -689,9 +690,9 @@ export default function PricingPage() {
                     : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                 }`}
               >
-                Annual
+                <T>Annual</T>
                 <span className="ml-1.5 text-xs font-semibold text-green-600 dark:text-green-400">
-                  Save 17%
+                  <T>Save 17%</T>
                 </span>
               </button>
             </div>
@@ -699,11 +700,11 @@ export default function PricingPage() {
 
           {/* Current country label */}
           <p className="mt-3 text-xs text-gray-500 dark:text-gray-500">
-            Showing prices for{" "}
+            <T>Showing prices for</T>{" "}
             <span className="font-medium text-gray-700 dark:text-gray-300">
               {COUNTRIES[country]?.name ?? country}
             </span>{" "}
-            in {currencySymbol(cur)} ({cur})
+            <T>in</T> {currencySymbol(cur)} ({cur})
           </p>
         </div>
       </section>
@@ -884,7 +885,7 @@ export default function PricingPage() {
               onClick={() => setShowComparison(!showComparison)}
               className="inline-flex items-center gap-2 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium transition-colors"
             >
-              {showComparison ? "Hide" : "Show"} Full Feature Comparison
+              {showComparison ? t("Hide") : t("Show")} {t("Full Feature Comparison")}
               <ChevronDown
                 className={`h-4 w-4 transition-transform ${showComparison ? "rotate-180" : ""}`}
               />
@@ -998,10 +999,10 @@ export default function PricingPage() {
                   <item.icon className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  {item.title}
+                  {t(item.title)}
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {item.description}
+                  {t(item.description)}
                 </p>
               </div>
             ))}
@@ -1018,7 +1019,7 @@ export default function PricingPage() {
               </div>
               <div className="px-6 py-4 text-center">
                 <span className="font-semibold text-gray-500 dark:text-gray-400">
-                  One-Time CRM
+                  <T>One-Time CRM</T>
                 </span>
               </div>
             </div>
@@ -1032,13 +1033,13 @@ export default function PricingPage() {
                 } border-b border-gray-100 dark:border-gray-800/50 last:border-0`}
               >
                 <div className="px-6 py-3.5 text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {row.label}
+                  {t(row.label)}
                 </div>
                 <div className="px-6 py-3.5 text-sm text-center text-green-700 dark:text-green-400 font-medium">
-                  {row.saas}
+                  {t(row.saas)}
                 </div>
                 <div className="px-6 py-3.5 text-sm text-center text-gray-500 dark:text-gray-400">
-                  {row.legacy}
+                  {t(row.legacy)}
                 </div>
               </div>
             ))}
@@ -1050,10 +1051,10 @@ export default function PricingPage() {
       <section className="py-20 max-w-6xl mx-auto px-4">
         <div className="text-center mb-14">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
-            Everything You Need to Run
+            <T>Everything You Need to Run</T>
             <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-700">
-              a Modern Jewellery Business
+              <T>a Modern Jewellery Business</T>
             </span>
           </h2>
         </div>
@@ -1097,10 +1098,10 @@ export default function PricingPage() {
             >
               <item.icon className="h-8 w-8 text-amber-500 mb-4" />
               <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-                {item.title}
+                {t(item.title)}
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                {item.desc}
+                {t(item.desc)}
               </p>
             </div>
           ))}
@@ -1111,7 +1112,7 @@ export default function PricingPage() {
       <section className="bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-800 py-20">
         <div className="max-w-3xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white text-center mb-12">
-            Frequently Asked Questions
+            <T>Frequently Asked Questions</T>
           </h2>
 
           <div className="space-y-6">
@@ -1122,12 +1123,12 @@ export default function PricingPage() {
               >
                 <summary className="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                   <span className="font-medium text-gray-900 dark:text-white">
-                    {item.q}
+                    {t(item.q)}
                   </span>
                   <ChevronDown className="h-4 w-4 text-gray-400 group-open:rotate-180 transition-transform flex-shrink-0 ml-4" />
                 </summary>
                 <div className="px-6 pb-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {item.a}
+                  {t(item.a)}
                 </div>
               </details>
             ))}
@@ -1139,11 +1140,10 @@ export default function PricingPage() {
       <section className="py-20">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            Ready to Grow Your Jewellery Business?
+            <T>Ready to Grow Your Jewellery Business?</T>
           </h2>
           <p className="text-lg text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
-            Join thousands of jewellers already using {BRAND.name} to manage
-            inventory, serve customers, and sell online — all from one platform.
+            <T>Join thousands of jewellers already using Orivraa to manage inventory, serve customers, and sell online — all from one platform.</T>
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/dashboard/shop/billing">
@@ -1151,7 +1151,7 @@ export default function PricingPage() {
                 size="lg"
                 className="bg-amber-500 hover:bg-amber-600 text-white px-8"
               >
-                Start Free Today
+                <T>Start Free Today</T>
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
@@ -1159,12 +1159,12 @@ export default function PricingPage() {
               href={`mailto:${BRAND.salesEmail}?subject=Enterprise%20Plan%20Inquiry`}
             >
               <Button size="lg" variant="outline" className="px-8">
-                Talk to Sales
+                <T>Talk to Sales</T>
               </Button>
             </Link>
           </div>
           <p className="mt-4 text-xs text-gray-500 dark:text-gray-500">
-            No credit card required. Free plan forever.
+            <T>No credit card required. Free plan forever.</T>
           </p>
         </div>
       </section>

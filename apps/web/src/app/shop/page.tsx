@@ -4,6 +4,7 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { T } from "@/components/ui/T";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -39,6 +40,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useT } from "@/providers/translation-provider";
 
 interface InventoryItem {
   id: string;
@@ -64,6 +66,7 @@ import { getApiUrl } from "@/lib/api";
 const API_URL = getApiUrl();
 
 export default function ShopPage() {
+  const t = useT();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [recommendedItems, setRecommendedItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -209,10 +212,10 @@ export default function ShopPage() {
         <section className="bg-gradient-to-r from-gold-50 to-amber-50 dark:from-gray-900 dark:to-gray-900 border-b">
           <div className="container mx-auto px-4 py-8">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Browse Jewellery
+              <T>Browse Jewellery</T>
             </h1>
             <p className="text-gray-600 dark:text-gray-300">
-              Discover exquisite pieces from verified local artisans
+              <T>Discover exquisite pieces from verified local artisans</T>
             </p>
           </div>
         </section>
@@ -223,7 +226,7 @@ export default function ShopPage() {
             <div className="container mx-auto px-4">
               <div className="flex items-center gap-2 mb-4">
                 <Sparkles className="h-5 w-5 text-gold-500" />
-                <h2 className="text-lg font-semibold">Recommended for You</h2>
+                <h2 className="text-lg font-semibold"><T>Recommended for You</T></h2>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {recommendedItems.slice(0, 4).map((item) => (
@@ -279,16 +282,16 @@ export default function ShopPage() {
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="RING">Rings</SelectItem>
-                  <SelectItem value="NECKLACE">Necklaces</SelectItem>
-                  <SelectItem value="BRACELET">Bracelets</SelectItem>
-                  <SelectItem value="EARRING">Earrings</SelectItem>
-                  <SelectItem value="PENDANT">Pendants</SelectItem>
-                  <SelectItem value="BANGLE">Bangles</SelectItem>
-                  <SelectItem value="CHAIN">Chains</SelectItem>
-                  <SelectItem value="ANKLET">Anklets</SelectItem>
-                  <SelectItem value="NOSE_PIN">Nose Pins</SelectItem>
+                  <SelectItem value="all"><T>All Types</T></SelectItem>
+                  <SelectItem value="RING"><T>Rings</T></SelectItem>
+                  <SelectItem value="NECKLACE"><T>Necklaces</T></SelectItem>
+                  <SelectItem value="BRACELET"><T>Bracelets</T></SelectItem>
+                  <SelectItem value="EARRING"><T>Earrings</T></SelectItem>
+                  <SelectItem value="PENDANT"><T>Pendants</T></SelectItem>
+                  <SelectItem value="BANGLE"><T>Bangles</T></SelectItem>
+                  <SelectItem value="CHAIN"><T>Chains</T></SelectItem>
+                  <SelectItem value="ANKLET"><T>Anklets</T></SelectItem>
+                  <SelectItem value="NOSE_PIN"><T>Nose Pins</T></SelectItem>
                 </SelectContent>
               </Select>
 
@@ -298,7 +301,7 @@ export default function ShopPage() {
                   <SelectValue placeholder="Metal" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Metals</SelectItem>
+                  <SelectItem value="all"><T>All Metals</T></SelectItem>
                   <SelectItem value="gold 24k">24K Gold</SelectItem>
                   <SelectItem value="gold 22k">22K Gold</SelectItem>
                   <SelectItem value="gold 18k">18K Gold</SelectItem>
@@ -314,10 +317,10 @@ export default function ShopPage() {
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="newest">Newest First</SelectItem>
-                  <SelectItem value="price_low">Price: Low to High</SelectItem>
-                  <SelectItem value="price_high">Price: High to Low</SelectItem>
-                  <SelectItem value="popular">Most Popular</SelectItem>
+                  <SelectItem value="newest"><T>Newest First</T></SelectItem>
+                  <SelectItem value="price_low"><T>Price: Low to High</T></SelectItem>
+                  <SelectItem value="price_high"><T>Price: High to Low</T></SelectItem>
+                  <SelectItem value="popular"><T>Most Popular</T></SelectItem>
                 </SelectContent>
               </Select>
 
@@ -326,7 +329,7 @@ export default function ShopPage() {
                 <SheetTrigger asChild>
                   <Button variant="outline" className="gap-2">
                     <SlidersHorizontal className="h-4 w-4" />
-                    Filters
+                    <T>Filters</T>
                     {activeFiltersCount > 0 && (
                       <Badge className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center">
                         {activeFiltersCount}
@@ -336,16 +339,16 @@ export default function ShopPage() {
                 </SheetTrigger>
                 <SheetContent>
                   <SheetHeader>
-                    <SheetTitle>Filters</SheetTitle>
+                    <SheetTitle><T>Filters</T></SheetTitle>
                     <SheetDescription>
-                      Refine your search results
+                      <T>Refine your search results</T>
                     </SheetDescription>
                   </SheetHeader>
                   <div className="py-6 space-y-6">
                     {/* Price Range */}
                     <div className="space-y-4">
                       <label className="text-sm font-medium">
-                        Price Range (NPR)
+                        <T>Price Range (NPR)</T>
                       </label>
                       <Slider
                         value={priceRange}
@@ -370,7 +373,7 @@ export default function ShopPage() {
                       className="w-full"
                     >
                       <X className="h-4 w-4 mr-2" />
-                      Clear All Filters
+                      <T>Clear All Filters</T>
                     </Button>
                   </div>
                 </SheetContent>
@@ -447,12 +450,12 @@ export default function ShopPage() {
               <div className="text-center py-20">
                 <Gem className="h-16 w-16 mx-auto text-gray-300 mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  No items found
+                  <T>No items found</T>
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300 mb-6">
-                  Try adjusting your filters or search query
+                  <T>Try adjusting your filters or search query</T>
                 </p>
-                <Button onClick={clearFilters}>Clear Filters</Button>
+                <Button onClick={clearFilters}><T>Clear Filters</T></Button>
               </div>
             ) : (
               <div
@@ -515,7 +518,7 @@ export default function ShopPage() {
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-300">
-                        Weight: {item.totalWeightGrams}g
+                        <T>Weight:</T> {item.totalWeightGrams}g
                       </p>
                     </CardContent>
                     <CardFooter className="p-4 pt-0 flex items-center justify-between">
@@ -527,7 +530,7 @@ export default function ShopPage() {
                       <Link href={`/shop/${item.id}`}>
                         <Button size="sm" className="gold-gradient text-white">
                           <ShoppingCart className="h-4 w-4 mr-1" />
-                          View
+                          <T>View</T>
                         </Button>
                       </Link>
                     </CardFooter>
