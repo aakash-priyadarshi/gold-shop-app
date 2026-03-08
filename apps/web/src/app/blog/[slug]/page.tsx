@@ -1,10 +1,10 @@
-import { BlogPostContent } from "./BlogPostContent";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { BRAND } from "@/config/brand";
 import { BLOG_POSTS, getBlogPost, getRelatedPosts } from "@/data/blog-posts";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { BlogPostContent } from "./BlogPostContent";
 
 /* ────────────────────────────────────────────────────────────── */
 /*  STATIC PARAMS                                                 */

@@ -1,9 +1,8 @@
 "use client";
 
-import { T } from "@/components/ui/T";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
-import { BRAND } from "@/config/brand";
+import { T } from "@/components/ui/T";
 import { BLOG_POSTS } from "@/data/blog-posts";
 import { ArrowRight, BookOpen, Calendar, Clock, Tag } from "lucide-react";
 import Link from "next/link";
@@ -37,7 +36,10 @@ export default function BlogPage() {
               </span>
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-stone-300">
-              <T>Expert guides on jewellery shop software, inventory management, GST compliance, and growing your gold and diamond business.</T>
+              <T>
+                Expert guides on jewellery shop software, inventory management,
+                GST compliance, and growing your gold and diamond business.
+              </T>
             </p>
           </div>
         </section>
@@ -140,7 +142,10 @@ export default function BlogPage() {
               <T>Ready to Grow Your Jewellery Business?</T>
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-amber-100">
-              <T>Join 2,000+ jewellers using Orivraa to manage inventory, sell online, and reach international buyers — free to start.</T>
+              <T>
+                Join 2,000+ jewellers using Orivraa to manage inventory, sell
+                online, and reach international buyers — free to start.
+              </T>
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link

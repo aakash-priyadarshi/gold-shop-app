@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -67,6 +69,7 @@ const getNotificationColor = (type: string) => {
 export default function NotificationsPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const t = useT();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
@@ -165,10 +168,10 @@ export default function NotificationsPage() {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffMins < 1) return t('Just now');
+    if (diffMins < 60) return `${diffMins}${t('m ago')}`;
+    if (diffHours < 24) return `${diffHours}${t('h ago')}`;
+    if (diffDays < 7) return `${diffDays}${t('d ago')}`;
     return date.toLocaleDateString();
   };
 
@@ -192,33 +195,33 @@ export default function NotificationsPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <BellIcon className="h-6 w-6" />
-              Notifications
+              <T>Notifications</T>
             </h1>
             <p className="text-gray-500 mt-1">
-              {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
+              {unreadCount > 0 ? `${unreadCount} ${t('unread')}` : t('All caught up!')}
             </p>
           </div>
           {unreadCount > 0 && (
             <Button variant="outline" onClick={markAllAsRead}>
               <CheckIcon className="h-4 w-4 mr-2" />
-              Mark all as read
+              <T>Mark all as read</T>
             </Button>
           )}
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4">
-            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="all"><T>All</T></TabsTrigger>
             <TabsTrigger value="unread">
-              Unread
+              <T>Unread</T>
               {unreadCount > 0 && (
                 <Badge variant="secondary" className="ml-2 bg-red-500 text-white">
                   {unreadCount}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="order">Orders</TabsTrigger>
-            <TabsTrigger value="rfq">Quotes</TabsTrigger>
+            <TabsTrigger value="order"><T>Orders</T></TabsTrigger>
+            <TabsTrigger value="rfq"><T>Quotes</T></TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab}>
@@ -226,11 +229,11 @@ export default function NotificationsPage() {
               <Card>
                 <CardContent className="py-12 text-center">
                   <BellIcon className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900">No notifications</h3>
+                  <h3 className="text-lg font-medium text-gray-900"><T>No notifications</T></h3>
                   <p className="text-gray-500 mt-1">
                     {activeTab === 'unread' 
-                      ? "You're all caught up!" 
-                      : 'No notifications to display'}
+                      ? t("You're all caught up!") 
+                      : t('No notifications to display')}
                   </p>
                 </CardContent>
               </Card>
@@ -271,7 +274,7 @@ export default function NotificationsPage() {
                                   onClick={() => markAsRead(notification.id)}
                                 >
                                   <CheckIcon className="h-3 w-3 mr-1" />
-                                  Mark as read
+                                  <T>Mark as read</T>
                                 </Button>
                               )}
                               <Button 
