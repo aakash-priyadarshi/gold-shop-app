@@ -2,6 +2,8 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -95,6 +97,7 @@ export default function ProductDetailPage() {
 
   // Cart context
   const { addToCart } = useCart();
+  const t = useT();
 
   // Get currency and country from global preferences store
   const currency = usePreferencesStore((state) => state.currency);
@@ -206,13 +209,13 @@ export default function ProductDetailPage() {
         },
       });
       toast({
-        title: "Added to Cart",
-        description: `${item.nameEn} has been added to your cart.`,
+        title: t("Added to Cart"),
+        description: `${item.nameEn} ${t("has been added to your cart.")}`,
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to add item to cart. Please try again.",
+        title: t("Error"),
+        description: t("Failed to add item to cart. Please try again."),
         variant: "destructive",
       });
     } finally {
@@ -258,9 +261,9 @@ export default function ProductDetailPage() {
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <Gem className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Item not found</h2>
+            <h2 className="text-xl font-semibold mb-2"><T>Item not found</T></h2>
             <Link href="/shop">
-              <Button>Back to Shop</Button>
+              <Button><T>Back to Shop</T></Button>
             </Link>
           </div>
         </main>
@@ -284,7 +287,7 @@ export default function ProductDetailPage() {
               className="text-gray-600 dark:text-gray-300"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Shop
+              <T>Back to Shop</T>
             </Button>
           </div>
         </div>
@@ -374,7 +377,7 @@ export default function ProductDetailPage() {
                   </Badge>
                   {item.stockQuantity <= 2 && item.stockQuantity > 0 && (
                     <Badge className="bg-orange-500">
-                      Only {item.stockQuantity} left
+                      <T>Only {item.stockQuantity} left</T>
                     </Badge>
                   )}
                 </div>
@@ -403,20 +406,20 @@ export default function ProductDetailPage() {
                   ))}
                 </div>
                 <span className="text-gray-600 dark:text-gray-300">
-                  4.0 (24 reviews)
+                  4.0 (24 <T>reviews</T>)
                 </span>
               </div>
 
               {/* Price */}
               <div className="bg-gold-50 rounded-xl p-4">
                 <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">
-                  Price
+                  <T>Price</T>
                 </p>
                 <p className="text-3xl font-bold text-gold-600">
                   {formatPrice(item.totalPriceNpr)}
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Weight: {item.totalWeightGrams}g | {getMetalInfo().metal}{" "}
+                  <T>Weight:</T> {item.totalWeightGrams}g | {getMetalInfo().metal}{" "}
                   {getMetalInfo().purity}
                 </p>
               </div>
@@ -441,7 +444,7 @@ export default function ProductDetailPage() {
                         <h3 className="font-semibold">{item.shop.shopName}</h3>
                         {item.shop.isVerified && (
                           <Badge className="bg-green-500 text-xs">
-                            Verified
+                            <T>Verified</T>
                           </Badge>
                         )}
                       </div>
@@ -454,7 +457,7 @@ export default function ProductDetailPage() {
                     </div>
                     <Link href={`/shops/${item.shop.id}`}>
                       <Button variant="outline" size="sm">
-                        Visit Shop
+                        <T>Visit Shop</T>
                       </Button>
                     </Link>
                   </div>
@@ -465,7 +468,7 @@ export default function ProductDetailPage() {
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
                   <span className="text-gray-600 dark:text-gray-300">
-                    Quantity:
+                    <T>Quantity:</T>
                   </span>
                   <div className="flex items-center gap-2">
                     <Button
@@ -489,7 +492,7 @@ export default function ProductDetailPage() {
                     </Button>
                   </div>
                   <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {item.stockQuantity} available
+                    {item.stockQuantity} <T>available</T>
                   </span>
                 </div>
 
@@ -505,7 +508,7 @@ export default function ProductDetailPage() {
                     ) : (
                       <ShoppingCart className="h-5 w-5 mr-2" />
                     )}
-                    {item.stockQuantity === 0 ? "Out of Stock" : "Add to Cart"}
+                    {item.stockQuantity === 0 ? t("Out of Stock") : t("Add to Cart")}
                   </Button>
                   <Button size="lg" variant="outline">
                     <Heart className="h-5 w-5" />
@@ -521,19 +524,19 @@ export default function ProductDetailPage() {
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <Shield className="h-6 w-6 mx-auto text-green-600 mb-1" />
                   <p className="text-xs text-gray-600 dark:text-gray-300">
-                    Certified Purity
+                    <T>Certified Purity</T>
                   </p>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <Truck className="h-6 w-6 mx-auto text-blue-600 mb-1" />
                   <p className="text-xs text-gray-600 dark:text-gray-300">
-                    Secure Delivery
+                    <T>Secure Delivery</T>
                   </p>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <Phone className="h-6 w-6 mx-auto text-gold-600 mb-1" />
                   <p className="text-xs text-gray-600 dark:text-gray-300">
-                    Support
+                    <T>Support</T>
                   </p>
                 </div>
               </div>
@@ -548,25 +551,25 @@ export default function ProductDetailPage() {
                   value="details"
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-gold-500"
                 >
-                  Product Details
+                  <T>Product Details</T>
                 </TabsTrigger>
                 <TabsTrigger
                   value="pricing"
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-gold-500"
                 >
-                  Price Breakdown
+                  <T>Price Breakdown</T>
                 </TabsTrigger>
                 <TabsTrigger
                   value="description"
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-gold-500"
                 >
-                  Description
+                  <T>Description</T>
                 </TabsTrigger>
                 <TabsTrigger
                   value="reviews"
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-gold-500"
                 >
-                  Reviews
+                  <T>Reviews</T>
                 </TabsTrigger>
               </TabsList>
 
@@ -582,7 +585,7 @@ export default function ProductDetailPage() {
                             1
                           </span>
                         </div>
-                        <h3 className="text-lg font-semibold">METAL DETAILS</h3>
+                        <h3 className="text-lg font-semibold"><T>METAL DETAILS</T></h3>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                         <div className="text-center">
@@ -590,7 +593,7 @@ export default function ProductDetailPage() {
                             {getMetalInfo().purity || "N/A"}
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Karatage
+                            <T>Karatage</T>
                           </p>
                         </div>
                         <div className="text-center">
@@ -598,7 +601,7 @@ export default function ProductDetailPage() {
                             {getMetalColor()}
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Material Colour
+                            <T>Material Colour</T>
                           </p>
                         </div>
                         <div className="text-center">
@@ -606,7 +609,7 @@ export default function ProductDetailPage() {
                             {item.totalWeightGrams}g
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Gross Weight
+                            <T>Gross Weight</T>
                           </p>
                         </div>
                         <div className="text-center">
@@ -614,7 +617,7 @@ export default function ProductDetailPage() {
                             {getMetalInfo().metal || "Gold"}
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Metal
+                            <T>Metal</T>
                           </p>
                         </div>
                         <div className="text-center">
@@ -622,7 +625,7 @@ export default function ProductDetailPage() {
                             {item.size || "Standard"}
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Size
+                            <T>Size</T>
                           </p>
                         </div>
                       </div>
@@ -642,7 +645,7 @@ export default function ProductDetailPage() {
                           <h3 className="text-lg font-semibold">
                             {item.gemstones[0]?.type?.toUpperCase() ||
                               "GEMSTONE"}{" "}
-                            DETAILS
+                            <T>DETAILS</T>
                           </h3>
                         </div>
                         {item.gemstones.map((gem, idx) => (
@@ -656,7 +659,7 @@ export default function ProductDetailPage() {
                                   {gem.clarity}
                                 </p>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                                  {gem.type} Clarity
+                                  {gem.type} <T>Clarity</T>
                                 </p>
                               </div>
                             )}
@@ -666,7 +669,7 @@ export default function ProductDetailPage() {
                                   {gem.color}
                                 </p>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                                  {gem.type} Color
+                                  {gem.type} <T>Color</T>
                                 </p>
                               </div>
                             )}
@@ -676,7 +679,7 @@ export default function ProductDetailPage() {
                                   {String(gem.count).padStart(2, "0")}
                                 </p>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                                  No Of {gem.type}s
+                                  <T>No Of</T> {gem.type}s
                                 </p>
                               </div>
                             )}
@@ -686,7 +689,7 @@ export default function ProductDetailPage() {
                                   {gem.setting}
                                 </p>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                                  {gem.type} Setting
+                                  {gem.type} <T>Setting</T>
                                 </p>
                               </div>
                             )}
@@ -696,7 +699,7 @@ export default function ProductDetailPage() {
                                   {gem.cut}
                                 </p>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                                  {gem.type} Shape
+                                  {gem.type} <T>Shape</T>
                                 </p>
                               </div>
                             )}
@@ -706,7 +709,7 @@ export default function ProductDetailPage() {
                                   {gem.caratWeight} ct
                                 </p>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                                  Carat Weight
+                                  <T>Carat Weight</T>
                                 </p>
                               </div>
                             )}
@@ -726,7 +729,7 @@ export default function ProductDetailPage() {
                           </span>
                         </div>
                         <h3 className="text-lg font-semibold">
-                          GENERAL DETAILS
+                          <T>GENERAL DETAILS</T>
                         </h3>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
@@ -737,7 +740,7 @@ export default function ProductDetailPage() {
                               .toLowerCase() || "Jewellery"}
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Jewellery Type
+                            <T>Jewellery Type</T>
                           </p>
                         </div>
                         <div className="text-center">
@@ -745,7 +748,7 @@ export default function ProductDetailPage() {
                             {item.shop.shopName}
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Brand
+                            <T>Brand</T>
                           </p>
                         </div>
                         <div className="text-center">
@@ -753,7 +756,7 @@ export default function ProductDetailPage() {
                             {item.collection || "Classic"}
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Collection
+                            <T>Collection</T>
                           </p>
                         </div>
                         <div className="text-center">
@@ -761,7 +764,7 @@ export default function ProductDetailPage() {
                             {item.gender || "Unisex"}
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Gender
+                            <T>Gender</T>
                           </p>
                         </div>
                         <div className="text-center">
@@ -769,7 +772,7 @@ export default function ProductDetailPage() {
                             {item.occasion || "All Occasions"}
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Occasion
+                            <T>Occasion</T>
                           </p>
                         </div>
                       </div>
@@ -785,7 +788,7 @@ export default function ProductDetailPage() {
                             {item.gemstones?.length ? "4" : "3"}
                           </span>
                         </div>
-                        <h3 className="text-lg font-semibold">CRAFTSMANSHIP</h3>
+                        <h3 className="text-lg font-semibold"><T>CRAFTSMANSHIP</T></h3>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-4">
                         <div className="flex items-start gap-4">
@@ -815,19 +818,19 @@ export default function ProductDetailPage() {
                       <thead>
                         <tr className="border-b bg-gray-50">
                           <th className="text-left p-4 text-sm font-medium text-gray-500 dark:text-gray-400">
-                            PRODUCT DETAILS
+                            <T>PRODUCT DETAILS</T>
                           </th>
                           <th className="text-center p-4 text-sm font-medium text-gray-500 dark:text-gray-400">
-                            RATE
+                            <T>RATE</T>
                           </th>
                           <th className="text-center p-4 text-sm font-medium text-gray-500 dark:text-gray-400">
-                            WEIGHT
+                            <T>WEIGHT</T>
                           </th>
                           <th className="text-center p-4 text-sm font-medium text-gray-500 dark:text-gray-400">
-                            DISCOUNT
+                            <T>DISCOUNT</T>
                           </th>
                           <th className="text-right p-4 text-sm font-medium text-gray-500 dark:text-gray-400">
-                            VALUE
+                            <T>VALUE</T>
                           </th>
                         </tr>
                       </thead>
@@ -893,7 +896,7 @@ export default function ProductDetailPage() {
 
                         {/* Making Charges Row */}
                         <tr className="border-b">
-                          <td className="p-4 font-medium">Making Charges</td>
+                          <td className="p-4 font-medium"><T>Making Charges</T></td>
                           <td className="text-center p-4">-</td>
                           <td className="text-center p-4">-</td>
                           <td className="text-center p-4">-</td>
@@ -906,12 +909,12 @@ export default function ProductDetailPage() {
 
                         {/* Sub Total Row */}
                         <tr className="border-b bg-gray-50">
-                          <td className="p-4 font-medium">Sub Total</td>
+                          <td className="p-4 font-medium"><T>Sub Total</T></td>
                           <td className="text-center p-4">-</td>
                           <td className="text-center p-4 font-medium">
                             {item.totalWeightGrams}g<br />
                             <span className="text-sm text-gray-500 dark:text-gray-400">
-                              Gross Wt.
+                              <T>Gross Wt.</T>
                             </span>
                           </td>
                           <td className="text-center p-4">-</td>
@@ -922,7 +925,7 @@ export default function ProductDetailPage() {
 
                         {/* Discount Row (placeholder) */}
                         <tr className="border-b">
-                          <td className="p-4 font-medium">Discount</td>
+                          <td className="p-4 font-medium"><T>Discount</T></td>
                           <td className="text-center p-4">-</td>
                           <td className="text-center p-4">-</td>
                           <td className="text-center p-4 text-red-500 font-medium">
@@ -934,7 +937,7 @@ export default function ProductDetailPage() {
                         {/* Subtotal after Discount */}
                         <tr className="border-b">
                           <td className="p-4 font-medium">
-                            Subtotal after Discount
+                            <T>Subtotal after Discount</T>
                           </td>
                           <td className="text-center p-4">-</td>
                           <td className="text-center p-4">-</td>
@@ -974,7 +977,7 @@ export default function ProductDetailPage() {
                               ))}
                               {breakdown.lineItems.length === 0 && (
                                 <tr className="border-b">
-                                  <td className="p-4 font-medium">Tax</td>
+                                  <td className="p-4 font-medium"><T>Tax</T></td>
                                   <td className="text-center p-4">-</td>
                                   <td className="text-center p-4">-</td>
                                   <td className="text-center p-4">-</td>
@@ -999,7 +1002,7 @@ export default function ProductDetailPage() {
                           return (
                             <tr className="bg-gray-900 text-white">
                               <td colSpan={4} className="p-4 font-bold text-lg">
-                                Grand Total
+                                <T>Grand Total</T>
                               </td>
                               <td className="text-right p-4 font-bold text-xl text-gold-400">
                                 {formatPrice(bd.grandTotal)}
@@ -1020,7 +1023,7 @@ export default function ProductDetailPage() {
                     <div className="flex items-center gap-2 mb-4">
                       <Info className="h-5 w-5 text-gray-500 dark:text-gray-400" />
                       <h3 className="text-lg font-semibold">
-                        Product Description
+                        <T>Product Description</T>
                       </h3>
                     </div>
                     <div className="prose max-w-none">
@@ -1038,27 +1041,27 @@ export default function ProductDetailPage() {
                     {/* Additional Info */}
                     <div className="mt-6 pt-6 border-t">
                       <h4 className="font-semibold mb-3">
-                        Why Choose This Product?
+                        <T>Why Choose This Product?</T>
                       </h4>
                       <ul className="space-y-2">
                         <li className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                           <Shield className="h-4 w-4 text-green-600" />
-                          <span>BIS Hallmarked for assured purity</span>
+                          <span><T>BIS Hallmarked for assured purity</T></span>
                         </li>
                         <li className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                           <Sparkles className="h-4 w-4 text-gold-600" />
                           <span>
                             {getBuildMethodInfo(item.buildMethod).label}{" "}
-                            craftsmanship
+                            <T>craftsmanship</T>
                           </span>
                         </li>
                         <li className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                           <Truck className="h-4 w-4 text-blue-600" />
-                          <span>Insured delivery to your doorstep</span>
+                          <span><T>Insured delivery to your doorstep</T></span>
                         </li>
                         <li className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                           <Phone className="h-4 w-4 text-purple-600" />
-                          <span>Lifetime maintenance support</span>
+                          <span><T>Lifetime maintenance support</T></span>
                         </li>
                       </ul>
                     </div>
@@ -1069,9 +1072,9 @@ export default function ProductDetailPage() {
               <TabsContent value="reviews" className="mt-6">
                 <div className="bg-white dark:bg-gray-900 rounded-xl p-6 text-center">
                   <Star className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No reviews yet</h3>
+                  <h3 className="text-lg font-semibold mb-2"><T>No reviews yet</T></h3>
                   <p className="text-gray-500 dark:text-gray-400">
-                    Be the first to review this product
+                    <T>Be the first to review this product</T>
                   </p>
                 </div>
               </TabsContent>
