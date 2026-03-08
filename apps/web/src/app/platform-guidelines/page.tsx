@@ -2,6 +2,7 @@
 
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
+import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
 import {
   AlertTriangle,
@@ -31,7 +32,7 @@ export default function PlatformGuidelinesPage() {
             className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white transition"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Home
+            <T>Back to Home</T>
           </Link>
         </div>
       </header>
@@ -43,11 +44,10 @@ export default function PlatformGuidelinesPage() {
             <BookOpen className="h-8 w-8" />
           </div>
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">
-            Platform Guidelines
+            <T>Platform Guidelines</T>
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-            Rules and policies to ensure a safe, fair, and trusted marketplace
-            for all users.
+            <T>Rules and policies to ensure a safe, fair, and trusted marketplace for all users.</T>
           </p>
           <p className="text-base text-gray-500 dark:text-gray-400 mt-2">
             प्लेटफ़ॉर्म गाइडलाइन्स — सभी यूज़र्स के लिए एक सुरक्षित और भरोसेमंद
@@ -66,10 +66,7 @@ export default function PlatformGuidelinesPage() {
             </div>
 
             <p className="text-gray-800 dark:text-gray-100 mb-4">
-              To protect both buyers and sellers, all communication and
-              transactions must happen through our platform. Sharing personal
-              contact information is <strong>strictly prohibited</strong> and
-              will result in account suspension.
+              <T>To protect both buyers and sellers, all communication and transactions must happen through our platform. Sharing personal contact information is strictly prohibited and will result in account suspension.</T>
             </p>
             <p className="text-gray-700 dark:text-gray-200 mb-6">
               खरीदारों और विक्रेताओं दोनों की सुरक्षा के लिए, सभी बातचीत और
@@ -131,7 +128,7 @@ export default function PlatformGuidelinesPage() {
                   <item.icon className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-sm text-gray-800 dark:text-gray-100">
-                      {item.en}
+                      <T>{item.en}</T>
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {item.hi}
@@ -144,7 +141,7 @@ export default function PlatformGuidelinesPage() {
             {/* Warning system */}
             <div className="bg-white rounded-xl border border-red-100 p-5">
               <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
-                ⚡ Warning System / चेतावनी प्रणाली
+                <T>⚡ Warning System</T> / चेतावनी प्रणाली
               </h3>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
@@ -234,7 +231,7 @@ export default function PlatformGuidelinesPage() {
                   <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-sm text-gray-800 dark:text-gray-100">
-                      {item.en}
+                      <T>{item.en}</T>
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {item.hi}
@@ -281,7 +278,7 @@ export default function PlatformGuidelinesPage() {
                   <Shield className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-sm text-gray-800 dark:text-gray-100">
-                      {item.en}
+                      <T>{item.en}</T>
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {item.hi}
@@ -297,7 +294,7 @@ export default function PlatformGuidelinesPage() {
         <section className="mb-10">
           <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 md:p-8">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              📋 General Marketplace Rules / सामान्य बाज़ार नियम
+              <T>📋 General Marketplace Rules</T> / सामान्य बाज़ार नियम
             </h2>
             <div className="space-y-4">
               <div>
@@ -357,7 +354,7 @@ export default function PlatformGuidelinesPage() {
         {/* ── Need Help? ── */}
         <section className="text-center mb-8">
           <p className="text-gray-600 dark:text-gray-300 mb-3">
-            Have questions or need help? / सवाल हैं या मदद चाहिए?
+            <T>Have questions or need help?</T> / सवाल हैं या मदद चाहिए?
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <Link
@@ -365,14 +362,14 @@ export default function PlatformGuidelinesPage() {
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-gold-500 to-gold-600 text-white rounded-xl font-medium text-sm hover:shadow-lg hover:shadow-gold-500/30 transition"
             >
               <MessageSquare className="h-4 w-4" />
-              Contact Support
+              <T>Contact Support</T>
             </Link>
             <Link
               href="/"
               className="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-200 bg-white text-gray-700 dark:text-gray-200 rounded-xl font-medium text-sm hover:bg-gray-50 transition"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Home
+              <T>Back to Home</T>
             </Link>
           </div>
         </section>

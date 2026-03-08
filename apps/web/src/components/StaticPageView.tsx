@@ -2,6 +2,7 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { T } from "@/components/ui/T";
 import { pagesApi } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -57,7 +58,7 @@ export function StaticPageView({ slug }: { slug: string }) {
         {page && (
           <article>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
-              {page.title}
+              <T>{page.title}</T>
             </h1>
             <div
               className="prose prose-lg dark:prose-invert max-w-none

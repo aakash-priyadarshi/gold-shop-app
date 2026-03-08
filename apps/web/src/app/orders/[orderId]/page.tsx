@@ -2,6 +2,8 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import {
   OrderStatusBadge,
   OrderStepper,
@@ -115,6 +117,7 @@ export default function OrderTrackingPage() {
   const router = useRouter();
   const orderId = params.orderId as string;
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const t = useT();
 
   // Currency from preferences
   const { currency } = usePreferencesStore();
@@ -269,17 +272,17 @@ export default function OrderTrackingPage() {
                 <XCircleIcon className="h-10 w-10 text-red-600" />
               </div>
               <CardTitle className="text-red-700 dark:text-red-400">
-                {error || "Order Not Found"}
+                <T>{error || "Order Not Found"}</T>
               </CardTitle>
               <CardDescription>
                 {error === "You do not have permission to view this order"
-                  ? "This order belongs to another user."
-                  : "The order you are looking for does not exist or has been removed."}
+                  ? t("This order belongs to another user.")
+                  : t("The order you are looking for does not exist or has been removed.")}
               </CardDescription>
             </CardHeader>
             <CardFooter className="justify-center">
               <Button asChild>
-                <Link href="/dashboard/customer">View My Orders</Link>
+                <Link href="/dashboard/customer"><T>View My Orders</T></Link>
               </Button>
             </CardFooter>
           </Card>
@@ -310,7 +313,7 @@ export default function OrderTrackingPage() {
         {/* Back button */}
         <Button variant="ghost" className="mb-4" onClick={() => router.back()}>
           <ArrowLeftIcon className="h-4 w-4 mr-2" />
-          Back
+          <T>Back</T>
         </Button>
 
         <div className="grid lg:grid-cols-3 gap-6">
@@ -322,7 +325,7 @@ export default function OrderTrackingPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Order Number
+                      <T>Order Number</T>
                     </p>
                     <CardTitle className="text-xl font-mono">
                       {order.orderNumber}
@@ -336,11 +339,11 @@ export default function OrderTrackingPage() {
                 <div className="flex flex-wrap gap-2 mt-2 text-sm text-gray-500 dark:text-gray-400">
                   <span className="flex items-center gap-1">
                     <CalendarIcon className="h-4 w-4" />
-                    Placed on {formatDate(order.createdAt)}
+                    <T>Placed on</T> {formatDate(order.createdAt)}
                   </span>
                   <span>•</span>
                   <span className="capitalize">
-                    {order.orderType.toLowerCase()} Order
+                    {order.orderType.toLowerCase()} <T>Order</T>
                   </span>
                 </div>
               </CardHeader>
@@ -349,8 +352,8 @@ export default function OrderTrackingPage() {
             {/* Order Status Stepper */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Order Progress</CardTitle>
-                <CardDescription>Track your order status</CardDescription>
+                <CardTitle className="text-lg"><T>Order Progress</T></CardTitle>
+                <CardDescription><T>Track your order status</T></CardDescription>
               </CardHeader>
               <CardContent>
                 <OrderStepper
@@ -365,16 +368,16 @@ export default function OrderTrackingPage() {
             {/* Tabs for details */}
             <Tabs defaultValue="details" className="w-full">
               <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="details">Details</TabsTrigger>
-                <TabsTrigger value="timeline">Timeline</TabsTrigger>
-                <TabsTrigger value="delivery">Delivery</TabsTrigger>
+                <TabsTrigger value="details"><T>Details</T></TabsTrigger>
+                <TabsTrigger value="timeline"><T>Timeline</T></TabsTrigger>
+                <TabsTrigger value="delivery"><T>Delivery</T></TabsTrigger>
               </TabsList>
 
               {/* Details tab */}
               <TabsContent value="details">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Order Details</CardTitle>
+                    <CardTitle className="text-lg"><T>Order Details</T></CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {/* Product info */}
@@ -423,7 +426,7 @@ export default function OrderTrackingPage() {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Sold by
+                          <T>Sold by</T>
                         </p>
                         <p className="font-medium">{order.shop.shopName}</p>
                       </div>
@@ -436,7 +439,7 @@ export default function OrderTrackingPage() {
               <TabsContent value="timeline">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Order Timeline</CardTitle>
+                    <CardTitle className="text-lg"><T>Order Timeline</T></CardTitle>
                   </CardHeader>
                   <CardContent>
                     {(order.milestones?.length || 0) > 0 ? (
@@ -480,9 +483,9 @@ export default function OrderTrackingPage() {
                     ) : (
                       <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                         <ClockIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                        <p>No timeline updates yet</p>
+                        <p><T>No timeline updates yet</T></p>
                         <p className="text-sm">
-                          Updates will appear here as your order progresses
+                          <T>Updates will appear here as your order progresses</T>
                         </p>
                       </div>
                     )}
@@ -495,7 +498,7 @@ export default function OrderTrackingPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg">
-                      Delivery Information
+                      <T>Delivery Information</T>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -537,15 +540,14 @@ export default function OrderTrackingPage() {
                     <div className="flex gap-3">
                       <TruckIcon className="h-5 w-5 text-gray-400 mt-0.5" />
                       <div>
-                        <p className="font-medium">Tracking</p>
+                        <p className="font-medium"><T>Tracking</T></p>
                         {order.trackingNumber ? (
                           <p className="text-sm font-mono">
                             {order.trackingNumber}
                           </p>
                         ) : (
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Tracking information will be available once your
-                            order ships
+                            <T>Tracking information will be available once your order ships</T>
                           </p>
                         )}
                       </div>
@@ -556,7 +558,7 @@ export default function OrderTrackingPage() {
                       <div className="flex gap-3">
                         <CalendarIcon className="h-5 w-5 text-gray-400 mt-0.5" />
                         <div>
-                          <p className="font-medium">Estimated Delivery</p>
+                          <p className="font-medium"><T>Estimated Delivery</T></p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
                             {formatDate(order.estimatedDelivery)}
                           </p>
@@ -569,7 +571,7 @@ export default function OrderTrackingPage() {
                         <CheckCircleIcon className="h-5 w-5 text-emerald-500 mt-0.5" />
                         <div>
                           <p className="font-medium text-emerald-600">
-                            Delivered
+                            <T>Delivered</T>
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
                             {formatDate(order.actualDelivery)}
@@ -590,13 +592,13 @@ export default function OrderTrackingPage() {
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <CreditCard className="h-5 w-5" />
-                  Payment
+                  <T>Payment</T>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500 dark:text-gray-400">
-                    Status
+                    <T>Status</T>
                   </span>
                   <Badge className={getPaymentStatusColor(order.paymentStatus)}>
                     {order.paidAtShopRequested
@@ -611,7 +613,7 @@ export default function OrderTrackingPage() {
                       <ExclamationTriangleIcon className="h-5 w-5 text-amber-600 mt-0.5" />
                       <div>
                         <p className="text-sm font-medium text-amber-800 dark:text-amber-400">
-                          Payment Pending at Shop
+                          <T>Payment Pending at Shop</T>
                         </p>
                         <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
                           Please visit {order.shop.shopName} to complete your
@@ -625,7 +627,7 @@ export default function OrderTrackingPage() {
                 {order.paymentMethod && (
                   <div className="flex justify-between items-center">
                     <span className="text-gray-500 dark:text-gray-400">
-                      Method
+                      <T>Method</T>
                     </span>
                     <span className="capitalize">
                       {order.paymentMethod.toLowerCase().replace("_", " ")}
@@ -638,35 +640,35 @@ export default function OrderTrackingPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-500 dark:text-gray-400">
-                      Subtotal
+                      <T>Subtotal</T>
                     </span>
                     <span>{formatPrice(order.subtotalNpr)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500 dark:text-gray-400">
-                      Tax
+                      <T>Tax</T>
                     </span>
                     <span>{formatPrice(order.taxNpr)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500 dark:text-gray-400">
-                      Shipping
+                      <T>Shipping</T>
                     </span>
                     <span>
                       {order.shippingNpr === 0
-                        ? "Free"
+                        ? t("Free")
                         : formatPrice(order.shippingNpr)}
                     </span>
                   </div>
                   {order.discountNpr > 0 && (
                     <div className="flex justify-between text-emerald-600">
-                      <span>Discount</span>
+                      <span><T>Discount</T></span>
                       <span>-{formatPrice(order.discountNpr)}</span>
                     </div>
                   )}
                   <Separator />
                   <div className="flex justify-between text-lg font-semibold">
-                    <span>Total</span>
+                    <span><T>Total</T></span>
                     <span className="text-amber-600">
                       {formatPrice(order.totalNpr)}
                     </span>
@@ -674,7 +676,7 @@ export default function OrderTrackingPage() {
                   {order.balanceDueNpr > 0 &&
                     order.balanceDueNpr < order.totalNpr && (
                       <div className="flex justify-between text-amber-600">
-                        <span>Balance Due</span>
+                        <span><T>Balance Due</T></span>
                         <span>{formatPrice(order.balanceDueNpr)}</span>
                       </div>
                     )}
@@ -685,7 +687,7 @@ export default function OrderTrackingPage() {
             {/* Quick actions */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Need Help?</CardTitle>
+                <CardTitle className="text-lg"><T>Need Help?</T></CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Button
@@ -695,7 +697,7 @@ export default function OrderTrackingPage() {
                 >
                   <Link href={`/shop/${order.shop.id}`}>
                     <BuildingStorefrontIcon className="h-4 w-4 mr-2" />
-                    View Shop
+                    <T>View Shop</T>
                   </Link>
                 </Button>
                 <Button
@@ -709,7 +711,7 @@ export default function OrderTrackingPage() {
                   ) : (
                     <ChatBubbleLeftRightIcon className="h-4 w-4 mr-2" />
                   )}
-                  Message Shop
+                  <T>Message Shop</T>
                 </Button>
               </CardContent>
             </Card>
