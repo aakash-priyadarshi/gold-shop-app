@@ -2,6 +2,8 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { BuyerEducation } from "@/components/pricing/BuyerEducation";
 import { MarketComparison } from "@/components/pricing/MarketComparison";
 import { SellerTierBadge } from "@/components/pricing/SellerTierBadge";
@@ -470,6 +472,7 @@ interface MarketRates {
 
 export default function CreateRfqPage() {
   const router = useRouter();
+  const t = useT();
   const {
     user,
     isAuthenticated,
@@ -551,13 +554,13 @@ export default function CreateRfqPage() {
   // Determine why submit is blocked (for tooltip)
   const getSubmitBlockReason = (): string | null => {
     if (!isLoggedIn) {
-      return "Please log in to submit your custom jewellery request";
+      return t("Please log in to submit your custom jewellery request");
     }
     if (!isPhoneVerified) {
-      return "Please verify your phone number in your profile settings to submit requests";
+      return t("Please verify your phone number in your profile settings to submit requests");
     }
     if (isSeller && !isShopVerified) {
-      return "Your shop needs KYC verification (ID card & tax details) before you can submit requests. Please complete verification in your dashboard.";
+      return t("Your shop needs KYC verification (ID card & tax details) before you can submit requests. Please complete verification in your dashboard.");
     }
     return null;
   };
@@ -638,7 +641,7 @@ export default function CreateRfqPage() {
       }
     },
     onError: (error) => {
-      setError(`Image upload failed: ${error}`);
+      setError(`${t("Image upload failed")}: ${error}`);
     },
   });
 
@@ -651,7 +654,7 @@ export default function CreateRfqPage() {
     // Upload each file
     for (const file of Array.from(files)) {
       if (file.size > 10 * 1024 * 1024) {
-        setError("Each image must be smaller than 10MB");
+        setError(t("Each image must be smaller than 10MB"));
         continue;
       }
       await uploadImageToR2(file);
@@ -1244,7 +1247,7 @@ export default function CreateRfqPage() {
       if (!response.ok) {
         const data = await response.json();
         console.error("[Generate Preview] API error:", data);
-        throw new Error(data.message || "Failed to generate preview");
+        throw new Error(data.message || t("Failed to generate preview"));
       }
 
       const result = await response.json();
@@ -1257,7 +1260,7 @@ export default function CreateRfqPage() {
       const design = result.design;
       if (!design) {
         console.error("[Generate Preview] No design object in response!");
-        throw new Error("Invalid response from API - no design object");
+        throw new Error(t("Invalid response from API - no design object"));
       }
 
       console.log(
@@ -1282,7 +1285,7 @@ export default function CreateRfqPage() {
       if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError("Failed to generate preview");
+        setError(t("Failed to generate preview"));
       }
     } finally {
       setGeneratingPreview(false);
@@ -1418,27 +1421,27 @@ export default function CreateRfqPage() {
           // Check if we're using fallback/stale data
           if (data.cache === "fallback") {
             setMarketRatesWarning(
-              "Using estimated rates - market data temporarily unavailable",
+              t("Using estimated rates - market data temporarily unavailable"),
             );
           } else if (data.cache === "stale") {
             setMarketRatesWarning(
-              "Using cached rates - market data may be outdated",
+              t("Using cached rates - market data may be outdated"),
             );
           } else if (data.debug?.spotSource === "fallback") {
             setMarketRatesWarning(
-              "Using fallback spot prices - live feed unavailable",
+              t("Using fallback spot prices - live feed unavailable"),
             );
           }
         } else {
           // API returned error but we should still have fallback data
           console.error("Market rates API error:", res.status);
           setMarketRatesWarning(
-            "Unable to load current rates - showing estimates",
+            t("Unable to load current rates - showing estimates"),
           );
         }
       } catch (err) {
         console.error("Failed to fetch market rates:", err);
-        setMarketRatesWarning("Connection error - showing estimated rates");
+        setMarketRatesWarning(t("Connection error - showing estimated rates"));
       } finally {
         setMarketRatesLoading(false);
       }
@@ -2533,7 +2536,7 @@ export default function CreateRfqPage() {
     } catch (err: any) {
       setAiError(
         err?.response?.data?.message ||
-          "AI assistant is temporarily unavailable. Please fill the form manually.",
+          t("AI assistant is temporarily unavailable. Please fill the form manually."),
       );
     } finally {
       setAiLoading(false);
@@ -2672,7 +2675,7 @@ export default function CreateRfqPage() {
     // Validate Vermeil
     if (!isVermeilValid()) {
       setError(
-        "Vermeil plating requires Sterling Silver (925) as the base metal.",
+        t("Vermeil plating requires Sterling Silver (925) as the base metal."),
       );
       return;
     }
@@ -2783,7 +2786,7 @@ export default function CreateRfqPage() {
       if (!response.ok) {
         const data = await response.json();
         console.error("[RFQ Submit] API error:", data);
-        throw new Error(data.message || "Failed to create request");
+        throw new Error(data.message || t("Failed to create request"));
       }
 
       const data = await response.json();
@@ -2826,7 +2829,7 @@ export default function CreateRfqPage() {
       if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError("An unexpected error occurred");
+        setError(t("An unexpected error occurred"));
       }
     } finally {
       setLoading(false);

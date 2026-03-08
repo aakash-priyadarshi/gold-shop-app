@@ -377,8 +377,8 @@ export default function DesignGalleryPage() {
         <div className="flex items-start justify-between mb-2">
           <div>
             <h3 className="font-medium text-sm">
-              {design.jewelryType.charAt(0) +
-                design.jewelryType.slice(1).toLowerCase()}
+              {t(design.jewelryType.charAt(0) +
+                design.jewelryType.slice(1).toLowerCase())}
             </h3>
             <p className="text-xs text-muted-foreground">
               {t(BUILD_METHOD_LABELS[design.buildMethod] || design.buildMethod)}
@@ -390,13 +390,13 @@ export default function DesignGalleryPage() {
         <div className="flex flex-wrap gap-1 mb-2">
           {design.metalType && (
             <Badge variant="outline" className="text-xs">
-              {design.metalType.replace(/_/g, " ")}
+              {t(design.metalType.replace(/_/g, " "))}
             </Badge>
           )}
           {design.primaryStone && (
             <Badge variant="outline" className="text-xs">
               <Gem className="h-3 w-3 mr-0.5" />
-              {design.primaryStone}
+              {t(design.primaryStone)}
             </Badge>
           )}
         </div>
@@ -637,8 +637,8 @@ export default function DesignGalleryPage() {
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
-                  {selectedDesign.jewelryType.charAt(0) +
-                    selectedDesign.jewelryType.slice(1).toLowerCase()}{" "}
+                  {t(selectedDesign.jewelryType.charAt(0) +
+                    selectedDesign.jewelryType.slice(1).toLowerCase())}{" "}
                   {t("Design")}
                   {selectedDesign.creator && (
                     <span className="text-sm font-normal text-muted-foreground">
@@ -707,7 +707,7 @@ export default function DesignGalleryPage() {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground"><T>Type</T></span>
-                        <span>{selectedDesign.jewelryType}</span>
+                        <span>{t(selectedDesign.jewelryType)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">
@@ -721,21 +721,21 @@ export default function DesignGalleryPage() {
                         <div className="flex justify-between">
                           <span className="text-muted-foreground"><T>Metal</T></span>
                           <span>
-                            {selectedDesign.metalType.replace(/_/g, " ")}
+                            {t(selectedDesign.metalType.replace(/_/g, " "))}
                           </span>
                         </div>
                       )}
                       {selectedDesign.metalColor && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground"><T>Color</T></span>
-                          <span>{selectedDesign.metalColor}</span>
+                          <span>{t(selectedDesign.metalColor)}</span>
                         </div>
                       )}
                       {selectedDesign.surfaceFinish && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground"><T>Finish</T></span>
                           <span>
-                            {selectedDesign.surfaceFinish.replace(/_/g, " ")}
+                            {t(selectedDesign.surfaceFinish.replace(/_/g, " "))}
                           </span>
                         </div>
                       )}
@@ -743,7 +743,7 @@ export default function DesignGalleryPage() {
                         <div className="flex justify-between">
                           <span className="text-muted-foreground"><T>Weight</T></span>
                           <span>
-                            {selectedDesign.weightCategory.replace(/_/g, " ")}
+                            {t(selectedDesign.weightCategory.replace(/_/g, " "))}
                           </span>
                         </div>
                       )}
@@ -761,12 +761,12 @@ export default function DesignGalleryPage() {
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
                             <span className="text-muted-foreground"><T>Stone</T></span>
-                            <span>{selectedDesign.primaryStone}</span>
+                            <span>{t(selectedDesign.primaryStone)}</span>
                           </div>
                           {selectedDesign.stoneCut && (
                             <div className="flex justify-between">
                               <span className="text-muted-foreground"><T>Cut</T></span>
-                              <span>{selectedDesign.stoneCut}</span>
+                              <span>{t(selectedDesign.stoneCut)}</span>
                             </div>
                           )}
                           {selectedDesign.stoneColor && (
@@ -774,7 +774,7 @@ export default function DesignGalleryPage() {
                               <span className="text-muted-foreground">
                                 <T>Color</T>
                               </span>
-                              <span>{selectedDesign.stoneColor}</span>
+                              <span>{t(selectedDesign.stoneColor)}</span>
                             </div>
                           )}
                           {selectedDesign.stoneCarat && (
@@ -790,7 +790,7 @@ export default function DesignGalleryPage() {
                               <span className="text-muted-foreground">
                                 <T>Setting</T>
                               </span>
-                              <span>{selectedDesign.settingStyle}</span>
+                              <span>{t(selectedDesign.settingStyle)}</span>
                             </div>
                           )}
                         </div>
