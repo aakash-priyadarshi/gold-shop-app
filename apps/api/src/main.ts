@@ -87,40 +87,6 @@ async function bootstrap() {
     }),
   );
 
-  // Host validation middleware - only allow requests from known hosts
-  const allowedHosts = [
-    "orivraa.com",
-    "www.orivraa.com",
-    "api.orivraa.com",
-    "localhost",
-    "127.0.0.1",
-    // Railway internal / public domains
-    "railway.app",
-    "up.railway.app",
-    "railway.internal",
-  ];
-
-  // In production, enforce host validation
-  if (process.env.NODE_ENV === "production") {
-    app.use((req: any, res: any, next: any) => {
-      const host = req.hostname || req.headers.host?.split(":")[0];
-
-      if (
-        !host ||
-        !allowedHosts.some(
-          (allowed) => host === allowed || host.endsWith(`.${allowed}`),
-        )
-      ) {
-        logger.warn(`Blocked request from unauthorized host: ${host}`);
-        return res.status(403).json({
-          statusCode: 403,
-          message: "Forbidden: Invalid host header",
-        });
-      }
-      next();
-    });
-  }
-
   // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({

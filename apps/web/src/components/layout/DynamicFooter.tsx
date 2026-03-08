@@ -1,6 +1,7 @@
 "use client";
 
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
 import { useMarket } from "@/hooks/useMarket";
 import {
@@ -13,7 +14,6 @@ import {
   Youtube,
 } from "lucide-react";
 import Link from "next/link";
-import { T } from "@/components/ui/T";
 
 export function DynamicFooter() {
   const { config } = useMarket();
@@ -34,7 +34,10 @@ export function DynamicFooter() {
               <span className="text-xl font-bold text-white">{BRAND.name}</span>
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed">
-              <T>Connecting buyers with verified jewellers across Nepal, India, Dubai, USA & UK.</T>
+              <T>
+                Connecting buyers with verified jewellers across Nepal, India,
+                Dubai, USA & UK.
+              </T>
             </p>
             {/* Social Links */}
             <div className="flex items-center gap-3 pt-2">
@@ -189,7 +192,8 @@ export function DynamicFooter() {
 
         <div className="border-t border-gray-800 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-gray-500 text-center md:text-left">
-            © {new Date().getFullYear()} {BRAND.name}. <T>All rights reserved.</T>
+            © {new Date().getFullYear()} {BRAND.name}.{" "}
+            <T>All rights reserved.</T>
           </p>
           <div className="flex flex-wrap justify-center gap-4 md:gap-6 text-sm">
             <Link

@@ -2,7 +2,6 @@
 
 import { GoldenUnveil } from "@/components/auth/GoldenUnveil";
 import { Turnstile } from "@/components/auth/Turnstile";
-import { T } from "@/components/ui/T";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,6 +16,8 @@ import { Label } from "@/components/ui/label";
 import OrivraaLoader, {
   useMinLoadingTime,
 } from "@/components/ui/OrivraaLoader";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import {
   Tooltip,
   TooltipContent,
@@ -42,7 +43,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useT } from "@/providers/translation-provider";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -55,6 +55,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const t = useT();
   const {
     login,
     verifyEmail,
@@ -262,7 +263,9 @@ function LoginForm() {
           toast({
             variant: "destructive",
             title: t("Error"),
-            description: t("Failed to send verification code. Please try again."),
+            description: t(
+              "Failed to send verification code. Please try again.",
+            ),
           });
         }
       } else {
@@ -338,7 +341,9 @@ function LoginForm() {
       setOtpError("");
       toast({
         title: t("Code resent!"),
-        description: t("Please check your email for the new verification code."),
+        description: t(
+          "Please check your email for the new verification code.",
+        ),
       });
     } catch (error: any) {
       toast({
@@ -483,7 +488,9 @@ function LoginForm() {
     >
       <Card className="border-0 shadow-2xl shadow-gold-500/10 bg-white/95 dark:bg-[#161B22]/95 backdrop-blur-sm login-form-item">
         <CardHeader className="space-y-1 text-center pb-2">
-          <CardTitle className="text-2xl font-bold"><T>Welcome back</T></CardTitle>
+          <CardTitle className="text-2xl font-bold">
+            <T>Welcome back</T>
+          </CardTitle>
           <CardDescription className="text-base">
             <T>Sign in to continue your jewellery journey</T>
           </CardDescription>
@@ -705,7 +712,10 @@ function LoginForm() {
                       </TooltipTrigger>
                       <TooltipContent side="top" className="max-w-[250px]">
                         <p className="text-sm">
-                          <T>Please complete the security captcha above. If it's not visible, try reloading the page.</T>
+                          <T>
+                            Please complete the security captcha above. If it's
+                            not visible, try reloading the page.
+                          </T>
                         </p>
                       </TooltipContent>
                     </Tooltip>

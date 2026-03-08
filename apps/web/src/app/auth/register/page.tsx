@@ -1078,7 +1078,7 @@ function RegisterForm() {
               </form>
             </TabsContent>
 
-            {/* Shopkeeper Registration Form */}}
+            {/* Shopkeeper Registration Form */}
             <TabsContent value="shopkeeper">
               <form
                 onSubmit={shopkeeperForm.handleSubmit(onShopkeeperSubmit)}

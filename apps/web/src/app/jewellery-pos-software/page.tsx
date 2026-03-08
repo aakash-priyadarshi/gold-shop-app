@@ -4,20 +4,13 @@ import {
   ArrowRight,
   BarChart3,
   Calculator,
-  CheckCircle2,
   CreditCard,
   Globe,
-  Monitor,
-  Package,
   Printer,
   Receipt,
   RefreshCw,
   Scale,
   ScanBarcode,
-  ShieldCheck,
-  Smartphone,
-  Store,
-  Zap,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -170,9 +163,15 @@ export default function JewelleryPosSoftwarePage() {
               </span>
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
-              Stop struggling with generic POS systems. Orivraa's point-of-sale module handles
-              <strong> weight-based billing, making charges, old gold exchange, barcode scanning</strong>, and
-              GST/VAT-compliant invoicing — all designed specifically for jewellery businesses.
+              Stop struggling with generic POS systems. Orivraa's point-of-sale
+              module handles
+              <strong>
+                {" "}
+                weight-based billing, making charges, old gold exchange, barcode
+                scanning
+              </strong>
+              , and GST/VAT-compliant invoicing — all designed specifically for
+              jewellery businesses.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
@@ -199,19 +198,43 @@ export default function JewelleryPosSoftwarePage() {
             </h2>
             <div className="prose prose-lg dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
               <p>
-                Most POS systems are designed for retail stores selling items at fixed prices. A grocery store
-                scans a barcode and the price pops up. Simple. But jewellery is different:
+                Most POS systems are designed for retail stores selling items at
+                fixed prices. A grocery store scans a barcode and the price pops
+                up. Simple. But jewellery is different:
               </p>
               <ul>
-                <li><strong>Prices change daily</strong> — Gold and silver rates fluctuate every day, sometimes multiple times a day. Your POS needs to pull live rates or accept manual rate entry.</li>
-                <li><strong>Billing is by weight, not unit</strong> — A gold necklace isn't priced at "₹50,000." It's priced at "22K gold × 15.3 grams × today's rate + making charges + stone charges − old gold exchange."</li>
-                <li><strong>Making charges vary</strong> — Different items have different making charges (per gram, per piece, or flat fee). A POS must support all these structures.</li>
-                <li><strong>Old gold exchange</strong> — Customers frequently trade in old jewellery. The POS needs to calculate the exchange value based on weight and purity, then adjust the bill.</li>
-                <li><strong>Purity grading</strong> — You sell 24K, 22K, 18K, and 14K gold. Each has a different base price. Generic POS systems have no concept of this.</li>
+                <li>
+                  <strong>Prices change daily</strong> — Gold and silver rates
+                  fluctuate every day, sometimes multiple times a day. Your POS
+                  needs to pull live rates or accept manual rate entry.
+                </li>
+                <li>
+                  <strong>Billing is by weight, not unit</strong> — A gold
+                  necklace isn't priced at "₹50,000." It's priced at "22K gold ×
+                  15.3 grams × today's rate + making charges + stone charges −
+                  old gold exchange."
+                </li>
+                <li>
+                  <strong>Making charges vary</strong> — Different items have
+                  different making charges (per gram, per piece, or flat fee). A
+                  POS must support all these structures.
+                </li>
+                <li>
+                  <strong>Old gold exchange</strong> — Customers frequently
+                  trade in old jewellery. The POS needs to calculate the
+                  exchange value based on weight and purity, then adjust the
+                  bill.
+                </li>
+                <li>
+                  <strong>Purity grading</strong> — You sell 24K, 22K, 18K, and
+                  14K gold. Each has a different base price. Generic POS systems
+                  have no concept of this.
+                </li>
               </ul>
               <p>
-                Orivraa's jewellery POS handles all of this natively. No workarounds. No spreadsheets. Just fast,
-                accurate billing designed for how jewellery shops actually work.
+                Orivraa's jewellery POS handles all of this natively. No
+                workarounds. No spreadsheets. Just fast, accurate billing
+                designed for how jewellery shops actually work.
               </p>
             </div>
           </div>
@@ -224,7 +247,8 @@ export default function JewelleryPosSoftwarePage() {
               POS Features Designed for Jewellers
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-12">
-              Every feature you need to bill customers accurately and efficiently at the jewellery counter.
+              Every feature you need to bill customers accurately and
+              efficiently at the jewellery counter.
             </p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {POS_FEATURES.map((f) => (
@@ -276,15 +300,22 @@ export default function JewelleryPosSoftwarePage() {
               Orivraa POS vs Generic POS Systems
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-10">
-              Here's what you get with a jewellery-specific POS vs trying to make a generic system work.
+              Here's what you get with a jewellery-specific POS vs trying to
+              make a generic system work.
             </p>
             <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-800">
-                    <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-200">Capability</th>
-                    <th className="px-4 py-3 font-semibold text-amber-700 dark:text-gold-400">Orivraa POS</th>
-                    <th className="px-4 py-3 font-semibold text-gray-500">Generic POS</th>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-200">
+                      Capability
+                    </th>
+                    <th className="px-4 py-3 font-semibold text-amber-700 dark:text-gold-400">
+                      Orivraa POS
+                    </th>
+                    <th className="px-4 py-3 font-semibold text-gray-500">
+                      Generic POS
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -304,11 +335,21 @@ export default function JewelleryPosSoftwarePage() {
                   ].map(([feature, orivraa, generic], i) => (
                     <tr
                       key={feature as string}
-                      className={i % 2 === 0 ? "bg-white dark:bg-gray-950" : "bg-gray-50/50 dark:bg-gray-900/50"}
+                      className={
+                        i % 2 === 0
+                          ? "bg-white dark:bg-gray-950"
+                          : "bg-gray-50/50 dark:bg-gray-900/50"
+                      }
                     >
-                      <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{feature as string}</td>
-                      <td className="px-4 py-3 text-center">{orivraa ? "✅" : "❌"}</td>
-                      <td className="px-4 py-3 text-center">{generic ? "✅" : "❌"}</td>
+                      <td className="px-4 py-3 text-gray-700 dark:text-gray-300">
+                        {feature as string}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {orivraa ? "✅" : "❌"}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {generic ? "✅" : "❌"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -374,7 +415,8 @@ export default function JewelleryPosSoftwarePage() {
               Upgrade Your Jewellery Shop Counter
             </h2>
             <p className="text-lg text-amber-100 mb-8">
-              Fast, accurate billing designed for gold and diamond shops. Free to start — no credit card required.
+              Fast, accurate billing designed for gold and diamond shops. Free
+              to start — no credit card required.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link

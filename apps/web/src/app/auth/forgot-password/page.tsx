@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import { useT } from "@/providers/translation-provider";
 import {
   ArrowLeftIcon,
   ArrowPathIcon,
@@ -33,7 +34,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useT } from "@/providers/translation-provider";
 
 const emailSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -114,8 +114,9 @@ function ForgotPasswordForm() {
       setResendCooldown(60);
       toast({
         title: t("Code sent!"),
-        description:
-          t("If an account exists with this email, you will receive a reset code."),
+        description: t(
+          "If an account exists with this email, you will receive a reset code.",
+        ),
       });
     } catch (error: any) {
       toast({
@@ -238,7 +239,9 @@ function ForgotPasswordForm() {
                 <T>Forgot password?</T>
               </CardTitle>
               <CardDescription className="text-base">
-                <T>No worries! Enter your email and we'll send you a reset code.</T>
+                <T>
+                  No worries! Enter your email and we'll send you a reset code.
+                </T>
               </CardDescription>
             </CardHeader>
 
@@ -248,7 +251,9 @@ function ForgotPasswordForm() {
                 className="space-y-6"
               >
                 <div className="space-y-2">
-                  <Label htmlFor="email"><T>Email address</T></Label>
+                  <Label htmlFor="email">
+                    <T>Email address</T>
+                  </Label>
                   <div className="relative">
                     <EnvelopeIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
                     <Input
@@ -413,7 +418,9 @@ function ForgotPasswordForm() {
                 className="space-y-6"
               >
                 <div className="space-y-2">
-                  <Label htmlFor="newPassword"><T>New Password</T></Label>
+                  <Label htmlFor="newPassword">
+                    <T>New Password</T>
+                  </Label>
                   <div className="relative">
                     <LockClosedIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
                     <Input
@@ -444,7 +451,9 @@ function ForgotPasswordForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword"><T>Confirm Password</T></Label>
+                  <Label htmlFor="confirmPassword">
+                    <T>Confirm Password</T>
+                  </Label>
                   <div className="relative">
                     <LockClosedIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
                     <Input
@@ -479,10 +488,18 @@ function ForgotPasswordForm() {
                 <div className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg">
                   <T>Password must contain:</T>
                   <ul className="list-disc list-inside mt-1 space-y-0.5">
-                    <li><T>At least 8 characters</T></li>
-                    <li><T>One uppercase letter</T></li>
-                    <li><T>One lowercase letter</T></li>
-                    <li><T>One number</T></li>
+                    <li>
+                      <T>At least 8 characters</T>
+                    </li>
+                    <li>
+                      <T>One uppercase letter</T>
+                    </li>
+                    <li>
+                      <T>One lowercase letter</T>
+                    </li>
+                    <li>
+                      <T>One number</T>
+                    </li>
                   </ul>
                 </div>
 

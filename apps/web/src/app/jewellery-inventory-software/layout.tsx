@@ -21,7 +21,8 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/jewellery-inventory-software" },
   openGraph: {
-    title: "Jewellery Inventory Software — Track Gold by Weight & Purity | Orivraa",
+    title:
+      "Jewellery Inventory Software — Track Gold by Weight & Purity | Orivraa",
     description:
       "Track gold, silver, and diamond inventory by weight, purity, and category. Automatic stock alerts, karigar management. Free to start.",
     url: "https://www.orivraa.com/jewellery-inventory-software",

@@ -3,24 +3,14 @@ import { Header } from "@/components/layout/header";
 import {
   ArrowRight,
   BarChart3,
-  Camera,
   CreditCard,
   Globe,
   Image,
   MessageSquare,
-  Package,
-  Palette,
-  Receipt,
-  Search,
   Share2,
-  ShieldCheck,
   ShoppingCart,
-  Smartphone,
   Sparkles,
-  Star,
   Store,
-  Truck,
-  Users,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -173,9 +163,12 @@ export default function JewelleryEcommerceSoftwarePage() {
               </span>
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
-              Orivraa gives your jewellery shop an <strong>instant online presence</strong>. List your products on
-              our marketplace, create shareable digital catalogues, and reach buyers across{" "}
-              <strong>Nepal, India, Dubai, USA, UK & Europe</strong>. No website development needed. Starts free.
+              Orivraa gives your jewellery shop an{" "}
+              <strong>instant online presence</strong>. List your products on
+              our marketplace, create shareable digital catalogues, and reach
+              buyers across{" "}
+              <strong>Nepal, India, Dubai, USA, UK & Europe</strong>. No website
+              development needed. Starts free.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
@@ -221,18 +214,44 @@ export default function JewelleryEcommerceSoftwarePage() {
             </h2>
             <div className="prose prose-lg dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
               <p>
-                Most jewellers know they need to sell online, but the barriers are real:
+                Most jewellers know they need to sell online, but the barriers
+                are real:
               </p>
               <ul>
-                <li><strong>Website development is expensive</strong> — Building a custom jewellery ecommerce site costs ₹2-10 lakhs, plus ongoing maintenance. Shopify and WooCommerce don't handle weight-based pricing or purity tracking.</li>
-                <li><strong>Photography is challenging</strong> — Jewellery photography needs proper lighting and angles. Most jewellers don't have professional setup or photo editing skills.</li>
-                <li><strong>Product descriptions take time</strong> — Writing compelling descriptions for hundreds of products in multiple languages is tedious and expensive.</li>
-                <li><strong>Payment and shipping are complex</strong> — Handling international payments, customs duties, and secure shipping for high-value items requires expertise.</li>
-                <li><strong>Driving traffic is hard</strong> — Even with a website, getting buyers to visit requires SEO knowledge, advertising budgets, and social media marketing.</li>
+                <li>
+                  <strong>Website development is expensive</strong> — Building a
+                  custom jewellery ecommerce site costs ₹2-10 lakhs, plus
+                  ongoing maintenance. Shopify and WooCommerce don't handle
+                  weight-based pricing or purity tracking.
+                </li>
+                <li>
+                  <strong>Photography is challenging</strong> — Jewellery
+                  photography needs proper lighting and angles. Most jewellers
+                  don't have professional setup or photo editing skills.
+                </li>
+                <li>
+                  <strong>Product descriptions take time</strong> — Writing
+                  compelling descriptions for hundreds of products in multiple
+                  languages is tedious and expensive.
+                </li>
+                <li>
+                  <strong>Payment and shipping are complex</strong> — Handling
+                  international payments, customs duties, and secure shipping
+                  for high-value items requires expertise.
+                </li>
+                <li>
+                  <strong>Driving traffic is hard</strong> — Even with a
+                  website, getting buyers to visit requires SEO knowledge,
+                  advertising budgets, and social media marketing.
+                </li>
               </ul>
               <p>
-                Orivraa solves all of these. You upload your products, and we handle the marketplace, discovery,
-                AI-generated descriptions, secure payments, and international reach. <strong>You focus on your jewellery — we handle the ecommerce.</strong>
+                Orivraa solves all of these. You upload your products, and we
+                handle the marketplace, discovery, AI-generated descriptions,
+                secure payments, and international reach.{" "}
+                <strong>
+                  You focus on your jewellery — we handle the ecommerce.
+                </strong>
               </p>
             </div>
           </div>
@@ -269,7 +288,8 @@ export default function JewelleryEcommerceSoftwarePage() {
               Everything You Need to Sell Jewellery Online
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-12">
-              From product listing to order delivery — Orivraa handles the complete ecommerce workflow.
+              From product listing to order delivery — Orivraa handles the
+              complete ecommerce workflow.
             </p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {FEATURES.map((f) => (
@@ -297,39 +317,76 @@ export default function JewelleryEcommerceSoftwarePage() {
               Orivraa vs Building Your Own Jewellery Website
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-10">
-              Why spend lakhs on a custom website when you can start selling today?
+              Why spend lakhs on a custom website when you can start selling
+              today?
             </p>
             <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-800">
-                    <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-200">Aspect</th>
-                    <th className="px-4 py-3 font-semibold text-amber-700 dark:text-gold-400">Orivraa</th>
-                    <th className="px-4 py-3 font-semibold text-gray-500">Custom Website</th>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-200">
+                      Aspect
+                    </th>
+                    <th className="px-4 py-3 font-semibold text-amber-700 dark:text-gold-400">
+                      Orivraa
+                    </th>
+                    <th className="px-4 py-3 font-semibold text-gray-500">
+                      Custom Website
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {[
                     ["Setup Cost", "Free", "₹2-10 Lakhs"],
                     ["Time to Launch", "15 minutes", "2-6 months"],
-                    ["Maintenance", "No technical skill needed", "Developer required"],
-                    ["Built-in Buyers", "6-country marketplace", "You drive all traffic"],
-                    ["Weight-Based Pricing", "Native support", "Custom development"],
-                    ["Multi-Currency", "6 currencies built in", "Custom plugins needed"],
+                    [
+                      "Maintenance",
+                      "No technical skill needed",
+                      "Developer required",
+                    ],
+                    [
+                      "Built-in Buyers",
+                      "6-country marketplace",
+                      "You drive all traffic",
+                    ],
+                    [
+                      "Weight-Based Pricing",
+                      "Native support",
+                      "Custom development",
+                    ],
+                    [
+                      "Multi-Currency",
+                      "6 currencies built in",
+                      "Custom plugins needed",
+                    ],
                     ["AI Descriptions", "Included", "Not available"],
                     ["Mobile Responsive", "Yes", "Depends on build"],
                     ["Customer Chat", "Built in", "Third-party integration"],
                     ["SEO Optimised", "Yes", "Depends on developer"],
                     ["Monthly Cost", "From $0", "$50-500+ hosting"],
-                    ["Digital Catalogues", "Shareable on WhatsApp", "Not available"],
+                    [
+                      "Digital Catalogues",
+                      "Shareable on WhatsApp",
+                      "Not available",
+                    ],
                   ].map(([aspect, orivraa, custom], i) => (
                     <tr
                       key={aspect}
-                      className={i % 2 === 0 ? "bg-white dark:bg-gray-950" : "bg-gray-50/50 dark:bg-gray-900/50"}
+                      className={
+                        i % 2 === 0
+                          ? "bg-white dark:bg-gray-950"
+                          : "bg-gray-50/50 dark:bg-gray-900/50"
+                      }
                     >
-                      <td className="px-4 py-3 text-gray-700 dark:text-gray-300 font-medium">{aspect}</td>
-                      <td className="px-4 py-3 text-center text-amber-700 dark:text-gold-400 font-medium">{orivraa}</td>
-                      <td className="px-4 py-3 text-center text-gray-500">{custom}</td>
+                      <td className="px-4 py-3 text-gray-700 dark:text-gray-300 font-medium">
+                        {aspect}
+                      </td>
+                      <td className="px-4 py-3 text-center text-amber-700 dark:text-gold-400 font-medium">
+                        {orivraa}
+                      </td>
+                      <td className="px-4 py-3 text-center text-gray-500">
+                        {custom}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -395,7 +452,8 @@ export default function JewelleryEcommerceSoftwarePage() {
               Start Selling Jewellery Online Today
             </h2>
             <p className="text-lg text-amber-100 mb-8">
-              Join 2,000+ jewellers already selling on Orivraa. Free to list — reach buyers worldwide.
+              Join 2,000+ jewellers already selling on Orivraa. Free to list —
+              reach buyers worldwide.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link

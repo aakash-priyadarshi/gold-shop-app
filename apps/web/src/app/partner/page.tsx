@@ -173,9 +173,11 @@ export default function PartnerPage() {
               </span>
             </h1>
             <p className="mt-6 text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
-              <T>Join Orivraa&apos;s partner network and reach thousands of
-              jewellery buyers across 6+ countries. Get premium tools, dedicated
-              support, and co-marketing to accelerate your growth.</T>
+              <T>
+                Join Orivraa&apos;s partner network and reach thousands of
+                jewellery buyers across 6+ countries. Get premium tools,
+                dedicated support, and co-marketing to accelerate your growth.
+              </T>
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Link
@@ -218,8 +220,10 @@ export default function PartnerPage() {
               <T>Why Partner With Orivraa?</T>
             </h2>
             <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-              <T>We provide everything you need to take your jewellery business to
-              the next level</T>
+              <T>
+                We provide everything you need to take your jewellery business
+                to the next level
+              </T>
             </p>
           </div>
           <div className="grid sm:grid-cols-2 gap-6">
@@ -362,8 +366,11 @@ export default function PartnerPage() {
               <T>Ready to Partner With Us?</T>
             </h2>
             <p className="mt-3 text-gray-400 max-w-lg mx-auto">
-              <T>Join the fastest-growing jewellery marketplace. No upfront costs,
-              dedicated support, and tools to help you succeed internationally.</T>
+              <T>
+                Join the fastest-growing jewellery marketplace. No upfront
+                costs, dedicated support, and tools to help you succeed
+                internationally.
+              </T>
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Link

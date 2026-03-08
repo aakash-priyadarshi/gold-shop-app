@@ -1,3 +1,6 @@
+"use client";
+
+import { T } from "@/components/ui/T";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { BRAND } from "@/config/brand";
@@ -30,12 +33,11 @@ export default function BlogPage() {
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
               Orivraa{" "}
               <span className="bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">
-                Blog
+                <T>Blog</T>
               </span>
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-stone-300">
-              Expert guides on jewellery shop software, inventory management,
-              GST compliance, and growing your gold &amp; diamond business.
+              <T>Expert guides on jewellery shop software, inventory management, GST compliance, and growing your gold and diamond business.</T>
             </p>
           </div>
         </section>
@@ -45,7 +47,7 @@ export default function BlogPage() {
           {featured && (
             <section className="mb-16">
               <h2 className="mb-6 text-sm font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                Featured Article
+                <T>Featured Article</T>
               </h2>
               <Link
                 href={`/blog/${featured.slug}`}
@@ -71,13 +73,13 @@ export default function BlogPage() {
                     </span>
                   </div>
                   <h3 className="text-2xl font-bold text-stone-900 dark:text-white group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors sm:text-3xl">
-                    {featured.title}
+                    <T>{featured.title}</T>
                   </h3>
                   <p className="mt-3 text-stone-600 dark:text-stone-300 leading-relaxed line-clamp-3">
-                    {featured.description}
+                    <T>{featured.description}</T>
                   </p>
                   <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-amber-600 dark:text-amber-400 group-hover:gap-3 transition-all">
-                    Read article
+                    <T>Read article</T>
                     <ArrowRight className="h-4 w-4" />
                   </div>
                 </div>
@@ -88,7 +90,7 @@ export default function BlogPage() {
           {/* ── All Posts Grid ─────────────────────────────────── */}
           <section>
             <h2 className="mb-8 text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-              All Articles
+              <T>All Articles</T>
             </h2>
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
               {rest.map((post) => (
@@ -108,10 +110,10 @@ export default function BlogPage() {
                       </span>
                     </div>
                     <h3 className="text-lg font-bold text-stone-900 dark:text-white group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors leading-snug">
-                      {post.title}
+                      <T>{post.title}</T>
                     </h3>
                     <p className="mt-2 flex-1 text-sm text-stone-500 dark:text-stone-400 line-clamp-3 leading-relaxed">
-                      {post.description}
+                      <T>{post.description}</T>
                     </p>
                     <div className="mt-4 flex items-center justify-between">
                       <span className="text-xs text-stone-400 dark:text-stone-500">
@@ -122,7 +124,7 @@ export default function BlogPage() {
                         })}
                       </span>
                       <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400 group-hover:gap-2 transition-all">
-                        Read
+                        <T>Read</T>
                         <ArrowRight className="h-3 w-3" />
                       </span>
                     </div>
@@ -135,24 +137,23 @@ export default function BlogPage() {
           {/* ── CTA ────────────────────────────────────────────── */}
           <section className="mt-20 rounded-2xl bg-gradient-to-r from-amber-600 to-yellow-500 p-10 text-center text-white shadow-lg">
             <h2 className="text-2xl font-bold sm:text-3xl">
-              Ready to Grow Your Jewellery Business?
+              <T>Ready to Grow Your Jewellery Business?</T>
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-amber-100">
-              Join 2,000+ jewellers using {BRAND.name} to manage inventory, sell
-              online, and reach international buyers — free to start.
+              <T>Join 2,000+ jewellers using Orivraa to manage inventory, sell online, and reach international buyers — free to start.</T>
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
                 href="/auth/register"
                 className="rounded-xl bg-white px-8 py-3 font-bold text-amber-700 shadow-md transition hover:shadow-lg hover:bg-amber-50"
               >
-                Start Free — No Credit Card
+                <T>Start Free — No Credit Card</T>
               </Link>
               <Link
                 href="/jewellery-shop-software"
                 className="rounded-xl border-2 border-white/40 px-8 py-3 font-semibold text-white backdrop-blur transition hover:bg-white/10"
               >
-                See All Features
+                <T>See All Features</T>
               </Link>
             </div>
           </section>

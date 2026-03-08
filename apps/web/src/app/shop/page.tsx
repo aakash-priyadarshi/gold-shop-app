@@ -4,7 +4,6 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { T } from "@/components/ui/T";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,7 +22,9 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Slider } from "@/components/ui/slider";
+import { T } from "@/components/ui/T";
 import { getImageUrl } from "@/lib/image-upload";
+import { useT } from "@/providers/translation-provider";
 import { CURRENCIES, usePreferencesStore } from "@/store/preferences";
 import {
   Gem,
@@ -40,7 +41,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useT } from "@/providers/translation-provider";
 
 interface InventoryItem {
   id: string;
@@ -226,7 +226,9 @@ export default function ShopPage() {
             <div className="container mx-auto px-4">
               <div className="flex items-center gap-2 mb-4">
                 <Sparkles className="h-5 w-5 text-gold-500" />
-                <h2 className="text-lg font-semibold"><T>Recommended for You</T></h2>
+                <h2 className="text-lg font-semibold">
+                  <T>Recommended for You</T>
+                </h2>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {recommendedItems.slice(0, 4).map((item) => (
@@ -282,16 +284,36 @@ export default function ShopPage() {
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all"><T>All Types</T></SelectItem>
-                  <SelectItem value="RING"><T>Rings</T></SelectItem>
-                  <SelectItem value="NECKLACE"><T>Necklaces</T></SelectItem>
-                  <SelectItem value="BRACELET"><T>Bracelets</T></SelectItem>
-                  <SelectItem value="EARRING"><T>Earrings</T></SelectItem>
-                  <SelectItem value="PENDANT"><T>Pendants</T></SelectItem>
-                  <SelectItem value="BANGLE"><T>Bangles</T></SelectItem>
-                  <SelectItem value="CHAIN"><T>Chains</T></SelectItem>
-                  <SelectItem value="ANKLET"><T>Anklets</T></SelectItem>
-                  <SelectItem value="NOSE_PIN"><T>Nose Pins</T></SelectItem>
+                  <SelectItem value="all">
+                    <T>All Types</T>
+                  </SelectItem>
+                  <SelectItem value="RING">
+                    <T>Rings</T>
+                  </SelectItem>
+                  <SelectItem value="NECKLACE">
+                    <T>Necklaces</T>
+                  </SelectItem>
+                  <SelectItem value="BRACELET">
+                    <T>Bracelets</T>
+                  </SelectItem>
+                  <SelectItem value="EARRING">
+                    <T>Earrings</T>
+                  </SelectItem>
+                  <SelectItem value="PENDANT">
+                    <T>Pendants</T>
+                  </SelectItem>
+                  <SelectItem value="BANGLE">
+                    <T>Bangles</T>
+                  </SelectItem>
+                  <SelectItem value="CHAIN">
+                    <T>Chains</T>
+                  </SelectItem>
+                  <SelectItem value="ANKLET">
+                    <T>Anklets</T>
+                  </SelectItem>
+                  <SelectItem value="NOSE_PIN">
+                    <T>Nose Pins</T>
+                  </SelectItem>
                 </SelectContent>
               </Select>
 
@@ -301,7 +323,9 @@ export default function ShopPage() {
                   <SelectValue placeholder="Metal" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all"><T>All Metals</T></SelectItem>
+                  <SelectItem value="all">
+                    <T>All Metals</T>
+                  </SelectItem>
                   <SelectItem value="gold 24k">24K Gold</SelectItem>
                   <SelectItem value="gold 22k">22K Gold</SelectItem>
                   <SelectItem value="gold 18k">18K Gold</SelectItem>
@@ -317,10 +341,18 @@ export default function ShopPage() {
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="newest"><T>Newest First</T></SelectItem>
-                  <SelectItem value="price_low"><T>Price: Low to High</T></SelectItem>
-                  <SelectItem value="price_high"><T>Price: High to Low</T></SelectItem>
-                  <SelectItem value="popular"><T>Most Popular</T></SelectItem>
+                  <SelectItem value="newest">
+                    <T>Newest First</T>
+                  </SelectItem>
+                  <SelectItem value="price_low">
+                    <T>Price: Low to High</T>
+                  </SelectItem>
+                  <SelectItem value="price_high">
+                    <T>Price: High to Low</T>
+                  </SelectItem>
+                  <SelectItem value="popular">
+                    <T>Most Popular</T>
+                  </SelectItem>
                 </SelectContent>
               </Select>
 
@@ -339,7 +371,9 @@ export default function ShopPage() {
                 </SheetTrigger>
                 <SheetContent>
                   <SheetHeader>
-                    <SheetTitle><T>Filters</T></SheetTitle>
+                    <SheetTitle>
+                      <T>Filters</T>
+                    </SheetTitle>
                     <SheetDescription>
                       <T>Refine your search results</T>
                     </SheetDescription>
@@ -455,7 +489,9 @@ export default function ShopPage() {
                 <p className="text-gray-600 dark:text-gray-300 mb-6">
                   <T>Try adjusting your filters or search query</T>
                 </p>
-                <Button onClick={clearFilters}><T>Clear Filters</T></Button>
+                <Button onClick={clearFilters}>
+                  <T>Clear Filters</T>
+                </Button>
               </div>
             ) : (
               <div

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
 import { useTranslation } from "@/providers/translation-provider";
+import { useEffect, useState, type ReactNode } from "react";
 
 /**
  * <T> — AI-powered translation component
@@ -24,6 +24,11 @@ import { useTranslation } from "@/providers/translation-provider";
  */
 export function T({ children }: { children: string }) {
   const { locale, t, register } = useTranslation();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (locale !== "en") {
@@ -31,7 +36,8 @@ export function T({ children }: { children: string }) {
     }
   }, [children, locale, register]);
 
-  if (locale === "en") return children as unknown as ReactNode;
+  // Always return English on server & first client render to avoid hydration mismatch
+  if (!mounted || locale === "en") return children as unknown as ReactNode;
 
   return t(children) as unknown as ReactNode;
 }

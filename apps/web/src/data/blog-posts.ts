@@ -1,5 +1,3 @@
-import { BRAND } from "@/config/brand";
-
 /* ────────────────────────────────────────────────────────────── */
 /*  Blog Post Type                                                */
 /* ────────────────────────────────────────────────────────────── */
@@ -749,8 +747,7 @@ export const BLOG_POSTS: BlogPost[] = [
   /* ── Post 6 ────────────────────────────────────────────────── */
   {
     slug: "best-jewellery-store-management-software-2026",
-    title:
-      "Best Jewellery Store Management Software in 2026: Complete Guide",
+    title: "Best Jewellery Store Management Software in 2026: Complete Guide",
     description:
       "Compare the best jewellery store management software for 2026. Orivraa, Marg ERP, Zoho, Vyapar — features, pricing, and which one suits your gold shop. Includes free options.",
     date: "2026-03-01",
@@ -1424,7 +1421,8 @@ export const BLOG_POSTS: BlogPost[] = [
 
 <p>Need help pricing your jewellery correctly? <a href="/jewellery-shop-billing-software">Orivraa's billing software</a> handles all these calculations automatically. <a href="/auth/register">Start free</a>.</p>
 `,
-  },];
+  },
+];
 
 /* ────────────────────────────────────────────────────────────── */
 /*  Helper                                                        */
@@ -1434,12 +1432,10 @@ export function getBlogPost(slug: string): BlogPost | undefined {
   return BLOG_POSTS.find((p) => p.slug === slug);
 }
 
-export function getRelatedPosts(
-  currentSlug: string,
-  limit = 3,
-): BlogPost[] {
+export function getRelatedPosts(currentSlug: string, limit = 3): BlogPost[] {
   const current = getBlogPost(currentSlug);
-  if (!current) return BLOG_POSTS.filter((p) => p.slug !== currentSlug).slice(0, limit);
+  if (!current)
+    return BLOG_POSTS.filter((p) => p.slug !== currentSlug).slice(0, limit);
 
   // Score by shared tags
   return BLOG_POSTS.filter((p) => p.slug !== currentSlug)

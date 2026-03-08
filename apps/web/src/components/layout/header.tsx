@@ -12,8 +12,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FlagImage, type FlagCode } from "@/components/ui/phone-input";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import {
   Popover,
   PopoverContent,
@@ -34,6 +32,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { T } from "@/components/ui/T";
 import {
   Tooltip,
   TooltipContent,
@@ -44,6 +43,7 @@ import { BRAND } from "@/config/brand";
 import { useCart } from "@/contexts/CartContext";
 import { getDashboardRoute, useAuth, type UserRole } from "@/hooks/useAuth";
 import { chatApi, notificationsApi, ordersApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   COUNTRIES,
   CURRENCIES,
@@ -1496,7 +1496,9 @@ export function Header() {
                 </Tooltip>
                 <PopoverContent className="w-80 p-0" align="end">
                   <div className="flex items-center justify-between p-3 border-b">
-                    <h3 className="font-semibold"><T>Shopping Cart</T></h3>
+                    <h3 className="font-semibold">
+                      <T>Shopping Cart</T>
+                    </h3>
                     <span className="text-sm text-muted-foreground">
                       {itemCount} item{itemCount !== 1 ? "s" : ""}
                     </span>
