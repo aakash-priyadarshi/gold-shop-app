@@ -2,6 +2,8 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import {
   MiniOrderStepper,
   type OrderType as OrderTypeEnum,
@@ -75,6 +77,7 @@ function MyOrdersPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const t = useT();
 
   // Currency from preferences
   const { currency } = usePreferencesStore();
@@ -218,10 +221,10 @@ function MyOrdersPageContent() {
         {/* Page header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            My Orders
+            <T>My Orders</T>
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Track and manage your orders
+            <T>Track and manage your orders</T>
           </p>
         </div>
 
@@ -235,7 +238,7 @@ function MyOrdersPageContent() {
                   <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <Input
                     type="text"
-                    placeholder="Search orders by order number..."
+                    placeholder={t("Search orders by order number...")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -248,36 +251,36 @@ function MyOrdersPageContent() {
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-[150px]">
                     <FunnelIcon className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Status" />
+                    <SelectValue placeholder={t("Status")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="PENDING">Pending</SelectItem>
-                    <SelectItem value="PROCESSING">Processing</SelectItem>
-                    <SelectItem value="SHIPPED">Shipped</SelectItem>
-                    <SelectItem value="DELIVERED">Delivered</SelectItem>
-                    <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                    <SelectItem value="all"><T>All Status</T></SelectItem>
+                    <SelectItem value="PENDING"><T>Pending</T></SelectItem>
+                    <SelectItem value="PROCESSING"><T>Processing</T></SelectItem>
+                    <SelectItem value="SHIPPED"><T>Shipped</T></SelectItem>
+                    <SelectItem value="DELIVERED"><T>Delivered</T></SelectItem>
+                    <SelectItem value="CANCELLED"><T>Cancelled</T></SelectItem>
                   </SelectContent>
                 </Select>
 
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
                   <SelectTrigger className="w-[150px]">
-                    <SelectValue placeholder="Type" />
+                    <SelectValue placeholder={t("Type")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="INVENTORY">Pre-built</SelectItem>
-                    <SelectItem value="CUSTOM">Custom</SelectItem>
+                    <SelectItem value="all"><T>All Types</T></SelectItem>
+                    <SelectItem value="INVENTORY"><T>Pre-built</T></SelectItem>
+                    <SelectItem value="CUSTOM"><T>Custom</T></SelectItem>
                   </SelectContent>
                 </Select>
 
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger className="w-[150px]">
-                    <SelectValue placeholder="Sort" />
+                    <SelectValue placeholder={t("Sort")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="newest">Newest First</SelectItem>
-                    <SelectItem value="oldest">Oldest First</SelectItem>
+                    <SelectItem value="newest"><T>Newest First</T></SelectItem>
+                    <SelectItem value="oldest"><T>Oldest First</T></SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -295,15 +298,15 @@ function MyOrdersPageContent() {
             <CardContent>
               <ShoppingBagIcon className="h-16 w-16 mx-auto text-gray-300 mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                No orders found
+                <T>No orders found</T>
               </h3>
               <p className="text-gray-500 dark:text-gray-400 mb-4">
                 {searchQuery || statusFilter !== "all" || typeFilter !== "all"
-                  ? "Try adjusting your filters"
-                  : "You haven't placed any orders yet"}
+                  ? t("Try adjusting your filters")
+                  : t("You haven't placed any orders yet")}
               </p>
               <Button asChild>
-                <Link href="/products">Browse Products</Link>
+                <Link href="/products"><T>Browse Products</T></Link>
               </Button>
             </CardContent>
           </Card>
@@ -314,7 +317,7 @@ function MyOrdersPageContent() {
                 order.productSnapshot.name ||
                 order.productSnapshot.nameEn ||
                 order.productSnapshot.jewelleryType ||
-                "Custom Jewellery";
+                t("Custom Jewellery");
               const productImage =
                 order.productSnapshot.images?.[0] ||
                 order.productSnapshot.referenceImages?.[0];
@@ -351,8 +354,8 @@ function MyOrdersPageContent() {
                                 </span>
                                 <Badge variant="secondary" className="text-xs">
                                   {order.orderType === "CUSTOM"
-                                    ? "Custom"
-                                    : "Pre-built"}
+                                    ? t("Custom")
+                                    : t("Pre-built")}
                                 </Badge>
                               </div>
 
@@ -406,7 +409,7 @@ function MyOrdersPageContent() {
         {totalPages > 1 && (
           <div className="flex items-center justify-between mt-6">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Showing {orders.length} of {totalOrders} orders
+              {t("Showing")} {orders.length} {t("of")} {totalOrders} {t("orders")}
             </p>
             <div className="flex gap-2">
               <Button
@@ -414,7 +417,7 @@ function MyOrdersPageContent() {
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               >
-                Previous
+                <T>Previous</T>
               </Button>
               <div className="flex items-center gap-1">
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -448,7 +451,7 @@ function MyOrdersPageContent() {
                   setCurrentPage((p) => Math.min(totalPages, p + 1))
                 }
               >
-                Next
+                <T>Next</T>
               </Button>
             </div>
           </div>

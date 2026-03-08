@@ -17,7 +17,6 @@ import OrivraaLoader, {
   useMinLoadingTime,
 } from "@/components/ui/OrivraaLoader";
 import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import {
   Tooltip,
   TooltipContent,
@@ -27,6 +26,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { getDashboardRoute, useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import { useT } from "@/providers/translation-provider";
 import {
   ArrowPathIcon,
   ArrowRightIcon,

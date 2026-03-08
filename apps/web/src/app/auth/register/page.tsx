@@ -2,7 +2,6 @@
 
 import { GoldenUnveil } from "@/components/auth/GoldenUnveil";
 import { Turnstile } from "@/components/auth/Turnstile";
-import { T } from "@/components/ui/T";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -30,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { T } from "@/components/ui/T";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
@@ -47,6 +47,7 @@ import {
 } from "@/hooks/useAuth";
 import { authApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useT } from "@/providers/translation-provider";
 import { usePreferencesStore } from "@/store/preferences";
 import {
   ArrowPathIcon,
@@ -69,7 +70,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useT } from "@/providers/translation-provider";
 
 // Customer registration schema
 const customerSchema = z
@@ -556,7 +556,9 @@ function RegisterForm() {
       setOtpError("");
       toast({
         title: t("Code resent!"),
-        description: t("Please check your email for the new verification code."),
+        description: t(
+          "Please check your email for the new verification code.",
+        ),
       });
     } catch (error: any) {
       toast({
@@ -750,7 +752,9 @@ function RegisterForm() {
               >
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="customer-firstName"><T>First Name</T></Label>
+                    <Label htmlFor="customer-firstName">
+                      <T>First Name</T>
+                    </Label>
                     <div className="relative">
                       <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                       <Input
@@ -768,7 +772,9 @@ function RegisterForm() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="customer-lastName"><T>Last Name</T></Label>
+                    <Label htmlFor="customer-lastName">
+                      <T>Last Name</T>
+                    </Label>
                     <Input
                       id="customer-lastName"
                       placeholder={placeholders.lastName}
@@ -784,7 +790,9 @@ function RegisterForm() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="customer-email"><T>Email</T></Label>
+                  <Label htmlFor="customer-email">
+                    <T>Email</T>
+                  </Label>
                   <div className="relative">
                     <EnvelopeIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                     <Input
@@ -843,7 +851,9 @@ function RegisterForm() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="customer-phone"><T>Phone (Optional)</T></Label>
+                  <Label htmlFor="customer-phone">
+                    <T>Phone (Optional)</T>
+                  </Label>
                   <div className="relative">
                     <PhoneInput
                       id="customer-phone"
@@ -886,7 +896,9 @@ function RegisterForm() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="customer-password"><T>Password</T></Label>
+                  <Label htmlFor="customer-password">
+                    <T>Password</T>
+                  </Label>
                   <div className="relative">
                     <LockClosedIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                     <Input
@@ -1090,7 +1102,9 @@ function RegisterForm() {
                   </h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="shop-firstName"><T>First Name</T></Label>
+                      <Label htmlFor="shop-firstName">
+                        <T>First Name</T>
+                      </Label>
                       <div className="relative">
                         <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                         <Input
@@ -1108,7 +1122,9 @@ function RegisterForm() {
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="shop-lastName"><T>Last Name</T></Label>
+                      <Label htmlFor="shop-lastName">
+                        <T>Last Name</T>
+                      </Label>
                       <Input
                         id="shop-lastName"
                         placeholder={placeholders.lastName}
@@ -1125,7 +1141,9 @@ function RegisterForm() {
                   </div>
                   <div className="grid grid-cols-2 gap-4 mt-4">
                     <div className="space-y-2">
-                      <Label htmlFor="shop-email"><T>Email</T></Label>
+                      <Label htmlFor="shop-email">
+                        <T>Email</T>
+                      </Label>
                       <div className="relative">
                         <EnvelopeIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                         <Input
@@ -1173,7 +1191,9 @@ function RegisterForm() {
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="shop-phone"><T>Phone</T></Label>
+                      <Label htmlFor="shop-phone">
+                        <T>Phone</T>
+                      </Label>
                       <div className="relative">
                         <PhoneInput
                           id="shop-phone"
@@ -1228,7 +1248,9 @@ function RegisterForm() {
                   </div>
                   <div className="grid grid-cols-2 gap-4 mt-4">
                     <div className="space-y-2">
-                      <Label htmlFor="shop-password"><T>Password</T></Label>
+                      <Label htmlFor="shop-password">
+                        <T>Password</T>
+                      </Label>
                       <div className="relative">
                         <LockClosedIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                         <Input
@@ -1311,7 +1333,9 @@ function RegisterForm() {
                   </h3>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="shop-name"><T>Shop Name</T></Label>
+                      <Label htmlFor="shop-name">
+                        <T>Shop Name</T>
+                      </Label>
                       <div className="relative">
                         <BuildingStorefrontIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                         <Input
@@ -1330,7 +1354,9 @@ function RegisterForm() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="shop-country"><T>Country</T></Label>
+                        <Label htmlFor="shop-country">
+                          <T>Country</T>
+                        </Label>
                         <Select
                           onValueChange={(value) =>
                             shopkeeperForm.setValue("country", value as any)
@@ -1364,7 +1390,9 @@ function RegisterForm() {
                         )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="shop-city"><T>City</T></Label>
+                        <Label htmlFor="shop-city">
+                          <T>City</T>
+                        </Label>
                         <div className="relative">
                           <MapPinIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                           <Input
@@ -1383,7 +1411,9 @@ function RegisterForm() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="shop-address"><T>Address (Optional)</T></Label>
+                      <Label htmlFor="shop-address">
+                        <T>Address (Optional)</T>
+                      </Label>
                       <div className="relative">
                         <MapPinIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                         <Input
@@ -1415,9 +1445,13 @@ function RegisterForm() {
                 <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-xl p-4 text-sm text-amber-800 dark:text-amber-200 flex items-start gap-3">
                   <InformationCircleIcon className="h-5 w-5 shrink-0 mt-0.5 text-amber-500" />
                   <div>
-                    <strong><T>Note:</T></strong> <T>Shop registrations require
-                    verification. Your account will be active after admin
-                    approval.</T>
+                    <strong>
+                      <T>Note:</T>
+                    </strong>{" "}
+                    <T>
+                      Shop registrations require verification. Your account will
+                      be active after admin approval.
+                    </T>
                   </div>
                 </div>
 
@@ -1542,7 +1576,9 @@ function RegisterForm() {
                 </Button>
                 <p className="text-xs text-center text-amber-600 mt-2">
                   <InformationCircleIcon className="h-3.5 w-3.5 inline mr-1" />
-                  <T>You'll need to complete shop details after Google sign-up</T>
+                  <T>
+                    You'll need to complete shop details after Google sign-up
+                  </T>
                 </p>
               </form>
             </TabsContent>

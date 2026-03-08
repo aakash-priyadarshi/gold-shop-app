@@ -2,6 +2,8 @@
 
 import { DynamicFooter } from '@/components/layout/DynamicFooter';
 import { Header } from "@/components/layout/header";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -118,6 +120,7 @@ const BUILD_METHOD_LABELS: Record<string, string> = {
 export default function DesignGalleryPage() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
+  const t = useT();
 
   // State
   const [designs, setDesigns] = useState<Design[]>([]);
@@ -337,7 +340,7 @@ export default function DesignGalleryPage() {
             }}
           >
             <ShoppingBag className="h-4 w-4 mr-1" />
-            Build This
+            <T>Build This</T>
           </Button>
         </div>
 
@@ -365,7 +368,7 @@ export default function DesignGalleryPage() {
         {featured && (
           <Badge className="absolute top-2 left-2 bg-amber-500 text-white">
             <Sparkles className="h-3 w-3 mr-1" />
-            Featured
+            <T>Featured</T>
           </Badge>
         )}
       </div>
@@ -378,7 +381,7 @@ export default function DesignGalleryPage() {
                 design.jewelryType.slice(1).toLowerCase()}
             </h3>
             <p className="text-xs text-muted-foreground">
-              {BUILD_METHOD_LABELS[design.buildMethod] || design.buildMethod}
+              {t(BUILD_METHOD_LABELS[design.buildMethod] || design.buildMethod)}
             </p>
           </div>
         </div>
@@ -423,7 +426,7 @@ export default function DesignGalleryPage() {
         {design.creator && (
           <div className="mt-2 pt-2 border-t flex items-center gap-1 text-xs text-muted-foreground">
             <User className="h-3 w-3" />
-            <span>by {design.creator.firstName}</span>
+            <span>{t("by")} {design.creator.firstName}</span>
           </div>
         )}
       </CardContent>
@@ -439,12 +442,12 @@ export default function DesignGalleryPage() {
         <div className="text-center mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-3">
             <Sparkles className="inline h-8 w-8 text-amber-500 mr-2" />
-            Design Gallery
+            <T>Design Gallery</T>
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Explore AI-generated jewelry designs from our community. Find
+            <T>Explore AI-generated jewelry designs from our community. Find
             inspiration or click &quot;Build This&quot; to create your own
-            custom piece.
+            custom piece.</T>
           </p>
         </div>
 
@@ -453,7 +456,7 @@ export default function DesignGalleryPage() {
           <section className="mb-12">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-amber-500" />
-              Trending Designs
+              <T>Trending Designs</T>
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {featured.slice(0, 4).map((design) => (
@@ -469,7 +472,7 @@ export default function DesignGalleryPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search designs..."
+              placeholder={t("Search designs...")}
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -488,12 +491,12 @@ export default function DesignGalleryPage() {
             }}
           >
             <SelectTrigger className="w-full md:w-[180px]">
-              <SelectValue placeholder="Jewelry Type" />
+              <SelectValue placeholder={t("Jewelry Type")} />
             </SelectTrigger>
             <SelectContent>
               {JEWELRY_TYPES.map((type) => (
                 <SelectItem key={type.value} value={type.value}>
-                  {type.label}
+                  {t(type.label)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -508,14 +511,14 @@ export default function DesignGalleryPage() {
             }}
           >
             <SelectTrigger className="w-full md:w-[180px]">
-              <SelectValue placeholder="Sort by" />
+              <SelectValue placeholder={t("Sort by")} />
             </SelectTrigger>
             <SelectContent>
               {SORT_OPTIONS.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   <div className="flex items-center gap-2">
                     <option.icon className="h-4 w-4" />
-                    {option.label}
+                    {t(option.label)}
                   </div>
                 </SelectItem>
               ))}
@@ -529,14 +532,14 @@ export default function DesignGalleryPage() {
             onClick={() => setShowFilters(!showFilters)}
           >
             <Filter className="h-4 w-4 mr-2" />
-            Filters
+            <T>Filters</T>
           </Button>
         </div>
 
         {/* Results count */}
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-muted-foreground">
-            {loading ? "Loading..." : `${total} designs found`}
+            {loading ? t("Loading...") : `${total} ${t("designs found")}`}
           </p>
 
           {/* Create your own CTA */}
@@ -546,12 +549,12 @@ export default function DesignGalleryPage() {
                 <Link href="/rfq/create">
                   <Button variant="outline" size="sm">
                     <Sparkles className="h-4 w-4 mr-2" />
-                    Create Your Own
+                    <T>Create Your Own</T>
                   </Button>
                 </Link>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Design your custom jewelry with AI preview</p>
+                <p><T>Design your custom jewelry with AI preview</T></p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -573,16 +576,16 @@ export default function DesignGalleryPage() {
         ) : designs.length === 0 ? (
           <div className="text-center py-16">
             <Gem className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium mb-2">No designs found</h3>
+            <h3 className="text-lg font-medium mb-2"><T>No designs found</T></h3>
             <p className="text-muted-foreground mb-4">
               {searchQuery || jewelryType !== "all"
-                ? "Try adjusting your filters"
-                : "Be the first to create a design!"}
+                ? t("Try adjusting your filters")
+                : t("Be the first to create a design!")}
             </p>
             <Link href="/rfq/create">
               <Button>
                 <Sparkles className="h-4 w-4 mr-2" />
-                Create Design
+                <T>Create Design</T>
               </Button>
             </Link>
           </div>
@@ -604,11 +607,11 @@ export default function DesignGalleryPage() {
               disabled={page === 1 || loading}
             >
               <ChevronLeft className="h-4 w-4" />
-              Previous
+              <T>Previous</T>
             </Button>
 
             <span className="text-sm text-muted-foreground px-4">
-              Page {page} of {totalPages}
+              {t("Page")} {page} {t("of")} {totalPages}
             </span>
 
             <Button
@@ -617,7 +620,7 @@ export default function DesignGalleryPage() {
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages || loading}
             >
-              Next
+              <T>Next</T>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -636,15 +639,15 @@ export default function DesignGalleryPage() {
                 <DialogTitle className="flex items-center gap-2">
                   {selectedDesign.jewelryType.charAt(0) +
                     selectedDesign.jewelryType.slice(1).toLowerCase()}{" "}
-                  Design
+                  {t("Design")}
                   {selectedDesign.creator && (
                     <span className="text-sm font-normal text-muted-foreground">
-                      by {selectedDesign.creator.firstName}
+                      {t("by")} {selectedDesign.creator.firstName}
                     </span>
                   )}
                 </DialogTitle>
                 <DialogDescription>
-                  {BUILD_METHOD_LABELS[selectedDesign.buildMethod]}
+                  {t(BUILD_METHOD_LABELS[selectedDesign.buildMethod])}
                 </DialogDescription>
               </DialogHeader>
 
@@ -654,7 +657,7 @@ export default function DesignGalleryPage() {
                   {selectedDesign.imageUrl ? (
                     <Image
                       src={selectedDesign.imageUrl}
-                      alt="Design preview"
+                      alt={t("Design preview")}
                       fill
                       className="object-cover"
                     />
@@ -699,24 +702,24 @@ export default function DesignGalleryPage() {
                   <div>
                     <h4 className="font-medium mb-2 flex items-center gap-2">
                       <Layers className="h-4 w-4" />
-                      Specifications
+                      <T>Specifications</T>
                     </h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Type</span>
+                        <span className="text-muted-foreground"><T>Type</T></span>
                         <span>{selectedDesign.jewelryType}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">
-                          Build Method
+                          <T>Build Method</T>
                         </span>
                         <span>
-                          {BUILD_METHOD_LABELS[selectedDesign.buildMethod]}
+                          {t(BUILD_METHOD_LABELS[selectedDesign.buildMethod])}
                         </span>
                       </div>
                       {selectedDesign.metalType && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Metal</span>
+                          <span className="text-muted-foreground"><T>Metal</T></span>
                           <span>
                             {selectedDesign.metalType.replace(/_/g, " ")}
                           </span>
@@ -724,13 +727,13 @@ export default function DesignGalleryPage() {
                       )}
                       {selectedDesign.metalColor && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Color</span>
+                          <span className="text-muted-foreground"><T>Color</T></span>
                           <span>{selectedDesign.metalColor}</span>
                         </div>
                       )}
                       {selectedDesign.surfaceFinish && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Finish</span>
+                          <span className="text-muted-foreground"><T>Finish</T></span>
                           <span>
                             {selectedDesign.surfaceFinish.replace(/_/g, " ")}
                           </span>
@@ -738,7 +741,7 @@ export default function DesignGalleryPage() {
                       )}
                       {selectedDesign.weightCategory && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Weight</span>
+                          <span className="text-muted-foreground"><T>Weight</T></span>
                           <span>
                             {selectedDesign.weightCategory.replace(/_/g, " ")}
                           </span>
@@ -753,23 +756,23 @@ export default function DesignGalleryPage() {
                       <div>
                         <h4 className="font-medium mb-2 flex items-center gap-2">
                           <Gem className="h-4 w-4" />
-                          Gemstone Details
+                          <T>Gemstone Details</T>
                         </h4>
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Stone</span>
+                            <span className="text-muted-foreground"><T>Stone</T></span>
                             <span>{selectedDesign.primaryStone}</span>
                           </div>
                           {selectedDesign.stoneCut && (
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">Cut</span>
+                              <span className="text-muted-foreground"><T>Cut</T></span>
                               <span>{selectedDesign.stoneCut}</span>
                             </div>
                           )}
                           {selectedDesign.stoneColor && (
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">
-                                Color
+                                <T>Color</T>
                               </span>
                               <span>{selectedDesign.stoneColor}</span>
                             </div>
@@ -777,7 +780,7 @@ export default function DesignGalleryPage() {
                           {selectedDesign.stoneCarat && (
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">
-                                Carat
+                                <T>Carat</T>
                               </span>
                               <span>{selectedDesign.stoneCarat}</span>
                             </div>
@@ -785,7 +788,7 @@ export default function DesignGalleryPage() {
                           {selectedDesign.settingStyle && (
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">
-                                Setting
+                                <T>Setting</T>
                               </span>
                               <span>{selectedDesign.settingStyle}</span>
                             </div>
@@ -804,15 +807,15 @@ export default function DesignGalleryPage() {
                             "fill-red-500 text-red-500",
                         )}
                       />
-                      {selectedDesign.likesCount} likes
+                      {selectedDesign.likesCount} {t("likes")}
                     </span>
                     <span className="flex items-center gap-1 text-sm">
                       <Eye className="h-4 w-4" />
-                      {selectedDesign.viewsCount} views
+                      {selectedDesign.viewsCount} {t("views")}
                     </span>
                     <span className="flex items-center gap-1 text-sm">
                       <ShoppingBag className="h-4 w-4" />
-                      {selectedDesign.ordersCount} orders
+                      {selectedDesign.ordersCount} {t("orders")}
                     </span>
                   </div>
 
@@ -835,14 +838,14 @@ export default function DesignGalleryPage() {
                           )}
                         />
                       )}
-                      {selectedDesign.isLikedByUser ? "Liked" : "Like"}
+                      {selectedDesign.isLikedByUser ? t("Liked") : t("Like")}
                     </Button>
                     <Button
                       className="flex-1 bg-amber-600 hover:bg-amber-700"
                       onClick={() => handleBuildThis(selectedDesign)}
                     >
                       <ShoppingBag className="h-4 w-4 mr-2" />
-                      Build Me This
+                      <T>Build Me This</T>
                     </Button>
                   </div>
                 </div>

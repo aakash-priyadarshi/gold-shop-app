@@ -402,38 +402,38 @@ export function Header() {
   // Notification text mapping
   const getNotificationText = (type: string) => {
     const texts: Record<string, { title: string; body: string }> = {
-      ORDER_PLACED: { title: "New Order", body: "A new order has been placed" },
+      ORDER_PLACED: { title: t("New Order"), body: t("A new order has been placed") },
       ORDER_CONFIRMED: {
-        title: "Order Confirmed",
-        body: "Your order has been confirmed",
+        title: t("Order Confirmed"),
+        body: t("Your order has been confirmed"),
       },
       ORDER_SHIPPED: {
-        title: "Order Shipped",
-        body: "Your order is on its way",
+        title: t("Order Shipped"),
+        body: t("Your order is on its way"),
       },
       ORDER_DELIVERED: {
-        title: "Order Delivered",
-        body: "Your order has been delivered",
+        title: t("Order Delivered"),
+        body: t("Your order has been delivered"),
       },
       RFQ_RECEIVED: {
-        title: "New RFQ Request",
-        body: "You have a new quote request",
+        title: t("New RFQ Request"),
+        body: t("You have a new quote request"),
       },
       OFFER_RECEIVED: {
-        title: "New Quote",
-        body: "You have received a new quote",
+        title: t("New Quote"),
+        body: t("You have received a new quote"),
       },
       OFFER_SELECTED: {
-        title: "Offer Selected",
-        body: "Your offer has been selected",
+        title: t("Offer Selected"),
+        body: t("Your offer has been selected"),
       },
       PAYMENT_RECEIVED: {
-        title: "Payment Received",
-        body: "Payment has been received",
+        title: t("Payment Received"),
+        body: t("Payment has been received"),
       },
       SYSTEM_ALERT: {
-        title: "System Alert",
-        body: "Important system notification",
+        title: t("System Alert"),
+        body: t("Important system notification"),
       },
     };
     return texts[type] || { title: type, body: "" };
@@ -494,7 +494,7 @@ export function Header() {
                 {/* More */}
                 <div className="pt-3 mt-2 border-t border-gray-100 dark:border-gray-800">
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-3 mb-2">
-                    Company
+                    <T>Company</T>
                   </p>
                   {moreNavItems.map((item) => (
                     <Link
@@ -504,7 +504,7 @@ export function Header() {
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       <item.icon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                      {item.name}
+                      {t(item.name)}
                     </Link>
                   ))}
                 </div>
@@ -607,7 +607,7 @@ export function Header() {
                           className="w-full h-12 justify-start rounded-xl text-base"
                         >
                           <action.icon className="mr-3 h-5 w-5" />
-                          {action.label}
+                          {t(action.label)}
                         </Button>
                       </Link>
                     ))}
@@ -810,7 +810,7 @@ export function Header() {
                 </SelectTrigger>
                 <SelectContent>
                   <div className="px-2 py-1.5 text-xs text-muted-foreground border-b mb-1">
-                    Price Display Currency
+                    {t("Price Display Currency")}
                   </div>
                   {Object.entries(CURRENCIES).map(([code, info]) => (
                     <SelectItem key={code} value={code} className="text-xs">
@@ -837,7 +837,7 @@ export function Header() {
                 </SelectTrigger>
                 <SelectContent>
                   <div className="px-2 py-1.5 text-xs text-muted-foreground border-b mb-1">
-                    Tax Jurisdiction
+                    {t("Tax Jurisdiction")}
                   </div>
                   {Object.entries(COUNTRIES).map(([code, info]) => (
                     <SelectItem key={code} value={code} className="text-xs">
@@ -884,7 +884,7 @@ export function Header() {
                       </PopoverTrigger>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Dashboard</p>
+                      <p>{t("Dashboard")}</p>
                     </TooltipContent>
                   </Tooltip>
                   <PopoverContent className="w-56 p-2" align="end">
@@ -895,7 +895,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <Squares2X2Icon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">Dashboard</span>
+                          <span className="text-sm">{t("Dashboard")}</span>
                         </div>
                       </Link>
                       <Link
@@ -904,7 +904,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <ShoppingCartIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">My Orders</span>
+                          <span className="text-sm">{t("My Orders")}</span>
                         </div>
                       </Link>
                       <Link
@@ -913,7 +913,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <ClipboardDocumentListIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">My RFQs</span>
+                          <span className="text-sm">{t("My RFQs")}</span>
                         </div>
                       </Link>
                       <Link
@@ -922,7 +922,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <HeartIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">Wishlist</span>
+                          <span className="text-sm">{t("Wishlist")}</span>
                         </div>
                       </Link>
                       <Link
@@ -931,7 +931,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <CreditCardIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">Payments</span>
+                          <span className="text-sm">{t("Payments")}</span>
                         </div>
                       </Link>
                       <div className="border-t dark:border-gray-800 my-1" />
@@ -941,7 +941,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <Cog6ToothIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">Settings</span>
+                          <span className="text-sm">{t("Settings")}</span>
                         </div>
                       </Link>
                     </div>
@@ -965,7 +965,7 @@ export function Header() {
                       </PopoverTrigger>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Shop Dashboard</p>
+                      <p>{t("Shop Dashboard")}</p>
                     </TooltipContent>
                   </Tooltip>
                   <PopoverContent className="w-56 p-2" align="end">
@@ -976,7 +976,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <Squares2X2Icon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">Dashboard</span>
+                          <span className="text-sm">{t("Dashboard")}</span>
                         </div>
                       </Link>
                       <Link
@@ -985,7 +985,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <ShoppingCartIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">Orders</span>
+                          <span className="text-sm">{t("Orders")}</span>
                         </div>
                       </Link>
                       <Link
@@ -994,7 +994,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <CubeIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">Products</span>
+                          <span className="text-sm">{t("Products")}</span>
                         </div>
                       </Link>
                       <Link
@@ -1003,7 +1003,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <ClipboardDocumentListIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">RFQ Requests</span>
+                          <span className="text-sm">{t("RFQ Requests")}</span>
                         </div>
                       </Link>
                       <Link
@@ -1012,7 +1012,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <UserIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">Customers</span>
+                          <span className="text-sm">{t("Customers")}</span>
                         </div>
                       </Link>
                       <Link
@@ -1021,7 +1021,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <SparklesIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">Analytics</span>
+                          <span className="text-sm">{t("Analytics")}</span>
                         </div>
                       </Link>
                       <div className="border-t dark:border-gray-800 my-1" />
@@ -1031,7 +1031,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <Cog6ToothIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">Settings</span>
+                          <span className="text-sm">{t("Settings")}</span>
                         </div>
                       </Link>
                     </div>
@@ -1055,7 +1055,7 @@ export function Header() {
                       </PopoverTrigger>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Admin Dashboard</p>
+                      <p>{t("Admin Dashboard")}</p>
                     </TooltipContent>
                   </Tooltip>
                   <PopoverContent className="w-56 p-2" align="end">
@@ -1066,7 +1066,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <ShieldCheckIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">Admin Panel</span>
+                          <span className="text-sm">{t("Admin Panel")}</span>
                         </div>
                       </Link>
                       <Link
@@ -1075,7 +1075,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <ClipboardDocumentListIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">All Orders</span>
+                          <span className="text-sm">{t("All Orders")}</span>
                         </div>
                       </Link>
                       <Link
@@ -1084,7 +1084,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <BuildingStorefrontIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">Shops & CRM</span>
+                          <span className="text-sm">{t("Shops & CRM")}</span>
                         </div>
                       </Link>
                       <Link
@@ -1093,7 +1093,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <UserIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">Users</span>
+                          <span className="text-sm">{t("Users")}</span>
                         </div>
                       </Link>
                       <Link
@@ -1102,7 +1102,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <DocumentTextIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">KYC & Verification</span>
+                          <span className="text-sm">{t("KYC & Verification")}</span>
                         </div>
                       </Link>
                       <div className="border-t dark:border-gray-800 my-1" />
@@ -1112,7 +1112,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <Cog6ToothIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">Settings</span>
+                          <span className="text-sm">{t("Settings")}</span>
                         </div>
                       </Link>
                     </div>
@@ -1136,7 +1136,7 @@ export function Header() {
                       </PopoverTrigger>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Sales Dashboard</p>
+                      <p>{t("Sales Dashboard")}</p>
                     </TooltipContent>
                   </Tooltip>
                   <PopoverContent className="w-56 p-2" align="end">
@@ -1147,7 +1147,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <Squares2X2Icon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">Dashboard</span>
+                          <span className="text-sm">{t("Dashboard")}</span>
                         </div>
                       </Link>
                       <Link
@@ -1156,7 +1156,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <BuildingStorefrontIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">Shops & CRM</span>
+                          <span className="text-sm">{t("Shops & CRM")}</span>
                         </div>
                       </Link>
                       <Link
@@ -1165,7 +1165,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <ClipboardDocumentListIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">Orders</span>
+                          <span className="text-sm">{t("Orders")}</span>
                         </div>
                       </Link>
                       <div className="border-t dark:border-gray-800 my-1" />
@@ -1175,7 +1175,7 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <UserIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">Profile</span>
+                          <span className="text-sm">{t("Profile")}</span>
                         </div>
                       </Link>
                     </div>
@@ -1220,12 +1220,12 @@ export function Header() {
                       </PopoverTrigger>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Track Orders</p>
+                      <p>{t("Track Orders")}</p>
                     </TooltipContent>
                   </Tooltip>
                   <PopoverContent className="w-80 p-0" align="end">
                     <div className="flex items-center justify-between p-3 border-b">
-                      <h3 className="font-semibold">Recent Orders</h3>
+                      <h3 className="font-semibold">{t("Recent Orders")}</h3>
                       <span className="text-xs text-muted-foreground">
                         {recentOrders.length} order
                         {recentOrders.length !== 1 ? "s" : ""}
@@ -1235,7 +1235,7 @@ export function Header() {
                       {recentOrders.length === 0 ? (
                         <div className="flex flex-col items-center justify-center p-6 text-center">
                           <TruckIcon className="h-12 w-12 text-gray-300 mb-3" />
-                          <p className="text-muted-foreground">No orders yet</p>
+                          <p className="text-muted-foreground">{t("No orders yet")}</p>
                           <Link
                             href="/shop"
                             onClick={() => setOrdersPopoverOpen(false)}
@@ -1244,7 +1244,7 @@ export function Header() {
                               variant="link"
                               className="mt-2 text-amber-600"
                             >
-                              Start Shopping
+                              {t("Start Shopping")}
                             </Button>
                           </Link>
                         </div>
@@ -1275,15 +1275,15 @@ export function Header() {
                                                 : "bg-gray-100 text-gray-700"
                                       }`}
                                     >
-                                      {order.status}
+                                      {t(order.status)}
                                     </span>
                                   </div>
                                   <p className="text-xs text-muted-foreground mt-1">
                                     {order.items?.[0]?.product?.name ||
-                                      "Custom Order"}
+                                      t("Custom Order")}
                                     {order.items &&
                                       order.items.length > 1 &&
-                                      ` +${order.items.length - 1} more`}
+                                      ` +${order.items.length - 1} ${t("more")}`}
                                   </p>
                                   <div className="flex items-center justify-between mt-1">
                                     <span className="text-xs text-gray-400">
@@ -1341,7 +1341,7 @@ export function Header() {
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>
-                      {getRoleQuickActions(user.role)[1]?.tooltip || "Orders"}
+                      {getRoleQuickActions(user.role)[1]?.tooltip || t("Orders")}
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -1371,16 +1371,16 @@ export function Header() {
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>
-                      Messages{unreadMessages > 0 ? ` (${unreadMessages})` : ""}
+                      {t("Messages")}{unreadMessages > 0 ? ` (${unreadMessages})` : ""}
                     </p>
                   </TooltipContent>
                 </Tooltip>
                 <PopoverContent className="w-80 p-0" align="end">
                   <div className="flex items-center justify-between p-3 border-b">
-                    <h3 className="font-semibold">Messages</h3>
+                    <h3 className="font-semibold">{t("Messages")}</h3>
                     {unreadMessages > 0 && (
                       <span className="text-xs bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">
-                        {unreadMessages} unread
+                        {unreadMessages} {t("unread")}
                       </span>
                     )}
                   </div>
@@ -1388,7 +1388,7 @@ export function Header() {
                     {recentMessages.length === 0 ? (
                       <div className="flex flex-col items-center justify-center p-6 text-center">
                         <ChatBubbleLeftRightIcon className="h-12 w-12 text-gray-300 mb-3" />
-                        <p className="text-muted-foreground">No messages yet</p>
+                        <p className="text-muted-foreground">{t("No messages yet")}</p>
                         <Link
                           href="/shop"
                           onClick={() => setMessagesPopoverOpen(false)}
@@ -1397,7 +1397,7 @@ export function Header() {
                             variant="link"
                             className="mt-2 text-amber-600"
                           >
-                            Browse Shops
+                            {t("Browse Shops")}
                           </Button>
                         </Link>
                       </div>
@@ -1500,7 +1500,7 @@ export function Header() {
                       <T>Shopping Cart</T>
                     </h3>
                     <span className="text-sm text-muted-foreground">
-                      {itemCount} item{itemCount !== 1 ? "s" : ""}
+                      {itemCount} {itemCount !== 1 ? t("items") : t("item")}
                     </span>
                   </div>
                   <ScrollArea className="h-[280px]">
@@ -1518,7 +1518,7 @@ export function Header() {
                             variant="link"
                             className="mt-2 text-amber-600"
                           >
-                            Start Shopping
+                            {t("Start Shopping")}
                           </Button>
                         </Link>
                       </div>
@@ -1545,7 +1545,7 @@ export function Header() {
                                 {item.product.name}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                Qty: {item.quantity}
+                                {t("Qty")}: {item.quantity}
                               </p>
                               <p className="text-sm font-semibold text-amber-600">
                                 {formatPrice(
@@ -1565,8 +1565,7 @@ export function Header() {
                         ))}
                         {items.length > 5 && (
                           <div className="p-2 text-center text-xs text-muted-foreground">
-                            +{items.length - 5} more item
-                            {items.length - 5 !== 1 ? "s" : ""}
+                            +{items.length - 5} {t("more items")}
                           </div>
                         )}
                       </div>
@@ -1576,7 +1575,7 @@ export function Header() {
                     <div className="border-t p-3 space-y-3">
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">
-                          Subtotal
+                          {t("Subtotal")}
                         </span>
                         <span className="font-semibold">
                           {formatPrice(subtotal)}
@@ -1620,15 +1619,15 @@ export function Header() {
                     </PopoverTrigger>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Notifications</p>
+                    <p>{t("Notifications")}</p>
                   </TooltipContent>
                 </Tooltip>
                 <PopoverContent className="w-80 p-0" align="end">
                   <div className="flex items-center justify-between p-3 border-b">
-                    <h3 className="font-semibold">Notifications</h3>
+                    <h3 className="font-semibold">{t("Notifications")}</h3>
                     {unreadNotifications > 0 && (
                       <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
-                        {unreadNotifications} new
+                        {unreadNotifications} {t("new")}
                       </span>
                     )}
                   </div>
@@ -1637,7 +1636,7 @@ export function Header() {
                       <div className="flex flex-col items-center justify-center p-6 text-center">
                         <BellIcon className="h-12 w-12 text-gray-300 mb-3" />
                         <p className="text-muted-foreground">
-                          No notifications yet
+                          {t("No notifications yet")}
                         </p>
                       </div>
                     ) : (
@@ -1708,7 +1707,7 @@ export function Header() {
                     </DropdownMenuTrigger>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Account</p>
+                    <p>{t("Account")}</p>
                   </TooltipContent>
                 </Tooltip>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
@@ -1729,26 +1728,26 @@ export function Header() {
                   <DropdownMenuItem asChild>
                     <Link href={getDashboardRoute(user.role)}>
                       <Squares2X2Icon className="mr-2 h-4 w-4" />
-                      Dashboard
+                      {t("Dashboard")}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/orders">
                       <ShoppingBagIcon className="mr-2 h-4 w-4" />
-                      My Orders
+                      {t("My Orders")}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/rfq">
                       <DocumentTextIcon className="mr-2 h-4 w-4" />
-                      My Requests
+                      {t("My Requests")}
                     </Link>
                   </DropdownMenuItem>
                   {user.role === "SHOPKEEPER" && (
                     <DropdownMenuItem asChild>
                       <Link href="/shop/manage">
                         <BuildingStorefrontIcon className="mr-2 h-4 w-4" />
-                        My Shop
+                        {t("My Shop")}
                       </Link>
                     </DropdownMenuItem>
                   )}
@@ -1758,13 +1757,13 @@ export function Header() {
                       <DropdownMenuItem asChild>
                         <Link href="/dashboard/admin">
                           <ShieldCheckIcon className="mr-2 h-4 w-4" />
-                          Admin Panel
+                          {t("Admin Panel")}
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link href="/dashboard/admin/orders">
                           <ClipboardDocumentListIcon className="mr-2 h-4 w-4" />
-                          All Orders
+                          {t("All Orders")}
                         </Link>
                       </DropdownMenuItem>
                     </>
@@ -1775,7 +1774,7 @@ export function Header() {
                       href={`/dashboard/${user.role === "ADMIN" ? "admin" : user.role === "SHOPKEEPER" ? "shop" : "customer"}/settings`}
                     >
                       <Cog6ToothIcon className="mr-2 h-4 w-4" />
-                      Settings
+                      {t("Settings")}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />

@@ -2,6 +2,8 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -107,6 +109,7 @@ const COUNTRIES = {
 export default function ShopsPage() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
+  const t = useT();
   const [shops, setShops] = useState<Shop[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [messagingShopId, setMessagingShopId] = useState<string | null>(null);
@@ -338,11 +341,11 @@ export default function ShopsPage() {
       <div className="bg-gradient-to-br from-amber-600 to-amber-800 text-white py-16">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Find Trusted Jewelers
+            <T>Find Trusted Jewelers</T>
           </h1>
           <p className="text-xl text-amber-100 max-w-2xl mx-auto mb-8">
-            Browse verified gold and silver shops near you. All our sellers are
-            verified and rated by real customers.
+            <T>Browse verified gold and silver shops near you. All our sellers are
+            verified and rated by real customers.</T>
           </p>
 
           {/* Search Bar */}
@@ -350,7 +353,7 @@ export default function ShopsPage() {
             <div className="relative">
               <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
-                placeholder="Search by shop name, city, or description..."
+                placeholder={t("Search by shop name, city, or description...")}
                 className="pl-12 pr-4 h-14 text-lg rounded-xl bg-white text-gray-900 dark:text-white border-0 shadow-lg"
                 value={filters.search}
                 onChange={(e) =>
@@ -372,7 +375,7 @@ export default function ShopsPage() {
               className="gap-2"
             >
               <FunnelIcon className="h-4 w-4" />
-              Filters
+              <T>Filters</T>
               {hasActiveFilters && (
                 <Badge
                   variant="secondary"
@@ -390,16 +393,16 @@ export default function ShopsPage() {
                 className="text-gray-500 dark:text-gray-400"
               >
                 <XMarkIcon className="h-4 w-4 mr-1" />
-                Clear all
+                <T>Clear all</T>
               </Button>
             )}
           </div>
           <p className="text-gray-500 dark:text-gray-400">
-            Showing{" "}
+            {t("Showing")}{" "}
             <span className="font-semibold text-gray-900 dark:text-white">
               {filteredShops.length}
             </span>{" "}
-            verified sellers
+            {t("verified sellers")}
           </p>
         </div>
 
@@ -424,10 +427,10 @@ export default function ShopsPage() {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="All countries" />
+                      <SelectValue placeholder={t("All countries")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Countries</SelectItem>
+                      <SelectItem value="all">{t("All Countries")}</SelectItem>
                       {Object.entries(COUNTRIES).map(([code, info]) => (
                         <SelectItem key={code} value={code}>
                           <span className="flex items-center gap-2">
@@ -453,10 +456,10 @@ export default function ShopsPage() {
                     disabled={filters.country === "all"}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="All states" />
+                      <SelectValue placeholder={t("All states")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All States</SelectItem>
+                      <SelectItem value="all">{t("All States")}</SelectItem>
                       {uniqueStates.map((state) => (
                         <SelectItem key={state} value={state}>
                           {state}
@@ -472,7 +475,7 @@ export default function ShopsPage() {
                     City
                   </label>
                   <Input
-                    placeholder="Filter by city..."
+                    placeholder={t("Filter by city...")}
                     value={filters.city}
                     onChange={(e) =>
                       setFilters((prev) => ({ ...prev, city: e.target.value }))
@@ -495,8 +498,8 @@ export default function ShopsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Sellers</SelectItem>
-                      <SelectItem value="verified">Verified Only</SelectItem>
+                      <SelectItem value="all">{t("All Sellers")}</SelectItem>
+                      <SelectItem value="verified">{t("Verified Only")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -523,14 +526,14 @@ export default function ShopsPage() {
             <CardContent className="py-16 text-center">
               <BuildingStorefrontIcon className="h-16 w-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                No sellers found
+                <T>No sellers found</T>
               </h3>
               <p className="text-gray-500 dark:text-gray-400 mb-4">
-                Try adjusting your filters or search terms
+                <T>Try adjusting your filters or search terms</T>
               </p>
               {hasActiveFilters && (
                 <Button variant="outline" onClick={clearFilters}>
-                  Clear filters
+                  <T>Clear filters</T>
                 </Button>
               )}
             </CardContent>
@@ -585,7 +588,7 @@ export default function ShopsPage() {
                         {shop.averageRating.toFixed(1)}
                       </span>
                       <span className="text-sm text-gray-500 dark:text-gray-400">
-                        ({shop.totalRatings} reviews)
+                        ({shop.totalRatings} {t("reviews")})
                       </span>
                     </div>
                   )}
@@ -618,7 +621,7 @@ export default function ShopsPage() {
                   <div className="flex items-center gap-2 pt-2">
                     <Link href={`/shops/${shop.id}`} className="flex-1">
                       <Button className="w-full gold-gradient text-white">
-                        View Shop
+                        <T>View Shop</T>
                       </Button>
                     </Link>
                     <Button
@@ -644,7 +647,7 @@ export default function ShopsPage() {
         {!isLoading && filteredShops.length > 0 && (
           <div className="mt-12">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Sellers by Location
+              <T>Sellers by Location</T>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {Object.entries(shopsByLocation).map(([country, states]) => (
@@ -667,7 +670,7 @@ export default function ShopsPage() {
                             {state}
                           </span>
                           <Badge variant="secondary">
-                            {stateShops.length} sellers
+                            {stateShops.length} {t("sellers")}
                           </Badge>
                         </div>
                       ))}
