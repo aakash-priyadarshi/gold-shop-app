@@ -944,7 +944,7 @@ export default function ShopDetailPage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <StarIcon className="h-5 w-5" />
-                      Customer Reviews
+                      <T>Customer Reviews</T>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
