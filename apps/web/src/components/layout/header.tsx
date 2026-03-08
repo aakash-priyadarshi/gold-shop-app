@@ -12,6 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FlagImage, type FlagCode } from "@/components/ui/phone-input";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import {
   Popover,
   PopoverContent,
@@ -153,6 +155,7 @@ const getRoleQuickActions = (role: UserRole | undefined) => {
 export function Header() {
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const { items, itemCount, subtotal, removeFromCart } = useCart();
+  const t = useT();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
@@ -466,14 +469,14 @@ export function Header() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <item.icon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                    {item.name}
+                    {t(item.name)}
                   </Link>
                 ))}
 
                 {/* For Sellers Section */}
                 <div className="pt-3 mt-2 border-t border-gray-100 dark:border-gray-800">
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-3 mb-2">
-                    For Sellers
+                    <T>For Sellers</T>
                   </p>
                   {sellerNavItems.map((item) => (
                     <Link
@@ -483,7 +486,7 @@ export function Header() {
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       <item.icon className="h-5 w-5 text-gold-500" />
-                      {item.name}
+                      {t(item.name)}
                     </Link>
                   ))}
                 </div>
@@ -511,7 +514,7 @@ export function Header() {
               {mounted && (
                 <div className="p-4 border-t border-gray-100 dark:border-gray-800 space-y-3">
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-1">
-                    Preferences
+                    <T>Preferences</T>
                   </p>
                   <div className="grid grid-cols-2 gap-2">
                     {/* Language */}
@@ -614,7 +617,7 @@ export function Header() {
                       onClick={() => logout()}
                     >
                       <ArrowRightOnRectangleIcon className="mr-3 h-5 w-5" />
-                      Log out
+                      <T>Log out</T>
                     </Button>
                   </>
                 ) : (
@@ -628,7 +631,7 @@ export function Header() {
                         variant="outline"
                         className="w-full h-12 rounded-xl text-base"
                       >
-                        Log in
+                        <T>Log in</T>
                       </Button>
                     </Link>
                     <Link
@@ -637,7 +640,7 @@ export function Header() {
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       <Button className="w-full h-12 rounded-xl text-base gold-gradient text-white">
-                        Sign up
+                        <T>Sign up</T>
                       </Button>
                     </Link>
                   </>
@@ -664,7 +667,7 @@ export function Header() {
               href={item.href}
               className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
             >
-              {item.name}
+              {t(item.name)}
             </Link>
           ))}
 
@@ -678,7 +681,7 @@ export function Header() {
               className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors inline-flex items-center gap-1"
               onClick={() => setSellerDropdownOpen(!sellerDropdownOpen)}
             >
-              For Sellers
+              <T>For Sellers</T>
               <svg
                 className={`h-3.5 w-3.5 transition-transform ${sellerDropdownOpen ? "rotate-180" : ""}`}
                 fill="none"
@@ -708,10 +711,10 @@ export function Header() {
                       <item.icon className="h-5 w-5 text-gold-500 mt-0.5 shrink-0" />
                       <div>
                         <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {item.name}
+                          {t(item.name)}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {item.desc}
+                          {t(item.desc)}
                         </div>
                       </div>
                     </Link>
@@ -731,7 +734,7 @@ export function Header() {
               className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors inline-flex items-center gap-1"
               onClick={() => setCompanyDropdownOpen(!companyDropdownOpen)}
             >
-              Company
+              <T>Company</T>
               <svg
                 className={`h-3.5 w-3.5 transition-transform ${companyDropdownOpen ? "rotate-180" : ""}`}
                 fill="none"
@@ -760,10 +763,10 @@ export function Header() {
                       <item.icon className="h-5 w-5 text-gold-500 mt-0.5 shrink-0" />
                       <div>
                         <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {item.name}
+                          {t(item.name)}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {item.desc}
+                          {t(item.desc)}
                         </div>
                       </div>
                     </Link>
@@ -1306,7 +1309,7 @@ export function Header() {
                         onClick={() => setOrdersPopoverOpen(false)}
                       >
                         <Button variant="outline" className="w-full">
-                          See All Orders
+                          <T>See All Orders</T>
                         </Button>
                       </Link>
                     </div>
@@ -1461,7 +1464,7 @@ export function Header() {
                       onClick={() => setMessagesPopoverOpen(false)}
                     >
                       <Button variant="outline" className="w-full">
-                        View All Messages
+                        <T>View All Messages</T>
                       </Button>
                     </Link>
                   </div>
@@ -1493,7 +1496,7 @@ export function Header() {
                 </Tooltip>
                 <PopoverContent className="w-80 p-0" align="end">
                   <div className="flex items-center justify-between p-3 border-b">
-                    <h3 className="font-semibold">Shopping Cart</h3>
+                    <h3 className="font-semibold"><T>Shopping Cart</T></h3>
                     <span className="text-sm text-muted-foreground">
                       {itemCount} item{itemCount !== 1 ? "s" : ""}
                     </span>
@@ -1503,7 +1506,7 @@ export function Header() {
                       <div className="flex flex-col items-center justify-center p-6 text-center">
                         <ShoppingCartIcon className="h-12 w-12 text-gray-300 mb-3" />
                         <p className="text-muted-foreground">
-                          Your cart is empty
+                          <T>Your cart is empty</T>
                         </p>
                         <Link
                           href="/shop"
@@ -1582,7 +1585,7 @@ export function Header() {
                         onClick={() => setCartPopoverOpen(false)}
                       >
                         <Button className="w-full bg-amber-500 hover:bg-amber-600 text-white">
-                          View Cart & Checkout
+                          <T>View Cart & Checkout</T>
                         </Button>
                       </Link>
                     </div>
@@ -1680,7 +1683,7 @@ export function Header() {
                       onClick={() => setNotifPopoverOpen(false)}
                     >
                       <Button variant="outline" className="w-full">
-                        See All Notifications
+                        <T>See All Notifications</T>
                       </Button>
                     </Link>
                   </div>
@@ -1779,7 +1782,7 @@ export function Header() {
                     className="text-red-600"
                   >
                     <ArrowRightOnRectangleIcon className="mr-2 h-4 w-4" />
-                    Log out
+                    <T>Log out</T>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -1803,12 +1806,12 @@ export function Header() {
               </Link>
               <Link href="/auth/login">
                 <Button variant="ghost" className="h-9 rounded-lg">
-                  Log in
+                  <T>Log in</T>
                 </Button>
               </Link>
               <Link href="/auth/register">
                 <Button className="h-9 rounded-lg gold-gradient text-white">
-                  Sign up
+                  <T>Sign up</T>
                 </Button>
               </Link>
             </>
