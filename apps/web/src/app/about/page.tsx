@@ -4,6 +4,8 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import {
   ArrowRightIcon,
   BuildingStorefrontIcon,
@@ -18,8 +20,6 @@ import {
 } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 
 const stats = [
   { label: "Verified Sellers", value: "500+", icon: BuildingStorefrontIcon },
@@ -110,7 +110,10 @@ export default function AboutPage() {
               <T>About Orivraa</T>
             </h1>
             <p className="text-xl md:text-2xl text-amber-100 mb-8">
-              <T>Your trusted marketplace for authentic gold and silver jewelry. Connecting skilled artisans with jewelry lovers worldwide.</T>
+              <T>
+                Your trusted marketplace for authentic gold and silver jewelry.
+                Connecting skilled artisans with jewelry lovers worldwide.
+              </T>
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
@@ -129,7 +132,9 @@ export default function AboutPage() {
                 className="border-white text-white bg-transparent hover:bg-white hover:text-amber-700"
                 asChild
               >
-                <Link href="/rfq/create"><T>Create Custom Order</T></Link>
+                <Link href="/rfq/create">
+                  <T>Create Custom Order</T>
+                </Link>
               </Button>
             </div>
           </motion.div>
@@ -174,13 +179,29 @@ export default function AboutPage() {
           <div className="max-w-4xl mx-auto">
             <div className="prose prose-lg mx-auto text-gray-600 dark:text-gray-300">
               <p className="text-lg leading-relaxed mb-6">
-                <T>Orivraa was born from a simple idea: make it easy for people to find and purchase authentic, high-quality gold and silver jewelry from trusted artisans around the world.</T>
+                <T>
+                  Orivraa was born from a simple idea: make it easy for people
+                  to find and purchase authentic, high-quality gold and silver
+                  jewelry from trusted artisans around the world.
+                </T>
               </p>
               <p className="text-lg leading-relaxed mb-6">
-                <T>In many countries, buying gold jewelry involves visiting multiple shops, comparing prices manually, and often dealing with unclear pricing. We wanted to change that by creating a transparent marketplace where buyers can see real-time gold prices, compare sellers, and order custom jewelry with confidence.</T>
+                <T>
+                  In many countries, buying gold jewelry involves visiting
+                  multiple shops, comparing prices manually, and often dealing
+                  with unclear pricing. We wanted to change that by creating a
+                  transparent marketplace where buyers can see real-time gold
+                  prices, compare sellers, and order custom jewelry with
+                  confidence.
+                </T>
               </p>
               <p className="text-lg leading-relaxed">
-                <T>Today, Orivraa connects thousands of customers with verified jewelers across Nepal, India, UAE, and beyond. Whether you're looking for a traditional wedding set or a modern custom design, we help you find the perfect piece at a fair price.</T>
+                <T>
+                  Today, Orivraa connects thousands of customers with verified
+                  jewelers across Nepal, India, UAE, and beyond. Whether you're
+                  looking for a traditional wedding set or a modern custom
+                  design, we help you find the perfect piece at a fair price.
+                </T>
               </p>
             </div>
           </div>
@@ -281,7 +302,11 @@ export default function AboutPage() {
                 </h2>
                 <div className="h-1 w-20 bg-amber-500 mb-6" />
                 <p className="text-lg text-gray-300 mb-6">
-                  <T>Join our marketplace and reach thousands of customers looking for quality gold and silver jewelry. We handle the platform, you focus on your craft.</T>
+                  <T>
+                    Join our marketplace and reach thousands of customers
+                    looking for quality gold and silver jewelry. We handle the
+                    platform, you focus on your craft.
+                  </T>
                 </p>
                 <ul className="space-y-3 mb-8">
                   {[
@@ -336,7 +361,10 @@ export default function AboutPage() {
             </h2>
             <div className="h-1 w-20 bg-amber-500 mx-auto mb-6" />
             <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
-              <T>Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.</T>
+              <T>
+                Have questions? We'd love to hear from you. Send us a message
+                and we'll respond as soon as possible.
+              </T>
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">

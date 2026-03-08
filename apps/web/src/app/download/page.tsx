@@ -3,7 +3,6 @@
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
-import { T } from "@/components/ui/T";
 import {
   Card,
   CardContent,
@@ -11,10 +10,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { T } from "@/components/ui/T";
 import { api } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   ArrowDownTrayIcon,
-  CheckCircleIcon,
   ComputerDesktopIcon,
   CpuChipIcon,
   ServerIcon,
@@ -22,7 +22,6 @@ import {
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useT } from "@/providers/translation-provider";
 
 interface Release {
   id: string;
@@ -94,9 +93,10 @@ export default function DownloadPage() {
         ]);
         setLatestReleases(latestRes.data);
 
-        const allOlder = [...(windowsRes.data || []), ...(macRes.data || [])].filter(
-          (r: Release) => !r.isLatest,
-        );
+        const allOlder = [
+          ...(windowsRes.data || []),
+          ...(macRes.data || []),
+        ].filter((r: Release) => !r.isLatest);
         setOlderReleases(allOlder);
       } catch (err) {
         console.error("Failed to fetch releases:", err);
@@ -149,8 +149,10 @@ export default function DownloadPage() {
                 </span>
               </h1>
               <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-2">
-                <T>The full-featured desktop experience with offline support, faster
-                performance, and seamless Google sign-in.</T>
+                <T>
+                  The full-featured desktop experience with offline support,
+                  faster performance, and seamless Google sign-in.
+                </T>
               </p>
               <p className="text-sm text-muted-foreground/60">
                 {detectedPlatform === "WINDOWS"
@@ -242,7 +244,9 @@ export default function DownloadPage() {
                   <CardContent className="flex flex-col items-center py-12 gap-4">
                     <ComputerDesktopIcon className="w-12 h-12 text-muted-foreground/40" />
                     <p className="text-muted-foreground">
-                      {t(`No release available for ${platformLabel[selectedPlatform]} yet.`)}
+                      {t(
+                        `No release available for ${platformLabel[selectedPlatform]} yet.`,
+                      )}
                     </p>
                     <p className="text-sm text-muted-foreground/60">
                       <T>Try switching platforms or check back later.</T>
@@ -265,7 +269,9 @@ export default function DownloadPage() {
                 <Card className="border-border/50">
                   <CardContent className="flex flex-col items-center py-6 gap-2">
                     <ServerIcon className="w-8 h-8 text-gold-500" />
-                    <p className="font-medium text-sm"><T>Operating System</T></p>
+                    <p className="font-medium text-sm">
+                      <T>Operating System</T>
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {primaryRelease.minOs || "Windows 10+ / macOS 12+"}
                     </p>
@@ -274,7 +280,9 @@ export default function DownloadPage() {
                 <Card className="border-border/50">
                   <CardContent className="flex flex-col items-center py-6 gap-2">
                     <CpuChipIcon className="w-8 h-8 text-gold-500" />
-                    <p className="font-medium text-sm"><T>Memory</T></p>
+                    <p className="font-medium text-sm">
+                      <T>Memory</T>
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {primaryRelease.minRam || "4 GB RAM"}
                     </p>
@@ -283,7 +291,9 @@ export default function DownloadPage() {
                 <Card className="border-border/50">
                   <CardContent className="flex flex-col items-center py-6 gap-2">
                     <ArrowDownTrayIcon className="w-8 h-8 text-gold-500" />
-                    <p className="font-medium text-sm"><T>Disk Space</T></p>
+                    <p className="font-medium text-sm">
+                      <T>Disk Space</T>
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {primaryRelease.minDisk || "200 MB"}
                     </p>
@@ -349,7 +359,9 @@ export default function DownloadPage() {
                     <CardContent className="py-5 flex gap-4">
                       <span className="text-2xl shrink-0">{feature.icon}</span>
                       <div>
-                        <p className="font-semibold text-sm">{t(feature.title)}</p>
+                        <p className="font-semibold text-sm">
+                          {t(feature.title)}
+                        </p>
                         <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                           {t(feature.desc)}
                         </p>
@@ -366,7 +378,9 @@ export default function DownloadPage() {
         {platformOlder.length > 0 && (
           <section className="py-12 border-t border-border/50">
             <div className="container mx-auto px-4 max-w-2xl">
-              <h2 className="text-xl font-bold mb-6"><T>Previous Versions</T></h2>
+              <h2 className="text-xl font-bold mb-6">
+                <T>Previous Versions</T>
+              </h2>
               <div className="space-y-3">
                 {platformOlder.map((release) => (
                   <div
@@ -377,7 +391,11 @@ export default function DownloadPage() {
                       <p className="font-medium text-sm">
                         v{release.version}{" "}
                         <span className="text-xs text-muted-foreground ml-1">
-                          {platformLabel[release.platform as keyof typeof platformLabel]}
+                          {
+                            platformLabel[
+                              release.platform as keyof typeof platformLabel
+                            ]
+                          }
                         </span>
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -408,12 +426,18 @@ export default function DownloadPage() {
         {/* Changelog Link */}
         <section className="py-12 border-t border-border/50">
           <div className="container mx-auto px-4 text-center">
-            <h2 className="text-xl font-bold mb-3"><T>Changelog</T></h2>
+            <h2 className="text-xl font-bold mb-3">
+              <T>Changelog</T>
+            </h2>
             <p className="text-sm text-muted-foreground mb-4">
-              <T>See what&apos;s new in every release — desktop and web combined.</T>
+              <T>
+                See what&apos;s new in every release — desktop and web combined.
+              </T>
             </p>
             <Button variant="outline" asChild>
-              <Link href="/download/changelog"><T>View Full Changelog</T></Link>
+              <Link href="/download/changelog">
+                <T>View Full Changelog</T>
+              </Link>
             </Button>
           </div>
         </section>

@@ -1,8 +1,8 @@
 import {
+  ArrayMaxSize,
   IsArray,
   IsIn,
   IsString,
-  ArrayMaxSize,
   MaxLength,
 } from "class-validator";
 

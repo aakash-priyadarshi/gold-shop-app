@@ -4,19 +4,13 @@ import {
   ArrowRight,
   BarChart3,
   Calculator,
-  CheckCircle2,
   CreditCard,
   FileText,
-  Globe,
-  Layers,
   Printer,
   Receipt,
   RefreshCw,
   Scale,
   ScanBarcode,
-  ShieldCheck,
-  Smartphone,
-  Users,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -160,9 +154,13 @@ export default function JewellerBillingSoftwarePage() {
               </span>
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
-              Generate professional GST/VAT-compliant invoices with <strong>making charges, old gold exchange,
-              weight-based pricing, and barcode scanning</strong>. Designed specifically for gold, silver, and
-              diamond jewellery shops. Trusted by <strong>2,000+ jewellers</strong>. Starts free.
+              Generate professional GST/VAT-compliant invoices with{" "}
+              <strong>
+                making charges, old gold exchange, weight-based pricing, and
+                barcode scanning
+              </strong>
+              . Designed specifically for gold, silver, and diamond jewellery
+              shops. Trusted by <strong>2,000+ jewellers</strong>. Starts free.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
@@ -188,7 +186,8 @@ export default function JewellerBillingSoftwarePage() {
               How a Jewellery Invoice Actually Works
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-xl mx-auto mb-10">
-              Here's a real example of a 22K gold necklace invoice — this is what Orivraa generates automatically.
+              Here's a real example of a 22K gold necklace invoice — this is
+              what Orivraa generates automatically.
             </p>
             <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="bg-amber-600 text-white px-6 py-3 text-sm font-semibold">
@@ -202,10 +201,10 @@ export default function JewellerBillingSoftwarePage() {
                       i === INVOICE_COMPONENTS.length - 1
                         ? "border-t-2 border-amber-500 pt-3 font-bold text-lg text-amber-700 dark:text-gold-400"
                         : i === INVOICE_COMPONENTS.length - 2
-                        ? "text-red-600 dark:text-red-400"
-                        : i === 5
-                        ? "border-t border-gray-300 dark:border-gray-600 pt-2 font-semibold"
-                        : "text-gray-700 dark:text-gray-300"
+                          ? "text-red-600 dark:text-red-400"
+                          : i === 5
+                            ? "border-t border-gray-300 dark:border-gray-600 pt-2 font-semibold"
+                            : "text-gray-700 dark:text-gray-300"
                     }`}
                   >
                     <span className="text-sm">{row.label}</span>
@@ -215,7 +214,8 @@ export default function JewellerBillingSoftwarePage() {
               </div>
             </div>
             <p className="text-xs text-center text-gray-400 mt-4">
-              Orivraa calculates all of this automatically — just scan the product and enter old gold details.
+              Orivraa calculates all of this automatically — just scan the
+              product and enter old gold details.
             </p>
           </div>
         </section>
@@ -227,7 +227,8 @@ export default function JewellerBillingSoftwarePage() {
               Billing Features Built for Jewellers
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-12">
-              Every billing scenario your jewellery shop faces — handled natively.
+              Every billing scenario your jewellery shop faces — handled
+              natively.
             </p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {FEATURES.map((f) => (
@@ -255,7 +256,8 @@ export default function JewellerBillingSoftwarePage() {
               Tax-Compliant Billing for Every Market
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-10">
-              Orivraa automatically applies the correct tax rules based on your shop's location.
+              Orivraa automatically applies the correct tax rules based on your
+              shop's location.
             </p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
@@ -263,37 +265,43 @@ export default function JewellerBillingSoftwarePage() {
                   flag: "🇮🇳",
                   country: "India",
                   tax: "GST",
-                  details: "3% on gold value, 5% on making charges. CGST + SGST for intra-state, IGST for interstate. HSN codes included.",
+                  details:
+                    "3% on gold value, 5% on making charges. CGST + SGST for intra-state, IGST for interstate. HSN codes included.",
                 },
                 {
                   flag: "🇳🇵",
                   country: "Nepal",
                   tax: "VAT",
-                  details: "13% VAT on jewellery sales. Proper invoicing with PAN and VAT registration numbers.",
+                  details:
+                    "13% VAT on jewellery sales. Proper invoicing with PAN and VAT registration numbers.",
                 },
                 {
                   flag: "🇦🇪",
                   country: "UAE",
                   tax: "VAT",
-                  details: "5% VAT on jewellery. TRN-compliant invoicing with proper Arabic/English formats.",
+                  details:
+                    "5% VAT on jewellery. TRN-compliant invoicing with proper Arabic/English formats.",
                 },
                 {
                   flag: "🇬🇧",
                   country: "UK",
                   tax: "VAT",
-                  details: "20% VAT on jewellery sales. VAT-registered seller invoicing with proper VAT breakdowns.",
+                  details:
+                    "20% VAT on jewellery sales. VAT-registered seller invoicing with proper VAT breakdowns.",
                 },
                 {
                   flag: "🇪🇺",
                   country: "Europe",
                   tax: "VAT",
-                  details: "Variable VAT rates by country. EU-compliant invoicing with proper VAT ID and cross-border rules.",
+                  details:
+                    "Variable VAT rates by country. EU-compliant invoicing with proper VAT ID and cross-border rules.",
                 },
                 {
                   flag: "🇺🇸",
                   country: "USA",
                   tax: "Sales Tax",
-                  details: "State-level sales tax on jewellery. Tax-exempt resale supported with proper documentation.",
+                  details:
+                    "State-level sales tax on jewellery. Tax-exempt resale supported with proper documentation.",
                 },
               ].map((c) => (
                 <div
@@ -375,7 +383,8 @@ export default function JewellerBillingSoftwarePage() {
               Professional Billing for Your Jewellery Shop
             </h2>
             <p className="text-lg text-amber-100 mb-8">
-              GST/VAT-compliant invoices with making charges, old gold exchange, and barcode scanning. Free to start.
+              GST/VAT-compliant invoices with making charges, old gold exchange,
+              and barcode scanning. Free to start.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link

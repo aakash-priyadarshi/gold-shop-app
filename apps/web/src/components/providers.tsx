@@ -181,7 +181,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
                   <ChatPopupProvider>
                     <TranslationProvider>
                       <DirectionSync>
-                        <MarketPreferencesSync>{children}</MarketPreferencesSync>
+                        <MarketPreferencesSync>
+                          {children}
+                        </MarketPreferencesSync>
                       </DirectionSync>
                     </TranslationProvider>
                   </ChatPopupProvider>

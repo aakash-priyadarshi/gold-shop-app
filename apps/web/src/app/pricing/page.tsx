@@ -4,8 +4,10 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
 import { subscriptionPlansApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   COUNTRIES,
   CURRENCIES,
@@ -37,8 +39,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 
 /* ────────────────────────────────────────────────────────────── */
 /*  TYPES                                                         */
@@ -638,7 +638,11 @@ export default function PricingPage() {
             </span>
           </h1>
           <p className="mt-6 text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto leading-relaxed">
-            <T>From free marketplace listings to a full AI-powered CRM — choose the plan that fits your business today and upgrade as you grow. No contracts, cancel anytime.</T>
+            <T>
+              From free marketplace listings to a full AI-powered CRM — choose
+              the plan that fits your business today and upgrade as you grow. No
+              contracts, cancel anytime.
+            </T>
           </p>
 
           {/* Country selector + Billing toggle */}
@@ -885,7 +889,8 @@ export default function PricingPage() {
               onClick={() => setShowComparison(!showComparison)}
               className="inline-flex items-center gap-2 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium transition-colors"
             >
-              {showComparison ? t("Hide") : t("Show")} {t("Full Feature Comparison")}
+              {showComparison ? t("Hide") : t("Show")}{" "}
+              {t("Full Feature Comparison")}
               <ChevronDown
                 className={`h-4 w-4 transition-transform ${showComparison ? "rotate-180" : ""}`}
               />
@@ -1143,7 +1148,11 @@ export default function PricingPage() {
             <T>Ready to Grow Your Jewellery Business?</T>
           </h2>
           <p className="text-lg text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
-            <T>Join thousands of jewellers already using Orivraa to manage inventory, serve customers, and sell online — all from one platform.</T>
+            <T>
+              Join thousands of jewellers already using Orivraa to manage
+              inventory, serve customers, and sell online — all from one
+              platform.
+            </T>
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/dashboard/shop/billing">

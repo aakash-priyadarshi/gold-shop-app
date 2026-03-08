@@ -8,7 +8,6 @@ import { NotificationDropdown } from "@/components/notifications/NotificationDro
 import { AnimatedThemeToggle } from "@/components/ui/animated-theme-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { T } from "@/components/ui/T";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,11 +26,13 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
 // ChatPopupProvider is now in root Providers
 import { useAuth, UserRole } from "@/hooks/useAuth";
 import { adminApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useT } from "@/providers/translation-provider";
 import {
   Activity,
   Award,
@@ -72,7 +73,6 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useT } from "@/providers/translation-provider";
 
 // Lazy-load ChatPopupWidget + emoji-mart (~80KB saved on initial page load)
 const ChatPopupWidget = dynamic(
@@ -714,14 +714,18 @@ function SidebarContent({
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors touch-target"
         >
           <Home className="h-5 w-5" />
-          <span><T>Browse Marketplace</T></span>
+          <span>
+            <T>Browse Marketplace</T>
+          </span>
         </Link>
         <button
           onClick={onLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors touch-target"
         >
           <LogOut className="h-5 w-5" />
-          <span><T>Sign out</T></span>
+          <span>
+            <T>Sign out</T>
+          </span>
         </button>
       </div>
 
@@ -775,15 +779,29 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const getRoleBadge = (role: UserRole) => {
     switch (role) {
       case "ADMIN":
-        return <span className="status-badge status-badge-purple"><T>Admin</T></span>;
+        return (
+          <span className="status-badge status-badge-purple">
+            <T>Admin</T>
+          </span>
+        );
       case "SHOPKEEPER":
-        return <span className="status-badge status-badge-blue"><T>Seller</T></span>;
+        return (
+          <span className="status-badge status-badge-blue">
+            <T>Seller</T>
+          </span>
+        );
       case "CUSTOMER":
         return (
-          <span className="status-badge status-badge-green"><T>Customer</T></span>
+          <span className="status-badge status-badge-green">
+            <T>Customer</T>
+          </span>
         );
       case "SALES":
-        return <span className="status-badge status-badge-yellow"><T>Sales</T></span>;
+        return (
+          <span className="status-badge status-badge-yellow">
+            <T>Sales</T>
+          </span>
+        );
     }
   };
 

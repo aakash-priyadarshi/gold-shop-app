@@ -1,7 +1,7 @@
-import { Body, Controller, Post, HttpCode } from "@nestjs/common";
+import { Body, Controller, HttpCode, Post } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
-import { TranslationService } from "./translation.service";
 import { TranslateBatchDto } from "./dto/translate.dto";
+import { TranslationService } from "./translation.service";
 
 @Controller("translation")
 export class TranslationController {

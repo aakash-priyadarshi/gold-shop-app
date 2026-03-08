@@ -41,7 +41,16 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    alternateLocale: ["en_GB", "en_IN", "fr_FR", "de_DE", "hi_IN", "es_ES", "ar_AE", "ne_NP"],
+    alternateLocale: [
+      "en_GB",
+      "en_IN",
+      "fr_FR",
+      "de_DE",
+      "hi_IN",
+      "es_ES",
+      "ar_AE",
+      "ne_NP",
+    ],
     url: "https://www.orivraa.com",
     siteName: BRAND.name,
     title: BRAND.seo.title,
@@ -138,13 +147,37 @@ export default function RootLayout({
                   ],
                   knowsLanguage: ["en", "fr", "de", "hi", "es", "ar", "ne"],
                   availableLanguage: [
-                    { "@type": "Language", name: "English", alternateName: "en" },
-                    { "@type": "Language", name: "French", alternateName: "fr" },
-                    { "@type": "Language", name: "German", alternateName: "de" },
+                    {
+                      "@type": "Language",
+                      name: "English",
+                      alternateName: "en",
+                    },
+                    {
+                      "@type": "Language",
+                      name: "French",
+                      alternateName: "fr",
+                    },
+                    {
+                      "@type": "Language",
+                      name: "German",
+                      alternateName: "de",
+                    },
                     { "@type": "Language", name: "Hindi", alternateName: "hi" },
-                    { "@type": "Language", name: "Spanish", alternateName: "es" },
-                    { "@type": "Language", name: "Arabic", alternateName: "ar" },
-                    { "@type": "Language", name: "Nepali", alternateName: "ne" },
+                    {
+                      "@type": "Language",
+                      name: "Spanish",
+                      alternateName: "es",
+                    },
+                    {
+                      "@type": "Language",
+                      name: "Arabic",
+                      alternateName: "ar",
+                    },
+                    {
+                      "@type": "Language",
+                      name: "Nepali",
+                      alternateName: "ne",
+                    },
                   ],
                   sameAs: [
                     BRAND.social?.instagram,

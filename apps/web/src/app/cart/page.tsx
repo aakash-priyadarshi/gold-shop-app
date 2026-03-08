@@ -4,7 +4,6 @@ import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { T } from "@/components/ui/T";
 import {
   Card,
   CardContent,
@@ -33,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { T } from "@/components/ui/T";
 import {
   useCart,
   type DeliveryAddress,
@@ -41,6 +41,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import { CURRENCIES, usePreferencesStore } from "@/store/preferences";
 import {
   BuildingStorefrontIcon,
@@ -55,7 +56,6 @@ import {
 import { Loader2, Package } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useT } from "@/providers/translation-provider";
 
 const COUNTRIES = [
   { code: "NP", name: "Nepal" },
@@ -293,7 +293,9 @@ export default function CartPage() {
           <Card className="max-w-md mx-auto text-center">
             <CardContent className="pt-8 pb-6">
               <ShoppingCartIcon className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-              <h2 className="text-xl font-semibold mb-2"><T>Your Cart is Empty</T></h2>
+              <h2 className="text-xl font-semibold mb-2">
+                <T>Your Cart is Empty</T>
+              </h2>
               <p className="text-muted-foreground mb-6">
                 <T>Browse our verified jewelers and add items to your cart</T>
               </p>
@@ -502,16 +504,22 @@ export default function CartPage() {
                       </DialogTrigger>
                       <DialogContent className="max-w-md">
                         <DialogHeader>
-                          <DialogTitle><T>Add Delivery Address</T></DialogTitle>
+                          <DialogTitle>
+                            <T>Add Delivery Address</T>
+                          </DialogTitle>
                           <DialogDescription>
-                            <T>Enter your delivery address for order shipment</T>
+                            <T>
+                              Enter your delivery address for order shipment
+                            </T>
                           </DialogDescription>
                         </DialogHeader>
 
                         <div className="space-y-4 py-4">
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label><T>Label</T></Label>
+                              <Label>
+                                <T>Label</T>
+                              </Label>
                               <Input
                                 placeholder="e.g., Home, Office"
                                 value={newAddress.label}
@@ -524,7 +532,9 @@ export default function CartPage() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label><T>Full Name *</T></Label>
+                              <Label>
+                                <T>Full Name *</T>
+                              </Label>
                               <Input
                                 value={newAddress.fullName}
                                 onChange={(e) =>
@@ -538,7 +548,9 @@ export default function CartPage() {
                           </div>
 
                           <div className="space-y-2">
-                            <Label><T>Phone *</T></Label>
+                            <Label>
+                              <T>Phone *</T>
+                            </Label>
                             <Input
                               value={newAddress.phone}
                               onChange={(e) =>
@@ -551,7 +563,9 @@ export default function CartPage() {
                           </div>
 
                           <div className="space-y-2">
-                            <Label><T>Address Line 1 *</T></Label>
+                            <Label>
+                              <T>Address Line 1 *</T>
+                            </Label>
                             <Input
                               value={newAddress.addressLine1}
                               onChange={(e) =>
@@ -564,7 +578,9 @@ export default function CartPage() {
                           </div>
 
                           <div className="space-y-2">
-                            <Label><T>Address Line 2</T></Label>
+                            <Label>
+                              <T>Address Line 2</T>
+                            </Label>
                             <Input
                               value={newAddress.addressLine2}
                               onChange={(e) =>
@@ -578,7 +594,9 @@ export default function CartPage() {
 
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label><T>City *</T></Label>
+                              <Label>
+                                <T>City *</T>
+                              </Label>
                               <Input
                                 value={newAddress.city}
                                 onChange={(e) =>
@@ -590,7 +608,9 @@ export default function CartPage() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label><T>State/Province</T></Label>
+                              <Label>
+                                <T>State/Province</T>
+                              </Label>
                               <Input
                                 value={newAddress.state}
                                 onChange={(e) =>
@@ -605,7 +625,9 @@ export default function CartPage() {
 
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label><T>Country *</T></Label>
+                              <Label>
+                                <T>Country *</T>
+                              </Label>
                               <Select
                                 value={newAddress.country}
                                 onValueChange={(v) =>
@@ -631,7 +653,9 @@ export default function CartPage() {
                               </Select>
                             </div>
                             <div className="space-y-2">
-                              <Label><T>Pincode/ZIP *</T></Label>
+                              <Label>
+                                <T>Pincode/ZIP *</T>
+                              </Label>
                               <Input
                                 value={newAddress.pincode}
                                 onChange={(e) =>
@@ -762,7 +786,9 @@ export default function CartPage() {
             {/* Order Summary */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg"><T>Order Summary</T></CardTitle>
+                <CardTitle className="text-lg">
+                  <T>Order Summary</T>
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between text-sm">
@@ -770,20 +796,26 @@ export default function CartPage() {
                   <span>{formatPrice(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span><T>Shipping</T></span>
+                  <span>
+                    <T>Shipping</T>
+                  </span>
                   <span className="text-muted-foreground">
                     <T>Calculated at checkout</T>
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span><T>Tax</T></span>
+                  <span>
+                    <T>Tax</T>
+                  </span>
                   <span className="text-muted-foreground">
                     <T>Calculated at checkout</T>
                   </span>
                 </div>
                 <Separator />
                 <div className="flex justify-between font-semibold text-lg">
-                  <span><T>Total</T></span>
+                  <span>
+                    <T>Total</T>
+                  </span>
                   <span>{formatPrice(subtotal)}+</span>
                 </div>
               </CardContent>

@@ -4,23 +4,13 @@ import {
   AlertTriangle,
   ArrowRight,
   BarChart3,
-  Box,
-  CheckCircle2,
-  ClipboardList,
   Database,
-  Gem,
-  Globe,
   Layers,
-  Package,
   Scale,
   Search,
-  ShieldCheck,
-  Sparkles,
   Tag,
-  TrendingUp,
   Upload,
   Users,
-  Weight,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -173,9 +163,14 @@ export default function JewelleryInventorySoftwarePage() {
               </span>
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
-              Stop using spreadsheets to track gold. Orivraa's inventory management tracks your{" "}
-              <strong>gold, silver, diamond, and gemstone inventory by weight, purity, and category</strong> with
-              automatic stock alerts, bulk upload, and real-time valuation. Trusted by <strong>2,000+ jewellers</strong>.
+              Stop using spreadsheets to track gold. Orivraa's inventory
+              management tracks your{" "}
+              <strong>
+                gold, silver, diamond, and gemstone inventory by weight, purity,
+                and category
+              </strong>{" "}
+              with automatic stock alerts, bulk upload, and real-time valuation.
+              Trusted by <strong>2,000+ jewellers</strong>.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
@@ -221,21 +216,28 @@ export default function JewelleryInventorySoftwarePage() {
             </h2>
             <div className="prose prose-lg dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
               <p>
-                Jewellery inventory isn't about counting units on a shelf. A single gold necklace has attributes
-                that most software can't handle: <strong>gross weight, net weight (after stones), gold purity,
-                stone weight, stone type, making charges per gram, HUID number, hallmark certification</strong>,
-                and more.
+                Jewellery inventory isn't about counting units on a shelf. A
+                single gold necklace has attributes that most software can't
+                handle:{" "}
+                <strong>
+                  gross weight, net weight (after stones), gold purity, stone
+                  weight, stone type, making charges per gram, HUID number,
+                  hallmark certification
+                </strong>
+                , and more.
               </p>
               <p>
-                Using a spreadsheet or generic inventory app means you're constantly creating workarounds —
-                extra columns, manual calculations, no automated alerts. One misplaced decimal and your
-                inventory valuation is off by lakhs.
+                Using a spreadsheet or generic inventory app means you're
+                constantly creating workarounds — extra columns, manual
+                calculations, no automated alerts. One misplaced decimal and
+                your inventory valuation is off by lakhs.
               </p>
               <p>
-                Orivraa was built from day one for jewellery businesses. Every field, every calculation, every
-                report is designed around how <strong>gold, silver, and diamond inventory</strong> actually works.
-                Whether you're a single-store retailer or a multi-branch wholesaler, your inventory stays
-                accurate down to the milligram.
+                Orivraa was built from day one for jewellery businesses. Every
+                field, every calculation, every report is designed around how{" "}
+                <strong>gold, silver, and diamond inventory</strong> actually
+                works. Whether you're a single-store retailer or a multi-branch
+                wholesaler, your inventory stays accurate down to the milligram.
               </p>
             </div>
           </div>
@@ -275,7 +277,8 @@ export default function JewelleryInventorySoftwarePage() {
               Powerful Inventory Features for Jewellers
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-12">
-              From weight tracking to stock valuation — everything you need to manage precious inventory.
+              From weight tracking to stock valuation — everything you need to
+              manage precious inventory.
             </p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {FEATURES.map((f) => (
@@ -357,7 +360,8 @@ export default function JewelleryInventorySoftwarePage() {
               Take Control of Your Jewellery Inventory
             </h2>
             <p className="text-lg text-amber-100 mb-8">
-              Stop guessing. Track every gram, every karat, every piece with cloud-based inventory software. Free to start.
+              Stop guessing. Track every gram, every karat, every piece with
+              cloud-based inventory software. Free to start.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link

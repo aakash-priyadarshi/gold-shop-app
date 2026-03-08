@@ -3,8 +3,8 @@
 import { HeroVideo } from "@/components/HeroVideo";
 import { Button } from "@/components/ui/button";
 import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { MarketRegion, useMarket } from "@/hooks/useMarket";
+import { useT } from "@/providers/translation-provider";
 import {
   ArrowRight,
   Gem,

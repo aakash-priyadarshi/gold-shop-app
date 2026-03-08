@@ -3,8 +3,6 @@ import { Header } from "@/components/layout/header";
 import {
   ArrowRight,
   BarChart3,
-  CalendarCheck,
-  CheckCircle2,
   ClipboardList,
   Globe,
   LayoutDashboard,
@@ -12,8 +10,6 @@ import {
   Package,
   Receipt,
   Scale,
-  ShieldCheck,
-  Smartphone,
   Sparkles,
   Store,
   TrendingUp,
@@ -134,18 +130,90 @@ const FEATURES = [
 ];
 
 const COMPARISON = [
-  { feature: "Cloud-Based (Access Anywhere)", orivraa: true, marg: false, zoho: true, vyapar: true },
-  { feature: "Jewellery-Specific Inventory", orivraa: true, marg: true, zoho: false, vyapar: false },
-  { feature: "Weight & Purity Tracking", orivraa: true, marg: true, zoho: false, vyapar: false },
-  { feature: "Built-in Marketplace", orivraa: true, marg: false, zoho: false, vyapar: false },
-  { feature: "Multi-Currency Support", orivraa: true, marg: false, zoho: true, vyapar: false },
-  { feature: "Customer Chat & RFQ", orivraa: true, marg: false, zoho: false, vyapar: false },
-  { feature: "Digital Catalogues", orivraa: true, marg: false, zoho: false, vyapar: false },
-  { feature: "AI-Powered Features", orivraa: true, marg: false, zoho: false, vyapar: false },
-  { feature: "Free Plan Available", orivraa: true, marg: false, zoho: true, vyapar: true },
-  { feature: "Desktop App", orivraa: true, marg: true, zoho: false, vyapar: false },
-  { feature: "Multi-Branch Support", orivraa: true, marg: true, zoho: true, vyapar: false },
-  { feature: "GST/Tax Compliant", orivraa: true, marg: true, zoho: true, vyapar: true },
+  {
+    feature: "Cloud-Based (Access Anywhere)",
+    orivraa: true,
+    marg: false,
+    zoho: true,
+    vyapar: true,
+  },
+  {
+    feature: "Jewellery-Specific Inventory",
+    orivraa: true,
+    marg: true,
+    zoho: false,
+    vyapar: false,
+  },
+  {
+    feature: "Weight & Purity Tracking",
+    orivraa: true,
+    marg: true,
+    zoho: false,
+    vyapar: false,
+  },
+  {
+    feature: "Built-in Marketplace",
+    orivraa: true,
+    marg: false,
+    zoho: false,
+    vyapar: false,
+  },
+  {
+    feature: "Multi-Currency Support",
+    orivraa: true,
+    marg: false,
+    zoho: true,
+    vyapar: false,
+  },
+  {
+    feature: "Customer Chat & RFQ",
+    orivraa: true,
+    marg: false,
+    zoho: false,
+    vyapar: false,
+  },
+  {
+    feature: "Digital Catalogues",
+    orivraa: true,
+    marg: false,
+    zoho: false,
+    vyapar: false,
+  },
+  {
+    feature: "AI-Powered Features",
+    orivraa: true,
+    marg: false,
+    zoho: false,
+    vyapar: false,
+  },
+  {
+    feature: "Free Plan Available",
+    orivraa: true,
+    marg: false,
+    zoho: true,
+    vyapar: true,
+  },
+  {
+    feature: "Desktop App",
+    orivraa: true,
+    marg: true,
+    zoho: false,
+    vyapar: false,
+  },
+  {
+    feature: "Multi-Branch Support",
+    orivraa: true,
+    marg: true,
+    zoho: true,
+    vyapar: false,
+  },
+  {
+    feature: "GST/Tax Compliant",
+    orivraa: true,
+    marg: true,
+    zoho: true,
+    vyapar: true,
+  },
 ];
 
 const STEPS = [
@@ -197,9 +265,11 @@ export default function JewelleryStoreManagementSoftwarePage() {
               </span>
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
-              Manage your entire jewellery business from one platform — inventory tracking by weight and purity,
-              billing with making charges, customer management, analytics, and an online marketplace.
-              Trusted by <strong>2,000+ jewellers</strong> across 6 countries. <strong>Starts free.</strong>
+              Manage your entire jewellery business from one platform —
+              inventory tracking by weight and purity, billing with making
+              charges, customer management, analytics, and an online
+              marketplace. Trusted by <strong>2,000+ jewellers</strong> across 6
+              countries. <strong>Starts free.</strong>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
@@ -245,19 +315,26 @@ export default function JewelleryStoreManagementSoftwarePage() {
             </h2>
             <div className="prose prose-lg dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
               <p>
-                Running a jewellery store is fundamentally different from running a general retail shop. You deal with
-                <strong> precious metals tracked by weight and purity</strong>, custom orders with making charges,
-                old gold exchange, karigar (artisan) management, and compliance with hallmarking regulations.
+                Running a jewellery store is fundamentally different from
+                running a general retail shop. You deal with
+                <strong> precious metals tracked by weight and purity</strong>,
+                custom orders with making charges, old gold exchange, karigar
+                (artisan) management, and compliance with hallmarking
+                regulations.
               </p>
               <p>
-                Generic retail software like Shopify or Square simply cannot handle the nuances of jewellery
-                — they don't support weight-based inventory, purity grading, or making-charge calculations. That's
-                why <strong>jewellery-specific store management software</strong> like Orivraa exists.
+                Generic retail software like Shopify or Square simply cannot
+                handle the nuances of jewellery — they don't support
+                weight-based inventory, purity grading, or making-charge
+                calculations. That's why{" "}
+                <strong>jewellery-specific store management software</strong>{" "}
+                like Orivraa exists.
               </p>
               <p>
-                With Orivraa, you get a purpose-built platform that understands the jewellery business from the
-                ground up — from 22K gold necklaces to diamond solitaires, from wholesale dealers to retail
-                customers, from local markets to international buyers.
+                With Orivraa, you get a purpose-built platform that understands
+                the jewellery business from the ground up — from 22K gold
+                necklaces to diamond solitaires, from wholesale dealers to
+                retail customers, from local markets to international buyers.
               </p>
             </div>
           </div>
@@ -270,7 +347,8 @@ export default function JewelleryStoreManagementSoftwarePage() {
               Everything You Need to Run Your Jewellery Store
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-12">
-              From inventory to invoicing, customer management to analytics — one platform does it all.
+              From inventory to invoicing, customer management to analytics —
+              one platform does it all.
             </p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {FEATURES.map((f) => (
@@ -298,30 +376,55 @@ export default function JewelleryStoreManagementSoftwarePage() {
               How Orivraa Compares to Other Store Management Software
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-10">
-              See why jewellers are switching to Orivraa for modern store management.
+              See why jewellers are switching to Orivraa for modern store
+              management.
             </p>
             <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-800">
-                    <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-200">Feature</th>
-                    <th className="px-4 py-3 font-semibold text-amber-700 dark:text-gold-400">Orivraa</th>
-                    <th className="px-4 py-3 font-semibold text-gray-500">Marg ERP</th>
-                    <th className="px-4 py-3 font-semibold text-gray-500">Zoho</th>
-                    <th className="px-4 py-3 font-semibold text-gray-500">Vyapar</th>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-200">
+                      Feature
+                    </th>
+                    <th className="px-4 py-3 font-semibold text-amber-700 dark:text-gold-400">
+                      Orivraa
+                    </th>
+                    <th className="px-4 py-3 font-semibold text-gray-500">
+                      Marg ERP
+                    </th>
+                    <th className="px-4 py-3 font-semibold text-gray-500">
+                      Zoho
+                    </th>
+                    <th className="px-4 py-3 font-semibold text-gray-500">
+                      Vyapar
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {COMPARISON.map((row, i) => (
                     <tr
                       key={row.feature}
-                      className={i % 2 === 0 ? "bg-white dark:bg-gray-950" : "bg-gray-50/50 dark:bg-gray-900/50"}
+                      className={
+                        i % 2 === 0
+                          ? "bg-white dark:bg-gray-950"
+                          : "bg-gray-50/50 dark:bg-gray-900/50"
+                      }
                     >
-                      <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{row.feature}</td>
-                      <td className="px-4 py-3 text-center">{row.orivraa ? "✅" : "❌"}</td>
-                      <td className="px-4 py-3 text-center">{row.marg ? "✅" : "❌"}</td>
-                      <td className="px-4 py-3 text-center">{row.zoho ? "✅" : "❌"}</td>
-                      <td className="px-4 py-3 text-center">{row.vyapar ? "✅" : "❌"}</td>
+                      <td className="px-4 py-3 text-gray-700 dark:text-gray-300">
+                        {row.feature}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {row.orivraa ? "✅" : "❌"}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {row.marg ? "✅" : "❌"}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {row.zoho ? "✅" : "❌"}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {row.vyapar ? "✅" : "❌"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -470,7 +573,8 @@ export default function JewelleryStoreManagementSoftwarePage() {
               Ready to Modernise Your Jewellery Store?
             </h2>
             <p className="text-lg text-amber-100 mb-8">
-              Join 2,000+ jewellers already managing their stores with Orivraa. Free forever plan — no credit card required.
+              Join 2,000+ jewellers already managing their stores with Orivraa.
+              Free forever plan — no credit card required.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link

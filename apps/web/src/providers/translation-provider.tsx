@@ -1,5 +1,7 @@
 "use client";
 
+import { api } from "@/lib/api";
+import { usePreferencesStore, type Language } from "@/store/preferences";
 import {
   createContext,
   useCallback,
@@ -9,8 +11,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { api } from "@/lib/api";
-import { usePreferencesStore, type Language } from "@/store/preferences";
 
 /* ────────────────────────────────────────────────────────────── */
 /*  Types                                                         */

@@ -2,7 +2,6 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Button } from "@/components/ui/button";
-import { T } from "@/components/ui/T";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -19,9 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { T } from "@/components/ui/T";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { ticketsApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   AlertCircle,
   ArrowLeft,
@@ -40,7 +41,6 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { useT } from "@/providers/translation-provider";
 
 // ─── Types ───
 interface ChatMessage {
@@ -172,7 +172,9 @@ export default function HelpPage() {
             </Link>
             <div className="flex items-center gap-2">
               <LifeBuoy className="h-5 w-5 text-amber-600" />
-              <h1 className="font-bold text-lg"><T>Help Center</T></h1>
+              <h1 className="font-bold text-lg">
+                <T>Help Center</T>
+              </h1>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -270,8 +272,8 @@ export default function HelpPage() {
                               setShowTicketForm(true);
                             }}
                           >
-                            <Ticket className="h-3 w-3 mr-1" /> <T>Create Support
-                            Ticket</T>
+                            <Ticket className="h-3 w-3 mr-1" />{" "}
+                            <T>Create Support Ticket</T>
                           </Button>
                         </div>
                       </div>
@@ -351,7 +353,9 @@ export default function HelpPage() {
       <Dialog open={showTicketForm} onOpenChange={setShowTicketForm}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle><T>Create Support Ticket</T></DialogTitle>
+            <DialogTitle>
+              <T>Create Support Ticket</T>
+            </DialogTitle>
             <DialogDescription>
               {isAuthenticated
                 ? "Our support team will review your issue and respond as soon as possible."

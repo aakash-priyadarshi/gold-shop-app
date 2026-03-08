@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { T } from "@/components/ui/T";
 import { FlagImage, type FlagCode } from "@/components/ui/phone-input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
@@ -35,11 +34,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { T } from "@/components/ui/T";
 import { useCart, type DeliveryAddress } from "@/contexts/CartContext";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchTaxRules, lookupTaxRate } from "@/hooks/useTaxRules";
 import { ordersApi, paymentsApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import { CURRENCIES, usePreferencesStore } from "@/store/preferences";
 import {
   ArrowLeftIcon,
@@ -55,7 +56,6 @@ import { Banknote, CreditCard, Loader2, Store } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useT } from "@/providers/translation-provider";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
@@ -468,14 +468,16 @@ function CheckoutPageContent() {
                 <T>Order Placed Successfully!</T>
               </CardTitle>
               <CardDescription className="text-lg">
-                <T>Order Number:</T>
-                {" "}<span className="font-mono font-semibold">{orderCreated}</span>
+                <T>Order Number:</T>{" "}
+                <span className="font-mono font-semibold">{orderCreated}</span>
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-gray-600 dark:text-gray-400">
-                <T>Thank you for your order! You will receive a confirmation email
-                shortly.</T>
+                <T>
+                  Thank you for your order! You will receive a confirmation
+                  email shortly.
+                </T>
               </p>
               {payAtShop && (
                 <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800">
@@ -484,8 +486,10 @@ function CheckoutPageContent() {
                     <T>Pay at Shop Selected</T>
                   </AlertTitle>
                   <AlertDescription className="text-amber-700 dark:text-amber-300">
-                    <T>Please visit the shop to complete your payment. Your order
-                    will be held for 48 hours.</T>
+                    <T>
+                      Please visit the shop to complete your payment. Your order
+                      will be held for 48 hours.
+                    </T>
                   </AlertDescription>
                 </Alert>
               )}
@@ -498,7 +502,9 @@ function CheckoutPageContent() {
                 </Link>
               </Button>
               <Button asChild className="bg-amber-600 hover:bg-amber-700">
-                <Link href="/shops"><T>Continue Shopping</T></Link>
+                <Link href="/shops">
+                  <T>Continue Shopping</T>
+                </Link>
               </Button>
             </CardFooter>
           </Card>
@@ -540,7 +546,9 @@ function CheckoutPageContent() {
                 >
                   1
                 </div>
-                <span className="hidden sm:inline"><T>Address</T></span>
+                <span className="hidden sm:inline">
+                  <T>Address</T>
+                </span>
               </div>
               <div className="flex-1 h-0.5 bg-gray-200 dark:bg-gray-700" />
               <div
@@ -559,7 +567,9 @@ function CheckoutPageContent() {
                 >
                   2
                 </div>
-                <span className="hidden sm:inline"><T>Payment</T></span>
+                <span className="hidden sm:inline">
+                  <T>Payment</T>
+                </span>
               </div>
             </div>
 
@@ -632,8 +642,12 @@ function CheckoutPageContent() {
                   ) : (
                     <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                       <MapPinIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                      <p><T>No saved addresses</T></p>
-                      <p className="text-sm"><T>Add an address to continue</T></p>
+                      <p>
+                        <T>No saved addresses</T>
+                      </p>
+                      <p className="text-sm">
+                        <T>Add an address to continue</T>
+                      </p>
                     </div>
                   )}
 
@@ -692,8 +706,10 @@ function CheckoutPageContent() {
                             <T>Pay at Shop</T>
                           </label>
                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            <T>Visit the shop to pay in person. Only available
-                            because you're in the same city as the shop.</T>
+                            <T>
+                              Visit the shop to pay in person. Only available
+                              because you're in the same city as the shop.
+                            </T>
                           </p>
                         </div>
                       </div>
@@ -844,11 +860,15 @@ function CheckoutPageContent() {
                     <span className="text-gray-500 dark:text-gray-400">
                       <T>Shipping</T>
                     </span>
-                    <span className="text-emerald-600"><T>Free</T></span>
+                    <span className="text-emerald-600">
+                      <T>Free</T>
+                    </span>
                   </div>
                   <Separator />
                   <div className="flex justify-between text-lg font-semibold">
-                    <span><T>Total</T></span>
+                    <span>
+                      <T>Total</T>
+                    </span>
                     <span className="text-amber-600">{formatPrice(total)}</span>
                   </div>
                 </div>
@@ -858,7 +878,9 @@ function CheckoutPageContent() {
                   <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm">
                     <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                       <TruckIcon className="h-4 w-4" />
-                      <span><T>Delivering to</T> {selectedAddress.city}</span>
+                      <span>
+                        <T>Delivering to</T> {selectedAddress.city}
+                      </span>
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       <T>Estimated delivery: 3-7 business days</T>
@@ -875,7 +897,9 @@ function CheckoutPageContent() {
       <Dialog open={addressDialogOpen} onOpenChange={setAddressDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle><T>Add Delivery Address</T></DialogTitle>
+            <DialogTitle>
+              <T>Add Delivery Address</T>
+            </DialogTitle>
             <DialogDescription>
               <T>Enter your delivery address details</T>
             </DialogDescription>
@@ -883,7 +907,9 @@ function CheckoutPageContent() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="label"><T>Address Label</T></Label>
+                <Label htmlFor="label">
+                  <T>Address Label</T>
+                </Label>
                 <Select
                   value={newAddress.label}
                   onValueChange={(value) =>
@@ -901,7 +927,9 @@ function CheckoutPageContent() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="country"><T>Country</T></Label>
+                <Label htmlFor="country">
+                  <T>Country</T>
+                </Label>
                 <Select
                   value={newAddress.country}
                   onValueChange={(value) =>
@@ -925,7 +953,9 @@ function CheckoutPageContent() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="fullName"><T>Full Name *</T></Label>
+              <Label htmlFor="fullName">
+                <T>Full Name *</T>
+              </Label>
               <Input
                 id="fullName"
                 value={newAddress.fullName}
@@ -936,7 +966,9 @@ function CheckoutPageContent() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone"><T>Phone Number *</T></Label>
+              <Label htmlFor="phone">
+                <T>Phone Number *</T>
+              </Label>
               <Input
                 id="phone"
                 value={newAddress.phone}
@@ -947,7 +979,9 @@ function CheckoutPageContent() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="addressLine1"><T>Address Line 1 *</T></Label>
+              <Label htmlFor="addressLine1">
+                <T>Address Line 1 *</T>
+              </Label>
               <Input
                 id="addressLine1"
                 value={newAddress.addressLine1}
@@ -958,7 +992,9 @@ function CheckoutPageContent() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="addressLine2"><T>Address Line 2</T></Label>
+              <Label htmlFor="addressLine2">
+                <T>Address Line 2</T>
+              </Label>
               <Input
                 id="addressLine2"
                 value={newAddress.addressLine2 || ""}
@@ -970,7 +1006,9 @@ function CheckoutPageContent() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="city"><T>City *</T></Label>
+                <Label htmlFor="city">
+                  <T>City *</T>
+                </Label>
                 <Input
                   id="city"
                   value={newAddress.city}
@@ -981,7 +1019,9 @@ function CheckoutPageContent() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="state"><T>State/Province</T></Label>
+                <Label htmlFor="state">
+                  <T>State/Province</T>
+                </Label>
                 <Input
                   id="state"
                   value={newAddress.state}
@@ -993,7 +1033,9 @@ function CheckoutPageContent() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="pincode"><T>PIN/ZIP Code *</T></Label>
+              <Label htmlFor="pincode">
+                <T>PIN/ZIP Code *</T>
+              </Label>
               <Input
                 id="pincode"
                 value={newAddress.pincode}

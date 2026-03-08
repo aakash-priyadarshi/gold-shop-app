@@ -2,10 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createHash } from "crypto";
 import { RedisService } from "../../common/redis";
-import {
-  LOCALE_NAMES,
-  type SupportedLocale,
-} from "./dto/translate.dto";
+import { LOCALE_NAMES, type SupportedLocale } from "./dto/translate.dto";
 
 /**
  * AI Translation Service
