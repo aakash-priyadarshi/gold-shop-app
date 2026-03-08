@@ -746,7 +746,685 @@ export const BLOG_POSTS: BlogPost[] = [
 <p>Orivraa handles GST compliance for Indian jewellers automatically — including the tricky making charges split. <a href="/auth/register">Start free</a> and see how it simplifies your billing.</p>
 `,
   },
-];
+  /* ── Post 6 ────────────────────────────────────────────────── */
+  {
+    slug: "best-jewellery-store-management-software-2026",
+    title:
+      "Best Jewellery Store Management Software in 2026: Complete Guide",
+    description:
+      "Compare the best jewellery store management software for 2026. Orivraa, Marg ERP, Zoho, Vyapar — features, pricing, and which one suits your gold shop. Includes free options.",
+    date: "2026-03-01",
+    author: "Orivraa Team",
+    authorRole: "Product & Market Research",
+    readTime: "11 min read",
+    category: "Software Guide",
+    tags: [
+      "jewellery store management",
+      "jewellery shop software",
+      "gold shop management",
+      "jewellery ERP",
+      "software comparison",
+      "Marg ERP",
+      "Vyapar",
+    ],
+    content: `
+<p>Managing a jewellery store in 2026 is more complex than ever. Between fluctuating gold prices, GST compliance, karigar management, and the shift to online selling — you need software that understands the jewellery business inside out.</p>
+
+<p>In this guide, we compare the <strong>best jewellery store management software</strong> available in 2026, covering features, pricing, and which type of jewellery business each serves best.</p>
+
+<h2>Why Jewellery Stores Need Specialised Software</h2>
+
+<p>A jewellery store isn't a regular retail shop. You can't manage gold with software designed for groceries or clothing. Here's why:</p>
+
+<ul>
+<li><strong>Inventory is tracked by weight and purity</strong> — not just quantity. A "gold necklace" could be 22K at 15 grams or 18K at 22 grams. Each requires different tracking.</li>
+<li><strong>Pricing changes daily</strong> — Gold and silver rates fluctuate. Your software must support dynamic pricing or manual rate entry.</li>
+<li><strong>Billing is complex</strong> — Making charges, stone charges, wastage, old gold exchange — regular billing software can't handle any of this.</li>
+<li><strong>Compliance requirements</strong> — HUID tracking, hallmark verification, GST with different rates on gold (3%) vs making charges (5%) in India.</li>
+<li><strong>Karigar management</strong> — Track raw materials issued to artisans, returned items, and wastage.</li>
+</ul>
+
+<h2>Top Jewellery Store Management Software in 2026</h2>
+
+<h3>1. Orivraa — Best Free Cloud-Based Platform</h3>
+
+<p><strong>Pricing:</strong> Free plan (15 products) · Pro $12.99/month · Pro+ $24.99/month · Enterprise custom</p>
+
+<p>Orivraa is the most modern jewellery store management platform available. It combines inventory management, billing, a built-in marketplace, customer messaging, digital catalogues, and AI-powered tools — all accessible from any device.</p>
+
+<p><strong>What sets it apart:</strong></p>
+<ul>
+<li>Cloud-based — access from anywhere, no installation needed</li>
+<li>Built-in marketplace reaching buyers across Nepal, India, Dubai, USA, UK & Europe</li>
+<li>AI product descriptions and smart tagging</li>
+<li>Multi-currency support (NPR, INR, AED, GBP, USD, EUR)</li>
+<li>Digital catalogues shareable on WhatsApp</li>
+<li>Desktop app available for offline access</li>
+</ul>
+
+<p><strong>Best for:</strong> Small to medium jewellery shops wanting a modern, affordable, cloud-based solution. Especially powerful for shops wanting to sell online without building a separate website.</p>
+
+<h3>2. Marg ERP 9+ Jewellery — Best Legacy Desktop ERP</h3>
+
+<p><strong>Pricing:</strong> ₹15,000–₹50,000 (one-time/annual)</p>
+
+<p>Marg ERP has been the go-to choice for Indian jewellery shops for over two decades. It excels at <strong>karigar management, RFID billing, and detailed GST compliance</strong>.</p>
+
+<p><strong>Best for:</strong> Large Indian jewellery shops with complex karigar networks and extensive walk-in billing. However, it lacks cloud access, online selling features, and modern UI.</p>
+
+<h3>3. Zoho Inventory + Books — Best General Business Suite</h3>
+
+<p><strong>Pricing:</strong> Free plan available · Paid from ₹749/month</p>
+
+<p>Zoho is a powerful general business suite, but it's not jewellery-specific. You'll need to customise fields for weight and purity tracking. It excels at <strong>accounting, CRM, and multi-channel selling</strong>.</p>
+
+<p><strong>Best for:</strong> Tech-savvy jewellers who want a complete business suite and are willing to do custom configuration. Not ideal for traditional shops or those needing karigar management.</p>
+
+<h3>4. Vyapar — Best Simple Billing App</h3>
+
+<p><strong>Pricing:</strong> Free plan · Paid from ₹399/month</p>
+
+<p>Vyapar is a popular Indian billing app that's simple to use. However, it's designed for general businesses and lacks jewellery-specific features like weight tracking, making charges, and purity management.</p>
+
+<p><strong>Best for:</strong> Very small jewellery shops that primarily need basic GST billing and don't require weight-based inventory management. Limited for growth.</p>
+
+<h2>Feature Comparison Table</h2>
+
+<table>
+<thead>
+<tr><th>Feature</th><th>Orivraa</th><th>Marg ERP</th><th>Zoho</th><th>Vyapar</th></tr>
+</thead>
+<tbody>
+<tr><td>Cloud-Based</td><td>✅</td><td>❌</td><td>✅</td><td>✅</td></tr>
+<tr><td>Weight & Purity Tracking</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
+<tr><td>Making Charges</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
+<tr><td>Built-in Marketplace</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
+<tr><td>Multi-Currency</td><td>✅</td><td>❌</td><td>✅</td><td>❌</td></tr>
+<tr><td>AI Features</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
+<tr><td>Karigar Management</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
+<tr><td>Free Plan</td><td>✅</td><td>❌</td><td>✅</td><td>✅</td></tr>
+<tr><td>Desktop App</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
+<tr><td>International Selling</td><td>✅</td><td>❌</td><td>✅ (with setup)</td><td>❌</td></tr>
+</tbody>
+</table>
+
+<h2>How to Choose the Right Software</h2>
+
+<p>Ask yourself these questions:</p>
+
+<ol>
+<li><strong>Do you want to sell online?</strong> → Orivraa (built-in marketplace)</li>
+<li><strong>Do you have complex karigar operations?</strong> → Orivraa or Marg ERP</li>
+<li><strong>Do you want cloud access from anywhere?</strong> → Orivraa or Zoho</li>
+<li><strong>Is budget a constraint?</strong> → Orivraa Free, Zoho Free, or Vyapar Free</li>
+<li><strong>Do you sell internationally?</strong> → Orivraa (multi-currency, multi-market)</li>
+</ol>
+
+<h2>Conclusion</h2>
+
+<p>For most jewellery shops in 2026, <strong>Orivraa offers the best combination</strong> of jewellery-specific features, modern cloud-based architecture, and affordability. It's the only platform that combines store management with an international marketplace and AI tools — starting free.</p>
+
+<p><a href="/auth/register">Try Orivraa free</a> — no credit card required. Or <a href="/jewellery-store-management-software">learn more about store management features</a>.</p>
+`,
+  },
+
+  /* ── Post 7 ────────────────────────────────────────────────── */
+  {
+    slug: "how-jewellery-shops-can-go-digital",
+    title:
+      "How Jewellery Shops Can Go Digital in 2026: A Complete Transformation Guide",
+    description:
+      "Step-by-step guide for jewellery shops going digital. From inventory digitisation to online sales, digital catalogues, social media marketing, and customer management. Practical tips for gold & diamond shops.",
+    date: "2026-02-20",
+    author: "Orivraa Team",
+    authorRole: "Business Strategy",
+    readTime: "10 min read",
+    category: "Business Guide",
+    tags: [
+      "digital transformation",
+      "jewellery shop",
+      "go digital",
+      "online selling",
+      "digital catalogue",
+      "jewellery marketing",
+    ],
+    content: `
+<p>The jewellery industry is undergoing a massive digital shift. Customers research online before visiting shops, compare prices on their phones, and increasingly buy jewellery online. If your shop is still operating purely offline, you're losing customers to competitors who have embraced digital.</p>
+
+<p>But "going digital" doesn't mean abandoning your physical store. It means <strong>extending your reach, improving efficiency, and meeting customers where they are</strong> — online.</p>
+
+<h2>Step 1: Digitise Your Inventory</h2>
+
+<p>The foundation of going digital is having your inventory in a digital system, not in paper registers or spreadsheets.</p>
+
+<p><strong>What to digitise for each product:</strong></p>
+<ul>
+<li>Product name and category (necklace, ring, bangle, etc.)</li>
+<li>Metal type and purity (22K gold, 925 silver, etc.)</li>
+<li>Gross weight and net weight (after stones)</li>
+<li>Stone details (type, weight, quality)</li>
+<li>Making charges and pricing</li>
+<li>Photos from multiple angles</li>
+<li>HUID/barcode numbers</li>
+</ul>
+
+<p><strong>Tool:</strong> <a href="/jewellery-inventory-software">Orivraa's inventory management</a> supports all these fields natively. You can bulk upload existing inventory via CSV/Excel if you have digital records, or add products one-by-one with photos.</p>
+
+<h2>Step 2: Create a Digital Catalogue</h2>
+
+<p>A digital catalogue is the jewellery equivalent of a restaurant menu — customers can browse your collection before visiting your shop (or instead of visiting).</p>
+
+<p><strong>Benefits of digital catalogues:</strong></p>
+<ul>
+<li>Share your collection via WhatsApp and social media</li>
+<li>Update instantly when products sell or new stock arrives</li>
+<li>Reach customers in other cities and countries</li>
+<li>Reduce the need for physical showroom visits for initial browsing</li>
+</ul>
+
+<p>With Orivraa, every product you add automatically becomes part of your digital catalogue. You can share your shop profile link on WhatsApp, Instagram, or Facebook — customers browse your full collection with photos, weights, and prices.</p>
+
+<h2>Step 3: Set Up Online Ordering</h2>
+
+<p>Once customers can see your products digitally, the natural next step is allowing them to order online or place custom requests.</p>
+
+<p><strong>Online ordering options:</strong></p>
+<ul>
+<li><strong>Direct purchase</strong> — Customer adds to cart and pays online (for standard items)</li>
+<li><strong>RFQ (Request for Quote)</strong> — Customer asks for pricing on custom designs or bulk orders</li>
+<li><strong>Chat enquiry</strong> — Customer messages you about a specific product to negotiate or ask questions</li>
+</ul>
+
+<p>Orivraa supports all three methods. Customers can browse your shop on the <a href="/shops">marketplace</a>, send enquiries, request custom orders, or purchase directly.</p>
+
+<h2>Step 4: Build a Social Media Presence</h2>
+
+<p>Social media is where jewellery discovery happens in 2026. Instagram and Facebook are visual platforms perfect for jewellery.</p>
+
+<p><strong>Content ideas for jewellery shops:</strong></p>
+<ul>
+<li>Daily new arrival posts with product photos</li>
+<li>Behind-the-scenes videos of craftsmanship</li>
+<li>Customer testimonials and reviews</li>
+<li>Jewellery care and maintenance tips</li>
+<li>Festival and wedding season collections</li>
+<li>Educational content (how to check gold purity, etc.)</li>
+</ul>
+
+<p><strong>Pro tip:</strong> Orivraa's AI can generate product descriptions and social media captions for you. Upload a photo and get ready-to-post content in seconds.</p>
+
+<h2>Step 5: Implement Digital Billing</h2>
+
+<p>Replace handwritten bills and manual calculations with <a href="/jewellery-shop-billing-software">digital billing software</a>. Benefits include:</p>
+
+<ul>
+<li>Faster checkout with barcode scanning</li>
+<li>Automatic tax calculation (GST/VAT)</li>
+<li>Accurate making charges and weight-based pricing</li>
+<li>Professional invoices that build trust</li>
+<li>Digital records for audit and compliance</li>
+</ul>
+
+<h2>Step 6: Embrace Multi-Channel Selling</h2>
+
+<p>Don't limit yourself to one sales channel. Modern jewellery businesses succeed by being present everywhere:</p>
+
+<ul>
+<li><strong>Physical store</strong> — Walk-in customers and local buyers</li>
+<li><strong>Orivraa marketplace</strong> — Online buyers across 6 countries</li>
+<li><strong>WhatsApp</strong> — Share catalogues and accept orders via chat</li>
+<li><strong>Instagram/Facebook</strong> — Social selling with product posts</li>
+<li><strong>Google Business</strong> — Local search visibility</li>
+</ul>
+
+<h2>Step 7: Use Data for Better Decisions</h2>
+
+<p>Digital tools give you data that paper registers never could:</p>
+
+<ul>
+<li>Which products sell fastest</li>
+<li>Which categories have dead stock</li>
+<li>Peak selling seasons and days</li>
+<li>Customer demographics and preferences</li>
+<li>Profit margins by product type</li>
+</ul>
+
+<p>Orivraa's analytics dashboard shows all of this in real-time, helping you make smarter buying, pricing, and marketing decisions.</p>
+
+<h2>Common Concerns About Going Digital</h2>
+
+<h3>"My customers are traditional — they won't buy online"</h3>
+<p>Digital isn't just about online sales. It's about digital billing, inventory tracking, and WhatsApp catalogues. Even traditional customers appreciate professional invoices and being able to browse your collection on WhatsApp before visiting.</p>
+
+<h3>"I don't have technical knowledge"</h3>
+<p>Modern platforms like Orivraa are designed for non-technical users. If you can use WhatsApp, you can use Orivraa. Most shops get set up in under 30 minutes.</p>
+
+<h3>"Digital transformation is expensive"</h3>
+<p>Orivraa starts free. Upload 15 products, get a marketplace listing, digital billing, and customer chat — all for ₹0. Upgrade only when your business grows.</p>
+
+<h2>Start Your Digital Journey Today</h2>
+
+<p>The best time to digitise your jewellery shop was 5 years ago. The second best time is today. <a href="/auth/register">Sign up for Orivraa free</a> and take the first step.</p>
+`,
+  },
+
+  /* ── Post 8 ────────────────────────────────────────────────── */
+  {
+    slug: "how-to-manage-gold-inventory-jewellery-store",
+    title:
+      "How to Manage Gold Inventory in a Jewellery Store: Best Practices for 2026",
+    description:
+      "Complete guide to managing gold inventory in a jewellery store. Weight tracking, purity management, karigar allotment, stock valuation, and loss prevention. Practical tips for gold shop owners.",
+    date: "2026-02-10",
+    author: "Orivraa Team",
+    authorRole: "Industry Expert",
+    readTime: "9 min read",
+    category: "Business Guide",
+    tags: [
+      "gold inventory",
+      "inventory management",
+      "jewellery store",
+      "gold tracking",
+      "karigar management",
+      "stock valuation",
+    ],
+    content: `
+<p>Gold inventory management is the backbone of any jewellery business. Unlike retail goods where you count units, gold must be tracked by <strong>weight, purity, and value</strong> — and the value changes every single day.</p>
+
+<p>Poor inventory management leads to theft, inaccurate valuation, tax discrepancies, and lost profits. This guide covers the best practices for managing gold inventory in a modern jewellery store.</p>
+
+<h2>The Unique Challenges of Gold Inventory</h2>
+
+<p>Gold inventory management is fundamentally different from any other retail inventory:</p>
+
+<ul>
+<li><strong>Weight accuracy matters to the milligram</strong> — A 0.5-gram discrepancy on a 22K gold piece at ₹7,200/gram = ₹3,600 loss</li>
+<li><strong>Purity must be tracked per item</strong> — You may have 24K, 22K, 18K, and 14K gold in the same display case</li>
+<li><strong>Value fluctuates daily</strong> — Today's inventory valuation may be different from tomorrow's by lakhs</li>
+<li><strong>Karigar allotments create "float" stock</strong> — Raw gold with artisans isn't in your display but is still your inventory</li>
+<li><strong>Stones add complexity</strong> — Gross weight includes stones, net weight is the actual metal content</li>
+</ul>
+
+<h2>Best Practice #1: Track Gross and Net Weight Separately</h2>
+
+<p>Every piece of jewellery should have two weight records:</p>
+
+<ul>
+<li><strong>Gross weight</strong> — Total weight of the finished piece (metal + stones + other materials)</li>
+<li><strong>Net weight</strong> — Weight of the precious metal only (what determines the metal value)</li>
+</ul>
+
+<p>The difference is the <strong>stone weight</strong>, which has its own value based on type, quality, and carat. Accurate separation ensures correct pricing and inventory valuation.</p>
+
+<h2>Best Practice #2: Categorise by Purity</h2>
+
+<p>Never mix purity grades in your tracking. Maintain separate inventory registers or categories for:</p>
+
+<ul>
+<li><strong>24K (99.9% pure)</strong> — Coins, bars, investment pieces</li>
+<li><strong>22K (91.6% pure)</strong> — Traditional Indian/Nepali jewellery</li>
+<li><strong>18K (75% pure)</strong> — Contemporary designs, diamond settings</li>
+<li><strong>14K (58.3% pure)</strong> — Affordable everyday jewellery</li>
+</ul>
+
+<p>Your total gold stock should be reportable by purity grade — how much 22K gold do you have in total? How much 18K? This is critical for purchasing decisions and financial reporting.</p>
+
+<h2>Best Practice #3: Implement Barcode or HUID Tracking</h2>
+
+<p>Every piece should have a unique identifier — either a barcode label you generate or the HUID (Hallmark Unique Identification) number assigned by the hallmarking centre.</p>
+
+<p><strong>Benefits of individual tracking:</strong></p>
+<ul>
+<li>Instant product lookup during billing (scan and bill in seconds)</li>
+<li>Theft detection — know exactly which pieces are missing</li>
+<li>Hallmark compliance (mandatory in India since 2023)</li>
+<li>Customer confidence — verifiable authenticity</li>
+</ul>
+
+<h2>Best Practice #4: Manage Karigar Allotments Rigorously</h2>
+
+<p>When you issue raw gold to karigars (artisans), that gold is still your asset. Track meticulously:</p>
+
+<ul>
+<li><strong>Gold issued</strong> — Date, weight, purity, and artisan name</li>
+<li><strong>Gold returned</strong> — Finished pieces weight + scrap/wastage weight</li>
+<li><strong>Wastage</strong> — Normal wastage is 2-5% depending on the design. Anything above should be investigated.</li>
+<li><strong>Outstanding balance</strong> — How much gold is currently with each karigar?</li>
+</ul>
+
+<p><a href="/jewellery-inventory-software">Orivraa's karigar management</a> automates this tracking, calculating balances and flagging unusual wastage automatically.</p>
+
+<h2>Best Practice #5: Daily Physical Verification</h2>
+
+<p>For high-value inventory like gold, daily verification of display stock is essential:</p>
+
+<ul>
+<li><strong>Morning opening</strong> — Verify display case items match the digital inventory count</li>
+<li><strong>Evening closing</strong> — Reconcile: opening stock − sold items + newly added items = closing stock</li>
+<li><strong>Weight check</strong> — Periodically weigh display categories and compare against the system</li>
+</ul>
+
+<p>With digital inventory software, this process is faster — scan barcodes and the system flags any mismatches.</p>
+
+<h2>Best Practice #6: Real-Time Stock Valuation</h2>
+
+<p>Your gold inventory value changes daily with market rates. Your system should calculate:</p>
+
+<ul>
+<li><strong>Total gold stock by weight and purity</strong> — e.g., 2.5 kg of 22K gold, 800g of 18K gold</li>
+<li><strong>Current market value</strong> — Based on today's gold rate per gram for each purity</li>
+<li><strong>Cost vs market value</strong> — Did your inventory appreciate or depreciate since purchase?</li>
+<li><strong>Stock ageing</strong> — Which items have been in stock the longest? (slow-moving stock ties up capital)</li>
+</ul>
+
+<h2>Best Practice #7: Maintain an Audit Trail</h2>
+
+<p>Every inventory movement should be logged:</p>
+
+<ul>
+<li>New stock additions (with purchase details)</li>
+<li>Sales and removals (with invoice reference)</li>
+<li>Transfers between branches or display cases</li>
+<li>Karigar issuances and returns</li>
+<li>Adjustments (with reason and authorisation)</li>
+</ul>
+
+<p>This audit trail is essential for loss prevention, tax compliance, and dispute resolution.</p>
+
+<h2>Common Gold Inventory Mistakes to Avoid</h2>
+
+<ul>
+<li><strong>Mixing gross and net weight</strong> — Leads to incorrect valuation and pricing</li>
+<li><strong>Not tracking karigar wastage</strong> — Can result in significant gold loss over time</li>
+<li><strong>Monthly instead of daily reconciliation</strong> — Theft or discrepancies go unnoticed for weeks</li>
+<li><strong>Using general inventory software</strong> — No purity tracking means inaccurate stock reports</li>
+<li><strong>Paper-based systems</strong> — Prone to errors, slow, and difficult to audit</li>
+</ul>
+
+<h2>The Right Software Makes It Easy</h2>
+
+<p>All of these best practices become simple with the right <a href="/jewellery-inventory-software">jewellery inventory software</a>. Orivraa tracks weight, purity, karigars, and valuations automatically — so you can focus on your customers and designs instead of spreadsheets.</p>
+
+<p><a href="/auth/register">Start free with Orivraa</a> — manage up to 15 products with full inventory tracking at no cost.</p>
+`,
+  },
+
+  /* ── Post 9 ────────────────────────────────────────────────── */
+  {
+    slug: "jewellery-shop-billing-software-guide",
+    title:
+      "Jewellery Shop Billing Software Guide: Everything You Need to Know in 2026",
+    description:
+      "Complete guide to jewellery shop billing software. How to calculate making charges, handle old gold exchange, generate GST/VAT invoices, and choose the right billing software for your gold shop.",
+    date: "2026-01-25",
+    author: "Orivraa Team",
+    authorRole: "Product Expert",
+    readTime: "10 min read",
+    category: "Software Guide",
+    tags: [
+      "jewellery billing",
+      "billing software",
+      "GST billing",
+      "making charges",
+      "old gold exchange",
+      "jewellery invoicing",
+    ],
+    content: `
+<p>Billing in a jewellery shop is nothing like billing in a grocery store or clothing boutique. When a customer buys a gold necklace, the bill involves <strong>metal weight, purity rate, making charges, stone charges, old gold exchange, and tax calculations</strong> — all in a single transaction.</p>
+
+<p>This guide explains how jewellery billing works, what features to look for in billing software, and how to choose the right solution for your shop.</p>
+
+<h2>How Jewellery Billing Works</h2>
+
+<p>A typical jewellery invoice has these components:</p>
+
+<h3>1. Metal Value Calculation</h3>
+<p>Metal value = <strong>Net weight × Purity rate per gram</strong></p>
+<p>Example: A 22K gold necklace weighing 15 grams net weight at ₹7,200/gram (22K rate) = ₹1,08,000</p>
+
+<h3>2. Making Charges</h3>
+<p>Making charges cover the artisan's labour. They can be calculated as:</p>
+<ul>
+<li><strong>Per gram:</strong> ₹800/gram × 15g = ₹12,000</li>
+<li><strong>Per piece:</strong> Flat ₹15,000 for the entire piece</li>
+<li><strong>Percentage:</strong> 15% of metal value = ₹16,200</li>
+</ul>
+
+<h3>3. Stone Charges</h3>
+<p>If the piece contains gemstones (diamonds, rubies, emeralds), each stone is priced separately based on type, carat, clarity, and cut.</p>
+
+<h3>4. Tax Calculation</h3>
+<p>In India:</p>
+<ul>
+<li>Gold/silver value: <strong>3% GST</strong></li>
+<li>Making charges: <strong>5% GST</strong></li>
+<li>Diamond value: <strong>0.25% GST</strong></li>
+</ul>
+
+<h3>5. Old Gold Exchange (Optional)</h3>
+<p>If the customer trades in old gold:</p>
+<ul>
+<li>Weigh and test the old gold</li>
+<li>Calculate value at current rate × purity</li>
+<li>Deduct from the total bill</li>
+</ul>
+
+<h3>6. Final Invoice</h3>
+<p>The invoice shows all components: metal value + making charges + stone charges + tax − old gold exchange = <strong>amount payable</strong>.</p>
+
+<h2>Essential Features in Jewellery Billing Software</h2>
+
+<p>When evaluating billing software for your jewellery shop, ensure it supports:</p>
+
+<table>
+<thead>
+<tr><th>Feature</th><th>Why It Matters</th></tr>
+</thead>
+<tbody>
+<tr><td>Weight-based pricing</td><td>Jewellery is priced by weight, not unit price</td></tr>
+<tr><td>Purity calculations</td><td>Different prices for 24K, 22K, 18K, 14K</td></tr>
+<tr><td>Making charges (per gram/piece/%)</td><td>Different products have different making charge structures</td></tr>
+<tr><td>Stone/gem charges</td><td>Separate pricing for diamonds and gemstones</td></tr>
+<tr><td>Old gold exchange</td><td>Very common in jewellery — must be on the invoice</td></tr>
+<tr><td>GST/VAT auto-calculation</td><td>3% on gold, 5% on making — automatic splitting</td></tr>
+<tr><td>Barcode/HUID scanning</td><td>Fast billing at the counter</td></tr>
+<tr><td>Multiple payment methods</td><td>Cash + card + UPI + old gold in one transaction</td></tr>
+<tr><td>Invoice printing</td><td>Professional templates with your branding</td></tr>
+<tr><td>Returns and credit notes</td><td>Handle exchanges and refunds properly</td></tr>
+</tbody>
+</table>
+
+<h2>Choosing the Right Billing Software</h2>
+
+<h3>Option 1: Orivraa (Recommended)</h3>
+<p><strong>Best for:</strong> Modern jewellery shops wanting cloud-based billing with online selling capabilities</p>
+<p>Orivraa's billing module handles all jewellery-specific calculations — weight-based pricing, making charges, old gold exchange, and multi-country tax compliance. Plus, it integrates with inventory, customer management, and the online marketplace. <strong>Free plan available.</strong></p>
+
+<h3>Option 2: Marg ERP</h3>
+<p><strong>Best for:</strong> Large Indian shops needing comprehensive desktop ERP with karigar and RFID features</p>
+<p>Proven solution with deep jewellery features, but desktop-only, expensive, and no online selling integration.</p>
+
+<h3>Option 3: Vyapar</h3>
+<p><strong>Best for:</strong> Very small shops needing basic GST billing only</p>
+<p>Easy to use but lacks jewellery-specific features like weight-based pricing and making charges.</p>
+
+<h2>Common Billing Mistakes in Jewellery Shops</h2>
+
+<ul>
+<li><strong>Rounding weight</strong> — Always bill to 2 decimal places (grams). Rounding costs you money on hundreds of transactions.</li>
+<li><strong>Wrong GST rate</strong> — Gold is 3%, making charges are 5%. Mixing these up leads to tax shortfall or overpayment.</li>
+<li><strong>Not recording old gold exchange properly</strong> — This needs proper documentation for tax purposes. The exchange value must appear on the invoice.</li>
+<li><strong>No invoice numbering sequence</strong> — GST requires sequential invoice numbers. Gaps can trigger audit scrutiny.</li>
+<li><strong>Handwritten bills</strong> — Illegible, error-prone, and not accepted by tax authorities for digital filing.</li>
+</ul>
+
+<h2>Getting Started with Digital Billing</h2>
+
+<p>Switching from manual to digital billing is easier than you think. With <a href="/jewellery-shop-billing-software">Orivraa's billing software</a>:</p>
+
+<ol>
+<li>Sign up free (2 minutes)</li>
+<li>Add your products with weight and purity</li>
+<li>Configure your tax settings (automatic for India, Nepal, UAE, UK, USA)</li>
+<li>Start billing — scan barcodes or search products</li>
+</ol>
+
+<p><a href="/auth/register">Try Orivraa billing free</a> — generate professional invoices with making charges, old gold exchange, and GST compliance from day one.</p>
+`,
+  },
+
+  /* ── Post 10 ───────────────────────────────────────────────── */
+  {
+    slug: "how-jewellery-pricing-works",
+    title:
+      "How Jewellery Pricing Works: The Complete Guide to Gold, Diamond & Silver Pricing",
+    description:
+      "Learn how jewellery pricing works — from gold rate calculations and making charges to diamond pricing (4Cs), silver pricing, and international currency differences. Essential guide for buyers and jewellers.",
+    date: "2026-01-15",
+    author: "Orivraa Team",
+    authorRole: "Industry Expert",
+    readTime: "12 min read",
+    category: "Industry Guide",
+    tags: [
+      "jewellery pricing",
+      "gold pricing",
+      "diamond pricing",
+      "making charges",
+      "gold rate",
+      "jewellery buying guide",
+    ],
+    content: `
+<p>Jewellery pricing confuses many buyers — and even some shop owners get it wrong. Understanding how jewellery is priced helps buyers make informed decisions and helps sellers price their products competitively.</p>
+
+<p>This guide breaks down the pricing structure for <strong>gold, diamond, and silver jewellery</strong>, explains making charges, and covers how prices vary across countries.</p>
+
+<h2>Gold Jewellery Pricing</h2>
+
+<p>Gold jewellery pricing has three main components:</p>
+
+<h3>1. Gold Metal Value</h3>
+<p><strong>Formula:</strong> Net weight (grams) × Gold rate per gram (for specific purity)</p>
+
+<p>Gold rates vary by purity:</p>
+<ul>
+<li><strong>24K (99.9% pure)</strong> — The benchmark rate. Used for coins and bars. Example: ₹7,800/gram</li>
+<li><strong>22K (91.6% pure)</strong> — Most common for Indian/Nepali jewellery. Rate = 24K rate × 0.916. Example: ₹7,143/gram</li>
+<li><strong>18K (75% pure)</strong> — Common for Western-style jewellery and diamond settings. Rate = 24K rate × 0.75. Example: ₹5,850/gram</li>
+<li><strong>14K (58.3% pure)</strong> — Affordable everyday jewellery. Rate = 24K rate × 0.583. Example: ₹4,547/gram</li>
+</ul>
+
+<p><strong>Important:</strong> The "net weight" is the weight of gold only, excluding stones. If a ring weighs 8 grams total but has a 0.5-gram diamond, the gold net weight is 7.5 grams.</p>
+
+<h3>2. Making Charges</h3>
+<p>Making charges (also called labour charges or wastage charges) cover the artisan's craftsmanship. They vary significantly based on design complexity:</p>
+
+<table>
+<thead>
+<tr><th>Design Type</th><th>Typical Making Charges (India)</th></tr>
+</thead>
+<tbody>
+<tr><td>Plain gold chain</td><td>₹200–400/gram</td></tr>
+<tr><td>Simple bangles</td><td>₹300–600/gram</td></tr>
+<tr><td>Standard necklace</td><td>₹500–800/gram</td></tr>
+<tr><td>Intricate temple jewellery</td><td>₹800–1,500/gram</td></tr>
+<tr><td>Kundan/Meenakari work</td><td>₹1,000–2,500/gram</td></tr>
+<tr><td>Custom handcrafted piece</td><td>₹1,500–5,000/gram</td></tr>
+</tbody>
+</table>
+
+<p>Some shops charge making as a percentage of gold value (8-25%) or a flat fee per piece for standardised designs.</p>
+
+<h3>3. Stone Charges</h3>
+<p>If the piece contains gemstones, they are priced separately. Diamonds are priced by the 4Cs (see below). Coloured stones (ruby, emerald, sapphire) are priced based on origin, quality, and carat weight.</p>
+
+<h3>Gold Pricing Example</h3>
+<p>A 22K gold necklace, 20 grams net weight, with making charges of ₹600/gram:</p>
+<ul>
+<li>Gold value: 20g × ₹7,143/gram = <strong>₹1,42,860</strong></li>
+<li>Making charges: 20g × ₹600/gram = <strong>₹12,000</strong></li>
+<li>Sub-total: ₹1,54,860</li>
+<li>GST (3% on gold): ₹4,286</li>
+<li>GST (5% on making): ₹600</li>
+<li><strong>Total: ₹1,59,746</strong></li>
+</ul>
+
+<h2>Diamond Jewellery Pricing</h2>
+
+<p>Diamond pricing is based on the <strong>4Cs</strong>:</p>
+
+<h3>1. Carat (Weight)</h3>
+<p>One carat = 0.2 grams. Larger diamonds are exponentially more expensive — a 2-carat diamond isn't just twice the price of a 1-carat; it could be 4-5 times more because larger diamonds are rarer.</p>
+
+<h3>2. Clarity</h3>
+<p>How "clean" the diamond is internally. Grades from FL (Flawless) to I3 (Included). Most jewellery uses VS to SI grade, which offers the best value — inclusions aren't visible to the naked eye.</p>
+
+<h3>3. Colour</h3>
+<p>Diamond colour grades from D (colourless, most expensive) to Z (yellow tint). D-F are "colourless" and command premium prices. G-J are "near colourless" and offer excellent value.</p>
+
+<h3>4. Cut</h3>
+<p>How well the diamond is cut determines its sparkle. Grades from Excellent to Poor. An "Excellent" cut diamond will sparkle more than a "Good" cut, even if other factors are the same.</p>
+
+<h3>Diamond Price Ranges (Approximate)</h3>
+<table>
+<thead>
+<tr><th>Size</th><th>VS-SI / G-H Colour</th><th>VVS-VS / D-F Colour</th></tr>
+</thead>
+<tbody>
+<tr><td>0.25 carat</td><td>₹15,000–30,000</td><td>₹30,000–60,000</td></tr>
+<tr><td>0.50 carat</td><td>₹40,000–80,000</td><td>₹80,000–1,50,000</td></tr>
+<tr><td>1.0 carat</td><td>₹2,00,000–4,00,000</td><td>₹4,00,000–10,00,000</td></tr>
+<tr><td>2.0 carat</td><td>₹8,00,000–15,00,000</td><td>₹15,00,000–40,00,000+</td></tr>
+</tbody>
+</table>
+
+<h2>Silver Jewellery Pricing</h2>
+
+<p>Silver jewellery pricing is simpler than gold:</p>
+
+<ul>
+<li><strong>Silver rate</strong> — Currently around ₹85-95/gram (fluctuates daily)</li>
+<li><strong>Purity</strong> — 999 (fine silver) or 925 (sterling silver, 92.5% pure)</li>
+<li><strong>Making charges</strong> — Usually a higher percentage of metal value compared to gold (since silver is cheaper, making is proportionally more expensive)</li>
+</ul>
+
+<p>Many silver pieces are priced as a "per piece" rate rather than weight-based, as the metal cost is relatively low and the craftsmanship is the dominant value.</p>
+
+<h2>Why Prices Differ Between Countries</h2>
+
+<p>Jewellery prices vary significantly by country due to:</p>
+
+<ul>
+<li><strong>Import duties</strong> — India charges ~15% on gold imports; Nepal and UAE have lower duties</li>
+<li><strong>Tax rates</strong> — GST (India: 3%), VAT (UK: 20%), Sales Tax (USA: varies by state)</li>
+<li><strong>Making charge standards</strong> — Italian and European making charges are much higher due to labour costs</li>
+<li><strong>Currency exchange</strong> — Gold is priced globally in USD; local prices depend on exchange rates</li>
+<li><strong>Hallmarking requirements</strong> — Mandatory hallmarking adds cost but ensures quality</li>
+</ul>
+
+<p>This is why <a href="/jewellery-shop-software">Orivraa supports multi-currency pricing</a> — jewellers can set prices in NPR, INR, AED, GBP, USD, and EUR with automatic tax calculations for each market.</p>
+
+<h2>Tips for Jewellery Buyers</h2>
+
+<ol>
+<li><strong>Always ask for the gold rate per gram</strong> — Don't accept a "per piece" price without knowing the weight and rate breakdown</li>
+<li><strong>Compare making charges</strong> — This is where you can negotiate. Gold rate is fixed, making charges aren't.</li>
+<li><strong>Check the weight on a certified scale</strong> — The shop should weigh the item in front of you</li>
+<li><strong>Verify hallmark/HUID</strong> — Ensures purity is as claimed</li>
+<li><strong>Keep your invoice</strong> — Essential for exchange, returns, and insurance claims</li>
+</ol>
+
+<h2>Tips for Jewellery Sellers</h2>
+
+<ol>
+<li><strong>Be transparent about pricing</strong> — Show the gold rate, weight, making charges, and taxes separately. Transparent pricing builds trust.</li>
+<li><strong>Use software for accurate billing</strong> — Manual calculations lead to errors that cost you or the customer money</li>
+<li><strong>Display today's rates prominently</strong> — In your shop and on your digital presence</li>
+<li><strong>Standardise making charges</strong> — Have a clear making charge structure by product category</li>
+</ol>
+
+<p>Need help pricing your jewellery correctly? <a href="/jewellery-shop-billing-software">Orivraa's billing software</a> handles all these calculations automatically. <a href="/auth/register">Start free</a>.</p>
+`,
+  },];
 
 /* ────────────────────────────────────────────────────────────── */
 /*  Helper                                                        */

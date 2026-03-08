@@ -1,5 +1,12 @@
-import { IsString, IsOptional, IsArray, IsBoolean, IsNumber, IsEnum } from 'class-validator';
-import { CurrencyCode, WeightUnit, PaymentMethod } from '@prisma/client';
+import { CurrencyCode, PaymentMethod, WeightUnit } from "@prisma/client";
+import {
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from "class-validator";
 
 export class UpdateMarketConfigDto {
   @IsOptional()

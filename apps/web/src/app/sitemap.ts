@@ -57,6 +57,36 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
+      url: `${BASE_URL}/jewellery-store-management-software`,
+      lastModified: new Date("2026-03-01"),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
+      url: `${BASE_URL}/jewellery-pos-software`,
+      lastModified: new Date("2026-03-01"),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
+      url: `${BASE_URL}/jewellery-inventory-software`,
+      lastModified: new Date("2026-03-01"),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
+      url: `${BASE_URL}/jewellery-ecommerce-software`,
+      lastModified: new Date("2026-03-01"),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
+      url: `${BASE_URL}/jewellery-shop-billing-software`,
+      lastModified: new Date("2026-03-01"),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
       url: `${BASE_URL}/help`,
       lastModified: new Date("2025-02-01"),
       changeFrequency: "monthly",
@@ -139,7 +169,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const blogIndex: MetadataRoute.Sitemap = [
     {
       url: `${BASE_URL}/blog`,
-      lastModified: new Date("2025-03-01"), // update when you publish new blog posts
+      lastModified: new Date("2026-03-01"), // update when you publish new blog posts
       changeFrequency: "weekly",
       priority: 0.8,
     },
