@@ -3,6 +3,8 @@
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { catalogueApi, rfqApi } from "@/lib/api";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import {
   ChevronLeft,
   ChevronRight,
@@ -34,6 +36,7 @@ function WalkInRfqModal({
 }) {
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+  const t = useT();
 
   // Step 1 — Items
   const [selectedItems, setSelectedItems] = useState<
@@ -78,7 +81,7 @@ function WalkInRfqModal({
     if (selectedItems.length === 0) {
       toast({
         variant: "destructive",
-        title: "Please select at least one item",
+        title: t("Please select at least one item"),
       });
       return;
     }
@@ -116,7 +119,7 @@ function WalkInRfqModal({
     } catch (err: any) {
       toast({
         variant: "destructive",
-        title: err.response?.data?.message || "Failed to create walk-in RFQ",
+        title: err.response?.data?.message || t("Failed to create walk-in RFQ"),
       });
     } finally {
       setSubmitting(false);
@@ -135,15 +138,15 @@ function WalkInRfqModal({
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <div>
             <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-              Create Walk-in RFQ
+              <T>Create Walk-in RFQ</T>
             </h2>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Step {step} of 3 —{" "}
+              {t("Step")} {step} {t("of")} 3 —{" "}
               {step === 1
-                ? "Select Items"
+                ? t("Select Items")
                 : step === 2
-                  ? "Request Details"
-                  : "Customer Info"}
+                  ? t("Request Details")
+                  : t("Customer Info")}
             </p>
           </div>
           <button
@@ -169,11 +172,11 @@ function WalkInRfqModal({
           {step === 1 && (
             <>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Selected items from showroom session:
+                <T>Selected items from showroom session:</T>
               </p>
               {selectedItems.length === 0 && (
                 <p className="text-sm text-gray-400 text-center py-6">
-                  No items selected.
+                  <T>No items selected.</T>
                 </p>
               )}
               {selectedItems.map((si, idx) => (
@@ -254,13 +257,13 @@ function WalkInRfqModal({
           {step === 2 && (
             <>
               <div>
-                <label className={labelClass}>Jewellery Type</label>
+                <label className={labelClass}><T>Jewellery Type</T></label>
                 <select
                   value={jewelleryType}
                   onChange={(e) => setJewelleryType(e.target.value)}
                   className={inputClass}
                 >
-                  <option value="">Select type (optional)</option>
+                  <option value="">{t("Select type (optional)")}</option>
                   {[
                     "RING",
                     "NECKLACE",
@@ -272,16 +275,16 @@ function WalkInRfqModal({
                     "ANKLET",
                     "BROOCH",
                     "OTHER",
-                  ].map((t) => (
-                    <option key={t} value={t}>
-                      {t.charAt(0) + t.slice(1).toLowerCase()}
+                  ].map((type) => (
+                    <option key={type} value={type}>
+                      {type.charAt(0) + type.slice(1).toLowerCase()}
                     </option>
                   ))}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={labelClass}>Budget Min (NPR)</label>
+                  <label className={labelClass}><T>Budget Min (NPR)</T></label>
                   <input
                     type="number"
                     value={budgetMin}
@@ -291,7 +294,7 @@ function WalkInRfqModal({
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Budget Max (NPR)</label>
+                  <label className={labelClass}><T>Budget Max (NPR)</T></label>
                   <input
                     type="number"
                     value={budgetMax}
@@ -302,7 +305,7 @@ function WalkInRfqModal({
                 </div>
               </div>
               <div>
-                <label className={labelClass}>Timeline (days)</label>
+                <label className={labelClass}><T>Timeline (days)</T></label>
                 <input
                   type="number"
                   value={deadlineDays}
@@ -312,21 +315,21 @@ function WalkInRfqModal({
                 />
               </div>
               <div>
-                <label className={labelClass}>Notes</label>
+                <label className={labelClass}><T>Notes</T></label>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={2}
-                  placeholder="Special instructions, engraving, etc."
+                  placeholder={t("Special instructions, engraving, etc.")}
                   className={inputClass}
                 />
               </div>
               <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2">
-                Measurements (optional)
+                <T>Measurements (optional)</T>
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={labelClass}>Ring Size</label>
+                  <label className={labelClass}><T>Ring Size</T></label>
                   <input
                     value={measurements.ringSize}
                     onChange={(e) =>
@@ -340,7 +343,7 @@ function WalkInRfqModal({
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Wrist Size</label>
+                  <label className={labelClass}><T>Wrist Size</T></label>
                   <input
                     value={measurements.wristSize}
                     onChange={(e) =>
@@ -354,7 +357,7 @@ function WalkInRfqModal({
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Chain Length</label>
+                  <label className={labelClass}><T>Chain Length</T></label>
                   <input
                     value={measurements.chainLength}
                     onChange={(e) =>
@@ -368,7 +371,7 @@ function WalkInRfqModal({
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Bangle Size</label>
+                  <label className={labelClass}><T>Bangle Size</T></label>
                   <input
                     value={measurements.bangleSize}
                     onChange={(e) =>
@@ -388,34 +391,34 @@ function WalkInRfqModal({
           {step === 3 && (
             <>
               <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-xs text-amber-700 dark:text-amber-400">
-                This info is stored for shop internal follow-up only. It is
-                never shared in platform chat or visible to buyers.
+                <T>This info is stored for shop internal follow-up only. It is
+                never shared in platform chat or visible to buyers.</T>
               </div>
               <div>
-                <label className={labelClass}>Customer Name</label>
+                <label className={labelClass}><T>Customer Name</T></label>
                 <input
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="Optional"
+                  placeholder={t("Optional")}
                   className={inputClass}
                 />
               </div>
               <div>
-                <label className={labelClass}>Customer Phone</label>
+                <label className={labelClass}><T>Customer Phone</T></label>
                 <input
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  placeholder="Optional"
+                  placeholder={t("Optional")}
                   className={inputClass}
                 />
               </div>
               <div>
-                <label className={labelClass}>Internal Notes</label>
+                <label className={labelClass}><T>Internal Notes</T></label>
                 <textarea
                   value={customerNotes}
                   onChange={(e) => setCustomerNotes(e.target.value)}
                   rows={2}
-                  placeholder="Any internal notes about this customer"
+                  placeholder={t("Any internal notes about this customer")}
                   className={inputClass}
                 />
               </div>
@@ -429,7 +432,7 @@ function WalkInRfqModal({
             onClick={() => (step > 1 ? setStep(step - 1) : onClose())}
             className="px-4 py-2 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
           >
-            {step > 1 ? "Back" : "Cancel"}
+            {step > 1 ? t("Back") : t("Cancel")}
           </button>
           {step < 3 ? (
             <button
@@ -437,7 +440,7 @@ function WalkInRfqModal({
               disabled={step === 1 && selectedItems.length === 0}
               className="px-5 py-2 text-sm font-medium rounded-lg bg-gold-600 text-white hover:bg-gold-700 disabled:opacity-50"
             >
-              Next
+              <T>Next</T>
             </button>
           ) : (
             <button
@@ -445,7 +448,7 @@ function WalkInRfqModal({
               disabled={submitting || selectedItems.length === 0}
               className="px-5 py-2 text-sm font-medium rounded-lg bg-gold-600 text-white hover:bg-gold-700 disabled:opacity-50"
             >
-              {submitting ? "Creating..." : "Create Walk-in RFQ"}
+              {submitting ? t("Creating...") : t("Create Walk-in RFQ")}
             </button>
           )}
         </div>
@@ -512,10 +515,10 @@ function PasswordGate({ onUnlock }: { onUnlock: (token: string) => void }) {
       <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-lg p-8 text-center space-y-4">
         <Lock className="h-10 w-10 mx-auto text-gold-500" />
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          This catalogue is protected
+          <T>This catalogue is protected</T>
         </h2>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Enter the password to view items.
+          <T>Enter the password to view items.</T>
         </p>
         <input
           type="password"
@@ -531,7 +534,7 @@ function PasswordGate({ onUnlock }: { onUnlock: (token: string) => void }) {
           disabled={loading || !pw}
           className="w-full py-2.5 rounded-lg bg-gold-600 text-white text-sm font-medium hover:bg-gold-700 disabled:opacity-50"
         >
-          {loading ? "Unlocking..." : "Unlock Catalogue"}
+          {loading ? <T>Unlocking...</T> : <T>Unlock Catalogue</T>}
         </button>
       </div>
     </div>
@@ -551,6 +554,7 @@ function ShowroomView({
   const [idx, setIdx] = useState(0);
   const [sessionItems, setSessionItems] = useState<CatalogueItemPublic[]>([]);
   const [showSession, setShowSession] = useState(false);
+  const t = useT();
   const item = items[idx];
 
   const prev = () => setIdx((i) => (i > 0 ? i - 1 : items.length - 1));
@@ -605,7 +609,7 @@ function ShowroomView({
           />
         ) : (
           <div className="w-64 h-64 bg-gray-800 rounded-xl flex items-center justify-center text-gray-600">
-            No Image
+            <T>No Image</T>
           </div>
         )}
 
@@ -657,7 +661,7 @@ function ShowroomView({
                       : "border-gray-600 text-gray-500 line-through"
                   }`}
                 >
-                  {v.size} {v.stock > 0 ? "" : "(out)"}
+                  {v.size} {v.stock > 0 ? "" : t("(out)")}
                 </span>
               ))}
             </div>
@@ -678,7 +682,7 @@ function ShowroomView({
             ) : (
               <Plus className="h-4 w-4" />
             )}
-            {inSession(item) ? "Remove from Session" : "Add to Session"}
+            {inSession(item) ? t("Remove from Session") : t("Add to Session")}
           </button>
         </div>
       </div>
@@ -688,7 +692,7 @@ function ShowroomView({
         <div className="absolute top-0 right-0 bottom-0 w-80 bg-gray-900/95 backdrop-blur-lg z-20 flex flex-col border-l border-gray-800">
           <div className="flex items-center justify-between p-4 border-b border-gray-800">
             <h3 className="text-white font-semibold">
-              Session ({sessionItems.length})
+              <T>Session</T> ({sessionItems.length})
             </h3>
             <button
               onClick={() => setShowSession(false)}
@@ -748,7 +752,7 @@ function ShowroomView({
                 className="w-full py-3 rounded-xl bg-gold-600 text-white text-sm font-semibold hover:bg-gold-700 flex items-center justify-center gap-2"
               >
                 <ClipboardList className="h-4 w-4" />
-                Create Walk-in RFQ
+                <T>Create Walk-in RFQ</T>
               </button>
             </div>
           )}
@@ -773,6 +777,7 @@ export default function PublicCataloguePage() {
   const [token, setToken] = useState<string | null>(null);
   const [showShowroom, setShowShowroom] = useState(false);
   const [error, setError] = useState("");
+  const t = useT();
 
   const isOwner = useMemo(() => {
     if (!user || !catalogue) return false;
@@ -801,9 +806,9 @@ export default function PublicCataloguePage() {
       await fetchItems(storedToken || undefined);
     } catch (err: any) {
       if (err.response?.status === 404) {
-        setError("Catalogue not found or has expired.");
+        setError(t("Catalogue not found or has expired."));
       } else {
-        setError("Something went wrong.");
+        setError(t("Something went wrong."));
       }
     } finally {
       setLoading(false);
@@ -812,13 +817,13 @@ export default function PublicCataloguePage() {
 
   const fetchItems = async (tkn?: string) => {
     try {
-      const t = tkn || token || undefined;
-      const res = await catalogueApi.getPublicItems(slug, t);
+      const authTkn = tkn || token || undefined;
+      const res = await catalogueApi.getPublicItems(slug, authTkn);
       setItems(
         (res.data || []).filter((i: CatalogueItemPublic) => !i.isHidden),
       );
     } catch {
-      setError("Failed to load items.");
+      setError(t("Failed to load items."));
     }
   };
 
@@ -859,12 +864,12 @@ export default function PublicCataloguePage() {
     }
     try {
       await catalogueApi.messageShop(slug);
-      toast({ title: "Conversation started! Check your messages." });
+      toast({ title: t("Conversation started! Check your messages.") });
       router.push("/dashboard/customer/messages");
     } catch (err: any) {
       toast({
         variant: "destructive",
-        title: err.response?.data?.message || "Failed to start conversation",
+        title: err.response?.data?.message || t("Failed to start conversation"),
       });
     }
   };
@@ -880,11 +885,11 @@ export default function PublicCataloguePage() {
         qty: 1,
       }));
       await catalogueApi.requestQuote(slug, { items: quoteItems });
-      toast({ title: "Quote requested! The shop will respond shortly." });
+      toast({ title: t("Quote requested! The shop will respond shortly.") });
     } catch (err: any) {
       toast({
         variant: "destructive",
-        title: err.response?.data?.message || "Failed to request quote",
+        title: err.response?.data?.message || t("Failed to request quote"),
       });
     }
   };
@@ -956,7 +961,7 @@ export default function PublicCataloguePage() {
             onSuccess={(rfqId) => {
               handleWalkInRfqClose();
               toast({
-                title: `Walk-in RFQ created!${rfqId ? ` ID: ${rfqId.slice(0, 8)}...` : ""}`,
+                title: `${t("Walk-in RFQ created!")}${rfqId ? ` ID: ${rfqId.slice(0, 8)}...` : ""}`,
               });
               router.push(`/dashboard/shop/rfqs`);
             }}
@@ -1000,14 +1005,14 @@ export default function PublicCataloguePage() {
               className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
             >
               <MessageSquare className="h-4 w-4" />
-              Message Shop
+              <T>Message Shop</T>
             </button>
             <button
               onClick={handleRequestQuote}
               className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-gold-600 text-white hover:bg-gold-700"
             >
               <FileText className="h-4 w-4" />
-              Request Quote
+              <T>Request Quote</T>
             </button>
             {catalogue.mode === "SHOWROOM" && (
               <button
@@ -1015,7 +1020,7 @@ export default function PublicCataloguePage() {
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-purple-600 text-white hover:bg-purple-700"
               >
                 <Eye className="h-4 w-4" />
-                Showroom Mode
+                <T>Showroom Mode</T>
               </button>
             )}
           </div>
@@ -1026,14 +1031,14 @@ export default function PublicCataloguePage() {
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            {items.length} items
+            {items.length} <T>items</T>
           </p>
         </div>
 
         {items.length === 0 ? (
           <div className="text-center py-16 text-gray-500 dark:text-gray-400">
             <ShoppingBag className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p>This catalogue has no items yet.</p>
+            <p><T>This catalogue has no items yet.</T></p>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
@@ -1058,7 +1063,7 @@ export default function PublicCataloguePage() {
                   {item.inventoryItem.variants &&
                     item.inventoryItem.variants.length > 0 && (
                       <div className="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full backdrop-blur-sm">
-                        {item.inventoryItem.variants.length} sizes
+                        {item.inventoryItem.variants.length} <T>sizes</T>
                       </div>
                     )}
                 </div>
@@ -1121,7 +1126,7 @@ export default function PublicCataloguePage() {
             className="px-5 py-3 rounded-full bg-gold-600 text-white shadow-lg hover:bg-gold-700 flex items-center gap-2 text-sm font-semibold"
           >
             <Eye className="h-4 w-4" />
-            Open Showroom
+            <T>Open Showroom</T>
           </button>
         </div>
       )}
@@ -1135,7 +1140,7 @@ export default function PublicCataloguePage() {
           onSuccess={(rfqId) => {
             handleWalkInRfqClose();
             toast({
-              title: `Walk-in RFQ created!${rfqId ? ` ID: ${rfqId.slice(0, 8)}...` : ""}`,
+              title: `${t("Walk-in RFQ created!")}${rfqId ? ` ID: ${rfqId.slice(0, 8)}...` : ""}`,
             });
             router.push(`/dashboard/shop/rfqs`);
           }}
