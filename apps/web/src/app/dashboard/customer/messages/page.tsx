@@ -3,6 +3,8 @@
 import { CustomerGuard } from "@/components/auth/RouteGuard";
 import { RichMessageCard } from "@/components/chat/RichMessageCard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +62,7 @@ interface Message {
 
 export default function CustomerMessagesPage() {
   const { user, refreshUser } = useAuth();
+  const t = useT();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<
     string | null
@@ -246,14 +249,14 @@ export default function CustomerMessagesPage() {
         <div className="flex flex-col h-[calc(100vh-8rem)]">
           <div className="flex items-center gap-2 mb-4">
             <MessageSquare className="h-6 w-6" />
-            <h1 className="text-2xl font-bold">Messages</h1>
+            <h1 className="text-2xl font-bold"><T>Messages</T></h1>
             {connected ? (
               <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-                <Wifi className="h-3 w-3" /> Live
+                <Wifi className="h-3 w-3" /> <T>Live</T>
               </span>
             ) : (
               <span className="flex items-center gap-1 text-xs text-gray-400">
-                <WifiOff className="h-3 w-3" /> Polling
+                <WifiOff className="h-3 w-3" /> <T>Polling</T>
               </span>
             )}
           </div>
@@ -262,13 +265,13 @@ export default function CustomerMessagesPage() {
             {/* Conversation list */}
             <div className="w-80 flex-shrink-0 border rounded-lg overflow-y-auto">
               {loading ? (
-                <div className="p-4 text-muted-foreground">Loading...</div>
+                <div className="p-4 text-muted-foreground"><T>Loading...</T></div>
               ) : conversations.length === 0 ? (
                 <div className="p-4 text-center text-muted-foreground">
                   <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>No conversations yet</p>
+                  <p><T>No conversations yet</T></p>
                   <p className="text-sm mt-1">
-                    Start a conversation from an order or RFQ page
+                    <T>Start a conversation from an order or RFQ page</T>
                   </p>
                 </div>
               ) : (
@@ -303,7 +306,7 @@ export default function CustomerMessagesPage() {
             <div className="flex-1 flex flex-col border rounded-lg">
               {!selectedConversation ? (
                 <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                  Select a conversation to view messages
+                  <T>Select a conversation to view messages</T>
                 </div>
               ) : (
                 <>
@@ -316,13 +319,13 @@ export default function CustomerMessagesPage() {
                       {selectedConv?.status === "LOCKED" && (
                         <Badge variant="destructive" className="text-xs">
                           <Lock className="h-3 w-3 mr-1" />
-                          Locked — Policy violation
+                          <T>Locked — Policy violation</T>
                         </Badge>
                       )}
                     </div>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Shield className="h-3 w-3" />
-                      Messages are monitored for safety
+                      <T>Messages are monitored for safety</T>
                     </div>
                   </div>
 
@@ -334,7 +337,7 @@ export default function CustomerMessagesPage() {
                           <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
                           <div className="flex-1">
                             <p className="text-sm font-semibold text-red-800 dark:text-red-200">
-                              ⚠️ Message Blocked
+                              ⚠️ <T>Message Blocked</T>
                             </p>
                             <p className="text-sm text-red-700 dark:text-red-300 mt-1">
                               {violationAlert.warning}
@@ -342,7 +345,7 @@ export default function CustomerMessagesPage() {
                             {violationAlert.strikeCount > 0 && (
                               <div className="flex items-center gap-2 mt-2">
                                 <span className="text-xs font-semibold text-red-800 dark:text-red-200">
-                                  Warnings: {violationAlert.strikeCount}/3
+                                  {t(`Warnings: ${violationAlert.strikeCount}/3`)}
                                 </span>
                                 <div className="flex gap-1">
                                   {[1, 2, 3].map((i) => (
@@ -362,8 +365,8 @@ export default function CustomerMessagesPage() {
                                 </div>
                                 <span className="text-xs text-red-600 dark:text-red-400">
                                   {violationAlert.strikeCount >= 3
-                                    ? "Account suspended!"
-                                    : `${3 - violationAlert.strikeCount} warning(s) remaining before account suspension`}
+                                    ? t("Account suspended!")
+                                    : t(`${3 - violationAlert.strikeCount} warning(s) remaining before account suspension`)}
                                 </span>
                               </div>
                             )}
@@ -414,7 +417,7 @@ export default function CustomerMessagesPage() {
                             )}
                             {msg.hasViolation && (
                               <p className="text-xs mt-1 opacity-75">
-                                ⚠️ Contact info removed for safety
+                                ⚠️ <T>Contact info removed for safety</T>
                               </p>
                             )}
                             <span className="text-xs opacity-60 mt-1 block">
@@ -451,8 +454,8 @@ export default function CustomerMessagesPage() {
                   {/* Input */}
                   {selectedConv?.status === "LOCKED" ? (
                     <div className="p-3 border-t bg-muted text-center text-sm text-muted-foreground">
-                      This conversation is locked. Contact support for
-                      assistance.
+                      <T>This conversation is locked. Contact support for
+                      assistance.</T>
                     </div>
                   ) : (
                     <div className="p-3 border-t flex gap-2">
