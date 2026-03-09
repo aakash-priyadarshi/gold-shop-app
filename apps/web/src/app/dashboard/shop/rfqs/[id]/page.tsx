@@ -2,6 +2,8 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -147,6 +149,7 @@ export default function ShopRfqDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
+  const t = useT();
   const shopCurrencyData = useShopCurrency();
   const rfqId = params.id as string;
 
@@ -551,13 +554,13 @@ export default function ShopRfqDetailPage() {
         <DashboardLayout>
           <div className="text-center py-12">
             <FileQuestion className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <h2 className="text-xl font-semibold">RFQ Not Found</h2>
+            <h2 className="text-xl font-semibold"><T>RFQ Not Found</T></h2>
             <p className="text-muted-foreground">
-              The request you're looking for doesn't exist.
+              <T>The request you're looking for doesn't exist.</T>
             </p>
             <Button onClick={() => router.back()} className="mt-4">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Go Back
+              <T>Go Back</T>
             </Button>
           </div>
         </DashboardLayout>
@@ -574,10 +577,10 @@ export default function ShopRfqDetailPage() {
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="sm" onClick={() => router.back()}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
+                <T>Back</T>
               </Button>
               <div>
-                <h1 className="text-2xl font-bold">RFQ Details</h1>
+                <h1 className="text-2xl font-bold"><T>RFQ Details</T></h1>
                 <p className="text-muted-foreground">
                   Request #{rfq.id.slice(0, 8)}
                 </p>
@@ -594,7 +597,7 @@ export default function ShopRfqDetailPage() {
               {/* Request Details */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Request Details</CardTitle>
+                  <CardTitle><T>Request Details</T></CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Jewellery Type with Image */}
@@ -610,7 +613,7 @@ export default function ShopRfqDetailPage() {
                     )}
                     <div className="flex-1">
                       <Label className="text-muted-foreground text-xs">
-                        Jewellery Type
+                        <T>Jewellery Type</T>
                       </Label>
                       <p className="font-semibold text-lg">
                         {getJewelleryTypeLabel(rfq.jewelleryType)}
@@ -632,15 +635,14 @@ export default function ShopRfqDetailPage() {
                   <TooltipProvider>
                     <div>
                       <Label className="text-muted-foreground text-xs flex items-center gap-1">
-                        Build Method
+                        <T>Build Method</T>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Info className="h-3 w-3 text-muted-foreground cursor-help" />
                           </TooltipTrigger>
                           <TooltipContent side="right" className="max-w-xs">
                             <p className="text-xs">
-                              How the jewellery is constructed — affects
-                              durability, weight, and price.
+                              <T>How the jewellery is constructed — affects durability, weight, and price.</T>
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -693,7 +695,7 @@ export default function ShopRfqDetailPage() {
                     {rfq.composition?.baseAlloy && (
                       <div>
                         <Label className="text-muted-foreground text-xs flex items-center gap-1">
-                          <Palette className="h-3 w-3" /> Base Metal
+                          <Palette className="h-3 w-3" /> <T>Base Metal</T>
                         </Label>
                         <div className="flex items-center gap-2 mt-1">
                           <p className="font-medium">
@@ -735,7 +737,7 @@ export default function ShopRfqDetailPage() {
                     {rfq.composition?.outerLayer && (
                       <div>
                         <Label className="text-muted-foreground text-xs">
-                          Outer Layer
+                          <T>Outer Layer</T>
                         </Label>
                         <p className="font-medium mt-1">
                           {rfq.composition.outerLayer.metal}{" "}
@@ -746,7 +748,7 @@ export default function ShopRfqDetailPage() {
                     {rfq.targetTotalWeightG && (
                       <div>
                         <Label className="text-muted-foreground text-xs">
-                          Target Weight
+                          <T>Target Weight</T>
                         </Label>
                         <div className="flex items-center gap-1 mt-1">
                           <Scale className="h-4 w-4 text-muted-foreground" />
@@ -763,7 +765,7 @@ export default function ShopRfqDetailPage() {
                     )}
                     <div>
                       <Label className="text-muted-foreground text-xs">
-                        Budget Range
+                        <T>Budget Range</T>
                       </Label>
                       {rfq.budgetMaxNpr ? (
                         <div className="flex items-center gap-1 mt-1">
@@ -777,17 +779,17 @@ export default function ShopRfqDetailPage() {
                         </div>
                       ) : (
                         <p className="text-muted-foreground text-sm mt-1">
-                          Not specified
+                          <T>Not specified</T>
                         </p>
                       )}
                     </div>
                     {rfq.preferredDeliveryDays && (
                       <div>
                         <Label className="text-muted-foreground text-xs">
-                          Preferred Delivery
+                          <T>Preferred Delivery</T>
                         </Label>
                         <p className="font-medium mt-1">
-                          {rfq.preferredDeliveryDays} days
+                          {t(`${rfq.preferredDeliveryDays} days`)}
                         </p>
                       </div>
                     )}
@@ -799,7 +801,7 @@ export default function ShopRfqDetailPage() {
                       <Separator />
                       <div>
                         <Label className="text-muted-foreground text-xs flex items-center gap-1">
-                          <Ruler className="h-3 w-3" /> Surface Finish
+                          <Ruler className="h-3 w-3" /> <T>Surface Finish</T>
                         </Label>
                         <div className="flex items-center gap-3 mt-2">
                           {surfaceFinishInfo && (
@@ -831,7 +833,7 @@ export default function ShopRfqDetailPage() {
                       <Separator />
                       <div>
                         <Label className="text-muted-foreground text-xs">
-                          Special Instructions
+                          <T>Special Instructions</T>
                         </Label>
                         <p className="mt-1 text-sm bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-md p-3">
                           {rfq.specialInstructions}
@@ -847,7 +849,7 @@ export default function ShopRfqDetailPage() {
                       <div>
                         <Label className="text-muted-foreground flex items-center gap-2 text-xs">
                           <Sparkles className="h-3 w-3" />
-                          Gemstones ({rfq.gemstones.length})
+                          {t(`Gemstones (${rfq.gemstones.length})`)}
                         </Label>
                         <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {rfq.gemstones.map((gem, idx) => (
@@ -919,7 +921,7 @@ export default function ShopRfqDetailPage() {
                       <div>
                         <Label className="text-muted-foreground flex items-center gap-2 text-xs">
                           <ImageIcon className="h-3 w-3" />
-                          Reference Images
+                          <T>Reference Images</T>
                         </Label>
                         <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
                           {rfq.referenceImages.map((url, idx) => (
@@ -951,8 +953,7 @@ export default function ShopRfqDetailPage() {
                           ))}
                         </div>
                         <p className="text-xs text-muted-foreground mt-2">
-                          Click any image to enlarge. Customer-provided
-                          reference images for the desired design.
+                          <T>Click any image to enlarge. Customer-provided reference images for the desired design.</T>
                         </p>
                       </div>
                     </>
@@ -965,7 +966,7 @@ export default function ShopRfqDetailPage() {
                       <div>
                         <Label className="text-muted-foreground flex items-center gap-2 text-xs">
                           <Wand2 className="h-3 w-3" />
-                          Your AI-Generated Design Preview
+                          <T>Your AI-Generated Design Preview</T>
                         </Label>
                         <div className="mt-2">
                           <div
@@ -1001,9 +1002,9 @@ export default function ShopRfqDetailPage() {
               {canSubmitOffer && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Respond to Request</CardTitle>
+                    <CardTitle><T>Respond to Request</T></CardTitle>
                     <CardDescription>
-                      Accept, counter-offer, or decline this request
+                      <T>Accept, counter-offer, or decline this request</T>
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -1016,7 +1017,7 @@ export default function ShopRfqDetailPage() {
                         className="flex-1"
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
-                        Accept
+                        <T>Accept</T>
                       </Button>
                       <Button
                         type="button"
@@ -1027,7 +1028,7 @@ export default function ShopRfqDetailPage() {
                         className="flex-1"
                       >
                         <MessageSquare className="h-4 w-4 mr-2" />
-                        Counter
+                        <T>Counter</T>
                       </Button>
                       <Button
                         type="button"
@@ -1038,18 +1039,18 @@ export default function ShopRfqDetailPage() {
                         className="flex-1"
                       >
                         <XCircle className="h-4 w-4 mr-2" />
-                        Decline
+                        <T>Decline</T>
                       </Button>
                     </div>
 
                     {offerType === "DECLINE" ? (
                       <div className="space-y-2">
                         <Label htmlFor="declineReason">
-                          Reason for Declining
+                          <T>Reason for Declining</T>
                         </Label>
                         <Textarea
                           id="declineReason"
-                          placeholder="Please provide a reason..."
+                          placeholder={t("Please provide a reason...")}
                           value={declineReason}
                           onChange={(e) => setDeclineReason(e.target.value)}
                           rows={3}
@@ -1060,7 +1061,7 @@ export default function ShopRfqDetailPage() {
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label htmlFor="metalCost">
-                              Metal Cost (NPR) *
+                              <T>Metal Cost (NPR) *</T>
                             </Label>
                             <Input
                               id="metalCost"
@@ -1072,7 +1073,7 @@ export default function ShopRfqDetailPage() {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="makingCharge">
-                              Making Charge (NPR) *
+                              <T>Making Charge (NPR) *</T>
                             </Label>
                             <Input
                               id="makingCharge"
@@ -1086,7 +1087,7 @@ export default function ShopRfqDetailPage() {
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label htmlFor="finishCost">
-                              Finish Cost (NPR)
+                              <T>Finish Cost (NPR)</T>
                             </Label>
                             <Input
                               id="finishCost"
@@ -1098,7 +1099,7 @@ export default function ShopRfqDetailPage() {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="gemstoneCost">
-                              Gemstone Cost (NPR)
+                              <T>Gemstone Cost (NPR)</T>
                             </Label>
                             <Input
                               id="gemstoneCost"
@@ -1111,7 +1112,7 @@ export default function ShopRfqDetailPage() {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="estimatedDays">
-                            Estimated Delivery (days) *
+                            <T>Estimated Delivery (days) *</T>
                           </Label>
                           <Input
                             id="estimatedDays"
@@ -1122,10 +1123,10 @@ export default function ShopRfqDetailPage() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="shopNotes">Notes (optional)</Label>
+                          <Label htmlFor="shopNotes"><T>Notes (optional)</T></Label>
                           <Textarea
                             id="shopNotes"
-                            placeholder="Add any additional details..."
+                            placeholder={t("Add any additional details...")}
                             value={shopNotes}
                             onChange={(e) => setShopNotes(e.target.value)}
                             rows={3}
@@ -1138,7 +1139,7 @@ export default function ShopRfqDetailPage() {
                           gemstoneCost) && (
                           <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-md">
                             <p className="text-sm text-muted-foreground">
-                              Estimated Total
+                              <T>Estimated Total</T>
                             </p>
                             <p className="text-lg font-bold">
                               Rs.{" "}
@@ -1165,18 +1166,17 @@ export default function ShopRfqDetailPage() {
                       {isSubmitting ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Submitting...
+                          <T>Submitting...</T>
                         </>
                       ) : offerType === "DECLINE" ? (
                         <>
                           <XCircle className="h-4 w-4 mr-2" />
-                          Decline Request
+                          <T>Decline Request</T>
                         </>
                       ) : (
                         <>
                           <Send className="h-4 w-4 mr-2" />
-                          Submit{" "}
-                          {offerType === "COUNTER" ? "Counter-Offer" : "Quote"}
+                          {offerType === "COUNTER" ? t("Submit Counter-Offer") : t("Submit Quote")}
                         </>
                       )}
                     </Button>
@@ -1200,12 +1200,12 @@ export default function ShopRfqDetailPage() {
                       {myOffer.offerType === "DECLINE" ? (
                         <>
                           <XCircle className="h-5 w-5" />
-                          You Declined This Request
+                          <T>You Declined This Request</T>
                         </>
                       ) : (
                         <>
                           <CheckCircle className="h-5 w-5" />
-                          Your Submitted Quote
+                          <T>Your Submitted Quote</T>
                         </>
                       )}
                     </CardTitle>
@@ -1216,7 +1216,7 @@ export default function ShopRfqDetailPage() {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                           <div>
                             <Label className="text-muted-foreground">
-                              Metal Cost
+                              <T>Metal Cost</T>
                             </Label>
                             <p className="font-medium">
                               Rs. {myOffer.metalCostNpr?.toLocaleString() || 0}
@@ -1224,7 +1224,7 @@ export default function ShopRfqDetailPage() {
                           </div>
                           <div>
                             <Label className="text-muted-foreground">
-                              Making Charge
+                              <T>Making Charge</T>
                             </Label>
                             <p className="font-medium">
                               Rs.{" "}
@@ -1233,7 +1233,7 @@ export default function ShopRfqDetailPage() {
                           </div>
                           <div>
                             <Label className="text-muted-foreground">
-                              Total
+                              <T>Total</T>
                             </Label>
                             <p className="font-medium text-lg">
                               Rs. {myOffer.totalPriceNpr?.toLocaleString() || 0}
@@ -1241,23 +1241,23 @@ export default function ShopRfqDetailPage() {
                           </div>
                           <div>
                             <Label className="text-muted-foreground">
-                              Delivery
+                              <T>Delivery</T>
                             </Label>
                             <p className="font-medium">
-                              {myOffer.estimatedDays} days
+                              {t(`${myOffer.estimatedDays} days`)}
                             </p>
                           </div>
                         </div>
                         <div className="mt-4 flex items-center gap-2">
                           <Label className="text-muted-foreground">
-                            Status:
+                            <T>Status:</T>
                           </Label>
                           <Badge variant="outline">{myOffer.status}</Badge>
                         </div>
                         {myOffer.shopNotes && (
                           <div className="mt-4">
                             <Label className="text-muted-foreground">
-                              Your Notes
+                              <T>Your Notes</T>
                             </Label>
                             <p className="text-sm mt-1">{myOffer.shopNotes}</p>
                           </div>
@@ -1265,7 +1265,7 @@ export default function ShopRfqDetailPage() {
                       </>
                     ) : (
                       <p className="text-muted-foreground">
-                        You have declined this request.
+                        <T>You have declined this request.</T>
                       </p>
                     )}
                   </CardContent>
@@ -1278,11 +1278,10 @@ export default function ShopRfqDetailPage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-amber-800">
                       <Reply className="h-5 w-5" />
-                      Customer Counter-Offers ({customerCounterOffers.length})
+                      {t(`Customer Counter-Offers (${customerCounterOffers.length})`)}
                     </CardTitle>
                     <CardDescription>
-                      The customer has sent counter-offers requiring your
-                      response
+                      <T>The customer has sent counter-offers requiring your response</T>
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -1306,7 +1305,7 @@ export default function ShopRfqDetailPage() {
                         <div className="grid grid-cols-2 gap-4 mb-4">
                           <div>
                             <Label className="text-muted-foreground text-xs">
-                              Proposed Price
+                              <T>Proposed Price</T>
                             </Label>
                             <p className="font-bold text-lg text-amber-700 dark:text-amber-300">
                               Rs. {counter.totalPriceNpr?.toLocaleString() || 0}
@@ -1315,10 +1314,10 @@ export default function ShopRfqDetailPage() {
                           {counter.preferredDeliveryDays && (
                             <div>
                               <Label className="text-muted-foreground text-xs">
-                                Preferred Delivery
+                                <T>Preferred Delivery</T>
                               </Label>
                               <p className="font-medium">
-                                {counter.preferredDeliveryDays} days
+                                {t(`${counter.preferredDeliveryDays} days`)}
                               </p>
                             </div>
                           )}
@@ -1327,7 +1326,7 @@ export default function ShopRfqDetailPage() {
                         {counter.counterMessage && (
                           <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded">
                             <Label className="text-muted-foreground text-xs">
-                              Customer Message
+                              <T>Customer Message</T>
                             </Label>
                             <p className="text-sm mt-1">
                               {counter.counterMessage}
@@ -1343,7 +1342,7 @@ export default function ShopRfqDetailPage() {
                               onClick={() => openAcceptDialog(counter.id)}
                             >
                               <ThumbsUp className="h-4 w-4 mr-2" />
-                              Accept
+                              <T>Accept</T>
                             </Button>
                             <Button
                               size="sm"
@@ -1354,7 +1353,7 @@ export default function ShopRfqDetailPage() {
                               }
                             >
                               <Reply className="h-4 w-4 mr-2" />
-                              Counter
+                              <T>Counter</T>
                             </Button>
                             <Button
                               size="sm"
@@ -1363,7 +1362,7 @@ export default function ShopRfqDetailPage() {
                               onClick={() => openDeclineDialog(counter.id)}
                             >
                               <ThumbsDown className="h-4 w-4 mr-2" />
-                              Decline
+                              <T>Decline</T>
                             </Button>
                           </div>
                         )}
@@ -1371,21 +1370,21 @@ export default function ShopRfqDetailPage() {
                         {counter.status === "ACCEPTED" && (
                           <Badge className="bg-green-100 text-green-700">
                             <CheckCircle className="h-3 w-3 mr-1" />
-                            You accepted this offer
+                            <T>You accepted this offer</T>
                           </Badge>
                         )}
 
                         {counter.status === "DECLINED" && (
                           <Badge className="bg-red-100 text-red-700">
                             <XCircle className="h-3 w-3 mr-1" />
-                            You declined this offer
+                            <T>You declined this offer</T>
                           </Badge>
                         )}
 
                         {counter.status === "COUNTERED" && (
                           <Badge className="bg-blue-100 text-blue-700">
                             <ArrowRight className="h-3 w-3 mr-1" />
-                            You sent a counter-offer
+                            <T>You sent a counter-offer</T>
                           </Badge>
                         )}
                       </div>
@@ -1400,7 +1399,7 @@ export default function ShopRfqDetailPage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <MessageSquare className="h-5 w-5" />
-                      Negotiation History
+                      <T>Negotiation History</T>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -1425,8 +1424,8 @@ export default function ShopRfqDetailPage() {
                                 }
                               >
                                 {offer.offerType === "CUSTOMER_COUNTER"
-                                  ? "Customer"
-                                  : "Your Offer"}
+                                  ? t("Customer")
+                                  : t("Your Offer")}
                               </Badge>
                               <span className="text-xs text-muted-foreground">
                                 #{idx + 1}
@@ -1457,7 +1456,7 @@ export default function ShopRfqDetailPage() {
               {/* Customer Info */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Customer</CardTitle>
+                  <CardTitle><T>Customer</T></CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-3">
@@ -1476,18 +1475,18 @@ export default function ShopRfqDetailPage() {
               {/* Timeline */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Timeline</CardTitle>
+                  <CardTitle><T>Timeline</T></CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center gap-2 text-sm">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Created:</span>
+                    <span className="text-muted-foreground"><T>Created:</T></span>
                     <span>{formatDate(rfq.createdAt)}</span>
                   </div>
                   {rfq.expiresAt && (
                     <div className="flex items-center gap-2 text-sm">
                       <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">Expires:</span>
+                      <span className="text-muted-foreground"><T>Expires:</T></span>
                       <span>{formatDate(rfq.expiresAt)}</span>
                     </div>
                   )}
@@ -1497,7 +1496,7 @@ export default function ShopRfqDetailPage() {
               {/* Other Offers Count */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Competition</CardTitle>
+                  <CardTitle><T>Competition</T></CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-2">
@@ -1505,7 +1504,7 @@ export default function ShopRfqDetailPage() {
                     <span className="text-2xl font-bold">
                       {rfq.offers?.length || 0}
                     </span>
-                    <span className="text-muted-foreground">total offers</span>
+                    <span className="text-muted-foreground"><T>total offers</T></span>
                   </div>
                 </CardContent>
               </Card>
@@ -1515,10 +1514,10 @@ export default function ShopRfqDetailPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-sm">
                     <Wand2 className="h-4 w-4 text-purple-600" />
-                    AI Design Preview
+                    <T>AI Design Preview</T>
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Generate a design preview based on this RFQ's specifications
+                    <T>Generate a design preview based on this RFQ's specifications</T>
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -1531,17 +1530,17 @@ export default function ShopRfqDetailPage() {
                     {aiGenerating ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Generating...
+                        <T>Generating...</T>
                       </>
                     ) : aiDesignUrl ? (
                       <>
                         <Wand2 className="h-4 w-4 mr-2" />
-                        Regenerate Design
+                        <T>Regenerate Design</T>
                       </>
                     ) : (
                       <>
                         <Wand2 className="h-4 w-4 mr-2" />
-                        Generate AI Design
+                        <T>Generate AI Design</T>
                       </>
                     )}
                   </Button>
@@ -1575,19 +1574,16 @@ export default function ShopRfqDetailPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <ThumbsUp className="h-5 w-5 text-green-600" />
-                Accept Customer Counter-Offer
+                <T>Accept Customer Counter-Offer</T>
               </DialogTitle>
               <DialogDescription>
-                Are you sure you want to accept this counter-offer? This will
-                create an order and the customer will be notified to proceed
-                with payment.
+                <T>Are you sure you want to accept this counter-offer? This will create an order and the customer will be notified to proceed with payment.</T>
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
               <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800/50 rounded-lg p-4">
                 <p className="text-sm text-green-800 dark:text-green-200">
-                  By accepting, you agree to fulfill this order at the
-                  customer's proposed price.
+                  <T>By accepting, you agree to fulfill this order at the customer's proposed price.</T>
                 </p>
               </div>
             </div>
@@ -1596,7 +1592,7 @@ export default function ShopRfqDetailPage() {
                 variant="outline"
                 onClick={() => setAcceptDialogOpen(false)}
               >
-                Cancel
+                <T>Cancel</T>
               </Button>
               <Button
                 className="bg-green-600 hover:bg-green-700"
@@ -1606,12 +1602,12 @@ export default function ShopRfqDetailPage() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Accepting...
+                    <T>Accepting...</T>
                   </>
                 ) : (
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    Accept Offer
+                    <T>Accept Offer</T>
                   </>
                 )}
               </Button>
@@ -1625,19 +1621,18 @@ export default function ShopRfqDetailPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <ThumbsDown className="h-5 w-5 text-red-600" />
-                Decline Customer Counter-Offer
+                <T>Decline Customer Counter-Offer</T>
               </DialogTitle>
               <DialogDescription>
-                Provide a reason for declining this counter-offer (optional but
-                recommended).
+                <T>Provide a reason for declining this counter-offer (optional but recommended).</T>
               </DialogDescription>
             </DialogHeader>
             <div className="py-4 space-y-4">
               <div>
-                <Label htmlFor="counterDeclineReason">Reason (optional)</Label>
+                <Label htmlFor="counterDeclineReason"><T>Reason (optional)</T></Label>
                 <Textarea
                   id="counterDeclineReason"
-                  placeholder="e.g., The proposed price is below our production cost..."
+                  placeholder={t("e.g., The proposed price is below our production cost...")}
                   value={counterDeclineReason}
                   onChange={(e) => setCounterDeclineReason(e.target.value)}
                   rows={3}
@@ -1649,7 +1644,7 @@ export default function ShopRfqDetailPage() {
                 variant="outline"
                 onClick={() => setDeclineDialogOpen(false)}
               >
-                Cancel
+                <T>Cancel</T>
               </Button>
               <Button
                 variant="destructive"
@@ -1659,12 +1654,12 @@ export default function ShopRfqDetailPage() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Declining...
+                    <T>Declining...</T>
                   </>
                 ) : (
                   <>
                     <XCircle className="h-4 w-4 mr-2" />
-                    Decline Offer
+                    <T>Decline Offer</T>
                   </>
                 )}
               </Button>
@@ -1678,17 +1673,16 @@ export default function ShopRfqDetailPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Reply className="h-5 w-5 text-blue-600" />
-                Send Counter-Offer
+                <T>Send Counter-Offer</T>
               </DialogTitle>
               <DialogDescription>
-                Propose a revised quote in response to the customer&apos;s
-                counter-offer.
+                <T>Propose a revised quote in response to the customer's counter-offer.</T>
               </DialogDescription>
             </DialogHeader>
             <div className="py-4 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="counterMetalCost">Metal Cost (NPR) *</Label>
+                  <Label htmlFor="counterMetalCost"><T>Metal Cost (NPR) *</T></Label>
                   <Input
                     id="counterMetalCost"
                     type="number"
@@ -1699,7 +1693,7 @@ export default function ShopRfqDetailPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="counterMakingCharge">
-                    Making Charge (NPR) *
+                    <T>Making Charge (NPR) *</T>
                   </Label>
                   <Input
                     id="counterMakingCharge"
@@ -1712,7 +1706,7 @@ export default function ShopRfqDetailPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="counterFinishCost">Finish Cost (NPR)</Label>
+                  <Label htmlFor="counterFinishCost"><T>Finish Cost (NPR)</T></Label>
                   <Input
                     id="counterFinishCost"
                     type="number"
@@ -1723,7 +1717,7 @@ export default function ShopRfqDetailPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="counterGemstoneCost">
-                    Gemstone Cost (NPR)
+                    <T>Gemstone Cost (NPR)</T>
                   </Label>
                   <Input
                     id="counterGemstoneCost"
@@ -1736,7 +1730,7 @@ export default function ShopRfqDetailPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="counterEstimatedDays">
-                  Estimated Delivery (days) *
+                  <T>Estimated Delivery (days) *</T>
                 </Label>
                 <Input
                   id="counterEstimatedDays"
@@ -1747,10 +1741,10 @@ export default function ShopRfqDetailPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="counterShopNotes">Notes (optional)</Label>
+                <Label htmlFor="counterShopNotes"><T>Notes (optional)</T></Label>
                 <Textarea
                   id="counterShopNotes"
-                  placeholder="Explain your revised quote..."
+                  placeholder={t("Explain your revised quote...")}
                   value={counterShopNotes}
                   onChange={(e) => setCounterShopNotes(e.target.value)}
                   rows={2}
@@ -1763,7 +1757,7 @@ export default function ShopRfqDetailPage() {
                 counterGemstoneCost) && (
                 <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 p-3 rounded-md">
                   <p className="text-sm text-muted-foreground">
-                    Estimated Total
+                    <T>Estimated Total</T>
                   </p>
                   <p className="text-lg font-bold text-blue-700 dark:text-blue-300">
                     Rs.{" "}
@@ -1782,7 +1776,7 @@ export default function ShopRfqDetailPage() {
                 variant="outline"
                 onClick={() => setCounterDialogOpen(false)}
               >
-                Cancel
+                <T>Cancel</T>
               </Button>
               <Button
                 onClick={handleCounterCounterOffer}
@@ -1791,12 +1785,12 @@ export default function ShopRfqDetailPage() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Sending...
+                    <T>Sending...</T>
                   </>
                 ) : (
                   <>
                     <Send className="h-4 w-4 mr-2" />
-                    Send Counter-Offer
+                    <T>Send Counter-Offer</T>
                   </>
                 )}
               </Button>
