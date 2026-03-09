@@ -1877,7 +1877,7 @@ export default function ShopInventoryPage() {
               </Card>
             </TabsContent>
 
-            {/* Build Methods Tab */>
+            {/* Build Methods Tab */}
             <TabsContent value="methods" className="space-y-4">
               <Card>
                 <CardHeader>
