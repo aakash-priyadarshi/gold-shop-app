@@ -2,6 +2,8 @@
 
 import { CustomerGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -66,6 +68,7 @@ export default function CustomerRFQsPage() {
   const [rfqs, setRfqs] = useState<RFQ[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
+  const t = useT();
 
   useEffect(() => {
     loadRFQs();
@@ -95,7 +98,7 @@ export default function CustomerRFQsPage() {
             variant="outline"
             className="bg-gray-50 text-gray-700 border-gray-200"
           >
-            Draft
+            <T>Draft</T>
           </Badge>
         );
       case "SENT_TO_SHOPS":
@@ -104,7 +107,7 @@ export default function CustomerRFQsPage() {
             variant="outline"
             className="bg-blue-50 text-blue-700 border-blue-200"
           >
-            Sent to Seller
+            <T>Sent to Seller</T>
           </Badge>
         );
       case "OFFERS_RECEIVED":
@@ -113,7 +116,7 @@ export default function CustomerRFQsPage() {
             variant="outline"
             className="bg-purple-50 text-purple-700 border-purple-200"
           >
-            Offers Received
+            <T>Offers Received</T>
           </Badge>
         );
       case "OFFER_SELECTED":
@@ -122,7 +125,7 @@ export default function CustomerRFQsPage() {
             variant="outline"
             className="bg-amber-50 text-amber-700 border-amber-200"
           >
-            Offer Selected
+            <T>Offer Selected</T>
           </Badge>
         );
       case "CONFIRMED":
@@ -131,7 +134,7 @@ export default function CustomerRFQsPage() {
             variant="outline"
             className="bg-green-50 text-green-700 border-green-200"
           >
-            Confirmed
+            <T>Confirmed</T>
           </Badge>
         );
       case "COMPLETED":
@@ -140,7 +143,7 @@ export default function CustomerRFQsPage() {
             variant="outline"
             className="bg-green-50 text-green-700 border-green-200"
           >
-            Completed
+            <T>Completed</T>
           </Badge>
         );
       case "CANCELLED":
@@ -149,7 +152,7 @@ export default function CustomerRFQsPage() {
             variant="outline"
             className="bg-red-50 text-red-700 border-red-200"
           >
-            Cancelled
+            <T>Cancelled</T>
           </Badge>
         );
       case "EXPIRED":
@@ -158,7 +161,7 @@ export default function CustomerRFQsPage() {
             variant="outline"
             className="bg-gray-50 text-gray-500 border-gray-200"
           >
-            Expired
+            <T>Expired</T>
           </Badge>
         );
       default:
@@ -201,15 +204,15 @@ export default function CustomerRFQsPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">My Custom Orders</h1>
+              <h1 className="text-2xl font-bold"><T>My Custom Orders</T></h1>
               <p className="text-muted-foreground">
-                Track your custom jewellery requests and seller responses
+                <T>Track your custom jewellery requests and seller responses</T>
               </p>
             </div>
             <Button asChild>
               <Link href="/rfq/create">
                 <Plus className="h-4 w-4 mr-2" />
-                New Request
+                <T>New Request</T>
               </Link>
             </Button>
           </div>
@@ -218,7 +221,7 @@ export default function CustomerRFQsPage() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Card>
               <CardHeader className="p-4 pb-2">
-                <CardDescription>Total Requests</CardDescription>
+                <CardDescription><T>Total Requests</T></CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <p className="text-2xl font-bold">{stats.total}</p>
@@ -226,7 +229,7 @@ export default function CustomerRFQsPage() {
             </Card>
             <Card>
               <CardHeader className="p-4 pb-2">
-                <CardDescription>Active</CardDescription>
+                <CardDescription><T>Active</T></CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <p className="text-2xl font-bold text-blue-600">
@@ -236,7 +239,7 @@ export default function CustomerRFQsPage() {
             </Card>
             <Card>
               <CardHeader className="p-4 pb-2">
-                <CardDescription>Completed</CardDescription>
+                <CardDescription><T>Completed</T></CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <p className="text-2xl font-bold text-green-600">
@@ -246,7 +249,7 @@ export default function CustomerRFQsPage() {
             </Card>
             <Card>
               <CardHeader className="p-4 pb-2">
-                <CardDescription>Closed</CardDescription>
+                <CardDescription><T>Closed</T></CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <p className="text-2xl font-bold text-gray-500 dark:text-gray-400">
@@ -256,7 +259,7 @@ export default function CustomerRFQsPage() {
             </Card>
             <Card>
               <CardHeader className="p-4 pb-2">
-                <CardDescription>Total Offers</CardDescription>
+                <CardDescription><T>Total Offers</T></CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <p className="text-2xl font-bold text-purple-600">
@@ -269,20 +272,20 @@ export default function CustomerRFQsPage() {
           {/* RFQ List */}
           <Card>
             <CardHeader>
-              <CardTitle>Custom Orders</CardTitle>
+              <CardTitle><T>Custom Orders</T></CardTitle>
             </CardHeader>
             <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="mb-4">
-                  <TabsTrigger value="all">All ({rfqs.length})</TabsTrigger>
+                  <TabsTrigger value="all">{t(`All (${rfqs.length})`)}</TabsTrigger>
                   <TabsTrigger value="active">
-                    Active ({stats.active})
+                    {t(`Active (${stats.active})`)}
                   </TabsTrigger>
                   <TabsTrigger value="completed">
-                    Completed ({stats.completed})
+                    {t(`Completed (${stats.completed})`)}
                   </TabsTrigger>
                   <TabsTrigger value="closed">
-                    Closed ({stats.closed})
+                    {t(`Closed (${stats.closed})`)}
                   </TabsTrigger>
                 </TabsList>
 
@@ -290,15 +293,15 @@ export default function CustomerRFQsPage() {
                   {filteredRFQs.length === 0 ? (
                     <div className="text-center py-12">
                       <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="font-medium mb-2">No requests found</h3>
+                      <h3 className="font-medium mb-2"><T>No requests found</T></h3>
                       <p className="text-muted-foreground text-sm mb-4">
                         {activeTab === "all"
-                          ? "You haven't created any custom order requests yet"
-                          : `No ${activeTab} requests`}
+                          ? t("You haven't created any custom order requests yet")
+                          : t(`No ${activeTab} requests`)}
                       </p>
                       <Button asChild>
                         <Link href="/rfq/create">
-                          Create Your First Request
+                          <T>Create Your First Request</T>
                         </Link>
                       </Button>
                     </div>
@@ -306,14 +309,14 @@ export default function CustomerRFQsPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Item</TableHead>
-                          <TableHead>Metal</TableHead>
-                          <TableHead>Weight</TableHead>
-                          <TableHead>Budget</TableHead>
-                          <TableHead>Offers</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Created</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
+                          <TableHead><T>Item</T></TableHead>
+                          <TableHead><T>Metal</T></TableHead>
+                          <TableHead><T>Weight</T></TableHead>
+                          <TableHead><T>Budget</T></TableHead>
+                          <TableHead><T>Offers</T></TableHead>
+                          <TableHead><T>Status</T></TableHead>
+                          <TableHead><T>Created</T></TableHead>
+                          <TableHead className="text-right"><T>Actions</T></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -335,7 +338,7 @@ export default function CustomerRFQsPage() {
                             </TableCell>
                             <TableCell>
                               <Badge variant="secondary">
-                                {rfq.offers?.length || 0} offers
+                                {t(`${rfq.offers?.length || 0} offers`)}
                               </Badge>
                             </TableCell>
                             <TableCell>{getStatusBadge(rfq.status)}</TableCell>
@@ -348,7 +351,7 @@ export default function CustomerRFQsPage() {
                                   href={`/dashboard/customer/rfqs/${rfq.id}`}
                                 >
                                   <Eye className="h-4 w-4 mr-1" />
-                                  View
+                                  <T>View</T>
                                 </Link>
                               </Button>
                             </TableCell>
