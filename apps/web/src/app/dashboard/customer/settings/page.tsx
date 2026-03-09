@@ -3,6 +3,8 @@
 import { CustomerGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -92,6 +94,7 @@ const countries = [
 ];
 
 export default function CustomerSettingsPage() {
+  const t = useT();
   const { user, refreshUser } = useAuth();
   const setCurrency = usePreferencesStore((state) => state.setCurrency);
   const setCountry = usePreferencesStore((state) => state.setCountry);
@@ -427,9 +430,9 @@ export default function CustomerSettingsPage() {
       <DashboardLayout>
         <div className="max-w-3xl mx-auto space-y-6">
           <div>
-            <h1 className="text-2xl font-bold">Settings</h1>
+            <h1 className="text-2xl font-bold"><T>Settings</T></h1>
             <p className="text-muted-foreground">
-              Manage your account and preferences
+              <T>Manage your account and preferences</T>
             </p>
           </div>
 
@@ -438,14 +441,14 @@ export default function CustomerSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />
-                Profile Information
+                <T>Profile Information</T>
               </CardTitle>
-              <CardDescription>Update your personal details</CardDescription>
+              <CardDescription><T>Update your personal details</T></CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="profile-firstName">First Name</Label>
+                  <Label htmlFor="profile-firstName"><T>First Name</T></Label>
                   <Input
                     id="profile-firstName"
                     value={profile.firstName}
@@ -455,7 +458,7 @@ export default function CustomerSettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="profile-lastName">Last Name</Label>
+                  <Label htmlFor="profile-lastName"><T>Last Name</T></Label>
                   <Input
                     id="profile-lastName"
                     value={profile.lastName}
@@ -465,7 +468,7 @@ export default function CustomerSettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="profile-email">Email</Label>
+                  <Label htmlFor="profile-email"><T>Email</T></Label>
                   <Input
                     id="profile-email"
                     type="email"
@@ -474,17 +477,17 @@ export default function CustomerSettingsPage() {
                     className="bg-muted"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Email cannot be changed
+                    <T>Email cannot be changed</T>
                   </p>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Label htmlFor="profile-phone">Phone Number</Label>
+                    <Label htmlFor="profile-phone"><T>Phone Number</T></Label>
                     {user?.phoneVerifiedAt &&
                       profile.phone === phoneCheckState.originalPhone && (
                         <span className="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 dark:bg-green-950/30 px-2 py-0.5 rounded-full">
                           <CheckCircle className="h-3 w-3" />
-                          Verified
+                          <T>Verified</T>
                         </span>
                       )}
                     {!user?.phoneVerifiedAt &&
@@ -492,7 +495,7 @@ export default function CustomerSettingsPage() {
                       profile.phone === phoneCheckState.originalPhone && (
                         <span className="inline-flex items-center gap-1 text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded-full">
                           <Shield className="h-3 w-3" />
-                          Not Verified
+                          <T>Not Verified</T>
                         </span>
                       )}
                   </div>
@@ -526,7 +529,7 @@ export default function CustomerSettingsPage() {
                   </div>
                   {phoneCheckState.exists === true && (
                     <p className="text-xs text-red-500">
-                      This phone number is already registered to another account
+                      <T>This phone number is already registered to another account</T>
                     </p>
                   )}
                   {!phoneCheckState.checking &&
@@ -534,14 +537,14 @@ export default function CustomerSettingsPage() {
                     profile.phone &&
                     profile.phone !== phoneCheckState.originalPhone && (
                       <p className="text-xs text-green-600">
-                        Phone number is available
+                        <T>Phone number is available</T>
                       </p>
                     )}
                   {profile.phone !== phoneCheckState.originalPhone &&
                     phoneCheckState.originalPhone &&
                     user?.phoneVerifiedAt && (
                       <p className="text-xs text-amber-600">
-                        Changing your phone number will require re-verification
+                        <T>Changing your phone number will require re-verification</T>
                       </p>
                     )}
                 </div>
@@ -554,14 +557,14 @@ export default function CustomerSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Globe className="h-5 w-5" />
-                Preferences
+                <T>Preferences</T>
               </CardTitle>
-              <CardDescription>Customize your experience</CardDescription>
+              <CardDescription><T>Customize your experience</T></CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="pref-country">Country</Label>
+                  <Label htmlFor="pref-country"><T>Country</T></Label>
                   <Select
                     value={profile.preferredCountry || "US"}
                     onValueChange={(value) => {
@@ -599,7 +602,7 @@ export default function CustomerSettingsPage() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="pref-currency">Preferred Currency</Label>
+                  <Label htmlFor="pref-currency"><T>Preferred Currency</T></Label>
                   <Select
                     value={profile.preferredCurrency}
                     onValueChange={(value) =>
@@ -626,7 +629,7 @@ export default function CustomerSettingsPage() {
               {/* State & City preferences */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="pref-state">Preferred State</Label>
+                  <Label htmlFor="pref-state"><T>Preferred State</T></Label>
                   {getStatesForCountry(profile.preferredCountry || "US")
                     .length > 0 ? (
                     <Select
@@ -670,7 +673,7 @@ export default function CustomerSettingsPage() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="pref-city">Preferred City</Label>
+                  <Label htmlFor="pref-city"><T>Preferred City</T></Label>
                   {getCitiesForCountry(
                     profile.preferredCountry || "US",
                     profile.preferredState || undefined,
@@ -709,7 +712,7 @@ export default function CustomerSettingsPage() {
                     />
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Helps find the best sellers near you
+                    <T>Helps find the best sellers near you</T>
                   </p>
                 </div>
               </div>
@@ -722,12 +725,12 @@ export default function CustomerSettingsPage() {
               {isSaving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
+                  <T>Saving...</T>
                 </>
               ) : (
                 <>
                   <Save className="h-4 w-4 mr-2" />
-                  Save Changes
+                  <T>Save Changes</T>
                 </>
               )}
             </Button>
@@ -740,10 +743,10 @@ export default function CustomerSettingsPage() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <MapPin className="h-5 w-5" />
-                    Delivery Addresses
+                    <T>Delivery Addresses</T>
                   </CardTitle>
                   <CardDescription>
-                    Manage your delivery addresses for orders
+                    <T>Manage your delivery addresses for orders</T>
                   </CardDescription>
                 </div>
                 <Button
@@ -755,7 +758,7 @@ export default function CustomerSettingsPage() {
                   }}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Address
+                  <T>Add Address</T>
                 </Button>
               </div>
             </CardHeader>
@@ -763,8 +766,8 @@ export default function CustomerSettingsPage() {
               {addresses.length === 0 && !showAddressForm && (
                 <div className="text-center py-8 text-muted-foreground">
                   <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No delivery addresses saved yet</p>
-                  <p className="text-sm">Add an address for faster checkout</p>
+                  <p><T>No delivery addresses saved yet</T></p>
+                  <p className="text-sm"><T>Add an address for faster checkout</T></p>
                 </div>
               )}
 
@@ -781,7 +784,7 @@ export default function CustomerSettingsPage() {
                         <span className="font-medium">{address.label}</span>
                         {address.isDefault && (
                           <span className="text-xs bg-gold-100 text-gold-800 px-2 py-0.5 rounded">
-                            Default
+                            <T>Default</T>
                           </span>
                         )}
                       </div>
@@ -805,7 +808,7 @@ export default function CustomerSettingsPage() {
                           size="sm"
                           onClick={() => setDefaultAddress(address.id!)}
                         >
-                          Set Default
+                          <T>Set Default</T>
                         </Button>
                       )}
                       <Button
@@ -816,7 +819,7 @@ export default function CustomerSettingsPage() {
                           setShowAddressForm(true);
                         }}
                       >
-                        Edit
+                        <T>Edit</T>
                       </Button>
                       <Button
                         variant="ghost"
@@ -835,11 +838,11 @@ export default function CustomerSettingsPage() {
               {showAddressForm && (
                 <div className="border rounded-lg p-4 space-y-4">
                   <h4 className="font-medium">
-                    {editingAddress ? "Edit Address" : "New Address"}
+                    {editingAddress ? t("Edit Address") : t("New Address")}
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Label</Label>
+                      <Label><T>Label</T></Label>
                       <Select
                         value={(editingAddress || newAddress).label}
                         onValueChange={(value) => {
@@ -857,14 +860,14 @@ export default function CustomerSettingsPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Home">Home</SelectItem>
-                          <SelectItem value="Work">Work</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
+                          <SelectItem value="Home"><T>Home</T></SelectItem>
+                          <SelectItem value="Work"><T>Work</T></SelectItem>
+                          <SelectItem value="Other"><T>Other</T></SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Full Name</Label>
+                      <Label><T>Full Name</T></Label>
                       <Input
                         value={(editingAddress || newAddress).fullName}
                         onChange={(e) => {
@@ -884,7 +887,7 @@ export default function CustomerSettingsPage() {
                       />
                     </div>
                     <div className="space-y-2 md:col-span-2">
-                      <Label>Phone Number</Label>
+                      <Label><T>Phone Number</T></Label>
                       <Input
                         value={(editingAddress || newAddress).phone}
                         onChange={(e) => {
@@ -904,7 +907,7 @@ export default function CustomerSettingsPage() {
                       />
                     </div>
                     <div className="space-y-2 md:col-span-2">
-                      <Label>Address Line 1</Label>
+                      <Label><T>Address Line 1</T></Label>
                       <Input
                         value={(editingAddress || newAddress).addressLine1}
                         onChange={(e) => {
@@ -924,7 +927,7 @@ export default function CustomerSettingsPage() {
                       />
                     </div>
                     <div className="space-y-2 md:col-span-2">
-                      <Label>Address Line 2 (Optional)</Label>
+                      <Label><T>Address Line 2 (Optional)</T></Label>
                       <Input
                         value={
                           (editingAddress || newAddress).addressLine2 || ""
@@ -946,7 +949,7 @@ export default function CustomerSettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>City</Label>
+                      <Label><T>City</T></Label>
                       <Input
                         value={(editingAddress || newAddress).city}
                         onChange={(e) => {
@@ -966,7 +969,7 @@ export default function CustomerSettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>State/Province</Label>
+                      <Label><T>State/Province</T></Label>
                       <Input
                         value={(editingAddress || newAddress).state}
                         onChange={(e) => {
@@ -986,7 +989,7 @@ export default function CustomerSettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Postal Code</Label>
+                      <Label><T>Postal Code</T></Label>
                       <Input
                         value={(editingAddress || newAddress).postalCode}
                         onChange={(e) => {
@@ -1006,7 +1009,7 @@ export default function CustomerSettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Country</Label>
+                      <Label><T>Country</T></Label>
                       <Select
                         value={(editingAddress || newAddress).country}
                         onValueChange={(value) => {
@@ -1050,18 +1053,18 @@ export default function CustomerSettingsPage() {
                         setEditingAddress(null);
                       }}
                     >
-                      Cancel
+                      <T>Cancel</T>
                     </Button>
                     <Button onClick={saveAddress} disabled={isSavingAddress}>
                       {isSavingAddress ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Saving...
+                          <T>Saving...</T>
                         </>
                       ) : (
                         <>
                           <Save className="h-4 w-4 mr-2" />
-                          {editingAddress ? "Update Address" : "Save Address"}
+                          {editingAddress ? t("Update Address") : t("Save Address")}
                         </>
                       )}
                     </Button>
@@ -1076,14 +1079,14 @@ export default function CustomerSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
-                Security
+                <T>Security</T>
               </CardTitle>
-              <CardDescription>Change your password</CardDescription>
+              <CardDescription><T>Change your password</T></CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="security-currentPassword">
-                  Current Password
+                  <T>Current Password</T>
                 </Label>
                 <Input
                   id="security-currentPassword"
@@ -1099,7 +1102,7 @@ export default function CustomerSettingsPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="security-newPassword">New Password</Label>
+                  <Label htmlFor="security-newPassword"><T>New Password</T></Label>
                   <Input
                     id="security-newPassword"
                     type="password"
@@ -1114,7 +1117,7 @@ export default function CustomerSettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="security-confirmPassword">
-                    Confirm New Password
+                    <T>Confirm New Password</T>
                   </Label>
                   <Input
                     id="security-confirmPassword"
@@ -1141,10 +1144,10 @@ export default function CustomerSettingsPage() {
                 {isChangingPassword ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Changing...
+                    <T>Changing...</T>
                   </>
                 ) : (
-                  "Change Password"
+                  t("Change Password")
                 )}
               </Button>
             </CardContent>
