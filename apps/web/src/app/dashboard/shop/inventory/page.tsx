@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { T } from "@/components/ui/T";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useT } from "@/providers/translation-provider";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { materialsApi, shopsApi } from "@/lib/api";
 import { FINISH_DATA, JEWELLERY_TYPE_DATA } from "@/lib/jewellery-constants";
@@ -245,6 +247,7 @@ const gemstoneCategories = [
 
 export default function ShopInventoryPage() {
   const { user } = useAuth();
+  const t = useT();
   const {
     currencyCode: shopCurrency,
     symbol: currencySymbol,
@@ -402,8 +405,8 @@ export default function ShopInventoryPage() {
       console.error("Failed to load data:", error);
       toast({
         variant: "destructive",
-        title: "Failed to load inventory",
-        description: "Could not fetch inventory data",
+        title: t("Failed to load inventory"),
+        description: t("Could not fetch inventory data"),
       });
     } finally {
       setIsLoading(false);
@@ -430,14 +433,14 @@ export default function ShopInventoryPage() {
         setMarketRates(ratesArray);
       }
       toast({
-        title: "Rates Refreshed",
-        description: "Market rates updated successfully",
+        title: t("Rates Refreshed"),
+        description: t("Market rates updated successfully"),
       });
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Refresh Failed",
-        description: "Could not refresh market rates",
+        title: t("Refresh Failed"),
+        description: t("Could not refresh market rates"),
       });
     } finally {
       setIsRefreshingRates(false);
@@ -504,15 +507,15 @@ export default function ShopInventoryPage() {
 
       await shopsApi.updateMaterials({ materials: transformedMaterials });
       toast({
-        title: "Materials Saved",
-        description: "Your material settings have been updated",
+        title: t("Materials Saved"),
+        description: t("Your material settings have been updated"),
       });
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Save Failed",
+        title: t("Save Failed"),
         description:
-          error.response?.data?.message || "Could not save materials",
+          error.response?.data?.message || t("Could not save materials"),
       });
     } finally {
       setIsSaving(false);
@@ -526,15 +529,15 @@ export default function ShopInventoryPage() {
     try {
       await shopsApi.updateCapabilities(capabilitiesData);
       toast({
-        title: "Capabilities Saved",
-        description: "Your capabilities have been updated",
+        title: t("Capabilities Saved"),
+        description: t("Your capabilities have been updated"),
       });
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Save Failed",
+        title: t("Save Failed"),
         description:
-          error.response?.data?.message || "Could not save capabilities",
+          error.response?.data?.message || t("Could not save capabilities"),
       });
     } finally {
       setIsSaving(false);
@@ -573,23 +576,23 @@ export default function ShopInventoryPage() {
 
       if (rates.length === 0) {
         toast({
-          title: "No Changes",
-          description: "No pricing overrides to save",
+          title: t("No Changes"),
+          description: t("No pricing overrides to save"),
         });
         return;
       }
 
       await shopsApi.updateGemstonePricing({ rates });
       toast({
-        title: "Gemstone Pricing Saved",
-        description: `Updated pricing for ${rates.length} gemstone configurations`,
+        title: t("Gemstone Pricing Saved"),
+        description: t(`Updated pricing for ${rates.length} gemstone configurations`),
       });
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Save Failed",
+        title: t("Save Failed"),
         description:
-          error.response?.data?.message || "Could not save gemstone pricing",
+          error.response?.data?.message || t("Could not save gemstone pricing"),
       });
     } finally {
       setIsSavingGemstones(false);
@@ -605,16 +608,16 @@ export default function ShopInventoryPage() {
         finishPrices,
       });
       toast({
-        title: "Component Pricing Saved",
+        title: t("Component Pricing Saved"),
         description:
-          "Your base metal, plating & finish prices have been updated. These prices will be used in the RFQ calculator.",
+          t("Your base metal, plating & finish prices have been updated. These prices will be used in the RFQ calculator."),
       });
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Save Failed",
+        title: t("Save Failed"),
         description:
-          error.response?.data?.message || "Could not save component pricing",
+          error.response?.data?.message || t("Could not save component pricing"),
       });
     } finally {
       setIsSavingComponentPricing(false);
@@ -838,9 +841,9 @@ export default function ShopInventoryPage() {
         <div className="space-y-6">
           {/* Header */}
           <div>
-            <h1 className="text-2xl font-bold">Inventory & Capabilities</h1>
+            <h1 className="text-2xl font-bold"><T>Inventory & Capabilities</T></h1>
             <p className="text-muted-foreground">
-              Manage your materials, jewellery types, and build methods
+              <T>Manage your materials, jewellery types, and build methods</T>
             </p>
           </div>
 
@@ -850,7 +853,7 @@ export default function ShopInventoryPage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-400 text-base">
                   <TrendingUp className="h-5 w-5" />
-                  Live Market Rates
+                  <T>Live Market Rates</T>
                 </CardTitle>
                 <Button
                   variant="outline"
@@ -864,7 +867,7 @@ export default function ShopInventoryPage() {
                   ) : (
                     <RefreshCw className="h-4 w-4" />
                   )}
-                  <span className="ml-1">Refresh</span>
+                  <span className="ml-1"><T>Refresh</T></span>
                 </Button>
               </div>
             </CardHeader>
@@ -892,22 +895,19 @@ export default function ShopInventoryPage() {
               <div className="bg-white/30 dark:bg-black/10 rounded-lg p-3 space-y-2">
                 <p className="font-medium">
                   <Info className="h-4 w-4 inline mr-1" />
-                  How Pricing Works:
+                  <T>How Pricing Works:</T>
                 </p>
                 <p>
                   <strong>
-                    Total Price = (Metal Weight × Live Rate) + Making Charges
+                    <T>Total Price = (Metal Weight × Live Rate) + Making Charges</T>
                   </strong>
                 </p>
                 <ul className="list-disc pl-5 space-y-1 text-xs">
                   <li>
-                    <strong>Market Rate:</strong> Fetched live from FENEGOSIDA
-                    (Nepal) or international sources.
+                    <strong><T>Market Rate:</T></strong>{" "}<T>Fetched live from FENEGOSIDA (Nepal) or international sources.</T>
                   </li>
                   <li>
-                    <strong>Making Charges:</strong> Set your own per gram rate
-                    below, or leave blank for system default (10% of metal
-                    value).
+                    <strong><T>Making Charges:</T></strong>{" "}<T>Set your own per gram rate below, or leave blank for system default (10% of metal value).</T>
                   </li>
                   <li>
                     <strong>Example:</strong> 10g Gold 24K at {currencySymbol}{" "}
@@ -933,14 +933,14 @@ export default function ShopInventoryPage() {
 
           <Tabs defaultValue="materials" className="space-y-4">
             <TabsList className="flex-wrap h-auto gap-1">
-              <TabsTrigger value="materials">Materials</TabsTrigger>
-              <TabsTrigger value="alloys">Alloys</TabsTrigger>
-              <TabsTrigger value="basemetals">Base Metals</TabsTrigger>
-              <TabsTrigger value="plating">Plating</TabsTrigger>
-              <TabsTrigger value="gemstones">Gemstones</TabsTrigger>
-              <TabsTrigger value="jewellery">Jewellery Types</TabsTrigger>
-              <TabsTrigger value="methods">Build Methods</TabsTrigger>
-              <TabsTrigger value="finishes">Finishes</TabsTrigger>
+              <TabsTrigger value="materials"><T>Materials</T></TabsTrigger>
+              <TabsTrigger value="alloys"><T>Alloys</T></TabsTrigger>
+              <TabsTrigger value="basemetals"><T>Base Metals</T></TabsTrigger>
+              <TabsTrigger value="plating"><T>Plating</T></TabsTrigger>
+              <TabsTrigger value="gemstones"><T>Gemstones</T></TabsTrigger>
+              <TabsTrigger value="jewellery"><T>Jewellery Types</T></TabsTrigger>
+              <TabsTrigger value="methods"><T>Build Methods</T></TabsTrigger>
+              <TabsTrigger value="finishes"><T>Finishes</T></TabsTrigger>
             </TabsList>
 
             {/* Materials Tab */}
@@ -949,10 +949,10 @@ export default function ShopInventoryPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Gem className="h-5 w-5" />
-                    Supported Materials
+                    <T>Supported Materials</T>
                   </CardTitle>
                   <CardDescription>
-                    Select the metals and purities you work with
+                    <T>Select the metals and purities you work with</T>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -1031,7 +1031,7 @@ export default function ShopInventoryPage() {
                                 <div className="space-y-2">
                                   <div className="flex items-center justify-between">
                                     <Label className="text-xs text-muted-foreground">
-                                      Making Charge Mode
+                                      <T>Making Charge Mode</T>
                                     </Label>
                                     <div className="flex items-center gap-2">
                                       <span
@@ -1093,7 +1093,7 @@ export default function ShopInventoryPage() {
                                   "percent" ? (
                                     <div className="space-y-1">
                                       <Label className="text-xs text-muted-foreground">
-                                        Making Charge Percentage (%)
+                                        <T>Making Charge Percentage (%)</T>
                                       </Label>
                                       <Input
                                         type="number"
@@ -1177,7 +1177,7 @@ export default function ShopInventoryPage() {
                                             </span>
                                           </>
                                         ) : (
-                                          "Leave blank to use default (10% of metal value)"
+                                          t("Leave blank to use default (10% of metal value)")
                                         )}
                                       </p>
                                     </div>
@@ -1187,7 +1187,7 @@ export default function ShopInventoryPage() {
                                 <div className="grid grid-cols-2 gap-2">
                                   <div className="space-y-1">
                                     <Label className="text-xs text-muted-foreground">
-                                      Min Weight (g)
+                                      <T>Min Weight (g)</T>
                                     </Label>
                                     <Input
                                       type="number"
@@ -1204,7 +1204,7 @@ export default function ShopInventoryPage() {
                                   </div>
                                   <div className="space-y-1">
                                     <Label className="text-xs text-muted-foreground">
-                                      Max Weight (g)
+                                      <T>Max Weight (g)</T>
                                     </Label>
                                     <Input
                                       type="number"
@@ -1226,7 +1226,7 @@ export default function ShopInventoryPage() {
                                   <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 space-y-2">
                                     <div className="flex items-center gap-1.5 text-xs font-medium text-blue-700 dark:text-blue-400">
                                       <Eye className="h-3.5 w-3.5" />
-                                      Customer View Preview
+                                      <T>Customer View Preview</T>
                                     </div>
                                     {(() => {
                                       const making =
@@ -1243,7 +1243,7 @@ export default function ShopInventoryPage() {
                                         <div className="grid grid-cols-3 gap-2 text-center">
                                           <div className="bg-white dark:bg-black/20 rounded p-2">
                                             <p className="text-[10px] text-muted-foreground uppercase">
-                                              Metal Rate
+                                              <T>Metal Rate</T>
                                             </p>
                                             <p className="text-sm font-bold">
                                               {currencySymbol}{" "}
@@ -1255,7 +1255,7 @@ export default function ShopInventoryPage() {
                                           </div>
                                           <div className="bg-white dark:bg-black/20 rounded p-2">
                                             <p className="text-[10px] text-muted-foreground uppercase">
-                                              Making
+                                              <T>Making</T>
                                             </p>
                                             <p className="text-sm font-bold text-amber-600">
                                               {currencySymbol}{" "}
@@ -1267,7 +1267,7 @@ export default function ShopInventoryPage() {
                                           </div>
                                           <div className="bg-white dark:bg-black/20 rounded p-2">
                                             <p className="text-[10px] text-muted-foreground uppercase">
-                                              Total
+                                              <T>Total</T>
                                             </p>
                                             <p className="text-sm font-bold text-green-600">
                                               {currencySymbol}{" "}
@@ -1297,7 +1297,7 @@ export default function ShopInventoryPage() {
                       ) : (
                         <Save className="h-4 w-4 mr-2" />
                       )}
-                      Save Materials
+                    <T>Save Materials</T>
                     </Button>
                   </div>
                 </CardContent>
@@ -1310,10 +1310,10 @@ export default function ShopInventoryPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Gem className="h-5 w-5" />
-                    Supported Gemstones
+                    <T>Supported Gemstones</T>
                   </CardTitle>
                   <CardDescription>
-                    Select the gemstones you can work with or source
+                    <T>Select the gemstones you can work with or source</T>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -1348,7 +1348,7 @@ export default function ShopInventoryPage() {
                               toggleAllGemstonesInCategory(category.id)
                             }
                           >
-                            {allSelected ? "Deselect All" : "Select All"}
+                            {allSelected ? t("Deselect All") : t("Select All")}
                           </Button>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -1385,7 +1385,7 @@ export default function ShopInventoryPage() {
                       ) : (
                         <Save className="h-4 w-4 mr-2" />
                       )}
-                      Save Gemstones
+                      <T>Save Gemstones</T>
                     </Button>
                   </div>
                 </CardContent>
@@ -1397,11 +1397,10 @@ export default function ShopInventoryPage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Gem className="h-5 w-5" />
-                      Gemstone Pricing
+                      <T>Gemstone Pricing</T>
                     </CardTitle>
                     <CardDescription>
-                      Set your own prices or use system defaults. Leave blank to
-                      use the default price.
+                      <T>Set your own prices or use system defaults. Leave blank to use the default price.</T>
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
@@ -1435,15 +1434,15 @@ export default function ShopInventoryPage() {
                                 <table className="w-full text-sm">
                                   <thead>
                                     <tr className="border-b">
-                                      <th className="text-left p-2">Size</th>
+                                      <th className="text-left p-2"><T>Size</T></th>
                                       <th className="text-right p-2">
-                                        Quality
+                                        <T>Quality</T>
                                       </th>
                                       <th className="text-right p-2">
-                                        System Default
+                                        <T>System Default</T>
                                       </th>
                                       <th className="text-right p-2">
-                                        Your Price ({currencySymbol})
+                                        <T>Your Price</T> ({currencySymbol})
                                       </th>
                                     </tr>
                                   </thead>
@@ -1537,7 +1536,7 @@ export default function ShopInventoryPage() {
                         ) : (
                           <Save className="h-4 w-4 mr-2" />
                         )}
-                        Save Gemstone Pricing
+                        <T>Save Gemstone Pricing</T>
                       </Button>
                     </div>
                   </CardContent>
@@ -1551,10 +1550,10 @@ export default function ShopInventoryPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <CircleDot className="h-5 w-5" />
-                    Jewellery Types
+                    <T>Jewellery Types</T>
                   </CardTitle>
                   <CardDescription>
-                    Select the types of jewellery you can make
+                    <T>Select the types of jewellery you can make</T>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -1623,7 +1622,7 @@ export default function ShopInventoryPage() {
                       ) : (
                         <Save className="h-4 w-4 mr-2" />
                       )}
-                      Save Jewellery Types
+                      <T>Save Jewellery Types</T>
                     </Button>
                   </div>
                 </CardContent>
@@ -1636,11 +1635,10 @@ export default function ShopInventoryPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <CircleDot className="h-5 w-5" />
-                    Standard Alloys (Method B)
+                    <T>Standard Alloys (Method B)</T>
                   </CardTitle>
                   <CardDescription>
-                    Select the alloy compositions you can work with for Method B
-                    orders
+                    <T>Select the alloy compositions you can work with for Method B orders</T>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -1679,7 +1677,7 @@ export default function ShopInventoryPage() {
                       ) : (
                         <Save className="h-4 w-4 mr-2" />
                       )}
-                      Save Alloys
+                      <T>Save Alloys</T>
                     </Button>
                   </div>
                 </CardContent>
@@ -1692,12 +1690,10 @@ export default function ShopInventoryPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Hammer className="h-5 w-5" />
-                    Base Metals (Method C & D)
+                    <T>Base Metals (Method C & D)</T>
                   </CardTitle>
                   <CardDescription>
-                    Select the base/core metals you work with and set your
-                    per-gram rate. These prices are used in the RFQ live
-                    calculator for transparent cost breakdown.
+                    <T>Select the base/core metals you work with and set your per-gram rate. These prices are used in the RFQ live calculator for transparent cost breakdown.</T>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -1766,7 +1762,7 @@ export default function ShopInventoryPage() {
                       ) : (
                         <Save className="h-4 w-4 mr-2" />
                       )}
-                      Save Selection
+                      <T>Save Selection</T>
                     </Button>
                     <Button
                       onClick={saveComponentPricing}
@@ -1778,7 +1774,7 @@ export default function ShopInventoryPage() {
                       ) : (
                         <TrendingUp className="h-4 w-4 mr-2" />
                       )}
-                      Save Prices
+                      <T>Save Prices</T>
                     </Button>
                   </div>
                 </CardContent>
@@ -1791,12 +1787,10 @@ export default function ShopInventoryPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Sparkles className="h-5 w-5" />
-                    Plating & Coating Types (Method C)
+                    <T>Plating & Coating Types (Method C)</T>
                   </CardTitle>
                   <CardDescription>
-                    Select plating types and set your base rate per piece. The
-                    calculator adjusts this by tier and jewellery size
-                    automatically.
+                    <T>Select plating types and set your base rate per piece. The calculator adjusts this by tier and jewellery size automatically.</T>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -1864,7 +1858,7 @@ export default function ShopInventoryPage() {
                       ) : (
                         <Save className="h-4 w-4 mr-2" />
                       )}
-                      Save Selection
+                      <T>Save Selection</T>
                     </Button>
                     <Button
                       onClick={saveComponentPricing}
@@ -1876,23 +1870,23 @@ export default function ShopInventoryPage() {
                       ) : (
                         <TrendingUp className="h-4 w-4 mr-2" />
                       )}
-                      Save Prices
+                      <T>Save Prices</T>
                     </Button>
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            {/* Build Methods Tab */}
+            {/* Build Methods Tab */>
             <TabsContent value="methods" className="space-y-4">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Hammer className="h-5 w-5" />
-                    Build Methods
+                    <T>Build Methods</T>
                   </CardTitle>
                   <CardDescription>
-                    Select the construction methods you support
+                    <T>Select the construction methods you support</T>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -1917,22 +1911,22 @@ export default function ShopInventoryPage() {
                             </Label>
                             {method.value === "METHOD_A" && (
                               <p className="text-sm text-muted-foreground mt-1">
-                                Standard solid gold or silver construction
+                                <T>Standard solid gold or silver construction</T>
                               </p>
                             )}
                             {method.value === "METHOD_B" && (
                               <p className="text-sm text-muted-foreground mt-1">
-                                Silver core with gold plating overlay
+                                <T>Silver core with gold plating overlay</T>
                               </p>
                             )}
                             {method.value === "METHOD_C" && (
                               <p className="text-sm text-muted-foreground mt-1">
-                                Hollow/tube construction for lightweight pieces
+                                <T>Hollow/tube construction for lightweight pieces</T>
                               </p>
                             )}
                             {method.value === "METHOD_D" && (
                               <p className="text-sm text-muted-foreground mt-1">
-                                Machine-made chains and bangles (Italian style)
+                                <T>Machine-made chains and bangles (Italian style)</T>
                               </p>
                             )}
                           </div>
@@ -1948,7 +1942,7 @@ export default function ShopInventoryPage() {
                       ) : (
                         <Save className="h-4 w-4 mr-2" />
                       )}
-                      Save Build Methods
+                      <T>Save Build Methods</T>
                     </Button>
                   </div>
                 </CardContent>
@@ -1961,11 +1955,10 @@ export default function ShopInventoryPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Sparkles className="h-5 w-5" />
-                    Surface Finishes
+                    <T>Surface Finishes</T>
                   </CardTitle>
                   <CardDescription>
-                    Select the finishes you can apply and set your price per
-                    piece for each. Prices feed into the RFQ calculator.
+                    <T>Select the finishes you can apply and set your price per piece for each. Prices feed into the RFQ calculator.</T>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -2066,7 +2059,7 @@ export default function ShopInventoryPage() {
                       ) : (
                         <Save className="h-4 w-4 mr-2" />
                       )}
-                      Save Selection
+                      <T>Save Selection</T>
                     </Button>
                     <Button
                       onClick={saveComponentPricing}
@@ -2078,7 +2071,7 @@ export default function ShopInventoryPage() {
                       ) : (
                         <TrendingUp className="h-4 w-4 mr-2" />
                       )}
-                      Save Prices
+                      <T>Save Prices</T>
                     </Button>
                   </div>
                 </CardContent>

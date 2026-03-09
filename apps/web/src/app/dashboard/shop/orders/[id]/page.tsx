@@ -2,8 +2,6 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import {
   OrderStatusBadge,
   OrderStepper,
@@ -34,10 +32,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import api from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -260,7 +260,9 @@ export default function ShopOrderDetailPage() {
         <DashboardLayout>
           <div className="text-center py-12">
             <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <h2 className="text-xl font-semibold"><T>Order Not Found</T></h2>
+            <h2 className="text-xl font-semibold">
+              <T>Order Not Found</T>
+            </h2>
             <p className="text-muted-foreground">
               <T>The order you're looking for doesn't exist.</T>
             </p>
@@ -309,7 +311,9 @@ export default function ShopOrderDetailPage() {
           {/* Order Progress Stepper */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle><T>Order Progress</T></CardTitle>
+              <CardTitle>
+                <T>Order Progress</T>
+              </CardTitle>
               <CardDescription>
                 <T>Track the order through production stages</T>
               </CardDescription>
@@ -339,7 +343,9 @@ export default function ShopOrderDetailPage() {
               {/* Order Details */}
               <Card>
                 <CardHeader>
-                  <CardTitle><T>Order Details</T></CardTitle>
+                  <CardTitle>
+                    <T>Order Details</T>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -380,28 +386,36 @@ export default function ShopOrderDetailPage() {
                   <Separator className="my-4" />
                   <div className="space-y-2">
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground"><T>Subtotal</T></span>
+                      <span className="text-muted-foreground">
+                        <T>Subtotal</T>
+                      </span>
                       <span>
                         {currencySymbol} {order.subtotalNpr?.toLocaleString()}
                       </span>
                     </div>
                     {order.shippingNpr > 0 && (
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground"><T>Shipping</T></span>
+                        <span className="text-muted-foreground">
+                          <T>Shipping</T>
+                        </span>
                         <span>
                           {currencySymbol} {order.shippingNpr?.toLocaleString()}
                         </span>
                       </div>
                     )}
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground"><T>Tax</T></span>
+                      <span className="text-muted-foreground">
+                        <T>Tax</T>
+                      </span>
                       <span>
                         {currencySymbol} {order.taxNpr?.toLocaleString()}
                       </span>
                     </div>
                     {order.discountNpr > 0 && (
                       <div className="flex justify-between items-center text-sm text-green-600">
-                        <span><T>Discount</T></span>
+                        <span>
+                          <T>Discount</T>
+                        </span>
                         <span>
                           -{currencySymbol}{" "}
                           {order.discountNpr?.toLocaleString()}
@@ -410,7 +424,9 @@ export default function ShopOrderDetailPage() {
                     )}
                     <Separator className="my-2" />
                     <div className="flex justify-between items-center font-bold">
-                      <span><T>Total</T></span>
+                      <span>
+                        <T>Total</T>
+                      </span>
                       <span className="text-xl">
                         {currencySymbol} {order.totalNpr?.toLocaleString()}
                       </span>
@@ -428,7 +444,9 @@ export default function ShopOrderDetailPage() {
                     )}
                     {order.balanceDueNpr > 0 && (
                       <div className="flex justify-between items-center text-sm font-medium text-orange-600">
-                        <span><T>Balance Due</T></span>
+                        <span>
+                          <T>Balance Due</T>
+                        </span>
                         <span>
                           {currencySymbol}{" "}
                           {order.balanceDueNpr?.toLocaleString()}
@@ -474,7 +492,9 @@ export default function ShopOrderDetailPage() {
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground mt-2">
-                            <T>Customer-provided reference images for the design.</T>
+                            <T>
+                              Customer-provided reference images for the design.
+                            </T>
                           </p>
                         </div>
                       </>
@@ -485,7 +505,9 @@ export default function ShopOrderDetailPage() {
               {/* Status Timeline */}
               <Card>
                 <CardHeader>
-                  <CardTitle><T>Order Timeline</T></CardTitle>
+                  <CardTitle>
+                    <T>Order Timeline</T>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -519,7 +541,9 @@ export default function ShopOrderDetailPage() {
                           <Clock className="h-4 w-4 text-blue-600" />
                         </div>
                         <div>
-                          <p className="font-medium"><T>Order Created</T></p>
+                          <p className="font-medium">
+                            <T>Order Created</T>
+                          </p>
                           <p className="text-sm text-muted-foreground">
                             {formatDate(order.createdAt)}
                           </p>
@@ -536,7 +560,9 @@ export default function ShopOrderDetailPage() {
               {/* Update Status */}
               <Card>
                 <CardHeader>
-                  <CardTitle><T>Update Status</T></CardTitle>
+                  <CardTitle>
+                    <T>Update Status</T>
+                  </CardTitle>
                   <CardDescription>
                     <T>Move order through production stages</T>
                   </CardDescription>
@@ -573,7 +599,9 @@ export default function ShopOrderDetailPage() {
               {/* Payment Info */}
               <Card>
                 <CardHeader>
-                  <CardTitle><T>Payment</T></CardTitle>
+                  <CardTitle>
+                    <T>Payment</T>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -652,7 +680,9 @@ export default function ShopOrderDetailPage() {
               {/* Customer Info */}
               <Card>
                 <CardHeader>
-                  <CardTitle><T>Customer</T></CardTitle>
+                  <CardTitle>
+                    <T>Customer</T>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-3">
@@ -685,7 +715,9 @@ export default function ShopOrderDetailPage() {
               {order.shippingAddress && (
                 <Card>
                   <CardHeader>
-                    <CardTitle><T>Shipping Address</T></CardTitle>
+                    <CardTitle>
+                      <T>Shipping Address</T>
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-start gap-3">
@@ -713,15 +745,22 @@ export default function ShopOrderDetailPage() {
           >
             <DialogContent>
               <DialogHeader>
-                <DialogTitle><T>Confirm Payment at Shop</T></DialogTitle>
+                <DialogTitle>
+                  <T>Confirm Payment at Shop</T>
+                </DialogTitle>
                 <DialogDescription>
-                  <T>By marking this order as paid at shop, you agree to the following:</T>
+                  <T>
+                    By marking this order as paid at shop, you agree to the
+                    following:
+                  </T>
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="rounded-lg border p-4 space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground"><T>Order Total:</T></span>
+                    <span className="text-muted-foreground">
+                      <T>Order Total:</T>
+                    </span>
                     <span className="font-bold">
                       Rs. {(order?.totalNpr || 0).toLocaleString()}
                     </span>
@@ -738,7 +777,9 @@ export default function ShopOrderDetailPage() {
                     <span className="text-muted-foreground">
                       <T>Settlement Due:</T>
                     </span>
-                    <span className="font-medium"><T>21 days from today</T></span>
+                    <span className="font-medium">
+                      <T>21 days from today</T>
+                    </span>
                   </div>
                 </div>
                 <div className="p-3 bg-yellow-50 dark:bg-yellow-950/30 rounded-lg border border-yellow-200 dark:border-yellow-800/50 text-sm text-yellow-800 dark:text-yellow-200">
@@ -747,7 +788,10 @@ export default function ShopOrderDetailPage() {
                     <T>Important Notice</T>
                   </p>
                   <p className="mt-1">
-                    <T>The 1% commission must be settled within 21 days. Failure to pay will result in your shop being placed on hold.</T>
+                    <T>
+                      The 1% commission must be settled within 21 days. Failure
+                      to pay will result in your shop being placed on hold.
+                    </T>
                   </p>
                 </div>
               </div>

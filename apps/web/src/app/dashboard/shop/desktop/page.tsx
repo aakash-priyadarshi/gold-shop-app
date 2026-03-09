@@ -3,7 +3,6 @@
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { T } from "@/components/ui/T";
 import {
   Card,
   CardContent,
@@ -11,8 +10,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useT } from "@/providers/translation-provider";
+import { T } from "@/components/ui/T";
 import { api } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   ArrowDownTrayIcon,
   CheckCircleIcon,
@@ -98,7 +98,11 @@ export default function DesktopAppPage() {
                   <T>Get the Orivraa Desktop App</T>
                 </CardTitle>
                 <CardDescription className="max-w-md mx-auto">
-                  <T>Manage your shop faster with offline support, native notifications, and seamless Google sign-in. The desktop app keeps everything at your fingertips.</T>
+                  <T>
+                    Manage your shop faster with offline support, native
+                    notifications, and seamless Google sign-in. The desktop app
+                    keeps everything at your fingertips.
+                  </T>
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col items-center gap-4 pb-8">
@@ -164,8 +168,12 @@ export default function DesktopAppPage() {
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {status.isUpToDate
-                        ? t(`Running the latest version (v${status.latestVersion})`)
-                        : t(`Latest version is v${status.latestVersion}. Download the update to get the latest features.`)}
+                        ? t(
+                            `Running the latest version (v${status.latestVersion})`,
+                          )
+                        : t(
+                            `Latest version is v${status.latestVersion}. Download the update to get the latest features.`,
+                          )}
                     </p>
                   </div>
                   {!status.isUpToDate && (
@@ -185,7 +193,9 @@ export default function DesktopAppPage() {
 
               {/* Sessions */}
               <div>
-                <h2 className="text-lg font-semibold mb-3"><T>Your Devices</T></h2>
+                <h2 className="text-lg font-semibold mb-3">
+                  <T>Your Devices</T>
+                </h2>
                 <div className="space-y-3">
                   {(status.sessions || []).map((session) => (
                     <Card key={session.id} className="border-border/50">
@@ -225,10 +235,14 @@ export default function DesktopAppPage() {
           {/* Links */}
           <div className="flex items-center gap-3 pt-2">
             <Button variant="outline" size="sm" asChild>
-              <Link href="/download"><T>Downloads Page</T></Link>
+              <Link href="/download">
+                <T>Downloads Page</T>
+              </Link>
             </Button>
             <Button variant="outline" size="sm" asChild>
-              <Link href="/download/changelog"><T>Changelog</T></Link>
+              <Link href="/download/changelog">
+                <T>Changelog</T>
+              </Link>
             </Button>
           </div>
         </div>

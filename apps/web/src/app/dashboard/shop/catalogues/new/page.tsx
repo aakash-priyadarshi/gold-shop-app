@@ -3,8 +3,8 @@
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
-import { useT } from "@/providers/translation-provider";
 import { catalogueApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import { ArrowLeft, BookOpen, Globe, Lock, Monitor } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";

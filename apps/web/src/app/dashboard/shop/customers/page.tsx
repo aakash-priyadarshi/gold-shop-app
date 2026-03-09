@@ -11,8 +11,8 @@ import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useFeatures } from "@/hooks/useFeatures";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
-import { useT } from "@/providers/translation-provider";
 import { customerCrmApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   Loader2,
   MessageSquare,
@@ -123,9 +123,14 @@ export default function CustomerDirectoryPage() {
               <Card>
                 <CardContent className="flex flex-col items-center py-12 text-center">
                   <Users className="h-12 w-12 text-muted-foreground opacity-30 mb-4" />
-                  <p className="text-muted-foreground"><T>No customers found</T></p>
+                  <p className="text-muted-foreground">
+                    <T>No customers found</T>
+                  </p>
                   <p className="text-sm text-muted-foreground">
-                    <T>Customers appear here after they place orders or RFQ requests</T>
+                    <T>
+                      Customers appear here after they place orders or RFQ
+                      requests
+                    </T>
                   </p>
                 </CardContent>
               </Card>

@@ -2,8 +2,6 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { T } from "@/components/ui/T";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
@@ -43,6 +42,7 @@ import {
   JEWELLERY_TYPE_IMAGES,
   WEIGHT_GUIDANCE,
 } from "@/lib/constants/jewellery";
+import { useT } from "@/providers/translation-provider";
 import {
   ArrowLeft,
   ArrowRight,
@@ -554,7 +554,9 @@ export default function ShopRfqDetailPage() {
         <DashboardLayout>
           <div className="text-center py-12">
             <FileQuestion className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <h2 className="text-xl font-semibold"><T>RFQ Not Found</T></h2>
+            <h2 className="text-xl font-semibold">
+              <T>RFQ Not Found</T>
+            </h2>
             <p className="text-muted-foreground">
               <T>The request you're looking for doesn't exist.</T>
             </p>
@@ -580,7 +582,9 @@ export default function ShopRfqDetailPage() {
                 <T>Back</T>
               </Button>
               <div>
-                <h1 className="text-2xl font-bold"><T>RFQ Details</T></h1>
+                <h1 className="text-2xl font-bold">
+                  <T>RFQ Details</T>
+                </h1>
                 <p className="text-muted-foreground">
                   Request #{rfq.id.slice(0, 8)}
                 </p>
@@ -597,7 +601,9 @@ export default function ShopRfqDetailPage() {
               {/* Request Details */}
               <Card>
                 <CardHeader>
-                  <CardTitle><T>Request Details</T></CardTitle>
+                  <CardTitle>
+                    <T>Request Details</T>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Jewellery Type with Image */}
@@ -642,7 +648,10 @@ export default function ShopRfqDetailPage() {
                           </TooltipTrigger>
                           <TooltipContent side="right" className="max-w-xs">
                             <p className="text-xs">
-                              <T>How the jewellery is constructed — affects durability, weight, and price.</T>
+                              <T>
+                                How the jewellery is constructed — affects
+                                durability, weight, and price.
+                              </T>
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -953,7 +962,10 @@ export default function ShopRfqDetailPage() {
                           ))}
                         </div>
                         <p className="text-xs text-muted-foreground mt-2">
-                          <T>Click any image to enlarge. Customer-provided reference images for the desired design.</T>
+                          <T>
+                            Click any image to enlarge. Customer-provided
+                            reference images for the desired design.
+                          </T>
                         </p>
                       </div>
                     </>
@@ -1002,7 +1014,9 @@ export default function ShopRfqDetailPage() {
               {canSubmitOffer && (
                 <Card>
                   <CardHeader>
-                    <CardTitle><T>Respond to Request</T></CardTitle>
+                    <CardTitle>
+                      <T>Respond to Request</T>
+                    </CardTitle>
                     <CardDescription>
                       <T>Accept, counter-offer, or decline this request</T>
                     </CardDescription>
@@ -1123,7 +1137,9 @@ export default function ShopRfqDetailPage() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="shopNotes"><T>Notes (optional)</T></Label>
+                          <Label htmlFor="shopNotes">
+                            <T>Notes (optional)</T>
+                          </Label>
                           <Textarea
                             id="shopNotes"
                             placeholder={t("Add any additional details...")}
@@ -1176,7 +1192,9 @@ export default function ShopRfqDetailPage() {
                       ) : (
                         <>
                           <Send className="h-4 w-4 mr-2" />
-                          {offerType === "COUNTER" ? t("Submit Counter-Offer") : t("Submit Quote")}
+                          {offerType === "COUNTER"
+                            ? t("Submit Counter-Offer")
+                            : t("Submit Quote")}
                         </>
                       )}
                     </Button>
@@ -1278,10 +1296,15 @@ export default function ShopRfqDetailPage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-amber-800">
                       <Reply className="h-5 w-5" />
-                      {t(`Customer Counter-Offers (${customerCounterOffers.length})`)}
+                      {t(
+                        `Customer Counter-Offers (${customerCounterOffers.length})`,
+                      )}
                     </CardTitle>
                     <CardDescription>
-                      <T>The customer has sent counter-offers requiring your response</T>
+                      <T>
+                        The customer has sent counter-offers requiring your
+                        response
+                      </T>
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -1456,7 +1479,9 @@ export default function ShopRfqDetailPage() {
               {/* Customer Info */}
               <Card>
                 <CardHeader>
-                  <CardTitle><T>Customer</T></CardTitle>
+                  <CardTitle>
+                    <T>Customer</T>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-3">
@@ -1475,18 +1500,24 @@ export default function ShopRfqDetailPage() {
               {/* Timeline */}
               <Card>
                 <CardHeader>
-                  <CardTitle><T>Timeline</T></CardTitle>
+                  <CardTitle>
+                    <T>Timeline</T>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center gap-2 text-sm">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground"><T>Created:</T></span>
+                    <span className="text-muted-foreground">
+                      <T>Created:</T>
+                    </span>
                     <span>{formatDate(rfq.createdAt)}</span>
                   </div>
                   {rfq.expiresAt && (
                     <div className="flex items-center gap-2 text-sm">
                       <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground"><T>Expires:</T></span>
+                      <span className="text-muted-foreground">
+                        <T>Expires:</T>
+                      </span>
                       <span>{formatDate(rfq.expiresAt)}</span>
                     </div>
                   )}
@@ -1496,7 +1527,9 @@ export default function ShopRfqDetailPage() {
               {/* Other Offers Count */}
               <Card>
                 <CardHeader>
-                  <CardTitle><T>Competition</T></CardTitle>
+                  <CardTitle>
+                    <T>Competition</T>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-2">
@@ -1504,7 +1537,9 @@ export default function ShopRfqDetailPage() {
                     <span className="text-2xl font-bold">
                       {rfq.offers?.length || 0}
                     </span>
-                    <span className="text-muted-foreground"><T>total offers</T></span>
+                    <span className="text-muted-foreground">
+                      <T>total offers</T>
+                    </span>
                   </div>
                 </CardContent>
               </Card>
@@ -1517,7 +1552,10 @@ export default function ShopRfqDetailPage() {
                     <T>AI Design Preview</T>
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    <T>Generate a design preview based on this RFQ's specifications</T>
+                    <T>
+                      Generate a design preview based on this RFQ's
+                      specifications
+                    </T>
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -1577,13 +1615,20 @@ export default function ShopRfqDetailPage() {
                 <T>Accept Customer Counter-Offer</T>
               </DialogTitle>
               <DialogDescription>
-                <T>Are you sure you want to accept this counter-offer? This will create an order and the customer will be notified to proceed with payment.</T>
+                <T>
+                  Are you sure you want to accept this counter-offer? This will
+                  create an order and the customer will be notified to proceed
+                  with payment.
+                </T>
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
               <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800/50 rounded-lg p-4">
                 <p className="text-sm text-green-800 dark:text-green-200">
-                  <T>By accepting, you agree to fulfill this order at the customer's proposed price.</T>
+                  <T>
+                    By accepting, you agree to fulfill this order at the
+                    customer's proposed price.
+                  </T>
                 </p>
               </div>
             </div>
@@ -1624,15 +1669,22 @@ export default function ShopRfqDetailPage() {
                 <T>Decline Customer Counter-Offer</T>
               </DialogTitle>
               <DialogDescription>
-                <T>Provide a reason for declining this counter-offer (optional but recommended).</T>
+                <T>
+                  Provide a reason for declining this counter-offer (optional
+                  but recommended).
+                </T>
               </DialogDescription>
             </DialogHeader>
             <div className="py-4 space-y-4">
               <div>
-                <Label htmlFor="counterDeclineReason"><T>Reason (optional)</T></Label>
+                <Label htmlFor="counterDeclineReason">
+                  <T>Reason (optional)</T>
+                </Label>
                 <Textarea
                   id="counterDeclineReason"
-                  placeholder={t("e.g., The proposed price is below our production cost...")}
+                  placeholder={t(
+                    "e.g., The proposed price is below our production cost...",
+                  )}
                   value={counterDeclineReason}
                   onChange={(e) => setCounterDeclineReason(e.target.value)}
                   rows={3}
@@ -1676,13 +1728,18 @@ export default function ShopRfqDetailPage() {
                 <T>Send Counter-Offer</T>
               </DialogTitle>
               <DialogDescription>
-                <T>Propose a revised quote in response to the customer's counter-offer.</T>
+                <T>
+                  Propose a revised quote in response to the customer's
+                  counter-offer.
+                </T>
               </DialogDescription>
             </DialogHeader>
             <div className="py-4 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="counterMetalCost"><T>Metal Cost (NPR) *</T></Label>
+                  <Label htmlFor="counterMetalCost">
+                    <T>Metal Cost (NPR) *</T>
+                  </Label>
                   <Input
                     id="counterMetalCost"
                     type="number"
@@ -1706,7 +1763,9 @@ export default function ShopRfqDetailPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="counterFinishCost"><T>Finish Cost (NPR)</T></Label>
+                  <Label htmlFor="counterFinishCost">
+                    <T>Finish Cost (NPR)</T>
+                  </Label>
                   <Input
                     id="counterFinishCost"
                     type="number"
@@ -1741,7 +1800,9 @@ export default function ShopRfqDetailPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="counterShopNotes"><T>Notes (optional)</T></Label>
+                <Label htmlFor="counterShopNotes">
+                  <T>Notes (optional)</T>
+                </Label>
                 <Textarea
                   id="counterShopNotes"
                   placeholder={t("Explain your revised quote...")}

@@ -2,8 +2,6 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -33,10 +31,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { T } from "@/components/ui/T";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import { format } from "date-fns";
 import {
   AlertTriangle,
@@ -407,7 +407,9 @@ export default function ShopkeeperProfilePage() {
         <DashboardLayout>
           <div className="text-center py-12">
             <AlertTriangle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h2 className="text-xl font-semibold mb-2"><T>Profile Not Found</T></h2>
+            <h2 className="text-xl font-semibold mb-2">
+              <T>Profile Not Found</T>
+            </h2>
             <p className="text-muted-foreground">
               <T>Unable to load your profile data.</T>
             </p>
@@ -424,7 +426,9 @@ export default function ShopkeeperProfilePage() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold"><T>My Profile</T></h1>
+              <h1 className="text-2xl font-bold">
+                <T>My Profile</T>
+              </h1>
               <p className="text-muted-foreground">
                 <T>Manage your personal account settings</T>
               </p>
@@ -461,7 +465,9 @@ export default function ShopkeeperProfilePage() {
                   <div className="flex items-center gap-2 justify-end">
                     <Clock className="h-4 w-4" />
                     <span>
-                      {t(`Joined ${format(new Date(profile.createdAt), "MMM d, yyyy")}`)}
+                      {t(
+                        `Joined ${format(new Date(profile.createdAt), "MMM d, yyyy")}`,
+                      )}
                     </span>
                   </div>
                   {profile.lastLoginAt && (
@@ -480,9 +486,15 @@ export default function ShopkeeperProfilePage() {
 
           <Tabs defaultValue="personal" className="space-y-4">
             <TabsList>
-              <TabsTrigger value="personal"><T>Personal Info</T></TabsTrigger>
-              <TabsTrigger value="preferences"><T>Preferences</T></TabsTrigger>
-              <TabsTrigger value="security"><T>Security</T></TabsTrigger>
+              <TabsTrigger value="personal">
+                <T>Personal Info</T>
+              </TabsTrigger>
+              <TabsTrigger value="preferences">
+                <T>Preferences</T>
+              </TabsTrigger>
+              <TabsTrigger value="security">
+                <T>Security</T>
+              </TabsTrigger>
             </TabsList>
 
             {/* Personal Info Tab */}
@@ -500,7 +512,9 @@ export default function ShopkeeperProfilePage() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName"><T>First Name</T></Label>
+                      <Label htmlFor="firstName">
+                        <T>First Name</T>
+                      </Label>
                       <Input
                         id="firstName"
                         value={profile.firstName}
@@ -510,7 +524,9 @@ export default function ShopkeeperProfilePage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="lastName"><T>Last Name</T></Label>
+                      <Label htmlFor="lastName">
+                        <T>Last Name</T>
+                      </Label>
                       <Input
                         id="lastName"
                         value={profile.lastName}
@@ -523,7 +539,9 @@ export default function ShopkeeperProfilePage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="email"><T>Email</T></Label>
+                      <Label htmlFor="email">
+                        <T>Email</T>
+                      </Label>
                       <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-muted-foreground" />
                         <Input
@@ -539,7 +557,9 @@ export default function ShopkeeperProfilePage() {
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <Label htmlFor="phone"><T>Phone Number</T></Label>
+                        <Label htmlFor="phone">
+                          <T>Phone Number</T>
+                        </Label>
                         {authUser?.phoneVerifiedAt && (
                           <span className="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950/30 px-2 py-0.5 rounded-full">
                             <CheckCircle className="h-3 w-3" />
@@ -596,13 +616,18 @@ export default function ShopkeeperProfilePage() {
                     <T>Regional Preferences</T>
                   </CardTitle>
                   <CardDescription>
-                    <T>Set your preferred language. Currency is determined by your shop's location.</T>
+                    <T>
+                      Set your preferred language. Currency is determined by
+                      your shop's location.
+                    </T>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="language"><T>Preferred Language</T></Label>
+                      <Label htmlFor="language">
+                        <T>Preferred Language</T>
+                      </Label>
                       <Select
                         value={profile.preferredLanguage || "en"}
                         onValueChange={(value) =>
@@ -622,10 +647,15 @@ export default function ShopkeeperProfilePage() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label><T>Currency</T></Label>
+                      <Label>
+                        <T>Currency</T>
+                      </Label>
                       <div className="p-3 bg-muted rounded-md text-sm">
                         <p className="text-muted-foreground">
-                          <T>Currency is automatically set based on your shop's country.</T>
+                          <T>
+                            Currency is automatically set based on your shop's
+                            country.
+                          </T>
                         </p>
                         <p className="mt-1">
                           {t("Manage this in")}{" "}
@@ -674,7 +704,9 @@ export default function ShopkeeperProfilePage() {
                         <Key className="h-5 w-5 text-amber-600" />
                       </div>
                       <div>
-                        <h3 className="font-medium"><T>Password</T></h3>
+                        <h3 className="font-medium">
+                          <T>Password</T>
+                        </h3>
                         <p className="text-sm text-muted-foreground">
                           <T>Change your account password</T>
                         </p>
@@ -685,13 +717,19 @@ export default function ShopkeeperProfilePage() {
                       onOpenChange={setPasswordDialogOpen}
                     >
                       <DialogTrigger asChild>
-                        <Button variant="outline"><T>Change Password</T></Button>
+                        <Button variant="outline">
+                          <T>Change Password</T>
+                        </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle><T>Change Password</T></DialogTitle>
+                          <DialogTitle>
+                            <T>Change Password</T>
+                          </DialogTitle>
                           <DialogDescription>
-                            <T>Enter your current password and choose a new one.</T>
+                            <T>
+                              Enter your current password and choose a new one.
+                            </T>
                           </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
@@ -712,7 +750,9 @@ export default function ShopkeeperProfilePage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="newPassword"><T>New Password</T></Label>
+                            <Label htmlFor="newPassword">
+                              <T>New Password</T>
+                            </Label>
                             <Input
                               id="newPassword"
                               type="password"
@@ -779,7 +819,9 @@ export default function ShopkeeperProfilePage() {
                         </h3>
                         <p className="text-sm text-muted-foreground">
                           {twoFactorStatus?.enabled
-                            ? t(`Enabled • ${twoFactorStatus.backupCodesRemaining} backup codes remaining`)
+                            ? t(
+                                `Enabled • ${twoFactorStatus.backupCodesRemaining} backup codes remaining`,
+                              )
                             : t("Add an extra layer of security with 2FA")}
                         </p>
                       </div>
@@ -834,7 +876,10 @@ export default function ShopkeeperProfilePage() {
                           <T>Set Up Two-Factor Authentication</T>
                         </DialogTitle>
                         <DialogDescription>
-                          <T>Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.)</T>
+                          <T>
+                            Scan the QR code with your authenticator app (Google
+                            Authenticator, Authy, etc.)
+                          </T>
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
@@ -904,9 +949,14 @@ export default function ShopkeeperProfilePage() {
                   >
                     <DialogContent className="sm:max-w-md">
                       <DialogHeader>
-                        <DialogTitle><T>Save Your Backup Codes</T></DialogTitle>
+                        <DialogTitle>
+                          <T>Save Your Backup Codes</T>
+                        </DialogTitle>
                         <DialogDescription>
-                          <T>These codes can be used if you lose access to your authenticator app. Each code can only be used once.</T>
+                          <T>
+                            These codes can be used if you lose access to your
+                            authenticator app. Each code can only be used once.
+                          </T>
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
@@ -925,7 +975,10 @@ export default function ShopkeeperProfilePage() {
                         <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-700 rounded-lg">
                           <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
                           <p className="text-sm text-amber-800 dark:text-amber-200">
-                            <T>Store these codes in a safe place. You won't be able to see them again.</T>
+                            <T>
+                              Store these codes in a safe place. You won't be
+                              able to see them again.
+                            </T>
                           </p>
                         </div>
                       </div>
@@ -952,12 +1005,17 @@ export default function ShopkeeperProfilePage() {
                           <T>Disable Two-Factor Authentication</T>
                         </DialogTitle>
                         <DialogDescription>
-                          <T>This will remove 2FA from your account. Enter your password to confirm.</T>
+                          <T>
+                            This will remove 2FA from your account. Enter your
+                            password to confirm.
+                          </T>
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                          <Label htmlFor="disablePassword"><T>Password</T></Label>
+                          <Label htmlFor="disablePassword">
+                            <T>Password</T>
+                          </Label>
                           <Input
                             id="disablePassword"
                             type="password"
@@ -996,9 +1054,14 @@ export default function ShopkeeperProfilePage() {
                   >
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle><T>Regenerate Backup Codes</T></DialogTitle>
+                        <DialogTitle>
+                          <T>Regenerate Backup Codes</T>
+                        </DialogTitle>
                         <DialogDescription>
-                          <T>This will invalidate all your existing backup codes. Enter a verification code to continue.</T>
+                          <T>
+                            This will invalidate all your existing backup codes.
+                            Enter a verification code to continue.
+                          </T>
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
@@ -1044,17 +1107,23 @@ export default function ShopkeeperProfilePage() {
 
                   {/* Account Activity */}
                   <div className="p-4 border rounded-lg">
-                    <h3 className="font-medium mb-3"><T>Recent Activity</T></h3>
+                    <h3 className="font-medium mb-3">
+                      <T>Recent Activity</T>
+                    </h3>
                     <div className="space-y-2 text-sm text-muted-foreground">
                       <div className="flex items-center justify-between">
-                        <span><T>Account created</T></span>
+                        <span>
+                          <T>Account created</T>
+                        </span>
                         <span>
                           {format(new Date(profile.createdAt), "MMM d, yyyy")}
                         </span>
                       </div>
                       {profile.lastLoginAt && (
                         <div className="flex items-center justify-between">
-                          <span><T>Last login</T></span>
+                          <span>
+                            <T>Last login</T>
+                          </span>
                           <span>
                             {format(
                               new Date(profile.lastLoginAt),

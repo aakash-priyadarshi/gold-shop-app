@@ -25,9 +25,11 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { useT } from "@/providers/translation-provider";
 import { sellerPerformanceApi, shopsApi } from "@/lib/api";
 import {
   AlertTriangle,
@@ -162,6 +164,7 @@ const CRITERIA_LABELS: Record<
 export default function ShopPublicProfilePage() {
   const { user } = useAuth();
   const { symbol } = useShopCurrency();
+  const t = useT();
 
   const [shop, setShop] = useState<ShopProfile | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -219,8 +222,8 @@ export default function ShopPublicProfilePage() {
       console.error("Failed to load shop profile:", error);
       toast({
         variant: "destructive",
-        title: "Failed to load",
-        description: "Could not fetch shop profile data",
+        title: t("Failed to load"),
+        description: t("Could not fetch shop profile data"),
       });
     } finally {
       setIsLoading(false);
@@ -259,8 +262,8 @@ export default function ShopPublicProfilePage() {
     if (aboutViolations.length > 0) {
       toast({
         variant: "destructive",
-        title: "Cannot save",
-        description: "Please fix the violations in your about section first",
+        title: t("Cannot save"),
+        description: t("Please fix the violations in your about section first"),
       });
       return;
     }
@@ -269,7 +272,7 @@ export default function ShopPublicProfilePage() {
     try {
       await shopsApi.updateProfile({ about: aboutText });
       setEditingAbout(false);
-      toast({ title: "Saved", description: "About section updated" });
+      toast({ title: t("Saved"), description: t("About section updated") });
       if (shop) setShop({ ...shop, about: aboutText });
     } catch (error: any) {
       const violations = error.response?.data?.violations;
@@ -278,9 +281,9 @@ export default function ShopPublicProfilePage() {
       }
       toast({
         variant: "destructive",
-        title: "Save failed",
+        title: t("Save failed"),
         description:
-          error.response?.data?.message || "Could not save about section",
+          error.response?.data?.message || t("Could not save about section"),
       });
     } finally {
       setSavingProfile(false);
@@ -293,13 +296,13 @@ export default function ShopPublicProfilePage() {
     try {
       await shopsApi.updateProfile({ shopName });
       setEditingName(false);
-      toast({ title: "Saved", description: "Shop name updated" });
+      toast({ title: t("Saved"), description: t("Shop name updated") });
       if (shop) setShop({ ...shop, shopName });
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Save failed",
-        description: error.response?.data?.message || "Could not update name",
+        title: t("Save failed"),
+        description: error.response?.data?.message || t("Could not update name"),
       });
     } finally {
       setSavingProfile(false);
@@ -310,9 +313,9 @@ export default function ShopPublicProfilePage() {
     try {
       await shopsApi.updateProfile({ profileImage: url });
       if (shop) setShop({ ...shop, profileImage: url });
-      toast({ title: "Profile image updated" });
+      toast({ title: t("Profile image updated") });
     } catch {
-      toast({ variant: "destructive", title: "Failed to update image" });
+      toast({ variant: "destructive", title: t("Failed to update image") });
     }
   };
 
@@ -320,9 +323,9 @@ export default function ShopPublicProfilePage() {
     try {
       await shopsApi.updateProfile({ coverImage: url });
       if (shop) setShop({ ...shop, coverImage: url });
-      toast({ title: "Cover image updated" });
+      toast({ title: t("Cover image updated") });
     } catch {
-      toast({ variant: "destructive", title: "Failed to update cover" });
+      toast({ variant: "destructive", title: t("Failed to update cover") });
     }
   };
 
@@ -333,7 +336,7 @@ export default function ShopPublicProfilePage() {
     setSavingReply(true);
     try {
       await shopsApi.replyToReview(replyingTo, replyText.trim());
-      toast({ title: "Reply posted" });
+      toast({ title: t("Reply posted") });
       setReplyingTo(null);
       setReplyText("");
       loadAll(); // Refresh
@@ -341,10 +344,10 @@ export default function ShopPublicProfilePage() {
       const violations = error.response?.data?.violations;
       toast({
         variant: "destructive",
-        title: "Reply failed",
+        title: t("Reply failed"),
         description: violations
           ? violations.join(", ")
-          : error.response?.data?.message || "Could not post reply",
+          : error.response?.data?.message || t("Could not post reply"),
       });
     } finally {
       setSavingReply(false);
@@ -360,8 +363,8 @@ export default function ShopPublicProfilePage() {
         deleteReason.trim(),
       );
       toast({
-        title: "Request submitted",
-        description: "Admin will review your request",
+        title: t("Request submitted"),
+        description: t("Admin will review your request"),
       });
       setDeleteRequestId(null);
       setDeleteReason("");
@@ -369,9 +372,9 @@ export default function ShopPublicProfilePage() {
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Request failed",
+        title: t("Request failed"),
         description:
-          error.response?.data?.message || "Could not submit request",
+          error.response?.data?.message || t("Could not submit request"),
       });
     } finally {
       setSavingDeleteRequest(false);
@@ -419,9 +422,9 @@ export default function ShopPublicProfilePage() {
         <DashboardLayout>
           <div className="text-center py-12">
             <Store className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <h2 className="text-xl font-semibold">Shop Not Found</h2>
+            <h2 className="text-xl font-semibold"><T>Shop Not Found</T></h2>
             <p className="text-muted-foreground">
-              Could not load shop profile data.
+              <T>Could not load shop profile data.</T>
             </p>
           </div>
         </DashboardLayout>
@@ -460,7 +463,7 @@ export default function ShopPublicProfilePage() {
                   if (url) saveCoverImage(url);
                 }}
               >
-                <Camera className="h-4 w-4 mr-1" /> Change Cover
+                <Camera className="h-4 w-4 mr-1" /> <T>Change Cover</T>
               </Button>
             </div>
           </div>
@@ -509,7 +512,7 @@ export default function ShopPublicProfilePage() {
                         setShopName(shop.shopName);
                       }}
                     >
-                      Cancel
+                      <T>Cancel</T>
                     </Button>
                   </div>
                 ) : (
@@ -535,19 +538,19 @@ export default function ShopPublicProfilePage() {
                     variant="default"
                     className="bg-green-500 text-xs px-1.5 py-0"
                   >
-                    <CheckCircle className="h-3 w-3 mr-0.5" /> Verified
+                    <CheckCircle className="h-3 w-3 mr-0.5" /> <T>Verified</T>
                   </Badge>
                 )}
                 <span
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${tierMeta.bg} ${tierMeta.color} border ${tierMeta.border}`}
                 >
                   <TierIcon className="h-3.5 w-3.5" />
-                  {tierMeta.label} Seller
+                  {tierMeta.label} <T>Seller</T>
                 </span>
                 {reviews.length > 0 && (
                   <span className="flex items-center gap-1">
                     <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
-                    {avgRating.toFixed(1)} ({reviews.length} reviews)
+                    {avgRating.toFixed(1)} ({reviews.length} <T>reviews</T>)
                   </span>
                 )}
               </div>
@@ -557,7 +560,7 @@ export default function ShopPublicProfilePage() {
                 target="_blank"
                 className="inline-flex items-center gap-1 text-xs text-primary mt-1 hover:underline"
               >
-                <ExternalLink className="h-3 w-3" /> View public page
+                <ExternalLink className="h-3 w-3" /> <T>View public page</T>
               </a>
             </div>
           </div>
@@ -565,10 +568,10 @@ export default function ShopPublicProfilePage() {
           {/* ── Tabs ──────────────────────────────────── */}
           <Tabs defaultValue="about" className="space-y-4">
             <TabsList>
-              <TabsTrigger value="about">About</TabsTrigger>
-              <TabsTrigger value="tier">Tier & Performance</TabsTrigger>
+              <TabsTrigger value="about"><T>About</T></TabsTrigger>
+              <TabsTrigger value="tier"><T>Tier & Performance</T></TabsTrigger>
               <TabsTrigger value="reviews">
-                Reviews ({reviews.length})
+                <T>Reviews</T> ({reviews.length})
               </TabsTrigger>
             </TabsList>
 
@@ -578,10 +581,9 @@ export default function ShopPublicProfilePage() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle>About Your Shop</CardTitle>
+                      <CardTitle><T>About Your Shop</T></CardTitle>
                       <CardDescription>
-                        Tell customers about your craftsmanship, history, and
-                        specialties
+                        <T>Tell customers about your craftsmanship, history, and specialties</T>
                       </CardDescription>
                     </div>
                     {!editingAbout && (
@@ -590,7 +592,7 @@ export default function ShopPublicProfilePage() {
                         size="sm"
                         onClick={() => setEditingAbout(true)}
                       >
-                        <Edit3 className="h-4 w-4 mr-1" /> Edit
+                        <Edit3 className="h-4 w-4 mr-1" /> <T>Edit</T>
                       </Button>
                     )}
                   </div>
@@ -603,7 +605,7 @@ export default function ShopPublicProfilePage() {
                         onChange={(e) => handleAboutChange(e.target.value)}
                         rows={6}
                         maxLength={2000}
-                        placeholder="Share your shop's story — your craft, specialties, years of experience, unique techniques..."
+                        placeholder={t("Share your shop's story — your craft, specialties, years of experience, unique techniques...")}
                         className={
                           aboutViolations.length > 0
                             ? "border-red-400 focus-visible:ring-red-400"
@@ -614,16 +616,16 @@ export default function ShopPublicProfilePage() {
                       {/* Live moderation feedback */}
                       {aboutChecking && (
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Loader2 className="h-3 w-3 animate-spin" /> Checking
-                          content...
+                          <Loader2 className="h-3 w-3 animate-spin" /> <T>Checking
+                          content...</T>
                         </p>
                       )}
 
                       {aboutViolations.length > 0 && (
                         <div className="rounded-md bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 p-3 space-y-1">
                           <p className="text-sm font-medium text-red-800 dark:text-red-200 flex items-center gap-1">
-                            <AlertTriangle className="h-4 w-4" /> Content policy
-                            violation
+                            <AlertTriangle className="h-4 w-4" /> <T>Content policy
+                            violation</T>
                           </p>
                           {aboutViolations.map((v, i) => (
                             <p
@@ -634,16 +636,16 @@ export default function ShopPublicProfilePage() {
                             </p>
                           ))}
                           <p className="text-xs text-red-600 mt-1">
-                            Personal contacts (phone, email, address, social
+                            <T>Personal contacts (phone, email, address, social
                             media) and offensive content are not allowed. This
-                            content will not be saved.
+                            content will not be saved.</T>
                           </p>
                         </div>
                       )}
 
                       <div className="flex items-center justify-between">
                         <p className="text-xs text-muted-foreground">
-                          {aboutText.length}/2000 characters
+                          {aboutText.length}/2000 <T>characters</T>
                         </p>
                         <div className="flex gap-2">
                           <Button
@@ -655,7 +657,7 @@ export default function ShopPublicProfilePage() {
                               setAboutViolations([]);
                             }}
                           >
-                            Cancel
+                            <T>Cancel</T>
                           </Button>
                           <Button
                             size="sm"
@@ -669,7 +671,7 @@ export default function ShopPublicProfilePage() {
                             ) : (
                               <Save className="h-4 w-4 mr-1" />
                             )}
-                            Save
+                            <T>Save</T>
                           </Button>
                         </div>
                       </div>
@@ -682,8 +684,8 @@ export default function ShopPublicProfilePage() {
                         </p>
                       ) : (
                         <p className="text-sm text-muted-foreground italic">
-                          No about section yet. Click Edit to add one — tell
-                          customers about your craftsmanship!
+                          <T>No about section yet. Click Edit to add one — tell
+                          customers about your craftsmanship!</T>
                         </p>
                       )}
                     </div>
@@ -695,7 +697,7 @@ export default function ShopPublicProfilePage() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base">
-                      Shop Description
+                      <T>Shop Description</T>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -720,11 +722,11 @@ export default function ShopPublicProfilePage() {
                         </div>
                         <div>
                           <h2 className={`text-xl font-bold ${tierMeta.color}`}>
-                            {tierMeta.label} Tier
+                            {tierMeta.label} <T>Tier</T>
                           </h2>
                           <p className="text-sm text-muted-foreground">
-                            Making charge cap:{" "}
-                            {tierDashboard.shop.makingChargeCap}% | Member since{" "}
+                            <T>Making charge cap:</T>{" "}
+                            {tierDashboard.shop.makingChargeCap}% | <T>Member since</T>{" "}
                             {new Date(shop.createdAt).toLocaleDateString()}
                           </p>
                         </div>
@@ -738,14 +740,14 @@ export default function ShopPublicProfilePage() {
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <ArrowUpRight className="h-5 w-5" />
-                          Progress to {
+                          <T>Progress to</T> {
                             TIER_META[tierDashboard.nextTier]?.label
                           }{" "}
-                          Tier
+                          <T>Tier</T>
                         </CardTitle>
                         <CardDescription>
                           {tierDashboard.overallProgress.met}/
-                          {tierDashboard.overallProgress.total} criteria met (
+                          {tierDashboard.overallProgress.total} <T>criteria met</T> (
                           {tierDashboard.overallProgress.percentage}%)
                         </CardDescription>
                       </CardHeader>
@@ -783,9 +785,9 @@ export default function ShopPublicProfilePage() {
                                   <span className="font-mono text-sm">
                                     {isBool ? (
                                       criterion.current ? (
-                                        "Yes"
+                                        <T>Yes</T>
                                       ) : (
-                                        "No"
+                                        <T>No</T>
                                       )
                                     ) : meta.lowerIsBetter ? (
                                       <>
@@ -827,14 +829,14 @@ export default function ShopPublicProfilePage() {
                     <CardHeader>
                       <CardTitle className="text-base">
                         <TrendingUp className="h-4 w-4 inline mr-1" />
-                        Tier Roadmap
+                        <T>Tier Roadmap</T>
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center gap-2">
                         {(["STANDARD", "SILVER", "GOLD", "ELITE"] as const).map(
-                          (t, i) => {
-                            const m = TIER_META[t];
+                          (tier, i) => {
+                            const m = TIER_META[tier];
                             const tierOrder = [
                               "STANDARD",
                               "SILVER",
@@ -844,7 +846,7 @@ export default function ShopPublicProfilePage() {
                             const isCurrentOrPast =
                               tierOrder.indexOf(currentTier) >= i;
                             return (
-                              <React.Fragment key={t}>
+                              <React.Fragment key={tier}>
                                 <div
                                   className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium flex-1 justify-center ${
                                     isCurrentOrPast
@@ -877,7 +879,7 @@ export default function ShopPublicProfilePage() {
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-base">
-                          Performance Statistics
+                          <T>Performance Statistics</T>
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
@@ -907,7 +909,7 @@ export default function ShopPublicProfilePage() {
                             >
                               <p className="text-2xl font-bold">{stat.value}</p>
                               <p className="text-xs text-muted-foreground">
-                                {stat.label}
+                                <T>{stat.label}</T>
                               </p>
                             </div>
                           ))}
@@ -921,8 +923,8 @@ export default function ShopPublicProfilePage() {
                   <CardContent className="py-8 text-center">
                     <TrendingUp className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-40" />
                     <p className="text-muted-foreground">
-                      Performance data will appear once your shop has some
-                      activity.
+                      <T>Performance data will appear once your shop has some
+                      activity.</T>
                     </p>
                   </CardContent>
                 </Card>
@@ -941,7 +943,7 @@ export default function ShopPublicProfilePage() {
                       </p>
                       {renderStars(Math.round(avgRating))}
                       <p className="text-xs text-muted-foreground mt-1">
-                        {reviews.length} reviews
+                        {reviews.length} <T>reviews</T>
                       </p>
                     </div>
                   </div>
@@ -954,8 +956,8 @@ export default function ShopPublicProfilePage() {
                   <CardContent className="py-8 text-center">
                     <MessageSquare className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-40" />
                     <p className="text-muted-foreground">
-                      No reviews yet. Reviews will appear here once customers
-                      rate their orders.
+                      <T>No reviews yet. Reviews will appear here once customers
+                      rate their orders.</T>
                     </p>
                   </CardContent>
                 </Card>
@@ -987,17 +989,17 @@ export default function ShopPublicProfilePage() {
                         {/* Deletion status badges */}
                         {review.deleteRequestStatus === "PENDING" && (
                           <Badge variant="outline" className="text-amber-600">
-                            Deletion Pending
+                            <T>Deletion Pending</T>
                           </Badge>
                         )}
                         {review.deleteRequestStatus === "REJECTED" && (
                           <Badge variant="outline" className="text-red-600">
-                            Deletion Rejected
+                            <T>Deletion Rejected</T>
                           </Badge>
                         )}
                         {review.deleteRequestStatus === "APPROVED" && (
                           <Badge variant="outline" className="text-green-600">
-                            Deleted
+                            <T>Deleted</T>
                           </Badge>
                         )}
                       </div>
@@ -1010,7 +1012,7 @@ export default function ShopPublicProfilePage() {
                       {review.sellerReply && (
                         <div className="ml-4 pl-4 border-l-2 border-primary/20">
                           <p className="text-xs font-semibold text-primary">
-                            Your Reply
+                            <T>Your Reply</T>
                           </p>
                           <p className="text-sm">{review.sellerReply}</p>
                           <p className="text-xs text-muted-foreground">
@@ -1033,7 +1035,7 @@ export default function ShopPublicProfilePage() {
                               setReplyText("");
                             }}
                           >
-                            <MessageSquare className="h-3.5 w-3.5 mr-1" /> Reply
+                            <MessageSquare className="h-3.5 w-3.5 mr-1" /> <T>Reply</T>
                           </Button>
                         )}
                         {review.deleteRequestStatus === "NONE" && (
@@ -1046,8 +1048,8 @@ export default function ShopPublicProfilePage() {
                               setDeleteReason("");
                             }}
                           >
-                            <Flag className="h-3.5 w-3.5 mr-1" /> Request
-                            Removal
+                            <Flag className="h-3.5 w-3.5 mr-1" /> <T>Request
+                            Removal</T>
                           </Button>
                         )}
                       </div>
@@ -1059,7 +1061,7 @@ export default function ShopPublicProfilePage() {
                             value={replyText}
                             onChange={(e) => setReplyText(e.target.value)}
                             rows={3}
-                            placeholder="Write a professional reply to this review..."
+                            placeholder={t("Write a professional reply to this review...")}
                             maxLength={500}
                           />
                           <div className="flex justify-end gap-2">
@@ -1068,7 +1070,7 @@ export default function ShopPublicProfilePage() {
                               variant="ghost"
                               onClick={() => setReplyingTo(null)}
                             >
-                              Cancel
+                              <T>Cancel</T>
                             </Button>
                             <Button
                               size="sm"
@@ -1080,7 +1082,7 @@ export default function ShopPublicProfilePage() {
                               ) : (
                                 <Save className="h-4 w-4 mr-1" />
                               )}{" "}
-                              Post Reply
+                              <T>Post Reply</T>
                             </Button>
                           </div>
                         </div>
@@ -1104,23 +1106,23 @@ export default function ShopPublicProfilePage() {
           >
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Request Review Removal</DialogTitle>
+                <DialogTitle><T>Request Review Removal</T></DialogTitle>
                 <DialogDescription>
-                  Explain why this review should be removed. The admin team will
+                  <T>Explain why this review should be removed. The admin team will
                   review your request. You cannot delete reviews yourself — only
-                  the admin can approve removal.
+                  the admin can approve removal.</T>
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-3">
-                <Label>Reason for removal (min 20 characters)</Label>
+                <Label><T>Reason for removal (min 20 characters)</T></Label>
                 <Textarea
                   value={deleteReason}
                   onChange={(e) => setDeleteReason(e.target.value)}
                   rows={4}
-                  placeholder="Explain why this review is unfair, inaccurate, or violates our policies. Include any evidence or order details that support your case..."
+                  placeholder={t("Explain why this review is unfair, inaccurate, or violates our policies. Include any evidence or order details that support your case...")}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {deleteReason.length}/20 minimum characters
+                  {deleteReason.length}/20 <T>minimum characters</T>
                 </p>
               </div>
               <DialogFooter>
@@ -1128,7 +1130,7 @@ export default function ShopPublicProfilePage() {
                   variant="ghost"
                   onClick={() => setDeleteRequestId(null)}
                 >
-                  Cancel
+                  <T>Cancel</T>
                 </Button>
                 <Button
                   onClick={submitDeleteRequest}
@@ -1139,7 +1141,7 @@ export default function ShopPublicProfilePage() {
                   {savingDeleteRequest && (
                     <Loader2 className="h-4 w-4 animate-spin mr-1" />
                   )}
-                  Submit Request
+                  <T>Submit Request</T>
                 </Button>
               </DialogFooter>
             </DialogContent>

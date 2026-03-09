@@ -2,8 +2,6 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { T } from "@/components/ui/T";
 import {
   Table,
   TableBody,
@@ -49,6 +48,7 @@ import { useImageUpload } from "@/hooks/useImageUpload";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { inventoryApi } from "@/lib/api";
 import { getImageUrl } from "@/lib/image-upload";
+import { useT } from "@/providers/translation-provider";
 import {
   Edit,
   GripVertical,
@@ -557,7 +557,9 @@ export default function ShopProductsPage() {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold"><T>Products</T></h1>
+              <h1 className="text-2xl font-bold">
+                <T>Products</T>
+              </h1>
               <p className="text-muted-foreground">
                 <T>Manage your jewellery inventory and listings</T>
               </p>
@@ -588,11 +590,21 @@ export default function ShopProductsPage() {
                     <SelectValue placeholder={t("Filter by status")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all"><T>All Products</T></SelectItem>
-                    <SelectItem value="AVAILABLE"><T>Available</T></SelectItem>
-                    <SelectItem value="SOLD"><T>Sold</T></SelectItem>
-                    <SelectItem value="RESERVED"><T>Reserved</T></SelectItem>
-                    <SelectItem value="UNAVAILABLE"><T>Unavailable</T></SelectItem>
+                    <SelectItem value="all">
+                      <T>All Products</T>
+                    </SelectItem>
+                    <SelectItem value="AVAILABLE">
+                      <T>Available</T>
+                    </SelectItem>
+                    <SelectItem value="SOLD">
+                      <T>Sold</T>
+                    </SelectItem>
+                    <SelectItem value="RESERVED">
+                      <T>Reserved</T>
+                    </SelectItem>
+                    <SelectItem value="UNAVAILABLE">
+                      <T>Unavailable</T>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -609,7 +621,9 @@ export default function ShopProductsPage() {
               ) : filteredProducts.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p><T>No products found</T></p>
+                  <p>
+                    <T>No products found</T>
+                  </p>
                   <p className="text-sm">
                     <T>Add your first product to start selling</T>
                   </p>
@@ -622,13 +636,27 @@ export default function ShopProductsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead><T>Product</T></TableHead>
-                      <TableHead><T>Type</T></TableHead>
-                      <TableHead><T>Weight</T></TableHead>
-                      <TableHead><T>Price</T></TableHead>
-                      <TableHead><T>Stock</T></TableHead>
-                      <TableHead><T>Status</T></TableHead>
-                      <TableHead><T>Actions</T></TableHead>
+                      <TableHead>
+                        <T>Product</T>
+                      </TableHead>
+                      <TableHead>
+                        <T>Type</T>
+                      </TableHead>
+                      <TableHead>
+                        <T>Weight</T>
+                      </TableHead>
+                      <TableHead>
+                        <T>Price</T>
+                      </TableHead>
+                      <TableHead>
+                        <T>Stock</T>
+                      </TableHead>
+                      <TableHead>
+                        <T>Status</T>
+                      </TableHead>
+                      <TableHead>
+                        <T>Actions</T>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -749,7 +777,9 @@ export default function ShopProductsPage() {
               {/* Basic Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 space-y-2">
-                  <Label htmlFor="name"><T>Product Name</T> *</Label>
+                  <Label htmlFor="name">
+                    <T>Product Name</T> *
+                  </Label>
                   <Input
                     id="name"
                     value={formData.nameEn}
@@ -772,7 +802,9 @@ export default function ShopProductsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="jewelleryType"><T>Jewellery Type</T> *</Label>
+                  <Label htmlFor="jewelleryType">
+                    <T>Jewellery Type</T> *
+                  </Label>
                   <Select
                     value={formData.jewelleryType}
                     onValueChange={(v) =>
@@ -794,7 +826,9 @@ export default function ShopProductsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description"><T>Description</T></Label>
+                <Label htmlFor="description">
+                  <T>Description</T>
+                </Label>
                 <Textarea
                   id="description"
                   value={formData.descriptionEn}
@@ -809,7 +843,9 @@ export default function ShopProductsPage() {
               {/* Material Info */}
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="buildMethod"><T>Build Method</T></Label>
+                  <Label htmlFor="buildMethod">
+                    <T>Build Method</T>
+                  </Label>
                   <Select
                     value={formData.buildMethod}
                     onValueChange={(v) =>
@@ -829,7 +865,9 @@ export default function ShopProductsPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="metalType"><T>Metal Type</T></Label>
+                  <Label htmlFor="metalType">
+                    <T>Metal Type</T>
+                  </Label>
                   <Select
                     value={formData.metalType}
                     onValueChange={(v) =>
@@ -847,7 +885,9 @@ export default function ShopProductsPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="purity"><T>Purity</T></Label>
+                  <Label htmlFor="purity">
+                    <T>Purity</T>
+                  </Label>
                   <Select
                     value={formData.purity}
                     onValueChange={(v) =>
@@ -873,7 +913,9 @@ export default function ShopProductsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <Label htmlFor="weight"><T>Total Weight</T> *</Label>
+                    <Label htmlFor="weight">
+                      <T>Total Weight</T> *
+                    </Label>
                     <div className="flex gap-1 text-xs">
                       <Button
                         type="button"
@@ -921,7 +963,9 @@ export default function ShopProductsPage() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="stock"><T>Stock Quantity</T></Label>
+                  <Label htmlFor="stock">
+                    <T>Stock Quantity</T>
+                  </Label>
                   <Input
                     id="stock"
                     type="number"
@@ -940,7 +984,9 @@ export default function ShopProductsPage() {
               {/* Gemstones Section */}
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <Label><T>Gemstones</T></Label>
+                  <Label>
+                    <T>Gemstones</T>
+                  </Label>
                   <Button
                     type="button"
                     variant="outline"
@@ -1103,7 +1149,9 @@ export default function ShopProductsPage() {
               {/* Total */}
               <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
                 <div className="flex justify-between items-center">
-                  <span className="font-medium"><T>Total Price</T></span>
+                  <span className="font-medium">
+                    <T>Total Price</T>
+                  </span>
                   <span className="text-xl font-bold">
                     {currency.symbol} {calculateTotal().toLocaleString()}
                   </span>
@@ -1112,7 +1160,9 @@ export default function ShopProductsPage() {
 
               {/* Images */}
               <div className="space-y-3">
-                <Label><T>Product Images (max 3)</T></Label>
+                <Label>
+                  <T>Product Images (max 3)</T>
+                </Label>
 
                 {/* File Upload */}
                 <div
@@ -1137,7 +1187,9 @@ export default function ShopProductsPage() {
                     {isUploadingImage ? (
                       <div className="flex flex-col items-center justify-center gap-2">
                         <Loader2 className="h-5 w-5 animate-spin" />
-                        <span><T>Uploading...</T> {imageProgress}%</span>
+                        <span>
+                          <T>Uploading...</T> {imageProgress}%
+                        </span>
                         <div className="w-full max-w-xs h-2 bg-gray-200 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-primary transition-all duration-300"
@@ -1175,7 +1227,9 @@ export default function ShopProductsPage() {
                 {formData.images.length > 0 && (
                   <div className="space-y-2 mt-2">
                     <p className="text-xs text-muted-foreground">
-                      <T>Drag to reorder - First image will be shown as primary</T>
+                      <T>
+                        Drag to reorder - First image will be shown as primary
+                      </T>
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {formData.images.map((url, idx) => (
@@ -1263,13 +1317,20 @@ export default function ShopProductsPage() {
         <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle><T>Delete Product</T></AlertDialogTitle>
+              <AlertDialogTitle>
+                <T>Delete Product</T>
+              </AlertDialogTitle>
               <AlertDialogDescription>
-                <T>Are you sure you want to delete this product? This action cannot be undone.</T>
+                <T>
+                  Are you sure you want to delete this product? This action
+                  cannot be undone.
+                </T>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel><T>Cancel</T></AlertDialogCancel>
+              <AlertDialogCancel>
+                <T>Cancel</T>
+              </AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDelete}
                 className="bg-red-600 hover:bg-red-700"

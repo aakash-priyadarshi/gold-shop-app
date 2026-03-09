@@ -4,8 +4,8 @@ import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useT } from "@/providers/translation-provider";
 import { catalogueApi, inventoryApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   ArrowLeft,
   BarChart3,
@@ -248,7 +248,8 @@ export default function CatalogueDetailPage() {
                 {catalogue.name}
               </h1>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                {t(`${catalogue.items.length} items`)} · {t(`${catalogue._count.viewEvents} views`)} ·{" "}
+                {t(`${catalogue.items.length} items`)} ·{" "}
+                {t(`${catalogue._count.viewEvents} views`)} ·{" "}
                 {catalogue.mode === "SHOWROOM"
                   ? t("Showroom Mode")
                   : t("Normal Mode")}
@@ -283,7 +284,9 @@ export default function CatalogueDetailPage() {
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gold-600 text-white hover:bg-gold-700"
             >
               <ExternalLink className="h-3.5 w-3.5" />
-              {catalogue.mode === "SHOWROOM" ? t("Open Showroom") : t("Preview")}
+              {catalogue.mode === "SHOWROOM"
+                ? t("Open Showroom")
+                : t("Preview")}
             </a>
           </div>
         </div>
@@ -506,7 +509,9 @@ export default function CatalogueDetailPage() {
                 </div>
               ) : availableItems.length === 0 ? (
                 <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
-                  <T>No items found. All inventory items may already be added.</T>
+                  <T>
+                    No items found. All inventory items may already be added.
+                  </T>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto">
@@ -549,9 +554,14 @@ export default function CatalogueDetailPage() {
           {/* Items */}
           {!catalogue.items || catalogue.items.length === 0 ? (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-              <p className="text-sm"><T>No items in this catalogue yet.</T></p>
+              <p className="text-sm">
+                <T>No items in this catalogue yet.</T>
+              </p>
               <p className="text-xs mt-1">
-                <T>Click &quot;Add Items&quot; to add products from your inventory.</T>
+                <T>
+                  Click &quot;Add Items&quot; to add products from your
+                  inventory.
+                </T>
               </p>
             </div>
           ) : (
