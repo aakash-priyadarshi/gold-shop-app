@@ -3,6 +3,8 @@ import { MetadataRoute } from "next";
 
 const BASE_URL = "https://www.orivraa.com";
 
+const ABOUT_LANGUAGES = ["fr", "de", "hi", "es", "ar", "ne"] as const;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Use a fixed reference date for pages that don't have dynamic content.
   // Update these dates ONLY when you actually modify the page content.
@@ -46,10 +48,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Informational pages
     {
       url: `${BASE_URL}/about`,
-      lastModified: new Date("2025-02-01"),
+      lastModified: new Date("2026-03-09"),
       changeFrequency: "monthly",
       priority: 0.7,
     },
+    // Localized about pages
+    ...ABOUT_LANGUAGES.map((lang) => ({
+      url: `${BASE_URL}/about/${lang}`,
+      lastModified: new Date("2026-03-09"),
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
     {
       url: `${BASE_URL}/jewellery-shop-software`,
       lastModified: new Date("2025-03-01"),
