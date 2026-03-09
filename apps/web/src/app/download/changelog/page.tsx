@@ -2,6 +2,7 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { T } from "@/components/ui/T";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/lib/api";
@@ -92,16 +93,15 @@ export default function ChangelogPage() {
             >
               <Link href="/download">
                 <ArrowLeftIcon className="w-4 h-4" />
-                Back to Downloads
+                <T>Back to Downloads</T>
               </Link>
             </Button>
 
             <h1 className="text-3xl font-bold tracking-tight mb-2">
-              Changelog
+              <T>Changelog</T>
             </h1>
             <p className="text-muted-foreground mb-8">
-              What&apos;s new across Orivraa — desktop and web releases
-              combined.
+              <T>What&apos;s new across Orivraa — desktop and web releases combined.</T>
             </p>
 
             {/* Platform Filter */}
@@ -131,14 +131,14 @@ export default function ChangelogPage() {
               <div className="flex flex-col items-center py-16 gap-4">
                 <div className="w-8 h-8 rounded-full border-3 border-transparent border-t-gold-500 border-r-gold-300 animate-spin" />
                 <p className="text-sm text-muted-foreground">
-                  Loading changelog...
+                  <T>Loading changelog...</T>
                 </p>
               </div>
             ) : filtered.length === 0 ? (
               <Card className="border-border/50">
                 <CardContent className="flex flex-col items-center py-12 gap-3">
                   <p className="text-muted-foreground">
-                    No changelog entries found.
+                    <T>No changelog entries found.</T>
                   </p>
                   {filter !== "ALL" && (
                     <Button
@@ -146,7 +146,7 @@ export default function ChangelogPage() {
                       size="sm"
                       onClick={() => setFilter("ALL")}
                     >
-                      Show All
+                      <T>Show All</T>
                     </Button>
                   )}
                 </CardContent>

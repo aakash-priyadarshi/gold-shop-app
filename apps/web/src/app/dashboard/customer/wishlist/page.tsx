@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { CustomerGuard } from '@/components/auth/RouteGuard';
+import { T } from '@/components/ui/T';
+import { useT } from '@/providers/translation-provider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +41,7 @@ export default function WishlistPage() {
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const t = useT();
 
   useEffect(() => {
     loadWishlist();
@@ -112,16 +115,16 @@ export default function WishlistPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">My Wishlist</h1>
+              <h1 className="text-2xl font-bold"><T>My Wishlist</T></h1>
               <p className="text-muted-foreground">
-                {wishlistItems.length} {wishlistItems.length === 1 ? 'item' : 'items'} saved
+                {t(`${wishlistItems.length} ${wishlistItems.length === 1 ? 'item' : 'items'} saved`)}
               </p>
             </div>
             {wishlistItems.length > 0 && (
               <Button variant="outline" asChild>
                 <Link href="/shops">
                   <Store className="h-4 w-4 mr-2" />
-                  Browse More
+                  <T>Browse More</T>
                 </Link>
               </Button>
             )}
@@ -133,15 +136,14 @@ export default function WishlistPage() {
                 <div className="rounded-full bg-muted p-6 mb-4">
                   <HeartOff className="h-12 w-12 text-muted-foreground" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">Your wishlist is empty</h3>
+                <h3 className="text-xl font-semibold mb-2"><T>Your wishlist is empty</T></h3>
                 <p className="text-muted-foreground text-center mb-6 max-w-md">
-                  Start browsing our shops and save items you love to your wishlist.
-                  They'll appear here for easy access later.
+                  <T>Start browsing our shops and save items you love to your wishlist. They'll appear here for easy access later.</T>
                 </p>
                 <Button asChild>
                   <Link href="/shops">
                     <Store className="h-4 w-4 mr-2" />
-                    Browse Shops
+                    <T>Browse Shops</T>
                   </Link>
                 </Button>
               </CardContent>
@@ -165,7 +167,7 @@ export default function WishlistPage() {
                     )}
                     {!item.inStock && (
                       <Badge variant="secondary" className="absolute top-2 left-2">
-                        Out of Stock
+                        <T>Out of Stock</T>
                       </Badge>
                     )}
                   </div>
@@ -203,7 +205,7 @@ export default function WishlistPage() {
                       </span>
                       <Button size="sm" disabled={!item.inStock}>
                         <ShoppingCart className="h-4 w-4 mr-1" />
-                        Add to Cart
+                        <T>Add to Cart</T>
                       </Button>
                     </div>
                   </CardContent>
