@@ -787,6 +787,7 @@ function ManualAddForm({
   onAdd: (itemId: string, variantId?: string) => void;
 }) {
   const [itemId, setItemId] = useState("");
+  const t = useT();
 
   return (
     <div className="flex items-end gap-2">
