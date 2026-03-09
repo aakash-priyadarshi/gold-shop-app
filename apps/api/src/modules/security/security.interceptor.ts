@@ -33,34 +33,46 @@ export class SecurityInterceptor implements NestInterceptor {
         error: (err) => {
           const status = err?.status || err?.statusCode || 500;
 
-          if (status === 401) {
-            // Failed auth — may indicate brute force
-            this.securityService
-              .recordFailedLogin(ip, route, userId, userAgent)
-              .catch(() => {});
-          } else if (status === 403) {
-            // Only record forbidden if the IP isn't already blocked by the guard.
-            // Otherwise we create a feedback loop: guard blocks → 403 → recordForbidden
-            // → score increases → more events logged → repeat on every request.
-            this.securityService
-              .isBlocked(ip)
-              .then((blocked) => {
-                if (!blocked) {
+          // Whitelisted IPs skip all threat recording — avoids
+          // score accumulation that could cause edge-case blocking.
+          this.securityService
+            .isWhitelisted(ip)
+            .then((whitelisted) => {
+              if (whitelisted) return;
+
+              if (status === 401) {
+                // Failed auth — may indicate brute force
+                this.securityService
+                  .recordFailedLogin(ip, route, userId, userAgent)
+                  .catch(() => {});
+              } else if (status === 403) {
+                // Authenticated users getting 403 is a normal role/permission
+                // mismatch (e.g. CUSTOMER accessing ADMIN route) — NOT a threat.
+                // Only record forbidden for unauthenticated requests, which
+                // could indicate actual probing/attack behaviour.
+                if (!userId) {
                   this.securityService
-                    .recordForbidden(ip, route, method, userId, userAgent)
+                    .isBlocked(ip)
+                    .then((blocked) => {
+                      if (!blocked) {
+                        this.securityService
+                          .recordForbidden(ip, route, method, userId, userAgent)
+                          .catch(() => {});
+                      }
+                    })
                     .catch(() => {});
                 }
-              })
-              .catch(() => {});
-          } else if (status === 404) {
-            this.securityService
-              .recordNotFound(ip, route, method, userAgent)
-              .catch(() => {});
-          } else if (status === 429) {
-            this.securityService
-              .recordRateLimited(ip, route, method, userAgent)
-              .catch(() => {});
-          }
+              } else if (status === 404) {
+                this.securityService
+                  .recordNotFound(ip, route, method, userAgent)
+                  .catch(() => {});
+              } else if (status === 429) {
+                this.securityService
+                  .recordRateLimited(ip, route, method, userAgent)
+                  .catch(() => {});
+              }
+            })
+            .catch(() => {});
         },
       }),
     );
