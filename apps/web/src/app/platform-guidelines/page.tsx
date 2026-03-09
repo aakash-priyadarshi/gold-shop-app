@@ -47,7 +47,10 @@ export default function PlatformGuidelinesPage() {
             <T>Platform Guidelines</T>
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-            <T>Rules and policies to ensure a safe, fair, and trusted marketplace for all users.</T>
+            <T>
+              Rules and policies to ensure a safe, fair, and trusted marketplace
+              for all users.
+            </T>
           </p>
           <p className="text-base text-gray-500 dark:text-gray-400 mt-2">
             प्लेटफ़ॉर्म गाइडलाइन्स — सभी यूज़र्स के लिए एक सुरक्षित और भरोसेमंद
@@ -66,7 +69,12 @@ export default function PlatformGuidelinesPage() {
             </div>
 
             <p className="text-gray-800 dark:text-gray-100 mb-4">
-              <T>To protect both buyers and sellers, all communication and transactions must happen through our platform. Sharing personal contact information is strictly prohibited and will result in account suspension.</T>
+              <T>
+                To protect both buyers and sellers, all communication and
+                transactions must happen through our platform. Sharing personal
+                contact information is strictly prohibited and will result in
+                account suspension.
+              </T>
             </p>
             <p className="text-gray-700 dark:text-gray-200 mb-6">
               खरीदारों और विक्रेताओं दोनों की सुरक्षा के लिए, सभी बातचीत और

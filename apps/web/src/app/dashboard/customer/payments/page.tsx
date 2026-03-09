@@ -2,8 +2,6 @@
 
 import { CustomerGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,8 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import api from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   Building,
   Check,
@@ -233,7 +233,9 @@ export default function PaymentMethodsPage() {
         <div className="max-w-3xl mx-auto space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold"><T>Payment Methods</T></h1>
+              <h1 className="text-2xl font-bold">
+                <T>Payment Methods</T>
+              </h1>
               <p className="text-muted-foreground">
                 <T>Manage your saved payment methods for faster checkout</T>
               </p>
@@ -256,7 +258,11 @@ export default function PaymentMethodsPage() {
                     <T>Your payment information is secure</T>
                   </h3>
                   <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                    <T>We use industry-standard encryption to protect your payment details. Card numbers are never stored on our servers.</T>
+                    <T>
+                      We use industry-standard encryption to protect your
+                      payment details. Card numbers are never stored on our
+                      servers.
+                    </T>
                   </p>
                 </div>
               </div>
@@ -267,7 +273,9 @@ export default function PaymentMethodsPage() {
           {showAddForm && (
             <Card>
               <CardHeader>
-                <CardTitle><T>Add Payment Method</T></CardTitle>
+                <CardTitle>
+                  <T>Add Payment Method</T>
+                </CardTitle>
                 <CardDescription>
                   <T>Choose your preferred payment method</T>
                 </CardDescription>
@@ -275,7 +283,9 @@ export default function PaymentMethodsPage() {
               <CardContent className="space-y-6">
                 {/* Payment Type Selection */}
                 <div className="space-y-2">
-                  <Label><T>Payment Type</T></Label>
+                  <Label>
+                    <T>Payment Type</T>
+                  </Label>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                     {paymentTypes.map((type) => {
                       const Icon = type.icon;
@@ -309,7 +319,9 @@ export default function PaymentMethodsPage() {
                 {newMethod.type === "card" && (
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label><T>Card Number</T></Label>
+                      <Label>
+                        <T>Card Number</T>
+                      </Label>
                       <Input
                         value={newMethod.cardNumber}
                         onChange={(e) =>
@@ -326,7 +338,9 @@ export default function PaymentMethodsPage() {
                     </div>
                     <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label><T>Expiry Month</T></Label>
+                        <Label>
+                          <T>Expiry Month</T>
+                        </Label>
                         <Select
                           value={newMethod.expiryMonth}
                           onValueChange={(value) =>
@@ -349,7 +363,9 @@ export default function PaymentMethodsPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label><T>Expiry Year</T></Label>
+                        <Label>
+                          <T>Expiry Year</T>
+                        </Label>
                         <Select
                           value={newMethod.expiryYear}
                           onValueChange={(value) =>
@@ -396,7 +412,9 @@ export default function PaymentMethodsPage() {
                 {newMethod.type === "bank" && (
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label><T>Bank Name</T></Label>
+                      <Label>
+                        <T>Bank Name</T>
+                      </Label>
                       <Input
                         value={newMethod.bankName}
                         onChange={(e) =>
@@ -409,7 +427,9 @@ export default function PaymentMethodsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label><T>Account Holder Name</T></Label>
+                      <Label>
+                        <T>Account Holder Name</T>
+                      </Label>
                       <Input
                         value={newMethod.accountHolderName}
                         onChange={(e) =>
@@ -422,7 +442,9 @@ export default function PaymentMethodsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label><T>Account Number</T></Label>
+                      <Label>
+                        <T>Account Number</T>
+                      </Label>
                       <Input
                         value={newMethod.accountNumber}
                         onChange={(e) =>
@@ -441,7 +463,9 @@ export default function PaymentMethodsPage() {
                 {["esewa", "khalti", "imepay"].includes(newMethod.type) && (
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label><T>Mobile Number</T></Label>
+                      <Label>
+                        <T>Mobile Number</T>
+                      </Label>
                       <Input
                         value={newMethod.mobileNumber}
                         onChange={(e) =>
@@ -462,7 +486,9 @@ export default function PaymentMethodsPage() {
 
                 {/* Label */}
                 <div className="space-y-2">
-                  <Label><T>Label (Optional)</T></Label>
+                  <Label>
+                    <T>Label (Optional)</T>
+                  </Label>
                   <Input
                     value={newMethod.label}
                     onChange={(e) =>
@@ -504,7 +530,9 @@ export default function PaymentMethodsPage() {
           {/* Saved Payment Methods */}
           <Card>
             <CardHeader>
-              <CardTitle><T>Saved Payment Methods</T></CardTitle>
+              <CardTitle>
+                <T>Saved Payment Methods</T>
+              </CardTitle>
               <CardDescription>
                 <T>Your saved payment methods for faster checkout</T>
               </CardDescription>
@@ -519,7 +547,9 @@ export default function PaymentMethodsPage() {
                     <T>No payment methods saved</T>
                   </h3>
                   <p className="text-muted-foreground mb-6">
-                    <T>Add a payment method to speed up your checkout process</T>
+                    <T>
+                      Add a payment method to speed up your checkout process
+                    </T>
                   </p>
                   {!showAddForm && (
                     <Button onClick={() => setShowAddForm(true)}>

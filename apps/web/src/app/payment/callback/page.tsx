@@ -1,7 +1,5 @@
 "use client";
 
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,6 +8,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { CheckCircle, Loader2, XCircle } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -30,11 +30,17 @@ function PaymentCallbackContent() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <XCircle className="h-16 w-16 text-red-500 mx-auto mb-2" />
-            <CardTitle><T>Payment Failed</T></CardTitle>
+            <CardTitle>
+              <T>Payment Failed</T>
+            </CardTitle>
             <CardDescription>
-              {t(`Your payment via ${gateway || "the gateway"} was not completed.`)}
+              {t(
+                `Your payment via ${gateway || "the gateway"} was not completed.`,
+              )}
               {txn && (
-                <span className="block mt-1 text-xs">{t(`Transaction: ${txn}`)}</span>
+                <span className="block mt-1 text-xs">
+                  {t(`Transaction: ${txn}`)}
+                </span>
               )}
             </CardDescription>
           </CardHeader>
@@ -61,17 +67,26 @@ function PaymentCallbackContent() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-2" />
-          <CardTitle><T>Payment Received!</T></CardTitle>
+          <CardTitle>
+            <T>Payment Received!</T>
+          </CardTitle>
           <CardDescription>
-            {t(`Your payment via ${gateway || "the gateway"} is being verified.`)}
+            {t(
+              `Your payment via ${gateway || "the gateway"} is being verified.`,
+            )}
             {txn && (
-              <span className="block mt-1 text-xs font-mono">{t(`Ref: ${txn}`)}</span>
+              <span className="block mt-1 text-xs font-mono">
+                {t(`Ref: ${txn}`)}
+              </span>
             )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="text-center text-sm text-muted-foreground">
-            <T>You will receive a confirmation once the payment is verified. This may take a few moments.</T>
+            <T>
+              You will receive a confirmation once the payment is verified. This
+              may take a few moments.
+            </T>
           </div>
           <Button
             className="w-full"

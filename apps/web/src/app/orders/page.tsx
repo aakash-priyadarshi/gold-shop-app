@@ -2,8 +2,6 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import {
   MiniOrderStepper,
   type OrderType as OrderTypeEnum,
@@ -19,8 +17,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { ordersApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import { CURRENCIES, usePreferencesStore } from "@/store/preferences";
 import {
   CalendarIcon,
@@ -254,12 +254,24 @@ function MyOrdersPageContent() {
                     <SelectValue placeholder={t("Status")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all"><T>All Status</T></SelectItem>
-                    <SelectItem value="PENDING"><T>Pending</T></SelectItem>
-                    <SelectItem value="PROCESSING"><T>Processing</T></SelectItem>
-                    <SelectItem value="SHIPPED"><T>Shipped</T></SelectItem>
-                    <SelectItem value="DELIVERED"><T>Delivered</T></SelectItem>
-                    <SelectItem value="CANCELLED"><T>Cancelled</T></SelectItem>
+                    <SelectItem value="all">
+                      <T>All Status</T>
+                    </SelectItem>
+                    <SelectItem value="PENDING">
+                      <T>Pending</T>
+                    </SelectItem>
+                    <SelectItem value="PROCESSING">
+                      <T>Processing</T>
+                    </SelectItem>
+                    <SelectItem value="SHIPPED">
+                      <T>Shipped</T>
+                    </SelectItem>
+                    <SelectItem value="DELIVERED">
+                      <T>Delivered</T>
+                    </SelectItem>
+                    <SelectItem value="CANCELLED">
+                      <T>Cancelled</T>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -268,9 +280,15 @@ function MyOrdersPageContent() {
                     <SelectValue placeholder={t("Type")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all"><T>All Types</T></SelectItem>
-                    <SelectItem value="INVENTORY"><T>Pre-built</T></SelectItem>
-                    <SelectItem value="CUSTOM"><T>Custom</T></SelectItem>
+                    <SelectItem value="all">
+                      <T>All Types</T>
+                    </SelectItem>
+                    <SelectItem value="INVENTORY">
+                      <T>Pre-built</T>
+                    </SelectItem>
+                    <SelectItem value="CUSTOM">
+                      <T>Custom</T>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -279,8 +297,12 @@ function MyOrdersPageContent() {
                     <SelectValue placeholder={t("Sort")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="newest"><T>Newest First</T></SelectItem>
-                    <SelectItem value="oldest"><T>Oldest First</T></SelectItem>
+                    <SelectItem value="newest">
+                      <T>Newest First</T>
+                    </SelectItem>
+                    <SelectItem value="oldest">
+                      <T>Oldest First</T>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -306,7 +328,9 @@ function MyOrdersPageContent() {
                   : t("You haven't placed any orders yet")}
               </p>
               <Button asChild>
-                <Link href="/products"><T>Browse Products</T></Link>
+                <Link href="/products">
+                  <T>Browse Products</T>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -409,7 +433,8 @@ function MyOrdersPageContent() {
         {totalPages > 1 && (
           <div className="flex items-center justify-between mt-6">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              {t("Showing")} {orders.length} {t("of")} {totalOrders} {t("orders")}
+              {t("Showing")} {orders.length} {t("of")} {totalOrders}{" "}
+              {t("orders")}
             </p>
             <div className="flex gap-2">
               <Button

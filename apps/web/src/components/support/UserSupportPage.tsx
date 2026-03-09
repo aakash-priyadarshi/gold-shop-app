@@ -1,8 +1,6 @@
 "use client";
 
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,10 +26,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { T } from "@/components/ui/T";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { TicketMessage, useTicketSocket } from "@/hooks/useTicketSocket";
 import { ticketsApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   AlertCircle,
   ArrowLeft,
@@ -186,10 +186,14 @@ export default function UserSupportPage() {
             </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
-                <DialogTitle><T>Create Support Ticket</T></DialogTitle>
+                <DialogTitle>
+                  <T>Create Support Ticket</T>
+                </DialogTitle>
                 <DialogDescription>
-                  <T>Describe your issue and we&apos;ll get back to you as soon as
-                  possible.</T>
+                  <T>
+                    Describe your issue and we&apos;ll get back to you as soon
+                    as possible.
+                  </T>
                 </DialogDescription>
               </DialogHeader>
               <CreateTicketForm
@@ -218,9 +222,13 @@ export default function UserSupportPage() {
           /* Ticket list */
           <Card>
             <CardHeader>
-              <CardTitle><T>My Tickets</T></CardTitle>
+              <CardTitle>
+                <T>My Tickets</T>
+              </CardTitle>
               <CardDescription>
-                {t(`${tickets.length} ticket${tickets.length !== 1 ? "s" : ""}`)}
+                {t(
+                  `${tickets.length} ticket${tickets.length !== 1 ? "s" : ""}`,
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -231,7 +239,9 @@ export default function UserSupportPage() {
               ) : tickets.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-40" />
-                  <p><T>No tickets yet</T></p>
+                  <p>
+                    <T>No tickets yet</T>
+                  </p>
                   <p className="text-sm mt-1">
                     <T>Click &quot;New Ticket&quot; to create one</T>
                   </p>
@@ -326,7 +336,9 @@ function CreateTicketForm({ onSuccess }: { onSuccess: () => void }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="text-sm font-medium mb-1 block"><T>Issue Type</T></label>
+        <label className="text-sm font-medium mb-1 block">
+          <T>Issue Type</T>
+        </label>
         <Select value={type} onValueChange={setType}>
           <SelectTrigger>
             <SelectValue placeholder="Select issue type..." />
@@ -342,7 +354,9 @@ function CreateTicketForm({ onSuccess }: { onSuccess: () => void }) {
       </div>
 
       <div>
-        <label className="text-sm font-medium mb-1 block"><T>Subject</T></label>
+        <label className="text-sm font-medium mb-1 block">
+          <T>Subject</T>
+        </label>
         <Input
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
@@ -352,7 +366,9 @@ function CreateTicketForm({ onSuccess }: { onSuccess: () => void }) {
       </div>
 
       <div>
-        <label className="text-sm font-medium mb-1 block"><T>Description</T></label>
+        <label className="text-sm font-medium mb-1 block">
+          <T>Description</T>
+        </label>
         <Textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -446,7 +462,9 @@ function TicketDetailView({
       <CardContent>
         {/* Description */}
         <div className="bg-muted/50 rounded-lg p-3 mb-4 text-sm">
-          <strong><T>Original description:</T></strong>
+          <strong>
+            <T>Original description:</T>
+          </strong>
           <p className="mt-1 whitespace-pre-wrap">{ticket.description}</p>
         </div>
 
@@ -532,8 +550,10 @@ function TicketDetailView({
           )}
           {isClosed && (
             <div className="border-t p-3 text-center text-sm text-muted-foreground">
-              <T>This ticket is closed. Create a new ticket if you need further
-              help.</T>
+              <T>
+                This ticket is closed. Create a new ticket if you need further
+                help.
+              </T>
             </div>
           )}
         </div>

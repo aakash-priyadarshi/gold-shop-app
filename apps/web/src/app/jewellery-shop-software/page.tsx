@@ -1,9 +1,8 @@
 "use client";
 
-import { T } from "@/components/ui/T";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
-import { BRAND } from "@/config/brand";
+import { T } from "@/components/ui/T";
 import {
   ArrowRight,
   BarChart3,
@@ -414,10 +413,19 @@ export default function JewelleryShopSoftwarePage() {
               <T>Free Plan Available — No Credit Card Required</T>
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-tight">
-              <T>The Best Jewellery Shop Software for Gold, Silver and Diamond Businesses</T>
+              <T>
+                The Best Jewellery Shop Software for Gold, Silver and Diamond
+                Businesses
+              </T>
             </h1>
             <p className="mt-6 text-lg lg:text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto leading-relaxed">
-              <T>Free cloud-based software to manage your jewellery shop — inventory by weight and purity, billing, digital catalogues, customer chat, and analytics. Trusted by 2,000+ jewellers across Nepal, India, Dubai, USA and UK. Better than Zoho, Marg ERP and Vyapar — and it starts free.</T>
+              <T>
+                Free cloud-based software to manage your jewellery shop —
+                inventory by weight and purity, billing, digital catalogues,
+                customer chat, and analytics. Trusted by 2,000+ jewellers across
+                Nepal, India, Dubai, USA and UK. Better than Zoho, Marg ERP and
+                Vyapar — and it starts free.
+              </T>
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Link
@@ -463,7 +471,10 @@ export default function JewelleryShopSoftwarePage() {
               <T>Everything Your Jewellery Shop Needs</T>
             </h2>
             <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              <T>Comprehensive jewellery shop management software with features designed specifically for gold, silver, and diamond businesses</T>
+              <T>
+                Comprehensive jewellery shop management software with features
+                designed specifically for gold, silver, and diamond businesses
+              </T>
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -494,7 +505,10 @@ export default function JewelleryShopSoftwarePage() {
                 <T>Orivraa vs Other Jewellery Software</T>
               </h2>
               <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                <T>See how Orivraa compares to Zoho, Marg ERP, and Vyapar for jewellery shop management</T>
+                <T>
+                  See how Orivraa compares to Zoho, Marg ERP, and Vyapar for
+                  jewellery shop management
+                </T>
               </p>
             </div>
             <div className="overflow-x-auto">
@@ -568,7 +582,10 @@ export default function JewelleryShopSoftwarePage() {
               <T>Built for Every Type of Jewellery Business</T>
             </h2>
             <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-              <T>Whether you are a retail shop, wholesale dealer, or custom designer — Orivraa adapts to your workflow</T>
+              <T>
+                Whether you are a retail shop, wholesale dealer, or custom
+                designer — Orivraa adapts to your workflow
+              </T>
             </p>
           </div>
           <div className="grid sm:grid-cols-2 gap-6">
@@ -626,8 +643,12 @@ export default function JewelleryShopSoftwarePage() {
                   <div className="w-10 h-10 rounded-full bg-white/20 text-white font-bold flex items-center justify-center mx-auto mb-3 text-lg">
                     {s.step}
                   </div>
-                  <h3 className="text-white font-semibold"><T>{s.title}</T></h3>
-                  <p className="text-amber-100 text-sm mt-1"><T>{s.desc}</T></p>
+                  <h3 className="text-white font-semibold">
+                    <T>{s.title}</T>
+                  </h3>
+                  <p className="text-amber-100 text-sm mt-1">
+                    <T>{s.desc}</T>
+                  </p>
                 </div>
               ))}
             </div>
@@ -743,7 +764,11 @@ export default function JewelleryShopSoftwarePage() {
               <T>Ready to Modernise Your Jewellery Shop?</T>
             </h2>
             <p className="mt-3 text-gray-400 max-w-lg mx-auto">
-              <T>Join 2,000+ jewellers using Orivraa to manage inventory, reach buyers, and grow sales. Free to start — no credit card, no contracts.</T>
+              <T>
+                Join 2,000+ jewellers using Orivraa to manage inventory, reach
+                buyers, and grow sales. Free to start — no credit card, no
+                contracts.
+              </T>
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Link
@@ -761,7 +786,10 @@ export default function JewelleryShopSoftwarePage() {
               </Link>
             </div>
             <p className="mt-4 text-xs text-gray-500">
-              <T>Free plan includes: 15 products · Marketplace listing · Customer chat · Digital catalogues · Analytics</T>
+              <T>
+                Free plan includes: 15 products · Marketplace listing · Customer
+                chat · Digital catalogues · Analytics
+              </T>
             </p>
           </div>
         </section>

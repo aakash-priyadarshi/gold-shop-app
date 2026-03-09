@@ -1,9 +1,7 @@
 "use client";
 
-import { DynamicFooter } from '@/components/layout/DynamicFooter';
+import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { T } from "@/components/ui/T";
 import {
   Tooltip,
   TooltipContent,
@@ -31,6 +30,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useT } from "@/providers/translation-provider";
 import {
   ChevronLeft,
   ChevronRight,
@@ -377,8 +377,10 @@ export default function DesignGalleryPage() {
         <div className="flex items-start justify-between mb-2">
           <div>
             <h3 className="font-medium text-sm">
-              {t(design.jewelryType.charAt(0) +
-                design.jewelryType.slice(1).toLowerCase())}
+              {t(
+                design.jewelryType.charAt(0) +
+                  design.jewelryType.slice(1).toLowerCase(),
+              )}
             </h3>
             <p className="text-xs text-muted-foreground">
               {t(BUILD_METHOD_LABELS[design.buildMethod] || design.buildMethod)}
@@ -426,7 +428,9 @@ export default function DesignGalleryPage() {
         {design.creator && (
           <div className="mt-2 pt-2 border-t flex items-center gap-1 text-xs text-muted-foreground">
             <User className="h-3 w-3" />
-            <span>{t("by")} {design.creator.firstName}</span>
+            <span>
+              {t("by")} {design.creator.firstName}
+            </span>
           </div>
         )}
       </CardContent>
@@ -445,9 +449,11 @@ export default function DesignGalleryPage() {
             <T>Design Gallery</T>
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            <T>Explore AI-generated jewelry designs from our community. Find
-            inspiration or click &quot;Build This&quot; to create your own
-            custom piece.</T>
+            <T>
+              Explore AI-generated jewelry designs from our community. Find
+              inspiration or click &quot;Build This&quot; to create your own
+              custom piece.
+            </T>
           </p>
         </div>
 
@@ -554,7 +560,9 @@ export default function DesignGalleryPage() {
                 </Link>
               </TooltipTrigger>
               <TooltipContent>
-                <p><T>Design your custom jewelry with AI preview</T></p>
+                <p>
+                  <T>Design your custom jewelry with AI preview</T>
+                </p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -576,7 +584,9 @@ export default function DesignGalleryPage() {
         ) : designs.length === 0 ? (
           <div className="text-center py-16">
             <Gem className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium mb-2"><T>No designs found</T></h3>
+            <h3 className="text-lg font-medium mb-2">
+              <T>No designs found</T>
+            </h3>
             <p className="text-muted-foreground mb-4">
               {searchQuery || jewelryType !== "all"
                 ? t("Try adjusting your filters")
@@ -637,8 +647,10 @@ export default function DesignGalleryPage() {
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
-                  {t(selectedDesign.jewelryType.charAt(0) +
-                    selectedDesign.jewelryType.slice(1).toLowerCase())}{" "}
+                  {t(
+                    selectedDesign.jewelryType.charAt(0) +
+                      selectedDesign.jewelryType.slice(1).toLowerCase(),
+                  )}{" "}
                   {t("Design")}
                   {selectedDesign.creator && (
                     <span className="text-sm font-normal text-muted-foreground">
@@ -706,7 +718,9 @@ export default function DesignGalleryPage() {
                     </h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground"><T>Type</T></span>
+                        <span className="text-muted-foreground">
+                          <T>Type</T>
+                        </span>
                         <span>{t(selectedDesign.jewelryType)}</span>
                       </div>
                       <div className="flex justify-between">
@@ -719,7 +733,9 @@ export default function DesignGalleryPage() {
                       </div>
                       {selectedDesign.metalType && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground"><T>Metal</T></span>
+                          <span className="text-muted-foreground">
+                            <T>Metal</T>
+                          </span>
                           <span>
                             {t(selectedDesign.metalType.replace(/_/g, " "))}
                           </span>
@@ -727,13 +743,17 @@ export default function DesignGalleryPage() {
                       )}
                       {selectedDesign.metalColor && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground"><T>Color</T></span>
+                          <span className="text-muted-foreground">
+                            <T>Color</T>
+                          </span>
                           <span>{t(selectedDesign.metalColor)}</span>
                         </div>
                       )}
                       {selectedDesign.surfaceFinish && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground"><T>Finish</T></span>
+                          <span className="text-muted-foreground">
+                            <T>Finish</T>
+                          </span>
                           <span>
                             {t(selectedDesign.surfaceFinish.replace(/_/g, " "))}
                           </span>
@@ -741,9 +761,13 @@ export default function DesignGalleryPage() {
                       )}
                       {selectedDesign.weightCategory && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground"><T>Weight</T></span>
+                          <span className="text-muted-foreground">
+                            <T>Weight</T>
+                          </span>
                           <span>
-                            {t(selectedDesign.weightCategory.replace(/_/g, " "))}
+                            {t(
+                              selectedDesign.weightCategory.replace(/_/g, " "),
+                            )}
                           </span>
                         </div>
                       )}
@@ -760,12 +784,16 @@ export default function DesignGalleryPage() {
                         </h4>
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground"><T>Stone</T></span>
+                            <span className="text-muted-foreground">
+                              <T>Stone</T>
+                            </span>
                             <span>{t(selectedDesign.primaryStone)}</span>
                           </div>
                           {selectedDesign.stoneCut && (
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground"><T>Cut</T></span>
+                              <span className="text-muted-foreground">
+                                <T>Cut</T>
+                              </span>
                               <span>{t(selectedDesign.stoneCut)}</span>
                             </div>
                           )}

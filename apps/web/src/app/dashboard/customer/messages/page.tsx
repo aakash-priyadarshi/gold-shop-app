@@ -3,11 +3,10 @@
 import { CustomerGuard } from "@/components/auth/RouteGuard";
 import { RichMessageCard } from "@/components/chat/RichMessageCard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import {
   useChatSocket,
@@ -15,6 +14,7 @@ import {
   type ViolationWarning,
 } from "@/hooks/useChatSocket";
 import { chatApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   AlertTriangle,
   Lock,
@@ -249,7 +249,9 @@ export default function CustomerMessagesPage() {
         <div className="flex flex-col h-[calc(100vh-8rem)]">
           <div className="flex items-center gap-2 mb-4">
             <MessageSquare className="h-6 w-6" />
-            <h1 className="text-2xl font-bold"><T>Messages</T></h1>
+            <h1 className="text-2xl font-bold">
+              <T>Messages</T>
+            </h1>
             {connected ? (
               <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
                 <Wifi className="h-3 w-3" /> <T>Live</T>
@@ -265,11 +267,15 @@ export default function CustomerMessagesPage() {
             {/* Conversation list */}
             <div className="w-80 flex-shrink-0 border rounded-lg overflow-y-auto">
               {loading ? (
-                <div className="p-4 text-muted-foreground"><T>Loading...</T></div>
+                <div className="p-4 text-muted-foreground">
+                  <T>Loading...</T>
+                </div>
               ) : conversations.length === 0 ? (
                 <div className="p-4 text-center text-muted-foreground">
                   <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p><T>No conversations yet</T></p>
+                  <p>
+                    <T>No conversations yet</T>
+                  </p>
                   <p className="text-sm mt-1">
                     <T>Start a conversation from an order or RFQ page</T>
                   </p>
@@ -345,7 +351,9 @@ export default function CustomerMessagesPage() {
                             {violationAlert.strikeCount > 0 && (
                               <div className="flex items-center gap-2 mt-2">
                                 <span className="text-xs font-semibold text-red-800 dark:text-red-200">
-                                  {t(`Warnings: ${violationAlert.strikeCount}/3`)}
+                                  {t(
+                                    `Warnings: ${violationAlert.strikeCount}/3`,
+                                  )}
                                 </span>
                                 <div className="flex gap-1">
                                   {[1, 2, 3].map((i) => (
@@ -366,7 +374,9 @@ export default function CustomerMessagesPage() {
                                 <span className="text-xs text-red-600 dark:text-red-400">
                                   {violationAlert.strikeCount >= 3
                                     ? t("Account suspended!")
-                                    : t(`${3 - violationAlert.strikeCount} warning(s) remaining before account suspension`)}
+                                    : t(
+                                        `${3 - violationAlert.strikeCount} warning(s) remaining before account suspension`,
+                                      )}
                                 </span>
                               </div>
                             )}
@@ -454,8 +464,10 @@ export default function CustomerMessagesPage() {
                   {/* Input */}
                   {selectedConv?.status === "LOCKED" ? (
                     <div className="p-3 border-t bg-muted text-center text-sm text-muted-foreground">
-                      <T>This conversation is locked. Contact support for
-                      assistance.</T>
+                      <T>
+                        This conversation is locked. Contact support for
+                        assistance.
+                      </T>
                     </div>
                   ) : (
                     <div className="p-3 border-t flex gap-2">

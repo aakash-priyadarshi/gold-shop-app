@@ -2,6 +2,8 @@
 
 import { SalesGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -98,6 +100,7 @@ export default function SalesMessagesPage() {
   }
 
   const selectedConv = conversations.find((c) => c.id === selectedConversation);
+  const t = useT();
 
   return (
     <SalesGuard>
@@ -105,9 +108,9 @@ export default function SalesMessagesPage() {
         <div className="flex flex-col h-[calc(100vh-8rem)]">
           <div className="flex items-center gap-2 mb-4">
             <MessageSquare className="h-6 w-6" />
-            <h1 className="text-2xl font-bold">Messages</h1>
+            <h1 className="text-2xl font-bold"><T>Messages</T></h1>
             <Badge variant="secondary" className="ml-2">
-              {conversations.length} conversations
+              {t(`${conversations.length} conversations`)}
             </Badge>
           </div>
 
@@ -115,11 +118,11 @@ export default function SalesMessagesPage() {
             {/* Conversation list */}
             <div className="w-80 flex-shrink-0 border rounded-lg overflow-y-auto">
               {loading ? (
-                <div className="p-4 text-muted-foreground">Loading...</div>
+                <div className="p-4 text-muted-foreground"><T>Loading...</T></div>
               ) : conversations.length === 0 ? (
                 <div className="p-4 text-center text-muted-foreground">
                   <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>No conversations found</p>
+                  <p><T>No conversations found</T></p>
                 </div>
               ) : (
                 conversations.map((conv) => (
@@ -171,7 +174,7 @@ export default function SalesMessagesPage() {
             <div className="flex-1 flex flex-col border rounded-lg">
               {!selectedConversation ? (
                 <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                  Select a conversation to view messages
+                  <T>Select a conversation to view messages</T>
                 </div>
               ) : (
                 <>
@@ -193,7 +196,7 @@ export default function SalesMessagesPage() {
                     </div>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Shield className="h-3 w-3" />
-                      Sales view
+                      <T>Sales view</T>
                     </div>
                   </div>
 
@@ -232,8 +235,8 @@ export default function SalesMessagesPage() {
                             <p className="text-sm">{msg.content}</p>
                             {msg.hasViolation && (
                               <p className="text-xs mt-1 opacity-75">
-                                ⚠️ Violation:{" "}
-                                {msg.violationType || "Contact info detected"}
+                                ⚠️ {t("Violation:")}{" "}
+                                {msg.violationType || t("Contact info detected")}
                               </p>
                             )}
                             <span className="text-xs opacity-60 mt-1 block">
@@ -254,7 +257,7 @@ export default function SalesMessagesPage() {
                       onKeyDown={(e) =>
                         e.key === "Enter" && !e.shiftKey && handleSend()
                       }
-                      placeholder="Send a message as Sales..."
+                      placeholder={t("Send a message as Sales...")}
                       disabled={sending}
                     />
                     <Button

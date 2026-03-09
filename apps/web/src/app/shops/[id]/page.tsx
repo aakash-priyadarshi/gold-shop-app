@@ -1,9 +1,7 @@
 "use client";
 
-import { DynamicFooter } from '@/components/layout/DynamicFooter';
+import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,11 +30,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { T } from "@/components/ui/T";
 import { Textarea } from "@/components/ui/textarea";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import api, { chatApi, materialsApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   BuildingStorefrontIcon,
   ChatBubbleLeftRightIcon,
@@ -442,7 +442,9 @@ export default function ShopDetailPage() {
         <main className="flex-1 flex items-center justify-center">
           <div className="flex items-center gap-2">
             <Loader2 className="h-6 w-6 animate-spin" />
-            <span><T>Loading shop details...</T></span>
+            <span>
+              <T>Loading shop details...</T>
+            </span>
           </div>
         </main>
         <DynamicFooter />
@@ -458,10 +460,14 @@ export default function ShopDetailPage() {
           <Card className="max-w-md mx-auto">
             <CardContent className="pt-6 text-center">
               <BuildingStorefrontIcon className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h2 className="text-xl font-semibold mb-2"><T>Shop Not Found</T></h2>
+              <h2 className="text-xl font-semibold mb-2">
+                <T>Shop Not Found</T>
+              </h2>
               <p className="text-muted-foreground mb-4">
                 {error ||
-                  t("The shop you are looking for does not exist or has been removed.")}
+                  t(
+                    "The shop you are looking for does not exist or has been removed.",
+                  )}
               </p>
               <Button onClick={() => router.push("/shops")}>
                 <ChevronLeftIcon className="h-4 w-4 mr-2" />
@@ -556,7 +562,10 @@ export default function ShopDetailPage() {
                   )}
                   {shop.sellerTier && shop.sellerTier !== "STANDARD" && (
                     <Badge
-                      className={TIER_COLORS[shop.sellerTier] || "bg-gray-100 dark:bg-gray-800"}
+                      className={
+                        TIER_COLORS[shop.sellerTier] ||
+                        "bg-gray-100 dark:bg-gray-800"
+                      }
                     >
                       {shop.sellerTier === "ELITE"
                         ? "👑"
@@ -612,16 +621,21 @@ export default function ShopDetailPage() {
                   </DialogTrigger>
                   <DialogContent className="max-w-lg">
                     <DialogHeader>
-                      <DialogTitle><T>Create Custom Order</T></DialogTitle>
+                      <DialogTitle>
+                        <T>Create Custom Order</T>
+                      </DialogTitle>
                       <DialogDescription>
-                        {t("Request a custom jewellery piece from")} {shop.shopName}
+                        {t("Request a custom jewellery piece from")}{" "}
+                        {shop.shopName}
                       </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label><T>Jewellery Type *</T></Label>
+                          <Label>
+                            <T>Jewellery Type *</T>
+                          </Label>
                           <Select
                             value={customOrderForm.jewelleryType}
                             onValueChange={(v) =>
@@ -645,7 +659,9 @@ export default function ShopDetailPage() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label><T>Metal Type</T></Label>
+                          <Label>
+                            <T>Metal Type</T>
+                          </Label>
                           <Select
                             value={customOrderForm.metalType}
                             onValueChange={(v) =>
@@ -659,9 +675,15 @@ export default function ShopDetailPage() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="GOLD"><T>Gold</T></SelectItem>
-                              <SelectItem value="SILVER"><T>Silver</T></SelectItem>
-                              <SelectItem value="PLATINUM"><T>Platinum</T></SelectItem>
+                              <SelectItem value="GOLD">
+                                <T>Gold</T>
+                              </SelectItem>
+                              <SelectItem value="SILVER">
+                                <T>Silver</T>
+                              </SelectItem>
+                              <SelectItem value="PLATINUM">
+                                <T>Platinum</T>
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -669,7 +691,9 @@ export default function ShopDetailPage() {
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label><T>Purity</T></Label>
+                          <Label>
+                            <T>Purity</T>
+                          </Label>
                           <Select
                             value={customOrderForm.purity}
                             onValueChange={(v) =>
@@ -683,17 +707,23 @@ export default function ShopDetailPage() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="24K"><T>24K (Pure)</T></SelectItem>
+                              <SelectItem value="24K">
+                                <T>24K (Pure)</T>
+                              </SelectItem>
                               <SelectItem value="22K">22K</SelectItem>
                               <SelectItem value="18K">18K</SelectItem>
                               <SelectItem value="14K">14K</SelectItem>
-                              <SelectItem value="925"><T>925 Sterling</T></SelectItem>
+                              <SelectItem value="925">
+                                <T>925 Sterling</T>
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
 
                         <div className="space-y-2">
-                          <Label><T>Approx. Weight (grams) *</T></Label>
+                          <Label>
+                            <T>Approx. Weight (grams) *</T>
+                          </Label>
                           <Input
                             type="number"
                             step="0.01"
@@ -710,7 +740,9 @@ export default function ShopDetailPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label><T>Description & Requirements</T></Label>
+                        <Label>
+                          <T>Description & Requirements</T>
+                        </Label>
                         <Textarea
                           value={customOrderForm.description}
                           onChange={(e) =>
@@ -719,7 +751,9 @@ export default function ShopDetailPage() {
                               description: e.target.value,
                             })
                           }
-                          placeholder={t("Describe your design requirements, preferences, etc.")}
+                          placeholder={t(
+                            "Describe your design requirements, preferences, etc.",
+                          )}
                           rows={4}
                         />
                       </div>
@@ -810,7 +844,9 @@ export default function ShopDetailPage() {
                   ) : products.length === 0 ? (
                     <div className="text-center py-12 text-muted-foreground">
                       <ShoppingBag className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p><T>No products available at the moment</T></p>
+                      <p>
+                        <T>No products available at the moment</T>
+                      </p>
                       <p className="text-sm mt-2">
                         <T>Try placing a custom order instead!</T>
                       </p>
@@ -903,7 +939,7 @@ export default function ShopDetailPage() {
                                   variant="secondary"
                                   disabled
                                 >
-                                <T>Your Product</T>
+                                  <T>Your Product</T>
                                 </Button>
                               ) : (
                                 <Button
@@ -928,7 +964,9 @@ export default function ShopDetailPage() {
               {shop.about && (
                 <Card>
                   <CardHeader>
-                    <CardTitle><T>About Us</T></CardTitle>
+                    <CardTitle>
+                      <T>About Us</T>
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-muted-foreground whitespace-pre-line">
@@ -1012,13 +1050,17 @@ export default function ShopDetailPage() {
               {/* Contact Info */}
               <Card>
                 <CardHeader>
-                  <CardTitle><T>Shop Information</T></CardTitle>
+                  <CardTitle>
+                    <T>Shop Information</T>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-start gap-3">
                     <MapPinIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
-                      <p className="font-medium"><T>Location</T></p>
+                      <p className="font-medium">
+                        <T>Location</T>
+                      </p>
                       <p className="text-sm text-muted-foreground">
                         {shop.city}
                         {shop.state && `, ${shop.state}`}
@@ -1035,7 +1077,9 @@ export default function ShopDetailPage() {
                     <div className="flex items-start gap-3">
                       <PhoneIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                       <div>
-                        <p className="font-medium"><T>Phone</T></p>
+                        <p className="font-medium">
+                          <T>Phone</T>
+                        </p>
                         <a
                           href={`tel:${shop.contactPhone}`}
                           className="text-sm text-amber-600 hover:underline"
@@ -1050,7 +1094,9 @@ export default function ShopDetailPage() {
                     <div className="flex items-start gap-3">
                       <EnvelopeIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                       <div>
-                        <p className="font-medium"><T>Email</T></p>
+                        <p className="font-medium">
+                          <T>Email</T>
+                        </p>
                         <a
                           href={`mailto:${shop.contactEmail}`}
                           className="text-sm text-amber-600 hover:underline"
@@ -1087,7 +1133,9 @@ export default function ShopDetailPage() {
                     <div className="flex items-start gap-3">
                       <GlobeAltIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                       <div>
-                        <p className="font-medium"><T>Website</T></p>
+                        <p className="font-medium">
+                          <T>Website</T>
+                        </p>
                         <a
                           href={shop.websiteUrl}
                           target="_blank"
@@ -1104,7 +1152,9 @@ export default function ShopDetailPage() {
                     <div className="flex items-start gap-3">
                       <ClockIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                       <div>
-                        <p className="font-medium"><T>Business Hours</T></p>
+                        <p className="font-medium">
+                          <T>Business Hours</T>
+                        </p>
                         <p className="text-sm text-muted-foreground">
                           {shop.businessHours}
                         </p>
@@ -1132,7 +1182,9 @@ export default function ShopDetailPage() {
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="border-b text-left">
-                              <th className="pb-2 font-medium"><T>Material</T></th>
+                              <th className="pb-2 font-medium">
+                                <T>Material</T>
+                              </th>
                               <th className="pb-2 font-medium text-right">
                                 <T>Market Rate /g</T>
                               </th>
@@ -1231,7 +1283,9 @@ export default function ShopDetailPage() {
                 shop.supportedJewelleryTypes.length > 0 && (
                   <Card>
                     <CardHeader>
-                      <CardTitle><T>Jewellery Types</T></CardTitle>
+                      <CardTitle>
+                        <T>Jewellery Types</T>
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-wrap gap-2">

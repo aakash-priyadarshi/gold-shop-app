@@ -2,8 +2,6 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import {
   OrderStatusBadge,
   OrderStepper,
@@ -20,9 +18,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { T } from "@/components/ui/T";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { chatApi, ordersApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import { CURRENCIES, usePreferencesStore } from "@/store/preferences";
 import {
   ArrowLeftIcon,
@@ -277,12 +277,16 @@ export default function OrderTrackingPage() {
               <CardDescription>
                 {error === "You do not have permission to view this order"
                   ? t("This order belongs to another user.")
-                  : t("The order you are looking for does not exist or has been removed.")}
+                  : t(
+                      "The order you are looking for does not exist or has been removed.",
+                    )}
               </CardDescription>
             </CardHeader>
             <CardFooter className="justify-center">
               <Button asChild>
-                <Link href="/dashboard/customer"><T>View My Orders</T></Link>
+                <Link href="/dashboard/customer">
+                  <T>View My Orders</T>
+                </Link>
               </Button>
             </CardFooter>
           </Card>
@@ -352,8 +356,12 @@ export default function OrderTrackingPage() {
             {/* Order Status Stepper */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg"><T>Order Progress</T></CardTitle>
-                <CardDescription><T>Track your order status</T></CardDescription>
+                <CardTitle className="text-lg">
+                  <T>Order Progress</T>
+                </CardTitle>
+                <CardDescription>
+                  <T>Track your order status</T>
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <OrderStepper
@@ -368,16 +376,24 @@ export default function OrderTrackingPage() {
             {/* Tabs for details */}
             <Tabs defaultValue="details" className="w-full">
               <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="details"><T>Details</T></TabsTrigger>
-                <TabsTrigger value="timeline"><T>Timeline</T></TabsTrigger>
-                <TabsTrigger value="delivery"><T>Delivery</T></TabsTrigger>
+                <TabsTrigger value="details">
+                  <T>Details</T>
+                </TabsTrigger>
+                <TabsTrigger value="timeline">
+                  <T>Timeline</T>
+                </TabsTrigger>
+                <TabsTrigger value="delivery">
+                  <T>Delivery</T>
+                </TabsTrigger>
               </TabsList>
 
               {/* Details tab */}
               <TabsContent value="details">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg"><T>Order Details</T></CardTitle>
+                    <CardTitle className="text-lg">
+                      <T>Order Details</T>
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {/* Product info */}
@@ -439,7 +455,9 @@ export default function OrderTrackingPage() {
               <TabsContent value="timeline">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg"><T>Order Timeline</T></CardTitle>
+                    <CardTitle className="text-lg">
+                      <T>Order Timeline</T>
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     {(order.milestones?.length || 0) > 0 ? (
@@ -483,9 +501,13 @@ export default function OrderTrackingPage() {
                     ) : (
                       <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                         <ClockIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                        <p><T>No timeline updates yet</T></p>
+                        <p>
+                          <T>No timeline updates yet</T>
+                        </p>
                         <p className="text-sm">
-                          <T>Updates will appear here as your order progresses</T>
+                          <T>
+                            Updates will appear here as your order progresses
+                          </T>
                         </p>
                       </div>
                     )}
@@ -540,14 +562,19 @@ export default function OrderTrackingPage() {
                     <div className="flex gap-3">
                       <TruckIcon className="h-5 w-5 text-gray-400 mt-0.5" />
                       <div>
-                        <p className="font-medium"><T>Tracking</T></p>
+                        <p className="font-medium">
+                          <T>Tracking</T>
+                        </p>
                         {order.trackingNumber ? (
                           <p className="text-sm font-mono">
                             {order.trackingNumber}
                           </p>
                         ) : (
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            <T>Tracking information will be available once your order ships</T>
+                            <T>
+                              Tracking information will be available once your
+                              order ships
+                            </T>
                           </p>
                         )}
                       </div>
@@ -558,7 +585,9 @@ export default function OrderTrackingPage() {
                       <div className="flex gap-3">
                         <CalendarIcon className="h-5 w-5 text-gray-400 mt-0.5" />
                         <div>
-                          <p className="font-medium"><T>Estimated Delivery</T></p>
+                          <p className="font-medium">
+                            <T>Estimated Delivery</T>
+                          </p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
                             {formatDate(order.estimatedDelivery)}
                           </p>
@@ -662,13 +691,17 @@ export default function OrderTrackingPage() {
                   </div>
                   {order.discountNpr > 0 && (
                     <div className="flex justify-between text-emerald-600">
-                      <span><T>Discount</T></span>
+                      <span>
+                        <T>Discount</T>
+                      </span>
                       <span>-{formatPrice(order.discountNpr)}</span>
                     </div>
                   )}
                   <Separator />
                   <div className="flex justify-between text-lg font-semibold">
-                    <span><T>Total</T></span>
+                    <span>
+                      <T>Total</T>
+                    </span>
                     <span className="text-amber-600">
                       {formatPrice(order.totalNpr)}
                     </span>
@@ -676,7 +709,9 @@ export default function OrderTrackingPage() {
                   {order.balanceDueNpr > 0 &&
                     order.balanceDueNpr < order.totalNpr && (
                       <div className="flex justify-between text-amber-600">
-                        <span><T>Balance Due</T></span>
+                        <span>
+                          <T>Balance Due</T>
+                        </span>
                         <span>{formatPrice(order.balanceDueNpr)}</span>
                       </div>
                     )}
@@ -687,7 +722,9 @@ export default function OrderTrackingPage() {
             {/* Quick actions */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg"><T>Need Help?</T></CardTitle>
+                <CardTitle className="text-lg">
+                  <T>Need Help?</T>
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Button

@@ -2,6 +2,8 @@
 
 import { SalesGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,10 +67,12 @@ export default function SalesDashboardPage() {
     }
   };
 
+  const t = useT();
+
   const statCards = stats
     ? [
         {
-          title: "Total Shops",
+          title: t("Total Shops"),
           value: stats.totalShops,
           icon: Store,
           color: "text-blue-600",
@@ -76,7 +80,7 @@ export default function SalesDashboardPage() {
           href: "/dashboard/sales/shops",
         },
         {
-          title: "Total Orders",
+          title: t("Total Orders"),
           value: stats.totalOrders,
           icon: ShoppingCart,
           color: "text-green-600",
@@ -84,7 +88,7 @@ export default function SalesDashboardPage() {
           href: "/dashboard/sales/orders",
         },
         {
-          title: "Pending Orders",
+          title: t("Pending Orders"),
           value: stats.pendingOrders,
           icon: Clock,
           color: "text-yellow-600",
@@ -92,7 +96,7 @@ export default function SalesDashboardPage() {
           href: "/dashboard/sales/orders",
         },
         {
-          title: "Messages",
+          title: t("Messages"),
           value: stats.recentConversations,
           icon: MessageSquare,
           color: "text-purple-600",
@@ -108,10 +112,10 @@ export default function SalesDashboardPage() {
         <div className="space-y-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              Sales Dashboard
+              <T>Sales Dashboard</T>
             </h1>
             <p className="text-gray-500 dark:text-gray-400 mt-1">
-              Overview of shops, orders, and customer interactions
+              <T>Overview of shops, orders, and customer interactions</T>
             </p>
           </div>
 
@@ -156,26 +160,26 @@ export default function SalesDashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Quick Actions</CardTitle>
-                <CardDescription>Common sales tasks</CardDescription>
+                <CardTitle className="text-lg"><T>Quick Actions</T></CardTitle>
+                <CardDescription><T>Common sales tasks</T></CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Link href="/dashboard/sales/shops">
                   <Button variant="outline" className="w-full justify-start">
                     <Store className="w-4 h-4 mr-2" />
-                    View Shops & CRM
+                    <T>View Shops & CRM</T>
                   </Button>
                 </Link>
                 <Link href="/dashboard/sales/orders">
                   <Button variant="outline" className="w-full justify-start">
                     <ShoppingCart className="w-4 h-4 mr-2" />
-                    Manage Orders
+                    <T>Manage Orders</T>
                   </Button>
                 </Link>
                 <Link href="/dashboard/sales/messages">
                   <Button variant="outline" className="w-full justify-start">
                     <MessageSquare className="w-4 h-4 mr-2" />
-                    View Messages
+                    <T>View Messages</T>
                   </Button>
                 </Link>
               </CardContent>
@@ -183,13 +187,13 @@ export default function SalesDashboardPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Recent Orders</CardTitle>
-                <CardDescription>Latest order activity</CardDescription>
+                <CardTitle className="text-lg"><T>Recent Orders</T></CardTitle>
+                <CardDescription><T>Latest order activity</T></CardDescription>
               </CardHeader>
               <CardContent>
                 {recentOrders.length === 0 ? (
                   <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-                    No recent orders
+                    <T>No recent orders</T>
                   </p>
                 ) : (
                   <div className="space-y-3">
@@ -203,7 +207,7 @@ export default function SalesDashboardPage() {
                             {order.orderNumber || order.id.slice(0, 8)}
                           </p>
                           <p className="text-gray-500 dark:text-gray-400 text-xs">
-                            {order.shop?.shopName || "Unknown Shop"}
+                            {order.shop?.shopName || t("Unknown Shop")}
                           </p>
                         </div>
                         <div className="text-right">

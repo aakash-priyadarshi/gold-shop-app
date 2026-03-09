@@ -2,8 +2,6 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { BuyerEducation } from "@/components/pricing/BuyerEducation";
 import { MarketComparison } from "@/components/pricing/MarketComparison";
 import { SellerTierBadge } from "@/components/pricing/SellerTierBadge";
@@ -25,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { T } from "@/components/ui/T";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
@@ -45,6 +44,7 @@ import {
   type TaxRule,
 } from "@/hooks/useTaxRules";
 import { getImageUrl } from "@/lib/image-upload";
+import { useT } from "@/providers/translation-provider";
 import {
   COUNTRIES,
   CURRENCIES,
@@ -557,10 +557,14 @@ export default function CreateRfqPage() {
       return t("Please log in to submit your custom jewellery request");
     }
     if (!isPhoneVerified) {
-      return t("Please verify your phone number in your profile settings to submit requests");
+      return t(
+        "Please verify your phone number in your profile settings to submit requests",
+      );
     }
     if (isSeller && !isShopVerified) {
-      return t("Your shop needs KYC verification (ID card & tax details) before you can submit requests. Please complete verification in your dashboard.");
+      return t(
+        "Your shop needs KYC verification (ID card & tax details) before you can submit requests. Please complete verification in your dashboard.",
+      );
     }
     return null;
   };
@@ -2536,7 +2540,9 @@ export default function CreateRfqPage() {
     } catch (err: any) {
       setAiError(
         err?.response?.data?.message ||
-          t("AI assistant is temporarily unavailable. Please fill the form manually."),
+          t(
+            "AI assistant is temporarily unavailable. Please fill the form manually.",
+          ),
       );
     } finally {
       setAiLoading(false);
@@ -3039,7 +3045,9 @@ export default function CreateRfqPage() {
                 </span>
                 .
               </p>
-              <p><T>Would you like to continue where you left off?</T></p>
+              <p>
+                <T>Would you like to continue where you left off?</T>
+              </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -3123,7 +3131,9 @@ export default function CreateRfqPage() {
                             : "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300"
                         }`}
                       >
-                        {marketRates.cache === "fresh" ? t("● Live") : t("● Cached")}
+                        {marketRates.cache === "fresh"
+                          ? t("● Live")
+                          : t("● Cached")}
                       </span>
                     )}
                   </div>
@@ -3425,7 +3435,10 @@ export default function CreateRfqPage() {
                         <T>What would you like to create?</T>
                       </CardTitle>
                       <CardDescription>
-                        <T>Tell us the basic details of your custom jewellery piece</T>
+                        <T>
+                          Tell us the basic details of your custom jewellery
+                          piece
+                        </T>
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
@@ -3504,7 +3517,7 @@ export default function CreateRfqPage() {
                                       href="/auth/login?redirect=/rfq/create"
                                       className="inline-flex items-center gap-1 text-xs bg-gold-600 text-white px-3 py-1.5 rounded-md hover:bg-gold-700 transition-colors"
                                     >
-                                    <T>Sign in for unlimited AI access →</T>
+                                      <T>Sign in for unlimited AI access →</T>
                                     </a>
                                   </div>
                                 ) : aiResult.confidence <= 10 ? (
@@ -3607,8 +3620,10 @@ export default function CreateRfqPage() {
                                     {aiResult.isGuest && (
                                       <div className="text-xs bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 rounded p-2 flex items-center justify-between">
                                         <span className="text-blue-800 dark:text-blue-200">
-                                          <T>✨ Sign in to submit this to sellers
-                                          and get real quotes</T>
+                                          <T>
+                                            ✨ Sign in to submit this to sellers
+                                            and get real quotes
+                                          </T>
                                         </span>
                                         <a
                                           href="/auth/login?redirect=/rfq/create"
@@ -3624,15 +3639,19 @@ export default function CreateRfqPage() {
                             )}
 
                             <p className="text-xs text-gold-600/70">
-                              <T>You can always adjust the fields below after AI
-                              fills them.</T>
+                              <T>
+                                You can always adjust the fields below after AI
+                                fills them.
+                              </T>
                             </p>
                           </div>
                         )}
                       </div>
 
                       <div className="space-y-2">
-                        <Label><T>Jewellery Type *</T></Label>
+                        <Label>
+                          <T>Jewellery Type *</T>
+                        </Label>
                         <Select
                           value={formData.jewelleryType}
                           onValueChange={(v: string) => {
@@ -3711,7 +3730,9 @@ export default function CreateRfqPage() {
                       {/* Template Selector - shows when jewellery type is selected */}
                       {formData.jewelleryType && templates.length > 0 && (
                         <div className="space-y-2">
-                          <Label><T>Choose a Template (Optional)</T></Label>
+                          <Label>
+                            <T>Choose a Template (Optional)</T>
+                          </Label>
                           <Select
                             value={formData.templateId}
                             onValueChange={(v: string) =>
@@ -3733,8 +3754,10 @@ export default function CreateRfqPage() {
                             </SelectContent>
                           </Select>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
-                            <T>Templates provide pre-defined weight ranges and
-                            recommended materials</T>
+                            <T>
+                              Templates provide pre-defined weight ranges and
+                              recommended materials
+                            </T>
                           </p>
                         </div>
                       )}
@@ -3742,7 +3765,9 @@ export default function CreateRfqPage() {
                       {/* Weight Category Slider - shows when template is selected */}
                       {hasRealTemplate && (
                         <div className="space-y-3">
-                          <Label><T>Weight Category *</T></Label>
+                          <Label>
+                            <T>Weight Category *</T>
+                          </Label>
                           <div className="flex gap-2">
                             {WEIGHT_CATEGORIES.map((cat) => {
                               const template = templates.find(
@@ -3789,7 +3814,9 @@ export default function CreateRfqPage() {
                       {/* Manual weight input when no template */}
                       {!hasRealTemplate && (
                         <div className="space-y-2">
-                          <Label><T>Estimated Weight</T> ({weightUnitSymbol})</Label>
+                          <Label>
+                            <T>Estimated Weight</T> ({weightUnitSymbol})
+                          </Label>
                           {/* Weight guidance message */}
                           {formData.jewelleryType &&
                             WEIGHT_GUIDANCE[formData.jewelleryType] && (
@@ -3863,7 +3890,9 @@ export default function CreateRfqPage() {
 
                       {/* Build Method Selection */}
                       <div className="space-y-3">
-                        <Label><T>Build Method *</T></Label>
+                        <Label>
+                          <T>Build Method *</T>
+                        </Label>
                         <div className="space-y-2">
                           {BUILD_METHODS.filter((method) => {
                             // Method D is only available for specific jewelry types
@@ -3946,7 +3975,9 @@ export default function CreateRfqPage() {
                                           className="mt-1 text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700"
                                         >
                                           <Sparkles className="h-3 w-3 mr-1" />
-                                          <T>Lighter weight, intricate patterns</T>
+                                          <T>
+                                            Lighter weight, intricate patterns
+                                          </T>
                                         </Badge>
                                       )}
                                     </div>
@@ -4010,7 +4041,9 @@ export default function CreateRfqPage() {
                       {/* Method A: Traditional Metal Selection */}
                       {formData.buildMethod === "METHOD_A" && (
                         <div className="space-y-2">
-                          <Label><T>Metal Type *</T></Label>
+                          <Label>
+                            <T>Metal Type *</T>
+                          </Label>
                           <Select
                             value={formData.metalType}
                             onValueChange={(v: string) =>
@@ -4073,7 +4106,9 @@ export default function CreateRfqPage() {
                           </div>
 
                           <div className="space-y-2">
-                            <Label><T>Metal Purity *</T></Label>
+                            <Label>
+                              <T>Metal Purity *</T>
+                            </Label>
                             <Select
                               value={formData.methodDConfig.purity}
                               onValueChange={(v: string) =>
@@ -4131,7 +4166,9 @@ export default function CreateRfqPage() {
                           </div>
 
                           <div className="space-y-2">
-                            <Label><T>Chain/Pattern Style *</T></Label>
+                            <Label>
+                              <T>Chain/Pattern Style *</T>
+                            </Label>
                             <Select
                               value={formData.methodDConfig.chainStyle}
                               onValueChange={(v: string) =>
@@ -4303,7 +4340,9 @@ export default function CreateRfqPage() {
                       )}
 
                       <div className="space-y-2">
-                        <Label><T>Surface Finish</T></Label>
+                        <Label>
+                          <T>Surface Finish</T>
+                        </Label>
                         <Select
                           value={formData.surfaceFinish}
                           onValueChange={(v: string) =>
@@ -4564,12 +4603,16 @@ export default function CreateRfqPage() {
                       <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4 flex gap-3">
                         <Info className="h-5 w-5 text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                         <div className="text-sm text-blue-700 dark:text-blue-300">
-                          <p className="font-medium mb-1"><T>How it works</T></p>
+                          <p className="font-medium mb-1">
+                            <T>How it works</T>
+                          </p>
                           <p>
-                            <T>After submitting your request, multiple verified
-                            jewellers will review your requirements and send you
-                            competitive quotes. You can compare offers and
-                            choose the best one.</T>
+                            <T>
+                              After submitting your request, multiple verified
+                              jewellers will review your requirements and send
+                              you competitive quotes. You can compare offers and
+                              choose the best one.
+                            </T>
                           </p>
                         </div>
                       </div>
@@ -4625,7 +4668,9 @@ export default function CreateRfqPage() {
                 {step === 2 && (
                   <Card>
                     <CardHeader>
-                      <CardTitle><T>Design Details</T></CardTitle>
+                      <CardTitle>
+                        <T>Design Details</T>
+                      </CardTitle>
                       <CardDescription>
                         <T>Describe your design vision and specifications</T>
                       </CardDescription>
@@ -4654,7 +4699,9 @@ export default function CreateRfqPage() {
                       {/* Manual weight input shown only if no template */}
                       {!hasRealTemplate && (
                         <div className="space-y-2">
-                          <Label><T>Estimated Weight</T> ({weightUnitSymbol}) *</Label>
+                          <Label>
+                            <T>Estimated Weight</T> ({weightUnitSymbol}) *
+                          </Label>
                           <Input
                             type="number"
                             step="0.1"
@@ -4707,7 +4754,9 @@ export default function CreateRfqPage() {
                       )}
 
                       <div className="space-y-2">
-                        <Label><T>Description *</T></Label>
+                        <Label>
+                          <T>Description *</T>
+                        </Label>
                         <Textarea
                           rows={4}
                           placeholder="Describe the design you're envisioning. Include style (traditional, modern, minimalist), patterns or motifs (floral, geometric, filigree), dimensions, and any specific details. This description helps our AI create a preview and helps sellers understand exactly what you want to craft."
@@ -4721,7 +4770,9 @@ export default function CreateRfqPage() {
                       {/* Gemstones Section */}
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <Label><T>Include Gemstones?</T></Label>
+                          <Label>
+                            <T>Include Gemstones?</T>
+                          </Label>
                           <div className="flex gap-2">
                             <Badge
                               variant={
@@ -4764,7 +4815,9 @@ export default function CreateRfqPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label><T>Reference Images (Optional)</T></Label>
+                        <Label>
+                          <T>Reference Images (Optional)</T>
+                        </Label>
                         <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
                           <input
                             ref={fileInputRef}
@@ -4805,7 +4858,9 @@ export default function CreateRfqPage() {
                                   size="sm"
                                   asChild
                                 >
-                                  <span><T>Browse Files</T></span>
+                                  <span>
+                                    <T>Browse Files</T>
+                                  </span>
                                 </Button>
                                 <p className="text-xs text-gray-400 mt-2">
                                   <T>PNG, JPG, WebP up to 10MB each</T>
@@ -4839,7 +4894,9 @@ export default function CreateRfqPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label><T>Special Instructions</T></Label>
+                        <Label>
+                          <T>Special Instructions</T>
+                        </Label>
                         <Textarea
                           rows={2}
                           placeholder="Any other requirements or preferences..."
@@ -4880,7 +4937,9 @@ export default function CreateRfqPage() {
                 {step === 3 && (
                   <Card>
                     <CardHeader>
-                      <CardTitle><T>Budget & Timeline</T></CardTitle>
+                      <CardTitle>
+                        <T>Budget & Timeline</T>
+                      </CardTitle>
                       <CardDescription>
                         <T>Set your budget range and preferred delivery date</T>
                       </CardDescription>
@@ -4899,7 +4958,9 @@ export default function CreateRfqPage() {
                                 )?.label || formData.jewelleryType}
                               </h3>
                               <p className="text-sm text-purple-700 dark:text-purple-300">
-                                <T>We have some great designs you might like!</T>
+                                <T>
+                                  We have some great designs you might like!
+                                </T>
                               </p>
                             </div>
                           </div>
@@ -4968,8 +5029,10 @@ export default function CreateRfqPage() {
                         </div>
 
                         <p className="text-sm text-gray-600 dark:text-gray-300">
-                          <T>Generate an AI visualization of your custom jewelry
-                          design based on all your specifications.</T>
+                          <T>
+                            Generate an AI visualization of your custom jewelry
+                            design based on all your specifications.
+                          </T>
                           {fromDesign &&
                             " This design was selected from the gallery."}
                         </p>
@@ -5008,8 +5071,12 @@ export default function CreateRfqPage() {
                                 }`}
                               >
                                 {!isLoggedIn
-                                  ? t("Sign in to generate AI design previews and submit your custom jewelry request.")
-                                  : t("Verify your phone number to generate AI design previews. This helps us prevent spam and ensures a quality experience.")}
+                                  ? t(
+                                      "Sign in to generate AI design previews and submit your custom jewelry request.",
+                                    )
+                                  : t(
+                                      "Verify your phone number to generate AI design previews. This helps us prevent spam and ensures a quality experience.",
+                                    )}
                               </p>
                               {!isLoggedIn ? (
                                 <Link
@@ -5076,7 +5143,9 @@ export default function CreateRfqPage() {
                         ) : (
                           <div className="w-full max-w-sm mx-auto aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400">
                             <ImageIcon className="h-12 w-12 mb-2" />
-                            <p className="text-sm"><T>Preview will appear here</T></p>
+                            <p className="text-sm">
+                              <T>Preview will appear here</T>
+                            </p>
                           </div>
                         )}
 
@@ -5085,8 +5154,12 @@ export default function CreateRfqPage() {
                           <div className="w-full max-w-sm mx-auto space-y-2">
                             <Label className="text-sm text-gray-600 dark:text-gray-300">
                               {fromDesign
-                                ? t("Want to customize this design? Describe your changes:")
-                                : t("Don't like the AI design? Describe what you'd like to change:")}
+                                ? t(
+                                    "Want to customize this design? Describe your changes:",
+                                  )
+                                : t(
+                                    "Don't like the AI design? Describe what you'd like to change:",
+                                  )}
                             </Label>
                             <Textarea
                               rows={2}
@@ -5144,8 +5217,12 @@ export default function CreateRfqPage() {
                               <TooltipContent side="top" className="max-w-xs">
                                 <p>
                                   {!isLoggedIn
-                                    ? t("Sign in to generate AI design previews")
-                                    : t("Verify your phone number to generate AI design previews")}
+                                    ? t(
+                                        "Sign in to generate AI design previews",
+                                      )
+                                    : t(
+                                        "Verify your phone number to generate AI design previews",
+                                      )}
                                 </p>
                               </TooltipContent>
                             )}
@@ -5185,15 +5262,19 @@ export default function CreateRfqPage() {
                           isPhoneVerified &&
                           (!formData.jewelleryType || !formData.metalType) && (
                             <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                              <T>Complete jewelry type and metal selection to
-                              enable preview generation</T>
+                              <T>
+                                Complete jewelry type and metal selection to
+                                enable preview generation
+                              </T>
                             </p>
                           )}
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label><T>Minimum Budget</T> ({currency}) *</Label>
+                          <Label>
+                            <T>Minimum Budget</T> ({currency}) *
+                          </Label>
                           <Input
                             type="number"
                             placeholder="e.g., 50000"
@@ -5204,7 +5285,9 @@ export default function CreateRfqPage() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label><T>Maximum Budget</T> ({currency}) *</Label>
+                          <Label>
+                            <T>Maximum Budget</T> ({currency}) *
+                          </Label>
                           <Input
                             type="number"
                             placeholder="e.g., 100000"
@@ -5359,7 +5442,9 @@ export default function CreateRfqPage() {
                       })()}
 
                       <div className="space-y-2">
-                        <Label><T>Preferred Deadline</T></Label>
+                        <Label>
+                          <T>Preferred Deadline</T>
+                        </Label>
                         <Input
                           type="date"
                           value={formData.deadline}
@@ -5485,9 +5570,14 @@ export default function CreateRfqPage() {
                         <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg p-3 flex gap-2">
                           <AlertTriangle className="h-5 w-5 text-amber-500 dark:text-amber-400 flex-shrink-0" />
                           <p className="text-sm text-amber-700 dark:text-amber-300">
-                            <strong><T>Note:</T></strong> <T>This piece uses base metal
-                            with plating/coating. It is not solid gold and will
-                            be labeled accordingly.</T>
+                            <strong>
+                              <T>Note:</T>
+                            </strong>{" "}
+                            <T>
+                              This piece uses base metal with plating/coating.
+                              It is not solid gold and will be labeled
+                              accordingly.
+                            </T>
                           </p>
                         </div>
                       )}
@@ -5656,7 +5746,9 @@ export default function CreateRfqPage() {
                                 <div className="text-center p-4">
                                   <Gem className="h-12 w-12 text-gold-400 mx-auto mb-2" />
                                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    <T>Custom design based on your specifications</T>
+                                    <T>
+                                      Custom design based on your specifications
+                                    </T>
                                   </p>
                                 </div>
                               </div>
@@ -5753,15 +5845,19 @@ export default function CreateRfqPage() {
                           <T>Delivery Location</T>
                         </CardTitle>
                         <CardDescription>
-                          <T>Select where you want your jewellery delivered to find
-                          sellers near you</T>
+                          <T>
+                            Select where you want your jewellery delivered to
+                            find sellers near you
+                          </T>
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
                         {loadingAddresses ? (
                           <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                             <Loader2 className="h-4 w-4 animate-spin" />
-                            <span><T>Loading your addresses...</T></span>
+                            <span>
+                              <T>Loading your addresses...</T>
+                            </span>
                           </div>
                         ) : deliveryAddresses.length === 0 ? (
                           <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg p-4">
@@ -5772,9 +5868,11 @@ export default function CreateRfqPage() {
                                   <T>No delivery address set</T>
                                 </h4>
                                 <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                                  <T>Add a delivery address to see sellers in your
-                                  area first. You can still browse all sellers
-                                  below.</T>
+                                  <T>
+                                    Add a delivery address to see sellers in
+                                    your area first. You can still browse all
+                                    sellers below.
+                                  </T>
                                 </p>
                                 <a
                                   href="/dashboard/customer/settings"
@@ -5873,19 +5971,22 @@ export default function CreateRfqPage() {
                           {sellerStats && sellerStats.totalMatching > 0 && (
                             <div className="text-right text-sm text-gray-500 dark:text-gray-400">
                               <div>
-                                <T>Price range:</T> {currencyInfo?.symbol || "Rs."}
+                                <T>Price range:</T>{" "}
+                                {currencyInfo?.symbol || "Rs."}
                                 {sellerStats.minPrice.toLocaleString()} -{" "}
                                 {currencyInfo?.symbol || "Rs."}
                                 {sellerStats.maxPrice.toLocaleString()}
                               </div>
                               {sellerStats.sameCityCount > 0 && (
                                 <div className="text-green-600">
-                                {sellerStats.sameCityCount} <T>in your city</T>
+                                  {sellerStats.sameCityCount}{" "}
+                                  <T>in your city</T>
                                 </div>
                               )}
                               {sellerStats.sameStateCount > 0 && (
                                 <div className="text-blue-600">
-                                {sellerStats.sameStateCount} <T>in your state</T>
+                                  {sellerStats.sameStateCount}{" "}
+                                  <T>in your state</T>
                                 </div>
                               )}
                             </div>
@@ -5969,9 +6070,11 @@ export default function CreateRfqPage() {
                                     🌍 <T>Include international sellers</T>
                                   </span>
                                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    <T>Show sellers from other countries.
-                                    International orders can be picked up from
-                                    Orivraa routing centres.</T>
+                                    <T>
+                                      Show sellers from other countries.
+                                      International orders can be picked up from
+                                      Orivraa routing centres.
+                                    </T>
                                   </p>
                                 </div>
                               </label>
@@ -6052,7 +6155,7 @@ export default function CreateRfqPage() {
                                           <SelectValue placeholder="All states" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="all">
+                                          <SelectItem value="all">
                                             <T>All states</T>
                                           </SelectItem>
                                           {states.map((s) => (
@@ -6110,7 +6213,7 @@ export default function CreateRfqPage() {
                                           <SelectValue placeholder="All cities" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="all">
+                                          <SelectItem value="all">
                                             <T>All cities</T>
                                           </SelectItem>
                                           {cities.map((c) => (
@@ -6207,8 +6310,10 @@ export default function CreateRfqPage() {
                             <span className="text-lg">🌍</span>
                             <div>
                               <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                                <T>No sellers found in your country — showing
-                                international sellers</T>
+                                <T>
+                                  No sellers found in your country — showing
+                                  international sellers
+                                </T>
                               </p>
                               <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
                                 {matchingSellers.length} international seller
@@ -6278,7 +6383,9 @@ export default function CreateRfqPage() {
                                   </ul>
                                 </div>
                               )}
-                              <p><T>Possible reasons:</T></p>
+                              <p>
+                                <T>Possible reasons:</T>
+                              </p>
                               <ul className="text-left list-disc pl-6 space-y-1">
                                 {sellerDiagnostics &&
                                 sellerDiagnostics.activeAndVerified === 0 ? (
@@ -6335,12 +6442,16 @@ export default function CreateRfqPage() {
                                     }
                                     className="text-amber-600 hover:text-amber-700 font-medium text-sm"
                                   >
-                                    <T>🌍 Try including international sellers</T>
+                                    <T>
+                                      🌍 Try including international sellers
+                                    </T>
                                   </button>
                                 )}
                                 <p className="text-xs text-gray-400">
-                                  <T>Your request has been saved — you'll be
-                                  notified when sellers respond.</T>
+                                  <T>
+                                    Your request has been saved — you'll be
+                                    notified when sellers respond.
+                                  </T>
                                 </p>
                               </div>
                             </div>
@@ -6494,7 +6605,7 @@ export default function CreateRfqPage() {
                                               <TooltipTrigger asChild>
                                                 <ShieldCheck className="h-4 w-4 text-blue-500" />
                                               </TooltipTrigger>
-                                                <TooltipContent>
+                                              <TooltipContent>
                                                 <T>Verified Seller</T>
                                               </TooltipContent>
                                             </Tooltip>
@@ -6559,7 +6670,8 @@ export default function CreateRfqPage() {
                                             variant="outline"
                                             className="text-xs"
                                           >
-                                            <T>Making Charge:</T> {totalMakingPercent}%
+                                            <T>Making Charge:</T>{" "}
+                                            {totalMakingPercent}%
                                           </Badge>
                                           {seller.hasCustomRate && (
                                             <Badge
@@ -6580,12 +6692,15 @@ export default function CreateRfqPage() {
                                                 <strong>
                                                   <T>International Order:</T>
                                                 </strong>{" "}
-                                                <T>This item will not be delivered
-                                                directly to you. You can pick it
-                                                up from an Orivraa routing
-                                                centre in your city. Location
-                                                details will be shared once the
-                                                order is received by Orivraa.</T>
+                                                <T>
+                                                  This item will not be
+                                                  delivered directly to you. You
+                                                  can pick it up from an Orivraa
+                                                  routing centre in your city.
+                                                  Location details will be
+                                                  shared once the order is
+                                                  received by Orivraa.
+                                                </T>
                                               </span>
                                             </p>
                                           </div>
@@ -6756,7 +6871,9 @@ export default function CreateRfqPage() {
                     <p className="text-gray-600 dark:text-gray-300">
                       <T>You're sending your custom jewellery request to</T>{" "}
                       <strong>{selectedSeller.shopName}</strong>
-                      {selectedSeller.city && ` ${t("in")} ${selectedSeller.city}`}.
+                      {selectedSeller.city &&
+                        ` ${t("in")} ${selectedSeller.city}`}
+                      .
                     </p>
 
                     {/* International notice */}
@@ -6768,12 +6885,17 @@ export default function CreateRfqPage() {
                           <p className="text-sm text-orange-800 flex items-start gap-2">
                             <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
                             <span>
-                              <strong><T>International Order:</T></strong> <T>This order
-                              will be crafted in</T> {selectedSeller.country} <T>and
-                              shipped to an Orivraa routing centre near you.
-                              You'll pick it up from there after quality
-                              verification. Location details will be shared once
-                              the order is received.</T>
+                              <strong>
+                                <T>International Order:</T>
+                              </strong>{" "}
+                              <T>This order will be crafted in</T>{" "}
+                              {selectedSeller.country}{" "}
+                              <T>
+                                and shipped to an Orivraa routing centre near
+                                you. You'll pick it up from there after quality
+                                verification. Location details will be shared
+                                once the order is received.
+                              </T>
                             </span>
                           </p>
                         </div>
@@ -6823,7 +6945,9 @@ export default function CreateRfqPage() {
                             </p>
                             <div className="space-y-1 text-sm text-amber-800 dark:text-amber-300">
                               <div className="flex justify-between">
-                                <span><T>Material Cost</T></span>
+                                <span>
+                                  <T>Material Cost</T>
+                                </span>
                                 <span>
                                   {sym}
                                   {(
@@ -6842,7 +6966,9 @@ export default function CreateRfqPage() {
                               </div>
                               {(selectedSeller.componentCost || 0) > 0 && (
                                 <div className="flex justify-between">
-                                  <span><T>Finish / Components</T></span>
+                                  <span>
+                                    <T>Finish / Components</T>
+                                  </span>
                                   <span>
                                     {sym}
                                     {(
@@ -6861,7 +6987,9 @@ export default function CreateRfqPage() {
                                 </div>
                               )}
                               <div className="flex justify-between pt-1 border-t border-amber-300 font-bold text-amber-950">
-                                <span><T>Total</T></span>
+                                <span>
+                                  <T>Total</T>
+                                </span>
                                 <span>
                                   {sym}
                                   {grandTotal.toLocaleString()}
@@ -6869,7 +6997,9 @@ export default function CreateRfqPage() {
                               </div>
                               {isIntl && (
                                 <p className="text-xs text-orange-600 font-medium pt-1">
-                                  <T>+ Import duty will be applied at delivery</T>
+                                  <T>
+                                    + Import duty will be applied at delivery
+                                  </T>
                                 </p>
                               )}
                             </div>
@@ -6888,8 +7018,10 @@ export default function CreateRfqPage() {
                         className="text-lg font-semibold"
                       />
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        <T>Pre-filled with the total price above. The seller may
-                        counter with a different price.</T>
+                        <T>
+                          Pre-filled with the total price above. The seller may
+                          counter with a different price.
+                        </T>
                       </p>
                     </div>
 
@@ -6909,11 +7041,15 @@ export default function CreateRfqPage() {
                     {/* Flow explanation */}
                     <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 rounded-lg">
                       <p className="text-xs text-blue-800 dark:text-blue-200">
-                        <strong><T>What happens next:</T></strong> <T>The seller will
-                        review your request and can accept, counter with a
-                        different price, or decline. If they counter, you can
-                        accept or reject — no further bargaining. Track your
-                        order from your dashboard.</T>
+                        <strong>
+                          <T>What happens next:</T>
+                        </strong>{" "}
+                        <T>
+                          The seller will review your request and can accept,
+                          counter with a different price, or decline. If they
+                          counter, you can accept or reject — no further
+                          bargaining. Track your order from your dashboard.
+                        </T>
                       </p>
                     </div>
                   </>
@@ -6971,7 +7107,9 @@ export default function CreateRfqPage() {
                     );
                   }
                 } catch (err) {
-                  setError(t("Failed to send order request. Please try again."));
+                  setError(
+                    t("Failed to send order request. Please try again."),
+                  );
                 } finally {
                   setSendingOrder(false);
                 }

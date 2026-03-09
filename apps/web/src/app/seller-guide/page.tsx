@@ -3,8 +3,8 @@
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { BRAND } from "@/config/brand";
+import { useT } from "@/providers/translation-provider";
 import {
   ArrowRight,
   BarChart3,
@@ -175,7 +175,11 @@ export default function SellerGuidePage() {
               </span>
             </h1>
             <p className="mt-6 text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
-              <T>Everything you need to launch and grow your jewellery business online. From registration to your first sale — this guide walks you through every step.</T>
+              <T>
+                Everything you need to launch and grow your jewellery business
+                online. From registration to your first sale — this guide walks
+                you through every step.
+              </T>
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Link
@@ -235,7 +239,10 @@ export default function SellerGuidePage() {
                 <T>Powerful Tools for Sellers</T>
               </h2>
               <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-                <T>Everything you need to manage and grow your jewellery business — all in one dashboard</T>
+                <T>
+                  Everything you need to manage and grow your jewellery business
+                  — all in one dashboard
+                </T>
               </p>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -266,7 +273,10 @@ export default function SellerGuidePage() {
               <T>Tips for Success</T>
             </h2>
             <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-              <T>Follow these best practices to maximize your sales and build a thriving jewellery business</T>
+              <T>
+                Follow these best practices to maximize your sales and build a
+                thriving jewellery business
+              </T>
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -298,13 +308,17 @@ export default function SellerGuidePage() {
               <T>Flexible Plans for Every Stage</T>
             </h2>
             <p className="mt-3 text-amber-100 max-w-2xl mx-auto">
-              <T>Start free with up to 15 product listings. Upgrade to Pro for unlimited products, AI tools, priority listing, and dedicated support. Enterprise plans available for large operations.</T>
+              <T>
+                Start free with up to 15 product listings. Upgrade to Pro for
+                unlimited products, AI tools, priority listing, and dedicated
+                support. Enterprise plans available for large operations.
+              </T>
             </p>
             <Link
               href="/pricing"
               className="inline-flex items-center gap-2 mt-6 px-6 py-3 bg-white text-amber-600 rounded-full font-semibold hover:bg-amber-50 transition-colors"
             >
-                <T>Compare Plans & Pricing</T>
+              <T>Compare Plans & Pricing</T>
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -345,7 +359,9 @@ export default function SellerGuidePage() {
               <T>Ready to Grow Your Jewellery Business?</T>
             </h2>
             <p className="mt-3 text-gray-400 max-w-lg mx-auto">
-              {t(`Join thousands of jewellers selling on ${BRAND.name}. Free to start, no contracts, cancel anytime.`)}
+              {t(
+                `Join thousands of jewellers selling on ${BRAND.name}. Free to start, no contracts, cancel anytime.`,
+              )}
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Link
