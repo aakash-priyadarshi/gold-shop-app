@@ -22,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { T } from "@/components/ui/T";
 import {
   Table,
   TableBody,
@@ -32,6 +33,7 @@ import {
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { useT } from "@/providers/translation-provider";
 import { invoicesApi } from "@/lib/api";
 import {
   ArrowLeft,
@@ -104,6 +106,7 @@ export default function InvoiceDetailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { symbol: currencySymbol } = useShopCurrency();
+  const t = useT();
   const invoiceId = params.id as string;
   const justCreated = searchParams.get("created") === "true";
 
@@ -124,8 +127,8 @@ export default function InvoiceDetailPage() {
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Failed to load invoice",
-        description: "Could not fetch invoice details",
+        title: t("Failed to load invoice"),
+        description: t("Could not fetch invoice details"),
       });
     } finally {
       setIsLoading(false);
@@ -139,7 +142,7 @@ export default function InvoiceDetailPage() {
   const handleRecordPayment = async () => {
     const amount = parseFloat(paymentAmount);
     if (!amount || amount <= 0) {
-      toast({ variant: "destructive", title: "Invalid amount" });
+      toast({ variant: "destructive", title: t("Invalid amount") });
       return;
     }
 
@@ -152,8 +155,8 @@ export default function InvoiceDetailPage() {
       toast({
         title:
           paymentMethod === "cash"
-            ? "Cash Payment Recorded"
-            : "Payment Recorded",
+            ? t("Cash Payment Recorded")
+            : t("Payment Recorded"),
         description: `${invoice?.currency} ${amount.toLocaleString()} recorded`,
       });
       setPaymentDialogOpen(false);
@@ -162,8 +165,8 @@ export default function InvoiceDetailPage() {
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Failed",
-        description: error.response?.data?.message || "Error",
+        title: t("Failed"),
+        description: error.response?.data?.message || t("Error"),
       });
     } finally {
       setIsSubmitting(false);
@@ -174,14 +177,14 @@ export default function InvoiceDetailPage() {
     setIsSubmitting(true);
     try {
       await invoicesApi.void(invoiceId);
-      toast({ title: "Invoice Voided" });
+      toast({ title: t("Invoice Voided") });
       setVoidDialogOpen(false);
       loadInvoice();
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Failed",
-        description: error.response?.data?.message || "Error",
+        title: t("Failed"),
+        description: error.response?.data?.message || t("Error"),
       });
     } finally {
       setIsSubmitting(false);
@@ -222,9 +225,9 @@ export default function InvoiceDetailPage() {
         <DashboardLayout>
           <div className="text-center py-12">
             <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-30" />
-            <h2 className="text-xl font-semibold">Invoice Not Found</h2>
+            <h2 className="text-xl font-semibold"><T>Invoice Not Found</T></h2>
             <Button onClick={() => router.back()} className="mt-4">
-              <ArrowLeft className="h-4 w-4 mr-2" /> Go Back
+              <ArrowLeft className="h-4 w-4 mr-2" /> <T>Go Back</T>
             </Button>
           </div>
         </DashboardLayout>
@@ -243,16 +246,16 @@ export default function InvoiceDetailPage() {
                 <PartyPopper className="h-5 w-5 text-green-600" />
                 <div>
                   <p className="font-semibold text-green-800 dark:text-green-200">
-                    Invoice Created Successfully!
+                    <T>Invoice Created Successfully!</T>
                   </p>
                   <p className="text-sm text-green-600">
-                    What would you like to do next?
+                    <T>What would you like to do next?</T>
                   </p>
                 </div>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={handlePrint}>
-                  <Printer className="h-4 w-4 mr-2" /> Print
+                  <Printer className="h-4 w-4 mr-2" /> <T>Print</T>
                 </Button>
                 <Button
                   size="sm"
@@ -263,7 +266,7 @@ export default function InvoiceDetailPage() {
                     setPaymentDialogOpen(true);
                   }}
                 >
-                  <Banknote className="h-4 w-4 mr-2" /> Pay Cash
+                  <Banknote className="h-4 w-4 mr-2" /> <T>Pay Cash</T>
                 </Button>
                 <Button
                   variant="ghost"
@@ -280,7 +283,7 @@ export default function InvoiceDetailPage() {
           <div className="flex items-center justify-between print:hidden">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="sm" onClick={() => router.back()}>
-                <ArrowLeft className="h-4 w-4 mr-2" /> Back
+                <ArrowLeft className="h-4 w-4 mr-2" /> <T>Back</T>
               </Button>
               <div>
                 <h1 className="text-2xl font-bold">
@@ -298,7 +301,7 @@ export default function InvoiceDetailPage() {
                   {invoice.paidAt && (
                     <span className="text-xs text-green-600 flex items-center gap-1">
                       <CheckCircle className="h-3 w-3" />
-                      Paid {formatDate(invoice.paidAt)}
+                      {t(`Paid ${formatDate(invoice.paidAt)}`)}
                     </span>
                   )}
                 </div>
@@ -306,7 +309,7 @@ export default function InvoiceDetailPage() {
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={handlePrint}>
-                <Printer className="h-4 w-4 mr-2" /> Print
+                <Printer className="h-4 w-4 mr-2" /> <T>Print</T>
               </Button>
               {invoice.status !== "PAID" && invoice.status !== "VOID" && (
                 <>
@@ -320,7 +323,7 @@ export default function InvoiceDetailPage() {
                       setPaymentDialogOpen(true);
                     }}
                   >
-                    <Banknote className="h-4 w-4 mr-2" /> Pay Cash
+                    <Banknote className="h-4 w-4 mr-2" /> <T>Pay Cash</T>
                   </Button>
                   <Button
                     size="sm"
@@ -331,14 +334,14 @@ export default function InvoiceDetailPage() {
                       setPaymentDialogOpen(true);
                     }}
                   >
-                    <CreditCard className="h-4 w-4 mr-2" /> Record Payment
+                    <CreditCard className="h-4 w-4 mr-2" /> <T>Record Payment</T>
                   </Button>
                   <Button
                     variant="destructive"
                     size="sm"
                     onClick={() => setVoidDialogOpen(true)}
                   >
-                    <Ban className="h-4 w-4 mr-2" /> Void
+                    <Ban className="h-4 w-4 mr-2" /> <T>Void</T>
                   </Button>
                 </>
               )}
@@ -350,23 +353,23 @@ export default function InvoiceDetailPage() {
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
-                  <CardTitle className="text-xl">INVOICE</CardTitle>
+                  <CardTitle className="text-xl"><T>INVOICE</T></CardTitle>
                   <CardDescription className="font-mono text-base mt-1">
                     {invoice.invoiceNumber}
                   </CardDescription>
                 </div>
                 <div className="text-right text-sm text-muted-foreground">
                   {invoice.issuedAt && (
-                    <p>Issued: {formatDate(invoice.issuedAt)}</p>
+                    <p>{t(`Issued: ${formatDate(invoice.issuedAt)}`)}</p>
                   )}
-                  {invoice.dueDate && <p>Due: {formatDate(invoice.dueDate)}</p>}
+                  {invoice.dueDate && <p>{t(`Due: ${formatDate(invoice.dueDate)}`)}</p>}
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Customer Info */}
               <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-                <Label className="text-xs text-muted-foreground">Bill To</Label>
+                <Label className="text-xs text-muted-foreground"><T>Bill To</T></Label>
                 <p className="font-semibold text-lg">{invoice.customerName}</p>
                 {invoice.customerPhone && (
                   <p className="text-sm">{invoice.customerPhone}</p>
@@ -385,10 +388,10 @@ export default function InvoiceDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Item</TableHead>
-                    <TableHead className="text-center">Qty</TableHead>
-                    <TableHead className="text-right">Unit Price</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead><T>Item</T></TableHead>
+                    <TableHead className="text-center"><T>Qty</T></TableHead>
+                    <TableHead className="text-right"><T>Unit Price</T></TableHead>
+                    <TableHead className="text-right"><T>Amount</T></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -425,7 +428,7 @@ export default function InvoiceDetailPage() {
               <div className="flex justify-end">
                 <div className="w-72 space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span>Subtotal</span>
+                    <span><T>Subtotal</T></span>
                     <span>{formatCurrency(invoice.subtotal)}</span>
                   </div>
                   {invoice.taxAmount > 0 && (
@@ -439,18 +442,18 @@ export default function InvoiceDetailPage() {
                   )}
                   {invoice.discountAmount > 0 && (
                     <div className="flex justify-between text-sm text-green-600">
-                      <span>Discount</span>
+                      <span><T>Discount</T></span>
                       <span>-{formatCurrency(invoice.discountAmount)}</span>
                     </div>
                   )}
                   <Separator />
                   <div className="flex justify-between font-bold text-lg">
-                    <span>Total</span>
+                    <span><T>Total</T></span>
                     <span>{formatCurrency(invoice.totalAmount)}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between text-sm text-green-600">
-                    <span>Paid</span>
+                    <span><T>Paid</T></span>
                     <span>{formatCurrency(invoice.paidAmount)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg">
@@ -461,7 +464,7 @@ export default function InvoiceDetailPage() {
                           : "text-green-600"
                       }
                     >
-                      Balance Due
+                      <T>Balance Due</T>
                     </span>
                     <span
                       className={
@@ -484,7 +487,7 @@ export default function InvoiceDetailPage() {
                     {invoice.notes && (
                       <div>
                         <Label className="text-xs text-muted-foreground">
-                          Notes
+                          <T>Notes</T>
                         </Label>
                         <p className="mt-1">{invoice.notes}</p>
                       </div>
@@ -492,7 +495,7 @@ export default function InvoiceDetailPage() {
                     {invoice.terms && (
                       <div>
                         <Label className="text-xs text-muted-foreground">
-                          Terms
+                          <T>Terms</T>
                         </Label>
                         <p className="mt-1">{invoice.terms}</p>
                       </div>
@@ -515,17 +518,17 @@ export default function InvoiceDetailPage() {
                   <CreditCard className="h-5 w-5 text-green-600" />
                 )}
                 {paymentMethod === "cash"
-                  ? "Record Cash Payment"
-                  : "Record Payment"}
+                  ? t("Record Cash Payment")
+                  : t("Record Payment")}
               </DialogTitle>
               <DialogDescription>
-                Record a payment for invoice {invoice.invoiceNumber}
+                {t(`Record a payment for invoice ${invoice.invoiceNumber}`)}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 text-sm">
                 <div className="flex justify-between">
-                  <span>Total Due</span>
+                  <span><T>Total Due</T></span>
                   <span className="font-bold">
                     {formatCurrency(invoice.balanceDue)}
                   </span>
@@ -533,7 +536,7 @@ export default function InvoiceDetailPage() {
               </div>
               {/* Payment method toggle */}
               <div>
-                <Label className="text-xs mb-1.5 block">Payment Method</Label>
+                <Label className="text-xs mb-1.5 block"><T>Payment Method</T></Label>
                 <div className="inline-flex h-9 rounded-full border bg-muted p-0.5">
                   <button
                     type="button"
@@ -544,7 +547,7 @@ export default function InvoiceDetailPage() {
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    <Banknote className="h-3.5 w-3.5" /> Cash
+                    <Banknote className="h-3.5 w-3.5" /> <T>Cash</T>
                   </button>
                   <button
                     type="button"
@@ -555,12 +558,12 @@ export default function InvoiceDetailPage() {
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    <CreditCard className="h-3.5 w-3.5" /> Other
+                    <CreditCard className="h-3.5 w-3.5" /> <T>Other</T>
                   </button>
                 </div>
               </div>
               <div>
-                <Label>Payment Amount ({invoice.currency})</Label>
+                <Label>{t(`Payment Amount (${invoice.currency})`)}</Label>
                 <Input
                   type="number"
                   value={paymentAmount}
@@ -576,7 +579,7 @@ export default function InvoiceDetailPage() {
                   className="text-xs"
                   onClick={() => setPaymentAmount(String(invoice.balanceDue))}
                 >
-                  Full Amount
+                  <T>Full Amount</T>
                 </Button>
                 {invoice.balanceDue > 0 && (
                   <Button
@@ -589,7 +592,7 @@ export default function InvoiceDetailPage() {
                       )
                     }
                   >
-                    Half
+                    <T>Half</T>
                   </Button>
                 )}
               </div>
@@ -599,7 +602,7 @@ export default function InvoiceDetailPage() {
                 variant="outline"
                 onClick={() => setPaymentDialogOpen(false)}
               >
-                Cancel
+                <T>Cancel</T>
               </Button>
               <Button
                 onClick={handleRecordPayment}
@@ -611,7 +614,7 @@ export default function InvoiceDetailPage() {
                 ) : (
                   <DollarSign className="h-4 w-4 mr-2" />
                 )}
-                Record Payment
+                <T>Record Payment</T>
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -623,11 +626,10 @@ export default function InvoiceDetailPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-red-600">
                 <Ban className="h-5 w-5" />
-                Void Invoice
+                <T>Void Invoice</T>
               </DialogTitle>
               <DialogDescription>
-                This will void invoice {invoice.invoiceNumber}. This action
-                cannot be undone.
+                {t(`This will void invoice ${invoice.invoiceNumber}. This action cannot be undone.`)}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -635,7 +637,7 @@ export default function InvoiceDetailPage() {
                 variant="outline"
                 onClick={() => setVoidDialogOpen(false)}
               >
-                Cancel
+                <T>Cancel</T>
               </Button>
               <Button
                 variant="destructive"
@@ -647,7 +649,7 @@ export default function InvoiceDetailPage() {
                 ) : (
                   <Ban className="h-4 w-4 mr-2" />
                 )}
-                Void Invoice
+                <T>Void Invoice</T>
               </Button>
             </DialogFooter>
           </DialogContent>

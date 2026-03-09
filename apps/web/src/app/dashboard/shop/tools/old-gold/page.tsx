@@ -13,7 +13,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { T } from "@/components/ui/T";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { useT } from "@/providers/translation-provider";
 import { materialsApi } from "@/lib/api";
 import {
   ArrowLeft,
@@ -45,6 +47,7 @@ export default function OldGoldExchangePage() {
     country: shopCountry,
     currencyCode,
   } = useShopCurrency();
+  const t = useT();
   const [goldRate24k, setGoldRate24k] = useState<number>(0);
   const [rateLoading, setRateLoading] = useState(true);
 
@@ -134,11 +137,10 @@ export default function OldGoldExchangePage() {
               <div>
                 <h1 className="text-2xl font-bold flex items-center gap-2">
                   <ArrowLeftRight className="h-6 w-6 text-amber-500" />
-                  Old Gold Exchange Calculator
+                  <T>Old Gold Exchange Calculator</T>
                 </h1>
                 <p className="text-muted-foreground">
-                  Calculate exchange value when customers trade old gold for new
-                  jewellery
+                  <T>Calculate exchange value when customers trade old gold for new jewellery</T>
                 </p>
               </div>
             </div>
@@ -151,7 +153,7 @@ export default function OldGoldExchangePage() {
               <RefreshCw
                 className={`h-4 w-4 mr-2 ${rateLoading ? "animate-spin" : ""}`}
               />
-              Refresh Rate
+              <T>Refresh Rate</T>
             </Button>
           </div>
 
@@ -162,7 +164,7 @@ export default function OldGoldExchangePage() {
                 <Coins className="h-8 w-8 text-amber-500" />
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    Live Gold Rate (24K)
+                    <T>Live Gold Rate (24K)</T>
                   </p>
                   <p className="text-2xl font-bold text-amber-600">
                     {rateLoading ? (
@@ -181,13 +183,13 @@ export default function OldGoldExchangePage() {
             <Card className="border-red-200 dark:border-red-800/50">
               <CardHeader className="bg-red-50/50 dark:bg-red-950/30 rounded-t-lg">
                 <CardTitle className="text-red-700 dark:text-red-300 flex items-center gap-2">
-                  <Scale className="h-5 w-5" /> Customer's Old Gold
+                  <Scale className="h-5 w-5" /> <T>Customer&apos;s Old Gold</T>
                 </CardTitle>
-                <CardDescription>Gold being exchanged/sold</CardDescription>
+                <CardDescription><T>Gold being exchanged/sold</T></CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 pt-4">
                 <div>
-                  <Label>Weight (grams)</Label>
+                  <Label><T>Weight (grams)</T></Label>
                   <Input
                     type="number"
                     value={oldWeight}
@@ -197,7 +199,7 @@ export default function OldGoldExchangePage() {
                   />
                 </div>
                 <div>
-                  <Label>Purity</Label>
+                  <Label><T>Purity</T></Label>
                   <select
                     value={oldPurity}
                     onChange={(e) => setOldPurity(parseFloat(e.target.value))}
@@ -211,7 +213,7 @@ export default function OldGoldExchangePage() {
                   </select>
                 </div>
                 <div>
-                  <Label>Impurity Deduction ({impurityDeduct}%)</Label>
+                  <Label>{t(`Impurity Deduction (${impurityDeduct}%)`)}</Label>
                   <Input
                     type="number"
                     value={impurityDeduct}
@@ -222,7 +224,7 @@ export default function OldGoldExchangePage() {
                   />
                 </div>
                 <div>
-                  <Label>Melting Loss ({meltingLoss}%)</Label>
+                  <Label>{t(`Melting Loss (${meltingLoss}%)`)}</Label>
                   <Input
                     type="number"
                     value={meltingLoss}
@@ -235,20 +237,20 @@ export default function OldGoldExchangePage() {
                 <Separator />
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span>Pure gold content</span>
+                    <span><T>Pure gold content</T></span>
                     <span>{pureGoldInOld.toFixed(3)}g</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
-                    <span>After impurity deduction</span>
+                    <span><T>After impurity deduction</T></span>
                     <span>{afterImpurity.toFixed(3)}g</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
-                    <span>After melting loss</span>
+                    <span><T>After melting loss</T></span>
                     <span>{afterMelting.toFixed(3)}g</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between font-bold text-lg text-red-600">
-                    <span>Old Gold Value</span>
+                    <span><T>Old Gold Value</T></span>
                     <span>
                       {currencySymbol}{" "}
                       {oldGoldValue.toLocaleString(undefined, {
@@ -264,13 +266,13 @@ export default function OldGoldExchangePage() {
             <Card className="border-green-200 dark:border-green-800/50">
               <CardHeader className="bg-green-50/50 dark:bg-green-950/30 rounded-t-lg">
                 <CardTitle className="text-green-700 dark:text-green-300 flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" /> New Jewellery
+                  <TrendingUp className="h-5 w-5" /> <T>New Jewellery</T>
                 </CardTitle>
-                <CardDescription>Item being purchased</CardDescription>
+                <CardDescription><T>Item being purchased</T></CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 pt-4">
                 <div>
-                  <Label>Weight (grams)</Label>
+                  <Label><T>Weight (grams)</T></Label>
                   <Input
                     type="number"
                     value={newWeight}
@@ -280,7 +282,7 @@ export default function OldGoldExchangePage() {
                   />
                 </div>
                 <div>
-                  <Label>Purity</Label>
+                  <Label><T>Purity</T></Label>
                   <select
                     value={newPurity}
                     onChange={(e) => setNewPurity(parseFloat(e.target.value))}
@@ -294,7 +296,7 @@ export default function OldGoldExchangePage() {
                   </select>
                 </div>
                 <div>
-                  <Label>Making Charge ({makingCharge}%)</Label>
+                  <Label>{t(`Making Charge (${makingCharge}%)`)}</Label>
                   <Input
                     type="number"
                     value={makingCharge}
@@ -307,11 +309,11 @@ export default function OldGoldExchangePage() {
                 <Separator />
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span>Pure gold content</span>
+                    <span><T>Pure gold content</T></span>
                     <span>{pureGoldInNew.toFixed(3)}g</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Gold cost</span>
+                    <span><T>Gold cost</T></span>
                     <span>
                       {currencySymbol}{" "}
                       {newGoldCost.toLocaleString(undefined, {
@@ -320,7 +322,7 @@ export default function OldGoldExchangePage() {
                     </span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
-                    <span>Making charge</span>
+                    <span><T>Making charge</T></span>
                     <span>
                       {currencySymbol}{" "}
                       {makingCost.toLocaleString(undefined, {
@@ -330,7 +332,7 @@ export default function OldGoldExchangePage() {
                   </div>
                   <Separator />
                   <div className="flex justify-between font-bold text-lg text-green-600">
-                    <span>New Item Cost</span>
+                    <span><T>New Item Cost</T></span>
                     <span>
                       {currencySymbol}{" "}
                       {newTotalCost.toLocaleString(undefined, {
@@ -348,14 +350,14 @@ export default function OldGoldExchangePage() {
             <Card className="border-2 border-amber-300 dark:border-amber-600 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30">
               <CardHeader>
                 <CardTitle className="text-center text-xl">
-                  Exchange Summary
+                  <T>Exchange Summary</T>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      Old Gold Value
+                      <T>Old Gold Value</T>
                     </p>
                     <p className="text-xl font-bold text-red-600">
                       {currencySymbol}{" "}
@@ -369,7 +371,7 @@ export default function OldGoldExchangePage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      New Item Cost
+                      <T>New Item Cost</T>
                     </p>
                     <p className="text-xl font-bold text-green-600">
                       {currencySymbol}{" "}
@@ -384,7 +386,7 @@ export default function OldGoldExchangePage() {
                   {customerPays > 0 ? (
                     <div>
                       <p className="text-sm text-muted-foreground">
-                        Customer Pays Extra
+                        <T>Customer Pays Extra</T>
                       </p>
                       <p className="text-3xl font-bold text-amber-600">
                         {currencySymbol}{" "}
@@ -396,7 +398,7 @@ export default function OldGoldExchangePage() {
                   ) : shopPays > 0 ? (
                     <div>
                       <p className="text-sm text-muted-foreground">
-                        Shop Refunds
+                        <T>Shop Refunds</T>
                       </p>
                       <p className="text-3xl font-bold text-blue-600">
                         {currencySymbol}{" "}
@@ -407,9 +409,9 @@ export default function OldGoldExchangePage() {
                     </div>
                   ) : (
                     <div>
-                      <p className="text-sm text-muted-foreground">Result</p>
+                      <p className="text-sm text-muted-foreground"><T>Result</T></p>
                       <p className="text-2xl font-bold text-green-600">
-                        Even Exchange
+                        <T>Even Exchange</T>
                       </p>
                     </div>
                   )}

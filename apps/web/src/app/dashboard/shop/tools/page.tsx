@@ -3,6 +3,8 @@
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import {
   ArrowLeftRight,
   Calculator,
@@ -61,6 +63,14 @@ const tools = [
 ];
 
 export default function ToolsPage() {
+  const t = useT();
+
+  const translatedTools = tools.map(tool => ({
+    ...tool,
+    title: t(tool.title),
+    description: t(tool.description),
+  }));
+
   return (
     <ShopGuard>
       <DashboardLayout>
@@ -68,15 +78,15 @@ export default function ToolsPage() {
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <Calculator className="h-6 w-6 text-amber-500" />
-              Shop Tools
+              <T>Shop Tools</T>
             </h1>
             <p className="text-muted-foreground">
-              Smart tools to streamline your jewellery business
+              <T>Smart tools to streamline your jewellery business</T>
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tools.map((tool) => (
+            {translatedTools.map((tool) => (
               <Link key={tool.href} href={tool.href}>
                 <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
                   <CardContent className="p-6 flex flex-col items-center text-center">

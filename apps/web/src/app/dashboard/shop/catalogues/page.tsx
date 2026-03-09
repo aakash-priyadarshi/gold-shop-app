@@ -1,7 +1,9 @@
 "use client";
 
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
+import { useT } from "@/providers/translation-provider";
 import { catalogueApi } from "@/lib/api";
 import {
   BarChart3,
@@ -38,6 +40,7 @@ interface Catalogue {
 
 export default function CataloguesPage() {
   const router = useRouter();
+  const t = useT();
   const [catalogues, setCatalogues] = useState<Catalogue[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -89,11 +92,10 @@ export default function CataloguesPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Catalogues
+              <T>Catalogues</T>
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Create shareable product catalogues for walk-in customers and
-              online sharing
+              <T>Create shareable product catalogues for walk-in customers and online sharing</T>
             </p>
           </div>
           <button
@@ -101,7 +103,7 @@ export default function CataloguesPage() {
             className="inline-flex items-center gap-2 rounded-lg bg-gold-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-gold-700 transition-colors"
           >
             <Plus className="h-4 w-4" />
-            New Catalogue
+            <T>New Catalogue</T>
           </button>
         </div>
 
@@ -119,18 +121,17 @@ export default function CataloguesPage() {
           <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700">
             <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              No catalogues yet
+              <T>No catalogues yet</T>
             </h3>
             <p className="text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto">
-              Create your first catalogue to share your products with walk-in
-              customers via QR code or link.
+              <T>Create your first catalogue to share your products with walk-in customers via QR code or link.</T>
             </p>
             <button
               onClick={() => router.push("/dashboard/shop/catalogues/new")}
               className="mt-4 inline-flex items-center gap-2 rounded-lg bg-gold-600 px-4 py-2 text-white hover:bg-gold-700"
             >
               <Plus className="h-4 w-4" />
-              Create Catalogue
+              <T>Create Catalogue</T>
             </button>
           </div>
         ) : (
@@ -168,11 +169,11 @@ export default function CataloguesPage() {
                 <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4">
                   <span className="flex items-center gap-1">
                     <BookOpen className="h-3.5 w-3.5" />
-                    {cat._count.items} items
+                    {t(`${cat._count.items} items`)}
                   </span>
                   <span className="flex items-center gap-1">
                     <BarChart3 className="h-3.5 w-3.5" />
-                    {cat._count.viewEvents} views
+                    {t(`${cat._count.viewEvents} views`)}
                   </span>
                   <span className="flex items-center gap-1">
                     {cat.isPublic ? (
@@ -180,7 +181,7 @@ export default function CataloguesPage() {
                     ) : (
                       <EyeOff className="h-3.5 w-3.5 text-red-500" />
                     )}
-                    {cat.isPublic ? "Public" : "Private"}
+                    {cat.isPublic ? t("Public") : t("Private")}
                   </span>
                 </div>
 
@@ -200,7 +201,7 @@ export default function CataloguesPage() {
                     className="flex-1 text-center px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                   >
                     <Settings className="h-3.5 w-3.5 inline mr-1" />
-                    Manage
+                    <T>Manage</T>
                   </button>
                   <button
                     onClick={() => copyLink(cat.slug)}
@@ -238,17 +239,17 @@ export default function CataloguesPage() {
               disabled={page === 1}
               className="px-3 py-1.5 text-sm rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50"
             >
-              Previous
+              <T>Previous</T>
             </button>
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              Page {page} of {meta.totalPages}
+              {t(`Page ${page} of ${meta.totalPages}`)}
             </span>
             <button
               onClick={() => setPage(Math.min(meta.totalPages, page + 1))}
               disabled={page === meta.totalPages}
               className="px-3 py-1.5 text-sm rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50"
             >
-              Next
+              <T>Next</T>
             </button>
           </div>
         )}

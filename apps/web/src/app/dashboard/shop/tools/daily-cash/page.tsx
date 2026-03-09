@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { useT } from "@/providers/translation-provider";
 import {
   ArrowDown,
   ArrowLeft,
@@ -66,6 +68,7 @@ function saveEntries(date: string, entries: CashEntry[]) {
 
 export default function DailyCashPage() {
   const router = useRouter();
+  const t = useT();
   const { symbol: currencySymbol } = useShopCurrency();
   const [date, setDate] = useState(getTodayKey());
   const [entries, setEntries] = useState<CashEntry[]>(loadEntries(date));
@@ -154,10 +157,10 @@ export default function DailyCashPage() {
               <div>
                 <h1 className="text-2xl font-bold flex items-center gap-2">
                   <Wallet className="h-6 w-6 text-amber-500" />
-                  Daily Cash Summary
+                  <T>Daily Cash Summary</T>
                 </h1>
                 <p className="text-muted-foreground">
-                  Track daily cash inflows and outflows
+                  <T>Track daily cash inflows and outflows</T>
                 </p>
               </div>
             </div>
@@ -179,7 +182,7 @@ export default function DailyCashPage() {
             <Card>
               <CardContent className="p-4 text-center">
                 <Banknote className="h-5 w-5 mx-auto text-gray-500 dark:text-gray-400 mb-1" />
-                <p className="text-sm text-muted-foreground">Opening</p>
+                <p className="text-sm text-muted-foreground"><T>Opening</T></p>
                 <Input
                   type="number"
                   value={openingBalance}
@@ -192,7 +195,7 @@ export default function DailyCashPage() {
             <Card className="border-green-200 dark:border-green-800/50">
               <CardContent className="p-4 text-center">
                 <ArrowDown className="h-5 w-5 mx-auto text-green-500 mb-1" />
-                <p className="text-sm text-muted-foreground">Cash In</p>
+                <p className="text-sm text-muted-foreground"><T>Cash In</T></p>
                 <p className="text-xl font-bold text-green-600">
                   {currencySymbol} {totalIn.toLocaleString()}
                 </p>
@@ -201,7 +204,7 @@ export default function DailyCashPage() {
             <Card className="border-red-200 dark:border-red-800/50">
               <CardContent className="p-4 text-center">
                 <ArrowUp className="h-5 w-5 mx-auto text-red-500 mb-1" />
-                <p className="text-sm text-muted-foreground">Cash Out</p>
+                <p className="text-sm text-muted-foreground"><T>Cash Out</T></p>
                 <p className="text-xl font-bold text-red-600">
                   {currencySymbol} {totalOut.toLocaleString()}
                 </p>
@@ -210,7 +213,7 @@ export default function DailyCashPage() {
             <Card className="border-amber-200 dark:border-amber-800/50 bg-amber-50/50 dark:bg-amber-950/30">
               <CardContent className="p-4 text-center">
                 <DollarSign className="h-5 w-5 mx-auto text-amber-500 mb-1" />
-                <p className="text-sm text-muted-foreground">Closing Balance</p>
+                <p className="text-sm text-muted-foreground"><T>Closing Balance</T></p>
                 <p
                   className={`text-xl font-bold ${netCash >= 0 ? "text-green-600" : "text-red-600"}`}
                 >
@@ -308,9 +311,9 @@ export default function DailyCashPage() {
             <Card>
               <CardContent className="flex flex-col items-center py-12 text-center">
                 <Wallet className="h-12 w-12 text-muted-foreground opacity-30 mb-4" />
-                <p className="text-muted-foreground">No entries for this day</p>
+                <p className="text-muted-foreground"><T>No entries for this day</T></p>
                 <p className="text-sm text-muted-foreground">
-                  Start recording cash transactions above
+                  <T>Start recording cash transactions above</T>
                 </p>
               </CardContent>
             </Card>
