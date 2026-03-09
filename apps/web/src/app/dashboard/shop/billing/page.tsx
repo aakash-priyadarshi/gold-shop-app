@@ -15,6 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatures } from "@/hooks/useFeatures";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import {
   aiCreditsApi,
   sellerSubscriptionsApi,
@@ -112,20 +114,21 @@ export default function SellerBillingPage() {
 }
 
 function SellerBillingPageInner() {
+  const t = useT();
   const searchParams = useSearchParams();
 
   useEffect(() => {
     if (searchParams.get("success") === "true") {
       toast({
-        title: "Payment Successful!",
-        description: "Your subscription has been activated. Welcome aboard!",
+        title: t("Payment Successful!"),
+        description: t("Your subscription has been activated. Welcome aboard!"),
       });
       // Clean up URL
       window.history.replaceState({}, "", "/dashboard/shop/billing");
     } else if (searchParams.get("cancelled") === "true") {
       toast({
-        title: "Payment Cancelled",
-        description: "You can subscribe anytime from the Available Plans tab.",
+        title: t("Payment Cancelled"),
+        description: t("You can subscribe anytime from the Available Plans tab."),
         variant: "destructive",
       });
       window.history.replaceState({}, "", "/dashboard/shop/billing");
@@ -137,17 +140,17 @@ function SellerBillingPageInner() {
       <DashboardLayout>
         <div className="space-y-6">
           <div>
-            <h1 className="text-2xl font-bold">Billing</h1>
+            <h1 className="text-2xl font-bold"><T>Billing</T></h1>
             <p className="text-muted-foreground">
-              Manage your subscription plan and AI credits.
+              <T>Manage your subscription plan and AI credits.</T>
             </p>
           </div>
 
           <Tabs defaultValue="plan" className="space-y-4">
             <TabsList>
-              <TabsTrigger value="plan">My Plan</TabsTrigger>
-              <TabsTrigger value="credits">AI Credits</TabsTrigger>
-              <TabsTrigger value="upgrade">Available Plans</TabsTrigger>
+              <TabsTrigger value="plan"><T>My Plan</T></TabsTrigger>
+              <TabsTrigger value="credits"><T>AI Credits</T></TabsTrigger>
+              <TabsTrigger value="upgrade"><T>Available Plans</T></TabsTrigger>
             </TabsList>
 
             <TabsContent value="plan">
@@ -171,6 +174,7 @@ function SellerBillingPageInner() {
 // ═══════════════════════════════════════════════════
 
 function CurrentPlanTab() {
+  const t = useT();
   const [sub, setSub] = useState<Subscription | null>(null);
   const [history, setHistory] = useState<Subscription[]>([]);
   const [usage, setUsage] = useState<UsageSummary | null>(null);
@@ -218,15 +222,15 @@ function CurrentPlanTab() {
         immediate: false,
       });
       toast({
-        title: "Success",
+        title: t("Success"),
         description:
-          "Subscription will be cancelled at the end of the billing period",
+          t("Subscription will be cancelled at the end of the billing period"),
       });
       fetchData();
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to cancel subscription",
+        title: t("Error"),
+        description: t("Failed to cancel subscription"),
         variant: "destructive",
       });
     }
@@ -235,7 +239,7 @@ function CurrentPlanTab() {
   if (loading) {
     return (
       <div className="py-12 text-center text-muted-foreground">
-        Loading your plan...
+        <T>Loading your plan...</T>
       </div>
     );
   }
@@ -251,8 +255,7 @@ function CurrentPlanTab() {
                 <div>
                   <CardTitle>{sub.plan.displayName}</CardTitle>
                   <CardDescription>
-                    {sub.billingCycle === "ANNUAL" ? "Annual" : "Monthly"}{" "}
-                    billing · {sub.plan.country} · {sub.plan.currency}
+                    {t(`${sub.billingCycle === "ANNUAL" ? "Annual" : "Monthly"} billing`)} · {sub.plan.country} · {sub.plan.currency}
                   </CardDescription>
                 </div>
               </div>
@@ -272,29 +275,29 @@ function CurrentPlanTab() {
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <div>
-                <p className="text-sm text-muted-foreground">Price</p>
+                <p className="text-sm text-muted-foreground"><T>Price</T></p>
                 <p className="text-lg font-semibold">
                   {sub.plan.monthlyPrice === 0
-                    ? "Free"
+                    ? t("Free")
                     : `${sub.plan.currency} ${sub.billingCycle === "ANNUAL" ? sub.plan.annualPrice : sub.plan.monthlyPrice}`}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Commission Rate</p>
+                <p className="text-sm text-muted-foreground"><T>Commission Rate</T></p>
                 <p className="text-lg font-semibold">
                   {sub.plan.commissionPercent}%
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">AI Credits/mo</p>
+                <p className="text-sm text-muted-foreground"><T>AI Credits/mo</T></p>
                 <p className="text-lg font-semibold">
                   {sub.plan.includesAi
                     ? sub.plan.monthlyAiCredits
-                    : "Not included"}
+                    : t("Not included")}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Period Ends</p>
+                <p className="text-sm text-muted-foreground"><T>Period Ends</T></p>
                 <p className="text-lg font-semibold">
                   {new Date(sub.currentPeriodEnd).toLocaleDateString()}
                 </p>
@@ -304,7 +307,7 @@ function CurrentPlanTab() {
             {sub.plan.catalogueLimit && (
               <div className="mt-3">
                 <p className="text-sm text-muted-foreground">
-                  Items per Catalogue:{" "}
+                  <T>Items per Catalogue</T>:{" "}
                   <span className="font-medium text-foreground">
                     {sub.plan.catalogueLimit}
                   </span>
@@ -317,27 +320,27 @@ function CurrentPlanTab() {
               <div className="mt-6">
                 <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold">
                   <BarChart3 className="h-4 w-4" />
-                  Resource Usage
+                  <T>Resource Usage</T>
                 </h4>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <UsageBar
                     icon={<Package className="h-4 w-4" />}
-                    label="Products"
+                    label={t("Products")}
                     info={usage.limits.products}
                   />
                   <UsageBar
                     icon={<Receipt className="h-4 w-4" />}
-                    label="Invoices / mo"
+                    label={t("Invoices / mo")}
                     info={usage.limits.invoicesPerMonth}
                   />
                   <UsageBar
                     icon={<Store className="h-4 w-4" />}
-                    label="Catalogues"
+                    label={t("Catalogues")}
                     info={usage.limits.catalogues}
                   />
                   <UsageBar
                     icon={<Store className="h-4 w-4" />}
-                    label="Orders / mo"
+                    label={t("Orders / mo")}
                     info={usage.limits.ordersPerMonth}
                   />
                 </div>
@@ -349,7 +352,7 @@ function CurrentPlanTab() {
               <div className="mt-6">
                 <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold">
                   <Sparkles className="h-4 w-4" />
-                  Plan Features
+                  <T>Plan Features</T>
                 </h4>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {Object.entries(
@@ -410,18 +413,18 @@ function CurrentPlanTab() {
                         }
                       } catch {
                         toast({
-                          title: "Error",
-                          description: "Could not open billing portal",
+                          title: t("Error"),
+                          description: t("Could not open billing portal"),
                           variant: "destructive",
                         });
                       }
                     }}
                   >
                     <CreditCard className="mr-2 h-4 w-4" />
-                    Manage Billing
+                    <T>Manage Billing</T>
                   </Button>
                   <Button variant="outline" size="sm" onClick={handleCancel}>
-                    Cancel Subscription
+                    <T>Cancel Subscription</T>
                   </Button>
                 </>
               )}
@@ -432,7 +435,7 @@ function CurrentPlanTab() {
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">
-              No active subscription. Choose a plan below to get started.
+              <T>No active subscription. Choose a plan below to get started.</T>
             </p>
           </CardContent>
         </Card>
@@ -442,7 +445,7 @@ function CurrentPlanTab() {
       {history.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Subscription History</CardTitle>
+            <CardTitle className="text-base"><T>Subscription History</T></CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -489,7 +492,7 @@ function UsageBar({
           {icon} {label}
         </div>
         <p className="mt-1 text-lg font-semibold">{info.used}</p>
-        <p className="text-xs text-muted-foreground">Unlimited</p>
+        <p className="text-xs text-muted-foreground"><T>Unlimited</T></p>
       </div>
     );
   }
@@ -515,7 +518,7 @@ function UsageBar({
       </div>
       {isAtLimit && (
         <p className="mt-1 text-xs text-red-500">
-          Limit reached — upgrade to continue
+          <T>Limit reached — upgrade to continue</T>
         </p>
       )}
     </div>
@@ -527,6 +530,7 @@ function UsageBar({
 // ═══════════════════════════════════════════════════
 
 function AiCreditsTab() {
+  const t = useT();
   const { user } = useAuth();
   const { hasFeature, loading: featuresLoading } = useFeatures();
   const canPurchase = hasFeature("purchasableAiCredits");
@@ -581,8 +585,8 @@ function AiCreditsTab() {
       }
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to load credit information",
+        title: t("Error"),
+        description: t("Failed to load credit information"),
         variant: "destructive",
       });
     } finally {
@@ -597,18 +601,18 @@ function AiCreditsTab() {
   const handleBuyCredits = async () => {
     if (!canPurchase) {
       toast({
-        title: "Feature Not Available",
+        title: t("Feature Not Available"),
         description:
-          "Purchasable AI Credits is not enabled on your plan. Upgrade from the Available Plans tab.",
+          t("Purchasable AI Credits is not enabled on your plan. Upgrade from the Available Plans tab."),
         variant: "destructive",
       });
       return;
     }
     if (!planInfo || planInfo.extraCreditPrice <= 0) {
       toast({
-        title: "Not Configured",
+        title: t("Not Configured"),
         description:
-          "Credit pricing is not configured for your plan. Contact support.",
+          t("Credit pricing is not configured for your plan. Contact support."),
         variant: "destructive",
       });
       return;
@@ -629,17 +633,17 @@ function AiCreditsTab() {
       }
       if (res.data?.clientSecret) {
         toast({
-          title: "Payment Initiated",
+          title: t("Payment Initiated"),
           description:
-            "Complete the payment in the payment sheet to receive your credits.",
+            t("Complete the payment in the payment sheet to receive your credits."),
         });
         // In future: open Stripe Elements inline
       }
     } catch (err: any) {
       toast({
-        title: "Error",
+        title: t("Error"),
         description:
-          err?.response?.data?.message || "Failed to initiate credit purchase",
+          err?.response?.data?.message || t("Failed to initiate credit purchase"),
         variant: "destructive",
       });
     } finally {
@@ -653,15 +657,15 @@ function AiCreditsTab() {
       const res = await aiCreditsApi.updateAutoRecharge(autoRecharge);
       setAutoRecharge(res.data);
       toast({
-        title: "Saved",
+        title: t("Saved"),
         description: autoRecharge.autoRechargeEnabled
-          ? `Auto-recharge enabled: ${autoRecharge.autoRechargePack} credits when balance drops below ${autoRecharge.autoRechargeThreshold}`
-          : "Auto-recharge disabled",
+          ? t(`Auto-recharge enabled: ${autoRecharge.autoRechargePack} credits when balance drops below ${autoRecharge.autoRechargeThreshold}`)
+          : t("Auto-recharge disabled"),
       });
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to save auto-recharge settings",
+        title: t("Error"),
+        description: t("Failed to save auto-recharge settings"),
         variant: "destructive",
       });
     } finally {
@@ -684,7 +688,7 @@ function AiCreditsTab() {
   if (loading) {
     return (
       <div className="py-12 text-center text-muted-foreground">
-        Loading credits...
+        <T>Loading credits...</T>
       </div>
     );
   }
@@ -701,7 +705,7 @@ function AiCreditsTab() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Available AI Credits
+                  <T>Available AI Credits</T>
                 </p>
                 <p className="text-3xl font-bold">
                   {balance?.toLocaleString() ?? 0}
@@ -714,7 +718,7 @@ function AiCreditsTab() {
                 className="border-green-500 text-green-600"
               >
                 <Zap className="mr-1 h-3 w-3" />
-                Auto-Recharge ON
+                <T>Auto-Recharge ON</T>
               </Badge>
             )}
           </div>
@@ -726,19 +730,19 @@ function AiCreditsTab() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <CreditCard className="h-4 w-4" />
-            Buy Credits
+            <T>Buy Credits</T>
             {!canPurchase && (
               <Badge variant="outline" className="ml-2 text-xs font-normal">
-                Upgrade to unlock
+                <T>Upgrade to unlock</T>
               </Badge>
             )}
           </CardTitle>
           <CardDescription>
             {!canPurchase
-              ? "This feature is not included in your current plan."
+              ? t("This feature is not included in your current plan.")
               : planInfo && planInfo.extraCreditPrice > 0
-                ? `${planInfo.currency} ${planInfo.extraCreditPrice} per credit`
-                : "Credit pricing not configured — contact support."}
+                ? t(`${planInfo.currency} ${planInfo.extraCreditPrice} per credit`)
+                : t("Credit pricing not configured — contact support.")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -753,7 +757,7 @@ function AiCreditsTab() {
                     : "border-muted hover:border-primary/50"
                 }`}
               >
-                {pack} credits
+                {t(`${pack} credits`)}
                 {planInfo && planInfo.extraCreditPrice > 0 && (
                   <span className="ml-1 text-xs opacity-75">
                     ({planInfo.currency}{" "}
@@ -774,11 +778,11 @@ function AiCreditsTab() {
             className="w-full sm:w-auto"
           >
             {buying ? (
-              "Processing..."
+              t("Processing...")
             ) : (
               <>
                 <CreditCard className="mr-2 h-4 w-4" />
-                Buy {buyAmount} Credits
+                {t(`Buy ${buyAmount} Credits`)}
                 {planInfo && planInfo.extraCreditPrice > 0 && (
                   <span className="ml-1">
                     — {planInfo.currency}{" "}
@@ -828,7 +832,7 @@ function AiCreditsTab() {
                 />
               </button>
               <span className="text-sm font-medium">
-                {autoRecharge.autoRechargeEnabled ? "Enabled" : "Disabled"}
+                {autoRecharge.autoRechargeEnabled ? t("Enabled") : t("Disabled")}
               </span>
             </div>
 
@@ -836,7 +840,7 @@ function AiCreditsTab() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">
-                    Recharge when balance drops below
+                    <T>Recharge when balance drops below</T>
                   </label>
                   <input
                     type="number"
@@ -854,7 +858,7 @@ function AiCreditsTab() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">
-                    Credits to buy per recharge
+                    <T>Credits to buy per recharge</T>
                   </label>
                   <input
                     type="number"
@@ -893,7 +897,7 @@ function AiCreditsTab() {
               onClick={handleSaveAutoRecharge}
               disabled={savingRecharge}
             >
-              {savingRecharge ? "Saving..." : "Save Settings"}
+              {savingRecharge ? t("Saving...") : t("Save Settings")}
             </Button>
           </CardContent>
         </Card>
@@ -907,7 +911,7 @@ function AiCreditsTab() {
         <CardContent>
           {ledger.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              No transactions yet.
+              <T>No transactions yet.</T>
             </p>
           ) : (
             <div className="space-y-2">
@@ -953,6 +957,7 @@ function AiCreditsTab() {
 // ═══════════════════════════════════════════════════
 
 function AvailablePlansTab() {
+  const t = useT();
   const { user } = useAuth();
   const shopCountry = user?.shop?.country || "";
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -979,8 +984,8 @@ function AvailablePlansTab() {
       }
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to load available plans",
+        title: t("Error"),
+        description: t("Failed to load available plans"),
         variant: "destructive",
       });
     } finally {
@@ -1013,13 +1018,13 @@ function AvailablePlansTab() {
         return;
       }
       // Free plan — activated immediately
-      toast({ title: "Success", description: "Subscription activated!" });
+      toast({ title: t("Success"), description: t("Subscription activated!") });
       fetchData();
     } catch (err: any) {
       toast({
-        title: "Error",
+        title: t("Error"),
         description:
-          err?.response?.data?.message || "Failed to subscribe to plan",
+          err?.response?.data?.message || t("Failed to subscribe to plan"),
         variant: "destructive",
       });
     } finally {
@@ -1030,7 +1035,7 @@ function AvailablePlansTab() {
   if (loading) {
     return (
       <div className="py-12 text-center text-muted-foreground">
-        Loading plans...
+        <T>Loading plans...</T>
       </div>
     );
   }
@@ -1038,13 +1043,13 @@ function AvailablePlansTab() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Pick a plan that suits your business. Upgrade anytime.
+        <T>Pick a plan that suits your business. Upgrade anytime.</T>
       </p>
 
       {plans.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            No plans available at the moment.
+            <T>No plans available at the moment.</T>
           </CardContent>
         </Card>
       ) : (
@@ -1064,7 +1069,7 @@ function AvailablePlansTab() {
                     {isCurrentPlan && (
                       <Badge className="flex items-center gap-1 bg-primary">
                         <CheckCircle className="h-3 w-3" />
-                        Current
+                        <T>Current</T>
                       </Badge>
                     )}
                   </div>
@@ -1075,59 +1080,59 @@ function AvailablePlansTab() {
                 <CardContent className="flex flex-1 flex-col space-y-2 text-sm">
                   <div className="flex-1 space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Monthly</span>
+                      <span className="text-muted-foreground"><T>Monthly</T></span>
                       <span className="font-semibold">
                         {plan.monthlyPrice === 0
-                          ? "Free"
+                          ? t("Free")
                           : `${plan.currency} ${plan.monthlyPrice}`}
                       </span>
                     </div>
                     {plan.annualPrice && plan.annualPrice > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Annual</span>
+                        <span className="text-muted-foreground"><T>Annual</T></span>
                         <span className="font-semibold">
                           {plan.currency} {plan.annualPrice}
                         </span>
                       </div>
                     )}
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Commission</span>
+                      <span className="text-muted-foreground"><T>Commission</T></span>
                       <span>{plan.commissionPercent}%</span>
                     </div>
 
                     {/* ── Resource Limits ─────────────────── */}
                     <div className="my-1 border-t pt-2 text-xs font-medium text-muted-foreground">
-                      Limits
+                      <T>Limits</T>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Products</span>
-                      <span>{plan.maxProducts ?? "Unlimited"}</span>
+                      <span className="text-muted-foreground"><T>Products</T></span>
+                      <span>{plan.maxProducts ?? t("Unlimited")}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Invoices/mo</span>
-                      <span>{plan.maxInvoicesPerMonth ?? "Unlimited"}</span>
+                      <span className="text-muted-foreground"><T>Invoices/mo</T></span>
+                      <span>{plan.maxInvoicesPerMonth ?? t("Unlimited")}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Catalogues</span>
-                      <span>{plan.maxCatalogues ?? "Unlimited"}</span>
+                      <span className="text-muted-foreground"><T>Catalogues</T></span>
+                      <span>{plan.maxCatalogues ?? t("Unlimited")}</span>
                     </div>
                     {plan.catalogueLimit && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">
-                          Items/catalogue
+                          <T>Items/catalogue</T>
                         </span>
                         <span>{plan.catalogueLimit}</span>
                       </div>
                     )}
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Orders/mo</span>
-                      <span>{plan.maxOrdersPerMonth ?? "Unlimited"}</span>
+                      <span className="text-muted-foreground"><T>Orders/mo</T></span>
+                      <span>{plan.maxOrdersPerMonth ?? t("Unlimited")}</span>
                     </div>
 
                     {plan.includesAi && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">
-                          AI Credits/mo
+                          <T>AI Credits/mo</T>
                         </span>
                         <span className="flex items-center gap-1">
                           <Zap className="h-3 w-3 text-yellow-500" />
@@ -1146,15 +1151,15 @@ function AvailablePlansTab() {
                     {isCurrentPlan ? (
                       <>
                         <CheckCircle className="mr-2 h-4 w-4" />
-                        Current Plan
+                        <T>Current Plan</T>
                       </>
                     ) : subscribing === plan.id ? (
-                      "Processing..."
+                      t("Processing...")
                     ) : (
                       <>
                         {plan.monthlyPrice === 0
-                          ? "Activate Free Plan"
-                          : "Subscribe"}
+                          ? t("Activate Free Plan")
+                          : t("Subscribe")}
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </>
                     )}
