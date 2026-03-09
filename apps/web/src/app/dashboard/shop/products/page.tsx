@@ -2,6 +2,8 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -270,6 +272,7 @@ export default function ShopProductsPage() {
 
   // Delete confirmation
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const t = useT();
 
   // Weight conversion helpers
   const gramsToTola = (grams: number) => grams / TOLA_TO_GRAM;
@@ -554,14 +557,14 @@ export default function ShopProductsPage() {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold">Products</h1>
+              <h1 className="text-2xl font-bold"><T>Products</T></h1>
               <p className="text-muted-foreground">
-                Manage your jewellery inventory and listings
+                <T>Manage your jewellery inventory and listings</T>
               </p>
             </div>
             <Button onClick={openAddDialog}>
               <Plus className="h-4 w-4 mr-2" />
-              Add Product
+              <T>Add Product</T>
             </Button>
           </div>
 
@@ -573,7 +576,7 @@ export default function ShopProductsPage() {
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search by name or SKU..."
+                      placeholder={t("Search by name or SKU...")}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-9"
@@ -582,14 +585,14 @@ export default function ShopProductsPage() {
                 </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Filter by status" />
+                    <SelectValue placeholder={t("Filter by status")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Products</SelectItem>
-                    <SelectItem value="AVAILABLE">Available</SelectItem>
-                    <SelectItem value="SOLD">Sold</SelectItem>
-                    <SelectItem value="RESERVED">Reserved</SelectItem>
-                    <SelectItem value="UNAVAILABLE">Unavailable</SelectItem>
+                    <SelectItem value="all"><T>All Products</T></SelectItem>
+                    <SelectItem value="AVAILABLE"><T>Available</T></SelectItem>
+                    <SelectItem value="SOLD"><T>Sold</T></SelectItem>
+                    <SelectItem value="RESERVED"><T>Reserved</T></SelectItem>
+                    <SelectItem value="UNAVAILABLE"><T>Unavailable</T></SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -606,26 +609,26 @@ export default function ShopProductsPage() {
               ) : filteredProducts.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No products found</p>
+                  <p><T>No products found</T></p>
                   <p className="text-sm">
-                    Add your first product to start selling
+                    <T>Add your first product to start selling</T>
                   </p>
                   <Button onClick={openAddDialog} className="mt-4">
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Product
+                    <T>Add Product</T>
                   </Button>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Weight</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Stock</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead><T>Product</T></TableHead>
+                      <TableHead><T>Type</T></TableHead>
+                      <TableHead><T>Weight</T></TableHead>
+                      <TableHead><T>Price</T></TableHead>
+                      <TableHead><T>Stock</T></TableHead>
+                      <TableHead><T>Status</T></TableHead>
+                      <TableHead><T>Actions</T></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -733,12 +736,12 @@ export default function ShopProductsPage() {
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {editingProduct ? "Edit Product" : "Add New Product"}
+                {editingProduct ? t("Edit Product") : t("Add New Product")}
               </DialogTitle>
               <DialogDescription>
                 {editingProduct
-                  ? "Update your product details"
-                  : "Add a new jewellery item to your inventory"}
+                  ? t("Update your product details")
+                  : t("Add a new jewellery item to your inventory")}
               </DialogDescription>
             </DialogHeader>
 
@@ -746,7 +749,7 @@ export default function ShopProductsPage() {
               {/* Basic Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 space-y-2">
-                  <Label htmlFor="name">Product Name *</Label>
+                  <Label htmlFor="name"><T>Product Name</T> *</Label>
                   <Input
                     id="name"
                     value={formData.nameEn}
@@ -769,7 +772,7 @@ export default function ShopProductsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="jewelleryType">Jewellery Type *</Label>
+                  <Label htmlFor="jewelleryType"><T>Jewellery Type</T> *</Label>
                   <Select
                     value={formData.jewelleryType}
                     onValueChange={(v) =>
@@ -777,7 +780,7 @@ export default function ShopProductsPage() {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
+                      <SelectValue placeholder={t("Select type")} />
                     </SelectTrigger>
                     <SelectContent>
                       {jewelleryTypes.map((type) => (
@@ -791,7 +794,7 @@ export default function ShopProductsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description"><T>Description</T></Label>
                 <Textarea
                   id="description"
                   value={formData.descriptionEn}
@@ -806,7 +809,7 @@ export default function ShopProductsPage() {
               {/* Material Info */}
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="buildMethod">Build Method</Label>
+                  <Label htmlFor="buildMethod"><T>Build Method</T></Label>
                   <Select
                     value={formData.buildMethod}
                     onValueChange={(v) =>
@@ -826,7 +829,7 @@ export default function ShopProductsPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="metalType">Metal Type</Label>
+                  <Label htmlFor="metalType"><T>Metal Type</T></Label>
                   <Select
                     value={formData.metalType}
                     onValueChange={(v) =>
@@ -844,7 +847,7 @@ export default function ShopProductsPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="purity">Purity</Label>
+                  <Label htmlFor="purity"><T>Purity</T></Label>
                   <Select
                     value={formData.purity}
                     onValueChange={(v) =>
@@ -870,7 +873,7 @@ export default function ShopProductsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <Label htmlFor="weight">Total Weight *</Label>
+                    <Label htmlFor="weight"><T>Total Weight</T> *</Label>
                     <div className="flex gap-1 text-xs">
                       <Button
                         type="button"
@@ -918,7 +921,7 @@ export default function ShopProductsPage() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="stock">Stock Quantity</Label>
+                  <Label htmlFor="stock"><T>Stock Quantity</T></Label>
                   <Input
                     id="stock"
                     type="number"
@@ -937,7 +940,7 @@ export default function ShopProductsPage() {
               {/* Gemstones Section */}
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <Label>Gemstones</Label>
+                  <Label><T>Gemstones</T></Label>
                   <Button
                     type="button"
                     variant="outline"
@@ -945,7 +948,7 @@ export default function ShopProductsPage() {
                     onClick={addGemstone}
                   >
                     <Plus className="h-3 w-3 mr-1" />
-                    Add Gemstone
+                    <T>Add Gemstone</T>
                   </Button>
                 </div>
                 {formData.gemstones.length > 0 && (
@@ -1091,7 +1094,7 @@ export default function ShopProductsPage() {
                   />
                   {formData.gemstones.length > 0 && (
                     <p className="text-xs text-muted-foreground">
-                      Auto-calculated from gemstones
+                      <T>Auto-calculated from gemstones</T>
                     </p>
                   )}
                 </div>
@@ -1100,7 +1103,7 @@ export default function ShopProductsPage() {
               {/* Total */}
               <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
                 <div className="flex justify-between items-center">
-                  <span className="font-medium">Total Price</span>
+                  <span className="font-medium"><T>Total Price</T></span>
                   <span className="text-xl font-bold">
                     {currency.symbol} {calculateTotal().toLocaleString()}
                   </span>
@@ -1109,7 +1112,7 @@ export default function ShopProductsPage() {
 
               {/* Images */}
               <div className="space-y-3">
-                <Label>Product Images (max 3)</Label>
+                <Label><T>Product Images (max 3)</T></Label>
 
                 {/* File Upload */}
                 <div
@@ -1134,7 +1137,7 @@ export default function ShopProductsPage() {
                     {isUploadingImage ? (
                       <div className="flex flex-col items-center justify-center gap-2">
                         <Loader2 className="h-5 w-5 animate-spin" />
-                        <span>Uploading... {imageProgress}%</span>
+                        <span><T>Uploading...</T> {imageProgress}%</span>
                         <div className="w-full max-w-xs h-2 bg-gray-200 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-primary transition-all duration-300"
@@ -1146,7 +1149,7 @@ export default function ShopProductsPage() {
                       <div className="space-y-2">
                         <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground" />
                         <p className="text-sm text-muted-foreground">
-                          Click to upload image (max 10MB)
+                          <T>Click to upload image (max 10MB)</T>
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {formData.images.length}/3 images added
@@ -1159,12 +1162,12 @@ export default function ShopProductsPage() {
                 {/* URL Input (fallback) */}
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Or enter image URL"
+                    placeholder={t("Or enter image URL")}
                     value={newImageUrl}
                     onChange={(e) => setNewImageUrl(e.target.value)}
                   />
                   <Button type="button" variant="outline" onClick={addImage}>
-                    Add
+                    <T>Add</T>
                   </Button>
                 </div>
 
@@ -1172,7 +1175,7 @@ export default function ShopProductsPage() {
                 {formData.images.length > 0 && (
                   <div className="space-y-2 mt-2">
                     <p className="text-xs text-muted-foreground">
-                      Drag to reorder • First image will be shown as primary
+                      <T>Drag to reorder - First image will be shown as primary</T>
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {formData.images.map((url, idx) => (
@@ -1238,18 +1241,18 @@ export default function ShopProductsPage() {
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancel
+                <T>Cancel</T>
               </Button>
               <Button onClick={handleSubmit} disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
+                    <T>Saving...</T>
                   </>
                 ) : editingProduct ? (
-                  "Update Product"
+                  t("Update Product")
                 ) : (
-                  "Add Product"
+                  t("Add Product")
                 )}
               </Button>
             </DialogFooter>
@@ -1260,19 +1263,18 @@ export default function ShopProductsPage() {
         <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete Product</AlertDialogTitle>
+              <AlertDialogTitle><T>Delete Product</T></AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete this product? This action cannot
-                be undone.
+                <T>Are you sure you want to delete this product? This action cannot be undone.</T>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel><T>Cancel</T></AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDelete}
                 className="bg-red-600 hover:bg-red-700"
               >
-                Delete
+                <T>Delete</T>
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
