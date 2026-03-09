@@ -2,6 +2,8 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -96,6 +98,7 @@ export default function ShopRfqsPage() {
   const [rfqs, setRfqs] = useState<Rfq[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("ALL");
+  const t = useT();
 
   useEffect(() => {
     if (user?.shop?.id) {
@@ -173,9 +176,9 @@ export default function ShopRfqsPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">RFQ Requests</h1>
+              <h1 className="text-2xl font-bold"><T>RFQ Requests</T></h1>
               <p className="text-muted-foreground">
-                Incoming quote requests from online and walk-in customers
+                <T>Incoming quote requests from online and walk-in customers</T>
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -190,7 +193,7 @@ export default function ShopRfqsPage() {
               <Link href="/dashboard/shop/quotes">
                 <Button variant="outline">
                   <UserPlus className="h-4 w-4 mr-2" />
-                  Walk-in Quotes
+                  <T>Walk-in Quotes</T>
                 </Button>
               </Link>
             </div>
@@ -208,7 +211,7 @@ export default function ShopRfqsPage() {
                     : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
                 }`}
               >
-                {f === "ALL" ? "All" : f === "ONLINE" ? "Online" : "Walk-in"}
+                {f === "ALL" ? t("All") : f === "ONLINE" ? t("Online") : t("Walk-in")}
               </button>
             ))}
           </div>
@@ -222,22 +225,22 @@ export default function ShopRfqsPage() {
               ) : rfqs.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <FileQuestion className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No RFQ requests yet</p>
+                  <p><T>No RFQ requests yet</T></p>
                   <p className="text-sm">
-                    Quote requests will appear here when customers send them
+                    <T>Quote requests will appear here when customers send them</T>
                   </p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Request</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Details</TableHead>
-                      <TableHead>Budget</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Received</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead><T>Request</T></TableHead>
+                      <TableHead><T>Customer</T></TableHead>
+                      <TableHead><T>Details</T></TableHead>
+                      <TableHead><T>Budget</T></TableHead>
+                      <TableHead><T>Status</T></TableHead>
+                      <TableHead><T>Received</T></TableHead>
+                      <TableHead><T>Actions</T></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -299,7 +302,7 @@ export default function ShopRfqsPage() {
                             </div>
                           ) : (
                             <span className="text-muted-foreground text-sm">
-                              Not specified
+                              <T>Not specified</T>
                             </span>
                           )}
                         </TableCell>
@@ -342,8 +345,8 @@ export default function ShopRfqsPage() {
                                 "BROADCAST",
                                 "SENT_TO_SHOPS",
                               ].includes(rfq.status)
-                                ? "Quote"
-                                : "View"}
+                                ? t("Quote")
+                                : t("View")}
                             </Button>
                           </Link>
                         </TableCell>

@@ -3,6 +3,8 @@
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { RichMessageCard } from "@/components/chat/RichMessageCard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -237,6 +239,7 @@ export default function ShopMessagesPage() {
   }
 
   const selectedConv = conversations.find((c) => c.id === selectedConversation);
+  const t = useT();
 
   return (
     <ShopGuard>
@@ -244,14 +247,14 @@ export default function ShopMessagesPage() {
         <div className="flex flex-col h-[calc(100vh-8rem)]">
           <div className="flex items-center gap-2 mb-4">
             <MessageSquare className="h-6 w-6" />
-            <h1 className="text-2xl font-bold">Customer Messages</h1>
+            <h1 className="text-2xl font-bold"><T>Customer Messages</T></h1>
             {connected ? (
               <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-                <Wifi className="h-3 w-3" /> Live
+                <Wifi className="h-3 w-3" /> <T>Live</T>
               </span>
             ) : (
               <span className="flex items-center gap-1 text-xs text-gray-400">
-                <WifiOff className="h-3 w-3" /> Polling
+                <WifiOff className="h-3 w-3" /> <T>Polling</T>
               </span>
             )}
           </div>
@@ -260,11 +263,11 @@ export default function ShopMessagesPage() {
             {/* Conversation list */}
             <div className="w-80 flex-shrink-0 border rounded-lg overflow-y-auto">
               {loading ? (
-                <div className="p-4 text-muted-foreground">Loading...</div>
+                <div className="p-4 text-muted-foreground"><T>Loading...</T></div>
               ) : conversations.length === 0 ? (
                 <div className="p-4 text-center text-muted-foreground">
                   <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>No customer messages yet</p>
+                  <p><T>No customer messages yet</T></p>
                 </div>
               ) : (
                 conversations.map((conv) => (
@@ -300,7 +303,7 @@ export default function ShopMessagesPage() {
             <div className="flex-1 flex flex-col border rounded-lg">
               {!selectedConversation ? (
                 <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                  Select a conversation
+                  <T>Select a conversation</T>
                 </div>
               ) : (
                 <>
@@ -312,7 +315,7 @@ export default function ShopMessagesPage() {
                       </h3>
                       {selectedConv?.status === "LOCKED" && (
                         <Badge variant="destructive" className="text-xs">
-                          <Lock className="h-3 w-3 mr-1" /> Locked
+                          <Lock className="h-3 w-3 mr-1" /> <T>Locked</T>
                         </Badge>
                       )}
                     </div>
@@ -329,11 +332,11 @@ export default function ShopMessagesPage() {
                         }}
                       >
                         <ScanLine className="h-3 w-3 mr-1" />
-                        Load Picks to POS
+                        <T>Load Picks to POS</T>
                       </Button>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Shield className="h-3 w-3" />
-                        Anti-circumvention active
+                        <T>Anti-circumvention active</T>
                       </div>
                     </div>
                   </div>
@@ -346,7 +349,7 @@ export default function ShopMessagesPage() {
                           <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
                           <div className="flex-1">
                             <p className="text-sm font-semibold text-red-800 dark:text-red-200">
-                              ⚠️ Message Blocked
+                              ⚠️ <T>Message Blocked</T>
                             </p>
                             <p className="text-sm text-red-700 dark:text-red-300 mt-1">
                               {violationAlert.warning}
@@ -425,7 +428,7 @@ export default function ShopMessagesPage() {
                             )}
                             {msg.hasViolation && (
                               <p className="text-xs mt-1 opacity-75">
-                                ⚠️ Contact info removed
+                                ⚠️ <T>Contact info removed</T>
                               </p>
                             )}
                             <span className="text-xs opacity-60 mt-1 block">
@@ -461,7 +464,7 @@ export default function ShopMessagesPage() {
 
                   {selectedConv?.status === "LOCKED" ? (
                     <div className="p-3 border-t bg-muted text-center text-sm text-muted-foreground">
-                      Conversation locked — contact support
+                      <T>Conversation locked — contact support</T>
                     </div>
                   ) : (
                     <div className="p-3 border-t flex gap-2">
@@ -471,7 +474,7 @@ export default function ShopMessagesPage() {
                         onKeyDown={(e) =>
                           e.key === "Enter" && !e.shiftKey && handleSend()
                         }
-                        placeholder="Reply to customer..."
+                        placeholder={t("Reply to customer...")}
                         disabled={sending}
                       />
                       <Button
