@@ -2,6 +2,8 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -99,6 +101,7 @@ const languages = [
 
 export default function ShopkeeperProfilePage() {
   const { user: authUser, refreshUser } = useAuth();
+  const t = useT();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -404,9 +407,9 @@ export default function ShopkeeperProfilePage() {
         <DashboardLayout>
           <div className="text-center py-12">
             <AlertTriangle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Profile Not Found</h2>
+            <h2 className="text-xl font-semibold mb-2"><T>Profile Not Found</T></h2>
             <p className="text-muted-foreground">
-              Unable to load your profile data.
+              <T>Unable to load your profile data.</T>
             </p>
           </div>
         </DashboardLayout>
@@ -421,9 +424,9 @@ export default function ShopkeeperProfilePage() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">My Profile</h1>
+              <h1 className="text-2xl font-bold"><T>My Profile</T></h1>
               <p className="text-muted-foreground">
-                Manage your personal account settings
+                <T>Manage your personal account settings</T>
               </p>
             </div>
           </div>
@@ -458,8 +461,7 @@ export default function ShopkeeperProfilePage() {
                   <div className="flex items-center gap-2 justify-end">
                     <Clock className="h-4 w-4" />
                     <span>
-                      Joined{" "}
-                      {format(new Date(profile.createdAt), "MMM d, yyyy")}
+                      {t(`Joined ${format(new Date(profile.createdAt), "MMM d, yyyy")}`)}
                     </span>
                   </div>
                   {profile.lastLoginAt && (
@@ -478,9 +480,9 @@ export default function ShopkeeperProfilePage() {
 
           <Tabs defaultValue="personal" className="space-y-4">
             <TabsList>
-              <TabsTrigger value="personal">Personal Info</TabsTrigger>
-              <TabsTrigger value="preferences">Preferences</TabsTrigger>
-              <TabsTrigger value="security">Security</TabsTrigger>
+              <TabsTrigger value="personal"><T>Personal Info</T></TabsTrigger>
+              <TabsTrigger value="preferences"><T>Preferences</T></TabsTrigger>
+              <TabsTrigger value="security"><T>Security</T></TabsTrigger>
             </TabsList>
 
             {/* Personal Info Tab */}
@@ -489,16 +491,16 @@ export default function ShopkeeperProfilePage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <User className="h-5 w-5" />
-                    Personal Information
+                    <T>Personal Information</T>
                   </CardTitle>
                   <CardDescription>
-                    Update your personal details
+                    <T>Update your personal details</T>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name</Label>
+                      <Label htmlFor="firstName"><T>First Name</T></Label>
                       <Input
                         id="firstName"
                         value={profile.firstName}
@@ -508,7 +510,7 @@ export default function ShopkeeperProfilePage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name</Label>
+                      <Label htmlFor="lastName"><T>Last Name</T></Label>
                       <Input
                         id="lastName"
                         value={profile.lastName}
@@ -521,7 +523,7 @@ export default function ShopkeeperProfilePage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
+                      <Label htmlFor="email"><T>Email</T></Label>
                       <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-muted-foreground" />
                         <Input
@@ -532,22 +534,22 @@ export default function ShopkeeperProfilePage() {
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Contact support to change your email address
+                        <T>Contact support to change your email address</T>
                       </p>
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <Label htmlFor="phone">Phone Number</Label>
+                        <Label htmlFor="phone"><T>Phone Number</T></Label>
                         {authUser?.phoneVerifiedAt && (
                           <span className="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950/30 px-2 py-0.5 rounded-full">
                             <CheckCircle className="h-3 w-3" />
-                            Verified
+                            <T>Verified</T>
                           </span>
                         )}
                         {!authUser?.phoneVerifiedAt && profile.phone && (
                           <span className="inline-flex items-center gap-1 text-xs text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-950/30 px-2 py-0.5 rounded-full">
                             <Shield className="h-3 w-3" />
-                            Not Verified
+                            <T>Not Verified</T>
                           </span>
                         )}
                       </div>
@@ -578,7 +580,7 @@ export default function ShopkeeperProfilePage() {
                       ) : (
                         <Save className="h-4 w-4 mr-2" />
                       )}
-                      Save Changes
+                      <T>Save Changes</T>
                     </Button>
                   </div>
                 </CardContent>
@@ -591,17 +593,16 @@ export default function ShopkeeperProfilePage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Globe className="h-5 w-5" />
-                    Regional Preferences
+                    <T>Regional Preferences</T>
                   </CardTitle>
                   <CardDescription>
-                    Set your preferred language. Currency is determined by your
-                    shop&apos;s location.
+                    <T>Set your preferred language. Currency is determined by your shop's location.</T>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="language">Preferred Language</Label>
+                      <Label htmlFor="language"><T>Preferred Language</T></Label>
                       <Select
                         value={profile.preferredLanguage || "en"}
                         onValueChange={(value) =>
@@ -609,7 +610,7 @@ export default function ShopkeeperProfilePage() {
                         }
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select language" />
+                          <SelectValue placeholder={t("Select language")} />
                         </SelectTrigger>
                         <SelectContent>
                           {languages.map((lang) => (
@@ -621,19 +622,18 @@ export default function ShopkeeperProfilePage() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Currency</Label>
+                      <Label><T>Currency</T></Label>
                       <div className="p-3 bg-muted rounded-md text-sm">
                         <p className="text-muted-foreground">
-                          Currency is automatically set based on your
-                          shop&apos;s country.
+                          <T>Currency is automatically set based on your shop's country.</T>
                         </p>
                         <p className="mt-1">
-                          Manage this in{" "}
+                          {t("Manage this in")}{" "}
                           <a
                             href="/dashboard/shop/settings"
                             className="text-gold-600 hover:underline"
                           >
-                            Shop Settings
+                            <T>Shop Settings</T>
                           </a>
                         </p>
                       </div>
@@ -647,7 +647,7 @@ export default function ShopkeeperProfilePage() {
                       ) : (
                         <Save className="h-4 w-4 mr-2" />
                       )}
-                      Save Preferences
+                      <T>Save Preferences</T>
                     </Button>
                   </div>
                 </CardContent>
@@ -660,10 +660,10 @@ export default function ShopkeeperProfilePage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Shield className="h-5 w-5" />
-                    Security Settings
+                    <T>Security Settings</T>
                   </CardTitle>
                   <CardDescription>
-                    Manage your account security
+                    <T>Manage your account security</T>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -674,9 +674,9 @@ export default function ShopkeeperProfilePage() {
                         <Key className="h-5 w-5 text-amber-600" />
                       </div>
                       <div>
-                        <h3 className="font-medium">Password</h3>
+                        <h3 className="font-medium"><T>Password</T></h3>
                         <p className="text-sm text-muted-foreground">
-                          Change your account password
+                          <T>Change your account password</T>
                         </p>
                       </div>
                     </div>
@@ -685,19 +685,19 @@ export default function ShopkeeperProfilePage() {
                       onOpenChange={setPasswordDialogOpen}
                     >
                       <DialogTrigger asChild>
-                        <Button variant="outline">Change Password</Button>
+                        <Button variant="outline"><T>Change Password</T></Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Change Password</DialogTitle>
+                          <DialogTitle><T>Change Password</T></DialogTitle>
                           <DialogDescription>
-                            Enter your current password and choose a new one.
+                            <T>Enter your current password and choose a new one.</T>
                           </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
                           <div className="space-y-2">
                             <Label htmlFor="currentPassword">
-                              Current Password
+                              <T>Current Password</T>
                             </Label>
                             <Input
                               id="currentPassword"
@@ -712,7 +712,7 @@ export default function ShopkeeperProfilePage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="newPassword">New Password</Label>
+                            <Label htmlFor="newPassword"><T>New Password</T></Label>
                             <Input
                               id="newPassword"
                               type="password"
@@ -727,7 +727,7 @@ export default function ShopkeeperProfilePage() {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="confirmPassword">
-                              Confirm New Password
+                              <T>Confirm New Password</T>
                             </Label>
                             <Input
                               id="confirmPassword"
@@ -747,7 +747,7 @@ export default function ShopkeeperProfilePage() {
                             variant="outline"
                             onClick={() => setPasswordDialogOpen(false)}
                           >
-                            Cancel
+                            <T>Cancel</T>
                           </Button>
                           <Button
                             onClick={handleChangePassword}
@@ -756,7 +756,7 @@ export default function ShopkeeperProfilePage() {
                             {isChangingPassword ? (
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             ) : null}
-                            Change Password
+                            <T>Change Password</T>
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -775,12 +775,12 @@ export default function ShopkeeperProfilePage() {
                       </div>
                       <div>
                         <h3 className="font-medium">
-                          Two-Factor Authentication
+                          <T>Two-Factor Authentication</T>
                         </h3>
                         <p className="text-sm text-muted-foreground">
                           {twoFactorStatus?.enabled
-                            ? `Enabled • ${twoFactorStatus.backupCodesRemaining} backup codes remaining`
-                            : "Add an extra layer of security with 2FA"}
+                            ? t(`Enabled • ${twoFactorStatus.backupCodesRemaining} backup codes remaining`)
+                            : t("Add an extra layer of security with 2FA")}
                         </p>
                       </div>
                     </div>
@@ -789,7 +789,7 @@ export default function ShopkeeperProfilePage() {
                         <>
                           <Badge variant="default" className="bg-green-600">
                             <CheckCircle className="h-3 w-3 mr-1" />
-                            Enabled
+                            <T>Enabled</T>
                           </Badge>
                           <Button
                             variant="outline"
@@ -797,14 +797,14 @@ export default function ShopkeeperProfilePage() {
                             onClick={() => setRegenerateDialogOpen(true)}
                           >
                             <RefreshCw className="h-4 w-4 mr-1" />
-                            New Codes
+                            <T>New Codes</T>
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setDisableDialogOpen(true)}
                           >
-                            Disable
+                            <T>Disable</T>
                           </Button>
                         </>
                       ) : (
@@ -817,7 +817,7 @@ export default function ShopkeeperProfilePage() {
                           ) : (
                             <Shield className="h-4 w-4 mr-2" />
                           )}
-                          Enable 2FA
+                          <T>Enable 2FA</T>
                         </Button>
                       )}
                     </div>
@@ -831,11 +831,10 @@ export default function ShopkeeperProfilePage() {
                     <DialogContent className="sm:max-w-md">
                       <DialogHeader>
                         <DialogTitle>
-                          Set Up Two-Factor Authentication
+                          <T>Set Up Two-Factor Authentication</T>
                         </DialogTitle>
                         <DialogDescription>
-                          Scan the QR code with your authenticator app (Google
-                          Authenticator, Authy, etc.)
+                          <T>Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.)</T>
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
@@ -850,7 +849,7 @@ export default function ShopkeeperProfilePage() {
                             </div>
                             <div className="text-center">
                               <p className="text-sm text-muted-foreground mb-2">
-                                Or enter this code manually:
+                                <T>Or enter this code manually:</T>
                               </p>
                               <code className="bg-muted px-3 py-2 rounded font-mono text-sm">
                                 {twoFactorSetup.secret}
@@ -858,7 +857,7 @@ export default function ShopkeeperProfilePage() {
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="verificationCode">
-                                Enter verification code
+                                <T>Enter verification code</T>
                               </Label>
                               <Input
                                 id="verificationCode"
@@ -883,7 +882,7 @@ export default function ShopkeeperProfilePage() {
                           variant="outline"
                           onClick={() => setTwoFactorDialogOpen(false)}
                         >
-                          Cancel
+                          <T>Cancel</T>
                         </Button>
                         <Button
                           onClick={verifyAndEnable2FA}
@@ -892,7 +891,7 @@ export default function ShopkeeperProfilePage() {
                           {isVerifying2FA ? (
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           ) : null}
-                          Verify & Enable
+                          <T>Verify & Enable</T>
                         </Button>
                       </DialogFooter>
                     </DialogContent>
@@ -905,10 +904,9 @@ export default function ShopkeeperProfilePage() {
                   >
                     <DialogContent className="sm:max-w-md">
                       <DialogHeader>
-                        <DialogTitle>Save Your Backup Codes</DialogTitle>
+                        <DialogTitle><T>Save Your Backup Codes</T></DialogTitle>
                         <DialogDescription>
-                          These codes can be used if you lose access to your
-                          authenticator app. Each code can only be used once.
+                          <T>These codes can be used if you lose access to your authenticator app. Each code can only be used once.</T>
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
@@ -927,18 +925,17 @@ export default function ShopkeeperProfilePage() {
                         <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-700 rounded-lg">
                           <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
                           <p className="text-sm text-amber-800 dark:text-amber-200">
-                            Store these codes in a safe place. You won't be able
-                            to see them again.
+                            <T>Store these codes in a safe place. You won't be able to see them again.</T>
                           </p>
                         </div>
                       </div>
                       <DialogFooter>
                         <Button variant="outline" onClick={copyBackupCodes}>
                           <Copy className="h-4 w-4 mr-2" />
-                          Copy Codes
+                          <T>Copy Codes</T>
                         </Button>
                         <Button onClick={() => setShowBackupCodes(false)}>
-                          I've Saved These Codes
+                          <T>I've Saved These Codes</T>
                         </Button>
                       </DialogFooter>
                     </DialogContent>
@@ -952,16 +949,15 @@ export default function ShopkeeperProfilePage() {
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle>
-                          Disable Two-Factor Authentication
+                          <T>Disable Two-Factor Authentication</T>
                         </DialogTitle>
                         <DialogDescription>
-                          This will remove 2FA from your account. Enter your
-                          password to confirm.
+                          <T>This will remove 2FA from your account. Enter your password to confirm.</T>
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                          <Label htmlFor="disablePassword">Password</Label>
+                          <Label htmlFor="disablePassword"><T>Password</T></Label>
                           <Input
                             id="disablePassword"
                             type="password"
@@ -975,7 +971,7 @@ export default function ShopkeeperProfilePage() {
                           variant="outline"
                           onClick={() => setDisableDialogOpen(false)}
                         >
-                          Cancel
+                          <T>Cancel</T>
                         </Button>
                         <Button
                           variant="destructive"
@@ -987,7 +983,7 @@ export default function ShopkeeperProfilePage() {
                           ) : (
                             <XCircle className="h-4 w-4 mr-2" />
                           )}
-                          Disable 2FA
+                          <T>Disable 2FA</T>
                         </Button>
                       </DialogFooter>
                     </DialogContent>
@@ -1000,16 +996,15 @@ export default function ShopkeeperProfilePage() {
                   >
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>Regenerate Backup Codes</DialogTitle>
+                        <DialogTitle><T>Regenerate Backup Codes</T></DialogTitle>
                         <DialogDescription>
-                          This will invalidate all your existing backup codes.
-                          Enter a verification code to continue.
+                          <T>This will invalidate all your existing backup codes. Enter a verification code to continue.</T>
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
                         <div className="space-y-2">
                           <Label htmlFor="regenerateToken">
-                            Verification Code
+                            <T>Verification Code</T>
                           </Label>
                           <Input
                             id="regenerateToken"
@@ -1030,7 +1025,7 @@ export default function ShopkeeperProfilePage() {
                           variant="outline"
                           onClick={() => setRegenerateDialogOpen(false)}
                         >
-                          Cancel
+                          <T>Cancel</T>
                         </Button>
                         <Button
                           onClick={regenerateBackupCodes}
@@ -1041,7 +1036,7 @@ export default function ShopkeeperProfilePage() {
                           ) : (
                             <RefreshCw className="h-4 w-4 mr-2" />
                           )}
-                          Regenerate
+                          <T>Regenerate</T>
                         </Button>
                       </DialogFooter>
                     </DialogContent>
@@ -1049,17 +1044,17 @@ export default function ShopkeeperProfilePage() {
 
                   {/* Account Activity */}
                   <div className="p-4 border rounded-lg">
-                    <h3 className="font-medium mb-3">Recent Activity</h3>
+                    <h3 className="font-medium mb-3"><T>Recent Activity</T></h3>
                     <div className="space-y-2 text-sm text-muted-foreground">
                       <div className="flex items-center justify-between">
-                        <span>Account created</span>
+                        <span><T>Account created</T></span>
                         <span>
                           {format(new Date(profile.createdAt), "MMM d, yyyy")}
                         </span>
                       </div>
                       {profile.lastLoginAt && (
                         <div className="flex items-center justify-between">
-                          <span>Last login</span>
+                          <span><T>Last login</T></span>
                           <span>
                             {format(
                               new Date(profile.lastLoginAt),
