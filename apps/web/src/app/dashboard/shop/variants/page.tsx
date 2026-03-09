@@ -1,33 +1,32 @@
-'use client';
+"use client";
 
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { ShopGuard } from '@/components/auth/RouteGuard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { T } from '@/components/ui/T';
+import { ShopGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import {
-  Ruler,
-  Plus,
-  Trash2,
-  Save,
-  RefreshCw,
-  Package,
-} from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { variantsApi } from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
-import { useT } from '@/providers/translation-provider';
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { T } from "@/components/ui/T";
+import { useAuth } from "@/hooks/useAuth";
+import { variantsApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
+import { Package, Plus, Ruler, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface InventoryItem {
   id: string;
@@ -57,7 +56,13 @@ interface SizeChartEntry {
   region: string;
 }
 
-const JEWELLERY_TYPES_WITH_SIZES = ['RING', 'BANGLE', 'BRACELET', 'CHAIN', 'NECKLACE'];
+const JEWELLERY_TYPES_WITH_SIZES = [
+  "RING",
+  "BANGLE",
+  "BRACELET",
+  "CHAIN",
+  "NECKLACE",
+];
 
 export default function ShopVariantsPage() {
   const { user } = useAuth();
@@ -72,12 +77,12 @@ export default function ShopVariantsPage() {
 
   // New variant form
   const [newVariant, setNewVariant] = useState({
-    sizeLabel: '',
-    sizeSystem: 'US',
-    sizeValue: '',
-    sku: '',
-    stock: '1',
-    priceOverride: '',
+    sizeLabel: "",
+    sizeSystem: "US",
+    sizeValue: "",
+    sku: "",
+    stock: "1",
+    priceOverride: "",
   });
 
   useEffect(() => {
@@ -91,11 +96,13 @@ export default function ShopVariantsPage() {
       const data = await res.json();
       const allItems = data?.items || data || [];
       // Only show types that can have sizes
-      setItems(allItems.filter((i: InventoryItem) =>
-        JEWELLERY_TYPES_WITH_SIZES.includes(i.jewelleryType)
-      ));
+      setItems(
+        allItems.filter((i: InventoryItem) =>
+          JEWELLERY_TYPES_WITH_SIZES.includes(i.jewelleryType),
+        ),
+      );
     } catch (e) {
-      console.error('Failed to load items', e);
+      console.error("Failed to load items", e);
     } finally {
       setLoading(false);
     }
@@ -108,7 +115,9 @@ export default function ShopVariantsPage() {
     try {
       const [varRes, chartRes] = await Promise.all([
         variantsApi.listVariants(item.id),
-        variantsApi.getSizeChart(item.jewelleryType).catch(() => ({ data: [] })),
+        variantsApi
+          .getSizeChart(item.jewelleryType)
+          .catch(() => ({ data: [] })),
       ]);
       setVariants(varRes.data || []);
       setSizeChart(chartRes.data || []);
@@ -125,7 +134,7 @@ export default function ShopVariantsPage() {
       // Refresh items list
       loadItems();
     } catch (e: any) {
-      alert(e.response?.data?.message || 'Failed to toggle sizes');
+      alert(e.response?.data?.message || "Failed to toggle sizes");
     }
   }
 
@@ -136,28 +145,39 @@ export default function ShopVariantsPage() {
       const payload = {
         sizeLabel: newVariant.sizeLabel,
         sizeSystem: newVariant.sizeSystem || undefined,
-        sizeValue: newVariant.sizeValue ? parseFloat(newVariant.sizeValue) : undefined,
+        sizeValue: newVariant.sizeValue
+          ? parseFloat(newVariant.sizeValue)
+          : undefined,
         sku: newVariant.sku,
         stock: parseInt(newVariant.stock) || 1,
-        priceOverride: newVariant.priceOverride ? parseFloat(newVariant.priceOverride) : undefined,
+        priceOverride: newVariant.priceOverride
+          ? parseFloat(newVariant.priceOverride)
+          : undefined,
       };
       await variantsApi.createVariant(selectedItem.id, payload);
-      setNewVariant({ sizeLabel: '', sizeSystem: 'US', sizeValue: '', sku: '', stock: '1', priceOverride: '' });
+      setNewVariant({
+        sizeLabel: "",
+        sizeSystem: "US",
+        sizeValue: "",
+        sku: "",
+        stock: "1",
+        priceOverride: "",
+      });
       selectItem(selectedItem);
     } catch (e: any) {
-      alert(e.response?.data?.message || 'Failed to add variant');
+      alert(e.response?.data?.message || "Failed to add variant");
     } finally {
       setSaving(false);
     }
   }
 
   async function deleteVariant(variantId: string) {
-    if (!selectedItem || !confirm('Delete this variant?')) return;
+    if (!selectedItem || !confirm("Delete this variant?")) return;
     try {
       await variantsApi.deleteVariant(selectedItem.id, variantId);
       setVariants((prev) => prev.filter((v) => v.id !== variantId));
     } catch (e: any) {
-      alert(e.response?.data?.message || 'Failed to delete variant');
+      alert(e.response?.data?.message || "Failed to delete variant");
     }
   }
 
@@ -166,10 +186,10 @@ export default function ShopVariantsPage() {
     try {
       await variantsApi.updateVariant(selectedItem.id, variantId, { isActive });
       setVariants((prev) =>
-        prev.map((v) => (v.id === variantId ? { ...v, isActive } : v))
+        prev.map((v) => (v.id === variantId ? { ...v, isActive } : v)),
       );
     } catch (e: any) {
-      alert(e.response?.data?.message || 'Failed to update');
+      alert(e.response?.data?.message || "Failed to update");
     }
   }
 
@@ -178,10 +198,10 @@ export default function ShopVariantsPage() {
     try {
       await variantsApi.updateVariant(selectedItem.id, variantId, { stock });
       setVariants((prev) =>
-        prev.map((v) => (v.id === variantId ? { ...v, stock } : v))
+        prev.map((v) => (v.id === variantId ? { ...v, stock } : v)),
       );
     } catch (e: any) {
-      alert(e.response?.data?.message || 'Failed to update stock');
+      alert(e.response?.data?.message || "Failed to update stock");
     }
   }
 
@@ -191,21 +211,31 @@ export default function ShopVariantsPage() {
         <div className="space-y-6">
           <div className="flex items-center gap-2">
             <Ruler className="h-6 w-6" />
-            <h1 className="text-2xl font-bold"><T>Size Variants</T></h1>
+            <h1 className="text-2xl font-bold">
+              <T>Size Variants</T>
+            </h1>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left: Item list */}
             <Card className="lg:col-span-1">
               <CardHeader>
-                <CardTitle className="text-base"><T>Products with Sizes</T></CardTitle>
-                <CardDescription><T>Rings, bangles, bracelets, chains, necklaces</T></CardDescription>
+                <CardTitle className="text-base">
+                  <T>Products with Sizes</T>
+                </CardTitle>
+                <CardDescription>
+                  <T>Rings, bangles, bracelets, chains, necklaces</T>
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? (
-                  <p className="text-muted-foreground text-sm"><T>Loading...</T></p>
+                  <p className="text-muted-foreground text-sm">
+                    <T>Loading...</T>
+                  </p>
                 ) : items.length === 0 ? (
-                  <p className="text-muted-foreground text-sm"><T>No size-eligible products</T></p>
+                  <p className="text-muted-foreground text-sm">
+                    <T>No size-eligible products</T>
+                  </p>
                 ) : (
                   <div className="space-y-2 max-h-[60vh] overflow-y-auto">
                     {items.map((item) => (
@@ -214,18 +244,23 @@ export default function ShopVariantsPage() {
                         onClick={() => selectItem(item)}
                         className={`w-full text-left p-3 border rounded-lg transition-colors ${
                           selectedItem?.id === item.id
-                            ? 'border-primary bg-primary/5'
-                            : 'hover:border-primary/30'
+                            ? "border-primary bg-primary/5"
+                            : "hover:border-primary/30"
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-medium text-sm truncate">{item.nameEn}</span>
+                          <span className="font-medium text-sm truncate">
+                            {item.nameEn}
+                          </span>
                           {item.hasSizes && (
-                            <Badge variant="secondary" className="text-xs ml-1">Sized</Badge>
+                            <Badge variant="secondary" className="text-xs ml-1">
+                              Sized
+                            </Badge>
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {item.jewelleryType} · {item.sku || item.id.slice(0, 8)}
+                          {item.jewelleryType} ·{" "}
+                          {item.sku || item.id.slice(0, 8)}
                         </p>
                       </button>
                     ))}
@@ -240,7 +275,9 @@ export default function ShopVariantsPage() {
                 <Card>
                   <CardContent className="pt-6 text-center">
                     <Package className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-muted-foreground"><T>Select a product to manage size variants</T></p>
+                    <p className="text-muted-foreground">
+                      <T>Select a product to manage size variants</T>
+                    </p>
                   </CardContent>
                 </Card>
               ) : (
@@ -250,10 +287,14 @@ export default function ShopVariantsPage() {
                     <CardContent className="pt-4 flex items-center justify-between">
                       <div>
                         <p className="font-medium">{selectedItem.nameEn}</p>
-                        <p className="text-sm text-muted-foreground">{selectedItem.jewelleryType}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedItem.jewelleryType}
+                        </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Label htmlFor="hasSizes" className="text-sm"><T>Enable Sizes</T></Label>
+                        <Label htmlFor="hasSizes" className="text-sm">
+                          <T>Enable Sizes</T>
+                        </Label>
                         <Switch
                           id="hasSizes"
                           checked={selectedItem.hasSizes}
@@ -268,40 +309,65 @@ export default function ShopVariantsPage() {
                       {/* Existing variants */}
                       <Card>
                         <CardHeader>
-                          <CardTitle className="text-base"><T>Current Variants</T></CardTitle>
+                          <CardTitle className="text-base">
+                            <T>Current Variants</T>
+                          </CardTitle>
                         </CardHeader>
                         <CardContent>
                           {variants.length === 0 ? (
-                            <p className="text-muted-foreground text-sm"><T>No variants yet</T></p>
+                            <p className="text-muted-foreground text-sm">
+                              <T>No variants yet</T>
+                            </p>
                           ) : (
                             <div className="space-y-2">
                               {variants.map((v) => (
-                                <div key={v.id} className="flex items-center gap-3 p-3 border rounded-lg">
+                                <div
+                                  key={v.id}
+                                  className="flex items-center gap-3 p-3 border rounded-lg"
+                                >
                                   <div className="flex-1">
-                                    <span className="font-medium">{v.sizeLabel}</span>
+                                    <span className="font-medium">
+                                      {v.sizeLabel}
+                                    </span>
                                     {v.sizeSystem && (
-                                      <span className="text-xs text-muted-foreground ml-1">({v.sizeSystem})</span>
+                                      <span className="text-xs text-muted-foreground ml-1">
+                                        ({v.sizeSystem})
+                                      </span>
                                     )}
-                                    <p className="text-xs text-muted-foreground">SKU: {v.sku}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      SKU: {v.sku}
+                                    </p>
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <Input
                                       type="number"
                                       min={0}
                                       value={v.stock}
-                                      onChange={(e) => updateStock(v.id, parseInt(e.target.value) || 0)}
+                                      onChange={(e) =>
+                                        updateStock(
+                                          v.id,
+                                          parseInt(e.target.value) || 0,
+                                        )
+                                      }
                                       className="w-20 h-8 text-sm"
                                     />
-                                    <span className="text-xs text-muted-foreground">stock</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      stock
+                                    </span>
                                   </div>
                                   {v.priceOverride && (
-                                    <Badge variant="outline" className="text-xs">
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
                                       {v.priceOverride}
                                     </Badge>
                                   )}
                                   <Switch
                                     checked={v.isActive}
-                                    onCheckedChange={(checked) => toggleVariantActive(v.id, checked)}
+                                    onCheckedChange={(checked) =>
+                                      toggleVariantActive(v.id, checked)
+                                    }
                                   />
                                   <Button
                                     variant="ghost"
@@ -320,7 +386,9 @@ export default function ShopVariantsPage() {
                       {/* Add new variant */}
                       <Card>
                         <CardHeader>
-                          <CardTitle className="text-base"><T>Add Variant</T></CardTitle>
+                          <CardTitle className="text-base">
+                            <T>Add Variant</T>
+                          </CardTitle>
                         </CardHeader>
                         <CardContent>
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -329,12 +397,17 @@ export default function ShopVariantsPage() {
                               <Select
                                 value={newVariant.sizeLabel}
                                 onValueChange={(v) => {
-                                  const entry = sizeChart.find((s) => s.sizeLabel === v);
+                                  const entry = sizeChart.find(
+                                    (s) => s.sizeLabel === v,
+                                  );
                                   setNewVariant((prev) => ({
                                     ...prev,
                                     sizeLabel: v,
-                                    sizeValue: entry?.sizeValue?.toString() || prev.sizeValue,
-                                    sizeSystem: entry?.sizeSystem || prev.sizeSystem,
+                                    sizeValue:
+                                      entry?.sizeValue?.toString() ||
+                                      prev.sizeValue,
+                                    sizeSystem:
+                                      entry?.sizeSystem || prev.sizeSystem,
                                   }));
                                 }}
                               >
@@ -344,15 +417,23 @@ export default function ShopVariantsPage() {
                                 <SelectContent>
                                   {sizeChart.length > 0 ? (
                                     sizeChart.map((s) => (
-                                      <SelectItem key={s.sizeLabel} value={s.sizeLabel}>
-                                        {s.sizeLabel} ({s.sizeSystem} — {s.diameterMm}mm)
+                                      <SelectItem
+                                        key={s.sizeLabel}
+                                        value={s.sizeLabel}
+                                      >
+                                        {s.sizeLabel} ({s.sizeSystem} —{" "}
+                                        {s.diameterMm}mm)
                                       </SelectItem>
                                     ))
                                   ) : (
                                     <>
-                                      {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((s) => (
-                                        <SelectItem key={s} value={s}>{s}</SelectItem>
-                                      ))}
+                                      {["XS", "S", "M", "L", "XL", "XXL"].map(
+                                        (s) => (
+                                          <SelectItem key={s} value={s}>
+                                            {s}
+                                          </SelectItem>
+                                        ),
+                                      )}
                                     </>
                                   )}
                                 </SelectContent>
@@ -362,7 +443,12 @@ export default function ShopVariantsPage() {
                               <Label className="text-xs">SKU *</Label>
                               <Input
                                 value={newVariant.sku}
-                                onChange={(e) => setNewVariant((p) => ({ ...p, sku: e.target.value }))}
+                                onChange={(e) =>
+                                  setNewVariant((p) => ({
+                                    ...p,
+                                    sku: e.target.value,
+                                  }))
+                                }
                                 placeholder="RING-GOLD-7"
                                 className="h-8"
                               />
@@ -373,7 +459,12 @@ export default function ShopVariantsPage() {
                                 type="number"
                                 min={0}
                                 value={newVariant.stock}
-                                onChange={(e) => setNewVariant((p) => ({ ...p, stock: e.target.value }))}
+                                onChange={(e) =>
+                                  setNewVariant((p) => ({
+                                    ...p,
+                                    stock: e.target.value,
+                                  }))
+                                }
                                 className="h-8"
                               />
                             </div>
@@ -381,15 +472,24 @@ export default function ShopVariantsPage() {
                               <Label className="text-xs">Size System</Label>
                               <Select
                                 value={newVariant.sizeSystem}
-                                onValueChange={(v) => setNewVariant((p) => ({ ...p, sizeSystem: v }))}
+                                onValueChange={(v) =>
+                                  setNewVariant((p) => ({
+                                    ...p,
+                                    sizeSystem: v,
+                                  }))
+                                }
                               >
                                 <SelectTrigger className="h-8">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {['US', 'UK', 'EU', 'INDIAN', 'JP'].map((s) => (
-                                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                                  ))}
+                                  {["US", "UK", "EU", "INDIAN", "JP"].map(
+                                    (s) => (
+                                      <SelectItem key={s} value={s}>
+                                        {s}
+                                      </SelectItem>
+                                    ),
+                                  )}
                                 </SelectContent>
                               </Select>
                             </div>
@@ -399,7 +499,12 @@ export default function ShopVariantsPage() {
                                 type="number"
                                 step="0.5"
                                 value={newVariant.sizeValue}
-                                onChange={(e) => setNewVariant((p) => ({ ...p, sizeValue: e.target.value }))}
+                                onChange={(e) =>
+                                  setNewVariant((p) => ({
+                                    ...p,
+                                    sizeValue: e.target.value,
+                                  }))
+                                }
                                 placeholder="7"
                                 className="h-8"
                               />
@@ -409,7 +514,12 @@ export default function ShopVariantsPage() {
                               <Input
                                 type="number"
                                 value={newVariant.priceOverride}
-                                onChange={(e) => setNewVariant((p) => ({ ...p, priceOverride: e.target.value }))}
+                                onChange={(e) =>
+                                  setNewVariant((p) => ({
+                                    ...p,
+                                    priceOverride: e.target.value,
+                                  }))
+                                }
                                 placeholder="Optional"
                                 className="h-8"
                               />
@@ -419,10 +529,12 @@ export default function ShopVariantsPage() {
                             className="mt-3"
                             size="sm"
                             onClick={addVariant}
-                            disabled={saving || !newVariant.sizeLabel || !newVariant.sku}
+                            disabled={
+                              saving || !newVariant.sizeLabel || !newVariant.sku
+                            }
                           >
                             <Plus className="h-4 w-4 mr-1" />
-                            {saving ? t('Adding...') : t('Add Variant')}
+                            {saving ? t("Adding...") : t("Add Variant")}
                           </Button>
                         </CardContent>
                       </Card>
@@ -431,9 +543,13 @@ export default function ShopVariantsPage() {
                       {sizeChart.length > 0 && (
                         <Card>
                           <CardHeader>
-                            <CardTitle className="text-base"><T>Size Chart Reference</T></CardTitle>
+                            <CardTitle className="text-base">
+                              <T>Size Chart Reference</T>
+                            </CardTitle>
                             <CardDescription>
-                              {t(`Standard sizes for ${selectedItem.jewelleryType}`)}
+                              {t(
+                                `Standard sizes for ${selectedItem.jewelleryType}`,
+                              )}
                             </CardDescription>
                           </CardHeader>
                           <CardContent>
@@ -441,20 +557,38 @@ export default function ShopVariantsPage() {
                               <table className="w-full text-sm">
                                 <thead>
                                   <tr className="border-b">
-                                    <th className="text-left py-1 px-2">Label</th>
-                                    <th className="text-left py-1 px-2">System</th>
-                                    <th className="text-left py-1 px-2">Value</th>
-                                    <th className="text-left py-1 px-2">Diameter (mm)</th>
-                                    <th className="text-left py-1 px-2">Region</th>
+                                    <th className="text-left py-1 px-2">
+                                      Label
+                                    </th>
+                                    <th className="text-left py-1 px-2">
+                                      System
+                                    </th>
+                                    <th className="text-left py-1 px-2">
+                                      Value
+                                    </th>
+                                    <th className="text-left py-1 px-2">
+                                      Diameter (mm)
+                                    </th>
+                                    <th className="text-left py-1 px-2">
+                                      Region
+                                    </th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {sizeChart.map((s, i) => (
                                     <tr key={i} className="border-b">
-                                      <td className="py-1 px-2 font-medium">{s.sizeLabel}</td>
-                                      <td className="py-1 px-2">{s.sizeSystem}</td>
-                                      <td className="py-1 px-2">{s.sizeValue}</td>
-                                      <td className="py-1 px-2">{s.diameterMm}</td>
+                                      <td className="py-1 px-2 font-medium">
+                                        {s.sizeLabel}
+                                      </td>
+                                      <td className="py-1 px-2">
+                                        {s.sizeSystem}
+                                      </td>
+                                      <td className="py-1 px-2">
+                                        {s.sizeValue}
+                                      </td>
+                                      <td className="py-1 px-2">
+                                        {s.diameterMm}
+                                      </td>
                                       <td className="py-1 px-2">{s.region}</td>
                                     </tr>
                                   ))}

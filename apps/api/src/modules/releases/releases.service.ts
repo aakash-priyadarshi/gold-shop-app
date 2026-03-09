@@ -167,9 +167,7 @@ export class ReleasesService {
         lastSeen: s.lastSeen,
         firstSeen: s.firstSeen,
       })),
-      latestVersion: latestRelease
-        ? this.serializeRelease(latestRelease)
-        : null,
+      latestVersion: latestRelease?.version ?? null,
       hasDesktop: sessions.length > 0,
       isUpToDate: sessions.some((s) => s.isLatest),
     };

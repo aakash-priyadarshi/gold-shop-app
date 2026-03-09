@@ -14,11 +14,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { T } from "@/components/ui/T";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { sellerPerformanceApi, shopsApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   Activity,
   AlertTriangle,
@@ -594,6 +596,7 @@ function getKycFieldsForCountry(country: string): {
 
 export default function ShopEngagementPage() {
   const { user } = useAuth();
+  const t = useT();
   const [loading, setLoading] = useState(true);
   const [healthScore, setHealthScore] = useState<HealthScore | null>(null);
   const [onboarding, setOnboarding] = useState<OnboardingProgress | null>(null);
@@ -624,7 +627,7 @@ export default function ShopEngagementPage() {
     onError: (err) =>
       toast({
         variant: "destructive",
-        title: "Upload failed",
+        title: t("Upload failed"),
         description: err,
       }),
   });
@@ -701,7 +704,7 @@ export default function ShopEngagementPage() {
       console.error("Failed to load engagement data:", error);
       toast({
         variant: "destructive",
-        title: "Failed to load engagement data",
+        title: t("Failed to load engagement data"),
       });
     } finally {
       setLoading(false);
@@ -730,7 +733,7 @@ export default function ShopEngagementPage() {
       const result = await uploadKycDoc(file);
       if (result.success && result.url) {
         setKycForm((prev) => ({ ...prev, [fieldKey]: result.url! }));
-        toast({ title: "Document uploaded" });
+        toast({ title: t("Document uploaded") });
       }
     };
     input.click();
@@ -779,12 +782,12 @@ export default function ShopEngagementPage() {
         verificationDocuments: docs,
       });
       setKycData(res.data);
-      toast({ title: "KYC details saved successfully" });
+      toast({ title: t("KYC details saved successfully") });
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Failed to save KYC",
-        description: error.response?.data?.message || "Please try again",
+        title: t("Failed to save KYC"),
+        description: error.response?.data?.message || t("Please try again"),
       });
     } finally {
       setKycSaving(false);
@@ -815,11 +818,10 @@ export default function ShopEngagementPage() {
           {/* ═══ HEADER ═══ */}
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Award className="h-6 w-6" /> Engagement & Growth
+              <Award className="h-6 w-6" /> <T>Engagement & Growth</T>
             </h1>
             <p className="text-muted-foreground">
-              Track your shop&apos;s performance, tiers, milestones, and
-              verification
+              <T>Track your shop's performance, tiers, milestones, and verification</T>
             </p>
           </div>
 
@@ -833,7 +835,7 @@ export default function ShopEngagementPage() {
                 <div className="flex items-center gap-2">
                   <HelpCircle className="h-5 w-5 text-blue-600" />
                   <span className="font-semibold text-blue-800 dark:text-blue-200">
-                    How Engagement & Tiers Work
+                    <T>How Engagement & Tiers Work</T>
                   </span>
                 </div>
                 {showExplainer ? (
@@ -848,42 +850,35 @@ export default function ShopEngagementPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <h4 className="font-semibold flex items-center gap-1 mb-1">
-                        <Heart className="h-4 w-4" /> Health Score
+                        <Heart className="h-4 w-4" /> <T>Health Score</T>
                       </h4>
                       <p>
-                        Your shop health score (0-100) measures profile
-                        completeness, performance metrics, verification status,
-                        capabilities setup, and engagement activity. A higher
-                        score means better visibility to customers.
+                        <T>Your shop health score (0-100) measures profile completeness, performance metrics, verification status, capabilities setup, and engagement activity. A higher score means better visibility to customers.</T>
                       </p>
                     </div>
                     <div>
                       <h4 className="font-semibold flex items-center gap-1 mb-1">
-                        <Trophy className="h-4 w-4" /> Milestones
+                        <Trophy className="h-4 w-4" /> <T>Milestones</T>
                       </h4>
                       <p>
-                        Achieve milestones by completing orders, earning
-                        revenue, getting positive reviews, and staying active.
-                        Milestones contribute to your overall shop reputation.
+                        <T>Achieve milestones by completing orders, earning revenue, getting positive reviews, and staying active. Milestones contribute to your overall shop reputation.</T>
                       </p>
                     </div>
                   </div>
                   <div>
                     <h4 className="font-semibold flex items-center gap-1 mb-2">
-                      <TrendingUp className="h-4 w-4" /> Tier System
+                      <TrendingUp className="h-4 w-4" /> <T>Tier System</T>
                     </h4>
                     <p className="mb-2">
-                      Your seller tier determines your making charge cap and
-                      marketplace visibility. Progress through tiers by meeting
-                      performance criteria:
+                      <T>Your seller tier determines your making charge cap and marketplace visibility. Progress through tiers by meeting performance criteria:</T>
                     </p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                       {(["STANDARD", "SILVER", "GOLD", "ELITE"] as const).map(
-                        (t) => {
-                          const m = TIER_META[t];
+                        (tier) => {
+                          const m = TIER_META[tier];
                           return (
                             <div
-                              key={t}
+                              key={tier}
                               className={`p-2 rounded-lg border ${m.border} ${m.bg}`}
                             >
                               <p className={`font-semibold text-xs ${m.color}`}>
@@ -902,15 +897,12 @@ export default function ShopEngagementPage() {
                   </div>
                   <div className="bg-blue-100/50 rounded p-2 text-xs dark:bg-blue-900/30">
                     <Info className="h-3 w-3 inline mr-1" />
-                    <strong>Tip:</strong> Complete your KYC verification,
-                    maintain a low cancellation rate, and respond to RFQs
-                    quickly to climb tiers faster. Making charge settings can be
-                    adjusted in{" "}
+                    <strong><T>Tip:</T></strong>{" "}<T>Complete your KYC verification, maintain a low cancellation rate, and respond to RFQs quickly to climb tiers faster. Making charge settings can be adjusted in</T>{" "}
                     <Link
                       href="/dashboard/shop/settings?tab=preferences"
                       className="underline font-medium"
                     >
-                      Shop Settings
+                      <T>Shop Settings</T>
                     </Link>
                     .
                   </div>
@@ -937,10 +929,10 @@ export default function ShopEngagementPage() {
                     </div>
                     <div>
                       <h2 className="text-xl font-bold flex items-center gap-2">
-                        <Heart className="h-5 w-5" /> Shop Health Score
+                        <Heart className="h-5 w-5" /> <T>Shop Health Score</T>
                       </h2>
                       <p className="text-muted-foreground">
-                        Grade:{" "}
+                        <T>Grade:</T>{" "}
                         <span className="font-bold">{healthScore.grade}</span> —{" "}
                         {gradeLabel[healthScore.grade] || ""}
                       </p>
@@ -985,7 +977,7 @@ export default function ShopEngagementPage() {
                       >
                         <Icon className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
                         <p className="text-xs text-muted-foreground mb-1">
-                          {item.label}
+                          <T>{item.label}</T>
                         </p>
                         <p className="font-bold">
                           {item.score}
@@ -996,7 +988,7 @@ export default function ShopEngagementPage() {
                         <Progress value={pct} className="h-1.5 mt-1" />
                         {item.missing && item.missing.length > 0 && (
                           <p className="text-[10px] text-orange-500 mt-1">
-                            Missing: {item.missing.slice(0, 2).join(", ")}
+                            <T>Missing:</T> {item.missing.slice(0, 2).join(", ")}
                             {item.missing.length > 2 ? "..." : ""}
                           </p>
                         )}
@@ -1013,11 +1005,10 @@ export default function ShopEngagementPage() {
             <Card className="border-2">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" /> Seller Tier & Progression
+                  <TrendingUp className="h-5 w-5" /> <T>Seller Tier & Progression</T>
                 </CardTitle>
                 <CardDescription>
-                  Your tier determines making charge caps and marketplace
-                  visibility
+                  <T>Your tier determines making charge caps and marketplace visibility</T>
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -1039,21 +1030,21 @@ export default function ShopEngagementPage() {
                           </div>
                           <div>
                             <p className={`font-bold text-lg ${meta.color}`}>
-                              {meta.label} Tier
+                              {meta.label} <T>Tier</T>
                             </p>
                             <p className="text-sm text-muted-foreground">
                               {currentTier === "ELITE"
-                                ? "No cap on making charge!"
+                                ? t("No cap on making charge!")
                                 : cap != null
-                                  ? `Making charge cap: up to ${cap}%`
-                                  : "Complete milestones to unlock higher tiers"}
+                                  ? `${t("Making charge cap: up to")} ${cap}%`
+                                  : t("Complete milestones to unlock higher tiers")}
                             </p>
                           </div>
                         </div>
                         <Link href="/dashboard/shop/settings?tab=preferences">
                           <Button variant="outline" size="sm" className="gap-1">
                             <Settings className="h-3.5 w-3.5" />
-                            Set Making Charge
+                            <T>Set Making Charge</T>
                           </Button>
                         </Link>
                       </div>
@@ -1064,12 +1055,12 @@ export default function ShopEngagementPage() {
                 {/* Tier Roadmap Row */}
                 <div className="rounded-lg border p-3 bg-muted/30">
                   <h5 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
-                    Tier Roadmap — click to view requirements
+                    <T>Tier Roadmap — click to view requirements</T>
                   </h5>
                   <div className="flex items-center gap-1">
                     {(["STANDARD", "SILVER", "GOLD", "ELITE"] as const).map(
-                      (t, i) => {
-                        const m = TIER_META[t];
+                      (tier, i) => {
+                        const m = TIER_META[tier];
                         const currentTierIdx = [
                           "STANDARD",
                           "SILVER",
@@ -1079,17 +1070,17 @@ export default function ShopEngagementPage() {
                         const isCurrentOrPast = currentTierIdx >= i;
                         const viewingTier =
                           tierDashboard.viewingTier || tierDashboard.nextTier;
-                        const isViewing = viewingTier === t;
+                        const isViewing = viewingTier === tier;
                         return (
                           <div
-                            key={t}
+                            key={tier}
                             className="flex items-center gap-1 flex-1"
                           >
                             <button
                               type="button"
                               onClick={() => {
-                                setSelectedViewTier(t);
-                                loadTierDashboard(t);
+                                setSelectedViewTier(tier);
+                                loadTierDashboard(tier);
                               }}
                               className={`flex items-center gap-1 px-2 py-1.5 rounded text-xs font-medium flex-1 justify-center transition-all cursor-pointer ${
                                 isViewing
@@ -1148,8 +1139,8 @@ export default function ShopEngagementPage() {
                                 className: "h-4 w-4",
                               })}
                               {isAlreadyAchieved
-                                ? `${viewMeta.label} Tier — Achieved!`
-                                : `Requirements for ${viewMeta.label}`}
+                                ? `${viewMeta.label} ${t("Tier — Achieved!")}`
+                                : `${t("Requirements for")} ${viewMeta.label}`}
                             </h5>
                             <span className="text-sm font-bold text-primary">
                               {tierDashboard.overallProgress.percentage}%
@@ -1186,9 +1177,9 @@ export default function ShopEngagementPage() {
                                     <span className="font-mono text-xs">
                                       {isBool ? (
                                         criterion.current ? (
-                                          "Yes"
+                                          t("Yes")
                                         ) : (
-                                          "No"
+                                          t("No")
                                         )
                                       ) : cMeta.lowerIsBetter ? (
                                         <>
@@ -1239,19 +1230,19 @@ export default function ShopEngagementPage() {
             <TabsList className="grid grid-cols-4">
               <TabsTrigger value="milestones" className="gap-1">
                 <Trophy className="h-4 w-4" />
-                <span className="hidden sm:inline">Milestones</span>
+                <span className="hidden sm:inline"><T>Milestones</T></span>
               </TabsTrigger>
               <TabsTrigger value="rfq" className="gap-1">
                 <BarChart3 className="h-4 w-4" />
-                <span className="hidden sm:inline">RFQ Funnel</span>
+                <span className="hidden sm:inline"><T>RFQ Funnel</T></span>
               </TabsTrigger>
               <TabsTrigger value="kyc" className="gap-1">
                 <FileCheck className="h-4 w-4" />
-                <span className="hidden sm:inline">KYC</span>
+                <span className="hidden sm:inline"><T>KYC</T></span>
               </TabsTrigger>
               <TabsTrigger value="onboarding" className="gap-1">
                 <CheckCircle className="h-4 w-4" />
-                <span className="hidden sm:inline">Onboarding</span>
+                <span className="hidden sm:inline"><T>Onboarding</T></span>
               </TabsTrigger>
             </TabsList>
 
@@ -1260,7 +1251,7 @@ export default function ShopEngagementPage() {
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
                   <Trophy className="h-4 w-4 inline mr-1" />
-                  {achievedCount} of {totalMilestones} milestones achieved
+                  {achievedCount} <T>of</T> {totalMilestones} <T>milestones achieved</T>
                 </p>
                 <Progress
                   value={
@@ -1349,19 +1340,19 @@ export default function ShopEngagementPage() {
                         icon: Target,
                         color: "text-blue-500",
                         value: rfqFunnel.totalTargeted,
-                        label: "RFQs Received",
+                        label: t("RFQs Received"),
                       },
                       {
                         icon: Eye,
                         color: "text-indigo-500",
                         value: rfqFunnel.viewed,
-                        label: `Viewed (${rfqFunnel.viewRate}%)`,
+                        label: `${t("Viewed")} (${rfqFunnel.viewRate}%)`,
                       },
                       {
                         icon: MessageSquare,
                         color: "text-green-500",
                         value: rfqFunnel.responded,
-                        label: `Responded (${rfqFunnel.responseRate}%)`,
+                        label: `${t("Responded")} (${rfqFunnel.responseRate}%)`,
                       },
                       {
                         icon: Activity,
@@ -1369,13 +1360,13 @@ export default function ShopEngagementPage() {
                         value: rfqFunnel.avgResponseTimeHours
                           ? `${rfqFunnel.avgResponseTimeHours}h`
                           : "N/A",
-                        label: "Avg Response Time",
+                        label: t("Avg Response Time"),
                       },
                       {
                         icon: TrendingUp,
                         color: "text-purple-500",
                         value: `${rfqFunnel.responseRate}%`,
-                        label: "Response Rate",
+                        label: t("Response Rate"),
                       },
                     ].map((stat) => {
                       const StatIcon = stat.icon;
@@ -1398,27 +1389,27 @@ export default function ShopEngagementPage() {
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-sm">
-                        Conversion Funnel
+                        <T>Conversion Funnel</T>
                       </CardTitle>
                       <CardDescription>
-                        From RFQ received to response
+                        <T>From RFQ received to response</T>
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
                         {[
                           {
-                            label: "Targeted",
+                            label: t("Targeted"),
                             value: rfqFunnel.totalTargeted,
                             color: "bg-blue-500",
                           },
                           {
-                            label: "Viewed",
+                            label: t("Viewed"),
                             value: rfqFunnel.viewed,
                             color: "bg-indigo-500",
                           },
                           {
-                            label: "Responded",
+                            label: t("Responded"),
                             value: rfqFunnel.responded,
                             color: "bg-green-500",
                           },
@@ -1452,7 +1443,7 @@ export default function ShopEngagementPage() {
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-sm">
-                          Weekly Breakdown
+                          <T>Weekly Breakdown</T>
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
@@ -1467,13 +1458,13 @@ export default function ShopEngagementPage() {
                               </span>
                               <div className="flex-1 flex items-center gap-2">
                                 <Badge variant="outline">
-                                  {w.targeted} sent
+                                  {w.targeted} <T>sent</T>
                                 </Badge>
                                 <Badge variant="secondary">
-                                  {w.viewed} viewed
+                                  {w.viewed} <T>viewed</T>
                                 </Badge>
                                 <Badge className="bg-green-100 text-green-800">
-                                  {w.responded} responded
+                                  {w.responded} <T>responded</T>
                                 </Badge>
                               </div>
                             </div>
@@ -1487,10 +1478,9 @@ export default function ShopEngagementPage() {
                 <Card>
                   <CardContent className="p-8 text-center">
                     <Target className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-50" />
-                    <p className="text-lg font-medium">No RFQ Data Yet</p>
+                    <p className="text-lg font-medium"><T>No RFQ Data Yet</T></p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      When customers send you RFQ requests, your conversion
-                      funnel data will appear here.
+                      <T>When customers send you RFQ requests, your conversion funnel data will appear here.</T>
                     </p>
                   </CardContent>
                 </Card>
@@ -1504,18 +1494,17 @@ export default function ShopEngagementPage() {
                 <Globe className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
                   <p className="font-medium text-blue-800 dark:text-blue-200">
-                    Your shop country is set to{" "}
+                    <T>Your shop country is set to</T>{" "}
                     <strong>{COUNTRY_NAMES[shopCountry] || shopCountry}</strong>{" "}
-                    — showing {COUNTRY_NAMES[shopCountry] || shopCountry} KYC
-                    requirements.
+                    — <T>showing</T> {COUNTRY_NAMES[shopCountry] || shopCountry} <T>KYC requirements.</T>
                   </p>
                   <p className="text-sm text-blue-700 mt-0.5 dark:text-blue-300">
-                    To change your country preference, go to{" "}
+                    <T>To change your country preference, go to</T>{" "}
                     <Link
                       href="/dashboard/shop/settings?tab=location"
                       className="underline font-medium"
                     >
-                      Shop Settings → Location
+                      <T>Shop Settings → Location</T>
                     </Link>
                     .
                   </p>
@@ -1523,7 +1512,7 @@ export default function ShopEngagementPage() {
                 {kycData?.isVerified && (
                   <Badge className="bg-green-500 shrink-0">
                     <CheckCircle className="h-3 w-3 mr-1" />
-                    Verified
+                    <T>Verified</T>
                   </Badge>
                 )}
               </div>
@@ -1601,19 +1590,19 @@ export default function ShopEngagementPage() {
                             {kycUploading ? (
                               <>
                                 <Loader2 className="h-3 w-3 animate-spin" />
-                                Uploading... {kycUploadProgress}%
+                                <T>Uploading...</T> {kycUploadProgress}%
                               </>
                             ) : (
                               <>
                                 <Upload className="h-3 w-3" />
-                                {docUrl ? "Replace" : "Upload"}
+                                {docUrl ? <T>Replace</T> : <T>Upload</T>}
                               </>
                             )}
                           </Button>
                           {docUrl && (
                             <span className="text-xs text-green-600 flex items-center gap-1 dark:text-green-400">
                               <CheckCircle className="h-3 w-3" />
-                              Document uploaded
+                              <T>Document uploaded</T>
                             </span>
                           )}
                         </div>
@@ -1629,8 +1618,7 @@ export default function ShopEngagementPage() {
                   {/* Save Button */}
                   <div className="flex items-center justify-between pt-4 border-t">
                     <p className="text-xs text-muted-foreground">
-                      Documents are stored securely and reviewed by our
-                      verification team.
+                      <T>Documents are stored securely and reviewed by our verification team.</T>
                     </p>
                     <Button
                       onClick={saveKyc}
@@ -1640,12 +1628,12 @@ export default function ShopEngagementPage() {
                       {kycSaving ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          Saving...
+                          <T>Saving...</T>
                         </>
                       ) : (
                         <>
                           <FileCheck className="h-4 w-4" />
-                          Save KYC Details
+                          <T>Save KYC Details</T>
                         </>
                       )}
                     </Button>
@@ -1656,12 +1644,9 @@ export default function ShopEngagementPage() {
                     <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 dark:bg-amber-950/30 dark:border-amber-800/50">
                       <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
                       <div className="text-xs text-amber-700 dark:text-amber-300">
-                        <p className="font-medium">Verification Pending</p>
+                        <p className="font-medium"><T>Verification Pending</T></p>
                         <p>
-                          Once you submit all required documents, our team will
-                          review and verify your shop. Verified shops get
-                          priority in seller matching and a verified badge on
-                          their profile.
+                          <T>Once you submit all required documents, our team will review and verify your shop. Verified shops get priority in seller matching and a verified badge on their profile.</T>
                         </p>
                       </div>
                     </div>
@@ -1678,10 +1663,10 @@ export default function ShopEngagementPage() {
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between mb-4">
                         <div>
-                          <h2 className="text-lg font-bold">Setup Progress</h2>
+                          <h2 className="text-lg font-bold"><T>Setup Progress</T></h2>
                           <p className="text-sm text-muted-foreground">
-                            {onboarding.completedCount} of{" "}
-                            {onboarding.totalCount} steps completed
+                            {onboarding.completedCount} <T>of</T>{" "}
+                            {onboarding.totalCount} <T>steps completed</T>
                           </p>
                         </div>
                         <div

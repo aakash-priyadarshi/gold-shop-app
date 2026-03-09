@@ -20,6 +20,13 @@ import OrivraaLoader, {
   useMinLoadingTime,
 } from "@/components/ui/OrivraaLoader";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -34,6 +41,11 @@ import { adminApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useT } from "@/providers/translation-provider";
 import {
+  LANGUAGES,
+  usePreferencesStore,
+  type Language,
+} from "@/store/preferences";
+import {
   Activity,
   Award,
   BookOpen,
@@ -46,6 +58,7 @@ import {
   FileEdit,
   FileText,
   FlaskConical,
+  Globe,
   Heart,
   Home,
   LayoutDashboard,
@@ -82,6 +95,27 @@ const ChatPopupWidget = dynamic(
     ),
   { ssr: false },
 );
+
+function LanguageSelector() {
+  const language = usePreferencesStore((s) => s.language);
+  const setLanguage = usePreferencesStore((s) => s.setLanguage);
+
+  return (
+    <Select value={language} onValueChange={(v) => setLanguage(v as Language)}>
+      <SelectTrigger className="w-[110px] h-9 text-xs rounded-lg border-gray-200 dark:border-gray-700">
+        <Globe className="h-3.5 w-3.5 mr-1 text-gray-400" />
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {Object.entries(LANGUAGES).map(([code, info]) => (
+          <SelectItem key={code} value={code} className="text-xs">
+            {info.nativeName}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 interface NavItem {
   label: string;
@@ -621,6 +655,7 @@ function SidebarContent({
                           <Link
                             key={child.href}
                             href={child.href}
+                            scroll={false}
                             onClick={onNavClick}
                             data-active={isChildActive}
                             className={cn(
@@ -656,6 +691,7 @@ function SidebarContent({
               <Link
                 key={item.href}
                 href={item.href}
+                scroll={false}
                 onClick={onNavClick}
                 data-active={isActive}
                 className={cn(
@@ -947,6 +983,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Language Selector */}
+              <LanguageSelector />
+
               {/* Theme Toggle */}
               <AnimatedThemeToggle size={40} />
 

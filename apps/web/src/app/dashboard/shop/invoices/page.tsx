@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { T } from "@/components/ui/T";
 import {
   Table,
   TableBody,
@@ -22,12 +23,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useFeatures } from "@/hooks/useFeatures";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
-import { useT } from "@/providers/translation-provider";
 import { invoicesApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   ArrowRight,
   DollarSign,
@@ -163,7 +163,9 @@ export default function InvoicesListPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold"><T>Invoices</T></h1>
+                <h1 className="text-2xl font-bold">
+                  <T>Invoices</T>
+                </h1>
                 <p className="text-muted-foreground">
                   <T>Manage billing and track payments</T>
                 </p>
@@ -278,22 +280,40 @@ export default function InvoicesListPage() {
                 ) : invoices.length === 0 ? (
                   <div className="text-center py-12">
                     <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-30" />
-                    <h3 className="text-lg font-medium"><T>No invoices yet</T></h3>
+                    <h3 className="text-lg font-medium">
+                      <T>No invoices yet</T>
+                    </h3>
                     <p className="text-muted-foreground">
-                      <T>Create your first invoice to start tracking payments.</T>
+                      <T>
+                        Create your first invoice to start tracking payments.
+                      </T>
                     </p>
                   </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead><T>Invoice #</T></TableHead>
-                        <TableHead><T>Customer</T></TableHead>
-                        <TableHead><T>Total</T></TableHead>
-                        <TableHead><T>Paid</T></TableHead>
-                        <TableHead><T>Balance</T></TableHead>
-                        <TableHead><T>Status</T></TableHead>
-                        <TableHead><T>Date</T></TableHead>
+                        <TableHead>
+                          <T>Invoice #</T>
+                        </TableHead>
+                        <TableHead>
+                          <T>Customer</T>
+                        </TableHead>
+                        <TableHead>
+                          <T>Total</T>
+                        </TableHead>
+                        <TableHead>
+                          <T>Paid</T>
+                        </TableHead>
+                        <TableHead>
+                          <T>Balance</T>
+                        </TableHead>
+                        <TableHead>
+                          <T>Status</T>
+                        </TableHead>
+                        <TableHead>
+                          <T>Date</T>
+                        </TableHead>
                         <TableHead className="w-10"></TableHead>
                       </TableRow>
                     </TableHeader>

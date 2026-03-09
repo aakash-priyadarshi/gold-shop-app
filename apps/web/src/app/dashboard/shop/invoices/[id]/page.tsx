@@ -33,8 +33,8 @@ import {
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
-import { useT } from "@/providers/translation-provider";
 import { invoicesApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   ArrowLeft,
   Ban,
@@ -225,7 +225,9 @@ export default function InvoiceDetailPage() {
         <DashboardLayout>
           <div className="text-center py-12">
             <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-30" />
-            <h2 className="text-xl font-semibold"><T>Invoice Not Found</T></h2>
+            <h2 className="text-xl font-semibold">
+              <T>Invoice Not Found</T>
+            </h2>
             <Button onClick={() => router.back()} className="mt-4">
               <ArrowLeft className="h-4 w-4 mr-2" /> <T>Go Back</T>
             </Button>
@@ -334,7 +336,8 @@ export default function InvoiceDetailPage() {
                       setPaymentDialogOpen(true);
                     }}
                   >
-                    <CreditCard className="h-4 w-4 mr-2" /> <T>Record Payment</T>
+                    <CreditCard className="h-4 w-4 mr-2" />{" "}
+                    <T>Record Payment</T>
                   </Button>
                   <Button
                     variant="destructive"
@@ -353,7 +356,9 @@ export default function InvoiceDetailPage() {
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
-                  <CardTitle className="text-xl"><T>INVOICE</T></CardTitle>
+                  <CardTitle className="text-xl">
+                    <T>INVOICE</T>
+                  </CardTitle>
                   <CardDescription className="font-mono text-base mt-1">
                     {invoice.invoiceNumber}
                   </CardDescription>
@@ -362,14 +367,18 @@ export default function InvoiceDetailPage() {
                   {invoice.issuedAt && (
                     <p>{t(`Issued: ${formatDate(invoice.issuedAt)}`)}</p>
                   )}
-                  {invoice.dueDate && <p>{t(`Due: ${formatDate(invoice.dueDate)}`)}</p>}
+                  {invoice.dueDate && (
+                    <p>{t(`Due: ${formatDate(invoice.dueDate)}`)}</p>
+                  )}
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Customer Info */}
               <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-                <Label className="text-xs text-muted-foreground"><T>Bill To</T></Label>
+                <Label className="text-xs text-muted-foreground">
+                  <T>Bill To</T>
+                </Label>
                 <p className="font-semibold text-lg">{invoice.customerName}</p>
                 {invoice.customerPhone && (
                   <p className="text-sm">{invoice.customerPhone}</p>
@@ -388,10 +397,18 @@ export default function InvoiceDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead><T>Item</T></TableHead>
-                    <TableHead className="text-center"><T>Qty</T></TableHead>
-                    <TableHead className="text-right"><T>Unit Price</T></TableHead>
-                    <TableHead className="text-right"><T>Amount</T></TableHead>
+                    <TableHead>
+                      <T>Item</T>
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <T>Qty</T>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <T>Unit Price</T>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <T>Amount</T>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -428,7 +445,9 @@ export default function InvoiceDetailPage() {
               <div className="flex justify-end">
                 <div className="w-72 space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span><T>Subtotal</T></span>
+                    <span>
+                      <T>Subtotal</T>
+                    </span>
                     <span>{formatCurrency(invoice.subtotal)}</span>
                   </div>
                   {invoice.taxAmount > 0 && (
@@ -442,18 +461,24 @@ export default function InvoiceDetailPage() {
                   )}
                   {invoice.discountAmount > 0 && (
                     <div className="flex justify-between text-sm text-green-600">
-                      <span><T>Discount</T></span>
+                      <span>
+                        <T>Discount</T>
+                      </span>
                       <span>-{formatCurrency(invoice.discountAmount)}</span>
                     </div>
                   )}
                   <Separator />
                   <div className="flex justify-between font-bold text-lg">
-                    <span><T>Total</T></span>
+                    <span>
+                      <T>Total</T>
+                    </span>
                     <span>{formatCurrency(invoice.totalAmount)}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between text-sm text-green-600">
-                    <span><T>Paid</T></span>
+                    <span>
+                      <T>Paid</T>
+                    </span>
                     <span>{formatCurrency(invoice.paidAmount)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg">
@@ -528,7 +553,9 @@ export default function InvoiceDetailPage() {
             <div className="space-y-4 py-4">
               <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 text-sm">
                 <div className="flex justify-between">
-                  <span><T>Total Due</T></span>
+                  <span>
+                    <T>Total Due</T>
+                  </span>
                   <span className="font-bold">
                     {formatCurrency(invoice.balanceDue)}
                   </span>
@@ -536,7 +563,9 @@ export default function InvoiceDetailPage() {
               </div>
               {/* Payment method toggle */}
               <div>
-                <Label className="text-xs mb-1.5 block"><T>Payment Method</T></Label>
+                <Label className="text-xs mb-1.5 block">
+                  <T>Payment Method</T>
+                </Label>
                 <div className="inline-flex h-9 rounded-full border bg-muted p-0.5">
                   <button
                     type="button"
@@ -629,7 +658,9 @@ export default function InvoiceDetailPage() {
                 <T>Void Invoice</T>
               </DialogTitle>
               <DialogDescription>
-                {t(`This will void invoice ${invoice.invoiceNumber}. This action cannot be undone.`)}
+                {t(
+                  `This will void invoice ${invoice.invoiceNumber}. This action cannot be undone.`,
+                )}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

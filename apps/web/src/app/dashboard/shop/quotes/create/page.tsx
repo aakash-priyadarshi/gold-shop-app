@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useImageUpload } from "@/hooks/useImageUpload";
@@ -74,6 +75,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useT } from "@/providers/translation-provider";
 
 const API_URL = getApiUrl();
 
@@ -125,6 +127,7 @@ interface MarketRates {
 export default function CreateShopQuotePage() {
   const router = useRouter();
   const { user } = useAuth();
+  const t = useT();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -322,8 +325,8 @@ export default function CreateShopQuotePage() {
       });
       setShowReturningCustomerAlert(false);
       toast({
-        title: "Customer details auto-filled",
-        description: `Welcome back, ${c.name}!`,
+        title: t("Customer details auto-filled"),
+        description: t("Welcome back") + `, ${c.name}!`,
       });
     }
   };
@@ -335,7 +338,7 @@ export default function CreateShopQuotePage() {
     if (!files?.length) return;
     for (const file of Array.from(files)) {
       if (file.size > 10 * 1024 * 1024) {
-        setError("Each image must be smaller than 10MB");
+        setError(t("Each image must be smaller than 10MB"));
         continue;
       }
       await uploadImageToR2(file);
@@ -454,12 +457,12 @@ export default function CreateShopQuotePage() {
 
   const handleGenerateDesign = async () => {
     if (!formData.jewelleryType) {
-      setError("Please select a jewellery type first");
+      setError(t("Please select a jewellery type first"));
       return;
     }
     const token = localStorage.getItem("accessToken");
     if (!token) {
-      setError("Please log in to generate design previews");
+      setError(t("Please log in to generate design previews"));
       return;
     }
     setGeneratingPreview(true);
@@ -517,8 +520,8 @@ export default function CreateShopQuotePage() {
       setDesignPreviewUrl(result.design.imageUrl);
       setDesignId(result.design.id);
       toast({
-        title: "AI Design Generated",
-        description: "Preview ready! You can regenerate with feedback.",
+        title: t("AI Design Generated"),
+        description: t("Preview ready! You can regenerate with feedback."),
       });
     } catch (err: unknown) {
       setError(
@@ -555,15 +558,15 @@ export default function CreateShopQuotePage() {
       !customerDetails.address ||
       !customerDetails.city
     ) {
-      setError("Please fill in all required customer details");
+      setError(t("Please fill in all required customer details"));
       return;
     }
     if (!/^\d{7,15}$/.test(customerDetails.phone)) {
-      setError("Please enter a valid phone number");
+      setError(t("Please enter a valid phone number"));
       return;
     }
     if (!formData.jewelleryType || !formData.buildMethod) {
-      setError("Please select jewellery type and build method");
+      setError(t("Please select jewellery type and build method"));
       return;
     }
     setLoading(true);
@@ -602,8 +605,8 @@ export default function CreateShopQuotePage() {
         shopNotes: formData.shopNotes || undefined,
       });
       toast({
-        title: "Quote Created",
-        description: `Quote ${response.data.quoteNumber} created for ${customerDetails.name}`,
+        title: t("Quote Created"),
+        description: `${t("Quote")} ${response.data.quoteNumber} ${t("created for")} ${customerDetails.name}`,
       });
       router.push("/dashboard/shop/quotes");
     } catch (err: unknown) {
@@ -632,13 +635,13 @@ export default function CreateShopQuotePage() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Create Walk-in Quote</h1>
+              <h1 className="text-2xl font-bold"><T>Create Walk-in Quote</T></h1>
               <p className="text-muted-foreground">
-                Create a quote for a customer visiting your shop
+                <T>Create a quote for a customer visiting your shop</T>
               </p>
             </div>
             <Badge variant="outline" className="text-sm">
-              Step {step} of 3
+              {t("Step")} {step} {t("of")} 3
             </Badge>
           </div>
 
@@ -669,7 +672,7 @@ export default function CreateShopQuotePage() {
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
+              <AlertTitle><T>Error</T></AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
@@ -693,8 +696,8 @@ export default function CreateShopQuotePage() {
                 }
               >
                 {lookupResult.customer.isRegistered
-                  ? "Registered Customer Found!"
-                  : "Returning Customer Found!"}
+                  ? t("Registered Customer Found!")
+                  : t("Returning Customer Found!")}
               </AlertTitle>
               <AlertDescription
                 className={
@@ -711,7 +714,7 @@ export default function CreateShopQuotePage() {
                         variant="outline"
                         className="ml-2 text-xs border-blue-400 text-blue-700"
                       >
-                        Registered Account
+                        <T>Registered Account</T>
                       </Badge>
                     )}
                     {lookupResult.customer.city
@@ -721,21 +724,21 @@ export default function CreateShopQuotePage() {
                   </span>
                   <div className="flex gap-2">
                     <Button size="sm" onClick={handleAutoFillCustomer}>
-                      <Check className="h-4 w-4 mr-1" /> Yes, auto-fill
+                      <Check className="h-4 w-4 mr-1" /> <T>Yes, auto-fill</T>
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => setShowReturningCustomerAlert(false)}
                     >
-                      No, new customer
+                      <T>No, new customer</T>
                     </Button>
                   </div>
                 </div>
                 {lookupResult.customer.recentOrders &&
                   lookupResult.customer.recentOrders.length > 0 && (
                     <div className="mt-2 pt-2 border-t border-green-200">
-                      <p className="text-xs mb-1">Recent orders:</p>
+                      <p className="text-xs mb-1"><T>Recent orders:</T></p>
                       <div className="flex flex-wrap gap-1">
                         {lookupResult.customer.recentOrders
                           .slice(0, 3)
@@ -760,17 +763,16 @@ export default function CreateShopQuotePage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" /> Customer Details
+                  <User className="h-5 w-5" /> <T>Customer Details</T>
                 </CardTitle>
                 <CardDescription>
-                  Enter the walk-in customer&apos;s information. Phone numbers
-                  identify returning customers.
+                  <T>Enter the walk-in customer's information. Phone numbers identify returning customers.</T>
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <Label>Country Code *</Label>
+                    <Label><T>Country Code *</T></Label>
                     <Select
                       value={customerDetails.phoneCountryCode}
                       onValueChange={(value) => {
@@ -800,7 +802,7 @@ export default function CreateShopQuotePage() {
                     </Select>
                   </div>
                   <div className="col-span-2">
-                    <Label>Phone Number *</Label>
+                    <Label><T>Phone Number *</T></Label>
                     <div className="relative">
                       <Input
                         placeholder="9876543210"
@@ -821,14 +823,14 @@ export default function CreateShopQuotePage() {
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Enter phone to check for returning customer
+                      <T>Enter phone to check for returning customer</T>
                     </p>
                   </div>
                 </div>
                 <div>
-                  <Label>Full Name *</Label>
+                  <Label><T>Full Name *</T></Label>
                   <Input
-                    placeholder="Enter customer's full name"
+                    placeholder={t("Enter customer's full name")}
                     value={customerDetails.name}
                     onChange={(e) =>
                       setCustomerDetails((prev) => ({
@@ -839,7 +841,7 @@ export default function CreateShopQuotePage() {
                   />
                 </div>
                 <div>
-                  <Label>Email (Optional)</Label>
+                  <Label><T>Email (Optional)</T></Label>
                   <Input
                     type="email"
                     placeholder="customer@example.com"
@@ -853,9 +855,9 @@ export default function CreateShopQuotePage() {
                   />
                 </div>
                 <div>
-                  <Label>Address *</Label>
+                  <Label><T>Address *</T></Label>
                   <Textarea
-                    placeholder="Enter full address"
+                    placeholder={t("Enter full address")}
                     value={customerDetails.address}
                     onChange={(e) =>
                       setCustomerDetails((prev) => ({
@@ -868,9 +870,9 @@ export default function CreateShopQuotePage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>City *</Label>
+                    <Label><T>City *</T></Label>
                     <Input
-                      placeholder="Mumbai"
+                      placeholder={t("Mumbai")}
                       value={customerDetails.city}
                       onChange={(e) =>
                         setCustomerDetails((prev) => ({
@@ -881,7 +883,7 @@ export default function CreateShopQuotePage() {
                     />
                   </div>
                   <div>
-                    <Label>Country</Label>
+                    <Label><T>Country</T></Label>
                     <Select
                       value={customerDetails.country}
                       onValueChange={(value) =>
@@ -934,16 +936,15 @@ export default function CreateShopQuotePage() {
               <div className="lg:col-span-2 space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Jewellery Details</CardTitle>
+                    <CardTitle><T>Jewellery Details</T></CardTitle>
                     <CardDescription>
-                      Configure the order. Live pricing updates as you change
-                      options.
+                      <T>Configure the order. Live pricing updates as you change options.</T>
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {/* Jewellery Type */}
                     <div>
-                      <Label>Jewellery Type *</Label>
+                      <Label><T>Jewellery Type *</T></Label>
                       <Select
                         value={formData.jewelleryType}
                         onValueChange={(value) =>
@@ -1007,7 +1008,7 @@ export default function CreateShopQuotePage() {
 
                     {/* Build Method */}
                     <div>
-                      <Label>Build Method *</Label>
+                      <Label><T>Build Method *</T></Label>
                       <div className="grid grid-cols-2 gap-2 mt-2">
                         {BUILD_METHODS.map((method) => (
                           <button
@@ -1057,7 +1058,7 @@ export default function CreateShopQuotePage() {
                     {/* Method A: Metal Type */}
                     {formData.buildMethod === "METHOD_A" && (
                       <div>
-                        <Label>Metal Type</Label>
+                        <Label><T>Metal Type</T></Label>
                         <Select
                           value={formData.metalType}
                           onValueChange={(value) =>
@@ -1098,7 +1099,7 @@ export default function CreateShopQuotePage() {
                     {formData.buildMethod === "METHOD_B" && (
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <Label>Base Metal</Label>
+                          <Label><T>Base Metal</T></Label>
                           <Select
                             value={formData.alloyConfig.baseMetal}
                             onValueChange={(value) =>
@@ -1121,7 +1122,7 @@ export default function CreateShopQuotePage() {
                           </Select>
                         </div>
                         <div>
-                          <Label>Karat</Label>
+                          <Label><T>Karat</T></Label>
                           <Select
                             value={formData.alloyConfig.karat || ""}
                             onValueChange={(value) =>
@@ -1152,7 +1153,7 @@ export default function CreateShopQuotePage() {
                     {formData.buildMethod === "METHOD_C" && (
                       <div className="grid grid-cols-3 gap-3">
                         <div>
-                          <Label>Base Metal</Label>
+                          <Label><T>Base Metal</T></Label>
                           <Select
                             value={formData.methodCConfig.baseMetal}
                             onValueChange={(value) =>
@@ -1178,7 +1179,7 @@ export default function CreateShopQuotePage() {
                           </Select>
                         </div>
                         <div>
-                          <Label>Plating</Label>
+                          <Label><T>Plating</T></Label>
                           <Select
                             value={formData.methodCConfig.platingType}
                             onValueChange={(value) =>
@@ -1211,7 +1212,7 @@ export default function CreateShopQuotePage() {
                           </Select>
                         </div>
                         <div>
-                          <Label>Tier</Label>
+                          <Label><T>Tier</T></Label>
                           <Select
                             value={formData.methodCConfig.platingTier}
                             onValueChange={(value) =>
@@ -1241,7 +1242,7 @@ export default function CreateShopQuotePage() {
                     {formData.buildMethod === "METHOD_D" && (
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <Label>Purity</Label>
+                          <Label><T>Purity</T></Label>
                           <Select
                             value={formData.methodDConfig.purity}
                             onValueChange={(value) =>
@@ -1265,7 +1266,7 @@ export default function CreateShopQuotePage() {
                           </Select>
                         </div>
                         <div>
-                          <Label>Chain/Style</Label>
+                          <Label><T>Chain/Style</T></Label>
                           <Input
                             placeholder="e.g., Rope, Box"
                             value={formData.methodDConfig.chainStyle}
@@ -1292,8 +1293,8 @@ export default function CreateShopQuotePage() {
                           targetTotalWeightG: weightGrams.toFixed(3),
                         }));
                         toast({
-                          title: "Weight Captured",
-                          description: `${weightGrams.toFixed(3)}g captured from scale`,
+                          title: t("Weight Captured"),
+                          description: `${weightGrams.toFixed(3)}g ${t("captured from scale")}`,
                         });
                       }}
                     />
@@ -1301,7 +1302,7 @@ export default function CreateShopQuotePage() {
                     {/* Weight */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>Target Total Weight (grams)</Label>
+                        <Label><T>Target Total Weight (grams)</T></Label>
                         <Input
                           type="number"
                           placeholder="e.g., 10.5"
@@ -1316,7 +1317,7 @@ export default function CreateShopQuotePage() {
                       </div>
                       {formData.buildMethod === "METHOD_D" && (
                         <div>
-                          <Label>Target Gold Weight (grams)</Label>
+                          <Label><T>Target Gold Weight (grams)</T></Label>
                           <Input
                             type="number"
                             placeholder="e.g., 8.0"
@@ -1334,7 +1335,7 @@ export default function CreateShopQuotePage() {
 
                     {/* Surface Finish */}
                     <div>
-                      <Label>Surface Finish</Label>
+                      <Label><T>Surface Finish</T></Label>
                       <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
                         {Object.entries(SURFACE_FINISH_IMAGES)
                           .slice(0, 8)
@@ -1369,7 +1370,7 @@ export default function CreateShopQuotePage() {
 
                     {/* Gemstones */}
                     <div>
-                      <Label>Gemstones</Label>
+                      <Label><T>Gemstones</T></Label>
                       <div className="flex items-center gap-3 mt-2 mb-3">
                         <Badge
                           variant={
@@ -1383,7 +1384,7 @@ export default function CreateShopQuotePage() {
                             }))
                           }
                         >
-                          Yes
+                          <T>Yes</T>
                         </Badge>
                         <Badge
                           variant={
@@ -1398,7 +1399,7 @@ export default function CreateShopQuotePage() {
                             }))
                           }
                         >
-                          No
+                          <T>No</T>
                         </Badge>
                       </div>
                       {formData.hasGemstones && (
@@ -1419,9 +1420,9 @@ export default function CreateShopQuotePage() {
 
                     {/* Description for the piece */}
                     <div>
-                      <Label>Design Description</Label>
+                      <Label><T>Design Description</T></Label>
                       <Textarea
-                        placeholder="The more detailed you describe, the better the AI preview & pricing. e.g. 'Heavy 22K gold bridal choker necklace with temple motifs, matte antique finish, set with rubies and emeralds in kundan style, around 45g'."
+                        placeholder={t("The more detailed you describe, the better the AI preview & pricing. e.g. 'Heavy 22K gold bridal choker necklace with temple motifs, matte antique finish, set with rubies and emeralds in kundan style, around 45g'.")}
                         value={formData.description}
                         onChange={(e) =>
                           setFormData((prev) => ({
@@ -1437,13 +1438,13 @@ export default function CreateShopQuotePage() {
                     <div className="border rounded-lg p-4 space-y-3 bg-gradient-to-br from-purple-50 to-indigo-50">
                       <div className="flex items-center justify-between">
                         <Label className="flex items-center gap-2 text-purple-800">
-                          <Sparkles className="h-4 w-4" /> AI Design Preview
+                          <Sparkles className="h-4 w-4" /> <T>AI Design Preview</T>
                         </Label>
                         <Badge
                           variant="outline"
                           className="text-xs text-purple-600"
                         >
-                          Powered by AI
+                          <T>Powered by AI</T>
                         </Badge>
                       </div>
                       {designPreviewUrl ? (
@@ -1466,7 +1467,7 @@ export default function CreateShopQuotePage() {
                           </div>
                           <div className="flex gap-2">
                             <Input
-                              placeholder="Want changes? Enter feedback..."
+                              placeholder={t("Want changes? Enter feedback...")}
                               value={regenerationFeedback}
                               onChange={(e) =>
                                 setRegenerationFeedback(e.target.value)
@@ -1498,17 +1499,17 @@ export default function CreateShopQuotePage() {
                             {generatingPreview ? (
                               <>
                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Generating...
+                                <T>Generating...</T>
                               </>
                             ) : (
                               <>
                                 <ImageIcon className="h-4 w-4 mr-2" />
-                                Generate AI Design Preview
+                                <T>Generate AI Design Preview</T>
                               </>
                             )}
                           </Button>
                           <p className="text-xs text-muted-foreground mt-2">
-                            Show the customer an AI preview of the final piece
+                            <T>Show the customer an AI preview of the final piece</T>
                           </p>
                         </div>
                       )}
@@ -1516,7 +1517,7 @@ export default function CreateShopQuotePage() {
 
                     {/* Reference Images */}
                     <div>
-                      <Label>Reference Images</Label>
+                      <Label><T>Reference Images</T></Label>
                       <div className="border-2 border-dashed rounded-lg p-4">
                         <input
                           ref={fileInputRef}
@@ -1555,12 +1556,12 @@ export default function CreateShopQuotePage() {
                           {isUploadingImage ? (
                             <>
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Uploading... {uploadProgress}%
+                              <T>Uploading...</T> {uploadProgress}%
                             </>
                           ) : (
                             <>
                               <Upload className="h-4 w-4 mr-2" />
-                              Add Reference Images
+                              <T>Add Reference Images</T>
                             </>
                           )}
                         </Button>
@@ -1569,9 +1570,9 @@ export default function CreateShopQuotePage() {
 
                     {/* Special Instructions */}
                     <div>
-                      <Label>Special Instructions</Label>
+                      <Label><T>Special Instructions</T></Label>
                       <Textarea
-                        placeholder="Any special requirements or notes..."
+                        placeholder={t("Any special requirements or notes...")}
                         value={formData.specialInstructions}
                         onChange={(e) =>
                           setFormData((prev) => ({
@@ -1606,9 +1607,9 @@ export default function CreateShopQuotePage() {
               <div className="lg:col-span-2">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Pricing & Quote</CardTitle>
+                    <CardTitle><T>Pricing & Quote</T></CardTitle>
                     <CardDescription>
-                      Review the live estimate and set final pricing.
+                      <T>Review the live estimate and set final pricing.</T>
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -1616,7 +1617,7 @@ export default function CreateShopQuotePage() {
                     {autoEstimate ? (
                       <div className="space-y-2">
                         <p className="text-sm font-medium text-muted-foreground mb-2">
-                          Calculated from your selections & live market rates
+                          <T>Calculated from your selections & live market rates</T>
                         </p>
 
                         {autoEstimate.lineItems.map((item, idx) => (
@@ -1636,20 +1637,19 @@ export default function CreateShopQuotePage() {
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground">
-                        Select metal, weight, and build method in Step 2 to see
-                        auto-calculated pricing.
+                        <T>Select metal, weight, and build method in Step 2 to see auto-calculated pricing.</T>
                       </p>
                     )}
 
                     {/* Manual Override Section */}
                     <details className="group">
                       <summary className="cursor-pointer text-sm font-medium text-amber-700 hover:text-amber-800">
-                        Override individual costs manually
+                        <T>Override individual costs manually</T>
                       </summary>
                       <div className="grid grid-cols-2 gap-4 mt-3">
                         <div>
                           <Label>
-                            Metal Cost ({currencySymbol})
+                            <T>Metal Cost</T> ({currencySymbol})
                             {autoEstimate && (
                               <span className="text-xs text-muted-foreground ml-1">
                                 Auto:{" "}
@@ -1677,7 +1677,7 @@ export default function CreateShopQuotePage() {
                         </div>
                         <div>
                           <Label>
-                            Making Charge ({currencySymbol})
+                            <T>Making Charge</T> ({currencySymbol})
                             {autoEstimate && (
                               <span className="text-xs text-muted-foreground ml-1">
                                 Auto:{" "}
@@ -1705,7 +1705,7 @@ export default function CreateShopQuotePage() {
                         </div>
                         <div>
                           <Label>
-                            Gemstone Cost ({currencySymbol})
+                            <T>Gemstone Cost</T> ({currencySymbol})
                             {autoEstimate && (
                               <span className="text-xs text-muted-foreground ml-1">
                                 Auto:{" "}
@@ -1733,7 +1733,7 @@ export default function CreateShopQuotePage() {
                         </div>
                         <div>
                           <Label>
-                            Finish Cost ({currencySymbol})
+                            <T>Finish Cost</T> ({currencySymbol})
                             {autoEstimate && (
                               <span className="text-xs text-muted-foreground ml-1">
                                 Auto:{" "}
@@ -1763,7 +1763,7 @@ export default function CreateShopQuotePage() {
                     </details>
                     <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-4 space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span>Subtotal</span>
+                        <span><T>Subtotal</T></span>
                         <span>
                           {currencySymbol} {subtotal.toLocaleString()}
                         </span>
@@ -1775,14 +1775,14 @@ export default function CreateShopQuotePage() {
                         </span>
                       </div>
                       <div className="flex justify-between font-bold text-lg border-t pt-2">
-                        <span>Total</span>
+                        <span><T>Total</T></span>
                         <span className="text-amber-600">
                           {currencySymbol} {total.toLocaleString()}
                         </span>
                       </div>
                     </div>
                     <div>
-                      <Label>Estimated Completion (days)</Label>
+                      <Label><T>Estimated Completion (days)</T></Label>
                       <Input
                         type="number"
                         placeholder="14"
@@ -1796,9 +1796,9 @@ export default function CreateShopQuotePage() {
                       />
                     </div>
                     <div>
-                      <Label>Internal Notes</Label>
+                      <Label><T>Internal Notes</T></Label>
                       <Textarea
-                        placeholder="Internal notes..."
+                        placeholder={t("Internal notes...")}
                         value={formData.shopNotes}
                         onChange={(e) =>
                           setFormData((prev) => ({
@@ -1811,9 +1811,9 @@ export default function CreateShopQuotePage() {
                     </div>
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Payment at Shop</AlertTitle>
+                      <AlertTitle><T>Payment at Shop</T></AlertTitle>
                       <AlertDescription>
-                        Walk-in order. Payment collected at your shop.
+                        <T>Walk-in order. Payment collected at your shop.</T>
                       </AlertDescription>
                     </Alert>
                   </CardContent>
@@ -1832,8 +1832,7 @@ export default function CreateShopQuotePage() {
                   <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm flex items-center gap-2">
-                        <Sparkles className="h-4 w-4 text-purple-500" /> AI
-                        Preview
+                        <Sparkles className="h-4 w-4 text-purple-500" /> <T>AI Preview</T>
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -1856,7 +1855,7 @@ export default function CreateShopQuotePage() {
               onClick={() => (step > 1 ? setStep(step - 1) : router.back())}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              {step === 1 ? "Cancel" : "Back"}
+              {step === 1 ? t("Cancel") : t("Back")}
             </Button>
             {step < 3 ? (
               <Button
@@ -1866,7 +1865,7 @@ export default function CreateShopQuotePage() {
                   (step === 2 && !jewelleryDetailsComplete)
                 }
               >
-                Next
+                <T>Next</T>
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             ) : (
@@ -1878,12 +1877,12 @@ export default function CreateShopQuotePage() {
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Creating...
+                    <T>Creating...</T>
                   </>
                 ) : (
                   <>
                     <Check className="h-4 w-4 mr-2" />
-                    Create Quote
+                    <T>Create Quote</T>
                   </>
                 )}
               </Button>
@@ -1894,28 +1893,28 @@ export default function CreateShopQuotePage() {
           {step === 3 && customerDetailsComplete && (
             <Card className="bg-muted/50">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Quote Summary</CardTitle>
+                <CardTitle className="text-sm"><T>Quote Summary</T></CardTitle>
               </CardHeader>
               <CardContent className="text-sm space-y-1">
                 <p>
-                  <strong>Customer:</strong> {customerDetails.name}
+                  <strong><T>Customer:</T></strong> {customerDetails.name}
                 </p>
                 <p>
-                  <strong>Phone:</strong> {customerDetails.phoneCountryCode}{" "}
+                  <strong><T>Phone:</T></strong> {customerDetails.phoneCountryCode}{" "}
                   {customerDetails.phone}
                 </p>
                 <p>
-                  <strong>Jewellery:</strong>{" "}
+                  <strong><T>Jewellery:</T></strong>{" "}
                   {getJewelleryTypeLabel(formData.jewelleryType)}
                 </p>
                 <p>
-                  <strong>Method:</strong>{" "}
+                  <strong><T>Method:</T></strong>{" "}
                   {getBuildMethodInfo(formData.buildMethod)?.shortLabel ||
                     formData.buildMethod}
                 </p>
                 {formData.targetTotalWeightG && (
                   <p>
-                    <strong>Weight:</strong> {formData.targetTotalWeightG}g
+                    <strong><T>Weight:</T></strong> {formData.targetTotalWeightG}g
                   </p>
                 )}
               </CardContent>

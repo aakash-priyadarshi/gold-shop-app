@@ -2,8 +2,6 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,12 +22,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { T } from "@/components/ui/T";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { authApi, sellerPerformanceApi, shopsApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import { getCitiesForCountry, getStatesForCountry } from "@gold-shop/shared";
 import {
   AlertTriangle,
@@ -382,7 +382,9 @@ export default function ShopSettingsPage() {
         <DashboardLayout>
           <div className="text-center py-12">
             <Settings className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <h2 className="text-xl font-semibold"><T>Settings Not Found</T></h2>
+            <h2 className="text-xl font-semibold">
+              <T>Settings Not Found</T>
+            </h2>
             <p className="text-muted-foreground">
               <T>Could not load shop settings.</T>
             </p>
@@ -402,7 +404,9 @@ export default function ShopSettingsPage() {
           {/* Header */}
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <h1 className="text-2xl font-bold"><T>Shop Settings</T></h1>
+              <h1 className="text-2xl font-bold">
+                <T>Shop Settings</T>
+              </h1>
               <p className="text-muted-foreground">
                 <T>Manage your shop profile and preferences</T>
               </p>
@@ -413,7 +417,9 @@ export default function ShopSettingsPage() {
                   <T>Verified</T>
                 </Badge>
               ) : (
-                <Badge variant="secondary"><T>Pending Verification</T></Badge>
+                <Badge variant="secondary">
+                  <T>Pending Verification</T>
+                </Badge>
               )}
               <Button onClick={saveSettings} disabled={isSaving}>
                 {isSaving ? (
@@ -436,9 +442,13 @@ export default function ShopSettingsPage() {
             <div className="flex items-start gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200">
               <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="font-medium"><T>Complete your shop address</T></p>
+                <p className="font-medium">
+                  <T>Complete your shop address</T>
+                </p>
                 <p className="text-sm mt-1">
-                  {t(`Your shop address (country, state, city) is required for customers to find you in seller matching. Go to the Location tab to set your address.`)}
+                  {t(
+                    `Your shop address (country, state, city) is required for customers to find you in seller matching. Go to the Location tab to set your address.`,
+                  )}
                 </p>
               </div>
             </div>
@@ -446,10 +456,18 @@ export default function ShopSettingsPage() {
 
           <Tabs defaultValue="profile" className="space-y-4">
             <TabsList className="flex-wrap h-auto">
-              <TabsTrigger value="profile"><T>Profile</T></TabsTrigger>
-              <TabsTrigger value="location"><T>Location</T></TabsTrigger>
-              <TabsTrigger value="preferences"><T>Preferences</T></TabsTrigger>
-              <TabsTrigger value="payments"><T>Payment Methods</T></TabsTrigger>
+              <TabsTrigger value="profile">
+                <T>Profile</T>
+              </TabsTrigger>
+              <TabsTrigger value="location">
+                <T>Location</T>
+              </TabsTrigger>
+              <TabsTrigger value="preferences">
+                <T>Preferences</T>
+              </TabsTrigger>
+              <TabsTrigger value="payments">
+                <T>Payment Methods</T>
+              </TabsTrigger>
             </TabsList>
 
             {/* Profile Tab */}
@@ -467,7 +485,9 @@ export default function ShopSettingsPage() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="shopName"><T>Shop Name (English) *</T></Label>
+                      <Label htmlFor="shopName">
+                        <T>Shop Name (English) *</T>
+                      </Label>
                       <Input
                         id="shopName"
                         value={shopData.shopName || ""}
@@ -478,7 +498,9 @@ export default function ShopSettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="shopNameNe"><T>Shop Name (नेपाली)</T></Label>
+                      <Label htmlFor="shopNameNe">
+                        <T>Shop Name (नेपाली)</T>
+                      </Label>
                       <Input
                         id="shopNameNe"
                         value={shopData.shopNameNe || ""}
@@ -490,7 +512,9 @@ export default function ShopSettingsPage() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="description"><T>Description</T></Label>
+                    <Label htmlFor="description">
+                      <T>Description</T>
+                    </Label>
                     <Textarea
                       id="description"
                       value={shopData.description || ""}
@@ -498,7 +522,9 @@ export default function ShopSettingsPage() {
                         updateShopData({ description: e.target.value })
                       }
                       rows={4}
-                      placeholder={t("Tell customers about your shop, specialties, and history...")}
+                      placeholder={t(
+                        "Tell customers about your shop, specialties, and history...",
+                      )}
                     />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -558,7 +584,9 @@ export default function ShopSettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="whatsapp"><T>WhatsApp Number</T></Label>
+                      <Label htmlFor="whatsapp">
+                        <T>WhatsApp Number</T>
+                      </Label>
                       <Input
                         id="whatsapp"
                         value={shopData.whatsappNumber || ""}
@@ -588,7 +616,9 @@ export default function ShopSettingsPage() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="country"><T>Country *</T></Label>
+                      <Label htmlFor="country">
+                        <T>Country *</T>
+                      </Label>
                       <Select
                         value={shopData.country || "NP"}
                         onValueChange={(value) =>
@@ -611,7 +641,9 @@ export default function ShopSettingsPage() {
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="state"><T>State/Province *</T></Label>
+                      <Label htmlFor="state">
+                        <T>State/Province *</T>
+                      </Label>
                       {getStatesForCountry(shopData.country || "NP").length >
                       0 ? (
                         <Select
@@ -647,7 +679,9 @@ export default function ShopSettingsPage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="city"><T>City *</T></Label>
+                      <Label htmlFor="city">
+                        <T>City *</T>
+                      </Label>
                       {getCitiesForCountry(
                         shopData.country || "NP",
                         shopData.state || undefined,
@@ -698,7 +732,9 @@ export default function ShopSettingsPage() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="address"><T>Full Address *</T></Label>
+                    <Label htmlFor="address">
+                      <T>Full Address *</T>
+                    </Label>
                     <Textarea
                       id="address"
                       value={shopData.address || ""}
@@ -728,7 +764,9 @@ export default function ShopSettingsPage() {
                 <CardContent className="space-y-6">
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label><T>Shop Active</T></Label>
+                      <Label>
+                        <T>Shop Active</T>
+                      </Label>
                       <p className="text-sm text-muted-foreground">
                         <T>Make your shop visible to customers</T>
                       </p>
@@ -749,7 +787,11 @@ export default function ShopSettingsPage() {
                     <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 rounded-lg p-3 flex gap-2">
                       <Info className="h-5 w-5 text-blue-500 flex-shrink-0" />
                       <p className="text-sm text-blue-700 dark:text-blue-300">
-                        <T>Your country determines market rates. Currency is for display purposes - all prices are stored in your market's base currency and converted automatically.</T>
+                        <T>
+                          Your country determines market rates. Currency is for
+                          display purposes - all prices are stored in your
+                          market's base currency and converted automatically.
+                        </T>
                       </p>
                     </div>
                   </div>
@@ -799,8 +841,12 @@ export default function ShopSettingsPage() {
                                       {currentTier === "ELITE"
                                         ? t("No cap on making charge!")
                                         : cap != null
-                                          ? t(`Making charge cap: up to ${cap}%`)
-                                          : t("Complete milestones to unlock higher tiers")}
+                                          ? t(
+                                              `Making charge cap: up to ${cap}%`,
+                                            )
+                                          : t(
+                                              "Complete milestones to unlock higher tiers",
+                                            )}
                                     </p>
                                   </div>
                                 </div>
@@ -822,7 +868,9 @@ export default function ShopSettingsPage() {
                     ) : (
                       <div className="bg-gray-50 dark:bg-gray-800/50 border rounded-lg p-3">
                         <p className="text-sm text-muted-foreground">
-                          {t("Tier information will appear once your shop has some activity.")}{" "}
+                          {t(
+                            "Tier information will appear once your shop has some activity.",
+                          )}{" "}
                           <a
                             href="/dashboard/shop/engagement"
                             className="underline font-medium"
@@ -866,27 +914,40 @@ export default function ShopSettingsPage() {
                             <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
                             <div className="text-xs text-red-700 dark:text-red-300">
                               <p className="font-medium">
-                                {t(`Exceeds your ${TIER_META[tierDashboard.shop.sellerTier]?.label || "Standard"} tier cap of ${tierDashboard.shop.makingChargeCap}%`)}
+                                {t(
+                                  `Exceeds your ${TIER_META[tierDashboard.shop.sellerTier]?.label || "Standard"} tier cap of ${tierDashboard.shop.makingChargeCap}%`,
+                                )}
                               </p>
                               <p>
                                 {tierDashboard.nextTier
-                                  ? t(`Upgrade to ${TIER_META[tierDashboard.nextTier]?.label} tier to increase your cap. Your offer will be rejected if making charge exceeds ${tierDashboard.shop.makingChargeCap}%.`)
-                                  : t(`Your offers will be rejected if making charge exceeds ${tierDashboard.shop.makingChargeCap}%.`)}
+                                  ? t(
+                                      `Upgrade to ${TIER_META[tierDashboard.nextTier]?.label} tier to increase your cap. Your offer will be rejected if making charge exceeds ${tierDashboard.shop.makingChargeCap}%.`,
+                                    )
+                                  : t(
+                                      `Your offers will be rejected if making charge exceeds ${tierDashboard.shop.makingChargeCap}%.`,
+                                    )}
                               </p>
                             </div>
                           </div>
                         ) : tierDashboard?.shop?.makingChargeCap != null ? (
                           <p className="text-xs text-muted-foreground">
-                            {t(`Your ${TIER_META[tierDashboard.shop.sellerTier]?.label || "Standard"} tier allows up to ${tierDashboard.shop.makingChargeCap}% making charge`)}
+                            {t(
+                              `Your ${TIER_META[tierDashboard.shop.sellerTier]?.label || "Standard"} tier allows up to ${tierDashboard.shop.makingChargeCap}% making charge`,
+                            )}
                           </p>
                         ) : (
                           <p className="text-xs text-muted-foreground">
-                            <T>Applied to all materials if not specified individually</T>
+                            <T>
+                              Applied to all materials if not specified
+                              individually
+                            </T>
                           </p>
                         )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="minOrder"><T>Minimum Order Value</T></Label>
+                        <Label htmlFor="minOrder">
+                          <T>Minimum Order Value</T>
+                        </Label>
                         <Input
                           id="minOrder"
                           type="number"
@@ -926,7 +987,9 @@ export default function ShopSettingsPage() {
                         <T>Cash on Delivery / Pay at Shop</T>
                       </Label>
                       <p className="text-sm text-muted-foreground">
-                        <T>Allow customers to pay when they collect their order</T>
+                        <T>
+                          Allow customers to pay when they collect their order
+                        </T>
                       </p>
                     </div>
                     <Switch
@@ -939,7 +1002,9 @@ export default function ShopSettingsPage() {
 
                   {shopData.codEnabled && (
                     <div className="ml-6 space-y-2">
-                      <Label htmlFor="codMax"><T>Maximum COD Value</T></Label>
+                      <Label htmlFor="codMax">
+                        <T>Maximum COD Value</T>
+                      </Label>
                       <Input
                         id="codMax"
                         type="number"
@@ -968,7 +1033,9 @@ export default function ShopSettingsPage() {
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="bankName"><T>Bank Name</T></Label>
+                        <Label htmlFor="bankName">
+                          <T>Bank Name</T>
+                        </Label>
                         <Input
                           id="bankName"
                           value={shopData.bankAccountDetails?.bankName || ""}
@@ -979,7 +1046,9 @@ export default function ShopSettingsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="branchName"><T>Branch Name</T></Label>
+                        <Label htmlFor="branchName">
+                          <T>Branch Name</T>
+                        </Label>
                         <Input
                           id="branchName"
                           value={shopData.bankAccountDetails?.branchName || ""}
@@ -990,7 +1059,9 @@ export default function ShopSettingsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="accountName"><T>Account Holder Name</T></Label>
+                        <Label htmlFor="accountName">
+                          <T>Account Holder Name</T>
+                        </Label>
                         <Input
                           id="accountName"
                           value={shopData.bankAccountDetails?.accountName || ""}
@@ -1001,7 +1072,9 @@ export default function ShopSettingsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="accountNumber"><T>Account Number</T></Label>
+                        <Label htmlFor="accountNumber">
+                          <T>Account Number</T>
+                        </Label>
                         <Input
                           id="accountNumber"
                           value={
@@ -1015,7 +1088,9 @@ export default function ShopSettingsPage() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="swiftCode">
-                          {t(`${countryPlaceholders.swiftLabel} (for international)`)}
+                          {t(
+                            `${countryPlaceholders.swiftLabel} (for international)`,
+                          )}
                         </Label>
                         <Input
                           id="swiftCode"
@@ -1035,7 +1110,12 @@ export default function ShopSettingsPage() {
                         <T>Online Payments (Coming Soon)</T>
                       </h4>
                       <p className="text-sm text-amber-700 dark:text-amber-300">
-                        <T>Stripe integration for accepting credit/debit cards and international payments will be available soon. You'll be able to receive payments directly to your connected Stripe account.</T>
+                        <T>
+                          Stripe integration for accepting credit/debit cards
+                          and international payments will be available soon.
+                          You'll be able to receive payments directly to your
+                          connected Stripe account.
+                        </T>
                       </p>
                     </div>
                   </div>

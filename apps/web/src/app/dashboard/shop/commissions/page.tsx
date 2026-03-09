@@ -5,7 +5,6 @@ import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { ShopCommissionStatus } from "@/components/shop/ShopCommissionStatus";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { T } from "@/components/ui/T";
 import {
   Card,
   CardContent,
@@ -13,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { T } from "@/components/ui/T";
 import {
   Table,
   TableBody,
@@ -23,8 +23,8 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
-import { useT } from "@/providers/translation-provider";
 import api from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import { format, formatDistanceToNow } from "date-fns";
 import {
   AlertTriangle,
@@ -145,7 +145,9 @@ export default function ShopCommissionsPage() {
           {/* Commissions Table */}
           <Card>
             <CardHeader>
-              <CardTitle><T>Commission History</T></CardTitle>
+              <CardTitle>
+                <T>Commission History</T>
+              </CardTitle>
               <CardDescription>
                 <T>Your commission records for all paid-at-shop orders</T>
               </CardDescription>
@@ -158,21 +160,38 @@ export default function ShopCommissionsPage() {
               ) : commissions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
                   <DollarSign className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                  <h3 className="text-lg font-medium"><T>No commission records</T></h3>
+                  <h3 className="text-lg font-medium">
+                    <T>No commission records</T>
+                  </h3>
                   <p className="text-sm text-muted-foreground">
-                    <T>Commission entries will appear when customers pay at your shop</T>
+                    <T>
+                      Commission entries will appear when customers pay at your
+                      shop
+                    </T>
                   </p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead><T>Order</T></TableHead>
-                      <TableHead><T>Order Total</T></TableHead>
-                      <TableHead><T>Commission</T></TableHead>
-                      <TableHead><T>Status</T></TableHead>
-                      <TableHead><T>Due Date</T></TableHead>
-                      <TableHead className="text-right"><T>Action</T></TableHead>
+                      <TableHead>
+                        <T>Order</T>
+                      </TableHead>
+                      <TableHead>
+                        <T>Order Total</T>
+                      </TableHead>
+                      <TableHead>
+                        <T>Commission</T>
+                      </TableHead>
+                      <TableHead>
+                        <T>Status</T>
+                      </TableHead>
+                      <TableHead>
+                        <T>Due Date</T>
+                      </TableHead>
+                      <TableHead className="text-right">
+                        <T>Action</T>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -264,7 +283,9 @@ export default function ShopCommissionsPage() {
           {/* Info Card */}
           <Card>
             <CardHeader>
-              <CardTitle><T>Commission Policy</T></CardTitle>
+              <CardTitle>
+                <T>Commission Policy</T>
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-3">
@@ -291,10 +312,24 @@ export default function ShopCommissionsPage() {
               </div>
               <div className="text-sm text-muted-foreground">
                 <p className="mb-2">
-                  <strong><T>How it works:</T></strong> <T>When a customer pays at your shop, a 1% commission is recorded. You have 21 days to settle this commission with the platform.</T>
+                  <strong>
+                    <T>How it works:</T>
+                  </strong>{" "}
+                  <T>
+                    When a customer pays at your shop, a 1% commission is
+                    recorded. You have 21 days to settle this commission with
+                    the platform.
+                  </T>
                 </p>
                 <p>
-                  <strong><T>Important:</T></strong> <T>Failure to settle commissions within 21 days will result in your shop being placed on hold. While on hold, new orders cannot be placed at your shop.</T>
+                  <strong>
+                    <T>Important:</T>
+                  </strong>{" "}
+                  <T>
+                    Failure to settle commissions within 21 days will result in
+                    your shop being placed on hold. While on hold, new orders
+                    cannot be placed at your shop.
+                  </T>
                 </p>
               </div>
             </CardContent>

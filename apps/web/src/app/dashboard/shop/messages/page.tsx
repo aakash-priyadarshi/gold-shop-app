@@ -3,11 +3,10 @@
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { RichMessageCard } from "@/components/chat/RichMessageCard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import {
   useChatSocket,
@@ -15,6 +14,7 @@ import {
   type ViolationWarning,
 } from "@/hooks/useChatSocket";
 import { chatApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   AlertTriangle,
   Lock,
@@ -247,7 +247,9 @@ export default function ShopMessagesPage() {
         <div className="flex flex-col h-[calc(100vh-8rem)]">
           <div className="flex items-center gap-2 mb-4">
             <MessageSquare className="h-6 w-6" />
-            <h1 className="text-2xl font-bold"><T>Customer Messages</T></h1>
+            <h1 className="text-2xl font-bold">
+              <T>Customer Messages</T>
+            </h1>
             {connected ? (
               <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
                 <Wifi className="h-3 w-3" /> <T>Live</T>
@@ -263,11 +265,15 @@ export default function ShopMessagesPage() {
             {/* Conversation list */}
             <div className="w-80 flex-shrink-0 border rounded-lg overflow-y-auto">
               {loading ? (
-                <div className="p-4 text-muted-foreground"><T>Loading...</T></div>
+                <div className="p-4 text-muted-foreground">
+                  <T>Loading...</T>
+                </div>
               ) : conversations.length === 0 ? (
                 <div className="p-4 text-center text-muted-foreground">
                   <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p><T>No customer messages yet</T></p>
+                  <p>
+                    <T>No customer messages yet</T>
+                  </p>
                 </div>
               ) : (
                 conversations.map((conv) => (

@@ -3,8 +3,6 @@
 import { ShopkeeperGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { PlanMigrationBanner } from "@/components/dashboard/PlanMigrationBanner";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,9 +13,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
 import { inventoryApi, ordersApi, rfqApi, shopsApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   AlertCircle,
   ArrowUpRight,
@@ -210,9 +210,13 @@ export default function ShopDashboard() {
         <div className="space-y-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold"><T>Shop Dashboard</T></h1>
+              <h1 className="text-2xl font-bold">
+                <T>Shop Dashboard</T>
+              </h1>
               <p className="text-gray-500 dark:text-gray-400">
-                {t(`Welcome back, ${user?.firstName}! Here's your shop overview.`)}
+                {t(
+                  `Welcome back, ${user?.firstName}! Here's your shop overview.`,
+                )}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -239,7 +243,10 @@ export default function ShopDashboard() {
                   <T>Shop Verification Pending</T>
                 </h3>
                 <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                  <T>Your shop is currently under review. Some features may be limited until verification is complete.</T>
+                  <T>
+                    Your shop is currently under review. Some features may be
+                    limited until verification is complete.
+                  </T>
                 </p>
               </div>
             </div>
@@ -303,10 +310,14 @@ export default function ShopDashboard() {
                     <ShoppingCart className="h-5 w-5 text-blue-500" />
                     <T>Recent Orders</T>
                   </CardTitle>
-                  <CardDescription><T>Latest customer orders</T></CardDescription>
+                  <CardDescription>
+                    <T>Latest customer orders</T>
+                  </CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href="/dashboard/shop/orders"><T>View all</T></Link>
+                  <Link href="/dashboard/shop/orders">
+                    <T>View all</T>
+                  </Link>
                 </Button>
               </CardHeader>
               <CardContent>
@@ -350,10 +361,14 @@ export default function ShopDashboard() {
                     <MessageSquare className="h-5 w-5 text-purple-500" />
                     <T>RFQ Requests</T>
                   </CardTitle>
-                  <CardDescription><T>Custom order inquiries</T></CardDescription>
+                  <CardDescription>
+                    <T>Custom order inquiries</T>
+                  </CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href="/dashboard/shop/rfq"><T>View all</T></Link>
+                  <Link href="/dashboard/shop/rfq">
+                    <T>View all</T>
+                  </Link>
                 </Button>
               </CardHeader>
               <CardContent>
@@ -376,7 +391,9 @@ export default function ShopDashboard() {
                       </div>
                       <div className="flex items-center justify-between mt-3">
                         <Badge variant="outline">Budget: {rfq.budget}</Badge>
-                        <Button size="sm"><T>Respond</T></Button>
+                        <Button size="sm">
+                          <T>Respond</T>
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -391,7 +408,9 @@ export default function ShopDashboard() {
                 <AlertCircle className="h-5 w-5 text-orange-500" />
                 <T>Low Stock Alert</T>
               </CardTitle>
-              <CardDescription><T>Items that need restocking</T></CardDescription>
+              <CardDescription>
+                <T>Items that need restocking</T>
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -420,7 +439,9 @@ export default function ShopDashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle><T>Quick Actions</T></CardTitle>
+              <CardTitle>
+                <T>Quick Actions</T>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -431,7 +452,9 @@ export default function ShopDashboard() {
                 >
                   <Link href="/dashboard/shop/products">
                     <Plus className="h-6 w-6" />
-                    <span><T>Add Product</T></span>
+                    <span>
+                      <T>Add Product</T>
+                    </span>
                   </Link>
                 </Button>
                 <Button
@@ -441,7 +464,9 @@ export default function ShopDashboard() {
                 >
                   <Link href="/dashboard/shop/orders">
                     <ShoppingCart className="h-6 w-6" />
-                    <span><T>View Orders</T></span>
+                    <span>
+                      <T>View Orders</T>
+                    </span>
                   </Link>
                 </Button>
                 <Button
@@ -451,7 +476,9 @@ export default function ShopDashboard() {
                 >
                   <Link href="/dashboard/shop/analytics">
                     <TrendingUp className="h-6 w-6" />
-                    <span><T>Analytics</T></span>
+                    <span>
+                      <T>Analytics</T>
+                    </span>
                   </Link>
                 </Button>
                 <Button
@@ -461,7 +488,9 @@ export default function ShopDashboard() {
                 >
                   <Link href="/dashboard/shop/settings">
                     <Star className="h-6 w-6" />
-                    <span><T>Shop Settings</T></span>
+                    <span>
+                      <T>Shop Settings</T>
+                    </span>
                   </Link>
                 </Button>
               </div>

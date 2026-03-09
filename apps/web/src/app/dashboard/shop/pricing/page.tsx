@@ -23,8 +23,8 @@ import {
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useT } from "@/providers/translation-provider";
 import api from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import { DollarSign, Loader2, Percent, Save, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -181,7 +181,9 @@ export default function ShopPricingPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold"><T>Pricing Settings</T></h1>
+              <h1 className="text-2xl font-bold">
+                <T>Pricing Settings</T>
+              </h1>
               <p className="text-muted-foreground">
                 <T>Configure your shop's making charges and margins</T>
               </p>
@@ -236,7 +238,9 @@ export default function ShopPricingPage() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="defaultMargin"><T>Default Margin (%)</T></Label>
+                  <Label htmlFor="defaultMargin">
+                    <T>Default Margin (%)</T>
+                  </Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="defaultMargin"
@@ -266,17 +270,28 @@ export default function ShopPricingPage() {
                 <T>Metal-Specific Overrides</T>
               </CardTitle>
               <CardDescription>
-                <T>Set custom rates for specific metals. Leave blank to use defaults.</T>
+                <T>
+                  Set custom rates for specific metals. Leave blank to use
+                  defaults.
+                </T>
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead><T>Metal</T></TableHead>
-                    <TableHead><T>Making Charge (%)</T></TableHead>
-                    <TableHead><T>Margin (%)</T></TableHead>
-                    <TableHead><T>Effective Rate</T></TableHead>
+                    <TableHead>
+                      <T>Metal</T>
+                    </TableHead>
+                    <TableHead>
+                      <T>Making Charge (%)</T>
+                    </TableHead>
+                    <TableHead>
+                      <T>Margin (%)</T>
+                    </TableHead>
+                    <TableHead>
+                      <T>Effective Rate</T>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -354,18 +369,28 @@ export default function ShopPricingPage() {
               </h4>
               <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
                 <li>
-                  <strong><T>Making Charge:</T></strong>{" "}
+                  <strong>
+                    <T>Making Charge:</T>
+                  </strong>{" "}
                   <T>Percentage added to metal value for craftsmanship</T>
                 </li>
                 <li>
-                  <strong><T>Margin:</T></strong>{" "}
+                  <strong>
+                    <T>Margin:</T>
+                  </strong>{" "}
                   <T>Your profit margin on the base metal price</T>
                 </li>
                 <li>
-                  <T>Final Price = Metal Value × (1 + Margin%) + (Metal Value × Making Charge%)</T>
+                  <T>
+                    Final Price = Metal Value × (1 + Margin%) + (Metal Value ×
+                    Making Charge%)
+                  </T>
                 </li>
                 <li>
-                  <T>Taxes are calculated separately based on the customer's region</T>
+                  <T>
+                    Taxes are calculated separately based on the customer's
+                    region
+                  </T>
                 </li>
               </ul>
             </CardContent>

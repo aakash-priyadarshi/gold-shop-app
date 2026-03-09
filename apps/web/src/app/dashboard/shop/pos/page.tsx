@@ -3,6 +3,8 @@
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -119,6 +121,7 @@ export default function PosPage() {
 function PosPageInner() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
+  const t = useT();
 
   // URL params from chat integration
   const urlCustomerId = searchParams.get("customerId");
@@ -174,7 +177,7 @@ function PosPageInner() {
         conversationId: convId || urlConversationId || undefined,
       });
       setSession(res.data);
-      toast({ title: "POS session started (30 min)" });
+      toast({ title: t("POS session started (30 min)") });
 
       // Auto-load picks if we have a customer
       if (cId || customerId) {
@@ -182,8 +185,8 @@ function PosPageInner() {
       }
     } catch (err: any) {
       toast({
-        title: "Failed to create session",
-        description: err?.response?.data?.message || "Unknown error",
+        title: t("Failed to create session"),
+        description: err?.response?.data?.message || t("Unknown error"),
         variant: "destructive",
       });
     } finally {
@@ -202,9 +205,9 @@ function PosPageInner() {
       setCustomerPicks(res.data);
     } catch (err: any) {
       toast({
-        title: "Cannot load picks",
+        title: t("Cannot load picks"),
         description:
-          err?.response?.data?.message || "No relationship with customer",
+          err?.response?.data?.message || t("No relationship with customer"),
         variant: "destructive",
       });
       setCustomerPicks([]);
@@ -226,11 +229,11 @@ function PosPageInner() {
         { inventoryItemId, variantId, qty },
       ]);
       setSession(res.data);
-      toast({ title: "Item added to basket" });
+      toast({ title: t("Item added to basket") });
     } catch (err: any) {
       toast({
-        title: "Failed to add item",
-        description: err?.response?.data?.message || "Insufficient stock?",
+        title: t("Failed to add item"),
+        description: err?.response?.data?.message || t("Insufficient stock?"),
         variant: "destructive",
       });
     }
@@ -247,8 +250,8 @@ function PosPageInner() {
       setSession(res.data);
     } catch (err: any) {
       toast({
-        title: "Failed to update",
-        description: err?.response?.data?.message || "Unknown error",
+        title: t("Failed to update"),
+        description: err?.response?.data?.message || t("Unknown error"),
         variant: "destructive",
       });
     }
@@ -272,13 +275,13 @@ function PosPageInner() {
       setCheckoutOpen(false);
       setCustomerPicks([]);
       toast({
-        title: "Checkout complete!",
-        description: `Invoice ${res.data.invoice.invoiceNumber} created`,
+        title: t("Checkout complete!"),
+        description: t("Invoice") + ` ${res.data.invoice.invoiceNumber} ` + t("created"),
       });
     } catch (err: any) {
       toast({
-        title: "Checkout failed",
-        description: err?.response?.data?.message || "Unknown error",
+        title: t("Checkout failed"),
+        description: err?.response?.data?.message || t("Unknown error"),
         variant: "destructive",
       });
     } finally {
@@ -294,11 +297,11 @@ function PosPageInner() {
       await posApi.cancelSession(session.id);
       setSession(null);
       setCustomerPicks([]);
-      toast({ title: "POS session cancelled, stock released" });
+      toast({ title: t("POS session cancelled, stock released") });
     } catch (err: any) {
       toast({
-        title: "Failed to cancel",
-        description: err?.response?.data?.message || "Unknown error",
+        title: t("Failed to cancel"),
+        description: err?.response?.data?.message || t("Unknown error"),
         variant: "destructive",
       });
     }
@@ -326,11 +329,10 @@ function PosPageInner() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold flex items-center gap-2">
-                <ScanLine className="h-6 w-6" /> POS Basket
+                <ScanLine className="h-6 w-6" /> <T>POS Basket</T>
               </h1>
               <p className="text-muted-foreground text-sm mt-1">
-                Load customer picks, build a basket, and checkout with an
-                invoice
+                <T>Load customer picks, build a basket, and checkout with an invoice</T>
               </p>
             </div>
             {session && (
@@ -339,14 +341,14 @@ function PosPageInner() {
                   variant={minsRemaining > 5 ? "default" : "destructive"}
                   className="text-sm"
                 >
-                  {minsRemaining} min remaining
+                  {minsRemaining} <T>min remaining</T>
                 </Badge>
                 <Button
                   variant="destructive"
                   size="sm"
                   onClick={handleCancelSession}
                 >
-                  <X className="h-4 w-4 mr-1" /> Cancel Session
+                  <X className="h-4 w-4 mr-1" /> <T>Cancel Session</T>
                 </Button>
               </div>
             )}
@@ -356,19 +358,18 @@ function PosPageInner() {
           {!session && (
             <Card>
               <CardHeader>
-                <CardTitle>Start a POS Session</CardTitle>
+                <CardTitle><T>Start a POS Session</T></CardTitle>
                 <CardDescription>
-                  Create a new POS session. Optionally enter a customer ID to
-                  load their liked items. Sessions last 30 minutes.
+                  <T>Create a new POS session. Optionally enter a customer ID to load their liked items. Sessions last 30 minutes.</T>
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-end gap-3">
                   <div className="flex-1">
-                    <Label htmlFor="customerId">Customer ID (optional)</Label>
+                    <Label htmlFor="customerId"><T>Customer ID (optional)</T></Label>
                     <Input
                       id="customerId"
-                      placeholder="Paste customer user ID..."
+                      placeholder={t("Paste customer user ID...")}
                       value={customerId}
                       onChange={(e) => setCustomerId(e.target.value)}
                     />
@@ -382,7 +383,7 @@ function PosPageInner() {
                     ) : (
                       <ShoppingCart className="h-4 w-4 mr-1" />
                     )}
-                    Start Session
+                    <T>Start Session</T>
                   </Button>
                 </div>
               </CardContent>
@@ -397,7 +398,7 @@ function PosPageInner() {
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <Heart className="h-4 w-4 text-pink-500" /> Customer Picks
+                      <Heart className="h-4 w-4 text-pink-500" /> <T>Customer Picks</T>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -406,9 +407,9 @@ function PosPageInner() {
                       <div className="space-y-3">
                         <div className="flex items-end gap-2">
                           <div className="flex-1">
-                            <Label>Customer ID</Label>
+                            <Label><T>Customer ID</T></Label>
                             <Input
-                              placeholder="Customer user ID"
+                              placeholder={t("Customer user ID")}
                               value={customerId}
                               onChange={(e) => setCustomerId(e.target.value)}
                             />
@@ -427,7 +428,7 @@ function PosPageInner() {
                         </div>
                         {picksLoading && (
                           <p className="text-xs text-muted-foreground">
-                            Loading...
+                            <T>Loading...</T>
                           </p>
                         )}
                       </div>
@@ -461,7 +462,7 @@ function PosPageInner() {
                               </p>
                               {pick.inventoryItem.variants?.length > 0 && (
                                 <p className="text-xs text-blue-600">
-                                  {pick.inventoryItem.variants.length} sizes
+                                  {pick.inventoryItem.variants.length} <T>sizes</T>
                                 </p>
                               )}
                             </div>
@@ -485,7 +486,7 @@ function PosPageInner() {
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">
-                      Quick Add by SKU
+                      <T>Quick Add by SKU</T>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -504,16 +505,16 @@ function PosPageInner() {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="flex items-center gap-2">
-                        <ShoppingCart className="h-5 w-5" /> Basket
+                        <ShoppingCart className="h-5 w-5" /> <T>Basket</T>
                         {session.items?.length > 0 && (
                           <Badge variant="secondary">
-                            {session.items.length} items
+                            {session.items.length} <T>items</T>
                           </Badge>
                         )}
                       </CardTitle>
                       {session.items?.length > 0 && (
                         <Button onClick={() => setCheckoutOpen(true)}>
-                          Checkout
+                          <T>Checkout</T>
                         </Button>
                       )}
                     </div>
@@ -522,9 +523,9 @@ function PosPageInner() {
                     {(!session.items || session.items.length === 0) && (
                       <div className="text-center py-12 text-muted-foreground">
                         <ShoppingCart className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                        <p>Basket is empty</p>
+                        <p><T>Basket is empty</T></p>
                         <p className="text-xs mt-1">
-                          Add items from customer picks or by SKU
+                          <T>Add items from customer picks or by SKU</T>
                         </p>
                       </div>
                     )}
@@ -534,14 +535,14 @@ function PosPageInner() {
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead>Item</TableHead>
-                              <TableHead>Variant</TableHead>
+                              <TableHead><T>Item</T></TableHead>
+                              <TableHead><T>Variant</T></TableHead>
                               <TableHead className="text-right">
-                                Unit Price
+                                <T>Unit Price</T>
                               </TableHead>
-                              <TableHead className="text-center">Qty</TableHead>
+                              <TableHead className="text-center"><T>Qty</T></TableHead>
                               <TableHead className="text-right">
-                                Line Total
+                                <T>Line Total</T>
                               </TableHead>
                               <TableHead></TableHead>
                             </TableRow>
@@ -636,28 +637,28 @@ function PosPageInner() {
                         <div className="mt-4 border-t pt-4 space-y-1 text-sm">
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">
-                              Subtotal
+                              <T>Subtotal</T>
                             </span>
                             <span>NPR {basketSubtotal.toLocaleString()}</span>
                           </div>
                           {taxRate > 0 && (
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">
-                                Tax ({(taxRate * 100).toFixed(1)}%)
+                                <T>Tax</T> ({(taxRate * 100).toFixed(1)}%)
                               </span>
                               <span>NPR {basketTax.toLocaleString()}</span>
                             </div>
                           )}
                           {discountAmount > 0 && (
                             <div className="flex justify-between text-green-600">
-                              <span>Discount</span>
+                              <span><T>Discount</T></span>
                               <span>
                                 - NPR {discountAmount.toLocaleString()}
                               </span>
                             </div>
                           )}
                           <div className="flex justify-between font-bold text-base pt-2 border-t">
-                            <span>Total</span>
+                            <span><T>Total</T></span>
                             <span>NPR {basketTotal.toLocaleString()}</span>
                           </div>
                         </div>
@@ -674,42 +675,42 @@ function PosPageInner() {
         <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Checkout</DialogTitle>
+              <DialogTitle><T>Checkout</T></DialogTitle>
               <DialogDescription>
-                Complete the sale and generate an invoice
+                <T>Complete the sale and generate an invoice</T>
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="checkout-name">Customer Name *</Label>
+                <Label htmlFor="checkout-name"><T>Customer Name *</T></Label>
                 <Input
                   id="checkout-name"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="Full name"
+                  placeholder={t("Full name")}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Phone</Label>
+                  <Label><T>Phone</T></Label>
                   <Input
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder="Optional"
+                    placeholder={t("Optional")}
                   />
                 </div>
                 <div>
-                  <Label>Email</Label>
+                  <Label><T>Email</T></Label>
                   <Input
                     value={customerEmail}
                     onChange={(e) => setCustomerEmail(e.target.value)}
-                    placeholder="Optional"
+                    placeholder={t("Optional")}
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Tax Rate</Label>
+                  <Label><T>Tax Rate</T></Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -717,11 +718,11 @@ function PosPageInner() {
                     max="1"
                     value={taxRate}
                     onChange={(e) => setTaxRate(Number(e.target.value))}
-                    placeholder="e.g. 0.13"
+                    placeholder={t("e.g. 0.13")}
                   />
                 </div>
                 <div>
-                  <Label>Discount (NPR)</Label>
+                  <Label><T>Discount (NPR)</T></Label>
                   <Input
                     type="number"
                     min="0"
@@ -732,11 +733,11 @@ function PosPageInner() {
                 </div>
               </div>
               <div>
-                <Label>Notes</Label>
+                <Label><T>Notes</T></Label>
                 <Textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Optional notes..."
+                  placeholder={t("Optional notes...")}
                   rows={2}
                 />
               </div>
@@ -744,22 +745,22 @@ function PosPageInner() {
               {/* Summary */}
               <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
                 <div className="flex justify-between">
-                  <span>Items</span>
+                  <span><T>Items</T></span>
                   <span>{session?.items?.length || 0}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Subtotal</span>
+                  <span><T>Subtotal</T></span>
                   <span>NPR {basketSubtotal.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between font-bold border-t pt-1">
-                  <span>Total</span>
+                  <span><T>Total</T></span>
                   <span>NPR {basketTotal.toLocaleString()}</span>
                 </div>
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setCheckoutOpen(false)}>
-                Cancel
+                <T>Cancel</T>
               </Button>
               <Button
                 onClick={handleCheckout}
@@ -768,7 +769,7 @@ function PosPageInner() {
                 {checkoutLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-1" />
                 ) : null}
-                Complete Sale
+                <T>Complete Sale</T>
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -790,9 +791,9 @@ function ManualAddForm({
   return (
     <div className="flex items-end gap-2">
       <div className="flex-1">
-        <Label>Inventory Item ID</Label>
+        <Label><T>Inventory Item ID</T></Label>
         <Input
-          placeholder="Paste item ID"
+          placeholder={t("Paste item ID")}
           value={itemId}
           onChange={(e) => setItemId(e.target.value)}
         />
@@ -805,7 +806,7 @@ function ManualAddForm({
           setItemId("");
         }}
       >
-        <Plus className="h-4 w-4 mr-1" /> Add
+        <Plus className="h-4 w-4 mr-1" /> <T>Add</T>
       </Button>
     </div>
   );

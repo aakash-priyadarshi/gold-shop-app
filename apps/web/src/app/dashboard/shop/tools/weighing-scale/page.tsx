@@ -56,7 +56,10 @@ export default function WeighingScalePage() {
                 <T>Weighing Scale</T>
               </h1>
               <p className="text-muted-foreground">
-                <T>Connect a digital weighing scale via USB/Serial or use the simulator</T>
+                <T>
+                  Connect a digital weighing scale via USB/Serial or use the
+                  simulator
+                </T>
               </p>
             </div>
           </div>

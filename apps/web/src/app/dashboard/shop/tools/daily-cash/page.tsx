@@ -182,7 +182,9 @@ export default function DailyCashPage() {
             <Card>
               <CardContent className="p-4 text-center">
                 <Banknote className="h-5 w-5 mx-auto text-gray-500 dark:text-gray-400 mb-1" />
-                <p className="text-sm text-muted-foreground"><T>Opening</T></p>
+                <p className="text-sm text-muted-foreground">
+                  <T>Opening</T>
+                </p>
                 <Input
                   type="number"
                   value={openingBalance}
@@ -195,7 +197,9 @@ export default function DailyCashPage() {
             <Card className="border-green-200 dark:border-green-800/50">
               <CardContent className="p-4 text-center">
                 <ArrowDown className="h-5 w-5 mx-auto text-green-500 mb-1" />
-                <p className="text-sm text-muted-foreground"><T>Cash In</T></p>
+                <p className="text-sm text-muted-foreground">
+                  <T>Cash In</T>
+                </p>
                 <p className="text-xl font-bold text-green-600">
                   {currencySymbol} {totalIn.toLocaleString()}
                 </p>
@@ -204,7 +208,9 @@ export default function DailyCashPage() {
             <Card className="border-red-200 dark:border-red-800/50">
               <CardContent className="p-4 text-center">
                 <ArrowUp className="h-5 w-5 mx-auto text-red-500 mb-1" />
-                <p className="text-sm text-muted-foreground"><T>Cash Out</T></p>
+                <p className="text-sm text-muted-foreground">
+                  <T>Cash Out</T>
+                </p>
                 <p className="text-xl font-bold text-red-600">
                   {currencySymbol} {totalOut.toLocaleString()}
                 </p>
@@ -213,7 +219,9 @@ export default function DailyCashPage() {
             <Card className="border-amber-200 dark:border-amber-800/50 bg-amber-50/50 dark:bg-amber-950/30">
               <CardContent className="p-4 text-center">
                 <DollarSign className="h-5 w-5 mx-auto text-amber-500 mb-1" />
-                <p className="text-sm text-muted-foreground"><T>Closing Balance</T></p>
+                <p className="text-sm text-muted-foreground">
+                  <T>Closing Balance</T>
+                </p>
                 <p
                   className={`text-xl font-bold ${netCash >= 0 ? "text-green-600" : "text-red-600"}`}
                 >
@@ -311,7 +319,9 @@ export default function DailyCashPage() {
             <Card>
               <CardContent className="flex flex-col items-center py-12 text-center">
                 <Wallet className="h-12 w-12 text-muted-foreground opacity-30 mb-4" />
-                <p className="text-muted-foreground"><T>No entries for this day</T></p>
+                <p className="text-muted-foreground">
+                  <T>No entries for this day</T>
+                </p>
                 <p className="text-sm text-muted-foreground">
                   <T>Start recording cash transactions above</T>
                 </p>

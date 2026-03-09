@@ -3,8 +3,8 @@
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
-import { useT } from "@/providers/translation-provider";
 import { catalogueApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   BarChart3,
   BookOpen,
@@ -95,7 +95,10 @@ export default function CataloguesPage() {
               <T>Catalogues</T>
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              <T>Create shareable product catalogues for walk-in customers and online sharing</T>
+              <T>
+                Create shareable product catalogues for walk-in customers and
+                online sharing
+              </T>
             </p>
           </div>
           <button
@@ -124,7 +127,10 @@ export default function CataloguesPage() {
               <T>No catalogues yet</T>
             </h3>
             <p className="text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto">
-              <T>Create your first catalogue to share your products with walk-in customers via QR code or link.</T>
+              <T>
+                Create your first catalogue to share your products with walk-in
+                customers via QR code or link.
+              </T>
             </p>
             <button
               onClick={() => router.push("/dashboard/shop/catalogues/new")}

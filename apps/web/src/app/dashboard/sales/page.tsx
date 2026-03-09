@@ -2,8 +2,6 @@
 
 import { SalesGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +11,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { T } from "@/components/ui/T";
 import api from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import { Clock, MessageSquare, ShoppingCart, Store } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -160,8 +160,12 @@ export default function SalesDashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg"><T>Quick Actions</T></CardTitle>
-                <CardDescription><T>Common sales tasks</T></CardDescription>
+                <CardTitle className="text-lg">
+                  <T>Quick Actions</T>
+                </CardTitle>
+                <CardDescription>
+                  <T>Common sales tasks</T>
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Link href="/dashboard/sales/shops">
@@ -187,8 +191,12 @@ export default function SalesDashboardPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg"><T>Recent Orders</T></CardTitle>
-                <CardDescription><T>Latest order activity</T></CardDescription>
+                <CardTitle className="text-lg">
+                  <T>Recent Orders</T>
+                </CardTitle>
+                <CardDescription>
+                  <T>Latest order activity</T>
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {recentOrders.length === 0 ? (

@@ -3,13 +3,12 @@
 import { AdminSellerCRM } from "@/components/admin/AdminSellerCRM";
 import { SalesGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { FlagImage, type FlagCode } from "@/components/ui/phone-input";
+import { T } from "@/components/ui/T";
 import {
   Table,
   TableBody,
@@ -20,6 +19,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import api from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import { Eye, Loader2, Search, Store, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -141,12 +141,24 @@ export default function SalesShopsPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead><T>Shop</T></TableHead>
-                          <TableHead><T>Owner</T></TableHead>
-                          <TableHead><T>Location</T></TableHead>
-                          <TableHead><T>Status</T></TableHead>
-                          <TableHead><T>Orders</T></TableHead>
-                          <TableHead><T>Actions</T></TableHead>
+                          <TableHead>
+                            <T>Shop</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Owner</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Location</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Status</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Orders</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Actions</T>
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>

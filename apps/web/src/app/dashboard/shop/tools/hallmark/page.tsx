@@ -147,12 +147,16 @@ export default function HallmarkTrackerPage() {
           {showForm && (
             <Card className="border-amber-200 dark:border-amber-800/50">
               <CardHeader>
-                <CardTitle className="text-base"><T>New Hallmark Entry</T></CardTitle>
+                <CardTitle className="text-base">
+                  <T>New Hallmark Entry</T>
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label><T>HUID (6-digit code)</T> *</Label>
+                    <Label>
+                      <T>HUID (6-digit code)</T> *
+                    </Label>
                     <Input
                       value={huid}
                       onChange={(e) => setHuid(e.target.value)}
@@ -162,7 +166,9 @@ export default function HallmarkTrackerPage() {
                     />
                   </div>
                   <div>
-                    <Label><T>Purity</T></Label>
+                    <Label>
+                      <T>Purity</T>
+                    </Label>
                     <select
                       value={purity}
                       onChange={(e) => setPurity(e.target.value)}
@@ -175,7 +181,9 @@ export default function HallmarkTrackerPage() {
                     </select>
                   </div>
                   <div>
-                    <Label><T>Weight (grams)</T></Label>
+                    <Label>
+                      <T>Weight (grams)</T>
+                    </Label>
                     <Input
                       value={weight}
                       onChange={(e) => setWeight(e.target.value)}
@@ -185,7 +193,9 @@ export default function HallmarkTrackerPage() {
                     />
                   </div>
                   <div>
-                    <Label><T>Item Description</T></Label>
+                    <Label>
+                      <T>Item Description</T>
+                    </Label>
                     <Input
                       value={itemDesc}
                       onChange={(e) => setItemDesc(e.target.value)}
@@ -193,7 +203,9 @@ export default function HallmarkTrackerPage() {
                     />
                   </div>
                   <div>
-                    <Label><T>Customer Name</T></Label>
+                    <Label>
+                      <T>Customer Name</T>
+                    </Label>
                     <Input
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
@@ -232,7 +244,9 @@ export default function HallmarkTrackerPage() {
             <Card>
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold">{entries.length}</p>
-                <p className="text-sm text-muted-foreground"><T>Total Entries</T></p>
+                <p className="text-sm text-muted-foreground">
+                  <T>Total Entries</T>
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -240,7 +254,9 @@ export default function HallmarkTrackerPage() {
                 <p className="text-2xl font-bold text-green-600">
                   {entries.filter((e) => e.verified).length}
                 </p>
-                <p className="text-sm text-muted-foreground"><T>Verified</T></p>
+                <p className="text-sm text-muted-foreground">
+                  <T>Verified</T>
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -248,7 +264,9 @@ export default function HallmarkTrackerPage() {
                 <p className="text-2xl font-bold text-yellow-600">
                   {entries.filter((e) => !e.verified).length}
                 </p>
-                <p className="text-sm text-muted-foreground"><T>Pending</T></p>
+                <p className="text-sm text-muted-foreground">
+                  <T>Pending</T>
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -258,7 +276,9 @@ export default function HallmarkTrackerPage() {
             <Card>
               <CardContent className="flex flex-col items-center py-12 text-center">
                 <Hash className="h-12 w-12 text-muted-foreground opacity-30 mb-4" />
-                <p className="text-muted-foreground"><T>No hallmark entries</T></p>
+                <p className="text-muted-foreground">
+                  <T>No hallmark entries</T>
+                </p>
                 <p className="text-sm text-muted-foreground">
                   <T>Add entries when you sell hallmarked items</T>
                 </p>

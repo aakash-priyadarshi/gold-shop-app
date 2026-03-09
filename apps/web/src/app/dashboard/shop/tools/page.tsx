@@ -65,7 +65,7 @@ const tools = [
 export default function ToolsPage() {
   const t = useT();
 
-  const translatedTools = tools.map(tool => ({
+  const translatedTools = tools.map((tool) => ({
     ...tool,
     title: t(tool.title),
     description: t(tool.description),

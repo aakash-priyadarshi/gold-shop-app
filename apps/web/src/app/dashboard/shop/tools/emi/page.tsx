@@ -93,7 +93,9 @@ export default function EMICalculatorPage() {
             {/* Inputs */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base"><T>Loan Details</T></CardTitle>
+                <CardTitle className="text-base">
+                  <T>Loan Details</T>
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -115,7 +117,9 @@ export default function EMICalculatorPage() {
                   />
                 </div>
                 <div>
-                  <Label><T>Annual Interest Rate (%)</T></Label>
+                  <Label>
+                    <T>Annual Interest Rate (%)</T>
+                  </Label>
                   <Input
                     type="number"
                     value={interestRate}
@@ -126,7 +130,9 @@ export default function EMICalculatorPage() {
                   />
                 </div>
                 <div>
-                  <Label><T>Tenure (months)</T></Label>
+                  <Label>
+                    <T>Tenure (months)</T>
+                  </Label>
                   <div className="flex gap-2 flex-wrap">
                     {[3, 6, 9, 12, 18, 24].map((m) => (
                       <Button
@@ -175,7 +181,9 @@ export default function EMICalculatorPage() {
               <div className="grid grid-cols-2 gap-4">
                 <Card>
                   <CardContent className="p-4 text-center">
-                    <p className="text-sm text-muted-foreground"><T>Loan Amount</T></p>
+                    <p className="text-sm text-muted-foreground">
+                      <T>Loan Amount</T>
+                    </p>
                     <p className="text-xl font-bold">
                       {currencySymbol} {Math.round(principal).toLocaleString()}
                     </p>
