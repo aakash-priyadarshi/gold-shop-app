@@ -2,8 +2,6 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,9 +20,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import api, { chatApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   BuildingStorefrontIcon,
   ChatBubbleLeftRightIcon,
@@ -344,8 +344,10 @@ export default function ShopsPage() {
             <T>Find Trusted Jewelers</T>
           </h1>
           <p className="text-xl text-amber-100 max-w-2xl mx-auto mb-8">
-            <T>Browse verified gold and silver shops near you. All our sellers are
-            verified and rated by real customers.</T>
+            <T>
+              Browse verified gold and silver shops near you. All our sellers
+              are verified and rated by real customers.
+            </T>
           </p>
 
           {/* Search Bar */}
@@ -499,7 +501,9 @@ export default function ShopsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">{t("All Sellers")}</SelectItem>
-                      <SelectItem value="verified">{t("Verified Only")}</SelectItem>
+                      <SelectItem value="verified">
+                        {t("Verified Only")}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -612,7 +616,8 @@ export default function ShopsPage() {
                     ))}
                     {(shop.supportedMaterials?.length || 0) > 3 && (
                       <Badge variant="secondary" className="text-xs">
-                        +{(shop.supportedMaterials?.length || 0) - 3} {t("more")}
+                        +{(shop.supportedMaterials?.length || 0) - 3}{" "}
+                        {t("more")}
                       </Badge>
                     )}
                   </div>

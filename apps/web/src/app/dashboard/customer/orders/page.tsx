@@ -3,8 +3,6 @@
 import { CustomerGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { MiniOrderStepper, type OrderType } from "@/components/orders";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { T } from "@/components/ui/T";
 import {
   Table,
   TableBody,
@@ -26,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrencyConversion } from "@/hooks/useCurrencyConversion";
 import { CURRENCY_SYMBOLS } from "@/hooks/useMarket";
 import api from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   CheckCircle2,
   Clock,
@@ -277,7 +277,9 @@ export default function CustomerOrdersPage() {
       <DashboardLayout>
         <div className="space-y-6">
           <div>
-            <h1 className="text-2xl font-bold"><T>My Orders</T></h1>
+            <h1 className="text-2xl font-bold">
+              <T>My Orders</T>
+            </h1>
             <p className="text-muted-foreground">
               <T>Track and manage your jewellery orders</T>
             </p>
@@ -287,7 +289,9 @@ export default function CustomerOrdersPage() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Card>
               <CardHeader className="p-4 pb-2">
-                <CardDescription><T>Total Orders</T></CardDescription>
+                <CardDescription>
+                  <T>Total Orders</T>
+                </CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <p className="text-2xl font-bold">{stats.total}</p>
@@ -295,7 +299,9 @@ export default function CustomerOrdersPage() {
             </Card>
             <Card>
               <CardHeader className="p-4 pb-2">
-                <CardDescription><T>Active</T></CardDescription>
+                <CardDescription>
+                  <T>Active</T>
+                </CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <p className="text-2xl font-bold text-blue-600">
@@ -305,7 +311,9 @@ export default function CustomerOrdersPage() {
             </Card>
             <Card>
               <CardHeader className="p-4 pb-2">
-                <CardDescription><T>Shipped</T></CardDescription>
+                <CardDescription>
+                  <T>Shipped</T>
+                </CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <p className="text-2xl font-bold text-cyan-600">
@@ -315,7 +323,9 @@ export default function CustomerOrdersPage() {
             </Card>
             <Card>
               <CardHeader className="p-4 pb-2">
-                <CardDescription><T>Delivered</T></CardDescription>
+                <CardDescription>
+                  <T>Delivered</T>
+                </CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <p className="text-2xl font-bold text-green-600">
@@ -382,21 +392,27 @@ export default function CustomerOrdersPage() {
             <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="mb-4">
-                  <TabsTrigger value="all">{t(`All (${orders.length})`)}</TabsTrigger>
+                  <TabsTrigger value="all">
+                    {t(`All (${orders.length})`)}
+                  </TabsTrigger>
                   <TabsTrigger value="active">
                     {t(`Active (${stats.active})`)}
                   </TabsTrigger>
                   <TabsTrigger value="shipped">
                     {t(`In Transit (${stats.shipped})`)}
                   </TabsTrigger>
-                  <TabsTrigger value="cancelled"><T>Cancelled</T></TabsTrigger>
+                  <TabsTrigger value="cancelled">
+                    <T>Cancelled</T>
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value={activeTab} className="mt-0">
                   {filteredOrders.length === 0 ? (
                     <div className="text-center py-12">
                       <ShoppingBag className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="font-medium mb-2"><T>No orders found</T></h3>
+                      <h3 className="font-medium mb-2">
+                        <T>No orders found</T>
+                      </h3>
                       <p className="text-muted-foreground text-sm mb-4">
                         {activeTab === "all"
                           ? t("You haven't placed any orders yet")
@@ -412,13 +428,27 @@ export default function CustomerOrdersPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead><T>Order</T></TableHead>
-                          <TableHead><T>Shop</T></TableHead>
-                          <TableHead><T>Product</T></TableHead>
-                          <TableHead><T>Total</T></TableHead>
-                          <TableHead><T>Status</T></TableHead>
-                          <TableHead><T>Date</T></TableHead>
-                          <TableHead className="text-right"><T>Actions</T></TableHead>
+                          <TableHead>
+                            <T>Order</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Shop</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Product</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Total</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Status</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Date</T>
+                          </TableHead>
+                          <TableHead className="text-right">
+                            <T>Actions</T>
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>

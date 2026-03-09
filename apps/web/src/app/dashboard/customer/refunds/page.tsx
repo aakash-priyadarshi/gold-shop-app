@@ -2,8 +2,6 @@
 
 import { CustomerGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,8 +11,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { T } from "@/components/ui/T";
 import { Textarea } from "@/components/ui/textarea";
 import { ordersApi, refundsApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import { ArrowRight, CheckCircle, RotateCcw, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -116,14 +116,22 @@ export default function CustomerRefundsPage() {
         <div className="space-y-6">
           <div className="flex items-center gap-2">
             <RotateCcw className="h-6 w-6" />
-            <h1 className="text-2xl font-bold"><T>Refunds</T></h1>
+            <h1 className="text-2xl font-bold">
+              <T>Refunds</T>
+            </h1>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle><T>Refund Policy</T></CardTitle>
+              <CardTitle>
+                <T>Refund Policy</T>
+              </CardTitle>
               <CardDescription>
-                <T>Refunds are available only for gold and silver jewellery within 7 days of delivery. Diamond, gemstone, and custom-cut products are non-refundable.</T>
+                <T>
+                  Refunds are available only for gold and silver jewellery
+                  within 7 days of delivery. Diamond, gemstone, and custom-cut
+                  products are non-refundable.
+                </T>
               </CardDescription>
             </CardHeader>
           </Card>
@@ -133,7 +141,9 @@ export default function CustomerRefundsPage() {
             .length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle><T>Your Refund Requests</T></CardTitle>
+                <CardTitle>
+                  <T>Your Refund Requests</T>
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {orders
@@ -171,14 +181,18 @@ export default function CustomerRefundsPage() {
           {/* Eligible orders */}
           <Card>
             <CardHeader>
-              <CardTitle><T>Delivered Orders</T></CardTitle>
+              <CardTitle>
+                <T>Delivered Orders</T>
+              </CardTitle>
               <CardDescription>
                 <T>Select an order to check refund eligibility</T>
               </CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <p className="text-muted-foreground"><T>Loading orders...</T></p>
+                <p className="text-muted-foreground">
+                  <T>Loading orders...</T>
+                </p>
               ) : deliveredOrders.length === 0 ? (
                 <p className="text-muted-foreground">
                   <T>No delivered orders found</T>
@@ -228,7 +242,9 @@ export default function CustomerRefundsPage() {
           {selectedOrder && (
             <Card>
               <CardHeader>
-                <CardTitle>{t(`Refund for ${selectedOrder.orderNumber}`)}</CardTitle>
+                <CardTitle>
+                  {t(`Refund for ${selectedOrder.orderNumber}`)}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {checkingEligibility ? (
@@ -290,7 +306,9 @@ export default function CustomerRefundsPage() {
                             onClick={submitRefund}
                             disabled={submitting || !reason.trim()}
                           >
-                            {submitting ? t("Submitting...") : t("Request Refund")}
+                            {submitting
+                              ? t("Submitting...")
+                              : t("Request Refund")}
                           </Button>
                           <Button
                             variant="outline"

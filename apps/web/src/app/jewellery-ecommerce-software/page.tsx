@@ -165,7 +165,12 @@ export default function JewelleryEcommerceSoftwarePage() {
               </span>
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
-              <T>Orivraa gives your jewellery shop an instant online presence. List your products on our marketplace, create shareable digital catalogues, and reach buyers across Nepal, India, Dubai, USA, UK & Europe. No website development needed. Starts free.</T>
+              <T>
+                Orivraa gives your jewellery shop an instant online presence.
+                List your products on our marketplace, create shareable digital
+                catalogues, and reach buyers across Nepal, India, Dubai, USA, UK
+                & Europe. No website development needed. Starts free.
+              </T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
@@ -197,7 +202,9 @@ export default function JewelleryEcommerceSoftwarePage() {
                 <div className="text-2xl lg:text-3xl font-bold text-gold-400">
                   {s.n}
                 </div>
-                <div className="text-sm text-gray-400 mt-1"><T>{s.l}</T></div>
+                <div className="text-sm text-gray-400 mt-1">
+                  <T>{s.l}</T>
+                </div>
               </div>
             ))}
           </div>
@@ -211,27 +218,56 @@ export default function JewelleryEcommerceSoftwarePage() {
             </h2>
             <div className="prose prose-lg dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
               <p>
-                <T>Most jewellers know they need to sell online, but the barriers are real:</T>
+                <T>
+                  Most jewellers know they need to sell online, but the barriers
+                  are real:
+                </T>
               </p>
               <ul>
                 <li>
-                  <T>Website development is expensive — Building a custom jewellery ecommerce site costs ₹2-10 lakhs, plus ongoing maintenance. Shopify and WooCommerce don't handle weight-based pricing or purity tracking.</T>
+                  <T>
+                    Website development is expensive — Building a custom
+                    jewellery ecommerce site costs ₹2-10 lakhs, plus ongoing
+                    maintenance. Shopify and WooCommerce don't handle
+                    weight-based pricing or purity tracking.
+                  </T>
                 </li>
                 <li>
-                  <T>Photography is challenging — Jewellery photography needs proper lighting and angles. Most jewellers don't have professional setup or photo editing skills.</T>
+                  <T>
+                    Photography is challenging — Jewellery photography needs
+                    proper lighting and angles. Most jewellers don't have
+                    professional setup or photo editing skills.
+                  </T>
                 </li>
                 <li>
-                  <T>Product descriptions take time — Writing compelling descriptions for hundreds of products in multiple languages is tedious and expensive.</T>
+                  <T>
+                    Product descriptions take time — Writing compelling
+                    descriptions for hundreds of products in multiple languages
+                    is tedious and expensive.
+                  </T>
                 </li>
                 <li>
-                  <T>Payment and shipping are complex — Handling international payments, customs duties, and secure shipping for high-value items requires expertise.</T>
+                  <T>
+                    Payment and shipping are complex — Handling international
+                    payments, customs duties, and secure shipping for high-value
+                    items requires expertise.
+                  </T>
                 </li>
                 <li>
-                  <T>Driving traffic is hard — Even with a website, getting buyers to visit requires SEO knowledge, advertising budgets, and social media marketing.</T>
+                  <T>
+                    Driving traffic is hard — Even with a website, getting
+                    buyers to visit requires SEO knowledge, advertising budgets,
+                    and social media marketing.
+                  </T>
                 </li>
               </ul>
               <p>
-                <T>Orivraa solves all of these. You upload your products, and we handle the marketplace, discovery, AI-generated descriptions, secure payments, and international reach. You focus on your jewellery — we handle the ecommerce.</T>
+                <T>
+                  Orivraa solves all of these. You upload your products, and we
+                  handle the marketplace, discovery, AI-generated descriptions,
+                  secure payments, and international reach. You focus on your
+                  jewellery — we handle the ecommerce.
+                </T>
               </p>
             </div>
           </div>
@@ -268,7 +304,10 @@ export default function JewelleryEcommerceSoftwarePage() {
               <T>Everything You Need to Sell Jewellery Online</T>
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-12">
-              <T>From product listing to order delivery — Orivraa handles the complete ecommerce workflow.</T>
+              <T>
+                From product listing to order delivery — Orivraa handles the
+                complete ecommerce workflow.
+              </T>
             </p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {FEATURES.map((f) => (
@@ -296,7 +335,10 @@ export default function JewelleryEcommerceSoftwarePage() {
               <T>Orivraa vs Building Your Own Jewellery Website</T>
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-10">
-              <T>Why spend lakhs on a custom website when you can start selling today?</T>
+              <T>
+                Why spend lakhs on a custom website when you can start selling
+                today?
+              </T>
             </p>
             <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
               <table className="w-full text-sm">
@@ -430,7 +472,10 @@ export default function JewelleryEcommerceSoftwarePage() {
               <T>Start Selling Jewellery Online Today</T>
             </h2>
             <p className="text-lg text-amber-100 mb-8">
-              <T>Join 2,000+ jewellers already selling on Orivraa. Free to list — reach buyers worldwide.</T>
+              <T>
+                Join 2,000+ jewellers already selling on Orivraa. Free to list —
+                reach buyers worldwide.
+              </T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link

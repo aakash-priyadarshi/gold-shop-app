@@ -3,8 +3,6 @@
 import { CustomerGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,9 +26,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import api, { authApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   COUNTRIES,
   CURRENCIES,
@@ -430,7 +430,9 @@ export default function CustomerSettingsPage() {
       <DashboardLayout>
         <div className="max-w-3xl mx-auto space-y-6">
           <div>
-            <h1 className="text-2xl font-bold"><T>Settings</T></h1>
+            <h1 className="text-2xl font-bold">
+              <T>Settings</T>
+            </h1>
             <p className="text-muted-foreground">
               <T>Manage your account and preferences</T>
             </p>
@@ -443,12 +445,16 @@ export default function CustomerSettingsPage() {
                 <User className="h-5 w-5" />
                 <T>Profile Information</T>
               </CardTitle>
-              <CardDescription><T>Update your personal details</T></CardDescription>
+              <CardDescription>
+                <T>Update your personal details</T>
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="profile-firstName"><T>First Name</T></Label>
+                  <Label htmlFor="profile-firstName">
+                    <T>First Name</T>
+                  </Label>
                   <Input
                     id="profile-firstName"
                     value={profile.firstName}
@@ -458,7 +464,9 @@ export default function CustomerSettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="profile-lastName"><T>Last Name</T></Label>
+                  <Label htmlFor="profile-lastName">
+                    <T>Last Name</T>
+                  </Label>
                   <Input
                     id="profile-lastName"
                     value={profile.lastName}
@@ -468,7 +476,9 @@ export default function CustomerSettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="profile-email"><T>Email</T></Label>
+                  <Label htmlFor="profile-email">
+                    <T>Email</T>
+                  </Label>
                   <Input
                     id="profile-email"
                     type="email"
@@ -482,7 +492,9 @@ export default function CustomerSettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Label htmlFor="profile-phone"><T>Phone Number</T></Label>
+                    <Label htmlFor="profile-phone">
+                      <T>Phone Number</T>
+                    </Label>
                     {user?.phoneVerifiedAt &&
                       profile.phone === phoneCheckState.originalPhone && (
                         <span className="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 dark:bg-green-950/30 px-2 py-0.5 rounded-full">
@@ -529,7 +541,10 @@ export default function CustomerSettingsPage() {
                   </div>
                   {phoneCheckState.exists === true && (
                     <p className="text-xs text-red-500">
-                      <T>This phone number is already registered to another account</T>
+                      <T>
+                        This phone number is already registered to another
+                        account
+                      </T>
                     </p>
                   )}
                   {!phoneCheckState.checking &&
@@ -544,7 +559,10 @@ export default function CustomerSettingsPage() {
                     phoneCheckState.originalPhone &&
                     user?.phoneVerifiedAt && (
                       <p className="text-xs text-amber-600">
-                        <T>Changing your phone number will require re-verification</T>
+                        <T>
+                          Changing your phone number will require
+                          re-verification
+                        </T>
                       </p>
                     )}
                 </div>
@@ -559,12 +577,16 @@ export default function CustomerSettingsPage() {
                 <Globe className="h-5 w-5" />
                 <T>Preferences</T>
               </CardTitle>
-              <CardDescription><T>Customize your experience</T></CardDescription>
+              <CardDescription>
+                <T>Customize your experience</T>
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="pref-country"><T>Country</T></Label>
+                  <Label htmlFor="pref-country">
+                    <T>Country</T>
+                  </Label>
                   <Select
                     value={profile.preferredCountry || "US"}
                     onValueChange={(value) => {
@@ -602,7 +624,9 @@ export default function CustomerSettingsPage() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="pref-currency"><T>Preferred Currency</T></Label>
+                  <Label htmlFor="pref-currency">
+                    <T>Preferred Currency</T>
+                  </Label>
                   <Select
                     value={profile.preferredCurrency}
                     onValueChange={(value) =>
@@ -629,7 +653,9 @@ export default function CustomerSettingsPage() {
               {/* State & City preferences */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="pref-state"><T>Preferred State</T></Label>
+                  <Label htmlFor="pref-state">
+                    <T>Preferred State</T>
+                  </Label>
                   {getStatesForCountry(profile.preferredCountry || "US")
                     .length > 0 ? (
                     <Select
@@ -673,7 +699,9 @@ export default function CustomerSettingsPage() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="pref-city"><T>Preferred City</T></Label>
+                  <Label htmlFor="pref-city">
+                    <T>Preferred City</T>
+                  </Label>
                   {getCitiesForCountry(
                     profile.preferredCountry || "US",
                     profile.preferredState || undefined,
@@ -766,8 +794,12 @@ export default function CustomerSettingsPage() {
               {addresses.length === 0 && !showAddressForm && (
                 <div className="text-center py-8 text-muted-foreground">
                   <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p><T>No delivery addresses saved yet</T></p>
-                  <p className="text-sm"><T>Add an address for faster checkout</T></p>
+                  <p>
+                    <T>No delivery addresses saved yet</T>
+                  </p>
+                  <p className="text-sm">
+                    <T>Add an address for faster checkout</T>
+                  </p>
                 </div>
               )}
 
@@ -842,7 +874,9 @@ export default function CustomerSettingsPage() {
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label><T>Label</T></Label>
+                      <Label>
+                        <T>Label</T>
+                      </Label>
                       <Select
                         value={(editingAddress || newAddress).label}
                         onValueChange={(value) => {
@@ -860,14 +894,22 @@ export default function CustomerSettingsPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Home"><T>Home</T></SelectItem>
-                          <SelectItem value="Work"><T>Work</T></SelectItem>
-                          <SelectItem value="Other"><T>Other</T></SelectItem>
+                          <SelectItem value="Home">
+                            <T>Home</T>
+                          </SelectItem>
+                          <SelectItem value="Work">
+                            <T>Work</T>
+                          </SelectItem>
+                          <SelectItem value="Other">
+                            <T>Other</T>
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label><T>Full Name</T></Label>
+                      <Label>
+                        <T>Full Name</T>
+                      </Label>
                       <Input
                         value={(editingAddress || newAddress).fullName}
                         onChange={(e) => {
@@ -887,7 +929,9 @@ export default function CustomerSettingsPage() {
                       />
                     </div>
                     <div className="space-y-2 md:col-span-2">
-                      <Label><T>Phone Number</T></Label>
+                      <Label>
+                        <T>Phone Number</T>
+                      </Label>
                       <Input
                         value={(editingAddress || newAddress).phone}
                         onChange={(e) => {
@@ -907,7 +951,9 @@ export default function CustomerSettingsPage() {
                       />
                     </div>
                     <div className="space-y-2 md:col-span-2">
-                      <Label><T>Address Line 1</T></Label>
+                      <Label>
+                        <T>Address Line 1</T>
+                      </Label>
                       <Input
                         value={(editingAddress || newAddress).addressLine1}
                         onChange={(e) => {
@@ -927,7 +973,9 @@ export default function CustomerSettingsPage() {
                       />
                     </div>
                     <div className="space-y-2 md:col-span-2">
-                      <Label><T>Address Line 2 (Optional)</T></Label>
+                      <Label>
+                        <T>Address Line 2 (Optional)</T>
+                      </Label>
                       <Input
                         value={
                           (editingAddress || newAddress).addressLine2 || ""
@@ -949,7 +997,9 @@ export default function CustomerSettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label><T>City</T></Label>
+                      <Label>
+                        <T>City</T>
+                      </Label>
                       <Input
                         value={(editingAddress || newAddress).city}
                         onChange={(e) => {
@@ -969,7 +1019,9 @@ export default function CustomerSettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label><T>State/Province</T></Label>
+                      <Label>
+                        <T>State/Province</T>
+                      </Label>
                       <Input
                         value={(editingAddress || newAddress).state}
                         onChange={(e) => {
@@ -989,7 +1041,9 @@ export default function CustomerSettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label><T>Postal Code</T></Label>
+                      <Label>
+                        <T>Postal Code</T>
+                      </Label>
                       <Input
                         value={(editingAddress || newAddress).postalCode}
                         onChange={(e) => {
@@ -1009,7 +1063,9 @@ export default function CustomerSettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label><T>Country</T></Label>
+                      <Label>
+                        <T>Country</T>
+                      </Label>
                       <Select
                         value={(editingAddress || newAddress).country}
                         onValueChange={(value) => {
@@ -1064,7 +1120,9 @@ export default function CustomerSettingsPage() {
                       ) : (
                         <>
                           <Save className="h-4 w-4 mr-2" />
-                          {editingAddress ? t("Update Address") : t("Save Address")}
+                          {editingAddress
+                            ? t("Update Address")
+                            : t("Save Address")}
                         </>
                       )}
                     </Button>
@@ -1081,7 +1139,9 @@ export default function CustomerSettingsPage() {
                 <Shield className="h-5 w-5" />
                 <T>Security</T>
               </CardTitle>
-              <CardDescription><T>Change your password</T></CardDescription>
+              <CardDescription>
+                <T>Change your password</T>
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -1102,7 +1162,9 @@ export default function CustomerSettingsPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="security-newPassword"><T>New Password</T></Label>
+                  <Label htmlFor="security-newPassword">
+                    <T>New Password</T>
+                  </Label>
                   <Input
                     id="security-newPassword"
                     type="password"

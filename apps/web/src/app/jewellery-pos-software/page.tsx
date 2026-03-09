@@ -2,6 +2,7 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { T } from "@/components/ui/T";
 import {
   ArrowRight,
   BarChart3,
@@ -15,7 +16,6 @@ import {
   ScanBarcode,
 } from "lucide-react";
 import Link from "next/link";
-import { T } from "@/components/ui/T";
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -166,7 +166,13 @@ export default function JewelleryPosSoftwarePage() {
               </span>
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
-              <T>Stop struggling with generic POS systems. Orivraa's point-of-sale module handles weight-based billing, making charges, old gold exchange, barcode scanning, and GST/VAT-compliant invoicing — all designed specifically for jewellery businesses.</T>
+              <T>
+                Stop struggling with generic POS systems. Orivraa's
+                point-of-sale module handles weight-based billing, making
+                charges, old gold exchange, barcode scanning, and
+                GST/VAT-compliant invoicing — all designed specifically for
+                jewellery businesses.
+              </T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
@@ -193,27 +199,56 @@ export default function JewelleryPosSoftwarePage() {
             </h2>
             <div className="prose prose-lg dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
               <p>
-                <T>Most POS systems are designed for retail stores selling items at fixed prices. A grocery store scans a barcode and the price pops up. Simple. But jewellery is different:</T>
+                <T>
+                  Most POS systems are designed for retail stores selling items
+                  at fixed prices. A grocery store scans a barcode and the price
+                  pops up. Simple. But jewellery is different:
+                </T>
               </p>
               <ul>
                 <li>
-                  <T>Prices change daily — Gold and silver rates fluctuate every day, sometimes multiple times a day. Your POS needs to pull live rates or accept manual rate entry.</T>
+                  <T>
+                    Prices change daily — Gold and silver rates fluctuate every
+                    day, sometimes multiple times a day. Your POS needs to pull
+                    live rates or accept manual rate entry.
+                  </T>
                 </li>
                 <li>
-                  <T>Billing is by weight, not unit — A gold necklace isn't priced at "₹50,000." It's priced at "22K gold × 15.3 grams × today's rate + making charges + stone charges − old gold exchange."</T>
+                  <T>
+                    Billing is by weight, not unit — A gold necklace isn't
+                    priced at "₹50,000." It's priced at "22K gold × 15.3 grams ×
+                    today's rate + making charges + stone charges − old gold
+                    exchange."
+                  </T>
                 </li>
                 <li>
-                  <T>Making charges vary — Different items have different making charges (per gram, per piece, or flat fee). A POS must support all these structures.</T>
+                  <T>
+                    Making charges vary — Different items have different making
+                    charges (per gram, per piece, or flat fee). A POS must
+                    support all these structures.
+                  </T>
                 </li>
                 <li>
-                  <T>Old gold exchange — Customers frequently trade in old jewellery. The POS needs to calculate the exchange value based on weight and purity, then adjust the bill.</T>
+                  <T>
+                    Old gold exchange — Customers frequently trade in old
+                    jewellery. The POS needs to calculate the exchange value
+                    based on weight and purity, then adjust the bill.
+                  </T>
                 </li>
                 <li>
-                  <T>Purity grading — You sell 24K, 22K, 18K, and 14K gold. Each has a different base price. Generic POS systems have no concept of this.</T>
+                  <T>
+                    Purity grading — You sell 24K, 22K, 18K, and 14K gold. Each
+                    has a different base price. Generic POS systems have no
+                    concept of this.
+                  </T>
                 </li>
               </ul>
               <p>
-                <T>Orivraa's jewellery POS handles all of this natively. No workarounds. No spreadsheets. Just fast, accurate billing designed for how jewellery shops actually work.</T>
+                <T>
+                  Orivraa's jewellery POS handles all of this natively. No
+                  workarounds. No spreadsheets. Just fast, accurate billing
+                  designed for how jewellery shops actually work.
+                </T>
               </p>
             </div>
           </div>
@@ -226,7 +261,10 @@ export default function JewelleryPosSoftwarePage() {
               <T>POS Features Designed for Jewellers</T>
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-12">
-              <T>Every feature you need to bill customers accurately and efficiently at the jewellery counter.</T>
+              <T>
+                Every feature you need to bill customers accurately and
+                efficiently at the jewellery counter.
+              </T>
             </p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {POS_FEATURES.map((f) => (
@@ -278,7 +316,10 @@ export default function JewelleryPosSoftwarePage() {
               <T>Orivraa POS vs Generic POS Systems</T>
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-10">
-              <T>Here's what you get with a jewellery-specific POS vs trying to make a generic system work.</T>
+              <T>
+                Here's what you get with a jewellery-specific POS vs trying to
+                make a generic system work.
+              </T>
             </p>
             <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
               <table className="w-full text-sm">
@@ -392,7 +433,10 @@ export default function JewelleryPosSoftwarePage() {
               <T>Upgrade Your Jewellery Shop Counter</T>
             </h2>
             <p className="text-lg text-amber-100 mb-8">
-              <T>Fast, accurate billing designed for gold and diamond shops. Free to start — no credit card required.</T>
+              <T>
+                Fast, accurate billing designed for gold and diamond shops. Free
+                to start — no credit card required.
+              </T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link

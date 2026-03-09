@@ -2,8 +2,6 @@
 
 import { CustomerGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import {
   OrderStatusBadge,
   OrderStepper,
@@ -19,9 +17,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useCurrencyConversion } from "@/hooks/useCurrencyConversion";
 import api from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   ArrowLeft,
   Calendar,
@@ -235,9 +235,13 @@ export default function CustomerOrderDetailPage() {
       <CustomerGuard>
         <DashboardLayout>
           <div className="text-center py-12">
-            <h2 className="text-xl font-semibold mb-2"><T>Order Not Found</T></h2>
+            <h2 className="text-xl font-semibold mb-2">
+              <T>Order Not Found</T>
+            </h2>
             <Button asChild>
-              <Link href="/dashboard/customer/orders"><T>Back to Orders</T></Link>
+              <Link href="/dashboard/customer/orders">
+                <T>Back to Orders</T>
+              </Link>
             </Button>
           </div>
         </DashboardLayout>
@@ -277,8 +281,12 @@ export default function CustomerOrderDetailPage() {
           {order.status !== "CANCELLED" && (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle><T>Order Progress</T></CardTitle>
-                <CardDescription><T>Track your order status</T></CardDescription>
+                <CardTitle>
+                  <T>Order Progress</T>
+                </CardTitle>
+                <CardDescription>
+                  <T>Track your order status</T>
+                </CardDescription>
               </CardHeader>
               <CardContent className="p-6">
                 <OrderStepper
@@ -340,7 +348,9 @@ export default function CustomerOrderDetailPage() {
                     )}
                     {order.productSnapshot?.totalWeightGrams && (
                       <p className="text-sm text-muted-foreground">
-                        {t(`Weight: ${order.productSnapshot.totalWeightGrams}g`)}
+                        {t(
+                          `Weight: ${order.productSnapshot.totalWeightGrams}g`,
+                        )}
                       </p>
                     )}
                     {order.productSnapshot?.quantity && (
@@ -355,7 +365,9 @@ export default function CustomerOrderDetailPage() {
                     )}
                     {order.productSnapshot?.buildMethod && (
                       <p className="text-sm text-muted-foreground">
-                        {t(`Build: ${order.productSnapshot.buildMethod.replace(/_/g, " ")}`)}
+                        {t(
+                          `Build: ${order.productSnapshot.buildMethod.replace(/_/g, " ")}`,
+                        )}
                       </p>
                     )}
                   </div>
@@ -367,7 +379,9 @@ export default function CustomerOrderDetailPage() {
                 <div className="flex justify-end">
                   <div className="w-64 space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground"><T>Subtotal</T></span>
+                      <span className="text-muted-foreground">
+                        <T>Subtotal</T>
+                      </span>
                       <span>
                         {formatWithConversion(
                           order.subtotalNpr || order.totalNpr || 0,
@@ -380,7 +394,9 @@ export default function CustomerOrderDetailPage() {
                     </div>
                     {order.taxNpr > 0 && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground"><T>Tax</T></span>
+                        <span className="text-muted-foreground">
+                          <T>Tax</T>
+                        </span>
                         <span>
                           {formatWithConversion(order.taxNpr, {
                             fromCurrency: (order.displayCurrency ||
@@ -391,7 +407,9 @@ export default function CustomerOrderDetailPage() {
                     )}
                     {order.shippingNpr > 0 && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground"><T>Shipping</T></span>
+                        <span className="text-muted-foreground">
+                          <T>Shipping</T>
+                        </span>
                         <span>
                           {formatWithConversion(order.shippingNpr, {
                             fromCurrency: (order.displayCurrency ||
@@ -402,7 +420,9 @@ export default function CustomerOrderDetailPage() {
                     )}
                     {order.discountNpr > 0 && (
                       <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
-                        <span><T>Discount</T></span>
+                        <span>
+                          <T>Discount</T>
+                        </span>
                         <span>
                           -
                           {formatWithConversion(order.discountNpr, {
@@ -414,7 +434,9 @@ export default function CustomerOrderDetailPage() {
                     )}
                     <Separator />
                     <div className="flex justify-between font-bold">
-                      <span><T>Total</T></span>
+                      <span>
+                        <T>Total</T>
+                      </span>
                       <span>
                         {formatWithConversion(order.totalNpr || 0, {
                           fromCurrency: (order.displayCurrency || "NPR") as any,
@@ -522,8 +544,10 @@ export default function CustomerOrderDetailPage() {
                   )}
                   {!order.estimatedDelivery && !order.trackingNumber && (
                     <p className="text-sm text-muted-foreground">
-                      <T>Delivery details will be updated once the order is ready
-                      to ship.</T>
+                      <T>
+                        Delivery details will be updated once the order is ready
+                        to ship.
+                      </T>
                     </p>
                   )}
                 </CardContent>
@@ -533,7 +557,9 @@ export default function CustomerOrderDetailPage() {
               {order.notes && (
                 <Card>
                   <CardHeader>
-                    <CardTitle><T>Notes</T></CardTitle>
+                    <CardTitle>
+                      <T>Notes</T>
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm">{order.notes}</p>

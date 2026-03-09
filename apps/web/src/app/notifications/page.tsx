@@ -1,30 +1,29 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { T } from "@/components/ui/T";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/hooks/useAuth";
+import api from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  BellIcon, 
-  CheckIcon, 
-  TrashIcon,
-  ShoppingBagIcon,
+import {
+  BellIcon,
+  CheckIcon,
   DocumentTextIcon,
-  UserIcon,
   ExclamationTriangleIcon,
   InformationCircleIcon,
+  ShoppingBagIcon,
   SparklesIcon,
-} from '@heroicons/react/24/outline';
-import api from '@/lib/api';
+  TrashIcon,
+} from "@heroicons/react/24/outline";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface Notification {
   id: string;
-  type: 'ORDER' | 'RFQ' | 'OFFER' | 'SYSTEM' | 'PROMOTION' | 'ALERT';
+  type: "ORDER" | "RFQ" | "OFFER" | "SYSTEM" | "PROMOTION" | "ALERT";
   title: string;
   message: string;
   isRead: boolean;
@@ -34,16 +33,16 @@ interface Notification {
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
-    case 'ORDER':
+    case "ORDER":
       return ShoppingBagIcon;
-    case 'RFQ':
-    case 'OFFER':
+    case "RFQ":
+    case "OFFER":
       return DocumentTextIcon;
-    case 'PROMOTION':
+    case "PROMOTION":
       return SparklesIcon;
-    case 'ALERT':
+    case "ALERT":
       return ExclamationTriangleIcon;
-    case 'SYSTEM':
+    case "SYSTEM":
     default:
       return InformationCircleIcon;
   }
@@ -51,18 +50,18 @@ const getNotificationIcon = (type: string) => {
 
 const getNotificationColor = (type: string) => {
   switch (type) {
-    case 'ORDER':
-      return 'bg-blue-100 text-blue-600';
-    case 'RFQ':
-    case 'OFFER':
-      return 'bg-purple-100 text-purple-600';
-    case 'PROMOTION':
-      return 'bg-amber-100 text-amber-600';
-    case 'ALERT':
-      return 'bg-red-100 text-red-600';
-    case 'SYSTEM':
+    case "ORDER":
+      return "bg-blue-100 text-blue-600";
+    case "RFQ":
+    case "OFFER":
+      return "bg-purple-100 text-purple-600";
+    case "PROMOTION":
+      return "bg-amber-100 text-amber-600";
+    case "ALERT":
+      return "bg-red-100 text-red-600";
+    case "SYSTEM":
     default:
-      return 'bg-gray-100 text-gray-600';
+      return "bg-gray-100 text-gray-600";
   }
 };
 
@@ -72,11 +71,11 @@ export default function NotificationsPage() {
   const t = useT();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState("all");
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      router.push('/auth/login?redirect=/notifications');
+      router.push("/auth/login?redirect=/notifications");
       return;
     }
     if (isAuthenticated) {
@@ -87,33 +86,34 @@ export default function NotificationsPage() {
   const loadNotifications = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/notifications');
+      const response = await api.get("/notifications");
       setNotifications(response.data?.notifications || response.data || []);
     } catch (error) {
-      console.error('Failed to load notifications:', error);
+      console.error("Failed to load notifications:", error);
       // Set demo notifications for now
       setNotifications([
         {
-          id: '1',
-          type: 'ORDER',
-          title: 'Order Confirmed',
-          message: 'Your order #ORD-001 has been confirmed by the seller.',
+          id: "1",
+          type: "ORDER",
+          title: "Order Confirmed",
+          message: "Your order #ORD-001 has been confirmed by the seller.",
           isRead: false,
           createdAt: new Date().toISOString(),
         },
         {
-          id: '2',
-          type: 'RFQ',
-          title: 'New Quote Received',
-          message: 'You have received a new quote for your custom ring request.',
+          id: "2",
+          type: "RFQ",
+          title: "New Quote Received",
+          message:
+            "You have received a new quote for your custom ring request.",
           isRead: false,
           createdAt: new Date(Date.now() - 3600000).toISOString(),
         },
         {
-          id: '3',
-          type: 'PROMOTION',
-          title: 'Special Offer',
-          message: 'Get 10% off on all gold jewelry this weekend!',
+          id: "3",
+          type: "PROMOTION",
+          title: "Special Offer",
+          message: "Get 10% off on all gold jewelry this weekend!",
           isRead: true,
           createdAt: new Date(Date.now() - 86400000).toISOString(),
         },
@@ -126,39 +126,39 @@ export default function NotificationsPage() {
   const markAsRead = async (id: string) => {
     try {
       await api.patch(`/notifications/${id}/read`);
-      setNotifications(prev => 
-        prev.map(n => n.id === id ? { ...n, isRead: true } : n)
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
       );
     } catch (error) {
-      console.error('Failed to mark as read:', error);
+      console.error("Failed to mark as read:", error);
     }
   };
 
   const markAllAsRead = async () => {
     try {
-      await api.patch('/notifications/read-all');
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      await api.patch("/notifications/read-all");
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     } catch (error) {
-      console.error('Failed to mark all as read:', error);
+      console.error("Failed to mark all as read:", error);
     }
   };
 
   const deleteNotification = async (id: string) => {
     try {
       await api.delete(`/notifications/${id}`);
-      setNotifications(prev => prev.filter(n => n.id !== id));
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
     } catch (error) {
-      console.error('Failed to delete notification:', error);
+      console.error("Failed to delete notification:", error);
     }
   };
 
-  const filteredNotifications = notifications.filter(n => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'unread') return !n.isRead;
+  const filteredNotifications = notifications.filter((n) => {
+    if (activeTab === "all") return true;
+    if (activeTab === "unread") return !n.isRead;
     return n.type === activeTab.toUpperCase();
   });
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -168,10 +168,10 @@ export default function NotificationsPage() {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return t('Just now');
-    if (diffMins < 60) return `${diffMins}${t('m ago')}`;
-    if (diffHours < 24) return `${diffHours}${t('h ago')}`;
-    if (diffDays < 7) return `${diffDays}${t('d ago')}`;
+    if (diffMins < 1) return t("Just now");
+    if (diffMins < 60) return `${diffMins}${t("m ago")}`;
+    if (diffHours < 24) return `${diffHours}${t("h ago")}`;
+    if (diffDays < 7) return `${diffDays}${t("d ago")}`;
     return date.toLocaleDateString();
   };
 
@@ -198,7 +198,9 @@ export default function NotificationsPage() {
               <T>Notifications</T>
             </h1>
             <p className="text-gray-500 mt-1">
-              {unreadCount > 0 ? `${unreadCount} ${t('unread')}` : t('All caught up!')}
+              {unreadCount > 0
+                ? `${unreadCount} ${t("unread")}`
+                : t("All caught up!")}
             </p>
           </div>
           {unreadCount > 0 && (
@@ -211,17 +213,26 @@ export default function NotificationsPage() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4">
-            <TabsTrigger value="all"><T>All</T></TabsTrigger>
+            <TabsTrigger value="all">
+              <T>All</T>
+            </TabsTrigger>
             <TabsTrigger value="unread">
               <T>Unread</T>
               {unreadCount > 0 && (
-                <Badge variant="secondary" className="ml-2 bg-red-500 text-white">
+                <Badge
+                  variant="secondary"
+                  className="ml-2 bg-red-500 text-white"
+                >
                   {unreadCount}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="order"><T>Orders</T></TabsTrigger>
-            <TabsTrigger value="rfq"><T>Quotes</T></TabsTrigger>
+            <TabsTrigger value="order">
+              <T>Orders</T>
+            </TabsTrigger>
+            <TabsTrigger value="rfq">
+              <T>Quotes</T>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab}>
@@ -229,11 +240,13 @@ export default function NotificationsPage() {
               <Card>
                 <CardContent className="py-12 text-center">
                   <BellIcon className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900"><T>No notifications</T></h3>
+                  <h3 className="text-lg font-medium text-gray-900">
+                    <T>No notifications</T>
+                  </h3>
                   <p className="text-gray-500 mt-1">
-                    {activeTab === 'unread' 
-                      ? t("You're all caught up!") 
-                      : t('No notifications to display')}
+                    {activeTab === "unread"
+                      ? t("You're all caught up!")
+                      : t("No notifications to display")}
                   </p>
                 </CardContent>
               </Card>
@@ -242,19 +255,23 @@ export default function NotificationsPage() {
                 {filteredNotifications.map((notification) => {
                   const Icon = getNotificationIcon(notification.type);
                   return (
-                    <Card 
-                      key={notification.id} 
-                      className={`transition-colors ${!notification.isRead ? 'bg-amber-50/50 border-amber-200' : ''}`}
+                    <Card
+                      key={notification.id}
+                      className={`transition-colors ${!notification.isRead ? "bg-amber-50/50 border-amber-200" : ""}`}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start gap-3">
-                          <div className={`p-2 rounded-lg ${getNotificationColor(notification.type)}`}>
+                          <div
+                            className={`p-2 rounded-lg ${getNotificationColor(notification.type)}`}
+                          >
                             <Icon className="h-5 w-5" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2">
                               <div>
-                                <h4 className={`text-sm font-medium ${!notification.isRead ? 'text-gray-900' : 'text-gray-700'}`}>
+                                <h4
+                                  className={`text-sm font-medium ${!notification.isRead ? "text-gray-900" : "text-gray-700"}`}
+                                >
                                   {notification.title}
                                 </h4>
                                 <p className="text-sm text-gray-500 mt-0.5">
@@ -267,9 +284,9 @@ export default function NotificationsPage() {
                             </div>
                             <div className="flex items-center gap-2 mt-2">
                               {!notification.isRead && (
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   className="h-7 text-xs"
                                   onClick={() => markAsRead(notification.id)}
                                 >
@@ -277,11 +294,13 @@ export default function NotificationsPage() {
                                   <T>Mark as read</T>
                                 </Button>
                               )}
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => deleteNotification(notification.id)}
+                                onClick={() =>
+                                  deleteNotification(notification.id)
+                                }
                               >
                                 <TrashIcon className="h-3 w-3 mr-1" />
                                 Delete

@@ -2,8 +2,6 @@
 
 import { CustomerGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,9 +22,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { T } from "@/components/ui/T";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import api from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   AlertCircle,
   ArrowLeft,
@@ -365,9 +365,13 @@ export default function CustomerRFQDetailPage() {
         <DashboardLayout>
           <div className="text-center py-12">
             <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h2 className="text-xl font-semibold mb-2"><T>Request Not Found</T></h2>
+            <h2 className="text-xl font-semibold mb-2">
+              <T>Request Not Found</T>
+            </h2>
             <Button asChild>
-              <Link href="/dashboard/customer/rfqs"><T>Back to Requests</T></Link>
+              <Link href="/dashboard/customer/rfqs">
+                <T>Back to Requests</T>
+              </Link>
             </Button>
           </div>
         </DashboardLayout>
@@ -414,31 +418,41 @@ export default function CustomerRFQDetailPage() {
             {/* Request Details */}
             <Card className="lg:col-span-1">
               <CardHeader>
-                <CardTitle><T>Request Details</T></CardTitle>
+                <CardTitle>
+                  <T>Request Details</T>
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-muted-foreground"><T>Type</T></p>
+                    <p className="text-muted-foreground">
+                      <T>Type</T>
+                    </p>
                     <p className="font-medium">
                       {rfq.jewelleryType.replace(/_/g, " ")}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground"><T>Method</T></p>
+                    <p className="text-muted-foreground">
+                      <T>Method</T>
+                    </p>
                     <p className="font-medium">
                       {rfq.buildMethod.replace(/_/g, " ")}
                     </p>
                   </div>
                   {rfq.targetTotalWeightG && (
                     <div>
-                      <p className="text-muted-foreground"><T>Target Weight</T></p>
+                      <p className="text-muted-foreground">
+                        <T>Target Weight</T>
+                      </p>
                       <p className="font-medium">{rfq.targetTotalWeightG}g</p>
                     </div>
                   )}
                   {rfq.preferredDeliveryDays && (
                     <div>
-                      <p className="text-muted-foreground"><T>Delivery</T></p>
+                      <p className="text-muted-foreground">
+                        <T>Delivery</T>
+                      </p>
                       <p className="font-medium">
                         {t(`${rfq.preferredDeliveryDays} days`)}
                       </p>
@@ -446,7 +460,9 @@ export default function CustomerRFQDetailPage() {
                   )}
                   {(rfq.budgetMinNpr || rfq.budgetMaxNpr) && (
                     <div className="col-span-2">
-                      <p className="text-muted-foreground"><T>Budget</T></p>
+                      <p className="text-muted-foreground">
+                        <T>Budget</T>
+                      </p>
                       <p className="font-medium">
                         {rfq.budgetMinNpr && rfq.budgetMaxNpr
                           ? `${formatCurrency(rfq.budgetMinNpr)} - ${formatCurrency(rfq.budgetMaxNpr)}`
@@ -502,7 +518,9 @@ export default function CustomerRFQDetailPage() {
                 </CardTitle>
                 <CardDescription>
                   {canAcceptOffers
-                    ? t("Review quotations from shops. Accept, counter-offer, or decline.")
+                    ? t(
+                        "Review quotations from shops. Accept, counter-offer, or decline.",
+                      )
                     : t("View quotations received for this request.")}
                 </CardDescription>
               </CardHeader>
@@ -510,7 +528,9 @@ export default function CustomerRFQDetailPage() {
                 {activeOffers.length === 0 ? (
                   <div className="text-center py-8">
                     <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="font-medium mb-2"><T>Waiting for Quotations</T></h3>
+                    <h3 className="font-medium mb-2">
+                      <T>Waiting for Quotations</T>
+                    </h3>
                     <p className="text-muted-foreground text-sm">
                       <T>Shops typically respond within 24-48 hours.</T>
                     </p>
@@ -596,15 +616,21 @@ export default function CustomerRFQDetailPage() {
                             </summary>
                             <div className="mt-2 p-3 bg-muted/50 rounded-lg grid grid-cols-2 md:grid-cols-5 gap-2 text-sm">
                               <div>
-                                <p className="text-muted-foreground"><T>Metal</T></p>
+                                <p className="text-muted-foreground">
+                                  <T>Metal</T>
+                                </p>
                                 <p>{formatCurrency(offer.metalCostNpr)}</p>
                               </div>
                               <div>
-                                <p className="text-muted-foreground"><T>Making</T></p>
+                                <p className="text-muted-foreground">
+                                  <T>Making</T>
+                                </p>
                                 <p>{formatCurrency(offer.makingChargeNpr)}</p>
                               </div>
                               <div>
-                                <p className="text-muted-foreground"><T>Finish</T></p>
+                                <p className="text-muted-foreground">
+                                  <T>Finish</T>
+                                </p>
                                 <p>{formatCurrency(offer.finishCostNpr)}</p>
                               </div>
                               <div>
@@ -614,7 +640,9 @@ export default function CustomerRFQDetailPage() {
                                 <p>{formatCurrency(offer.gemstoneCostNpr)}</p>
                               </div>
                               <div>
-                                <p className="text-muted-foreground"><T>Tax</T></p>
+                                <p className="text-muted-foreground">
+                                  <T>Tax</T>
+                                </p>
                                 <p>{formatCurrency(offer.taxNpr)}</p>
                               </div>
                             </div>
@@ -635,7 +663,9 @@ export default function CustomerRFQDetailPage() {
                             offer.declineReason && (
                               <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200">
                                 <p className="text-sm text-red-700 dark:text-red-300">
-                                  <strong><T>Decline Reason:</T></strong>{" "}
+                                  <strong>
+                                    <T>Decline Reason:</T>
+                                  </strong>{" "}
                                   {offer.declineReason}
                                 </p>
                               </div>
@@ -683,8 +713,10 @@ export default function CustomerRFQDetailPage() {
                             offer.status === "PENDING" && (
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <RefreshCw className="h-4 w-4 animate-spin" />
-                                <T>Waiting for shop to respond to your
-                                counter-offer...</T>
+                                <T>
+                                  Waiting for shop to respond to your
+                                  counter-offer...
+                                </T>
                               </div>
                             )}
                         </CardContent>
@@ -706,7 +738,9 @@ export default function CustomerRFQDetailPage() {
         >
           <DialogContent>
             <DialogHeader>
-              <DialogTitle><T>Make a Counter-Offer</T></DialogTitle>
+              <DialogTitle>
+                <T>Make a Counter-Offer</T>
+              </DialogTitle>
               <DialogDescription>
                 Propose a different price to{" "}
                 {counterDialog.offer?.shop.shopName}.
@@ -723,7 +757,9 @@ export default function CustomerRFQDetailPage() {
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="proposedPrice"><T>Your Proposed Price (NPR)</T></Label>
+                <Label htmlFor="proposedPrice">
+                  <T>Your Proposed Price (NPR)</T>
+                </Label>
                 <Input
                   id="proposedPrice"
                   type="number"
@@ -737,7 +773,9 @@ export default function CustomerRFQDetailPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="deliveryDays"><T>Preferred Delivery Days</T></Label>
+                <Label htmlFor="deliveryDays">
+                  <T>Preferred Delivery Days</T>
+                </Label>
                 <Input
                   id="deliveryDays"
                   type="number"
@@ -751,7 +789,9 @@ export default function CustomerRFQDetailPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="message"><T>Message to Shop (Optional)</T></Label>
+                <Label htmlFor="message">
+                  <T>Message to Shop (Optional)</T>
+                </Label>
                 <Textarea
                   id="message"
                   value={counterForm.message}
@@ -796,7 +836,9 @@ export default function CustomerRFQDetailPage() {
         >
           <DialogContent>
             <DialogHeader>
-              <DialogTitle><T>Decline Quotation</T></DialogTitle>
+              <DialogTitle>
+                <T>Decline Quotation</T>
+              </DialogTitle>
               <DialogDescription>
                 Are you sure you want to decline this quotation from{" "}
                 {declineDialog.offer?.shop.shopName}?
@@ -804,7 +846,9 @@ export default function CustomerRFQDetailPage() {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="declineReason"><T>Reason (Optional)</T></Label>
+                <Label htmlFor="declineReason">
+                  <T>Reason (Optional)</T>
+                </Label>
                 <Textarea
                   id="declineReason"
                   value={declineReason}

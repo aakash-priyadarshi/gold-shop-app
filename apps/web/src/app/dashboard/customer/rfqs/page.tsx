@@ -2,8 +2,6 @@
 
 import { CustomerGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { T } from "@/components/ui/T";
 import {
   Table,
   TableBody,
@@ -23,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import api from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import { Eye, FileText, Loader2, Plus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -204,7 +204,9 @@ export default function CustomerRFQsPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold"><T>My Custom Orders</T></h1>
+              <h1 className="text-2xl font-bold">
+                <T>My Custom Orders</T>
+              </h1>
               <p className="text-muted-foreground">
                 <T>Track your custom jewellery requests and seller responses</T>
               </p>
@@ -221,7 +223,9 @@ export default function CustomerRFQsPage() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Card>
               <CardHeader className="p-4 pb-2">
-                <CardDescription><T>Total Requests</T></CardDescription>
+                <CardDescription>
+                  <T>Total Requests</T>
+                </CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <p className="text-2xl font-bold">{stats.total}</p>
@@ -229,7 +233,9 @@ export default function CustomerRFQsPage() {
             </Card>
             <Card>
               <CardHeader className="p-4 pb-2">
-                <CardDescription><T>Active</T></CardDescription>
+                <CardDescription>
+                  <T>Active</T>
+                </CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <p className="text-2xl font-bold text-blue-600">
@@ -239,7 +245,9 @@ export default function CustomerRFQsPage() {
             </Card>
             <Card>
               <CardHeader className="p-4 pb-2">
-                <CardDescription><T>Completed</T></CardDescription>
+                <CardDescription>
+                  <T>Completed</T>
+                </CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <p className="text-2xl font-bold text-green-600">
@@ -249,7 +257,9 @@ export default function CustomerRFQsPage() {
             </Card>
             <Card>
               <CardHeader className="p-4 pb-2">
-                <CardDescription><T>Closed</T></CardDescription>
+                <CardDescription>
+                  <T>Closed</T>
+                </CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <p className="text-2xl font-bold text-gray-500 dark:text-gray-400">
@@ -259,7 +269,9 @@ export default function CustomerRFQsPage() {
             </Card>
             <Card>
               <CardHeader className="p-4 pb-2">
-                <CardDescription><T>Total Offers</T></CardDescription>
+                <CardDescription>
+                  <T>Total Offers</T>
+                </CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <p className="text-2xl font-bold text-purple-600">
@@ -272,12 +284,16 @@ export default function CustomerRFQsPage() {
           {/* RFQ List */}
           <Card>
             <CardHeader>
-              <CardTitle><T>Custom Orders</T></CardTitle>
+              <CardTitle>
+                <T>Custom Orders</T>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="mb-4">
-                  <TabsTrigger value="all">{t(`All (${rfqs.length})`)}</TabsTrigger>
+                  <TabsTrigger value="all">
+                    {t(`All (${rfqs.length})`)}
+                  </TabsTrigger>
                   <TabsTrigger value="active">
                     {t(`Active (${stats.active})`)}
                   </TabsTrigger>
@@ -293,10 +309,14 @@ export default function CustomerRFQsPage() {
                   {filteredRFQs.length === 0 ? (
                     <div className="text-center py-12">
                       <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="font-medium mb-2"><T>No requests found</T></h3>
+                      <h3 className="font-medium mb-2">
+                        <T>No requests found</T>
+                      </h3>
                       <p className="text-muted-foreground text-sm mb-4">
                         {activeTab === "all"
-                          ? t("You haven't created any custom order requests yet")
+                          ? t(
+                              "You haven't created any custom order requests yet",
+                            )
                           : t(`No ${activeTab} requests`)}
                       </p>
                       <Button asChild>
@@ -309,14 +329,30 @@ export default function CustomerRFQsPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead><T>Item</T></TableHead>
-                          <TableHead><T>Metal</T></TableHead>
-                          <TableHead><T>Weight</T></TableHead>
-                          <TableHead><T>Budget</T></TableHead>
-                          <TableHead><T>Offers</T></TableHead>
-                          <TableHead><T>Status</T></TableHead>
-                          <TableHead><T>Created</T></TableHead>
-                          <TableHead className="text-right"><T>Actions</T></TableHead>
+                          <TableHead>
+                            <T>Item</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Metal</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Weight</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Budget</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Offers</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Status</T>
+                          </TableHead>
+                          <TableHead>
+                            <T>Created</T>
+                          </TableHead>
+                          <TableHead className="text-right">
+                            <T>Actions</T>
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>

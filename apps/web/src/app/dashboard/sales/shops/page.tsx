@@ -3,6 +3,8 @@
 import { AdminSellerCRM } from "@/components/admin/AdminSellerCRM";
 import { SalesGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -45,6 +47,7 @@ export default function SalesShopsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const t = useT();
 
   useEffect(() => {
     loadShops();
@@ -86,10 +89,10 @@ export default function SalesShopsPage() {
         <div className="space-y-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              Shops & CRM
+              <T>Shops & CRM</T>
             </h1>
             <p className="text-gray-500 dark:text-gray-400 mt-1">
-              Browse shops and manage seller relationships
+              <T>Browse shops and manage seller relationships</T>
             </p>
           </div>
 
@@ -97,11 +100,11 @@ export default function SalesShopsPage() {
             <TabsList>
               <TabsTrigger value="directory" className="gap-2">
                 <Store className="w-4 h-4" />
-                Shop Directory
+                <T>Shop Directory</T>
               </TabsTrigger>
               <TabsTrigger value="crm" className="gap-2">
                 <TrendingUp className="w-4 h-4" />
-                Seller CRM
+                <T>Seller CRM</T>
               </TabsTrigger>
             </TabsList>
 
@@ -111,7 +114,7 @@ export default function SalesShopsPage() {
                 <div className="relative flex-1 max-w-md">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
-                    placeholder="Search shops..."
+                    placeholder={t("Search shops...")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -119,7 +122,7 @@ export default function SalesShopsPage() {
                   />
                 </div>
                 <Button onClick={handleSearch} variant="outline">
-                  Search
+                  <T>Search</T>
                 </Button>
               </div>
 
@@ -132,18 +135,18 @@ export default function SalesShopsPage() {
                     </div>
                   ) : shops.length === 0 ? (
                     <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                      No shops found
+                      <T>No shops found</T>
                     </div>
                   ) : (
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Shop</TableHead>
-                          <TableHead>Owner</TableHead>
-                          <TableHead>Location</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Orders</TableHead>
-                          <TableHead>Actions</TableHead>
+                          <TableHead><T>Shop</T></TableHead>
+                          <TableHead><T>Owner</T></TableHead>
+                          <TableHead><T>Location</T></TableHead>
+                          <TableHead><T>Status</T></TableHead>
+                          <TableHead><T>Orders</T></TableHead>
+                          <TableHead><T>Actions</T></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -174,14 +177,14 @@ export default function SalesShopsPage() {
                               <div className="flex gap-1">
                                 {shop.isVerified ? (
                                   <Badge variant="default" className="text-xs">
-                                    Verified
+                                    <T>Verified</T>
                                   </Badge>
                                 ) : (
                                   <Badge
                                     variant="secondary"
                                     className="text-xs"
                                   >
-                                    Unverified
+                                    <T>Unverified</T>
                                   </Badge>
                                 )}
                                 {shop.isActive ? (
@@ -189,14 +192,14 @@ export default function SalesShopsPage() {
                                     variant="outline"
                                     className="text-xs text-green-600"
                                   >
-                                    Active
+                                    <T>Active</T>
                                   </Badge>
                                 ) : (
                                   <Badge
                                     variant="outline"
                                     className="text-xs text-red-600"
                                   >
-                                    Inactive
+                                    <T>Inactive</T>
                                   </Badge>
                                 )}
                               </div>
@@ -206,7 +209,7 @@ export default function SalesShopsPage() {
                               <Link href={`/shops/${shop.id}`}>
                                 <Button variant="ghost" size="sm">
                                   <Eye className="w-4 h-4 mr-1" />
-                                  View
+                                  <T>View</T>
                                 </Button>
                               </Link>
                             </TableCell>
@@ -227,10 +230,10 @@ export default function SalesShopsPage() {
                     disabled={currentPage === 1}
                     onClick={() => setCurrentPage((p) => p - 1)}
                   >
-                    Previous
+                    <T>Previous</T>
                   </Button>
                   <span className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                    Page {currentPage} of {totalPages}
+                    {t(`Page ${currentPage} of ${totalPages}`)}
                   </span>
                   <Button
                     variant="outline"
@@ -238,7 +241,7 @@ export default function SalesShopsPage() {
                     disabled={currentPage === totalPages}
                     onClick={() => setCurrentPage((p) => p + 1)}
                   >
-                    Next
+                    <T>Next</T>
                   </Button>
                 </div>
               )}

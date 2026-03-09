@@ -1,9 +1,9 @@
 "use client";
 
+import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { catalogueApi, rfqApi } from "@/lib/api";
-import { T } from "@/components/ui/T";
 import { useT } from "@/providers/translation-provider";
 import {
   ChevronLeft,
@@ -257,7 +257,9 @@ function WalkInRfqModal({
           {step === 2 && (
             <>
               <div>
-                <label className={labelClass}><T>Jewellery Type</T></label>
+                <label className={labelClass}>
+                  <T>Jewellery Type</T>
+                </label>
                 <select
                   value={jewelleryType}
                   onChange={(e) => setJewelleryType(e.target.value)}
@@ -284,7 +286,9 @@ function WalkInRfqModal({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={labelClass}><T>Budget Min (NPR)</T></label>
+                  <label className={labelClass}>
+                    <T>Budget Min (NPR)</T>
+                  </label>
                   <input
                     type="number"
                     value={budgetMin}
@@ -294,7 +298,9 @@ function WalkInRfqModal({
                   />
                 </div>
                 <div>
-                  <label className={labelClass}><T>Budget Max (NPR)</T></label>
+                  <label className={labelClass}>
+                    <T>Budget Max (NPR)</T>
+                  </label>
                   <input
                     type="number"
                     value={budgetMax}
@@ -305,7 +311,9 @@ function WalkInRfqModal({
                 </div>
               </div>
               <div>
-                <label className={labelClass}><T>Timeline (days)</T></label>
+                <label className={labelClass}>
+                  <T>Timeline (days)</T>
+                </label>
                 <input
                   type="number"
                   value={deadlineDays}
@@ -315,7 +323,9 @@ function WalkInRfqModal({
                 />
               </div>
               <div>
-                <label className={labelClass}><T>Notes</T></label>
+                <label className={labelClass}>
+                  <T>Notes</T>
+                </label>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
@@ -329,7 +339,9 @@ function WalkInRfqModal({
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={labelClass}><T>Ring Size</T></label>
+                  <label className={labelClass}>
+                    <T>Ring Size</T>
+                  </label>
                   <input
                     value={measurements.ringSize}
                     onChange={(e) =>
@@ -343,7 +355,9 @@ function WalkInRfqModal({
                   />
                 </div>
                 <div>
-                  <label className={labelClass}><T>Wrist Size</T></label>
+                  <label className={labelClass}>
+                    <T>Wrist Size</T>
+                  </label>
                   <input
                     value={measurements.wristSize}
                     onChange={(e) =>
@@ -357,7 +371,9 @@ function WalkInRfqModal({
                   />
                 </div>
                 <div>
-                  <label className={labelClass}><T>Chain Length</T></label>
+                  <label className={labelClass}>
+                    <T>Chain Length</T>
+                  </label>
                   <input
                     value={measurements.chainLength}
                     onChange={(e) =>
@@ -371,7 +387,9 @@ function WalkInRfqModal({
                   />
                 </div>
                 <div>
-                  <label className={labelClass}><T>Bangle Size</T></label>
+                  <label className={labelClass}>
+                    <T>Bangle Size</T>
+                  </label>
                   <input
                     value={measurements.bangleSize}
                     onChange={(e) =>
@@ -391,11 +409,15 @@ function WalkInRfqModal({
           {step === 3 && (
             <>
               <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-xs text-amber-700 dark:text-amber-400">
-                <T>This info is stored for shop internal follow-up only. It is
-                never shared in platform chat or visible to buyers.</T>
+                <T>
+                  This info is stored for shop internal follow-up only. It is
+                  never shared in platform chat or visible to buyers.
+                </T>
               </div>
               <div>
-                <label className={labelClass}><T>Customer Name</T></label>
+                <label className={labelClass}>
+                  <T>Customer Name</T>
+                </label>
                 <input
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
@@ -404,7 +426,9 @@ function WalkInRfqModal({
                 />
               </div>
               <div>
-                <label className={labelClass}><T>Customer Phone</T></label>
+                <label className={labelClass}>
+                  <T>Customer Phone</T>
+                </label>
                 <input
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
@@ -413,7 +437,9 @@ function WalkInRfqModal({
                 />
               </div>
               <div>
-                <label className={labelClass}><T>Internal Notes</T></label>
+                <label className={labelClass}>
+                  <T>Internal Notes</T>
+                </label>
                 <textarea
                   value={customerNotes}
                   onChange={(e) => setCustomerNotes(e.target.value)}
@@ -1038,7 +1064,9 @@ export default function PublicCataloguePage() {
         {items.length === 0 ? (
           <div className="text-center py-16 text-gray-500 dark:text-gray-400">
             <ShoppingBag className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p><T>This catalogue has no items yet.</T></p>
+            <p>
+              <T>This catalogue has no items yet.</T>
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">

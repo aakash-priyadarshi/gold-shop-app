@@ -2,15 +2,15 @@
 
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { T } from "@/components/ui/T";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "@/hooks/use-toast";
 import { getImageUrl } from "@/lib/image-upload";
+import { useT } from "@/providers/translation-provider";
 import {
   ArrowLeft,
   ChevronLeft,
@@ -261,9 +261,13 @@ export default function ProductDetailPage() {
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <Gem className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-            <h2 className="text-xl font-semibold mb-2"><T>Item not found</T></h2>
+            <h2 className="text-xl font-semibold mb-2">
+              <T>Item not found</T>
+            </h2>
             <Link href="/shop">
-              <Button><T>Back to Shop</T></Button>
+              <Button>
+                <T>Back to Shop</T>
+              </Button>
             </Link>
           </div>
         </main>
@@ -419,8 +423,8 @@ export default function ProductDetailPage() {
                   {formatPrice(item.totalPriceNpr)}
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  <T>Weight:</T> {item.totalWeightGrams}g | {getMetalInfo().metal}{" "}
-                  {getMetalInfo().purity}
+                  <T>Weight:</T> {item.totalWeightGrams}g |{" "}
+                  {getMetalInfo().metal} {getMetalInfo().purity}
                 </p>
               </div>
 
@@ -508,7 +512,9 @@ export default function ProductDetailPage() {
                     ) : (
                       <ShoppingCart className="h-5 w-5 mr-2" />
                     )}
-                    {item.stockQuantity === 0 ? t("Out of Stock") : t("Add to Cart")}
+                    {item.stockQuantity === 0
+                      ? t("Out of Stock")
+                      : t("Add to Cart")}
                   </Button>
                   <Button size="lg" variant="outline">
                     <Heart className="h-5 w-5" />
@@ -585,7 +591,9 @@ export default function ProductDetailPage() {
                             1
                           </span>
                         </div>
-                        <h3 className="text-lg font-semibold"><T>METAL DETAILS</T></h3>
+                        <h3 className="text-lg font-semibold">
+                          <T>METAL DETAILS</T>
+                        </h3>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                         <div className="text-center">
@@ -788,7 +796,9 @@ export default function ProductDetailPage() {
                             {item.gemstones?.length ? "4" : "3"}
                           </span>
                         </div>
-                        <h3 className="text-lg font-semibold"><T>CRAFTSMANSHIP</T></h3>
+                        <h3 className="text-lg font-semibold">
+                          <T>CRAFTSMANSHIP</T>
+                        </h3>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-4">
                         <div className="flex items-start gap-4">
@@ -896,7 +906,9 @@ export default function ProductDetailPage() {
 
                         {/* Making Charges Row */}
                         <tr className="border-b">
-                          <td className="p-4 font-medium"><T>Making Charges</T></td>
+                          <td className="p-4 font-medium">
+                            <T>Making Charges</T>
+                          </td>
                           <td className="text-center p-4">-</td>
                           <td className="text-center p-4">-</td>
                           <td className="text-center p-4">-</td>
@@ -909,7 +921,9 @@ export default function ProductDetailPage() {
 
                         {/* Sub Total Row */}
                         <tr className="border-b bg-gray-50">
-                          <td className="p-4 font-medium"><T>Sub Total</T></td>
+                          <td className="p-4 font-medium">
+                            <T>Sub Total</T>
+                          </td>
                           <td className="text-center p-4">-</td>
                           <td className="text-center p-4 font-medium">
                             {item.totalWeightGrams}g<br />
@@ -925,7 +939,9 @@ export default function ProductDetailPage() {
 
                         {/* Discount Row (placeholder) */}
                         <tr className="border-b">
-                          <td className="p-4 font-medium"><T>Discount</T></td>
+                          <td className="p-4 font-medium">
+                            <T>Discount</T>
+                          </td>
                           <td className="text-center p-4">-</td>
                           <td className="text-center p-4">-</td>
                           <td className="text-center p-4 text-red-500 font-medium">
@@ -977,7 +993,9 @@ export default function ProductDetailPage() {
                               ))}
                               {breakdown.lineItems.length === 0 && (
                                 <tr className="border-b">
-                                  <td className="p-4 font-medium"><T>Tax</T></td>
+                                  <td className="p-4 font-medium">
+                                    <T>Tax</T>
+                                  </td>
                                   <td className="text-center p-4">-</td>
                                   <td className="text-center p-4">-</td>
                                   <td className="text-center p-4">-</td>
@@ -1046,7 +1064,9 @@ export default function ProductDetailPage() {
                       <ul className="space-y-2">
                         <li className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                           <Shield className="h-4 w-4 text-green-600" />
-                          <span><T>BIS Hallmarked for assured purity</T></span>
+                          <span>
+                            <T>BIS Hallmarked for assured purity</T>
+                          </span>
                         </li>
                         <li className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                           <Sparkles className="h-4 w-4 text-gold-600" />
@@ -1057,11 +1077,15 @@ export default function ProductDetailPage() {
                         </li>
                         <li className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                           <Truck className="h-4 w-4 text-blue-600" />
-                          <span><T>Insured delivery to your doorstep</T></span>
+                          <span>
+                            <T>Insured delivery to your doorstep</T>
+                          </span>
                         </li>
                         <li className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                           <Phone className="h-4 w-4 text-purple-600" />
-                          <span><T>Lifetime maintenance support</T></span>
+                          <span>
+                            <T>Lifetime maintenance support</T>
+                          </span>
                         </li>
                       </ul>
                     </div>
@@ -1072,7 +1096,9 @@ export default function ProductDetailPage() {
               <TabsContent value="reviews" className="mt-6">
                 <div className="bg-white dark:bg-gray-900 rounded-xl p-6 text-center">
                   <Star className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-                  <h3 className="text-lg font-semibold mb-2"><T>No reviews yet</T></h3>
+                  <h3 className="text-lg font-semibold mb-2">
+                    <T>No reviews yet</T>
+                  </h3>
                   <p className="text-gray-500 dark:text-gray-400">
                     <T>Be the first to review this product</T>
                   </p>

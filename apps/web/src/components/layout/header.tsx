@@ -402,7 +402,10 @@ export function Header() {
   // Notification text mapping
   const getNotificationText = (type: string) => {
     const texts: Record<string, { title: string; body: string }> = {
-      ORDER_PLACED: { title: t("New Order"), body: t("A new order has been placed") },
+      ORDER_PLACED: {
+        title: t("New Order"),
+        body: t("A new order has been placed"),
+      },
       ORDER_CONFIRMED: {
         title: t("Order Confirmed"),
         body: t("Your order has been confirmed"),
@@ -1102,7 +1105,9 @@ export function Header() {
                       >
                         <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                           <DocumentTextIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-sm">{t("KYC & Verification")}</span>
+                          <span className="text-sm">
+                            {t("KYC & Verification")}
+                          </span>
                         </div>
                       </Link>
                       <div className="border-t dark:border-gray-800 my-1" />
@@ -1235,7 +1240,9 @@ export function Header() {
                       {recentOrders.length === 0 ? (
                         <div className="flex flex-col items-center justify-center p-6 text-center">
                           <TruckIcon className="h-12 w-12 text-gray-300 mb-3" />
-                          <p className="text-muted-foreground">{t("No orders yet")}</p>
+                          <p className="text-muted-foreground">
+                            {t("No orders yet")}
+                          </p>
                           <Link
                             href="/shop"
                             onClick={() => setOrdersPopoverOpen(false)}
@@ -1341,7 +1348,8 @@ export function Header() {
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>
-                      {getRoleQuickActions(user.role)[1]?.tooltip || t("Orders")}
+                      {getRoleQuickActions(user.role)[1]?.tooltip ||
+                        t("Orders")}
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -1371,7 +1379,8 @@ export function Header() {
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>
-                      {t("Messages")}{unreadMessages > 0 ? ` (${unreadMessages})` : ""}
+                      {t("Messages")}
+                      {unreadMessages > 0 ? ` (${unreadMessages})` : ""}
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -1388,7 +1397,9 @@ export function Header() {
                     {recentMessages.length === 0 ? (
                       <div className="flex flex-col items-center justify-center p-6 text-center">
                         <ChatBubbleLeftRightIcon className="h-12 w-12 text-gray-300 mb-3" />
-                        <p className="text-muted-foreground">{t("No messages yet")}</p>
+                        <p className="text-muted-foreground">
+                          {t("No messages yet")}
+                        </p>
                         <Link
                           href="/shop"
                           onClick={() => setMessagesPopoverOpen(false)}
@@ -1491,7 +1502,9 @@ export function Header() {
                     </PopoverTrigger>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{t("Cart")} ({mounted ? itemCount : 0})</p>
+                    <p>
+                      {t("Cart")} ({mounted ? itemCount : 0})
+                    </p>
                   </TooltipContent>
                 </Tooltip>
                 <PopoverContent className="w-80 p-0" align="end">

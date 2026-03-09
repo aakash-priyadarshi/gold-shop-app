@@ -1,8 +1,8 @@
 "use client";
 
-import { T } from "@/components/ui/T";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { T } from "@/components/ui/T";
 import {
   ArrowRight,
   BarChart3,
@@ -268,7 +268,13 @@ export default function JewelleryStoreManagementSoftwarePage() {
               </span>
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
-              <T>Manage your entire jewellery business from one platform — inventory tracking by weight and purity, billing with making charges, customer management, analytics, and an online marketplace. Trusted by 2,000+ jewellers across 6 countries. Starts free.</T>
+              <T>
+                Manage your entire jewellery business from one platform —
+                inventory tracking by weight and purity, billing with making
+                charges, customer management, analytics, and an online
+                marketplace. Trusted by 2,000+ jewellers across 6 countries.
+                Starts free.
+              </T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
@@ -300,7 +306,9 @@ export default function JewelleryStoreManagementSoftwarePage() {
                 <div className="text-2xl lg:text-3xl font-bold text-gold-400">
                   {s.n}
                 </div>
-                <div className="text-sm text-gray-400 mt-1"><T>{s.l}</T></div>
+                <div className="text-sm text-gray-400 mt-1">
+                  <T>{s.l}</T>
+                </div>
               </div>
             ))}
           </div>
@@ -314,13 +322,31 @@ export default function JewelleryStoreManagementSoftwarePage() {
             </h2>
             <div className="prose prose-lg dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
               <p>
-                <T>Running a jewellery store is fundamentally different from running a general retail shop. You deal with precious metals tracked by weight and purity, custom orders with making charges, old gold exchange, karigar (artisan) management, and compliance with hallmarking regulations.</T>
+                <T>
+                  Running a jewellery store is fundamentally different from
+                  running a general retail shop. You deal with precious metals
+                  tracked by weight and purity, custom orders with making
+                  charges, old gold exchange, karigar (artisan) management, and
+                  compliance with hallmarking regulations.
+                </T>
               </p>
               <p>
-                <T>Generic retail software like Shopify or Square simply cannot handle the nuances of jewellery — they don't support weight-based inventory, purity grading, or making-charge calculations. That's why jewellery-specific store management software like Orivraa exists.</T>
+                <T>
+                  Generic retail software like Shopify or Square simply cannot
+                  handle the nuances of jewellery — they don't support
+                  weight-based inventory, purity grading, or making-charge
+                  calculations. That's why jewellery-specific store management
+                  software like Orivraa exists.
+                </T>
               </p>
               <p>
-                <T>With Orivraa, you get a purpose-built platform that understands the jewellery business from the ground up — from 22K gold necklaces to diamond solitaires, from wholesale dealers to retail customers, from local markets to international buyers.</T>
+                <T>
+                  With Orivraa, you get a purpose-built platform that
+                  understands the jewellery business from the ground up — from
+                  22K gold necklaces to diamond solitaires, from wholesale
+                  dealers to retail customers, from local markets to
+                  international buyers.
+                </T>
               </p>
             </div>
           </div>
@@ -333,7 +359,10 @@ export default function JewelleryStoreManagementSoftwarePage() {
               <T>Everything You Need to Run Your Jewellery Store</T>
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-12">
-              <T>From inventory to invoicing, customer management to analytics — one platform does it all.</T>
+              <T>
+                From inventory to invoicing, customer management to analytics —
+                one platform does it all.
+              </T>
             </p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {FEATURES.map((f) => (
@@ -361,7 +390,10 @@ export default function JewelleryStoreManagementSoftwarePage() {
               <T>How Orivraa Compares to Other Store Management Software</T>
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-10">
-              <T>See why jewellers are switching to Orivraa for modern store management.</T>
+              <T>
+                See why jewellers are switching to Orivraa for modern store
+                management.
+              </T>
             </p>
             <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
               <table className="w-full text-sm">
@@ -557,7 +589,10 @@ export default function JewelleryStoreManagementSoftwarePage() {
               <T>Ready to Modernise Your Jewellery Store?</T>
             </h2>
             <p className="text-lg text-amber-100 mb-8">
-              <T>Join 2,000+ jewellers already managing their stores with Orivraa. Free forever plan — no credit card required.</T>
+              <T>
+                Join 2,000+ jewellers already managing their stores with
+                Orivraa. Free forever plan — no credit card required.
+              </T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link

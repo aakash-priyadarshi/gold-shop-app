@@ -2,8 +2,6 @@
 
 import { CustomerGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { T } from "@/components/ui/T";
-import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,8 +11,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { T } from "@/components/ui/T";
 import { useAuth } from "@/hooks/useAuth";
 import { ordersApi, rfqApi, shopsApi } from "@/lib/api";
+import { useT } from "@/providers/translation-provider";
 import {
   ArrowRight,
   Heart,
@@ -254,10 +254,14 @@ export default function CustomerDashboard() {
                     <Package className="h-5 w-5 text-blue-500" />
                     <T>Recent Orders</T>
                   </CardTitle>
-                  <CardDescription><T>Track your purchases</T></CardDescription>
+                  <CardDescription>
+                    <T>Track your purchases</T>
+                  </CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href="/dashboard/customer/orders"><T>View all</T></Link>
+                  <Link href="/dashboard/customer/orders">
+                    <T>View all</T>
+                  </Link>
                 </Button>
               </CardHeader>
               <CardContent>
@@ -303,10 +307,14 @@ export default function CustomerDashboard() {
                     <Heart className="h-5 w-5 text-red-500" />
                     <T>My Wishlist</T>
                   </CardTitle>
-                  <CardDescription><T>Items you&apos;ve saved</T></CardDescription>
+                  <CardDescription>
+                    <T>Items you&apos;ve saved</T>
+                  </CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href="/dashboard/customer/wishlist"><T>View all</T></Link>
+                  <Link href="/dashboard/customer/wishlist">
+                    <T>View all</T>
+                  </Link>
                 </Button>
               </CardHeader>
               <CardContent>
@@ -345,10 +353,14 @@ export default function CustomerDashboard() {
                   <MessageSquare className="h-5 w-5 text-purple-500" />
                   My RFQ Requests
                 </CardTitle>
-                <CardDescription><T>Custom design inquiries</T></CardDescription>
+                <CardDescription>
+                  <T>Custom design inquiries</T>
+                </CardDescription>
               </div>
               <Button asChild>
-                <Link href="/dashboard/customer/rfq/new"><T>Create New RFQ</T></Link>
+                <Link href="/dashboard/customer/rfq/new">
+                  <T>Create New RFQ</T>
+                </Link>
               </Button>
             </CardHeader>
             <CardContent>
@@ -395,7 +407,9 @@ export default function CustomerDashboard() {
                 <Store className="h-5 w-5 text-gold-500" />
                 <T>Recommended Shops</T>
               </CardTitle>
-              <CardDescription><T>Trusted jewellers in your area</T></CardDescription>
+              <CardDescription>
+                <T>Trusted jewellers in your area</T>
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

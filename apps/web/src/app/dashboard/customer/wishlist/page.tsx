@@ -1,25 +1,24 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { CustomerGuard } from '@/components/auth/RouteGuard';
-import { T } from '@/components/ui/T';
-import { useT } from '@/providers/translation-provider';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { CustomerGuard } from "@/components/auth/RouteGuard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { T } from "@/components/ui/T";
+import { toast } from "@/hooks/use-toast";
+import { useT } from "@/providers/translation-provider";
 import {
-  Heart,
-  Trash2,
+  HeartOff,
+  Loader2,
+  Package,
   ShoppingCart,
   Store,
-  Package,
-  Loader2,
-  HeartOff,
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import Image from 'next/image';
+  Trash2,
+} from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 interface WishlistItem {
   id: string;
@@ -53,15 +52,15 @@ export default function WishlistPage() {
       // TODO: Replace with actual API call when wishlist endpoint is available
       // const response = await api.get('/wishlist');
       // setWishlistItems(response.data);
-      
+
       // For now, show empty state
       setWishlistItems([]);
     } catch (error) {
-      console.error('Failed to load wishlist:', error);
+      console.error("Failed to load wishlist:", error);
       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to load wishlist items',
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load wishlist items",
       });
     } finally {
       setIsLoading(false);
@@ -73,17 +72,17 @@ export default function WishlistPage() {
     try {
       // TODO: Replace with actual API call
       // await api.delete(`/wishlist/${itemId}`);
-      
-      setWishlistItems(prev => prev.filter(item => item.id !== itemId));
+
+      setWishlistItems((prev) => prev.filter((item) => item.id !== itemId));
       toast({
-        title: 'Removed from wishlist',
-        description: 'Item has been removed from your wishlist',
+        title: "Removed from wishlist",
+        description: "Item has been removed from your wishlist",
       });
     } catch (error) {
       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to remove item from wishlist',
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to remove item from wishlist",
       });
     } finally {
       setRemovingId(null);
@@ -91,8 +90,8 @@ export default function WishlistPage() {
   };
 
   const formatPrice = (price: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
       currency: currency,
     }).format(price);
   };
@@ -115,9 +114,13 @@ export default function WishlistPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold"><T>My Wishlist</T></h1>
+              <h1 className="text-2xl font-bold">
+                <T>My Wishlist</T>
+              </h1>
               <p className="text-muted-foreground">
-                {t(`${wishlistItems.length} ${wishlistItems.length === 1 ? 'item' : 'items'} saved`)}
+                {t(
+                  `${wishlistItems.length} ${wishlistItems.length === 1 ? "item" : "items"} saved`,
+                )}
               </p>
             </div>
             {wishlistItems.length > 0 && (
@@ -136,9 +139,14 @@ export default function WishlistPage() {
                 <div className="rounded-full bg-muted p-6 mb-4">
                   <HeartOff className="h-12 w-12 text-muted-foreground" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2"><T>Your wishlist is empty</T></h3>
+                <h3 className="text-xl font-semibold mb-2">
+                  <T>Your wishlist is empty</T>
+                </h3>
                 <p className="text-muted-foreground text-center mb-6 max-w-md">
-                  <T>Start browsing our shops and save items you love to your wishlist. They'll appear here for easy access later.</T>
+                  <T>
+                    Start browsing our shops and save items you love to your
+                    wishlist. They'll appear here for easy access later.
+                  </T>
                 </p>
                 <Button asChild>
                   <Link href="/shops">
@@ -166,7 +174,10 @@ export default function WishlistPage() {
                       </div>
                     )}
                     {!item.inStock && (
-                      <Badge variant="secondary" className="absolute top-2 left-2">
+                      <Badge
+                        variant="secondary"
+                        className="absolute top-2 left-2"
+                      >
                         <T>Out of Stock</T>
                       </Badge>
                     )}
@@ -174,7 +185,9 @@ export default function WishlistPage() {
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <h3 className="font-semibold line-clamp-1">{item.name}</h3>
+                        <h3 className="font-semibold line-clamp-1">
+                          {item.name}
+                        </h3>
                         <Link
                           href={`/shop/${item.shop.id}`}
                           className="text-sm text-muted-foreground hover:text-primary"

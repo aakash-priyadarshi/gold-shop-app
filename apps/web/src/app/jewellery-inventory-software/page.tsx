@@ -1,8 +1,8 @@
 "use client";
 
-import { T } from "@/components/ui/T";
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
+import { T } from "@/components/ui/T";
 import {
   AlertTriangle,
   ArrowRight,
@@ -166,7 +166,13 @@ export default function JewelleryInventorySoftwarePage() {
               </span>
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
-              <T>Stop using spreadsheets to track gold. Orivraa's inventory management tracks your gold, silver, diamond, and gemstone inventory by weight, purity, and category with automatic stock alerts, bulk upload, and real-time valuation. Trusted by 2,000+ jewellers.</T>
+              <T>
+                Stop using spreadsheets to track gold. Orivraa's inventory
+                management tracks your gold, silver, diamond, and gemstone
+                inventory by weight, purity, and category with automatic stock
+                alerts, bulk upload, and real-time valuation. Trusted by 2,000+
+                jewellers.
+              </T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
@@ -198,7 +204,9 @@ export default function JewelleryInventorySoftwarePage() {
                 <div className="text-2xl lg:text-3xl font-bold text-gold-400">
                   {s.n}
                 </div>
-                <div className="text-sm text-gray-400 mt-1"><T>{s.l}</T></div>
+                <div className="text-sm text-gray-400 mt-1">
+                  <T>{s.l}</T>
+                </div>
               </div>
             ))}
           </div>
@@ -208,17 +216,37 @@ export default function JewelleryInventorySoftwarePage() {
         <section className="py-16 lg:py-20 bg-white dark:bg-gray-950">
           <div className="container mx-auto px-4 max-w-5xl">
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 dark:text-white mb-6">
-              <T>Why Spreadsheets and Generic Software Fail for Jewellery Inventory</T>
+              <T>
+                Why Spreadsheets and Generic Software Fail for Jewellery
+                Inventory
+              </T>
             </h2>
             <div className="prose prose-lg dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
               <p>
-                <T>Jewellery inventory isn't about counting units on a shelf. A single gold necklace has attributes that most software can't handle: gross weight, net weight (after stones), gold purity, stone weight, stone type, making charges per gram, HUID number, hallmark certification, and more.</T>
+                <T>
+                  Jewellery inventory isn't about counting units on a shelf. A
+                  single gold necklace has attributes that most software can't
+                  handle: gross weight, net weight (after stones), gold purity,
+                  stone weight, stone type, making charges per gram, HUID
+                  number, hallmark certification, and more.
+                </T>
               </p>
               <p>
-                <T>Using a spreadsheet or generic inventory app means you're constantly creating workarounds — extra columns, manual calculations, no automated alerts. One misplaced decimal and your inventory valuation is off by lakhs.</T>
+                <T>
+                  Using a spreadsheet or generic inventory app means you're
+                  constantly creating workarounds — extra columns, manual
+                  calculations, no automated alerts. One misplaced decimal and
+                  your inventory valuation is off by lakhs.
+                </T>
               </p>
               <p>
-                <T>Orivraa was built from day one for jewellery businesses. Every field, every calculation, every report is designed around how gold, silver, and diamond inventory actually works. Whether you're a single-store retailer or a multi-branch wholesaler, your inventory stays accurate down to the milligram.</T>
+                <T>
+                  Orivraa was built from day one for jewellery businesses. Every
+                  field, every calculation, every report is designed around how
+                  gold, silver, and diamond inventory actually works. Whether
+                  you're a single-store retailer or a multi-branch wholesaler,
+                  your inventory stays accurate down to the milligram.
+                </T>
               </p>
             </div>
           </div>
@@ -258,7 +286,10 @@ export default function JewelleryInventorySoftwarePage() {
               <T>Powerful Inventory Features for Jewellers</T>
             </h2>
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-12">
-              <T>From weight tracking to stock valuation — everything you need to manage precious inventory.</T>
+              <T>
+                From weight tracking to stock valuation — everything you need to
+                manage precious inventory.
+              </T>
             </p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {FEATURES.map((f) => (
@@ -340,7 +371,10 @@ export default function JewelleryInventorySoftwarePage() {
               <T>Take Control of Your Jewellery Inventory</T>
             </h2>
             <p className="text-lg text-amber-100 mb-8">
-              <T>Stop guessing. Track every gram, every karat, every piece with cloud-based inventory software. Free to start.</T>
+              <T>
+                Stop guessing. Track every gram, every karat, every piece with
+                cloud-based inventory software. Free to start.
+              </T>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
