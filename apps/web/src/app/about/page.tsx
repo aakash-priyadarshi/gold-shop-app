@@ -5,6 +5,13 @@ import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { T } from "@/components/ui/T";
+import {
+  COMING_SOON_PLATFORMS,
+  LANG_META,
+  LIVE_PLATFORMS,
+  SUPPORTED_ABOUT_LANGS,
+  TESTIMONIALS,
+} from "@/data/about-i18n";
 import { useT } from "@/providers/translation-provider";
 import {
   ArrowRightIcon,
@@ -15,6 +22,7 @@ import {
   HeartIcon,
   ShieldCheckIcon,
   SparklesIcon,
+  StarIcon,
   TruckIcon,
   UserGroupIcon,
 } from "@heroicons/react/24/outline";
@@ -287,6 +295,171 @@ export default function AboutPage() {
                 </p>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Find Us On Section */}
+      <section className="py-16 md:py-24 bg-amber-50 dark:bg-gray-900">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto text-center mb-12">
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              viewport={{ once: true }}
+              className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4"
+            >
+              <T>Find Us On</T>
+            </motion.h2>
+            <div className="h-1 w-20 bg-amber-500 mx-auto mb-6" />
+            <p className="text-lg text-gray-600 dark:text-gray-300">
+              <T>Orivraa is listed on leading platforms. Visit our profiles to learn more and leave a review.</T>
+            </p>
+          </div>
+          {/* Live profiles */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 max-w-5xl mx-auto mb-10">
+            {LIVE_PLATFORMS.map((platform, index) => (
+              <motion.a
+                key={platform.name}
+                href={platform.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+                viewport={{ once: true }}
+                className="group"
+              >
+                <Card className="h-full hover:shadow-lg hover:border-amber-400 transition-all">
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl mb-2">{platform.logo}</div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">
+                      {platform.name}
+                    </h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{platform.category}</p>
+                    <span className="text-xs text-amber-600 group-hover:underline mt-2 inline-block">
+                      <T>Visit Profile</T> →
+                    </span>
+                  </CardContent>
+                </Card>
+              </motion.a>
+            ))}
+          </div>
+          {/* Coming soon */}
+          {COMING_SOON_PLATFORMS.length > 0 && (
+            <>
+              <div className="text-center mb-4">
+                <span className="text-sm font-medium uppercase tracking-wider text-gray-400">
+                  <T>Coming soon on</T>
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 max-w-5xl mx-auto">
+                {COMING_SOON_PLATFORMS.map((platform, index) => (
+                  <motion.div
+                    key={platform.name}
+                    initial={{ opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2, delay: index * 0.03 }}
+                    viewport={{ once: true }}
+                  >
+                    <Card className="h-full border-dashed border-gray-300 dark:border-gray-600 opacity-70">
+                      <CardContent className="p-3 text-center">
+                        <div className="text-xl mb-1">{platform.logo}</div>
+                        <h3 className="font-medium text-gray-600 dark:text-gray-400 text-xs mb-1">
+                          {platform.name}
+                        </h3>
+                        <span className="inline-block text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 font-medium">
+                          <T>Coming Soon</T>
+                        </span>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-16 md:py-24">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto text-center mb-12">
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              viewport={{ once: true }}
+              className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4"
+            >
+              <T>What Our Users Say</T>
+            </motion.h2>
+            <div className="h-1 w-20 bg-amber-500 mx-auto mb-6" />
+            <p className="text-lg text-gray-600 dark:text-gray-300">
+              <T>Real stories from jewellers and customers who use Orivraa</T>
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+            {TESTIMONIALS.map((testimonial, index) => (
+              <motion.div
+                key={testimonial.name}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+                viewport={{ once: true }}
+              >
+                <Card className="h-full hover:shadow-lg transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex gap-1 mb-3">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <StarIcon
+                          key={i}
+                          className={`h-4 w-4 ${
+                            i < testimonial.rating ? "text-amber-500 fill-amber-500" : "text-gray-300"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 italic">
+                      &quot;{testimonial.text}&quot;
+                    </p>
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white text-sm">
+                        {testimonial.name}
+                      </p>
+                      <p className="text-xs text-gray-500">{testimonial.role}</p>
+                      <p className="text-xs text-gray-400">{testimonial.location}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Language Cross-links */}
+      <section className="py-12 bg-gray-50 dark:bg-gray-900">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto text-center">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              <T>This page is also available in:</T>
+            </p>
+            <div className="flex flex-wrap gap-3 justify-center">
+              {SUPPORTED_ABOUT_LANGS.map((code) => {
+                const lm = LANG_META[code];
+                return (
+                  <Link
+                    key={code}
+                    href={`/about/${code}`}
+                    className="px-4 py-2 rounded-full text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-amber-400 hover:shadow transition-all"
+                  >
+                    {lm.flag} {lm.nativeName}
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </div>
       </section>
