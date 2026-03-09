@@ -3,6 +3,7 @@
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { BRAND } from "@/config/brand";
 import {
   ArrowRight,
@@ -153,6 +154,7 @@ const FAQS = [
 /* ────────────────────────────────────────────────────────────── */
 
 export default function SellerGuidePage() {
+  const t = useT();
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Header />
@@ -343,7 +345,7 @@ export default function SellerGuidePage() {
               <T>Ready to Grow Your Jewellery Business?</T>
             </h2>
             <p className="mt-3 text-gray-400 max-w-lg mx-auto">
-              <T>Join thousands of jewellers selling on {BRAND.name}. Free to start, no contracts, cancel anytime.</T>
+              {t(`Join thousands of jewellers selling on ${BRAND.name}. Free to start, no contracts, cancel anytime.`)}
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Link
