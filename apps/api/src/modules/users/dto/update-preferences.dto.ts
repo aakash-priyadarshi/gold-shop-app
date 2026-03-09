@@ -4,11 +4,11 @@ import { IsEnum, IsOptional, IsString } from "class-validator";
 
 export class UpdatePreferencesDto {
   @ApiPropertyOptional({
-    enum: ["en", "ne", "hi"],
+    enum: ["en", "fr", "de", "hi", "es", "ar", "ne"],
     description: "Preferred language for the UI",
   })
   @IsOptional()
-  @IsEnum(["en", "ne", "hi"])
+  @IsEnum(["en", "fr", "de", "hi", "es", "ar", "ne"])
   preferredLanguage?: string;
 
   @ApiPropertyOptional({

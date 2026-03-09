@@ -263,9 +263,10 @@ export const usePreferencesStore = create<PreferencesState>()(
       },
 
       setAuthenticated: (isAuthenticated) => {
+        const wasAuthenticated = get().isAuthenticated;
         set({ isAuthenticated });
-        if (isAuthenticated) {
-          // Sync from server when user logs in
+        if (isAuthenticated && !wasAuthenticated) {
+          // Only sync on actual login transition (false → true)
           get().syncFromServer();
         }
       },

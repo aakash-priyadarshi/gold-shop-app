@@ -38,9 +38,9 @@ export class UpdateProfileDto {
   @IsString()
   city?: string;
 
-  @ApiPropertyOptional({ enum: ["en", "ne", "hi"] })
+  @ApiPropertyOptional({ enum: ["en", "fr", "de", "hi", "es", "ar", "ne"] })
   @IsOptional()
-  @IsEnum(["en", "ne", "hi"])
+  @IsEnum(["en", "fr", "de", "hi", "es", "ar", "ne"])
   preferredLanguage?: string;
 
   @ApiPropertyOptional({ enum: CurrencyCode })
