@@ -2,6 +2,8 @@
 
 import { CustomerGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import {
   OrderStatusBadge,
   OrderStepper,
@@ -112,6 +114,7 @@ const statusSteps = [
 
 export default function CustomerOrderDetailPage() {
   const params = useParams();
+  const t = useT();
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { formatWithConversion, selectedCurrency, currencySymbol } =
@@ -148,7 +151,7 @@ export default function CustomerOrderDetailPage() {
             variant="outline"
             className="bg-yellow-50 text-yellow-700 border-yellow-200"
           >
-            Pending
+            <T>Pending</T>
           </Badge>
         );
       case "CONFIRMED":
@@ -157,7 +160,7 @@ export default function CustomerOrderDetailPage() {
             variant="outline"
             className="bg-blue-50 text-blue-700 border-blue-200"
           >
-            Confirmed
+            <T>Confirmed</T>
           </Badge>
         );
       case "IN_PROGRESS":
@@ -166,7 +169,7 @@ export default function CustomerOrderDetailPage() {
             variant="outline"
             className="bg-purple-50 text-purple-700 border-purple-200"
           >
-            In Progress
+            <T>In Progress</T>
           </Badge>
         );
       case "READY":
@@ -175,7 +178,7 @@ export default function CustomerOrderDetailPage() {
             variant="outline"
             className="bg-indigo-50 text-indigo-700 border-indigo-200"
           >
-            Ready
+            <T>Ready</T>
           </Badge>
         );
       case "SHIPPED":
@@ -184,7 +187,7 @@ export default function CustomerOrderDetailPage() {
             variant="outline"
             className="bg-cyan-50 text-cyan-700 border-cyan-200"
           >
-            Shipped
+            <T>Shipped</T>
           </Badge>
         );
       case "DELIVERED":
@@ -193,7 +196,7 @@ export default function CustomerOrderDetailPage() {
             variant="outline"
             className="bg-green-50 text-green-700 border-green-200"
           >
-            Delivered
+            <T>Delivered</T>
           </Badge>
         );
       case "CANCELLED":
@@ -202,7 +205,7 @@ export default function CustomerOrderDetailPage() {
             variant="outline"
             className="bg-red-50 text-red-700 border-red-200"
           >
-            Cancelled
+            <T>Cancelled</T>
           </Badge>
         );
       default:
@@ -232,9 +235,9 @@ export default function CustomerOrderDetailPage() {
       <CustomerGuard>
         <DashboardLayout>
           <div className="text-center py-12">
-            <h2 className="text-xl font-semibold mb-2">Order Not Found</h2>
+            <h2 className="text-xl font-semibold mb-2"><T>Order Not Found</T></h2>
             <Button asChild>
-              <Link href="/dashboard/customer/orders">Back to Orders</Link>
+              <Link href="/dashboard/customer/orders"><T>Back to Orders</T></Link>
             </Button>
           </div>
         </DashboardLayout>
@@ -257,7 +260,7 @@ export default function CustomerOrderDetailPage() {
             <div className="flex-1">
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold">
-                  Order #{order.orderNumber}
+                  {t(`Order #${order.orderNumber}`)}
                 </h1>
                 <OrderStatusBadge
                   orderType={(order.orderType || "INVENTORY") as OrderType}
@@ -265,7 +268,7 @@ export default function CustomerOrderDetailPage() {
                 />
               </div>
               <p className="text-muted-foreground">
-                Placed {new Date(order.createdAt).toLocaleDateString()}
+                {t(`Placed ${new Date(order.createdAt).toLocaleDateString()}`)}
               </p>
             </div>
           </div>
@@ -274,8 +277,8 @@ export default function CustomerOrderDetailPage() {
           {order.status !== "CANCELLED" && (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle>Order Progress</CardTitle>
-                <CardDescription>Track your order status</CardDescription>
+                <CardTitle><T>Order Progress</T></CardTitle>
+                <CardDescription><T>Track your order status</T></CardDescription>
               </CardHeader>
               <CardContent className="p-6">
                 <OrderStepper
@@ -301,7 +304,7 @@ export default function CustomerOrderDetailPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Package className="h-5 w-5" />
-                  Order Details
+                  <T>Order Details</T>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -337,23 +340,22 @@ export default function CustomerOrderDetailPage() {
                     )}
                     {order.productSnapshot?.totalWeightGrams && (
                       <p className="text-sm text-muted-foreground">
-                        Weight: {order.productSnapshot.totalWeightGrams}g
+                        {t(`Weight: ${order.productSnapshot.totalWeightGrams}g`)}
                       </p>
                     )}
                     {order.productSnapshot?.quantity && (
                       <p className="text-sm text-muted-foreground">
-                        Quantity: {order.productSnapshot.quantity}
+                        {t(`Quantity: ${order.productSnapshot.quantity}`)}
                       </p>
                     )}
                     {order.productSnapshot?.sku && (
                       <p className="text-sm text-muted-foreground">
-                        SKU: {order.productSnapshot.sku}
+                        {t(`SKU: ${order.productSnapshot.sku}`)}
                       </p>
                     )}
                     {order.productSnapshot?.buildMethod && (
                       <p className="text-sm text-muted-foreground">
-                        Build:{" "}
-                        {order.productSnapshot.buildMethod.replace(/_/g, " ")}
+                        {t(`Build: ${order.productSnapshot.buildMethod.replace(/_/g, " ")}`)}
                       </p>
                     )}
                   </div>
@@ -365,7 +367,7 @@ export default function CustomerOrderDetailPage() {
                 <div className="flex justify-end">
                   <div className="w-64 space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Subtotal</span>
+                      <span className="text-muted-foreground"><T>Subtotal</T></span>
                       <span>
                         {formatWithConversion(
                           order.subtotalNpr || order.totalNpr || 0,
@@ -378,7 +380,7 @@ export default function CustomerOrderDetailPage() {
                     </div>
                     {order.taxNpr > 0 && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Tax</span>
+                        <span className="text-muted-foreground"><T>Tax</T></span>
                         <span>
                           {formatWithConversion(order.taxNpr, {
                             fromCurrency: (order.displayCurrency ||
@@ -389,7 +391,7 @@ export default function CustomerOrderDetailPage() {
                     )}
                     {order.shippingNpr > 0 && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Shipping</span>
+                        <span className="text-muted-foreground"><T>Shipping</T></span>
                         <span>
                           {formatWithConversion(order.shippingNpr, {
                             fromCurrency: (order.displayCurrency ||
@@ -400,7 +402,7 @@ export default function CustomerOrderDetailPage() {
                     )}
                     {order.discountNpr > 0 && (
                       <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
-                        <span>Discount</span>
+                        <span><T>Discount</T></span>
                         <span>
                           -
                           {formatWithConversion(order.discountNpr, {
@@ -412,7 +414,7 @@ export default function CustomerOrderDetailPage() {
                     )}
                     <Separator />
                     <div className="flex justify-between font-bold">
-                      <span>Total</span>
+                      <span><T>Total</T></span>
                       <span>
                         {formatWithConversion(order.totalNpr || 0, {
                           fromCurrency: (order.displayCurrency || "NPR") as any,
@@ -431,7 +433,7 @@ export default function CustomerOrderDetailPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Store className="h-5 w-5" />
-                    Shop Details
+                    <T>Shop Details</T>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -450,7 +452,7 @@ export default function CustomerOrderDetailPage() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <MapPin className="h-5 w-5" />
-                        Shipping Address
+                        <T>Shipping Address</T>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-1 text-sm">
@@ -491,7 +493,7 @@ export default function CustomerOrderDetailPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Truck className="h-5 w-5" />
-                    Delivery Info
+                    <T>Delivery Info</T>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -500,7 +502,7 @@ export default function CustomerOrderDetailPage() {
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <div>
                         <p className="text-sm text-muted-foreground">
-                          Est. Delivery
+                          <T>Est. Delivery</T>
                         </p>
                         <p className="font-medium">
                           {new Date(
@@ -513,15 +515,15 @@ export default function CustomerOrderDetailPage() {
                   {order.trackingNumber && (
                     <div>
                       <p className="text-sm text-muted-foreground">
-                        Tracking Number
+                        <T>Tracking Number</T>
                       </p>
                       <p className="font-mono">{order.trackingNumber}</p>
                     </div>
                   )}
                   {!order.estimatedDelivery && !order.trackingNumber && (
                     <p className="text-sm text-muted-foreground">
-                      Delivery details will be updated once the order is ready
-                      to ship.
+                      <T>Delivery details will be updated once the order is ready
+                      to ship.</T>
                     </p>
                   )}
                 </CardContent>
@@ -531,7 +533,7 @@ export default function CustomerOrderDetailPage() {
               {order.notes && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Notes</CardTitle>
+                    <CardTitle><T>Notes</T></CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm">{order.notes}</p>
