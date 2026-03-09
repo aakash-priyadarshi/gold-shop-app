@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
+import { useT } from "@/providers/translation-provider";
 import {
   ArrowLeft,
   CheckCircle,
@@ -47,6 +49,7 @@ function saveEntries(entries: HallmarkEntry[]) {
 
 export default function HallmarkTrackerPage() {
   const router = useRouter();
+  const t = useT();
   const [entries, setEntries] = useState<HallmarkEntry[]>(loadEntries);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -125,10 +128,10 @@ export default function HallmarkTrackerPage() {
               <div>
                 <h1 className="text-2xl font-bold flex items-center gap-2">
                   <Shield className="h-6 w-6 text-amber-500" />
-                  Hallmark Tracker
+                  <T>Hallmark Tracker</T>
                 </h1>
                 <p className="text-muted-foreground">
-                  Track BIS Hallmark & HUID entries for items sold
+                  <T>Track BIS Hallmark & HUID entries for items sold</T>
                 </p>
               </div>
             </div>
@@ -136,7 +139,7 @@ export default function HallmarkTrackerPage() {
               onClick={() => setShowForm(!showForm)}
               className="bg-amber-500 hover:bg-amber-600"
             >
-              <Plus className="h-4 w-4 mr-2" /> Add Entry
+              <Plus className="h-4 w-4 mr-2" /> <T>Add Entry</T>
             </Button>
           </div>
 
@@ -144,12 +147,12 @@ export default function HallmarkTrackerPage() {
           {showForm && (
             <Card className="border-amber-200 dark:border-amber-800/50">
               <CardHeader>
-                <CardTitle className="text-base">New Hallmark Entry</CardTitle>
+                <CardTitle className="text-base"><T>New Hallmark Entry</T></CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>HUID (6-digit code) *</Label>
+                    <Label><T>HUID (6-digit code)</T> *</Label>
                     <Input
                       value={huid}
                       onChange={(e) => setHuid(e.target.value)}
@@ -159,7 +162,7 @@ export default function HallmarkTrackerPage() {
                     />
                   </div>
                   <div>
-                    <Label>Purity</Label>
+                    <Label><T>Purity</T></Label>
                     <select
                       value={purity}
                       onChange={(e) => setPurity(e.target.value)}
@@ -172,7 +175,7 @@ export default function HallmarkTrackerPage() {
                     </select>
                   </div>
                   <div>
-                    <Label>Weight (grams)</Label>
+                    <Label><T>Weight (grams)</T></Label>
                     <Input
                       value={weight}
                       onChange={(e) => setWeight(e.target.value)}
@@ -182,7 +185,7 @@ export default function HallmarkTrackerPage() {
                     />
                   </div>
                   <div>
-                    <Label>Item Description</Label>
+                    <Label><T>Item Description</T></Label>
                     <Input
                       value={itemDesc}
                       onChange={(e) => setItemDesc(e.target.value)}
@@ -190,7 +193,7 @@ export default function HallmarkTrackerPage() {
                     />
                   </div>
                   <div>
-                    <Label>Customer Name</Label>
+                    <Label><T>Customer Name</T></Label>
                     <Input
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
@@ -200,13 +203,13 @@ export default function HallmarkTrackerPage() {
                 </div>
                 <div className="flex gap-2 justify-end">
                   <Button variant="outline" onClick={() => setShowForm(false)}>
-                    Cancel
+                    <T>Cancel</T>
                   </Button>
                   <Button
                     onClick={addEntry}
                     className="bg-amber-500 hover:bg-amber-600"
                   >
-                    Save Entry
+                    <T>Save Entry</T>
                   </Button>
                 </div>
               </CardContent>
@@ -229,7 +232,7 @@ export default function HallmarkTrackerPage() {
             <Card>
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold">{entries.length}</p>
-                <p className="text-sm text-muted-foreground">Total Entries</p>
+                <p className="text-sm text-muted-foreground"><T>Total Entries</T></p>
               </CardContent>
             </Card>
             <Card>
@@ -237,7 +240,7 @@ export default function HallmarkTrackerPage() {
                 <p className="text-2xl font-bold text-green-600">
                   {entries.filter((e) => e.verified).length}
                 </p>
-                <p className="text-sm text-muted-foreground">Verified</p>
+                <p className="text-sm text-muted-foreground"><T>Verified</T></p>
               </CardContent>
             </Card>
             <Card>
@@ -245,7 +248,7 @@ export default function HallmarkTrackerPage() {
                 <p className="text-2xl font-bold text-yellow-600">
                   {entries.filter((e) => !e.verified).length}
                 </p>
-                <p className="text-sm text-muted-foreground">Pending</p>
+                <p className="text-sm text-muted-foreground"><T>Pending</T></p>
               </CardContent>
             </Card>
           </div>
@@ -255,9 +258,9 @@ export default function HallmarkTrackerPage() {
             <Card>
               <CardContent className="flex flex-col items-center py-12 text-center">
                 <Hash className="h-12 w-12 text-muted-foreground opacity-30 mb-4" />
-                <p className="text-muted-foreground">No hallmark entries</p>
+                <p className="text-muted-foreground"><T>No hallmark entries</T></p>
                 <p className="text-sm text-muted-foreground">
-                  Add entries when you sell hallmarked items
+                  <T>Add entries when you sell hallmarked items</T>
                 </p>
               </CardContent>
             </Card>

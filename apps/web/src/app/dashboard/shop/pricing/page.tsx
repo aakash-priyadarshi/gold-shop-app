@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { T } from "@/components/ui/T";
 import {
   Table,
   TableBody,
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useT } from "@/providers/translation-provider";
 import api from "@/lib/api";
 import { DollarSign, Loader2, Percent, Save, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -48,6 +50,7 @@ const defaultMetals = [
 
 export default function ShopPricingPage() {
   const { user } = useAuth();
+  const t = useT();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -178,21 +181,21 @@ export default function ShopPricingPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Pricing Settings</h1>
+              <h1 className="text-2xl font-bold"><T>Pricing Settings</T></h1>
               <p className="text-muted-foreground">
-                Configure your shop's making charges and margins
+                <T>Configure your shop's making charges and margins</T>
               </p>
             </div>
             <Button onClick={savePricing} disabled={isSaving}>
               {isSaving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
+                  <T>Saving...</T>
                 </>
               ) : (
                 <>
                   <Save className="h-4 w-4 mr-2" />
-                  Save Changes
+                  <T>Save Changes</T>
                 </>
               )}
             </Button>
@@ -203,17 +206,17 @@ export default function ShopPricingPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="h-5 w-5" />
-                Default Rates
+                <T>Default Rates</T>
               </CardTitle>
               <CardDescription>
-                These rates apply to all metals unless overridden below
+                <T>These rates apply to all metals unless overridden below</T>
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="defaultMaking">
-                    Default Making Charge (%)
+                    <T>Default Making Charge (%)</T>
                   </Label>
                   <div className="flex items-center gap-2">
                     <Input
@@ -229,11 +232,11 @@ export default function ShopPricingPage() {
                     <Percent className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Charged on top of metal value for craftsmanship
+                    <T>Charged on top of metal value for craftsmanship</T>
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="defaultMargin">Default Margin (%)</Label>
+                  <Label htmlFor="defaultMargin"><T>Default Margin (%)</T></Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="defaultMargin"
@@ -248,7 +251,7 @@ export default function ShopPricingPage() {
                     <Percent className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Added to base metal price as profit margin
+                    <T>Added to base metal price as profit margin</T>
                   </p>
                 </div>
               </div>
@@ -260,21 +263,20 @@ export default function ShopPricingPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <DollarSign className="h-5 w-5" />
-                Metal-Specific Overrides
+                <T>Metal-Specific Overrides</T>
               </CardTitle>
               <CardDescription>
-                Set custom rates for specific metals. Leave blank to use
-                defaults.
+                <T>Set custom rates for specific metals. Leave blank to use defaults.</T>
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Metal</TableHead>
-                    <TableHead>Making Charge (%)</TableHead>
-                    <TableHead>Margin (%)</TableHead>
-                    <TableHead>Effective Rate</TableHead>
+                    <TableHead><T>Metal</T></TableHead>
+                    <TableHead><T>Making Charge (%)</T></TableHead>
+                    <TableHead><T>Margin (%)</T></TableHead>
+                    <TableHead><T>Effective Rate</T></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -348,23 +350,22 @@ export default function ShopPricingPage() {
           <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/50">
             <CardContent className="p-4">
               <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">
-                How Pricing Works
+                <T>How Pricing Works</T>
               </h4>
               <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
                 <li>
-                  <strong>Making Charge:</strong> Percentage added to metal
-                  value for craftsmanship
+                  <strong><T>Making Charge:</T></strong>{" "}
+                  <T>Percentage added to metal value for craftsmanship</T>
                 </li>
                 <li>
-                  <strong>Margin:</strong> Your profit margin on the base metal
-                  price
+                  <strong><T>Margin:</T></strong>{" "}
+                  <T>Your profit margin on the base metal price</T>
                 </li>
                 <li>
-                  Final Price = Metal Value × (1 + Margin%) + (Metal Value ×
-                  Making Charge%)
+                  <T>Final Price = Metal Value × (1 + Margin%) + (Metal Value × Making Charge%)</T>
                 </li>
                 <li>
-                  Taxes are calculated separately based on the customer's region
+                  <T>Taxes are calculated separately based on the customer's region</T>
                 </li>
               </ul>
             </CardContent>

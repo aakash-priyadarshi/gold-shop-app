@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { T } from '@/components/ui/T';
 import {
   Select,
   SelectContent,
@@ -26,6 +27,7 @@ import {
 import { useEffect, useState } from 'react';
 import { variantsApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { useT } from '@/providers/translation-provider';
 
 interface InventoryItem {
   id: string;
@@ -59,6 +61,7 @@ const JEWELLERY_TYPES_WITH_SIZES = ['RING', 'BANGLE', 'BRACELET', 'CHAIN', 'NECK
 
 export default function ShopVariantsPage() {
   const { user } = useAuth();
+  const t = useT();
   const shopData = user?.shop;
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
@@ -188,21 +191,21 @@ export default function ShopVariantsPage() {
         <div className="space-y-6">
           <div className="flex items-center gap-2">
             <Ruler className="h-6 w-6" />
-            <h1 className="text-2xl font-bold">Size Variants</h1>
+            <h1 className="text-2xl font-bold"><T>Size Variants</T></h1>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left: Item list */}
             <Card className="lg:col-span-1">
               <CardHeader>
-                <CardTitle className="text-base">Products with Sizes</CardTitle>
-                <CardDescription>Rings, bangles, bracelets, chains, necklaces</CardDescription>
+                <CardTitle className="text-base"><T>Products with Sizes</T></CardTitle>
+                <CardDescription><T>Rings, bangles, bracelets, chains, necklaces</T></CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? (
-                  <p className="text-muted-foreground text-sm">Loading...</p>
+                  <p className="text-muted-foreground text-sm"><T>Loading...</T></p>
                 ) : items.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No size-eligible products</p>
+                  <p className="text-muted-foreground text-sm"><T>No size-eligible products</T></p>
                 ) : (
                   <div className="space-y-2 max-h-[60vh] overflow-y-auto">
                     {items.map((item) => (
@@ -237,7 +240,7 @@ export default function ShopVariantsPage() {
                 <Card>
                   <CardContent className="pt-6 text-center">
                     <Package className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-muted-foreground">Select a product to manage size variants</p>
+                    <p className="text-muted-foreground"><T>Select a product to manage size variants</T></p>
                   </CardContent>
                 </Card>
               ) : (
@@ -250,7 +253,7 @@ export default function ShopVariantsPage() {
                         <p className="text-sm text-muted-foreground">{selectedItem.jewelleryType}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Label htmlFor="hasSizes" className="text-sm">Enable Sizes</Label>
+                        <Label htmlFor="hasSizes" className="text-sm"><T>Enable Sizes</T></Label>
                         <Switch
                           id="hasSizes"
                           checked={selectedItem.hasSizes}
@@ -265,11 +268,11 @@ export default function ShopVariantsPage() {
                       {/* Existing variants */}
                       <Card>
                         <CardHeader>
-                          <CardTitle className="text-base">Current Variants</CardTitle>
+                          <CardTitle className="text-base"><T>Current Variants</T></CardTitle>
                         </CardHeader>
                         <CardContent>
                           {variants.length === 0 ? (
-                            <p className="text-muted-foreground text-sm">No variants yet</p>
+                            <p className="text-muted-foreground text-sm"><T>No variants yet</T></p>
                           ) : (
                             <div className="space-y-2">
                               {variants.map((v) => (
@@ -317,7 +320,7 @@ export default function ShopVariantsPage() {
                       {/* Add new variant */}
                       <Card>
                         <CardHeader>
-                          <CardTitle className="text-base">Add Variant</CardTitle>
+                          <CardTitle className="text-base"><T>Add Variant</T></CardTitle>
                         </CardHeader>
                         <CardContent>
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -419,7 +422,7 @@ export default function ShopVariantsPage() {
                             disabled={saving || !newVariant.sizeLabel || !newVariant.sku}
                           >
                             <Plus className="h-4 w-4 mr-1" />
-                            {saving ? 'Adding...' : 'Add Variant'}
+                            {saving ? t('Adding...') : t('Add Variant')}
                           </Button>
                         </CardContent>
                       </Card>
@@ -428,9 +431,9 @@ export default function ShopVariantsPage() {
                       {sizeChart.length > 0 && (
                         <Card>
                           <CardHeader>
-                            <CardTitle className="text-base">Size Chart Reference</CardTitle>
+                            <CardTitle className="text-base"><T>Size Chart Reference</T></CardTitle>
                             <CardDescription>
-                              Standard sizes for {selectedItem.jewelleryType}
+                              {t(`Standard sizes for ${selectedItem.jewelleryType}`)}
                             </CardDescription>
                           </CardHeader>
                           <CardContent>

@@ -5,13 +5,16 @@ import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { WeighingScalePanel } from "@/components/scale/WeighingScalePanel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
+import { useT } from "@/providers/translation-provider";
 import { ArrowLeft, ClipboardCopy, Scale } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function WeighingScalePage() {
   const router = useRouter();
+  const t = useT();
   const [capturedWeights, setCapturedWeights] = useState<
     { weight: number; timestamp: Date }[]
   >([]);
@@ -50,11 +53,10 @@ export default function WeighingScalePage() {
             <div>
               <h1 className="text-2xl font-bold flex items-center gap-2">
                 <Scale className="h-6 w-6 text-teal-500" />
-                Weighing Scale
+                <T>Weighing Scale</T>
               </h1>
               <p className="text-muted-foreground">
-                Connect a digital weighing scale via USB/Serial or use the
-                simulator
+                <T>Connect a digital weighing scale via USB/Serial or use the simulator</T>
               </p>
             </div>
           </div>
@@ -71,7 +73,7 @@ export default function WeighingScalePage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">
-                  Captured Weights ({capturedWeights.length})
+                  {t(`Captured Weights (${capturedWeights.length})`)}
                 </CardTitle>
               </CardHeader>
               <CardContent>

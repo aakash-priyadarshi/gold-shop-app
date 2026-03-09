@@ -7,9 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useFeatures } from "@/hooks/useFeatures";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { useT } from "@/providers/translation-provider";
 import { customerCrmApi } from "@/lib/api";
 import {
   Loader2,
@@ -39,6 +41,7 @@ interface Customer {
 
 export default function CustomerDirectoryPage() {
   const { symbol: currencySymbol } = useShopCurrency();
+  const t = useT();
   const { hasFeature, planName, loading: featuresLoading } = useFeatures();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,10 +92,10 @@ export default function CustomerDirectoryPage() {
               <div>
                 <h1 className="text-2xl font-bold flex items-center gap-2">
                   <Users className="h-6 w-6 text-amber-500" />
-                  Customer Directory
+                  <T>Customer Directory</T>
                 </h1>
                 <p className="text-muted-foreground">
-                  {total} total customers across registered and walk-in
+                  {t(`${total} total customers across registered and walk-in`)}
                 </p>
               </div>
             </div>
@@ -120,10 +123,9 @@ export default function CustomerDirectoryPage() {
               <Card>
                 <CardContent className="flex flex-col items-center py-12 text-center">
                   <Users className="h-12 w-12 text-muted-foreground opacity-30 mb-4" />
-                  <p className="text-muted-foreground">No customers found</p>
+                  <p className="text-muted-foreground"><T>No customers found</T></p>
                   <p className="text-sm text-muted-foreground">
-                    Customers appear here after they place orders or RFQ
-                    requests
+                    <T>Customers appear here after they place orders or RFQ requests</T>
                   </p>
                 </CardContent>
               </Card>
@@ -152,8 +154,8 @@ export default function CustomerDirectoryPage() {
                                 }
                               >
                                 {customer.type === "REGISTERED"
-                                  ? "Registered"
-                                  : "Walk-in"}
+                                  ? t("Registered")
+                                  : t("Walk-in")}
                               </Badge>
                             </div>
                           </div>
@@ -165,7 +167,7 @@ export default function CustomerDirectoryPage() {
                             <div className="flex items-center gap-2">
                               <MessageSquare className="h-3 w-3 text-amber-500" />
                               <span className="text-amber-600 text-xs font-medium">
-                                Platform messaging available
+                                <T>Platform messaging available</T>
                               </span>
                             </div>
                           )}
@@ -177,9 +179,9 @@ export default function CustomerDirectoryPage() {
                             <>
                               <div className="flex items-center gap-1">
                                 <ShoppingCart className="h-3 w-3" />
-                                {customer.orderCount} orders
+                                {t(`${customer.orderCount} orders`)}
                               </div>
-                              <div>{customer.rfqCount} RFQs</div>
+                              <div>{t(`${customer.rfqCount} RFQs`)}</div>
                               {customer.totalSpent > 0 && (
                                 <div className="font-medium text-amber-600">
                                   {currencySymbol}{" "}
@@ -188,7 +190,7 @@ export default function CustomerDirectoryPage() {
                               )}
                             </>
                           ) : (
-                            <div>{customer.quoteCount || 0} quotes</div>
+                            <div>{t(`${customer.quoteCount || 0} quotes`)}</div>
                           )}
                           <div className="ml-auto">
                             {new Date(customer.lastActive).toLocaleDateString()}
@@ -210,10 +212,10 @@ export default function CustomerDirectoryPage() {
                   disabled={page <= 1}
                   onClick={() => setPage(page - 1)}
                 >
-                  Previous
+                  <T>Previous</T>
                 </Button>
                 <span className="flex items-center px-3 text-sm text-muted-foreground">
-                  Page {page} of {totalPages}
+                  {t(`Page ${page} of ${totalPages}`)}
                 </span>
                 <Button
                   variant="outline"
@@ -221,7 +223,7 @@ export default function CustomerDirectoryPage() {
                   disabled={page >= totalPages}
                   onClick={() => setPage(page + 1)}
                 >
-                  Next
+                  <T>Next</T>
                 </Button>
               </div>
             )}

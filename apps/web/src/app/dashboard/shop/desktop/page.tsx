@@ -3,6 +3,7 @@
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { T } from "@/components/ui/T";
 import {
   Card,
   CardContent,
@@ -10,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useT } from "@/providers/translation-provider";
 import { api } from "@/lib/api";
 import {
   ArrowDownTrayIcon,
@@ -49,6 +51,7 @@ function timeAgo(dateStr: string): string {
 export default function DesktopAppPage() {
   const [status, setStatus] = useState<DesktopStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const t = useT();
 
   useEffect(() => {
     async function fetchStatus() {
@@ -71,10 +74,10 @@ export default function DesktopAppPage() {
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <ComputerDesktopIcon className="h-6 w-6 text-gold-500" />
-              Desktop App
+              <T>Desktop App</T>
             </h1>
             <p className="text-muted-foreground">
-              Manage and track your Orivraa desktop application
+              <T>Manage and track your Orivraa desktop application</T>
             </p>
           </div>
 
@@ -92,12 +95,10 @@ export default function DesktopAppPage() {
                   <ComputerDesktopIcon className="h-8 w-8 text-gold-500" />
                 </div>
                 <CardTitle className="text-xl">
-                  Get the Orivraa Desktop App
+                  <T>Get the Orivraa Desktop App</T>
                 </CardTitle>
                 <CardDescription className="max-w-md mx-auto">
-                  Manage your shop faster with offline support, native
-                  notifications, and seamless Google sign-in. The desktop app
-                  keeps everything at your fingertips.
+                  <T>Manage your shop faster with offline support, native notifications, and seamless Google sign-in. The desktop app keeps everything at your fingertips.</T>
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col items-center gap-4 pb-8">
@@ -107,7 +108,7 @@ export default function DesktopAppPage() {
                 >
                   <Link href="/download">
                     <ArrowDownTrayIcon className="w-5 h-5" />
-                    Download Desktop App
+                    <T>Download Desktop App</T>
                   </Link>
                 </Button>
                 {status?.latestVersion && (
@@ -117,9 +118,9 @@ export default function DesktopAppPage() {
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 w-full max-w-md">
                   {[
-                    { icon: "⚡", text: "Faster performance" },
-                    { icon: "📴", text: "Works offline" },
-                    { icon: "🔔", text: "System notifications" },
+                    { icon: "⚡", text: t("Faster performance") },
+                    { icon: "📴", text: t("Works offline") },
+                    { icon: "🔔", text: t("System notifications") },
                   ].map((f, i) => (
                     <div
                       key={i}
@@ -158,13 +159,13 @@ export default function DesktopAppPage() {
                   <div className="flex-1">
                     <p className="font-semibold">
                       {status.isUpToDate
-                        ? "You're up to date!"
-                        : "Update available"}
+                        ? t("You're up to date!")
+                        : t("Update available")}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {status.isUpToDate
-                        ? `Running the latest version (v${status.latestVersion})`
-                        : `Latest version is v${status.latestVersion}. Download the update to get the latest features.`}
+                        ? t(`Running the latest version (v${status.latestVersion})`)
+                        : t(`Latest version is v${status.latestVersion}. Download the update to get the latest features.`)}
                     </p>
                   </div>
                   {!status.isUpToDate && (
@@ -184,7 +185,7 @@ export default function DesktopAppPage() {
 
               {/* Sessions */}
               <div>
-                <h2 className="text-lg font-semibold mb-3">Your Devices</h2>
+                <h2 className="text-lg font-semibold mb-3"><T>Your Devices</T></h2>
                 <div className="space-y-3">
                   {(status.sessions || []).map((session) => (
                     <Card key={session.id} className="border-border/50">
@@ -224,10 +225,10 @@ export default function DesktopAppPage() {
           {/* Links */}
           <div className="flex items-center gap-3 pt-2">
             <Button variant="outline" size="sm" asChild>
-              <Link href="/download">Downloads Page</Link>
+              <Link href="/download"><T>Downloads Page</T></Link>
             </Button>
             <Button variant="outline" size="sm" asChild>
-              <Link href="/download/changelog">Changelog</Link>
+              <Link href="/download/changelog"><T>Changelog</T></Link>
             </Button>
           </div>
         </div>

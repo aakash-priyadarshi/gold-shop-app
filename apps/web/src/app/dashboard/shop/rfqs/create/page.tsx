@@ -1,5 +1,6 @@
 'use client';
 
+import { T } from '@/components/ui/T';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -17,7 +18,7 @@ export default function CreateWalkInRfqRedirect() {
 
   return (
     <div className="flex items-center justify-center min-h-screen">
-      <p className="text-muted-foreground">Redirecting to Walk-in Quotes...</p>
+      <p className="text-muted-foreground"><T>Redirecting to Walk-in Quotes...</T></p>
     </div>
   );
 }

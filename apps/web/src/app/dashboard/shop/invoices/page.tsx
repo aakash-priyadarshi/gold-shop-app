@@ -22,9 +22,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useFeatures } from "@/hooks/useFeatures";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { useT } from "@/providers/translation-provider";
 import { invoicesApi } from "@/lib/api";
 import {
   ArrowRight,
@@ -83,6 +85,7 @@ const statusColors: Record<string, string> = {
 
 export default function InvoicesListPage() {
   const { symbol: currencySymbol } = useShopCurrency();
+  const t = useT();
   const { hasFeature, planName, loading: featuresLoading } = useFeatures();
   const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
   const [stats, setStats] = useState<InvoiceStats | null>(null);
@@ -160,22 +163,22 @@ export default function InvoicesListPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold">Invoices</h1>
+                <h1 className="text-2xl font-bold"><T>Invoices</T></h1>
                 <p className="text-muted-foreground">
-                  Manage billing and track payments
+                  <T>Manage billing and track payments</T>
                 </p>
               </div>
               <div className="flex gap-2">
                 <Link href="/dashboard/shop/invoices/settings">
                   <Button variant="outline" size="sm">
                     <Settings2 className="h-4 w-4 mr-2" />
-                    Bill Settings
+                    <T>Bill Settings</T>
                   </Button>
                 </Link>
                 <Link href="/dashboard/shop/invoices/create">
                   <Button className="bg-amber-500 hover:bg-amber-600">
                     <Plus className="h-4 w-4 mr-2" />
-                    Create Invoice
+                    <T>Create Invoice</T>
                   </Button>
                 </Link>
               </div>
@@ -189,7 +192,7 @@ export default function InvoicesListPage() {
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4 text-blue-500" />
                       <span className="text-sm text-muted-foreground">
-                        Total
+                        <T>Total</T>
                       </span>
                     </div>
                     <p className="text-2xl font-bold mt-1">
@@ -202,7 +205,7 @@ export default function InvoicesListPage() {
                     <div className="flex items-center gap-2">
                       <TrendingUp className="h-4 w-4 text-green-500" />
                       <span className="text-sm text-muted-foreground">
-                        Collected
+                        <T>Collected</T>
                       </span>
                     </div>
                     <p className="text-2xl font-bold mt-1 text-green-600 dark:text-green-400">
@@ -215,7 +218,7 @@ export default function InvoicesListPage() {
                     <div className="flex items-center gap-2">
                       <DollarSign className="h-4 w-4 text-amber-500" />
                       <span className="text-sm text-muted-foreground">
-                        Outstanding
+                        <T>Outstanding</T>
                       </span>
                     </div>
                     <p className="text-2xl font-bold mt-1 text-amber-600 dark:text-amber-400">
@@ -228,7 +231,7 @@ export default function InvoicesListPage() {
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4 text-purple-500" />
                       <span className="text-sm text-muted-foreground">
-                        Paid
+                        <T>Paid</T>
                       </span>
                     </div>
                     <p className="text-2xl font-bold mt-1">
@@ -275,22 +278,22 @@ export default function InvoicesListPage() {
                 ) : invoices.length === 0 ? (
                   <div className="text-center py-12">
                     <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-30" />
-                    <h3 className="text-lg font-medium">No invoices yet</h3>
+                    <h3 className="text-lg font-medium"><T>No invoices yet</T></h3>
                     <p className="text-muted-foreground">
-                      Create your first invoice to start tracking payments.
+                      <T>Create your first invoice to start tracking payments.</T>
                     </p>
                   </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Invoice #</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Total</TableHead>
-                        <TableHead>Paid</TableHead>
-                        <TableHead>Balance</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Date</TableHead>
+                        <TableHead><T>Invoice #</T></TableHead>
+                        <TableHead><T>Customer</T></TableHead>
+                        <TableHead><T>Total</T></TableHead>
+                        <TableHead><T>Paid</T></TableHead>
+                        <TableHead><T>Balance</T></TableHead>
+                        <TableHead><T>Status</T></TableHead>
+                        <TableHead><T>Date</T></TableHead>
                         <TableHead className="w-10"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -363,10 +366,10 @@ export default function InvoicesListPage() {
                   disabled={page === 1}
                   onClick={() => setPage(page - 1)}
                 >
-                  Previous
+                  <T>Previous</T>
                 </Button>
                 <span className="text-sm text-muted-foreground py-2">
-                  Page {page} of {totalPages}
+                  {t(`Page ${page} of ${totalPages}`)}
                 </span>
                 <Button
                   variant="outline"
@@ -374,7 +377,7 @@ export default function InvoicesListPage() {
                   disabled={page === totalPages}
                   onClick={() => setPage(page + 1)}
                 >
-                  Next
+                  <T>Next</T>
                 </Button>
               </div>
             )}

@@ -5,6 +5,7 @@ import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { ShopCommissionStatus } from "@/components/shop/ShopCommissionStatus";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { T } from "@/components/ui/T";
 import {
   Card,
   CardContent,
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/hooks/useAuth";
 import { useShopCurrency } from "@/hooks/useShopCurrency";
+import { useT } from "@/providers/translation-provider";
 import api from "@/lib/api";
 import { format, formatDistanceToNow } from "date-fns";
 import {
@@ -81,6 +83,7 @@ interface CommissionLedger {
 
 export default function ShopCommissionsPage() {
   const { user } = useAuth();
+  const t = useT();
   const { currencyCode, locale, symbol } = useShopCurrency();
   const [commissions, setCommissions] = useState<CommissionLedger[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,10 +126,10 @@ export default function ShopCommissionsPage() {
           {/* Header */}
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
-              Commission Ledger
+              <T>Commission Ledger</T>
             </h1>
             <p className="text-muted-foreground">
-              Track your commission obligations for paid-at-shop orders
+              <T>Track your commission obligations for paid-at-shop orders</T>
             </p>
           </div>
 
@@ -142,9 +145,9 @@ export default function ShopCommissionsPage() {
           {/* Commissions Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Commission History</CardTitle>
+              <CardTitle><T>Commission History</T></CardTitle>
               <CardDescription>
-                Your commission records for all paid-at-shop orders
+                <T>Your commission records for all paid-at-shop orders</T>
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -155,22 +158,21 @@ export default function ShopCommissionsPage() {
               ) : commissions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
                   <DollarSign className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                  <h3 className="text-lg font-medium">No commission records</h3>
+                  <h3 className="text-lg font-medium"><T>No commission records</T></h3>
                   <p className="text-sm text-muted-foreground">
-                    Commission entries will appear when customers pay at your
-                    shop
+                    <T>Commission entries will appear when customers pay at your shop</T>
                   </p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Order</TableHead>
-                      <TableHead>Order Total</TableHead>
-                      <TableHead>Commission</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Due Date</TableHead>
-                      <TableHead className="text-right">Action</TableHead>
+                      <TableHead><T>Order</T></TableHead>
+                      <TableHead><T>Order Total</T></TableHead>
+                      <TableHead><T>Commission</T></TableHead>
+                      <TableHead><T>Status</T></TableHead>
+                      <TableHead><T>Due Date</T></TableHead>
+                      <TableHead className="text-right"><T>Action</T></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -262,20 +264,20 @@ export default function ShopCommissionsPage() {
           {/* Info Card */}
           <Card>
             <CardHeader>
-              <CardTitle>Commission Policy</CardTitle>
+              <CardTitle><T>Commission Policy</T></CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="text-center p-4 bg-muted rounded-lg">
                   <div className="text-3xl font-bold text-primary">1%</div>
                   <div className="text-sm text-muted-foreground">
-                    Commission Rate
+                    <T>Commission Rate</T>
                   </div>
                 </div>
                 <div className="text-center p-4 bg-muted rounded-lg">
                   <div className="text-3xl font-bold text-primary">21</div>
                   <div className="text-sm text-muted-foreground">
-                    Days to Settle
+                    <T>Days to Settle</T>
                   </div>
                 </div>
                 <div className="text-center p-4 bg-muted rounded-lg">
@@ -283,20 +285,16 @@ export default function ShopCommissionsPage() {
                     <Ban className="h-6 w-6 text-red-500" />
                   </div>
                   <div className="text-sm text-muted-foreground mt-1">
-                    Shop Hold if Overdue
+                    <T>Shop Hold if Overdue</T>
                   </div>
                 </div>
               </div>
               <div className="text-sm text-muted-foreground">
                 <p className="mb-2">
-                  <strong>How it works:</strong> When a customer pays at your
-                  shop, a 1% commission is recorded. You have 21 days to settle
-                  this commission with the platform.
+                  <strong><T>How it works:</T></strong> <T>When a customer pays at your shop, a 1% commission is recorded. You have 21 days to settle this commission with the platform.</T>
                 </p>
                 <p>
-                  <strong>Important:</strong> Failure to settle commissions
-                  within 21 days will result in your shop being placed on hold.
-                  While on hold, new orders cannot be placed at your shop.
+                  <strong><T>Important:</T></strong> <T>Failure to settle commissions within 21 days will result in your shop being placed on hold. While on hold, new orders cannot be placed at your shop.</T>
                 </p>
               </div>
             </CardContent>
