@@ -1,6 +1,6 @@
 import { Body, Controller, HttpCode, Post } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
-import { TranslateBatchDto } from "./dto/translate.dto";
+import { TranslateBatchDto, TranslateHtmlDto } from "./dto/translate.dto";
 import { TranslationService } from "./translation.service";
 
 @Controller("translation")
@@ -24,5 +24,24 @@ export class TranslationController {
       dto.locale,
     );
     return { translations };
+  }
+
+  /**
+   * POST /translation/html
+   *
+   * Translate a full HTML document/fragment (blog post, CMS page, etc.).
+   * Segments are cached individually so only changed content costs AI calls.
+   * The full assembled result is also cached by content hash.
+   *
+   * If the client sends the same contentHash it already has, and the server
+   * has a cached translation for that hash, it's effectively free.
+   */
+  @Post("html")
+  @HttpCode(200)
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 requests/min
+  async translateHtml(
+    @Body() dto: TranslateHtmlDto,
+  ): Promise<{ html: string; contentHash: string; fromCache: boolean }> {
+    return this.translationService.translateHtml(dto.html, dto.locale);
   }
 }

@@ -2,6 +2,7 @@ import {
   ArrayMaxSize,
   IsArray,
   IsIn,
+  IsOptional,
   IsString,
   MaxLength,
 } from "class-validator";
@@ -37,4 +38,20 @@ export class TranslateBatchDto {
   @IsString()
   @IsIn(SUPPORTED_LOCALES)
   locale: SupportedLocale;
+}
+
+export class TranslateHtmlDto {
+  @IsString()
+  @MaxLength(200_000) // blog posts / CMS pages can be large
+  html: string;
+
+  @IsString()
+  @IsIn(SUPPORTED_LOCALES)
+  locale: SupportedLocale;
+
+  /** Optional client-side content hash for cache validation */
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  contentHash?: string;
 }
