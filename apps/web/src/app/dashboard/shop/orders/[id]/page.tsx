@@ -2,6 +2,8 @@
 
 import { ShopGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import {
   OrderStatusBadge,
   OrderStepper,
@@ -160,6 +162,7 @@ export default function ShopOrderDetailPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isPaidAtShopDialogOpen, setIsPaidAtShopDialogOpen] = useState(false);
   const [isMarkingPaidAtShop, setIsMarkingPaidAtShop] = useState(false);
+  const t = useT();
 
   useEffect(() => {
     if (orderId) {
@@ -257,13 +260,13 @@ export default function ShopOrderDetailPage() {
         <DashboardLayout>
           <div className="text-center py-12">
             <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <h2 className="text-xl font-semibold">Order Not Found</h2>
+            <h2 className="text-xl font-semibold"><T>Order Not Found</T></h2>
             <p className="text-muted-foreground">
-              The order you're looking for doesn't exist.
+              <T>The order you're looking for doesn't exist.</T>
             </p>
             <Button onClick={() => router.back()} className="mt-4">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Go Back
+              <T>Go Back</T>
             </Button>
           </div>
         </DashboardLayout>
@@ -280,7 +283,7 @@ export default function ShopOrderDetailPage() {
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="sm" onClick={() => router.back()}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
+                <T>Back</T>
               </Button>
               <div>
                 <h1 className="text-2xl font-bold">
@@ -306,9 +309,9 @@ export default function ShopOrderDetailPage() {
           {/* Order Progress Stepper */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle>Order Progress</CardTitle>
+              <CardTitle><T>Order Progress</T></CardTitle>
               <CardDescription>
-                Track the order through production stages
+                <T>Track the order through production stages</T>
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -336,7 +339,7 @@ export default function ShopOrderDetailPage() {
               {/* Order Details */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Order Details</CardTitle>
+                  <CardTitle><T>Order Details</T></CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -377,28 +380,28 @@ export default function ShopOrderDetailPage() {
                   <Separator className="my-4" />
                   <div className="space-y-2">
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">Subtotal</span>
+                      <span className="text-muted-foreground"><T>Subtotal</T></span>
                       <span>
                         {currencySymbol} {order.subtotalNpr?.toLocaleString()}
                       </span>
                     </div>
                     {order.shippingNpr > 0 && (
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">Shipping</span>
+                        <span className="text-muted-foreground"><T>Shipping</T></span>
                         <span>
                           {currencySymbol} {order.shippingNpr?.toLocaleString()}
                         </span>
                       </div>
                     )}
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">Tax</span>
+                      <span className="text-muted-foreground"><T>Tax</T></span>
                       <span>
                         {currencySymbol} {order.taxNpr?.toLocaleString()}
                       </span>
                     </div>
                     {order.discountNpr > 0 && (
                       <div className="flex justify-between items-center text-sm text-green-600">
-                        <span>Discount</span>
+                        <span><T>Discount</T></span>
                         <span>
                           -{currencySymbol}{" "}
                           {order.discountNpr?.toLocaleString()}
@@ -407,7 +410,7 @@ export default function ShopOrderDetailPage() {
                     )}
                     <Separator className="my-2" />
                     <div className="flex justify-between items-center font-bold">
-                      <span>Total</span>
+                      <span><T>Total</T></span>
                       <span className="text-xl">
                         {currencySymbol} {order.totalNpr?.toLocaleString()}
                       </span>
@@ -415,7 +418,7 @@ export default function ShopOrderDetailPage() {
                     {order.bookingFeePaidNpr && order.bookingFeePaidNpr > 0 && (
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-muted-foreground">
-                          Booking Fee Paid
+                          <T>Booking Fee Paid</T>
                         </span>
                         <span className="text-green-600">
                           {currencySymbol}{" "}
@@ -425,7 +428,7 @@ export default function ShopOrderDetailPage() {
                     )}
                     {order.balanceDueNpr > 0 && (
                       <div className="flex justify-between items-center text-sm font-medium text-orange-600">
-                        <span>Balance Due</span>
+                        <span><T>Balance Due</T></span>
                         <span>
                           {currencySymbol}{" "}
                           {order.balanceDueNpr?.toLocaleString()}
@@ -443,7 +446,7 @@ export default function ShopOrderDetailPage() {
                           <div className="flex items-center gap-2 mb-3">
                             <ImageIcon className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm font-medium">
-                              Reference Images
+                              <T>Reference Images</T>
                             </span>
                           </div>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -471,7 +474,7 @@ export default function ShopOrderDetailPage() {
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground mt-2">
-                            Customer-provided reference images for the design.
+                            <T>Customer-provided reference images for the design.</T>
                           </p>
                         </div>
                       </>
@@ -482,7 +485,7 @@ export default function ShopOrderDetailPage() {
               {/* Status Timeline */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Order Timeline</CardTitle>
+                  <CardTitle><T>Order Timeline</T></CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -516,7 +519,7 @@ export default function ShopOrderDetailPage() {
                           <Clock className="h-4 w-4 text-blue-600" />
                         </div>
                         <div>
-                          <p className="font-medium">Order Created</p>
+                          <p className="font-medium"><T>Order Created</T></p>
                           <p className="text-sm text-muted-foreground">
                             {formatDate(order.createdAt)}
                           </p>
@@ -533,9 +536,9 @@ export default function ShopOrderDetailPage() {
               {/* Update Status */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Update Status</CardTitle>
+                  <CardTitle><T>Update Status</T></CardTitle>
                   <CardDescription>
-                    Move order through production stages
+                    <T>Move order through production stages</T>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -561,7 +564,7 @@ export default function ShopOrderDetailPage() {
                   {isUpdating && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Updating...
+                      <T>Updating...</T>
                     </div>
                   )}
                 </CardContent>
@@ -570,12 +573,12 @@ export default function ShopOrderDetailPage() {
               {/* Payment Info */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Payment</CardTitle>
+                  <CardTitle><T>Payment</T></CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">
-                      Status
+                      <T>Status</T>
                     </span>
                     <Badge
                       variant={
@@ -591,7 +594,7 @@ export default function ShopOrderDetailPage() {
                   {order.paymentMethod && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">
-                        Method
+                        <T>Method</T>
                       </span>
                       <div className="flex items-center gap-1">
                         {order.paymentMethod === "PAID_AT_SHOP" ? (
@@ -612,7 +615,7 @@ export default function ShopOrderDetailPage() {
                       <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200 mb-2">
                         <AlertTriangle className="h-4 w-4" />
                         <span className="font-medium text-sm">
-                          Commission Due
+                          <T>Commission Due</T>
                         </span>
                       </div>
                       <div className="text-sm text-yellow-700 dark:text-yellow-300">
@@ -640,7 +643,7 @@ export default function ShopOrderDetailPage() {
                       variant="outline"
                     >
                       <Store className="h-4 w-4 mr-2" />
-                      Mark as Paid at Shop
+                      <T>Mark as Paid at Shop</T>
                     </Button>
                   )}
                 </CardContent>
@@ -649,7 +652,7 @@ export default function ShopOrderDetailPage() {
               {/* Customer Info */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Customer</CardTitle>
+                  <CardTitle><T>Customer</T></CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-3">
@@ -682,7 +685,7 @@ export default function ShopOrderDetailPage() {
               {order.shippingAddress && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Shipping Address</CardTitle>
+                    <CardTitle><T>Shipping Address</T></CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-start gap-3">
@@ -710,23 +713,22 @@ export default function ShopOrderDetailPage() {
           >
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Confirm Payment at Shop</DialogTitle>
+                <DialogTitle><T>Confirm Payment at Shop</T></DialogTitle>
                 <DialogDescription>
-                  By marking this order as paid at shop, you agree to the
-                  following:
+                  <T>By marking this order as paid at shop, you agree to the following:</T>
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="rounded-lg border p-4 space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Order Total:</span>
+                    <span className="text-muted-foreground"><T>Order Total:</T></span>
                     <span className="font-bold">
                       Rs. {(order?.totalNpr || 0).toLocaleString()}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">
-                      Commission (1%):
+                      <T>Commission (1%):</T>
                     </span>
                     <span className="font-medium text-orange-600">
                       Rs. {((order?.totalNpr || 0) * 0.01).toLocaleString()}
@@ -734,19 +736,18 @@ export default function ShopOrderDetailPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">
-                      Settlement Due:
+                      <T>Settlement Due:</T>
                     </span>
-                    <span className="font-medium">21 days from today</span>
+                    <span className="font-medium"><T>21 days from today</T></span>
                   </div>
                 </div>
                 <div className="p-3 bg-yellow-50 dark:bg-yellow-950/30 rounded-lg border border-yellow-200 dark:border-yellow-800/50 text-sm text-yellow-800 dark:text-yellow-200">
                   <p className="font-medium flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4" />
-                    Important Notice
+                    <T>Important Notice</T>
                   </p>
                   <p className="mt-1">
-                    The 1% commission must be settled within 21 days. Failure to
-                    pay will result in your shop being placed on hold.
+                    <T>The 1% commission must be settled within 21 days. Failure to pay will result in your shop being placed on hold.</T>
                   </p>
                 </div>
               </div>
@@ -756,18 +757,18 @@ export default function ShopOrderDetailPage() {
                   onClick={() => setIsPaidAtShopDialogOpen(false)}
                   disabled={isMarkingPaidAtShop}
                 >
-                  Cancel
+                  <T>Cancel</T>
                 </Button>
                 <Button onClick={markPaidAtShop} disabled={isMarkingPaidAtShop}>
                   {isMarkingPaidAtShop ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
+                      <T>Processing...</T>
                     </>
                   ) : (
                     <>
                       <CheckCircle className="mr-2 h-4 w-4" />
-                      Confirm Payment
+                      <T>Confirm Payment</T>
                     </>
                   )}
                 </Button>

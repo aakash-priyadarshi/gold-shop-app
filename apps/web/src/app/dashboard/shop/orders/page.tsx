@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { ShopGuard } from '@/components/auth/RouteGuard';
+import { T } from '@/components/ui/T';
+import { useT } from '@/providers/translation-provider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -73,6 +75,7 @@ export default function ShopOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const t = useT();
 
   useEffect(() => {
     if (user?.shop?.id) {
@@ -149,22 +152,22 @@ export default function ShopOrdersPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Orders</h1>
+              <h1 className="text-2xl font-bold"><T>Orders</T></h1>
               <p className="text-muted-foreground">
-                Manage and track customer orders
+                <T>Manage and track customer orders</T>
               </p>
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
+                <SelectValue placeholder={t("Filter by status")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Orders</SelectItem>
-                <SelectItem value="PAYMENT_PENDING">Payment Pending</SelectItem>
-                <SelectItem value="PAID">Paid</SelectItem>
-                <SelectItem value="IN_PRODUCTION">In Production</SelectItem>
-                <SelectItem value="SHIPPED">Shipped</SelectItem>
-                <SelectItem value="DELIVERED">Delivered</SelectItem>
+                <SelectItem value="all"><T>All Orders</T></SelectItem>
+                <SelectItem value="PAYMENT_PENDING"><T>Payment Pending</T></SelectItem>
+                <SelectItem value="PAID"><T>Paid</T></SelectItem>
+                <SelectItem value="IN_PRODUCTION"><T>In Production</T></SelectItem>
+                <SelectItem value="SHIPPED"><T>Shipped</T></SelectItem>
+                <SelectItem value="DELIVERED"><T>Delivered</T></SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -178,20 +181,20 @@ export default function ShopOrdersPage() {
               ) : orders.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No orders found</p>
-                  <p className="text-sm">Orders will appear here when customers place them</p>
+                  <p><T>No orders found</T></p>
+                  <p className="text-sm"><T>Orders will appear here when customers place them</T></p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Order</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Payment</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead><T>Order</T></TableHead>
+                      <TableHead><T>Customer</T></TableHead>
+                      <TableHead><T>Amount</T></TableHead>
+                      <TableHead><T>Status</T></TableHead>
+                      <TableHead><T>Payment</T></TableHead>
+                      <TableHead><T>Date</T></TableHead>
+                      <TableHead><T>Actions</T></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -245,7 +248,7 @@ export default function ShopOrdersPage() {
                           <Link href={`/dashboard/shop/orders/${order.id}`}>
                             <Button size="sm" variant="outline">
                               <Eye className="h-4 w-4 mr-1" />
-                              View
+                              <T>View</T>
                             </Button>
                           </Link>
                         </TableCell>
