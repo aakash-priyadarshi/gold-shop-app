@@ -2,6 +2,8 @@
 
 import { CustomerGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -60,6 +62,7 @@ export default function PaymentMethodsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const t = useT();
 
   const [newMethod, setNewMethod] = useState({
     type: "esewa" as "card" | "bank" | "esewa" | "khalti" | "imepay",
@@ -230,15 +233,15 @@ export default function PaymentMethodsPage() {
         <div className="max-w-3xl mx-auto space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Payment Methods</h1>
+              <h1 className="text-2xl font-bold"><T>Payment Methods</T></h1>
               <p className="text-muted-foreground">
-                Manage your saved payment methods for faster checkout
+                <T>Manage your saved payment methods for faster checkout</T>
               </p>
             </div>
             {!showAddForm && (
               <Button onClick={() => setShowAddForm(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Payment Method
+                <T>Add Payment Method</T>
               </Button>
             )}
           </div>
@@ -250,11 +253,10 @@ export default function PaymentMethodsPage() {
                 <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
                 <div>
                   <h3 className="font-medium text-blue-900 dark:text-blue-100">
-                    Your payment information is secure
+                    <T>Your payment information is secure</T>
                   </h3>
                   <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                    We use industry-standard encryption to protect your payment
-                    details. Card numbers are never stored on our servers.
+                    <T>We use industry-standard encryption to protect your payment details. Card numbers are never stored on our servers.</T>
                   </p>
                 </div>
               </div>
@@ -265,15 +267,15 @@ export default function PaymentMethodsPage() {
           {showAddForm && (
             <Card>
               <CardHeader>
-                <CardTitle>Add Payment Method</CardTitle>
+                <CardTitle><T>Add Payment Method</T></CardTitle>
                 <CardDescription>
-                  Choose your preferred payment method
+                  <T>Choose your preferred payment method</T>
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Payment Type Selection */}
                 <div className="space-y-2">
-                  <Label>Payment Type</Label>
+                  <Label><T>Payment Type</T></Label>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                     {paymentTypes.map((type) => {
                       const Icon = type.icon;
@@ -307,7 +309,7 @@ export default function PaymentMethodsPage() {
                 {newMethod.type === "card" && (
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Card Number</Label>
+                      <Label><T>Card Number</T></Label>
                       <Input
                         value={newMethod.cardNumber}
                         onChange={(e) =>
@@ -324,7 +326,7 @@ export default function PaymentMethodsPage() {
                     </div>
                     <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label>Expiry Month</Label>
+                        <Label><T>Expiry Month</T></Label>
                         <Select
                           value={newMethod.expiryMonth}
                           onValueChange={(value) =>
@@ -347,7 +349,7 @@ export default function PaymentMethodsPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label>Expiry Year</Label>
+                        <Label><T>Expiry Year</T></Label>
                         <Select
                           value={newMethod.expiryYear}
                           onValueChange={(value) =>
@@ -394,7 +396,7 @@ export default function PaymentMethodsPage() {
                 {newMethod.type === "bank" && (
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Bank Name</Label>
+                      <Label><T>Bank Name</T></Label>
                       <Input
                         value={newMethod.bankName}
                         onChange={(e) =>
@@ -407,7 +409,7 @@ export default function PaymentMethodsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Account Holder Name</Label>
+                      <Label><T>Account Holder Name</T></Label>
                       <Input
                         value={newMethod.accountHolderName}
                         onChange={(e) =>
@@ -420,7 +422,7 @@ export default function PaymentMethodsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Account Number</Label>
+                      <Label><T>Account Number</T></Label>
                       <Input
                         value={newMethod.accountNumber}
                         onChange={(e) =>
@@ -439,7 +441,7 @@ export default function PaymentMethodsPage() {
                 {["esewa", "khalti", "imepay"].includes(newMethod.type) && (
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Mobile Number</Label>
+                      <Label><T>Mobile Number</T></Label>
                       <Input
                         value={newMethod.mobileNumber}
                         onChange={(e) =>
@@ -460,7 +462,7 @@ export default function PaymentMethodsPage() {
 
                 {/* Label */}
                 <div className="space-y-2">
-                  <Label>Label (Optional)</Label>
+                  <Label><T>Label (Optional)</T></Label>
                   <Input
                     value={newMethod.label}
                     onChange={(e) =>
@@ -479,18 +481,18 @@ export default function PaymentMethodsPage() {
                       resetForm();
                     }}
                   >
-                    Cancel
+                    <T>Cancel</T>
                   </Button>
                   <Button onClick={addPaymentMethod} disabled={isSaving}>
                     {isSaving ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Saving...
+                        <T>Saving...</T>
                       </>
                     ) : (
                       <>
                         <Plus className="h-4 w-4 mr-2" />
-                        Add Payment Method
+                        <T>Add Payment Method</T>
                       </>
                     )}
                   </Button>
@@ -502,9 +504,9 @@ export default function PaymentMethodsPage() {
           {/* Saved Payment Methods */}
           <Card>
             <CardHeader>
-              <CardTitle>Saved Payment Methods</CardTitle>
+              <CardTitle><T>Saved Payment Methods</T></CardTitle>
               <CardDescription>
-                Your saved payment methods for faster checkout
+                <T>Your saved payment methods for faster checkout</T>
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -514,15 +516,15 @@ export default function PaymentMethodsPage() {
                     <Wallet className="h-12 w-12 text-muted-foreground" />
                   </div>
                   <h3 className="text-lg font-semibold mb-2">
-                    No payment methods saved
+                    <T>No payment methods saved</T>
                   </h3>
                   <p className="text-muted-foreground mb-6">
-                    Add a payment method to speed up your checkout process
+                    <T>Add a payment method to speed up your checkout process</T>
                   </p>
                   {!showAddForm && (
                     <Button onClick={() => setShowAddForm(true)}>
                       <Plus className="h-4 w-4 mr-2" />
-                      Add Your First Payment Method
+                      <T>Add Your First Payment Method</T>
                     </Button>
                   )}
                 </div>
@@ -549,7 +551,7 @@ export default function PaymentMethodsPage() {
                             {method.isDefault && (
                               <span className="text-xs bg-gold-100 text-gold-800 dark:text-gold-200 px-2 py-0.5 rounded flex items-center gap-1">
                                 <Check className="h-3 w-3" />
-                                Default
+                                <T>Default</T>
                               </span>
                             )}
                           </div>
@@ -574,7 +576,7 @@ export default function PaymentMethodsPage() {
                             size="sm"
                             onClick={() => setDefaultPaymentMethod(method.id)}
                           >
-                            Set Default
+                            <T>Set Default</T>
                           </Button>
                         )}
                         <Button
