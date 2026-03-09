@@ -377,7 +377,7 @@ export default function ProductDetailPage() {
                   </Badge>
                   {item.stockQuantity <= 2 && item.stockQuantity > 0 && (
                     <Badge className="bg-orange-500">
-                      <T>Only {item.stockQuantity} left</T>
+                      {t(`Only ${item.stockQuantity} left`)}
                     </Badge>
                   )}
                 </div>

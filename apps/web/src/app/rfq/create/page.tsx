@@ -6535,7 +6535,7 @@ export default function CreateRfqPage() {
                                             ]
                                               .filter(Boolean)
                                               .join(", ") ||
-                                            Location not specified"}
+                                              t("Location not specified")}
                                           </span>
                                           {seller.averageRating > 0 && (
                                             <span className="flex items-center gap-1">
