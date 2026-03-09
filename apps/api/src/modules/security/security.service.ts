@@ -106,7 +106,20 @@ export class SecurityService {
   private whitelistedIpsCache = new Set<string>();
   private whitelistedIpsCacheUpdatedAt = 0;
 
+  // Permanent whitelist from env var (never cleared)
+  private readonly envWhitelistedIps: Set<string>;
+
   constructor(private readonly prisma: PrismaService) {
+    // Parse WHITELISTED_IPS env var (comma-separated)
+    const envIps = process.env.WHITELISTED_IPS?.split(",")
+      .map((ip) => ip.trim())
+      .filter(Boolean);
+    this.envWhitelistedIps = new Set(envIps ?? []);
+    if (this.envWhitelistedIps.size > 0) {
+      this.logger.log(
+        `✅ Loaded ${this.envWhitelistedIps.size} whitelisted IP(s) from env`,
+      );
+    }
     this.refreshBlockedIpsCache();
     this.refreshWhitelistedIpsCache();
   }
@@ -212,6 +225,9 @@ export class SecurityService {
     userId?: string,
     userAgent?: string,
   ): Promise<void> {
+    // Whitelisted IPs skip all threat recording
+    if (await this.isWhitelisted(ip)) return;
+
     const profile = this.getOrCreateProfile(ip);
     profile.failedLogins++;
     profile.score = Math.min(100, profile.score + 10);
@@ -274,6 +290,8 @@ export class SecurityService {
 
   /**
    * Record a 403 Forbidden response.
+   * Only called for unauthenticated requests (authenticated 403s are
+   * normal role/permission mismatches and are filtered in the interceptor).
    */
   async recordForbidden(
     ip: string,
@@ -282,13 +300,21 @@ export class SecurityService {
     userId?: string,
     userAgent?: string,
   ): Promise<void> {
+    // Whitelisted IPs skip all threat recording
+    if (await this.isWhitelisted(ip)) return;
+
+    // Authenticated users hitting a wrong-role endpoint is NOT a threat
+    if (userId) return;
+
     const profile = this.getOrCreateProfile(ip);
     profile.forbiddenHits++;
-    profile.score = Math.min(100, profile.score + 8);
+
+    // Only bump score moderately — a few 403s are normal (e.g. crawlers)
+    profile.score = Math.min(100, profile.score + 3);
 
     const event: ThreatEvent = {
       type: ThreatType.ACCESS_FORBIDDEN,
-      severity: profile.forbiddenHits >= 5 ? Severity.HIGH : Severity.MEDIUM,
+      severity: profile.forbiddenHits >= 30 ? Severity.HIGH : Severity.LOW,
       ip,
       userId,
       route,
@@ -298,7 +324,9 @@ export class SecurityService {
     };
     await this.persistEvents([event]);
 
-    if (profile.forbiddenHits >= 10) {
+    // Only auto-block after many unauthenticated forbidden hits on diverse
+    // routes — indicates actual probing, not a legitimate user.
+    if (profile.forbiddenHits >= 50) {
       await this.blockIp(
         ip,
         `Repeated forbidden access: ${profile.forbiddenHits} hits`,
@@ -318,6 +346,9 @@ export class SecurityService {
     method: string,
     userAgent?: string,
   ): Promise<void> {
+    // Whitelisted IPs skip all threat recording
+    if (await this.isWhitelisted(ip)) return;
+
     const profile = this.getOrCreateProfile(ip);
     profile.notFoundHits++;
 
@@ -362,6 +393,9 @@ export class SecurityService {
     method: string,
     userAgent?: string,
   ): Promise<void> {
+    // Whitelisted IPs skip all threat recording
+    if (await this.isWhitelisted(ip)) return;
+
     const profile = this.getOrCreateProfile(ip);
     profile.score = Math.min(100, profile.score + 5);
 
@@ -390,6 +424,8 @@ export class SecurityService {
   }
 
   async isWhitelisted(ip: string): Promise<boolean> {
+    // Env-var whitelist always takes precedence (no DB round-trip)
+    if (this.envWhitelistedIps.has(ip)) return true;
     if (Date.now() - this.whitelistedIpsCacheUpdatedAt > this.CACHE_TTL_MS) {
       await this.refreshWhitelistedIpsCache();
     }
@@ -459,10 +495,11 @@ export class SecurityService {
         update: { label, addedBy },
       });
       this.whitelistedIpsCache.add(ip);
-      // Also unblock if currently blocked
-      if (this.blockedIpsCache.has(ip)) {
-        await this.unblockIp(ip);
-      }
+      // Always unblock from DB (not just in-memory cache) to avoid stale
+      // BlockedIp records surviving across server restarts.
+      await this.unblockIp(ip);
+      // Reset in-memory threat profile so the IP starts clean
+      this.ipProfiles.delete(ip);
       this.logger.log(`✅ Whitelisted IP: ${ip} (${label || "no label"})`);
     } catch (err) {
       this.logger.error(`Failed to whitelist IP ${ip}:`, err);
@@ -487,13 +524,21 @@ export class SecurityService {
 
   private async refreshBlockedIpsCache(): Promise<void> {
     try {
-      const blocked = await this.prisma.blockedIp.findMany({
-        where: {
-          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-        },
-        select: { ip: true },
-      });
-      this.blockedIpsCache = new Set(blocked.map((b) => b.ip));
+      const [blocked, whitelisted] = await Promise.all([
+        this.prisma.blockedIp.findMany({
+          where: {
+            OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+          },
+          select: { ip: true },
+        }),
+        this.prisma.whitelistedIp.findMany({ select: { ip: true } }),
+      ]);
+      // Exclude whitelisted IPs from the blocked set to prevent
+      // stale BlockedIp records from overriding the whitelist.
+      const whitelistedSet = new Set(whitelisted.map((w) => w.ip));
+      this.blockedIpsCache = new Set(
+        blocked.map((b) => b.ip).filter((ip) => !whitelistedSet.has(ip)),
+      );
       this.blockedIpsCacheUpdatedAt = Date.now();
     } catch (err) {
       this.logger.error("Failed to refresh blocked IPs cache:", err);
@@ -736,6 +781,13 @@ export class SecurityService {
       // Decay score by 5 every 5 min if no recent activity
       if (now - profile.lastSeen > 5 * 60 * 1000) {
         profile.score = Math.max(0, profile.score - 5);
+      }
+      // After 30 min of inactivity, also decay hit counters so IPs
+      // aren't permanently flagged from one bad session.
+      if (now - profile.lastSeen > 30 * 60 * 1000) {
+        profile.forbiddenHits = Math.max(0, profile.forbiddenHits - 5);
+        profile.notFoundHits = Math.max(0, profile.notFoundHits - 5);
+        profile.failedLogins = Math.max(0, profile.failedLogins - 1);
       }
       // Evict profiles inactive for 2 hours with score 0
       if (now - profile.lastSeen > 2 * 60 * 60 * 1000 && profile.score === 0) {
