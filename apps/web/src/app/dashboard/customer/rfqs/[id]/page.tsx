@@ -2,6 +2,8 @@
 
 import { CustomerGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -141,6 +143,7 @@ const OFFER_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 export default function CustomerRFQDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const t = useT();
   const [rfq, setRfq] = useState<RFQDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -362,9 +365,9 @@ export default function CustomerRFQDetailPage() {
         <DashboardLayout>
           <div className="text-center py-12">
             <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h2 className="text-xl font-semibold mb-2">Request Not Found</h2>
+            <h2 className="text-xl font-semibold mb-2"><T>Request Not Found</T></h2>
             <Button asChild>
-              <Link href="/dashboard/customer/rfqs">Back to Requests</Link>
+              <Link href="/dashboard/customer/rfqs"><T>Back to Requests</T></Link>
             </Button>
           </div>
         </DashboardLayout>
@@ -391,18 +394,18 @@ export default function CustomerRFQDetailPage() {
             <div className="flex-1">
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-2xl font-bold">
-                  {rfq.jewelleryType.replace(/_/g, " ")} Request
+                  {t(`${rfq.jewelleryType.replace(/_/g, " ")} Request`)}
                 </h1>
                 {getStatusBadge(rfq.status)}
               </div>
               <p className="text-muted-foreground">
-                Created {new Date(rfq.createdAt).toLocaleDateString()}
+                {t(`Created ${new Date(rfq.createdAt).toLocaleDateString()}`)}
               </p>
             </div>
             {canAcceptOffers && (
               <Button variant="outline" onClick={cancelRFQ}>
                 <XCircle className="h-4 w-4 mr-2" />
-                Cancel Request
+                <T>Cancel Request</T>
               </Button>
             )}
           </div>
@@ -411,39 +414,39 @@ export default function CustomerRFQDetailPage() {
             {/* Request Details */}
             <Card className="lg:col-span-1">
               <CardHeader>
-                <CardTitle>Request Details</CardTitle>
+                <CardTitle><T>Request Details</T></CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-muted-foreground">Type</p>
+                    <p className="text-muted-foreground"><T>Type</T></p>
                     <p className="font-medium">
                       {rfq.jewelleryType.replace(/_/g, " ")}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Method</p>
+                    <p className="text-muted-foreground"><T>Method</T></p>
                     <p className="font-medium">
                       {rfq.buildMethod.replace(/_/g, " ")}
                     </p>
                   </div>
                   {rfq.targetTotalWeightG && (
                     <div>
-                      <p className="text-muted-foreground">Target Weight</p>
+                      <p className="text-muted-foreground"><T>Target Weight</T></p>
                       <p className="font-medium">{rfq.targetTotalWeightG}g</p>
                     </div>
                   )}
                   {rfq.preferredDeliveryDays && (
                     <div>
-                      <p className="text-muted-foreground">Delivery</p>
+                      <p className="text-muted-foreground"><T>Delivery</T></p>
                       <p className="font-medium">
-                        {rfq.preferredDeliveryDays} days
+                        {t(`${rfq.preferredDeliveryDays} days`)}
                       </p>
                     </div>
                   )}
                   {(rfq.budgetMinNpr || rfq.budgetMaxNpr) && (
                     <div className="col-span-2">
-                      <p className="text-muted-foreground">Budget</p>
+                      <p className="text-muted-foreground"><T>Budget</T></p>
                       <p className="font-medium">
                         {rfq.budgetMinNpr && rfq.budgetMaxNpr
                           ? `${formatCurrency(rfq.budgetMinNpr)} - ${formatCurrency(rfq.budgetMaxNpr)}`
@@ -460,7 +463,7 @@ export default function CustomerRFQDetailPage() {
                     <Separator />
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">
-                        Special Instructions
+                        <T>Special Instructions</T>
                       </p>
                       <p className="text-sm">{rfq.specialInstructions}</p>
                     </div>
@@ -472,7 +475,7 @@ export default function CustomerRFQDetailPage() {
                     <Separator />
                     <div>
                       <p className="text-sm text-muted-foreground mb-2">
-                        Reference Images
+                        <T>Reference Images</T>
                       </p>
                       <div className="grid grid-cols-3 gap-2">
                         {rfq.referenceImages.map((img, i) => (
@@ -495,21 +498,21 @@ export default function CustomerRFQDetailPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5" />
-                  Quotations ({activeOffers.length})
+                  {t(`Quotations (${activeOffers.length})`)}
                 </CardTitle>
                 <CardDescription>
                   {canAcceptOffers
-                    ? "Review quotations from shops. Accept, counter-offer, or decline."
-                    : "View quotations received for this request."}
+                    ? t("Review quotations from shops. Accept, counter-offer, or decline.")
+                    : t("View quotations received for this request.")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {activeOffers.length === 0 ? (
                   <div className="text-center py-8">
                     <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="font-medium mb-2">Waiting for Quotations</h3>
+                    <h3 className="font-medium mb-2"><T>Waiting for Quotations</T></h3>
                     <p className="text-muted-foreground text-sm">
-                      Shops typically respond within 24-48 hours.
+                      <T>Shops typically respond within 24-48 hours.</T>
                     </p>
                   </div>
                 ) : (
@@ -542,7 +545,7 @@ export default function CustomerRFQDetailPage() {
                                   variant="outline"
                                   className="bg-blue-50 text-blue-700"
                                 >
-                                  Your Counter
+                                  <T>Your Counter</T>
                                 </Badge>
                               )}
                               {getOfferStatusBadge(offer.status)}
@@ -554,7 +557,7 @@ export default function CustomerRFQDetailPage() {
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                             <div>
                               <p className="text-sm text-muted-foreground">
-                                Total Price
+                                <T>Total Price</T>
                               </p>
                               <p className="font-bold text-lg text-primary">
                                 {formatCurrency(offer.totalPriceNpr)}
@@ -562,15 +565,15 @@ export default function CustomerRFQDetailPage() {
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">
-                                Delivery
+                                <T>Delivery</T>
                               </p>
                               <p className="font-medium">
-                                {offer.estimatedDays} days
+                                {t(`${offer.estimatedDays} days`)}
                               </p>
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">
-                                Booking Fee
+                                <T>Booking Fee</T>
                               </p>
                               <p className="font-medium">
                                 {formatCurrency(offer.bookingFeeNpr)} (
@@ -579,7 +582,7 @@ export default function CustomerRFQDetailPage() {
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">
-                                Quoted
+                                <T>Quoted</T>
                               </p>
                               <p className="font-medium">
                                 {new Date(offer.createdAt).toLocaleDateString()}
@@ -589,29 +592,29 @@ export default function CustomerRFQDetailPage() {
 
                           <details className="mb-4">
                             <summary className="text-sm text-muted-foreground cursor-pointer hover:text-foreground">
-                              View price breakdown
+                              <T>View price breakdown</T>
                             </summary>
                             <div className="mt-2 p-3 bg-muted/50 rounded-lg grid grid-cols-2 md:grid-cols-5 gap-2 text-sm">
                               <div>
-                                <p className="text-muted-foreground">Metal</p>
+                                <p className="text-muted-foreground"><T>Metal</T></p>
                                 <p>{formatCurrency(offer.metalCostNpr)}</p>
                               </div>
                               <div>
-                                <p className="text-muted-foreground">Making</p>
+                                <p className="text-muted-foreground"><T>Making</T></p>
                                 <p>{formatCurrency(offer.makingChargeNpr)}</p>
                               </div>
                               <div>
-                                <p className="text-muted-foreground">Finish</p>
+                                <p className="text-muted-foreground"><T>Finish</T></p>
                                 <p>{formatCurrency(offer.finishCostNpr)}</p>
                               </div>
                               <div>
                                 <p className="text-muted-foreground">
-                                  Gemstones
+                                  <T>Gemstones</T>
                                 </p>
                                 <p>{formatCurrency(offer.gemstoneCostNpr)}</p>
                               </div>
                               <div>
-                                <p className="text-muted-foreground">Tax</p>
+                                <p className="text-muted-foreground"><T>Tax</T></p>
                                 <p>{formatCurrency(offer.taxNpr)}</p>
                               </div>
                             </div>
@@ -621,8 +624,8 @@ export default function CustomerRFQDetailPage() {
                             <div className="mb-4 p-3 bg-muted rounded-lg">
                               <p className="text-sm text-muted-foreground mb-1">
                                 {offer.offerType === "CUSTOMER_COUNTER"
-                                  ? "Your Message:"
-                                  : "Shop Notes:"}
+                                  ? t("Your Message:")
+                                  : t("Shop Notes:")}
                               </p>
                               <p className="text-sm">{offer.shopNotes}</p>
                             </div>
@@ -632,7 +635,7 @@ export default function CustomerRFQDetailPage() {
                             offer.declineReason && (
                               <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200">
                                 <p className="text-sm text-red-700 dark:text-red-300">
-                                  <strong>Decline Reason:</strong>{" "}
+                                  <strong><T>Decline Reason:</T></strong>{" "}
                                   {offer.declineReason}
                                 </p>
                               </div>
@@ -652,7 +655,7 @@ export default function CustomerRFQDetailPage() {
                                   ) : (
                                     <>
                                       <CheckCircle2 className="h-4 w-4 mr-2" />
-                                      Accept Quotation
+                                      <T>Accept Quotation</T>
                                     </>
                                   )}
                                 </Button>
@@ -662,7 +665,7 @@ export default function CustomerRFQDetailPage() {
                                   disabled={actionLoading === offer.id}
                                 >
                                   <ArrowRightLeft className="h-4 w-4 mr-2" />
-                                  Counter-Offer
+                                  <T>Counter-Offer</T>
                                 </Button>
                                 <Button
                                   variant="ghost"
@@ -671,7 +674,7 @@ export default function CustomerRFQDetailPage() {
                                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                 >
                                   <XCircle className="h-4 w-4 mr-2" />
-                                  Decline
+                                  <T>Decline</T>
                                 </Button>
                               </div>
                             )}
@@ -680,8 +683,8 @@ export default function CustomerRFQDetailPage() {
                             offer.status === "PENDING" && (
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <RefreshCw className="h-4 w-4 animate-spin" />
-                                Waiting for shop to respond to your
-                                counter-offer...
+                                <T>Waiting for shop to respond to your
+                                counter-offer...</T>
                               </div>
                             )}
                         </CardContent>
@@ -703,7 +706,7 @@ export default function CustomerRFQDetailPage() {
         >
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Make a Counter-Offer</DialogTitle>
+              <DialogTitle><T>Make a Counter-Offer</T></DialogTitle>
               <DialogDescription>
                 Propose a different price to{" "}
                 {counterDialog.offer?.shop.shopName}.
@@ -712,7 +715,7 @@ export default function CustomerRFQDetailPage() {
             <div className="space-y-4 py-4">
               <div className="p-3 bg-muted rounded-lg">
                 <p className="text-sm text-muted-foreground">
-                  Shop&apos;s Quote
+                  <T>Shop&apos;s Quote</T>
                 </p>
                 <p className="text-lg font-bold">
                   {counterDialog.offer &&
@@ -720,7 +723,7 @@ export default function CustomerRFQDetailPage() {
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="proposedPrice">Your Proposed Price (NPR)</Label>
+                <Label htmlFor="proposedPrice"><T>Your Proposed Price (NPR)</T></Label>
                 <Input
                   id="proposedPrice"
                   type="number"
@@ -734,7 +737,7 @@ export default function CustomerRFQDetailPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="deliveryDays">Preferred Delivery Days</Label>
+                <Label htmlFor="deliveryDays"><T>Preferred Delivery Days</T></Label>
                 <Input
                   id="deliveryDays"
                   type="number"
@@ -748,7 +751,7 @@ export default function CustomerRFQDetailPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="message">Message to Shop (Optional)</Label>
+                <Label htmlFor="message"><T>Message to Shop (Optional)</T></Label>
                 <Textarea
                   id="message"
                   value={counterForm.message}
@@ -764,7 +767,7 @@ export default function CustomerRFQDetailPage() {
                 variant="outline"
                 onClick={() => setCounterDialog({ open: false, offer: null })}
               >
-                Cancel
+                <T>Cancel</T>
               </Button>
               <Button
                 onClick={submitCounterOffer}
@@ -778,7 +781,7 @@ export default function CustomerRFQDetailPage() {
                 ) : (
                   <ArrowRightLeft className="h-4 w-4 mr-2" />
                 )}
-                Send Counter-Offer
+                <T>Send Counter-Offer</T>
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -793,7 +796,7 @@ export default function CustomerRFQDetailPage() {
         >
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Decline Quotation</DialogTitle>
+              <DialogTitle><T>Decline Quotation</T></DialogTitle>
               <DialogDescription>
                 Are you sure you want to decline this quotation from{" "}
                 {declineDialog.offer?.shop.shopName}?
@@ -801,7 +804,7 @@ export default function CustomerRFQDetailPage() {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="declineReason">Reason (Optional)</Label>
+                <Label htmlFor="declineReason"><T>Reason (Optional)</T></Label>
                 <Textarea
                   id="declineReason"
                   value={declineReason}
@@ -815,7 +818,7 @@ export default function CustomerRFQDetailPage() {
                 variant="outline"
                 onClick={() => setDeclineDialog({ open: false, offer: null })}
               >
-                Cancel
+                <T>Cancel</T>
               </Button>
               <Button
                 variant="destructive"
@@ -827,7 +830,7 @@ export default function CustomerRFQDetailPage() {
                 ) : (
                   <XCircle className="h-4 w-4 mr-2" />
                 )}
-                Decline Quotation
+                <T>Decline Quotation</T>
               </Button>
             </DialogFooter>
           </DialogContent>

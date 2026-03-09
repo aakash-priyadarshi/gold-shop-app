@@ -2,6 +2,8 @@
 
 import { CustomerGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -66,6 +68,7 @@ const purities = {
 export default function NewRFQPage() {
   const router = useRouter();
   const { user, refreshUser } = useAuth();
+  const t = useT();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
 
@@ -160,9 +163,9 @@ export default function NewRFQPage() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">Request a Quote</h1>
+              <h1 className="text-2xl font-bold"><T>Request a Quote</T></h1>
               <p className="text-muted-foreground">
-                Describe what you're looking for and receive offers from shops
+                <T>Describe what you're looking for and receive offers from shops</T>
               </p>
             </div>
           </div>
@@ -172,16 +175,16 @@ export default function NewRFQPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5" />
-                  Jewellery Details
+                  <T>Jewellery Details</T>
                 </CardTitle>
                 <CardDescription>
-                  Tell us about the piece you want made
+                  <T>Tell us about the piece you want made</T>
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Jewellery Type */}
                 <div className="space-y-2">
-                  <Label htmlFor="jewelleryType">Type of Jewellery *</Label>
+                  <Label htmlFor="jewelleryType"><T>Type of Jewellery *</T></Label>
                   <Select
                     value={formData.jewelleryType}
                     onValueChange={(value) =>
@@ -204,7 +207,7 @@ export default function NewRFQPage() {
                 {/* Metal Type & Purity */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="metalType">Metal *</Label>
+                    <Label htmlFor="metalType"><T>Metal *</T></Label>
                     <Select
                       value={formData.metalType}
                       onValueChange={(value) =>
@@ -224,7 +227,7 @@ export default function NewRFQPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="purity">Purity *</Label>
+                    <Label htmlFor="purity"><T>Purity *</T></Label>
                     <Select
                       value={formData.purity}
                       onValueChange={(value) =>
@@ -249,7 +252,7 @@ export default function NewRFQPage() {
 
                 {/* Weight */}
                 <div className="space-y-2">
-                  <Label htmlFor="weight">Approximate Weight (grams) *</Label>
+                  <Label htmlFor="weight"><T>Approximate Weight (grams) *</T></Label>
                   <Input
                     id="weight"
                     type="number"
@@ -262,13 +265,13 @@ export default function NewRFQPage() {
                     }
                   />
                   <p className="text-xs text-muted-foreground">
-                    Enter your estimated weight, shops may adjust in their offer
+                    <T>Enter your estimated weight, shops may adjust in their offer</T>
                   </p>
                 </div>
 
                 {/* Budget */}
                 <div className="space-y-2">
-                  <Label htmlFor="budget">Budget (USD, optional)</Label>
+                  <Label htmlFor="budget"><T>Budget (USD, optional)</T></Label>
                   <Input
                     id="budget"
                     type="number"
@@ -281,14 +284,14 @@ export default function NewRFQPage() {
                     }
                   />
                   <p className="text-xs text-muted-foreground">
-                    Helps shops understand your price range
+                    <T>Helps shops understand your price range</T>
                   </p>
                 </div>
 
                 {/* Preferred Delivery */}
                 <div className="space-y-2">
                   <Label htmlFor="preferredDeliveryDays">
-                    Preferred Delivery (days, optional)
+                    <T>Preferred Delivery (days, optional)</T>
                   </Label>
                   <Input
                     id="preferredDeliveryDays"
@@ -304,7 +307,7 @@ export default function NewRFQPage() {
 
                 {/* Description */}
                 <div className="space-y-2">
-                  <Label htmlFor="description">Additional Details</Label>
+                  <Label htmlFor="description"><T>Additional Details</T></Label>
                   <Textarea
                     id="description"
                     placeholder="Describe your requirements, design preferences, any special requests..."
@@ -320,17 +323,17 @@ export default function NewRFQPage() {
                 <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 rounded-lg p-4 flex gap-3">
                   <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
                   <div className="text-sm text-blue-800 dark:text-blue-200">
-                    <p className="font-medium mb-1">What happens next?</p>
+                    <p className="font-medium mb-1"><T>What happens next?</T></p>
                     <ul className="list-disc list-inside space-y-1 text-blue-700 dark:text-blue-300">
                       <li>
-                        Your request is sent to verified shops that work with
-                        your chosen metal
+                        <T>Your request is sent to verified shops that work with
+                        your chosen metal</T>
                       </li>
                       <li>
-                        Shops will send you price quotes within 24-48 hours
+                        <T>Shops will send you price quotes within 24-48 hours</T>
                       </li>
-                      <li>You can compare offers and choose the best one</li>
-                      <li>No commitment until you accept an offer</li>
+                      <li><T>You can compare offers and choose the best one</T></li>
+                      <li><T>No commitment until you accept an offer</T></li>
                     </ul>
                   </div>
                 </div>
@@ -352,22 +355,22 @@ export default function NewRFQPage() {
                         className={`font-medium ${isPhoneVerified ? "text-green-800 dark:text-green-200" : "text-amber-800 dark:text-amber-200"}`}
                       >
                         {isPhoneVerified
-                          ? "Phone Verified"
-                          : "Phone Verification Required"}
+                          ? t("Phone Verified")
+                          : t("Phone Verification Required")}
                       </p>
                       <p
                         className={`text-sm ${isPhoneVerified ? "text-green-700 dark:text-green-300" : "text-amber-700 dark:text-amber-300"}`}
                       >
                         {isPhoneVerified
-                          ? "Your phone number is verified. You can submit requests."
-                          : "Verify your phone to submit quote requests to shops."}
+                          ? t("Your phone number is verified. You can submit requests.")
+                          : t("Verify your phone to submit quote requests to shops.")}
                       </p>
                     </div>
                   </div>
                   {isPhoneVerified ? (
                     <Badge className="bg-green-100 text-green-700">
                       <CheckCircle className="h-3 w-3 mr-1" />
-                      Verified
+                      <T>Verified</T>
                     </Badge>
                   ) : (
                     <Button
@@ -377,7 +380,7 @@ export default function NewRFQPage() {
                       className="border-amber-500 text-amber-700 hover:bg-amber-100"
                     >
                       <Phone className="h-4 w-4 mr-2" />
-                      Verify Now
+                      <T>Verify Now</T>
                     </Button>
                   )}
                 </div>
@@ -386,7 +389,7 @@ export default function NewRFQPage() {
 
             <div className="flex justify-end gap-4 mt-6">
               <Button type="button" variant="outline" asChild>
-                <Link href="/dashboard/customer/rfqs">Cancel</Link>
+                <Link href="/dashboard/customer/rfqs"><T>Cancel</T></Link>
               </Button>
               <Button
                 type="submit"
@@ -400,15 +403,15 @@ export default function NewRFQPage() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Submitting...
+                    <T>Submitting...</T>
                   </>
                 ) : !isPhoneVerified ? (
                   <>
                     <AlertCircle className="h-4 w-4 mr-2" />
-                    Verify Phone First
+                    <T>Verify Phone First</T>
                   </>
                 ) : (
-                  "Submit Request"
+                  t("Submit Request")
                 )}
               </Button>
             </div>
