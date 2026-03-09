@@ -2,6 +2,8 @@
 
 import { CustomerGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,6 +55,7 @@ export default function CustomerRefundsPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [checkingEligibility, setCheckingEligibility] = useState(false);
+  const t = useT();
 
   useEffect(() => {
     loadOrders();
@@ -113,16 +116,14 @@ export default function CustomerRefundsPage() {
         <div className="space-y-6">
           <div className="flex items-center gap-2">
             <RotateCcw className="h-6 w-6" />
-            <h1 className="text-2xl font-bold">Refunds</h1>
+            <h1 className="text-2xl font-bold"><T>Refunds</T></h1>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Refund Policy</CardTitle>
+              <CardTitle><T>Refund Policy</T></CardTitle>
               <CardDescription>
-                Refunds are available only for gold and silver jewellery within
-                7 days of delivery. Diamond, gemstone, and custom-cut products
-                are non-refundable.
+                <T>Refunds are available only for gold and silver jewellery within 7 days of delivery. Diamond, gemstone, and custom-cut products are non-refundable.</T>
               </CardDescription>
             </CardHeader>
           </Card>
@@ -132,7 +133,7 @@ export default function CustomerRefundsPage() {
             .length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Your Refund Requests</CardTitle>
+                <CardTitle><T>Your Refund Requests</T></CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {orders
@@ -170,17 +171,17 @@ export default function CustomerRefundsPage() {
           {/* Eligible orders */}
           <Card>
             <CardHeader>
-              <CardTitle>Delivered Orders</CardTitle>
+              <CardTitle><T>Delivered Orders</T></CardTitle>
               <CardDescription>
-                Select an order to check refund eligibility
+                <T>Select an order to check refund eligibility</T>
               </CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <p className="text-muted-foreground">Loading orders...</p>
+                <p className="text-muted-foreground"><T>Loading orders...</T></p>
               ) : deliveredOrders.length === 0 ? (
                 <p className="text-muted-foreground">
-                  No delivered orders found
+                  <T>No delivered orders found</T>
                 </p>
               ) : (
                 <div className="space-y-3">
@@ -206,7 +207,7 @@ export default function CustomerRefundsPage() {
                           size="sm"
                           onClick={() => checkEligibility(order)}
                         >
-                          Check Eligibility{" "}
+                          <T>Check Eligibility</T>{" "}
                           <ArrowRight className="h-4 w-4 ml-1" />
                         </Button>
                       ) : (
@@ -227,12 +228,12 @@ export default function CustomerRefundsPage() {
           {selectedOrder && (
             <Card>
               <CardHeader>
-                <CardTitle>Refund for {selectedOrder.orderNumber}</CardTitle>
+                <CardTitle>{t(`Refund for ${selectedOrder.orderNumber}`)}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {checkingEligibility ? (
                   <p className="text-muted-foreground">
-                    Checking eligibility...
+                    <T>Checking eligibility...</T>
                   </p>
                 ) : eligibility ? (
                   <>
@@ -251,8 +252,8 @@ export default function CustomerRefundsPage() {
                       <div>
                         <p className="font-medium">
                           {eligibility.eligible
-                            ? "Eligible for refund"
-                            : "Not eligible"}
+                            ? t("Eligible for refund")
+                            : t("Not eligible")}
                         </p>
                         <p className="text-sm">{eligibility.reason}</p>
                         {eligibility.eligible && (
@@ -275,7 +276,7 @@ export default function CustomerRefundsPage() {
                       <div className="space-y-3">
                         <div>
                           <label className="text-sm font-medium">
-                            Reason for refund
+                            <T>Reason for refund</T>
                           </label>
                           <Textarea
                             value={reason}
@@ -289,7 +290,7 @@ export default function CustomerRefundsPage() {
                             onClick={submitRefund}
                             disabled={submitting || !reason.trim()}
                           >
-                            {submitting ? "Submitting..." : "Request Refund"}
+                            {submitting ? t("Submitting...") : t("Request Refund")}
                           </Button>
                           <Button
                             variant="outline"
@@ -299,7 +300,7 @@ export default function CustomerRefundsPage() {
                               setReason("");
                             }}
                           >
-                            Cancel
+                            <T>Cancel</T>
                           </Button>
                         </div>
                       </div>

@@ -3,6 +3,8 @@
 import { CustomerGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { MiniOrderStepper, type OrderType } from "@/components/orders";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -82,6 +84,7 @@ export default function CustomerOrdersPage() {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
+  const t = useT();
   const {
     formatWithConversion,
     convertCurrency,
@@ -128,7 +131,7 @@ export default function CustomerOrdersPage() {
             variant="outline"
             className="bg-yellow-50 text-yellow-700 border-yellow-200"
           >
-            Placed
+            <T>Placed</T>
           </Badge>
         );
       case "CONFIRMED":
@@ -137,7 +140,7 @@ export default function CustomerOrdersPage() {
             variant="outline"
             className="bg-blue-50 text-blue-700 border-blue-200"
           >
-            Confirmed
+            <T>Confirmed</T>
           </Badge>
         );
       case "IN_PROGRESS":
@@ -146,7 +149,7 @@ export default function CustomerOrdersPage() {
             variant="outline"
             className="bg-purple-50 text-purple-700 border-purple-200"
           >
-            In Progress
+            <T>In Progress</T>
           </Badge>
         );
       case "READY":
@@ -155,7 +158,7 @@ export default function CustomerOrdersPage() {
             variant="outline"
             className="bg-indigo-50 text-indigo-700 border-indigo-200"
           >
-            Ready
+            <T>Ready</T>
           </Badge>
         );
       case "SHIPPED":
@@ -164,7 +167,7 @@ export default function CustomerOrdersPage() {
             variant="outline"
             className="bg-cyan-50 text-cyan-700 border-cyan-200"
           >
-            Shipped
+            <T>Shipped</T>
           </Badge>
         );
       case "OUT_FOR_DELIVERY":
@@ -173,7 +176,7 @@ export default function CustomerOrdersPage() {
             variant="outline"
             className="bg-teal-50 text-teal-700 border-teal-200"
           >
-            Out for Delivery
+            <T>Out for Delivery</T>
           </Badge>
         );
       case "DELIVERED":
@@ -192,7 +195,7 @@ export default function CustomerOrdersPage() {
             variant="outline"
             className="bg-red-50 text-red-700 border-red-200"
           >
-            {status === "CANCELLED" ? "Cancelled" : "Refunded"}
+            {status === "CANCELLED" ? t("Cancelled") : t("Refunded")}
           </Badge>
         );
       default:
@@ -274,9 +277,9 @@ export default function CustomerOrdersPage() {
       <DashboardLayout>
         <div className="space-y-6">
           <div>
-            <h1 className="text-2xl font-bold">My Orders</h1>
+            <h1 className="text-2xl font-bold"><T>My Orders</T></h1>
             <p className="text-muted-foreground">
-              Track and manage your jewellery orders
+              <T>Track and manage your jewellery orders</T>
             </p>
           </div>
 
@@ -284,7 +287,7 @@ export default function CustomerOrdersPage() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Card>
               <CardHeader className="p-4 pb-2">
-                <CardDescription>Total Orders</CardDescription>
+                <CardDescription><T>Total Orders</T></CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <p className="text-2xl font-bold">{stats.total}</p>
@@ -292,7 +295,7 @@ export default function CustomerOrdersPage() {
             </Card>
             <Card>
               <CardHeader className="p-4 pb-2">
-                <CardDescription>Active</CardDescription>
+                <CardDescription><T>Active</T></CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <p className="text-2xl font-bold text-blue-600">
@@ -302,7 +305,7 @@ export default function CustomerOrdersPage() {
             </Card>
             <Card>
               <CardHeader className="p-4 pb-2">
-                <CardDescription>Shipped</CardDescription>
+                <CardDescription><T>Shipped</T></CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <p className="text-2xl font-bold text-cyan-600">
@@ -312,7 +315,7 @@ export default function CustomerOrdersPage() {
             </Card>
             <Card>
               <CardHeader className="p-4 pb-2">
-                <CardDescription>Delivered</CardDescription>
+                <CardDescription><T>Delivered</T></CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <p className="text-2xl font-bold text-green-600">
@@ -324,7 +327,7 @@ export default function CustomerOrdersPage() {
               <CardHeader className="p-4 pb-2">
                 <CardDescription className="flex items-center gap-1">
                   <Wallet className="h-3 w-3" />
-                  Total Spent
+                  <T>Total Spent</T>
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0">
@@ -373,35 +376,35 @@ export default function CustomerOrdersPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ShoppingBag className="h-5 w-5" />
-                Orders
+                <T>Orders</T>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="mb-4">
-                  <TabsTrigger value="all">All ({orders.length})</TabsTrigger>
+                  <TabsTrigger value="all">{t(`All (${orders.length})`)}</TabsTrigger>
                   <TabsTrigger value="active">
-                    Active ({stats.active})
+                    {t(`Active (${stats.active})`)}
                   </TabsTrigger>
                   <TabsTrigger value="shipped">
-                    In Transit ({stats.shipped})
+                    {t(`In Transit (${stats.shipped})`)}
                   </TabsTrigger>
-                  <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
+                  <TabsTrigger value="cancelled"><T>Cancelled</T></TabsTrigger>
                 </TabsList>
 
                 <TabsContent value={activeTab} className="mt-0">
                   {filteredOrders.length === 0 ? (
                     <div className="text-center py-12">
                       <ShoppingBag className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="font-medium mb-2">No orders found</h3>
+                      <h3 className="font-medium mb-2"><T>No orders found</T></h3>
                       <p className="text-muted-foreground text-sm mb-4">
                         {activeTab === "all"
-                          ? "You haven't placed any orders yet"
-                          : `No ${activeTab} orders`}
+                          ? t("You haven't placed any orders yet")
+                          : t(`No ${activeTab} orders`)}
                       </p>
                       <Button asChild>
                         <Link href="/dashboard/customer/rfqs/new">
-                          Request a Quote
+                          <T>Request a Quote</T>
                         </Link>
                       </Button>
                     </div>
@@ -409,13 +412,13 @@ export default function CustomerOrdersPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Order</TableHead>
-                          <TableHead>Shop</TableHead>
-                          <TableHead>Product</TableHead>
-                          <TableHead>Total</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
+                          <TableHead><T>Order</T></TableHead>
+                          <TableHead><T>Shop</T></TableHead>
+                          <TableHead><T>Product</T></TableHead>
+                          <TableHead><T>Total</T></TableHead>
+                          <TableHead><T>Status</T></TableHead>
+                          <TableHead><T>Date</T></TableHead>
+                          <TableHead className="text-right"><T>Actions</T></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -465,7 +468,7 @@ export default function CustomerOrdersPage() {
                                   href={`/dashboard/customer/orders/${order.id}`}
                                 >
                                   <Eye className="h-4 w-4 mr-1" />
-                                  View
+                                  <T>View</T>
                                 </Link>
                               </Button>
                             </TableCell>
