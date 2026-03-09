@@ -1,6 +1,8 @@
 "use client";
 
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -107,6 +109,7 @@ function formatDate(d: string) {
 // ─── Main Component ───
 export default function UserSupportPage() {
   const { user } = useAuth();
+  const t = useT();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
@@ -169,24 +172,24 @@ export default function UserSupportPage() {
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <LifeBuoy className="h-6 w-6" />
-              Help & Support
+              <T>Help & Support</T>
             </h1>
             <p className="text-muted-foreground mt-1">
-              Create support tickets and track their resolution
+              <T>Create support tickets and track their resolution</T>
             </p>
           </div>
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
               <Button>
-                <Plus className="h-4 w-4 mr-2" /> New Ticket
+                <Plus className="h-4 w-4 mr-2" /> <T>New Ticket</T>
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
-                <DialogTitle>Create Support Ticket</DialogTitle>
+                <DialogTitle><T>Create Support Ticket</T></DialogTitle>
                 <DialogDescription>
-                  Describe your issue and we&apos;ll get back to you as soon as
-                  possible.
+                  <T>Describe your issue and we&apos;ll get back to you as soon as
+                  possible.</T>
                 </DialogDescription>
               </DialogHeader>
               <CreateTicketForm
@@ -215,9 +218,9 @@ export default function UserSupportPage() {
           /* Ticket list */
           <Card>
             <CardHeader>
-              <CardTitle>My Tickets</CardTitle>
+              <CardTitle><T>My Tickets</T></CardTitle>
               <CardDescription>
-                {tickets.length} ticket{tickets.length !== 1 ? "s" : ""}
+                {t(`${tickets.length} ticket${tickets.length !== 1 ? "s" : ""}`)}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -228,9 +231,9 @@ export default function UserSupportPage() {
               ) : tickets.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-40" />
-                  <p>No tickets yet</p>
+                  <p><T>No tickets yet</T></p>
                   <p className="text-sm mt-1">
-                    Click &quot;New Ticket&quot; to create one
+                    <T>Click &quot;New Ticket&quot; to create one</T>
                   </p>
                 </div>
               ) : (
@@ -271,12 +274,12 @@ export default function UserSupportPage() {
                           <div>{formatDate(ticket.createdAt)}</div>
                           {ticket.assignee && (
                             <div className="mt-1 text-green-600">
-                              Agent: {ticket.assignee.firstName}
+                              {t(`Agent: ${ticket.assignee.firstName}`)}
                             </div>
                           )}
                           {ticket._count?.messages && (
                             <div className="mt-1">
-                              {ticket._count.messages} messages
+                              {t(`${ticket._count.messages} messages`)}
                             </div>
                           )}
                         </div>
@@ -295,6 +298,7 @@ export default function UserSupportPage() {
 
 // ─── Create Ticket Form ───
 function CreateTicketForm({ onSuccess }: { onSuccess: () => void }) {
+  const t = useT();
   const [type, setType] = useState("");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
@@ -304,7 +308,7 @@ function CreateTicketForm({ onSuccess }: { onSuccess: () => void }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!type || !subject || !description) {
-      setError("Please fill all fields");
+      setError(t("Please fill all fields"));
       return;
     }
     setError("");
@@ -313,7 +317,7 @@ function CreateTicketForm({ onSuccess }: { onSuccess: () => void }) {
       await ticketsApi.create({ type, subject, description });
       onSuccess();
     } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to create ticket");
+      setError(err.response?.data?.message || t("Failed to create ticket"));
     } finally {
       setSubmitting(false);
     }
@@ -322,15 +326,15 @@ function CreateTicketForm({ onSuccess }: { onSuccess: () => void }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="text-sm font-medium mb-1 block">Issue Type</label>
+        <label className="text-sm font-medium mb-1 block"><T>Issue Type</T></label>
         <Select value={type} onValueChange={setType}>
           <SelectTrigger>
             <SelectValue placeholder="Select issue type..." />
           </SelectTrigger>
           <SelectContent>
-            {TICKET_TYPES.map((t) => (
-              <SelectItem key={t.value} value={t.value}>
-                {t.label}
+            {TICKET_TYPES.map((tt) => (
+              <SelectItem key={tt.value} value={tt.value}>
+                {t(tt.label)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -338,7 +342,7 @@ function CreateTicketForm({ onSuccess }: { onSuccess: () => void }) {
       </div>
 
       <div>
-        <label className="text-sm font-medium mb-1 block">Subject</label>
+        <label className="text-sm font-medium mb-1 block"><T>Subject</T></label>
         <Input
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
@@ -348,7 +352,7 @@ function CreateTicketForm({ onSuccess }: { onSuccess: () => void }) {
       </div>
 
       <div>
-        <label className="text-sm font-medium mb-1 block">Description</label>
+        <label className="text-sm font-medium mb-1 block"><T>Description</T></label>
         <Textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -365,7 +369,7 @@ function CreateTicketForm({ onSuccess }: { onSuccess: () => void }) {
 
       <Button type="submit" className="w-full" disabled={submitting}>
         {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-        Submit Ticket
+        <T>Submit Ticket</T>
       </Button>
     </form>
   );
@@ -382,6 +386,7 @@ function TicketDetailView({
   onSendMessage: (content: string) => void;
 }) {
   const { user } = useAuth();
+  const t = useT();
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -429,11 +434,11 @@ function TicketDetailView({
             </div>
             <CardDescription>
               {ticket.ticketNumber} &middot;{" "}
-              {TICKET_TYPES.find((t) => t.value === ticket.type)?.label ||
+              {TICKET_TYPES.find((tt) => tt.value === ticket.type)?.label ||
                 ticket.type}{" "}
-              &middot; Created {formatDate(ticket.createdAt)}
+              &middot; {t(`Created ${formatDate(ticket.createdAt)}`)}
               {ticket.assignee &&
-                ` · Agent: ${ticket.assignee.firstName} ${ticket.assignee.lastName}`}
+                ` · ${t(`Agent: ${ticket.assignee.firstName} ${ticket.assignee.lastName}`)}`}
             </CardDescription>
           </div>
         </div>
@@ -441,7 +446,7 @@ function TicketDetailView({
       <CardContent>
         {/* Description */}
         <div className="bg-muted/50 rounded-lg p-3 mb-4 text-sm">
-          <strong>Original description:</strong>
+          <strong><T>Original description:</T></strong>
           <p className="mt-1 whitespace-pre-wrap">{ticket.description}</p>
         </div>
 
@@ -527,8 +532,8 @@ function TicketDetailView({
           )}
           {isClosed && (
             <div className="border-t p-3 text-center text-sm text-muted-foreground">
-              This ticket is closed. Create a new ticket if you need further
-              help.
+              <T>This ticket is closed. Create a new ticket if you need further
+              help.</T>
             </div>
           )}
         </div>
