@@ -166,7 +166,7 @@ export function DynamicFooter() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 text-gold-400 mt-0.5 shrink-0" />
-                <span className="text-gray-400">{contactAddress}</span>
+                <span className="text-gray-400"><T>{contactAddress}</T></span>
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-gold-400 shrink-0" />

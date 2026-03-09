@@ -2,7 +2,7 @@
 
 import { T } from "@/components/ui/T";
 import type { BlogPost } from "@/data/blog-posts";
-import { useTranslation } from "@/providers/translation-provider";
+import { useTranslatedHtml } from "@/hooks/useTranslatedHtml";
 import {
   ArrowLeft,
   ArrowRight,
@@ -12,7 +12,6 @@ import {
   User,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect } from "react";
 
 interface Props {
   post: BlogPost;
@@ -20,14 +19,7 @@ interface Props {
 }
 
 export function BlogPostContent({ post, related }: Props) {
-  const { locale, t, register } = useTranslation();
-
-  // Register the HTML body for translation
-  useEffect(() => {
-    if (locale !== "en") {
-      register(post.content);
-    }
-  }, [locale, post.content, register]);
+  const { html: translatedContent } = useTranslatedHtml(post.content);
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-amber-50/30 via-white to-stone-50 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950">
@@ -128,7 +120,7 @@ export function BlogPostContent({ post, related }: Props) {
             prose-table:border-collapse prose-table:text-sm
             prose-th:bg-stone-100 dark:prose-th:bg-stone-800 prose-th:px-4 prose-th:py-2.5 prose-th:text-left prose-th:font-semibold prose-th:text-stone-700 dark:prose-th:text-stone-300
             prose-td:border-t prose-td:border-stone-200 dark:prose-td:border-stone-700 prose-td:px-4 prose-td:py-2.5 prose-td:text-stone-600 dark:prose-td:text-stone-400"
-          dangerouslySetInnerHTML={{ __html: t(post.content) }}
+          dangerouslySetInnerHTML={{ __html: translatedContent }}
         />
 
         {/* Tags */}

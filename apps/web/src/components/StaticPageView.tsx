@@ -3,6 +3,7 @@
 import { DynamicFooter } from "@/components/layout/DynamicFooter";
 import { Header } from "@/components/layout/header";
 import { T } from "@/components/ui/T";
+import { useTranslatedHtml } from "@/hooks/useTranslatedHtml";
 import { pagesApi } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -56,24 +57,32 @@ export function StaticPageView({ slug }: { slug: string }) {
         )}
 
         {page && (
-          <article>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
-              <T>{page.title}</T>
-            </h1>
-            <div
-              className="prose prose-lg dark:prose-invert max-w-none
-                prose-headings:text-gray-900 dark:prose-headings:text-white
-                prose-p:text-gray-600 dark:prose-p:text-gray-300
-                prose-li:text-gray-600 dark:prose-li:text-gray-300
-                prose-a:text-amber-600 dark:prose-a:text-amber-400
-                prose-strong:text-gray-900 dark:prose-strong:text-white"
-              dangerouslySetInnerHTML={{ __html: page.content }}
-            />
-          </article>
+          <PageContent page={page} />
         )}
       </main>
 
       <DynamicFooter />
     </div>
+  );
+}
+
+function PageContent({ page }: { page: StaticPageData }) {
+  const { html: translatedContent } = useTranslatedHtml(page.content);
+
+  return (
+    <article>
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
+        <T>{page.title}</T>
+      </h1>
+      <div
+        className="prose prose-lg dark:prose-invert max-w-none
+          prose-headings:text-gray-900 dark:prose-headings:text-white
+          prose-p:text-gray-600 dark:prose-p:text-gray-300
+          prose-li:text-gray-600 dark:prose-li:text-gray-300
+          prose-a:text-amber-600 dark:prose-a:text-amber-400
+          prose-strong:text-gray-900 dark:prose-strong:text-white"
+        dangerouslySetInnerHTML={{ __html: translatedContent }}
+      />
+    </article>
   );
 }

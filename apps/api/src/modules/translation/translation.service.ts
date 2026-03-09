@@ -4,6 +4,54 @@ import { createHash } from "crypto";
 import { RedisService } from "../../common/redis";
 import { LOCALE_NAMES, type SupportedLocale } from "./dto/translate.dto";
 
+/* ────────────────────────────────────────────────────────────── */
+/*  Simple HTML text-node extractor (no DOM dependency)           */
+/* ────────────────────────────────────────────────────────────── */
+
+interface HtmlSegment {
+  /** "tag" = HTML markup, "text" = translatable content */
+  type: "tag" | "text";
+  value: string;
+}
+
+/**
+ * Split HTML into alternating tag / text segments.
+ * Tags, entities, and whitespace-only nodes are preserved as-is.
+ * Only non-empty text nodes are marked for translation.
+ */
+function segmentHtml(html: string): HtmlSegment[] {
+  const segments: HtmlSegment[] = [];
+  // Match HTML tags (including comments, doctype, self-closing)
+  const TAG_RE = /<[^>]+>/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = TAG_RE.exec(html)) !== null) {
+    // Text before this tag
+    if (match.index > lastIndex) {
+      const text = html.slice(lastIndex, match.index);
+      segments.push({
+        type: text.trim().length > 0 ? "text" : "tag", // whitespace-only → tag (don't translate)
+        value: text,
+      });
+    }
+    // The tag itself
+    segments.push({ type: "tag", value: match[0] });
+    lastIndex = TAG_RE.lastIndex;
+  }
+
+  // Remaining text after last tag
+  if (lastIndex < html.length) {
+    const text = html.slice(lastIndex);
+    segments.push({
+      type: text.trim().length > 0 ? "text" : "tag",
+      value: text,
+    });
+  }
+
+  return segments;
+}
+
 /**
  * AI Translation Service
  *
@@ -174,5 +222,132 @@ Respond with ONLY the JSON array, no markdown fences.`;
   ): Promise<void> {
     // No TTL = permanent cache
     await this.redisService.set(this.cacheKey(locale, text), translation);
+  }
+
+  /* ────────────────────────────────────────────────────────── */
+  /*  HTML Content Translation                                  */
+  /* ────────────────────────────────────────────────────────── */
+
+  private htmlCacheKey(locale: string, contentHash: string): string {
+    return `${this.CACHE_PREFIX}html:${locale}:${contentHash}`;
+  }
+
+  private hashContent(content: string): string {
+    return createHash("sha256").update(content).digest("hex").slice(0, 20);
+  }
+
+  /**
+   * Translate a full HTML document/fragment.
+   *
+   * Strategy:
+   * 1. Hash the HTML content → check if we already have a fully-translated
+   *    version cached for this locale. If yes, return immediately ($0 cost).
+   * 2. On cache miss, parse HTML into text segments.
+   * 3. Each text segment is individually cached (same cache as translateBatch).
+   *    So if the admin edits one paragraph, only that paragraph costs an AI call.
+   * 4. Reassemble and cache the full translated HTML for fast future lookups.
+   *
+   * Returns: { html, contentHash, fromCache }
+   */
+  async translateHtml(
+    html: string,
+    locale: SupportedLocale,
+  ): Promise<{ html: string; contentHash: string; fromCache: boolean }> {
+    if (locale === "en" || !html) {
+      return { html, contentHash: this.hashContent(html || ""), fromCache: true };
+    }
+
+    const contentHash = this.hashContent(html);
+
+    // 1. Check full-document cache
+    const cached = await this.redisService.get(
+      this.htmlCacheKey(locale, contentHash),
+    );
+    if (cached) {
+      this.logger.debug(
+        `HTML translation cache hit: locale=${locale} hash=${contentHash}`,
+      );
+      return { html: cached, contentHash, fromCache: true };
+    }
+
+    // 2. Parse into segments
+    const segments = segmentHtml(html);
+    const textSegments: { index: number; value: string }[] = [];
+    for (let i = 0; i < segments.length; i++) {
+      if (segments[i].type === "text") {
+        textSegments.push({ index: i, value: segments[i].value });
+      }
+    }
+
+    if (textSegments.length === 0) {
+      // No translatable text (e.g. only tags/images)
+      return { html, contentHash, fromCache: false };
+    }
+
+    // 3. Check per-segment cache; collect uncached
+    const segmentResults: (string | null)[] = await Promise.all(
+      textSegments.map((s) => this.getFromCache(locale, s.value.trim())),
+    );
+
+    const uncachedIdx: number[] = [];
+    const uncachedTexts: string[] = [];
+    for (let i = 0; i < textSegments.length; i++) {
+      if (segmentResults[i] === null) {
+        uncachedIdx.push(i);
+        uncachedTexts.push(textSegments[i].value.trim());
+      }
+    }
+
+    this.logger.log(
+      `HTML translation: ${textSegments.length} segments, ${uncachedTexts.length} uncached → locale=${locale}`,
+    );
+
+    // 4. Translate uncached via Gemini in chunks
+    if (uncachedTexts.length > 0) {
+      const CHUNK_SIZE = 30;
+      for (let i = 0; i < uncachedTexts.length; i += CHUNK_SIZE) {
+        const chunk = uncachedTexts.slice(i, i + CHUNK_SIZE);
+        const chunkLocalIdx = uncachedIdx.slice(i, i + CHUNK_SIZE);
+
+        try {
+          const translations = await this.callGemini(chunk, locale);
+          for (let j = 0; j < chunk.length; j++) {
+            const translation =
+              translations[j] !== undefined ? translations[j] : chunk[j];
+            segmentResults[chunkLocalIdx[j]] = translation;
+            this.setInCache(locale, chunk[j], translation).catch(() => {});
+          }
+        } catch (error) {
+          this.logger.error(
+            `Gemini HTML translation failed: ${error.message}`,
+          );
+          for (let j = 0; j < chunk.length; j++) {
+            if (segmentResults[chunkLocalIdx[j]] === null) {
+              segmentResults[chunkLocalIdx[j]] = chunk[j];
+            }
+          }
+        }
+      }
+    }
+
+    // 5. Reassemble: replace text segments with translations
+    for (let i = 0; i < textSegments.length; i++) {
+      const seg = textSegments[i];
+      const original = seg.value;
+      const translated = segmentResults[i] || original;
+      // Preserve leading/trailing whitespace from the original segment
+      const leadingWs = original.match(/^\s*/)?.[0] || "";
+      const trailingWs = original.match(/\s*$/)?.[0] || "";
+      segments[seg.index].value = leadingWs + translated + trailingWs;
+    }
+
+    const translatedHtml = segments.map((s) => s.value).join("");
+
+    // 6. Cache the full assembled document (keyed by content hash)
+    this.redisService
+      .set(this.htmlCacheKey(locale, contentHash), translatedHtml)
+      .catch(() => {});
+
+    return { html: translatedHtml, contentHash, fromCache: false };
   }
 }
