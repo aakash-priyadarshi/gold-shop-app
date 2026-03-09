@@ -2,6 +2,8 @@
 
 import { CustomerGuard } from "@/components/auth/RouteGuard";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { T } from "@/components/ui/T";
+import { useT } from "@/providers/translation-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -69,6 +71,7 @@ const statusColors: Record<string, string> = {
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
+  const t = useT();
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
   const [rfqRequests, setRfqRequests] = useState<RFQRequest[]>([]);
@@ -153,16 +156,16 @@ export default function CustomerDashboard() {
           {/* Welcome banner */}
           <div className="bg-gradient-to-r from-gold-500 to-yellow-600 rounded-xl p-6 text-white">
             <h1 className="text-2xl font-bold">
-              Welcome back, {user?.firstName}!
+              {t(`Welcome back, ${user?.firstName}!`)}
             </h1>
             <p className="mt-1 opacity-90">
-              Discover beautiful jewellery from trusted local shops.
+              <T>Discover beautiful jewellery from trusted local shops.</T>
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <Button variant="secondary" asChild>
                 <Link href="/browse">
                   <Store className="h-4 w-4 mr-2" />
-                  Browse Shops
+                  <T>Browse Shops</T>
                 </Link>
               </Button>
               <Button
@@ -172,7 +175,7 @@ export default function CustomerDashboard() {
               >
                 <Link href="/dashboard/customer/rfq">
                   <MessageSquare className="h-4 w-4 mr-2" />
-                  Request Custom Design
+                  <T>Request Custom Design</T>
                 </Link>
               </Button>
             </div>
@@ -189,7 +192,7 @@ export default function CustomerDashboard() {
                   <div>
                     <p className="text-2xl font-bold">{recentOrders.length}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Total Orders
+                      <T>Total Orders</T>
                     </p>
                   </div>
                 </div>
@@ -204,7 +207,7 @@ export default function CustomerDashboard() {
                   <div>
                     <p className="text-2xl font-bold">{wishlistItems.length}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Wishlist Items
+                      <T>Wishlist Items</T>
                     </p>
                   </div>
                 </div>
@@ -219,7 +222,7 @@ export default function CustomerDashboard() {
                   <div>
                     <p className="text-2xl font-bold">{rfqRequests.length}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      RFQ Requests
+                      <T>RFQ Requests</T>
                     </p>
                   </div>
                 </div>
@@ -234,7 +237,7 @@ export default function CustomerDashboard() {
                   <div>
                     <p className="text-2xl font-bold">{totalSpent}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Total Spent
+                      <T>Total Spent</T>
                     </p>
                   </div>
                 </div>
@@ -249,12 +252,12 @@ export default function CustomerDashboard() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Package className="h-5 w-5 text-blue-500" />
-                    Recent Orders
+                    <T>Recent Orders</T>
                   </CardTitle>
-                  <CardDescription>Track your purchases</CardDescription>
+                  <CardDescription><T>Track your purchases</T></CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href="/dashboard/customer/orders">View all</Link>
+                  <Link href="/dashboard/customer/orders"><T>View all</T></Link>
                 </Button>
               </CardHeader>
               <CardContent>
@@ -298,12 +301,12 @@ export default function CustomerDashboard() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Heart className="h-5 w-5 text-red-500" />
-                    My Wishlist
+                    <T>My Wishlist</T>
                   </CardTitle>
-                  <CardDescription>Items you&apos;ve saved</CardDescription>
+                  <CardDescription><T>Items you&apos;ve saved</T></CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href="/dashboard/customer/wishlist">View all</Link>
+                  <Link href="/dashboard/customer/wishlist"><T>View all</T></Link>
                 </Button>
               </CardHeader>
               <CardContent>
@@ -324,7 +327,7 @@ export default function CustomerDashboard() {
                           {item.price}
                         </p>
                         <Button size="sm" variant="link" className="h-auto p-0">
-                          View item
+                          <T>View item</T>
                         </Button>
                       </div>
                     </div>
@@ -342,10 +345,10 @@ export default function CustomerDashboard() {
                   <MessageSquare className="h-5 w-5 text-purple-500" />
                   My RFQ Requests
                 </CardTitle>
-                <CardDescription>Custom design inquiries</CardDescription>
+                <CardDescription><T>Custom design inquiries</T></CardDescription>
               </div>
               <Button asChild>
-                <Link href="/dashboard/customer/rfq/new">Create New RFQ</Link>
+                <Link href="/dashboard/customer/rfq/new"><T>Create New RFQ</T></Link>
               </Button>
             </CardHeader>
             <CardContent>
@@ -369,12 +372,12 @@ export default function CustomerDashboard() {
                           {rfq.status}
                         </Badge>
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                          {rfq.quotes} quotes received
+                          {t(`${rfq.quotes} quotes received`)}
                         </p>
                       </div>
                       <Button variant="outline" size="sm" asChild>
                         <Link href={`/dashboard/customer/rfq/${rfq.id}`}>
-                          View
+                          <T>View</T>
                           <ArrowRight className="h-4 w-4 ml-1" />
                         </Link>
                       </Button>
@@ -390,9 +393,9 @@ export default function CustomerDashboard() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Store className="h-5 w-5 text-gold-500" />
-                Recommended Shops
+                <T>Recommended Shops</T>
               </CardTitle>
-              <CardDescription>Trusted jewellers in your area</CardDescription>
+              <CardDescription><T>Trusted jewellers in your area</T></CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
