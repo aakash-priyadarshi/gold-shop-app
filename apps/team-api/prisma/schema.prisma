@@ -1,0 +1,731 @@
+// ═══════════════════════════════════════════════════════════════
+//  Orivraa Team Operations — Database Schema
+//  Separate DB for: Employees, AI Sales, Certificates,
+//  Social Media, Review Management, Support & CRM
+// ═══════════════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("TEAM_DATABASE_URL")
+}
+
+// ── 1. EMPLOYEE MANAGEMENT ──────────────────────────────────
+
+model Employee {
+  id              String           @id @default(uuid())
+  // Links to main DB User/Shop (read-only cross-reference)
+  mainUserId      String?          // userId from main orivraa DB
+  mainShopId      String?          // shopId from main orivraa DB
+
+  firstName       String
+  lastName        String
+  email           String           @unique
+  phone           String?
+  avatarUrl       String?
+  dateOfBirth     DateTime?
+
+  department      Department       @relation(fields: [departmentId], references: [id])
+  departmentId    String
+  role            EmployeeRole     @default(AGENT)
+  jobTitle        String?
+  employeeCode    String           @unique // e.g. ORI-EMP-001
+  isActive        Boolean          @default(true)
+
+  // Employment
+  joinedAt        DateTime         @default(now())
+  terminatedAt    DateTime?
+  salary          Float?
+  currency        String           @default("INR")
+
+  // Relations
+  attendance      Attendance[]
+  leaveRequests   LeaveRequest[]
+  tasks           Task[]           @relation("AssignedTasks")
+  tasksCreated    Task[]           @relation("CreatedTasks")
+  kpiRecords      KPIRecord[]
+  certificates    Certificate[]
+  callSessions    CallSession[]
+  socialPosts     SocialPost[]     @relation("AuthoredPosts")
+  socialApprovals SocialPost[]     @relation("ApprovedPosts")
+  tickets         SupportTicket[]  @relation("AssignedTickets")
+  ticketMessages  TicketMessage[]
+  reviewResponses ReviewTrackerResponse[]
+  payrollRecords  PayrollRecord[]
+  documents       EmployeeDocument[]
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([mainUserId])
+  @@index([mainShopId])
+  @@index([departmentId])
+  @@index([email])
+}
+
+model Department {
+  id          String       @id @default(uuid())
+  name        String       @unique // Sales, Support, Marketing, Operations, HR
+  description String?
+  headId      String?      // employee id of department head
+  isActive    Boolean      @default(true)
+  employees   Employee[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+enum EmployeeRole {
+  ADMIN           // Full access
+  MANAGER         // Department-level access
+  TEAM_LEAD       // Team-level access
+  AGENT           // Basic task-level access
+  INTERN          // Limited access
+}
+
+model Attendance {
+  id          String          @id @default(uuid())
+  employeeId  String
+  employee    Employee        @relation(fields: [employeeId], references: [id])
+  date        DateTime        @db.Date
+  clockIn     DateTime?
+  clockOut    DateTime?
+  hoursWorked Float?
+  status      AttendanceStatus @default(PRESENT)
+  notes       String?
+  ipAddress   String?         // for remote clock-in verification
+  createdAt   DateTime        @default(now())
+
+  @@unique([employeeId, date])
+  @@index([employeeId])
+  @@index([date])
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  WORK_FROM_HOME
+  ON_LEAVE
+  HOLIDAY
+}
+
+model LeaveRequest {
+  id          String       @id @default(uuid())
+  employeeId  String
+  employee    Employee     @relation(fields: [employeeId], references: [id])
+  type        LeaveType
+  startDate   DateTime     @db.Date
+  endDate     DateTime     @db.Date
+  reason      String?
+  status      LeaveStatus  @default(PENDING)
+  approvedBy  String?      // employee id of approver
+  approvedAt  DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([employeeId])
+  @@index([status])
+}
+
+enum LeaveType {
+  CASUAL
+  SICK
+  EARNED
+  MATERNITY
+  PATERNITY
+  UNPAID
+  COMPENSATORY
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model PayrollRecord {
+  id            String   @id @default(uuid())
+  employeeId    String
+  employee      Employee @relation(fields: [employeeId], references: [id])
+  month         Int      // 1-12
+  year          Int
+  baseSalary    Float
+  bonus         Float    @default(0)
+  deductions    Float    @default(0)
+  netPay        Float
+  currency      String   @default("INR")
+  paidAt        DateTime?
+  notes         String?
+  createdAt     DateTime @default(now())
+
+  @@unique([employeeId, month, year])
+  @@index([employeeId])
+}
+
+model EmployeeDocument {
+  id          String   @id @default(uuid())
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id])
+  name        String   // "Aadhar Card", "Resume", "Offer Letter"
+  type        String   // identity, resume, offer, contract, certificate
+  fileUrl     String
+  uploadedAt  DateTime @default(now())
+
+  @@index([employeeId])
+}
+
+// ── 2. TASK MANAGEMENT (Kanban) ─────────────────────────────
+
+model Task {
+  id          String     @id @default(uuid())
+  title       String
+  description String?    @db.Text
+  priority    TaskPriority @default(MEDIUM)
+  status      TaskStatus   @default(TODO)
+  dueDate     DateTime?
+  tags        String[]
+
+  assigneeId  String?
+  assignee    Employee?  @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  creatorId   String
+  creator     Employee   @relation("CreatedTasks", fields: [creatorId], references: [id])
+
+  // For linking to external entities (lead, ticket, etc.)
+  referenceType String?  // "Lead", "Ticket", "SocialPost"
+  referenceId   String?
+
+  completedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([assigneeId])
+  @@index([status])
+  @@index([priority])
+}
+
+enum TaskPriority {
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  CANCELLED
+}
+
+// ── 3. KPI & PERFORMANCE ────────────────────────────────────
+
+model KPIRecord {
+  id          String   @id @default(uuid())
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id])
+  period      String   // "2026-Q1", "2026-03"
+  metric      String   // "calls_made", "tickets_resolved", "posts_published"
+  target      Float
+  achieved    Float    @default(0)
+  score       Float?   // calculated percentage
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([employeeId, period, metric])
+  @@index([employeeId])
+}
+
+// ── 4. AI SALES TEAM (ElevenLabs) ───────────────────────────
+
+model AIAgent {
+  id              String       @id @default(uuid())
+  name            String       // "Priya — Sales Assistant"
+  voiceId         String       // ElevenLabs voice ID
+  personality     String?      @db.Text // system prompt / personality desc
+  language        String       @default("en")
+  greeting        String?      // opening line for calls
+  isActive        Boolean      @default(true)
+
+  scripts         AIScript[]
+  callSessions    CallSession[]
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model AIScript {
+  id          String    @id @default(uuid())
+  agentId     String
+  agent       AIAgent   @relation(fields: [agentId], references: [id])
+  name        String    // "Cold Call — Gold Buyers"
+  category    String    // cold_call, follow_up, upsell, support
+  content     String    @db.Text // the script/prompt template
+  variables   String[]  // dynamic placeholders: {{customerName}}, {{lastOrder}}
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([agentId])
+}
+
+model Lead {
+  id              String     @id @default(uuid())
+  // Cross-reference to main DB
+  mainUserId      String?    // existing orivraa user
+  mainShopId      String?
+
+  name            String
+  email           String?
+  phone           String?
+  company         String?
+  source          LeadSource @default(MANUAL)
+  stage           LeadStage  @default(NEW)
+  score           Int        @default(0) // 0-100 heat score
+  notes           String?    @db.Text
+  tags            String[]
+
+  assignedToId    String?    // employee handling this lead
+  lastContactedAt DateTime?
+
+  callSessions    CallSession[]
+
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@index([mainUserId])
+  @@index([stage])
+  @@index([assignedToId])
+  @@index([score])
+}
+
+enum LeadSource {
+  MANUAL
+  WEBSITE
+  REFERRAL
+  SOCIAL_MEDIA
+  AI_GENERATED
+  IMPORT
+  CART_ABANDON
+  WISHLIST
+}
+
+enum LeadStage {
+  NEW
+  CONTACTED
+  QUALIFIED
+  DEMO
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+  CHURNED
+}
+
+model CallSession {
+  id              String        @id @default(uuid())
+  agentId         String?
+  agent           AIAgent?      @relation(fields: [agentId], references: [id])
+  leadId          String?
+  lead            Lead?         @relation(fields: [leadId], references: [id])
+  employeeId      String?       // if human-assisted
+  employee        Employee?     @relation(fields: [employeeId], references: [id])
+
+  direction       CallDirection @default(OUTBOUND)
+  status          CallStatus    @default(INITIATED)
+  duration        Int?          // seconds
+  recordingUrl    String?
+  transcriptUrl   String?
+  transcript      String?       @db.Text
+  sentiment       CallSentiment?
+  summary         String?       @db.Text // AI-generated call summary
+  outcome         String?       // "interested", "callback", "not_interested"
+  callbackAt      DateTime?
+
+  startedAt       DateTime      @default(now())
+  endedAt         DateTime?
+
+  @@index([agentId])
+  @@index([leadId])
+  @@index([employeeId])
+  @@index([status])
+}
+
+enum CallDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum CallStatus {
+  INITIATED
+  RINGING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  NO_ANSWER
+  VOICEMAIL
+}
+
+enum CallSentiment {
+  VERY_POSITIVE
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+  VERY_NEGATIVE
+}
+
+// ── 5. CERTIFICATE MANAGEMENT ───────────────────────────────
+
+model CertificateTemplate {
+  id              String        @id @default(uuid())
+  name            String        // "Employment Certificate", "Training Completion"
+  type            CertificateType
+  htmlTemplate    String        @db.Text // Handlebars/HTML template
+  cssStyles       String?       @db.Text
+  thumbnailUrl    String?
+  variables       String[]      // {{employeeName}}, {{date}}, {{title}}
+  isActive        Boolean       @default(true)
+  certificates    Certificate[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+enum CertificateType {
+  EMPLOYMENT
+  TRAINING
+  ACHIEVEMENT
+  APPRAISAL
+  EXPERIENCE
+  INTERNSHIP
+  CUSTOM
+}
+
+model Certificate {
+  id              String            @id @default(uuid())
+  templateId      String
+  template        CertificateTemplate @relation(fields: [templateId], references: [id])
+  employeeId      String
+  employee        Employee          @relation(fields: [employeeId], references: [id])
+
+  title           String            // "Certificate of Employment"
+  data            Json              // key-value pairs for template variables
+  certificateNo   String            @unique // ORI-CERT-2026-001
+  qrToken         String            @unique // signed JWT for QR verification
+  pdfUrl          String?           // generated PDF URL
+  imageUrl        String?           // generated image URL
+
+  issuedAt        DateTime          @default(now())
+  expiresAt       DateTime?
+  revokedAt       DateTime?
+  revokeReason    String?
+  status          CertificateStatus @default(ACTIVE)
+
+  verifications   CertificateVerification[]
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([employeeId])
+  @@index([certificateNo])
+  @@index([qrToken])
+  @@index([status])
+}
+
+enum CertificateStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
+model CertificateVerification {
+  id              String      @id @default(uuid())
+  certificateId   String
+  certificate     Certificate @relation(fields: [certificateId], references: [id])
+  verifiedAt      DateTime    @default(now())
+  ipAddress       String?
+  userAgent       String?
+  country         String?
+
+  @@index([certificateId])
+}
+
+// ── 6. SOCIAL MEDIA COMMAND CENTER ──────────────────────────
+
+model SocialAccount {
+  id          String         @id @default(uuid())
+  platform    SocialPlatform
+  accountName String         // @orivraa
+  accountId   String?        // platform-specific ID
+  accessToken String?        // encrypted
+  refreshToken String?       // encrypted
+  tokenExpiry DateTime?
+  isActive    Boolean        @default(true)
+  posts       SocialPost[]
+  analytics   SocialAnalytics[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([platform, accountName])
+}
+
+enum SocialPlatform {
+  INSTAGRAM
+  FACEBOOK
+  X_TWITTER
+  LINKEDIN
+  YOUTUBE
+  PINTEREST
+}
+
+model SocialPost {
+  id              String          @id @default(uuid())
+  accountId       String
+  account         SocialAccount   @relation(fields: [accountId], references: [id])
+
+  content         String          @db.Text
+  mediaUrls       String[]
+  hashtags        String[]
+  scheduledAt     DateTime?
+  publishedAt     DateTime?
+  status          SocialPostStatus @default(DRAFT)
+
+  // Approval workflow
+  authorId        String
+  author          Employee        @relation("AuthoredPosts", fields: [authorId], references: [id])
+  approverId      String?
+  approver        Employee?       @relation("ApprovedPosts", fields: [approverId], references: [id])
+  approvedAt      DateTime?
+  rejectionReason String?
+
+  // Analytics (updated periodically)
+  likes           Int             @default(0)
+  comments        Int             @default(0)
+  shares          Int             @default(0)
+  impressions     Int             @default(0)
+  clicks          Int             @default(0)
+  externalPostId  String?         // ID from the platform
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([accountId])
+  @@index([authorId])
+  @@index([status])
+  @@index([scheduledAt])
+}
+
+enum SocialPostStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  SCHEDULED
+  PUBLISHED
+  REJECTED
+  FAILED
+}
+
+model SocialAnalytics {
+  id          String        @id @default(uuid())
+  accountId   String
+  account     SocialAccount @relation(fields: [accountId], references: [id])
+  date        DateTime      @db.Date
+  followers   Int           @default(0)
+  following   Int           @default(0)
+  engagementRate Float      @default(0)
+  impressions Int           @default(0)
+  profileViews Int          @default(0)
+
+  @@unique([accountId, date])
+  @@index([accountId])
+}
+
+// ── 7. REVIEW & REPUTATION MANAGEMENT ───────────────────────
+
+model ReviewTracker {
+  id          String              @id @default(uuid())
+  platform    ReviewPlatform
+  profileUrl  String              // URL to the profile on that platform
+  isActive    Boolean             @default(true)
+  lastScraped DateTime?
+  reviews     TrackedReview[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@unique([platform])
+}
+
+enum ReviewPlatform {
+  G2
+  CRUNCHBASE
+  SAASHUB
+  TRUSTPILOT
+  GOOGLE_BUSINESS
+  CAPTERRA
+  PRODUCT_HUNT
+}
+
+model TrackedReview {
+  id              String                  @id @default(uuid())
+  trackerId       String
+  tracker         ReviewTracker           @relation(fields: [trackerId], references: [id])
+  externalId      String?                 // ID from the platform
+  authorName      String?
+  rating          Float?                  // 1-5
+  content         String?                 @db.Text
+  publishedAt     DateTime?
+  sentiment       ReviewSentiment?
+  isResponded     Boolean                 @default(false)
+  responses       ReviewTrackerResponse[]
+  detectedAt      DateTime                @default(now())
+
+  @@unique([trackerId, externalId])
+  @@index([trackerId])
+  @@index([sentiment])
+}
+
+enum ReviewSentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+model ReviewTrackerResponse {
+  id          String        @id @default(uuid())
+  reviewId    String
+  review      TrackedReview @relation(fields: [reviewId], references: [id])
+  employeeId  String?
+  employee    Employee?     @relation(fields: [employeeId], references: [id])
+  content     String        @db.Text
+  isAiDraft   Boolean       @default(false)
+  isPublished Boolean       @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime      @default(now())
+
+  @@index([reviewId])
+}
+
+// ── 8. SUPPORT & CRM ────────────────────────────────────────
+
+model SupportTicket {
+  id              String          @id @default(uuid())
+  // Cross-reference
+  mainUserId      String?         // customer from main DB
+  mainOrderId     String?         // related order from main DB
+
+  customerName    String
+  customerEmail   String
+  subject         String
+  channel         TicketChannel   @default(EMAIL)
+  priority        TicketPriority  @default(MEDIUM)
+  status          TicketStatus    @default(OPEN)
+  category        String?         // "Order Issue", "Payment", "Product Query"
+  tags            String[]
+
+  assignedToId    String?
+  assignedTo      Employee?       @relation("AssignedTickets", fields: [assignedToId], references: [id])
+
+  // SLA tracking
+  slaDeadline     DateTime?
+  firstResponseAt DateTime?
+  resolvedAt      DateTime?
+  csatScore       Int?            // 1-5 customer satisfaction
+
+  messages        TicketMessage[]
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([mainUserId])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([priority])
+}
+
+enum TicketChannel {
+  EMAIL
+  CHAT
+  WHATSAPP
+  PHONE
+  SOCIAL_MEDIA
+}
+
+enum TicketPriority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_CUSTOMER
+  WAITING_INTERNAL
+  RESOLVED
+  CLOSED
+  ESCALATED
+}
+
+model TicketMessage {
+  id          String      @id @default(uuid())
+  ticketId    String
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id])
+  employeeId  String?
+  employee    Employee?   @relation(fields: [employeeId], references: [id])
+  isCustomer  Boolean     @default(false) // true = customer, false = agent
+  isInternal  Boolean     @default(false) // internal notes
+  content     String      @db.Text
+  attachments String[]
+  createdAt   DateTime    @default(now())
+
+  @@index([ticketId])
+}
+
+// ── 9. KNOWLEDGE BASE (for support canned responses) ────────
+
+model KnowledgeArticle {
+  id          String   @id @default(uuid())
+  title       String
+  content     String   @db.Text
+  category    String
+  tags        String[]
+  isPublic    Boolean  @default(false) // public = customer-facing
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+}
+
+model CannedResponse {
+  id          String   @id @default(uuid())
+  shortcode   String   @unique // "/greeting", "/refund-policy"
+  title       String
+  content     String   @db.Text
+  category    String?
+  usageCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ── 10. APP SETTINGS ────────────────────────────────────────
+
+model TeamSettings {
+  id                    String   @id @default("singleton")
+  companyName           String   @default("Orivraa")
+  timezone              String   @default("Asia/Kolkata")
+  workingDaysPerWeek    Int      @default(6)
+  workingHoursStart     String   @default("09:00")
+  workingHoursEnd       String   @default("18:00")
+  slaResponseMinutes    Int      @default(120) // 2 hours
+  slaResolutionMinutes  Int      @default(1440) // 24 hours
+  elevenLabsApiKey      String?  // encrypted
+  mainApiUrl            String?  // URL to main orivraa API for cross-service calls
+  mainApiReadOnlyDsn    String?  // read-only connection to main DB (Neon)
+  updatedAt             DateTime @updatedAt
+}
