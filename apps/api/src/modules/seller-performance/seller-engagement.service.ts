@@ -5,7 +5,8 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
-import { PlatformReviewStatus } from "@prisma/client";
+import { PlatformReviewStatus, ReferralReward, ReferralStatus } from "@prisma/client";
+import { randomBytes } from "crypto";
 import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../../prisma/prisma.service";
 
@@ -1198,21 +1199,38 @@ export class SellerEngagementService {
 
   /** Grant 1 month of Pro by extending or creating a subscription. */
   private async grantOneMonthPro(shopId: string, country: string) {
-    // Find the PRO plan for this shop's country
-    const proPlan = await this.prisma.subscriptionPlan.findFirst({
-      where: { name: "PRO", country: country as any, isActive: true },
+    return this.grantPlanReward(shopId, country, "PRO", 1, "Review & Earn reward");
+  }
+
+  /**
+   * Generic method to grant N months of a given plan (PRO / PRO_PLUS) as a reward.
+   * Extends if the seller already has that plan, or creates a new subscription.
+   */
+  private async grantPlanReward(
+    shopId: string,
+    country: string,
+    planName: string,
+    months: number,
+    reason: string,
+  ) {
+    const plan = await this.prisma.subscriptionPlan.findFirst({
+      where: { name: planName, country: country as any, isActive: true },
     });
 
-    if (!proPlan) {
+    if (!plan) {
       this.logger.warn(
-        `No PRO plan found for country=${country}, cannot grant reward for shop=${shopId}`,
+        `No ${planName} plan found for country=${country}, cannot grant reward for shop=${shopId}`,
       );
       return;
     }
 
     const now = new Date();
-    const oneMonthFromNow = new Date(now);
-    oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
+    const rewardEnd = new Date(now);
+    // Support fractional months (e.g. 1.5)
+    const fullMonths = Math.floor(months);
+    const extraDays = Math.round((months - fullMonths) * 30);
+    rewardEnd.setMonth(rewardEnd.getMonth() + fullMonths);
+    rewardEnd.setDate(rewardEnd.getDate() + extraDays);
 
     // Check for existing active subscription
     const existing = await this.prisma.sellerSubscription.findFirst({
@@ -1223,10 +1241,11 @@ export class SellerEngagementService {
       include: { plan: true },
     });
 
-    if (existing && existing.plan.name === "PRO") {
-      // Extend the current PRO subscription by 1 month
+    if (existing && existing.plan.name === planName) {
+      // Extend the current subscription
       const newEnd = new Date(existing.currentPeriodEnd);
-      newEnd.setMonth(newEnd.getMonth() + 1);
+      newEnd.setMonth(newEnd.getMonth() + fullMonths);
+      newEnd.setDate(newEnd.getDate() + extraDays);
 
       await this.prisma.sellerSubscription.update({
         where: { id: existing.id },
@@ -1234,17 +1253,17 @@ export class SellerEngagementService {
       });
 
       this.logger.log(
-        `Extended PRO subscription for shop=${shopId} until ${newEnd.toISOString()}`,
+        `Extended ${planName} subscription for shop=${shopId} until ${newEnd.toISOString()} (${reason})`,
       );
     } else {
-      // Cancel existing FREE/other plan, create a new PRO subscription
+      // Cancel existing plan, create a new one
       if (existing) {
         await this.prisma.sellerSubscription.update({
           where: { id: existing.id },
           data: {
             status: "CANCELLED",
             cancelledAt: now,
-            cancelReason: "Upgraded via Review & Earn reward",
+            cancelReason: `Upgraded via ${reason}`,
           },
         });
       }
@@ -1252,18 +1271,18 @@ export class SellerEngagementService {
       await this.prisma.sellerSubscription.create({
         data: {
           shopId,
-          planId: proPlan.id,
+          planId: plan.id,
           status: "ACTIVE",
           country: country as any,
           startedAt: now,
           currentPeriodStart: now,
-          currentPeriodEnd: oneMonthFromNow,
-          autoRenew: false, // reward subscriptions don't auto-renew
+          currentPeriodEnd: rewardEnd,
+          autoRenew: false,
         },
       });
 
       this.logger.log(
-        `Created PRO subscription (review reward) for shop=${shopId} until ${oneMonthFromNow.toISOString()}`,
+        `Created ${planName} subscription (${reason}) for shop=${shopId} until ${rewardEnd.toISOString()}`,
       );
     }
   }
@@ -1315,5 +1334,301 @@ export class SellerEngagementService {
 
     this.logger.log(`Sent ${sentCount} review reminder notifications`);
     return { sentCount };
+  }
+
+  /* ═══════════════════════════════════════════════════════
+   *  9. REFERRAL PROGRAMME
+   * ═══════════════════════════════════════════════════════ */
+
+  /** Load referral settings (or create default singleton). */
+  private async getReferralSettings() {
+    let settings = await this.prisma.referralSettings.findUnique({
+      where: { id: "singleton" },
+    });
+    if (!settings) {
+      settings = await this.prisma.referralSettings.create({
+        data: { id: "singleton" },
+      });
+    }
+    return settings;
+  }
+
+  /** Generate a unique referral code. */
+  private generateReferralCode(): string {
+    return randomBytes(6).toString("hex").toUpperCase(); // 12-char code
+  }
+
+  /** Create a referral invitation. */
+  async createReferral(
+    shopId: string,
+    refereeEmail: string,
+    rewardType: ReferralReward,
+  ) {
+    const settings = await this.getReferralSettings();
+    if (!settings.isActive) {
+      throw new BadRequestException("Referral programme is currently paused.");
+    }
+
+    // Check cap
+    const existingCount = await this.prisma.referral.count({
+      where: { referrerShopId: shopId },
+    });
+    if (existingCount >= settings.maxReferralsPerShop) {
+      throw new BadRequestException(
+        `You have reached the maximum of ${settings.maxReferralsPerShop} referrals.`,
+      );
+    }
+
+    // Check duplicate
+    const existing = await this.prisma.referral.findUnique({
+      where: {
+        referrerShopId_refereeEmail: { referrerShopId: shopId, refereeEmail },
+      },
+    });
+    if (existing) {
+      throw new ConflictException("You have already invited this email.");
+    }
+
+    // Prevent self-referral
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      include: { user: { select: { email: true } } },
+    });
+    if (shop?.user.email.toLowerCase() === refereeEmail.toLowerCase()) {
+      throw new BadRequestException("You cannot refer yourself.");
+    }
+
+    const referral = await this.prisma.referral.create({
+      data: {
+        referrerShopId: shopId,
+        refereeEmail: refereeEmail.toLowerCase(),
+        rewardType,
+        referralCode: this.generateReferralCode(),
+      },
+    });
+
+    // Notify the referrer
+    if (shop) {
+      await this.notifications.create({
+        userId: shop.userId,
+        type: "REFERRAL_INVITE_SENT",
+        titleKey: "Referral invitation sent! 🎉",
+        bodyKey: `You invited ${refereeEmail}. When they sign up and get verified, you'll both earn free plan time!`,
+        referenceType: "Referral",
+        referenceId: referral.id,
+        channels: ["IN_APP"],
+      });
+    }
+
+    return referral;
+  }
+
+  /** Get all referrals for a seller's shop. */
+  async getMyReferrals(shopId: string) {
+    const referrals = await this.prisma.referral.findMany({
+      where: { referrerShopId: shopId },
+      orderBy: { invitedAt: "desc" },
+      include: {
+        refereeShop: { select: { shopName: true, isVerified: true } },
+      },
+    });
+
+    const settings = await this.getReferralSettings();
+
+    return {
+      referrals,
+      settings: {
+        proMonths: settings.proMonths,
+        proPlusMonths: settings.proPlusMonths,
+        maxReferrals: settings.maxReferralsPerShop,
+        isActive: settings.isActive,
+      },
+    };
+  }
+
+  /** Called when a referred seller signs up — link them to the referral. */
+  async processReferralSignup(refereeEmail: string, refereeShopId: string) {
+    const referral = await this.prisma.referral.findFirst({
+      where: {
+        refereeEmail: refereeEmail.toLowerCase(),
+        status: "PENDING",
+      },
+    });
+
+    if (!referral) return null; // no referral found, that's fine
+
+    // Check expiration
+    const settings = await this.getReferralSettings();
+    const expiresAt = new Date(referral.invitedAt);
+    expiresAt.setDate(expiresAt.getDate() + settings.expirationDays);
+
+    if (new Date() > expiresAt) {
+      await this.prisma.referral.update({
+        where: { id: referral.id },
+        data: { status: "EXPIRED" },
+      });
+      return null;
+    }
+
+    const updated = await this.prisma.referral.update({
+      where: { id: referral.id },
+      data: {
+        refereeShopId,
+        status: "SIGNED_UP",
+        signedUpAt: new Date(),
+      },
+    });
+
+    // Notify the referrer
+    const referrerShop = await this.prisma.shop.findUnique({
+      where: { id: referral.referrerShopId },
+      select: { userId: true },
+    });
+    if (referrerShop) {
+      await this.notifications.create({
+        userId: referrerShop.userId,
+        type: "REFERRAL_SIGNUP",
+        titleKey: "Your referral signed up! 🎯",
+        bodyKey: `${refereeEmail} has joined Orivraa! Rewards will be granted once their shop is verified.`,
+        referenceType: "Referral",
+        referenceId: referral.id,
+        channels: ["IN_APP"],
+      });
+    }
+
+    return updated;
+  }
+
+  /** Admin: complete a referral and grant rewards to both parties. */
+  async completeReferral(referralId: string) {
+    const referral = await this.prisma.referral.findUnique({
+      where: { id: referralId },
+      include: {
+        referrerShop: { select: { id: true, country: true, userId: true } },
+        refereeShop: { select: { id: true, country: true, userId: true } },
+      },
+    });
+
+    if (!referral) throw new NotFoundException("Referral not found.");
+    if (referral.status === "COMPLETED") {
+      throw new BadRequestException("Referral already completed.");
+    }
+    if (!referral.refereeShopId || !referral.refereeShop) {
+      throw new BadRequestException("Referee has not signed up yet.");
+    }
+
+    const settings = await this.getReferralSettings();
+    const planName =
+      referral.rewardType === "PRO_3_MONTHS" ? "PRO" : "PRO_PLUS";
+    const months =
+      referral.rewardType === "PRO_3_MONTHS"
+        ? settings.proMonths
+        : settings.proPlusMonths;
+
+    const now = new Date();
+
+    // Grant reward to referrer
+    await this.grantPlanReward(
+      referral.referrerShop.id,
+      referral.referrerShop.country,
+      planName,
+      months,
+      "Referral reward (referrer)",
+    );
+
+    // Grant reward to referee
+    await this.grantPlanReward(
+      referral.refereeShop.id,
+      referral.refereeShop.country,
+      planName,
+      months,
+      "Referral reward (referee)",
+    );
+
+    const updated = await this.prisma.referral.update({
+      where: { id: referralId },
+      data: {
+        status: "COMPLETED",
+        completedAt: now,
+        referrerRewarded: true,
+        refereeRewarded: true,
+        referrerRewardedAt: now,
+        refereeRewardedAt: now,
+      },
+    });
+
+    // Notify both
+    for (const party of [referral.referrerShop, referral.refereeShop]) {
+      if (party) {
+        await this.notifications.create({
+          userId: party.userId,
+          type: "REFERRAL_REWARD_GRANTED",
+          titleKey: "Referral reward granted! 🎁",
+          bodyKey: `You've earned ${months} month(s) of ${planName} for free via the referral programme!`,
+          referenceType: "Referral",
+          referenceId: referralId,
+          channels: ["IN_APP"],
+        });
+      }
+    }
+
+    this.logger.log(
+      `Completed referral ${referralId}: granted ${months} months of ${planName} to both parties`,
+    );
+
+    return updated;
+  }
+
+  /** Admin: list all referrals with optional status filter. */
+  async listReferrals(status?: string) {
+    return this.prisma.referral.findMany({
+      where: status && status !== "ALL" ? { status: status as ReferralStatus } : undefined,
+      orderBy: { invitedAt: "desc" },
+      include: {
+        referrerShop: {
+          select: { shopName: true, user: { select: { firstName: true, lastName: true, email: true } } },
+        },
+        refereeShop: {
+          select: { shopName: true, isVerified: true },
+        },
+      },
+    });
+  }
+
+  /** Admin: get & update referral programme settings. */
+  async getReferralSettingsAdmin() {
+    return this.getReferralSettings();
+  }
+
+  async updateReferralSettings(data: {
+    proMonths?: number;
+    proPlusMonths?: number;
+    expirationDays?: number;
+    maxReferralsPerShop?: number;
+    isActive?: boolean;
+  }) {
+    const settings = await this.getReferralSettings();
+    return this.prisma.referralSettings.update({
+      where: { id: settings.id },
+      data,
+    });
+  }
+
+  /** Expire old pending referrals (call via cron). */
+  async expireOldReferrals() {
+    const settings = await this.getReferralSettings();
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - settings.expirationDays);
+
+    const result = await this.prisma.referral.updateMany({
+      where: {
+        status: "PENDING",
+        invitedAt: { lt: cutoff },
+      },
+      data: { status: "EXPIRED" },
+    });
+
+    this.logger.log(`Expired ${result.count} old referral invitations`);
+    return { expiredCount: result.count };
   }
 }

@@ -582,6 +582,28 @@ export const sellerPerformanceApi = {
     }),
   sendReviewReminders: () =>
     api.post("/seller-performance/admin/reviews/send-reminders"),
+  // Referrals (seller)
+  getMyReferrals: () => api.get("/seller-performance/referrals"),
+  createReferral: (data: { refereeEmail: string; rewardType: string }) =>
+    api.post("/seller-performance/referrals", data),
+  // Admin: referrals
+  getAdminReferrals: (status?: string) =>
+    api.get(
+      `/seller-performance/admin/referrals${status ? `?status=${status}` : ""}`,
+    ),
+  completeReferral: (referralId: string) =>
+    api.post(`/seller-performance/admin/referrals/${referralId}/complete`),
+  getReferralSettings: () =>
+    api.get("/seller-performance/admin/referral-settings"),
+  updateReferralSettings: (data: {
+    proMonths?: number;
+    proPlusMonths?: number;
+    expirationDays?: number;
+    maxReferralsPerShop?: number;
+    isActive?: boolean;
+  }) => api.post("/seller-performance/admin/referral-settings", data),
+  expireOldReferrals: () =>
+    api.post("/seller-performance/admin/referrals/expire-old"),
 };
 
 // Designs API (AI Image Generation)
