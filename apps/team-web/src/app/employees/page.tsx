@@ -29,7 +29,7 @@ export default function EmployeesPage() {
   const [employees, setEmployees] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
   const [search, setSearch] = useState("");
-  const [filterDept, setFilterDept] = useState("");
+  const [filterDept, setFilterDept] = useState("__all__");
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({
@@ -46,7 +46,7 @@ export default function EmployeesPage() {
     setLoading(true);
     const params: Record<string, string> = {};
     if (search) params.search = search;
-    if (filterDept) params.departmentId = filterDept;
+    if (filterDept && filterDept !== "__all__") params.departmentId = filterDept;
     Promise.all([employeeApi.list(params), employeeApi.listDepartments()])
       .then(([empRes, deptRes]) => {
         setEmployees(
@@ -239,7 +239,7 @@ export default function EmployeesPage() {
                 <SelectValue placeholder="All Departments" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All</SelectItem>
+                <SelectItem value="__all__">All</SelectItem>
                 {departments.map((d: any) => (
                   <SelectItem key={d.id} value={d.id}>
                     {d.name}
