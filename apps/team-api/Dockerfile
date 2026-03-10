@@ -27,4 +27,6 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./
 
 EXPOSE 3002
-CMD ["sh", "-c", "npx prisma db push --schema ./prisma/schema.prisma && node dist/main.js"]
+COPY start.sh ./start.sh
+RUN chmod +x ./start.sh
+CMD ["./start.sh"]
