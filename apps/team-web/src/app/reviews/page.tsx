@@ -142,28 +142,28 @@ export default function ReviewsPage() {
         <TabsContent value="reviews" className="space-y-4">
           <div className="flex gap-2 flex-wrap">
             <Select
-              value={filter.sentiment ?? ""}
-              onValueChange={(v) => setFilter({ ...filter, sentiment: v })}
+              value={filter.sentiment ?? "__all__"}
+              onValueChange={(v) => setFilter({ ...filter, sentiment: v === "__all__" ? "" : v })}
             >
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Sentiment" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All</SelectItem>
+                <SelectItem value="__all__">All</SelectItem>
                 <SelectItem value="POSITIVE">Positive</SelectItem>
                 <SelectItem value="NEUTRAL">Neutral</SelectItem>
                 <SelectItem value="NEGATIVE">Negative</SelectItem>
               </SelectContent>
             </Select>
             <Select
-              value={filter.needsResponse ?? ""}
-              onValueChange={(v) => setFilter({ ...filter, needsResponse: v })}
+              value={filter.needsResponse ?? "__all__"}
+              onValueChange={(v) => setFilter({ ...filter, needsResponse: v === "__all__" ? "" : v })}
             >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Response status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All</SelectItem>
+                <SelectItem value="__all__">All</SelectItem>
                 <SelectItem value="true">Needs Response</SelectItem>
                 <SelectItem value="false">Responded</SelectItem>
               </SelectContent>

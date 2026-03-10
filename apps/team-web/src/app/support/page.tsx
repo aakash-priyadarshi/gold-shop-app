@@ -45,7 +45,7 @@ export default function SupportPage() {
   const [dashboard, setDashboard] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("__all__");
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({
     subject: "",
@@ -60,7 +60,7 @@ export default function SupportPage() {
     setLoading(true);
     const params: Record<string, string> = {};
     if (search) params.search = search;
-    if (statusFilter) params.status = statusFilter;
+    if (statusFilter && statusFilter !== "__all__") params.status = statusFilter;
     Promise.allSettled([
       supportApi.listTickets(params),
       supportApi.getDashboard(),
@@ -277,7 +277,7 @@ export default function SupportPage() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All</SelectItem>
+                <SelectItem value="__all__">All</SelectItem>
                 {["OPEN", "IN_PROGRESS", "WAITING", "RESOLVED", "CLOSED"].map(
                   (s) => (
                     <SelectItem key={s} value={s}>
