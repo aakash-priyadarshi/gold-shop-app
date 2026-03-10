@@ -29,6 +29,32 @@ model Employee {
   phone           String?
   avatarUrl       String?
   dateOfBirth     DateTime?
+  gender          String?          // Male, Female, Other
+
+  // Address
+  address         String?
+  city            String?
+  state           String?
+  pincode         String?
+  country         String?          @default("India")
+
+  // Emergency Contact
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  emergencyRelation     String?    // Father, Mother, Spouse, etc.
+
+  // Identity Documents (encrypted IDs stored)
+  panNumber       String?
+  aadhaarLast4    String?          // Only last 4 digits for reference
+  bloodGroup      String?          // A+, B+, O-, AB+, etc.
+  maritalStatus   String?          // Single, Married, Divorced, Widowed
+  nationality     String?          @default("Indian")
+
+  // Bank Details
+  bankAccountNo   String?
+  bankName        String?
+  bankIfsc        String?
+  bankBranch      String?
 
   department      Department       @relation(fields: [departmentId], references: [id])
   departmentId    String
@@ -40,8 +66,12 @@ model Employee {
   // Employment
   joinedAt        DateTime         @default(now())
   terminatedAt    DateTime?
+  terminationReason String?
   salary          Float?
   currency        String           @default("INR")
+  employmentType  EmploymentType   @default(FULL_TIME)
+  shiftTiming     String?          // "09:00-18:00"
+  reportingToId   String?          // manager/lead employee id
 
   // Relations
   attendance      Attendance[]
@@ -58,6 +88,7 @@ model Employee {
   reviewResponses ReviewTrackerResponse[]
   payrollRecords  PayrollRecord[]
   documents       EmployeeDocument[]
+  activityLogs    ActivityLog[]
 
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
@@ -85,6 +116,54 @@ enum EmployeeRole {
   TEAM_LEAD       // Team-level access
   AGENT           // Basic task-level access
   INTERN          // Limited access
+  SALES           // Sales team
+  SUPPORT         // Support team
+  CRAFTSMAN       // Jewelry craftsman
+  DELIVERY        // Delivery staff
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERN_TYPE
+  PROBATION
+}
+
+// ── ROLE PERMISSIONS ────────────────────────────────────────
+
+model RolePermission {
+  id          String       @id @default(uuid())
+  role        EmployeeRole
+  module      String       // "employees", "tasks", "payroll", "departments", "ai-sales", "certificates", "social", "reviews", "support", "settings"
+  canView     Boolean      @default(false)
+  canCreate   Boolean      @default(false)
+  canEdit     Boolean      @default(false)
+  canDelete   Boolean      @default(false)
+  canApprove  Boolean      @default(false)  // for leave, payroll, social posts etc.
+  canExport   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([role, module])
+}
+
+// ── ACTIVITY LOG ────────────────────────────────────────────
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  employeeId  String?
+  employee    Employee? @relation(fields: [employeeId], references: [id])
+  action      String   // "CREATED_EMPLOYEE", "APPROVED_LEAVE", "CLOCKED_IN", etc.
+  module      String   // "employees", "tasks", "payroll", etc.
+  targetId    String?  // ID of the affected entity
+  details     String?  @db.Text // JSON string with extra details
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  @@index([employeeId])
+  @@index([module])
+  @@index([createdAt])
 }
 
 model Attendance {
