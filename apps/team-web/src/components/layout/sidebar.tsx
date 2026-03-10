@@ -122,9 +122,7 @@ export function Sidebar() {
           {!collapsed && user && (
             <div className="px-3 py-2 text-xs text-muted-foreground truncate">
               {user.email}
-              <span className="block text-[10px] opacity-60">
-                {user.role}
-              </span>
+              <span className="block text-[10px] opacity-60">{user.role}</span>
             </div>
           )}
           <button

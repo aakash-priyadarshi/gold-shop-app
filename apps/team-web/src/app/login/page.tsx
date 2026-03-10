@@ -1,5 +1,6 @@
 "use client";
 
+import { Turnstile } from "@/components/auth/turnstile";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,13 +11,13 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Turnstile } from "@/components/auth/turnstile";
 import { ALLOWED_ROLES } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
-const MAIN_API = process.env.NEXT_PUBLIC_MAIN_API_URL || "http://localhost:4000";
+const MAIN_API =
+  process.env.NEXT_PUBLIC_MAIN_API_URL || "http://localhost:4000";
 const MAIN_URL = process.env.NEXT_PUBLIC_MAIN_URL || "http://localhost:3000";
 
 export default function LoginPage() {
@@ -53,7 +54,7 @@ export default function LoginPage() {
       const payload = JSON.parse(atob(data.accessToken.split(".")[1]));
       if (!ALLOWED_ROLES.includes(payload.role)) {
         toast.error(
-          "Access denied. Only ADMIN, SUPPORT, and SALES roles can access the team portal."
+          "Access denied. Only ADMIN, SUPPORT, and SALES roles can access the team portal.",
         );
         return;
       }
@@ -70,7 +71,9 @@ export default function LoginPage() {
 
   const handleGoogleLogin = () => {
     // Redirect to main API's Google OAuth with state preserving team context
-    const state = btoa(JSON.stringify({ role: "ADMIN", mode: "login", source: "team" }));
+    const state = btoa(
+      JSON.stringify({ role: "ADMIN", mode: "login", source: "team" }),
+    );
     window.location.href = `${MAIN_API}/api/auth/google?state=${state}`;
   };
 
@@ -157,11 +160,7 @@ export default function LoginPage() {
             className="flex justify-center"
           />
 
-          <Button
-            className="w-full"
-            onClick={handleLogin}
-            disabled={loading}
-          >
+          <Button className="w-full" onClick={handleLogin} disabled={loading}>
             {loading ? "Signing in..." : "Sign In"}
           </Button>
 

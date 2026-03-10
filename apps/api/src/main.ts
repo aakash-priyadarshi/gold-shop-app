@@ -108,7 +108,9 @@ async function bootstrap() {
     "https://team.orivraa.com",
     "https://gold-shop-app-api.vercel.app",
     // Only allow localhost in development
-    ...(process.env.NODE_ENV !== "production" ? ["http://localhost:3000", "http://localhost:3001"] : []),
+    ...(process.env.NODE_ENV !== "production"
+      ? ["http://localhost:3000", "http://localhost:3001"]
+      : []),
   ].filter((origin): origin is string => Boolean(origin));
 
   app.enableCors({

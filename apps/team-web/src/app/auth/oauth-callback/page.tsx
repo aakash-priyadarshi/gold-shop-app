@@ -33,7 +33,7 @@ function OAuthCallbackHandler() {
       const payload = JSON.parse(atob(accessToken.split(".")[1]));
       if (!ALLOWED_ROLES.includes(payload.role)) {
         toast.error(
-          "Access denied. Only ADMIN, SUPPORT, and SALES roles can access the team portal."
+          "Access denied. Only ADMIN, SUPPORT, and SALES roles can access the team portal.",
         );
         setTimeout(() => {
           window.location.href = MAIN_URL;
