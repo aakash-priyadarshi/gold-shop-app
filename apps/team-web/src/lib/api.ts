@@ -129,8 +129,8 @@ export const aiSalesApi = {
     api.patch(`/ai-sales/agents/${id}/toggle`, { isActive }),
   createScript: (data: Record<string, unknown>) =>
     api.post("/ai-sales/scripts", data),
-  listScripts: (agentId: string) =>
-    api.get(`/ai-sales/agents/${agentId}/scripts`),
+  listScripts: (agentId?: string) =>
+    agentId ? api.get(`/ai-sales/agents/${agentId}/scripts`) : api.get("/ai-sales/scripts"),
   updateScript: (id: string, data: Record<string, unknown>) =>
     api.put(`/ai-sales/scripts/${id}`, data),
   deleteScript: (id: string) => api.delete(`/ai-sales/scripts/${id}`),
@@ -150,6 +150,65 @@ export const aiSalesApi = {
   getCallStats: () => api.get("/ai-sales/calls/stats"),
   endCall: (id: string, data: Record<string, unknown>) =>
     api.patch(`/ai-sales/calls/${id}/end`, data),
+
+  // Products
+  listProducts: () => api.get("/ai-sales/products"),
+  createProduct: (data: Record<string, unknown>) =>
+    api.post("/ai-sales/products", data),
+  updateProduct: (id: string, data: Record<string, unknown>) =>
+    api.put(`/ai-sales/products/${id}`, data),
+  deleteProduct: (id: string) => api.delete(`/ai-sales/products/${id}`),
+
+  // Objections
+  listObjections: (category?: string) =>
+    api.get("/ai-sales/objections", { params: category ? { category } : {} }),
+  createObjection: (data: Record<string, unknown>) =>
+    api.post("/ai-sales/objections", data),
+  updateObjection: (id: string, data: Record<string, unknown>) =>
+    api.put(`/ai-sales/objections/${id}`, data),
+  deleteObjection: (id: string) => api.delete(`/ai-sales/objections/${id}`),
+
+  // Campaigns
+  listCampaigns: (status?: string) =>
+    api.get("/ai-sales/campaigns", { params: status ? { status } : {} }),
+  getCampaign: (id: string) => api.get(`/ai-sales/campaigns/${id}`),
+  createCampaign: (data: Record<string, unknown>) =>
+    api.post("/ai-sales/campaigns", data),
+  updateCampaign: (id: string, data: Record<string, unknown>) =>
+    api.put(`/ai-sales/campaigns/${id}`, data),
+  addLeadsToCampaign: (id: string, leadIds: string[]) =>
+    api.post(`/ai-sales/campaigns/${id}/leads`, { leadIds }),
+  removeLeadFromCampaign: (id: string, leadId: string) =>
+    api.delete(`/ai-sales/campaigns/${id}/leads/${leadId}`),
+  startCampaign: (id: string) =>
+    api.post(`/ai-sales/campaigns/${id}/start`),
+  pauseCampaign: (id: string) =>
+    api.post(`/ai-sales/campaigns/${id}/pause`),
+  getCampaignStats: (id: string) =>
+    api.get(`/ai-sales/campaigns/${id}/stats`),
+
+  // Call orchestrator
+  initiateCall: (data: { agentId: string; leadId: string; campaignId?: string }) =>
+    api.post("/ai-sales/calls/initiate", data),
+  getActiveCallsCount: () => api.get("/ai-sales/calls/active-count"),
+  getDetailedCallStats: (from?: string, to?: string) =>
+    api.get("/ai-sales/calls/detailed-stats", { params: { from, to } }),
+
+  // Lead scoring
+  getLeadScore: (id: string) => api.get(`/ai-sales/leads/${id}/score`),
+  bulkScoreLeads: () => api.post("/ai-sales/leads/bulk-score"),
+
+  // Schedules
+  listSchedules: (params?: Record<string, string>) =>
+    api.get("/ai-sales/schedules", { params }),
+  createSchedule: (data: Record<string, unknown>) =>
+    api.post("/ai-sales/schedules", data),
+  updateSchedule: (id: string, data: Record<string, unknown>) =>
+    api.put(`/ai-sales/schedules/${id}`, data),
+  deleteSchedule: (id: string) => api.delete(`/ai-sales/schedules/${id}`),
+
+  // Analytics
+  getAnalyticsDashboard: () => api.get("/ai-sales/analytics/dashboard"),
 };
 
 // ─── Certificates ───
