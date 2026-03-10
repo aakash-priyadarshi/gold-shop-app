@@ -39,6 +39,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
+      url: `${BASE_URL}/shop`,
+      lastModified: new Date(), // product listings change often
+      changeFrequency: "daily",
+      priority: 0.85,
+    },
+    {
       url: `${BASE_URL}/rfq/create`,
       lastModified: new Date("2025-02-01"),
       changeFrequency: "monthly",
