@@ -5,8 +5,7 @@ import { ExtractJwt, Strategy } from "passport-jwt";
 
 /**
  * JWT Strategy for Team API.
- * Validates tokens issued by the MAIN Orivraa API (same JWT_SECRET).
- * No DB lookup needed — we trust the payload from the main app.
+ * Validates tokens issued by the Team API itself (employee-based auth).
  */
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -26,10 +25,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     return {
       id: payload.sub,
       email: payload.email,
-      role: payload.role,         // from main app: ADMIN, SHOPKEEPER, USER
-      firstName: payload.firstName,
-      lastName: payload.lastName,
-      shopId: payload.shopId,
+      role: payload.role,         // EmployeeRole: ADMIN, MANAGER, TEAM_LEAD, AGENT, INTERN
+      employeeCode: payload.employeeCode,
+      departmentId: payload.departmentId,
     };
   }
 }

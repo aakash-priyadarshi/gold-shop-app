@@ -24,6 +24,7 @@ model Employee {
   firstName       String
   lastName        String
   email           String           @unique
+  passwordHash    String?          // null until first login setup
   phone           String?
   avatarUrl       String?
   dateOfBirth     DateTime?
