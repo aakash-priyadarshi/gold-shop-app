@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
@@ -116,7 +124,8 @@ export class SellerPerformanceController {
   @ApiOperation({ summary: "Submit a platform review proof" })
   async submitReview(
     @CurrentUser("shopId") shopId: string,
-    @Body() body: { platform: string; proofScreenshot: string; reviewUrl?: string },
+    @Body()
+    body: { platform: string; proofScreenshot: string; reviewUrl?: string },
   ) {
     return this.engagementService.submitPlatformReview(
       shopId,
@@ -173,12 +182,11 @@ export class SellerPerformanceController {
   @ApiOperation({ summary: "Create a referral invitation" })
   async createReferral(
     @CurrentUser("shopId") shopId: string,
-    @Body() body: { refereeEmail: string; rewardType: string },
+    @Body() body: { refereeEmail: string },
   ) {
     return this.engagementService.createReferral(
       shopId,
       body.refereeEmail,
-      body.rewardType as any,
     );
   }
 
@@ -211,8 +219,8 @@ export class SellerPerformanceController {
   async updateReferralSettings(
     @Body()
     body: {
-      proMonths?: number;
-      proPlusMonths?: number;
+      freeMonths?: number;
+      aiCreditsReward?: number;
       expirationDays?: number;
       maxReferralsPerShop?: number;
       isActive?: boolean;

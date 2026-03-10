@@ -3,25 +3,13 @@
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { sellerPerformanceApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
-import {
-  CheckCircle,
-  ExternalLink,
-  Loader2,
-  Star,
-  Upload,
-} from "lucide-react";
+import { CheckCircle, ExternalLink, Loader2, Star, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface PlatformReviewEntry {
@@ -68,15 +56,13 @@ const PLATFORM_DISPLAY: Record<
 
 export default function SellerReviewsPage() {
   const t = useT();
-  const [platformReviews, setPlatformReviews] = useState<
-    PlatformReviewEntry[]
-  >([]);
+  const [platformReviews, setPlatformReviews] = useState<PlatformReviewEntry[]>(
+    [],
+  );
   const [reviewSubmitting, setReviewSubmitting] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const {
-    upload: uploadReviewProof,
-  } = useImageUpload({
+  const { upload: uploadReviewProof } = useImageUpload({
     type: "review-proof",
     onSuccess: () => {},
     onError: (err) =>

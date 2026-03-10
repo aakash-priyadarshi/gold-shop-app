@@ -28,7 +28,6 @@ import { toast } from "@/hooks/use-toast";
 import { sellerPerformanceApi } from "@/lib/api";
 import {
   CheckCircle,
-  Clock,
   Gift,
   Loader2,
   Settings,
@@ -41,8 +40,7 @@ interface ReferralData {
   id: string;
   refereeEmail: string;
   referralCode: string;
-  rewardType: "PRO_3_MONTHS" | "PRO_PLUS_1_5_MONTHS";
-  status: "PENDING" | "SIGNED_UP" | "COMPLETED" | "EXPIRED";
+  status: "PENDING" | "SIGNED_UP" | "PLAN_PURCHASED" | "COMPLETED" | "EXPIRED";
   invitedAt: string;
   signedUpAt: string | null;
   completedAt: string | null;
@@ -58,16 +56,11 @@ interface ReferralData {
 interface ReferralSettingsData {
   id: string;
   isActive: boolean;
-  proMonths: number;
-  proPlusMonths: number;
+  freeMonths: number;
+  aiCreditsReward: number;
   maxReferralsPerShop: number;
   expiryDays: number;
 }
-
-const REWARD_LABELS: Record<string, string> = {
-  PRO_3_MONTHS: "3 months Pro",
-  PRO_PLUS_1_5_MONTHS: "1.5 months Pro+",
-};
 
 export default function AdminReferralsPage() {
   const [referrals, setReferrals] = useState<ReferralData[]>([]);
@@ -139,8 +132,8 @@ export default function AdminReferralsPage() {
     try {
       await sellerPerformanceApi.updateReferralSettings({
         isActive: settings.isActive,
-        proMonths: settings.proMonths,
-        proPlusMonths: settings.proPlusMonths,
+        freeMonths: settings.freeMonths,
+        aiCreditsReward: settings.aiCreditsReward,
         maxReferralsPerShop: settings.maxReferralsPerShop,
         expirationDays: settings.expiryDays,
       });
@@ -165,7 +158,10 @@ export default function AdminReferralsPage() {
       });
       loadReferrals();
     } catch {
-      toast({ variant: "destructive", title: "Failed to expire old referrals" });
+      toast({
+        variant: "destructive",
+        title: "Failed to expire old referrals",
+      });
     } finally {
       setExpiringOld(false);
     }
@@ -174,7 +170,9 @@ export default function AdminReferralsPage() {
   const stats = {
     total: referrals.length,
     pending: referrals.filter((r) => r.status === "PENDING").length,
-    signedUp: referrals.filter((r) => r.status === "SIGNED_UP").length,
+    signedUp: referrals.filter(
+      (r) => r.status === "SIGNED_UP" || r.status === "PLAN_PURCHASED",
+    ).length,
     completed: referrals.filter((r) => r.status === "COMPLETED").length,
     expired: referrals.filter((r) => r.status === "EXPIRED").length,
   };
@@ -260,6 +258,7 @@ export default function AdminReferralsPage() {
                     <SelectItem value="ALL">All</SelectItem>
                     <SelectItem value="PENDING">Invited</SelectItem>
                     <SelectItem value="SIGNED_UP">Signed Up</SelectItem>
+                    <SelectItem value="PLAN_PURCHASED">Plan Purchased</SelectItem>
                     <SelectItem value="COMPLETED">Completed</SelectItem>
                     <SelectItem value="EXPIRED">Expired</SelectItem>
                   </SelectContent>
@@ -296,7 +295,6 @@ export default function AdminReferralsPage() {
                         <TableRow>
                           <TableHead>Referrer</TableHead>
                           <TableHead>Referee Email</TableHead>
-                          <TableHead>Reward</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Referee Shop</TableHead>
                           <TableHead>Date</TableHead>
@@ -321,12 +319,6 @@ export default function AdminReferralsPage() {
                               {ref.refereeEmail}
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline" className="text-xs">
-                                {REWARD_LABELS[ref.rewardType] ||
-                                  ref.rewardType}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
                               <Badge
                                 variant={
                                   ref.status === "COMPLETED"
@@ -347,9 +339,11 @@ export default function AdminReferralsPage() {
                                   ? "Invited"
                                   : ref.status === "SIGNED_UP"
                                     ? "Signed Up"
-                                    : ref.status === "COMPLETED"
-                                      ? "Completed"
-                                      : "Expired"}
+                                    : ref.status === "PLAN_PURCHASED"
+                                      ? "Plan Purchased"
+                                      : ref.status === "COMPLETED"
+                                        ? "Completed"
+                                        : "Expired"}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-sm">
@@ -370,7 +364,8 @@ export default function AdminReferralsPage() {
                               {new Date(ref.invitedAt).toLocaleDateString()}
                             </TableCell>
                             <TableCell>
-                              {ref.status === "SIGNED_UP" && (
+                              {(ref.status === "SIGNED_UP" ||
+                                ref.status === "PLAN_PURCHASED") && (
                                 <Button
                                   size="sm"
                                   className="bg-green-600 hover:bg-green-700"
@@ -434,46 +429,48 @@ export default function AdminReferralsPage() {
                     </div>
 
                     <div className="grid sm:grid-cols-2 gap-6">
-                      {/* Pro months */}
+                      {/* Free months */}
                       <div>
-                        <Label htmlFor="proMonths">Pro Months (Option A)</Label>
+                        <Label htmlFor="freeMonths">
+                          Extra Free Months
+                        </Label>
                         <p className="text-xs text-muted-foreground mb-1">
-                          Free Pro months each party gets
+                          Months added to current plan for both parties
                         </p>
                         <Input
-                          id="proMonths"
+                          id="freeMonths"
                           type="number"
                           min={1}
                           max={12}
-                          value={settings.proMonths}
+                          value={settings.freeMonths}
                           onChange={(e) =>
                             setSettings({
                               ...settings,
-                              proMonths: Number(e.target.value) || 1,
+                              freeMonths: Number(e.target.value) || 1,
                             })
                           }
                         />
                       </div>
 
-                      {/* Pro+ months */}
+                      {/* AI credits */}
                       <div>
-                        <Label htmlFor="proPlusMonths">
-                          Pro+ Months (Option B)
+                        <Label htmlFor="aiCreditsReward">
+                          AI Credits Reward
                         </Label>
                         <p className="text-xs text-muted-foreground mb-1">
-                          Free Pro+ months each party gets
+                          AI credits granted to both parties
                         </p>
                         <Input
-                          id="proPlusMonths"
+                          id="aiCreditsReward"
                           type="number"
-                          min={0.5}
-                          max={12}
-                          step={0.5}
-                          value={settings.proPlusMonths}
+                          min={0}
+                          max={500}
+                          step={10}
+                          value={settings.aiCreditsReward}
                           onChange={(e) =>
                             setSettings({
                               ...settings,
-                              proPlusMonths: Number(e.target.value) || 1,
+                              aiCreditsReward: Number(e.target.value) || 50,
                             })
                           }
                         />
@@ -496,8 +493,7 @@ export default function AdminReferralsPage() {
                           onChange={(e) =>
                             setSettings({
                               ...settings,
-                              maxReferralsPerShop:
-                                Number(e.target.value) || 10,
+                              maxReferralsPerShop: Number(e.target.value) || 10,
                             })
                           }
                         />

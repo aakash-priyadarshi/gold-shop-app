@@ -3127,7 +3127,6 @@ model Referral {
   refereeShopId     String?         // set once the referred seller creates a shop
   refereeEmail      String          // email of the invited seller
   referralCode      String          @unique
-  rewardType        ReferralReward  // PRO_3_MONTHS or PRO_PLUS_1_5_MONTHS
   status            ReferralStatus  @default(PENDING)
   referrerRewarded  Boolean         @default(false)
   refereeRewarded   Boolean         @default(false)
@@ -3135,7 +3134,8 @@ model Referral {
   refereeRewardedAt  DateTime?
   invitedAt         DateTime        @default(now())
   signedUpAt        DateTime?       // when the referee registered
-  completedAt       DateTime?       // when admin/system marked it complete
+  planPurchasedAt   DateTime?       // when the referee bought a plan
+  completedAt       DateTime?       // when rewards were granted
 
   referrerShop      Shop            @relation("ShopReferralsMade", fields: [referrerShopId], references: [id])
   refereeShop       Shop?           @relation("ShopReferralsReceived", fields: [refereeShopId], references: [id])
@@ -3149,20 +3149,16 @@ model Referral {
 
 enum ReferralStatus {
   PENDING           // invitation sent, awaiting sign-up
-  SIGNED_UP         // referee registered but not yet verified
+  SIGNED_UP         // referee registered but not yet verified/plan purchased
+  PLAN_PURCHASED    // referee bought a plan — ready for auto-completion
   COMPLETED         // both rewarded
   EXPIRED           // invitation expired (e.g. 90 days)
 }
 
-enum ReferralReward {
-  PRO_3_MONTHS
-  PRO_PLUS_1_5_MONTHS
-}
-
 model ReferralSettings {
   id                      String   @id @default("singleton")
-  proMonths               Float    @default(3)      // months of PRO for PRO_3_MONTHS reward
-  proPlusMonths           Float    @default(1.5)    // months of PRO+ for PRO_PLUS_1_5_MONTHS reward
+  freeMonths              Float    @default(1)      // extra months added to current plan for both parties
+  aiCreditsReward         Int      @default(50)     // AI credits granted to both parties
   expirationDays          Int      @default(90)     // referral link validity
   maxReferralsPerShop     Int      @default(50)     // anti-abuse cap
   isActive                Boolean  @default(true)   // master switch
