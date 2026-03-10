@@ -3,17 +3,29 @@
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { T } from "@/components/ui/T";
 import { BRAND } from "@/config/brand";
+import { LANG_META, type Language } from "@/data/about-i18n";
 import { useMarket } from "@/hooks/useMarket";
 import {
   Facebook,
+  Globe,
   Instagram,
+  Linkedin,
   Mail,
   MapPin,
   Phone,
   Twitter,
-  Youtube,
 } from "lucide-react";
 import Link from "next/link";
+
+const FOOTER_LANGUAGES: { code: Language; href: string }[] = [
+  { code: "en", href: "/about" },
+  { code: "fr", href: "/about/fr" },
+  { code: "de", href: "/about/de" },
+  { code: "hi", href: "/about/hi" },
+  { code: "es", href: "/about/es" },
+  { code: "ar", href: "/about/ar" },
+  { code: "ne", href: "/about/ne" },
+];
 
 export function DynamicFooter() {
   const { config } = useMarket();
@@ -42,28 +54,36 @@ export function DynamicFooter() {
             {/* Social Links */}
             <div className="flex items-center gap-3 pt-2">
               <a
-                href="#"
+                href={BRAND.social.facebook}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-9 h-9 bg-gray-800 hover:bg-gold-500 rounded-lg flex items-center justify-center transition-colors"
               >
                 <Facebook className="h-4 w-4" />
               </a>
               <a
-                href="#"
+                href={BRAND.social.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-9 h-9 bg-gray-800 hover:bg-gold-500 rounded-lg flex items-center justify-center transition-colors"
               >
                 <Instagram className="h-4 w-4" />
               </a>
               <a
-                href="#"
+                href={BRAND.social.twitter}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-9 h-9 bg-gray-800 hover:bg-gold-500 rounded-lg flex items-center justify-center transition-colors"
               >
                 <Twitter className="h-4 w-4" />
               </a>
               <a
-                href="#"
+                href={BRAND.social.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-9 h-9 bg-gray-800 hover:bg-gold-500 rounded-lg flex items-center justify-center transition-colors"
               >
-                <Youtube className="h-4 w-4" />
+                <Linkedin className="h-4 w-4" />
               </a>
             </div>
           </div>
@@ -190,7 +210,31 @@ export function DynamicFooter() {
           </div>
         </div>
 
-        <div className="border-t border-gray-800 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
+        {/* Language Availability */}
+        <div className="border-t border-gray-800 mt-8 pt-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Globe className="h-4 w-4 text-gold-400" />
+            <span className="text-sm font-medium text-gray-300">
+              <T>Available in 7 Languages</T>
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {FOOTER_LANGUAGES.map(({ code, href }) => {
+              const meta = LANG_META[code];
+              return (
+                <Link
+                  key={code}
+                  href={href}
+                  className="text-xs px-2.5 py-1 rounded-full bg-gray-800 hover:bg-gold-500/20 hover:text-gold-400 text-gray-400 transition-colors"
+                >
+                  {meta.flag} {meta.nativeName}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="border-t border-gray-800 mt-6 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-gray-500 text-center md:text-left">
             © {new Date().getFullYear()} {BRAND.name}.{" "}
             <T>All rights reserved.</T>
