@@ -210,7 +210,7 @@ export default function EmployeesPage() {
     setFormTab("basic");
   };
 
-  const EmployeeFormContent = ({ isEdit }: { isEdit: boolean }) => (
+  const employeeFormContent = (isEdit: boolean) => (
     <div className="space-y-4">
       <Tabs value={formTab} onValueChange={setFormTab}>
         <TabsList className="grid w-full grid-cols-4">
@@ -452,7 +452,7 @@ export default function EmployeesPage() {
             <DialogHeader>
               <DialogTitle>Add Employee</DialogTitle>
             </DialogHeader>
-            <EmployeeFormContent isEdit={false} />
+            {employeeFormContent(false)}
           </DialogContent>
         </Dialog>
       </div>
@@ -463,7 +463,7 @@ export default function EmployeesPage() {
           <DialogHeader>
             <DialogTitle>Edit Employee — {editEmp?.firstName} {editEmp?.lastName}</DialogTitle>
           </DialogHeader>
-          <EmployeeFormContent isEdit={true} />
+          {employeeFormContent(true)}
         </DialogContent>
       </Dialog>
 
