@@ -267,8 +267,13 @@ export class AuthController {
   async googleAuthCallback(@Request() req: any, @Res() res: Response) {
     const ipAddress = req.ip || req.connection?.remoteAddress;
     const userAgent = req.headers["user-agent"];
+    const source = req.user?.source;
     const frontendUrl =
-      this.configService.get<string>("FRONTEND_URL") || "http://localhost:3000";
+      source === "team"
+        ? this.configService.get<string>("TEAM_FRONTEND_URL") ||
+          "http://localhost:3001"
+        : this.configService.get<string>("FRONTEND_URL") ||
+          "http://localhost:3000";
 
     try {
       const requestedRole = req.user?.requestedRole || "CUSTOMER";

@@ -2,96 +2,103 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
-  useCallback,
   type ReactNode,
 } from "react";
 
-interface Employee {
+export const ALLOWED_ROLES = ["ADMIN", "SUPPORT", "SALES"];
+
+interface User {
   id: string;
   email: string;
-  firstName: string;
-  lastName: string;
-  role: string;         // ADMIN, MANAGER, TEAM_LEAD, AGENT, INTERN
-  employeeCode: string;
-  department: string;
-  avatarUrl?: string;
+  role: string; // ADMIN, SUPPORT, SALES
+  firstName?: string;
+  lastName?: string;
+  shopId?: string;
 }
 
 interface AuthContextType {
-  employee: Employee | null;
+  user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
-  employee: null,
+  user: null,
   isLoading: true,
   isAuthenticated: false,
   logout: () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [employee, setEmployee] = useState<Employee | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadEmployee = useCallback(() => {
+  const loadUser = useCallback(() => {
     try {
       const token = localStorage.getItem("token");
-      const stored = localStorage.getItem("employee");
-      if (!token || !stored) {
-        setEmployee(null);
+      if (!token) {
+        setUser(null);
         setIsLoading(false);
         return;
       }
 
-      // Check token expiration
       const payload = JSON.parse(atob(token.split(".")[1]));
+
+      // Check expiration
       if (payload.exp * 1000 < Date.now()) {
         localStorage.removeItem("token");
         localStorage.removeItem("refreshToken");
-        localStorage.removeItem("employee");
-        setEmployee(null);
+        setUser(null);
+      } else if (!ALLOWED_ROLES.includes(payload.role)) {
+        // Not an employee role — reject
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        setUser(null);
       } else {
-        setEmployee(JSON.parse(stored));
+        setUser({
+          id: payload.sub,
+          email: payload.email,
+          role: payload.role,
+          shopId: payload.shopId,
+        });
       }
     } catch {
       localStorage.removeItem("token");
       localStorage.removeItem("refreshToken");
-      localStorage.removeItem("employee");
-      setEmployee(null);
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadEmployee();
-  }, [loadEmployee]);
+    loadUser();
+  }, [loadUser]);
 
   useEffect(() => {
-    const handle = () => loadEmployee();
+    const handle = () => loadUser();
     window.addEventListener("storage", handle);
     return () => window.removeEventListener("storage", handle);
-  }, [loadEmployee]);
+  }, [loadUser]);
 
   const logout = useCallback(() => {
     localStorage.removeItem("token");
     localStorage.removeItem("refreshToken");
-    localStorage.removeItem("employee");
-    setEmployee(null);
+    setUser(null);
     window.location.href = "/login";
   }, []);
 
   return (
     <AuthContext.Provider
       value={{
-        employee,
+        user,
         isLoading,
-        isAuthenticated: !!employee,
+        isAuthenticated: !!user,
         logout,
       }}
     >

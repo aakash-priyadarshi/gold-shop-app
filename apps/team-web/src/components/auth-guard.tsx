@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 
-const publicPaths = ["/login"];
+const publicPaths = ["/login", "/auth/oauth-callback"];
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();

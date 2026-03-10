@@ -1,7 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
 
 const api = axios.create({
   baseURL: `${API_BASE_URL}/api`,
@@ -26,17 +25,8 @@ api.interceptors.response.use(
       window.location.href = "/login";
     }
     return Promise.reject(error);
-  }
+  },
 );
-
-// ─── Auth ───
-export const authApi = {
-  login: (data: { email: string; password: string }) =>
-    api.post("/auth/login", data),
-  setupPassword: (data: { email: string; setupToken: string; password: string }) =>
-    api.post("/auth/setup-password", data),
-  me: () => api.get("/auth/me"),
-};
 
 // ─── Employee ───
 export const employeeApi = {
@@ -45,8 +35,7 @@ export const employeeApi = {
     api.post("/employees/departments", data),
   updateDepartment: (id: string, data: Record<string, unknown>) =>
     api.put(`/employees/departments/${id}`, data),
-  list: (params?: Record<string, string>) =>
-    api.get("/employees", { params }),
+  list: (params?: Record<string, string>) => api.get("/employees", { params }),
   getById: (id: string) => api.get(`/employees/${id}`),
   create: (data: Record<string, unknown>) => api.post("/employees", data),
   update: (id: string, data: Record<string, unknown>) =>
@@ -64,18 +53,17 @@ export const employeeApi = {
     api.post("/employees/leave", data),
   listLeaves: (params?: Record<string, string>) =>
     api.get("/employees/leave/requests", { params }),
-  approveLeave: (id: string) =>
-    api.patch(`/employees/leave/${id}/approve`),
-  rejectLeave: (id: string) =>
-    api.patch(`/employees/leave/${id}/reject`),
+  approveLeave: (id: string) => api.patch(`/employees/leave/${id}/approve`),
+  rejectLeave: (id: string) => api.patch(`/employees/leave/${id}/reject`),
   createPayroll: (data: Record<string, unknown>) =>
     api.post("/employees/payroll", data),
   getPayroll: (month: number, year: number) =>
     api.get("/employees/payroll", { params: { month, year } }),
-  markPayrollPaid: (id: string) =>
-    api.patch(`/employees/payroll/${id}/paid`),
-  addDocument: (employeeId: string, data: { name: string; type: string; fileUrl: string }) =>
-    api.post(`/employees/${employeeId}/documents`, data),
+  markPayrollPaid: (id: string) => api.patch(`/employees/payroll/${id}/paid`),
+  addDocument: (
+    employeeId: string,
+    data: { name: string; type: string; fileUrl: string },
+  ) => api.post(`/employees/${employeeId}/documents`, data),
   getDocuments: (employeeId: string) =>
     api.get(`/employees/${employeeId}/documents`),
   deleteDocument: (id: string) => api.delete(`/employees/documents/${id}`),
@@ -87,8 +75,7 @@ export const employeeApi = {
 
 // ─── Tasks ───
 export const taskApi = {
-  list: (params?: Record<string, string>) =>
-    api.get("/tasks", { params }),
+  list: (params?: Record<string, string>) => api.get("/tasks", { params }),
   getById: (id: string) => api.get(`/tasks/${id}`),
   create: (data: Record<string, unknown>) => api.post("/tasks", data),
   update: (id: string, data: Record<string, unknown>) =>
@@ -144,14 +131,12 @@ export const certificateApi = {
   list: (params?: Record<string, string>) =>
     api.get("/certificates", { params }),
   getById: (id: string) => api.get(`/certificates/${id}`),
-  issue: (data: Record<string, unknown>) =>
-    api.post("/certificates", data),
+  issue: (data: Record<string, unknown>) => api.post("/certificates", data),
   revoke: (id: string, reason: string) =>
     api.patch(`/certificates/${id}/revoke`, { reason }),
   getVerifications: (id: string) =>
     api.get(`/certificates/${id}/verifications`),
-  verify: (qrToken: string) =>
-    api.get(`/certificates/verify/${qrToken}`),
+  verify: (qrToken: string) => api.get(`/certificates/verify/${qrToken}`),
 };
 
 // ─── Social ───
@@ -170,10 +155,8 @@ export const socialApi = {
     api.post("/social/posts", data),
   updatePost: (id: string, data: Record<string, unknown>) =>
     api.put(`/social/posts/${id}`, data),
-  approvePost: (id: string) =>
-    api.patch(`/social/posts/${id}/approve`),
-  publishPost: (id: string) =>
-    api.patch(`/social/posts/${id}/publish`),
+  approvePost: (id: string) => api.patch(`/social/posts/${id}/approve`),
+  publishPost: (id: string) => api.patch(`/social/posts/${id}/publish`),
   deletePost: (id: string) => api.delete(`/social/posts/${id}`),
   getScheduledPosts: () => api.get("/social/posts/scheduled"),
   recordAnalytics: (accountId: string, data: Record<string, unknown>) =>
@@ -189,8 +172,7 @@ export const reviewApi = {
     api.post("/review-tracker/trackers", data),
   updateTracker: (id: string, data: Record<string, unknown>) =>
     api.put(`/review-tracker/trackers/${id}`, data),
-  deleteTracker: (id: string) =>
-    api.delete(`/review-tracker/trackers/${id}`),
+  deleteTracker: (id: string) => api.delete(`/review-tracker/trackers/${id}`),
   listReviews: (params?: Record<string, string>) =>
     api.get("/review-tracker/reviews", { params }),
   getReview: (id: string) => api.get(`/review-tracker/reviews/${id}`),
@@ -218,12 +200,9 @@ export const supportApi = {
     api.put(`/support/tickets/${id}`, data),
   assignTicket: (id: string, assignedToId: string) =>
     api.patch(`/support/tickets/${id}/assign`, { assignedToId }),
-  resolveTicket: (id: string) =>
-    api.patch(`/support/tickets/${id}/resolve`),
-  closeTicket: (id: string) =>
-    api.patch(`/support/tickets/${id}/close`),
-  reopenTicket: (id: string) =>
-    api.patch(`/support/tickets/${id}/reopen`),
+  resolveTicket: (id: string) => api.patch(`/support/tickets/${id}/resolve`),
+  closeTicket: (id: string) => api.patch(`/support/tickets/${id}/close`),
+  reopenTicket: (id: string) => api.patch(`/support/tickets/${id}/reopen`),
   addMessage: (ticketId: string, data: Record<string, unknown>) =>
     api.post(`/support/tickets/${ticketId}/messages`, data),
   getMessages: (ticketId: string) =>
@@ -235,16 +214,13 @@ export const supportApi = {
     api.post("/support/knowledge", data),
   updateArticle: (id: string, data: Record<string, unknown>) =>
     api.put(`/support/knowledge/${id}`, data),
-  deleteArticle: (id: string) =>
-    api.delete(`/support/knowledge/${id}`),
+  deleteArticle: (id: string) => api.delete(`/support/knowledge/${id}`),
   listCannedResponses: (category?: string) =>
     api.get("/support/canned", { params: { category } }),
   createCannedResponse: (data: Record<string, unknown>) =>
     api.post("/support/canned", data),
-  useCannedResponse: (id: string) =>
-    api.patch(`/support/canned/${id}/use`),
-  deleteCannedResponse: (id: string) =>
-    api.delete(`/support/canned/${id}`),
+  useCannedResponse: (id: string) => api.patch(`/support/canned/${id}/use`),
+  deleteCannedResponse: (id: string) => api.delete(`/support/canned/${id}`),
   getDashboard: () => api.get("/support/dashboard"),
 };
 

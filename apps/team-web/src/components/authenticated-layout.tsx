@@ -1,12 +1,16 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { Sidebar } from "@/components/layout/sidebar";
 import { AuthGuard } from "@/components/auth-guard";
+import { Sidebar } from "@/components/layout/sidebar";
+import { usePathname } from "next/navigation";
 
-const publicPaths = ["/login"];
+const publicPaths = ["/login", "/auth/oauth-callback"];
 
-export function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
+export function AuthenticatedLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const isPublic = publicPaths.some((p) => pathname.startsWith(p));
 
@@ -17,9 +21,7 @@ export function AuthenticatedLayout({ children }: { children: React.ReactNode })
       ) : (
         <div className="flex min-h-screen">
           <Sidebar />
-          <main className="flex-1 lg:ml-64 p-6 pt-20 lg:pt-6">
-            {children}
-          </main>
+          <main className="flex-1 lg:ml-64 p-6 pt-20 lg:pt-6">{children}</main>
         </div>
       )}
     </AuthGuard>

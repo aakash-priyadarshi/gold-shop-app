@@ -17,8 +17,8 @@ import {
 import { AuthService } from "./auth.service";
 import { TeamLoginDto } from "./dto/login.dto";
 import { SetupPasswordDto } from "./dto/setup-password.dto";
-import { Public } from "./public.decorator";
 import { JwtAuthGuard } from "./jwt-auth.guard";
+import { Public } from "./public.decorator";
 
 @ApiTags("auth")
 @Controller("auth")
