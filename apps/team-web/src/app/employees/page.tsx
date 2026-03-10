@@ -39,7 +39,7 @@ export default function EmployeesPage() {
     phone: "",
     role: "SALES",
     departmentId: "",
-    baseSalary: "",
+    salary: "",
   });
 
   const load = () => {
@@ -70,7 +70,7 @@ export default function EmployeesPage() {
     try {
       await employeeApi.create({
         ...form,
-        baseSalary: form.baseSalary ? parseFloat(form.baseSalary) : undefined,
+        salary: form.salary ? parseFloat(form.salary) : undefined,
       });
       toast.success("Employee created");
       setShowAdd(false);
@@ -81,7 +81,7 @@ export default function EmployeesPage() {
         phone: "",
         role: "SALES",
         departmentId: "",
-        baseSalary: "",
+        salary: "",
       });
       load();
     } catch {
@@ -203,9 +203,9 @@ export default function EmployeesPage() {
                 <Label>Base Salary</Label>
                 <Input
                   type="number"
-                  value={form.baseSalary}
+                  value={form.salary}
                   onChange={(e) =>
-                    setForm({ ...form, baseSalary: e.target.value })
+                    setForm({ ...form, salary: e.target.value })
                   }
                 />
               </div>
