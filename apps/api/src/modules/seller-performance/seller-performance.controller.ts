@@ -158,4 +158,73 @@ export class SellerPerformanceController {
   async sendReminders() {
     return this.engagementService.sendReviewReminders();
   }
+
+  /* ─── REFERRAL PROGRAMME (Seller) ─── */
+
+  @Get("referrals")
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiOperation({ summary: "Get my referral invitations" })
+  async getMyReferrals(@CurrentUser("shopId") shopId: string) {
+    return this.engagementService.getMyReferrals(shopId);
+  }
+
+  @Post("referrals")
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiOperation({ summary: "Create a referral invitation" })
+  async createReferral(
+    @CurrentUser("shopId") shopId: string,
+    @Body() body: { refereeEmail: string; rewardType: string },
+  ) {
+    return this.engagementService.createReferral(
+      shopId,
+      body.refereeEmail,
+      body.rewardType as any,
+    );
+  }
+
+  /* ─── REFERRAL PROGRAMME (Admin) ─── */
+
+  @Get("admin/referrals")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "List all referrals (admin)" })
+  async listReferrals(@Query("status") status?: string) {
+    return this.engagementService.listReferrals(status);
+  }
+
+  @Post("admin/referrals/:referralId/complete")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Complete a referral and grant rewards (admin)" })
+  async completeReferral(@Param("referralId") referralId: string) {
+    return this.engagementService.completeReferral(referralId);
+  }
+
+  @Get("admin/referral-settings")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Get referral programme settings (admin)" })
+  async getReferralSettings() {
+    return this.engagementService.getReferralSettingsAdmin();
+  }
+
+  @Post("admin/referral-settings")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Update referral programme settings (admin)" })
+  async updateReferralSettings(
+    @Body()
+    body: {
+      proMonths?: number;
+      proPlusMonths?: number;
+      expirationDays?: number;
+      maxReferralsPerShop?: number;
+      isActive?: boolean;
+    },
+  ) {
+    return this.engagementService.updateReferralSettings(body);
+  }
+
+  @Post("admin/referrals/expire-old")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Expire old pending referrals (admin)" })
+  async expireOldReferrals() {
+    return this.engagementService.expireOldReferrals();
+  }
 }

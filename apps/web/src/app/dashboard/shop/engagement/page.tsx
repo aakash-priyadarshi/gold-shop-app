@@ -48,6 +48,10 @@ import {
   XCircle,
   Zap,
   ExternalLink,
+  Gift,
+  Copy,
+  Users,
+  Send,
 } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
@@ -124,6 +128,31 @@ interface PlatformReviewEntry {
     rewardGranted: boolean;
   } | null;
 }
+
+interface ReferralEntry {
+  id: string;
+  refereeEmail: string;
+  referralCode: string;
+  rewardType: "PRO_3_MONTHS" | "PRO_PLUS_1_5_MONTHS";
+  status: "PENDING" | "SIGNED_UP" | "COMPLETED" | "EXPIRED";
+  invitedAt: string;
+  signedUpAt: string | null;
+  completedAt: string | null;
+  referrerRewarded: boolean;
+  refereeShop: { shopName: string; isVerified: boolean } | null;
+}
+
+interface ReferralSettings {
+  proMonths: number;
+  proPlusMonths: number;
+  maxReferrals: number;
+  isActive: boolean;
+}
+
+const REWARD_LABELS: Record<string, string> = {
+  PRO_3_MONTHS: "3 months Pro",
+  PRO_PLUS_1_5_MONTHS: "1.5 months Pro+",
+};
 
 const PLATFORM_DISPLAY: Record<string, { name: string; url: string; logo: string }> = {
   saashub: { name: "SaaSHub", url: "https://www.saashub.com/orivraa-alternatives", logo: "🔍" },
@@ -641,6 +670,13 @@ export default function ShopEngagementPage() {
 
   // Platform reviews state
   const [platformReviews, setPlatformReviews] = useState<PlatformReviewEntry[]>([]);
+
+  // Referral state
+  const [referrals, setReferrals] = useState<ReferralEntry[]>([]);
+  const [referralSettings, setReferralSettings] = useState<ReferralSettings | null>(null);
+  const [referralEmail, setReferralEmail] = useState("");
+  const [referralReward, setReferralReward] = useState<string>("PRO_3_MONTHS");
+  const [referralSending, setReferralSending] = useState(false);
   const [reviewSubmitting, setReviewSubmitting] = useState<string | null>(null);
   const {
     uploading: reviewUploading,
@@ -744,6 +780,9 @@ export default function ShopEngagementPage() {
 
       // Load platform reviews
       loadPlatformReviews();
+
+      // Load referrals
+      loadReferrals();
     } catch (error) {
       console.error("Failed to load engagement data:", error);
       toast({
@@ -774,6 +813,48 @@ export default function ShopEngagementPage() {
     } catch (error) {
       console.warn("Failed to load platform reviews:", error);
     }
+  };
+
+  const loadReferrals = async () => {
+    try {
+      const res = await sellerPerformanceApi.getMyReferrals();
+      if (res?.data) {
+        setReferrals(res.data.referrals || []);
+        setReferralSettings(res.data.settings || null);
+      }
+    } catch (error) {
+      console.warn("Failed to load referrals:", error);
+    }
+  };
+
+  const handleSendReferral = async () => {
+    if (!referralEmail.trim()) return;
+    setReferralSending(true);
+    try {
+      await sellerPerformanceApi.createReferral({
+        refereeEmail: referralEmail.trim(),
+        rewardType: referralReward,
+      });
+      toast({
+        title: t("Referral sent!"),
+        description: t("We'll notify you when they sign up."),
+      });
+      setReferralEmail("");
+      loadReferrals();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: t("Failed to send referral"),
+        description: error?.response?.data?.message || t("Something went wrong."),
+      });
+    } finally {
+      setReferralSending(false);
+    }
+  };
+
+  const copyReferralCode = (code: string) => {
+    navigator.clipboard.writeText(`https://orivraa.com/register?ref=${code}`);
+    toast({ title: t("Referral link copied!") });
   };
 
   const handleReviewSubmit = async (platform: string, reviewUrl: string) => {
@@ -1335,7 +1416,7 @@ export default function ShopEngagementPage() {
 
           {/* ═══ TABS ═══ */}
           <Tabs defaultValue="milestones" className="w-full">
-            <TabsList className="grid grid-cols-5">
+            <TabsList className="grid grid-cols-6">
               <TabsTrigger value="milestones" className="gap-1">
                 <Trophy className="h-4 w-4" />
                 <span className="hidden sm:inline"><T>Milestones</T></span>
@@ -1347,6 +1428,10 @@ export default function ShopEngagementPage() {
               <TabsTrigger value="reviews" className="gap-1">
                 <Star className="h-4 w-4" />
                 <span className="hidden sm:inline"><T>Reviews</T></span>
+              </TabsTrigger>
+              <TabsTrigger value="referrals" className="gap-1">
+                <Gift className="h-4 w-4" />
+                <span className="hidden sm:inline"><T>Referrals</T></span>
               </TabsTrigger>
               <TabsTrigger value="kyc" className="gap-1">
                 <FileCheck className="h-4 w-4" />
@@ -1809,6 +1894,158 @@ export default function ShopEngagementPage() {
                       <span className="font-bold text-amber-600">
                         {platformReviews.filter((r) => r.review?.rewardGranted).length}
                       </span>
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* ═══ REFERRALS TAB ═══ */}
+            <TabsContent value="referrals" className="space-y-4 mt-4">
+              {/* Banner */}
+              <Card className="border-purple-200 bg-purple-50 dark:border-purple-800/50 dark:bg-purple-950/30">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900/40">
+                      <Gift className="h-6 w-6 text-purple-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-purple-800 dark:text-purple-200 mb-1">
+                        <T>Refer a Seller — You Both Earn Free Plan Time!</T>
+                      </h3>
+                      <p className="text-sm text-purple-700 dark:text-purple-300 mb-2">
+                        <T>Invite another jeweller to Orivraa. When they sign up and get verified, both of you earn free plan time!</T>
+                      </p>
+                      {referralSettings && (
+                        <div className="text-xs text-purple-600 dark:text-purple-400 space-y-1">
+                          <p><strong><T>Option A:</T></strong> {referralSettings.proMonths} <T>months of Pro — both get it free.</T></p>
+                          <p><strong><T>Option B:</T></strong> {referralSettings.proPlusMonths} <T>months of Pro+ — both get it free.</T></p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Send Referral Form */}
+              {referralSettings?.isActive && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Send className="h-4 w-4" />
+                      <T>Send a Referral Invitation</T>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="flex-1">
+                        <Label htmlFor="refEmail" className="text-xs mb-1 block"><T>Seller's Email</T></Label>
+                        <Input
+                          id="refEmail"
+                          type="email"
+                          placeholder="seller@example.com"
+                          value={referralEmail}
+                          onChange={(e) => setReferralEmail(e.target.value)}
+                        />
+                      </div>
+                      <div className="w-48">
+                        <Label className="text-xs mb-1 block"><T>Reward Choice</T></Label>
+                        <select
+                          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                          value={referralReward}
+                          onChange={(e) => setReferralReward(e.target.value)}
+                        >
+                          <option value="PRO_3_MONTHS">{referralSettings.proMonths} months Pro</option>
+                          <option value="PRO_PLUS_1_5_MONTHS">{referralSettings.proPlusMonths} months Pro+</option>
+                        </select>
+                      </div>
+                      <div className="flex items-end">
+                        <Button
+                          onClick={handleSendReferral}
+                          disabled={referralSending || !referralEmail.trim()}
+                        >
+                          {referralSending ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                          ) : (
+                            <Send className="h-4 w-4 mr-1" />
+                          )}
+                          <T>Send</T>
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* My Referrals List */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    <T>My Referrals</T>
+                    <Badge variant="secondary" className="ml-auto">{referrals.length}{referralSettings ? ` / ${referralSettings.maxReferrals}` : ""}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {referrals.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">
+                      <T>No referrals yet. Send your first invitation above!</T>
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {referrals.map((ref) => (
+                        <div key={ref.id} className="flex items-center justify-between p-3 rounded-lg border">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{ref.refereeEmail}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge
+                                variant={ref.status === "COMPLETED" ? "default" : ref.status === "EXPIRED" ? "destructive" : "secondary"}
+                                className={ref.status === "COMPLETED" ? "bg-green-600" : ""}
+                              >
+                                {ref.status === "PENDING" ? "Invited" : ref.status === "SIGNED_UP" ? "Signed Up" : ref.status === "COMPLETED" ? "Rewarded" : "Expired"}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                {REWARD_LABELS[ref.rewardType] || ref.rewardType}
+                              </span>
+                              {ref.refereeShop && (
+                                <span className="text-xs text-muted-foreground">— {ref.refereeShop.shopName}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 ml-2">
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(ref.invitedAt).toLocaleDateString()}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => copyReferralCode(ref.referralCode)}
+                              title="Copy referral link"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Summary */}
+              <Card className="bg-muted/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground"><T>Completed referrals:</T></span>
+                    <span className="font-bold text-green-600">
+                      {referrals.filter((r) => r.status === "COMPLETED").length}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm mt-1">
+                    <span className="text-muted-foreground"><T>Pending sign-ups:</T></span>
+                    <span className="font-medium">
+                      {referrals.filter((r) => r.status === "PENDING" || r.status === "SIGNED_UP").length}
                     </span>
                   </div>
                 </CardContent>

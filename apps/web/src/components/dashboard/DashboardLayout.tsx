@@ -58,6 +58,7 @@ import {
   FileEdit,
   FileText,
   FlaskConical,
+  Gift,
   Globe,
   Heart,
   Home,
@@ -75,6 +76,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   ShoppingCart,
+  Star,
   Store,
   Ticket,
   TrendingUp,
@@ -201,6 +203,18 @@ const navItems: NavItem[] = [
     label: "Blog",
     href: "/dashboard/admin/blog",
     icon: FileEdit,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Reviews",
+    href: "/dashboard/admin/reviews",
+    icon: Star,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Referrals",
+    href: "/dashboard/admin/referrals",
+    icon: Gift,
     roles: ["ADMIN"],
   },
   // ── Maintenance / Ops (collapsible group) ──
@@ -351,6 +365,18 @@ const navItems: NavItem[] = [
     label: "Engagement",
     href: "/dashboard/shop/engagement",
     icon: Award,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Reviews",
+    href: "/dashboard/shop/reviews",
+    icon: Star,
+    roles: ["SHOPKEEPER"],
+  },
+  {
+    label: "Referrals",
+    href: "/dashboard/shop/referrals",
+    icon: Gift,
     roles: ["SHOPKEEPER"],
   },
   {

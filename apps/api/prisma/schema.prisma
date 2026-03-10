@@ -279,6 +279,8 @@ model Shop {
   stockReservations       StockReservation[]
   subscriptions           SellerSubscription[]
   platformReviews         PlatformReview[]
+  referralsMade           Referral[]           @relation("ShopReferralsMade")
+  referralsReceived       Referral[]           @relation("ShopReferralsReceived")
   // Enterprise features
   branches                ShopBranch[]
   staffAccounts           StaffAccount[]
@@ -1698,6 +1700,10 @@ enum NotificationType {
   REVIEW_SUBMITTED
   REVIEW_APPROVED
   REVIEW_REJECTED
+  // Referral Programme
+  REFERRAL_INVITE_SENT
+  REFERRAL_SIGNUP
+  REFERRAL_REWARD_GRANTED
 }
 
 enum WeightCategory {
@@ -3112,6 +3118,55 @@ enum PlatformReviewStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+// ── Referral Programme ──────────────────────────────────────────
+model Referral {
+  id                String          @id @default(uuid())
+  referrerShopId    String
+  refereeShopId     String?         // set once the referred seller creates a shop
+  refereeEmail      String          // email of the invited seller
+  referralCode      String          @unique
+  rewardType        ReferralReward  // PRO_3_MONTHS or PRO_PLUS_1_5_MONTHS
+  status            ReferralStatus  @default(PENDING)
+  referrerRewarded  Boolean         @default(false)
+  refereeRewarded   Boolean         @default(false)
+  referrerRewardedAt DateTime?
+  refereeRewardedAt  DateTime?
+  invitedAt         DateTime        @default(now())
+  signedUpAt        DateTime?       // when the referee registered
+  completedAt       DateTime?       // when admin/system marked it complete
+
+  referrerShop      Shop            @relation("ShopReferralsMade", fields: [referrerShopId], references: [id])
+  refereeShop       Shop?           @relation("ShopReferralsReceived", fields: [refereeShopId], references: [id])
+
+  @@unique([referrerShopId, refereeEmail])
+  @@index([referralCode])
+  @@index([refereeEmail])
+  @@index([status])
+  @@index([referrerShopId])
+}
+
+enum ReferralStatus {
+  PENDING           // invitation sent, awaiting sign-up
+  SIGNED_UP         // referee registered but not yet verified
+  COMPLETED         // both rewarded
+  EXPIRED           // invitation expired (e.g. 90 days)
+}
+
+enum ReferralReward {
+  PRO_3_MONTHS
+  PRO_PLUS_1_5_MONTHS
+}
+
+model ReferralSettings {
+  id                      String   @id @default("singleton")
+  proMonths               Float    @default(3)      // months of PRO for PRO_3_MONTHS reward
+  proPlusMonths           Float    @default(1.5)    // months of PRO+ for PRO_PLUS_1_5_MONTHS reward
+  expirationDays          Int      @default(90)     // referral link validity
+  maxReferralsPerShop     Int      @default(50)     // anti-abuse cap
+  isActive                Boolean  @default(true)   // master switch
+  updatedAt               DateTime @updatedAt
 }
 
 // ── Blog Posts ─────────────────────────────────────────────────
