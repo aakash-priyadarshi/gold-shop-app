@@ -10,14 +10,15 @@ import {
 } from "@nestjs/common";
 import { TaskService } from "./task.service";
 import { Roles } from "../../auth/roles.decorator";
+import { CurrentUser } from "../../auth/current-user.decorator";
 
 @Controller("tasks")
 export class TaskController {
   constructor(private svc: TaskService) {}
 
   @Post()
-  create(@Body() body: any) {
-    return this.svc.create(body);
+  create(@Body() body: any, @CurrentUser() user: any) {
+    return this.svc.create({ ...body, creatorId: user.id });
   }
 
   @Get()

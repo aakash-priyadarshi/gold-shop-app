@@ -56,7 +56,7 @@ export default function TasksPage() {
     title: "",
     description: "",
     priority: "MEDIUM",
-    assignedToId: "",
+    assigneeId: "",
     dueDate: "",
   });
 
@@ -84,19 +84,18 @@ export default function TasksPage() {
 
   const handleCreate = async () => {
     try {
-      await taskApi.create({
-        ...form,
-        dueDate: form.dueDate
-          ? new Date(form.dueDate).toISOString()
-          : undefined,
-      });
+      const payload: Record<string, any> = { ...form };
+      if (!payload.assigneeId) delete payload.assigneeId;
+      if (payload.dueDate) payload.dueDate = new Date(payload.dueDate).toISOString();
+      else delete payload.dueDate;
+      await taskApi.create(payload);
       toast.success("Task created");
       setShowAdd(false);
       setForm({
         title: "",
         description: "",
         priority: "MEDIUM",
-        assignedToId: "",
+        assigneeId: "",
         dueDate: "",
       });
       load();
