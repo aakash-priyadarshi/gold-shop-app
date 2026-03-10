@@ -560,6 +560,28 @@ export const sellerPerformanceApi = {
   getMilestones: () => api.get("/seller-performance/milestones"),
   getRfqFunnel: (days?: number) =>
     api.get(`/seller-performance/rfq-funnel${days ? `?days=${days}` : ""}`),
+  // Platform reviews (Review & Earn)
+  getMyReviews: () => api.get("/seller-performance/reviews"),
+  submitReview: (data: {
+    platform: string;
+    proofScreenshot: string;
+    reviewUrl?: string;
+  }) => api.post("/seller-performance/reviews", data),
+  // Admin: reviews
+  getAdminReviews: (status?: string) =>
+    api.get(
+      `/seller-performance/admin/reviews${status ? `?status=${status}` : ""}`,
+    ),
+  processReview: (
+    reviewId: string,
+    action: "approve" | "reject",
+    adminNotes?: string,
+  ) =>
+    api.post(`/seller-performance/admin/reviews/${reviewId}/${action}`, {
+      adminNotes,
+    }),
+  sendReviewReminders: () =>
+    api.post("/seller-performance/admin/reviews/send-reminders"),
 };
 
 // Designs API (AI Image Generation)

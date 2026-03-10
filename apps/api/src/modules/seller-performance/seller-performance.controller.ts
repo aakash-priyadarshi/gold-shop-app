@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
@@ -100,5 +100,62 @@ export class SellerPerformanceController {
   async recalculateAll() {
     await this.performanceService.recalculateAll();
     return { message: "All seller performance recalculated" };
+  }
+
+  /* ─── PLATFORM REVIEWS (Seller) ─── */
+
+  @Get("reviews")
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiOperation({ summary: "Get my platform review submissions" })
+  async getMyReviews(@CurrentUser("shopId") shopId: string) {
+    return this.engagementService.getShopPlatformReviews(shopId);
+  }
+
+  @Post("reviews")
+  @Roles(UserRole.SHOPKEEPER)
+  @ApiOperation({ summary: "Submit a platform review proof" })
+  async submitReview(
+    @CurrentUser("shopId") shopId: string,
+    @Body() body: { platform: string; proofScreenshot: string; reviewUrl?: string },
+  ) {
+    return this.engagementService.submitPlatformReview(
+      shopId,
+      body.platform,
+      body.proofScreenshot,
+      body.reviewUrl,
+    );
+  }
+
+  /* ─── PLATFORM REVIEWS (Admin) ─── */
+
+  @Get("admin/reviews")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "List all platform review submissions (admin)" })
+  async listAllReviews(@Query("status") status?: string) {
+    return this.engagementService.listPendingReviews(status);
+  }
+
+  @Post("admin/reviews/:reviewId/:action")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Approve or reject a platform review (admin)" })
+  async processReview(
+    @Param("reviewId") reviewId: string,
+    @Param("action") action: "approve" | "reject",
+    @CurrentUser("id") adminId: string,
+    @Body() body: { adminNotes?: string },
+  ) {
+    return this.engagementService.reviewPlatformSubmission(
+      reviewId,
+      adminId,
+      action,
+      body.adminNotes,
+    );
+  }
+
+  @Post("admin/reviews/send-reminders")
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Send review reminders to eligible shops (admin)" })
+  async sendReminders() {
+    return this.engagementService.sendReviewReminders();
   }
 }
