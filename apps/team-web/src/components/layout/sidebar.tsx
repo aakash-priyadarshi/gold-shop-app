@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import {
   Award,
   Bot,
+  Building2,
   ChevronLeft,
   HeadphonesIcon,
   LayoutDashboard,
@@ -14,6 +15,7 @@ import {
   Menu,
   Settings,
   Share2,
+  Shield,
   Star,
   Users,
   X,
@@ -25,6 +27,8 @@ import { useState } from "react";
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/employees", label: "Employees", icon: Users },
+  { href: "/departments", label: "Departments", icon: Building2 },
+  { href: "/roles", label: "Roles & Permissions", icon: Shield },
   { href: "/tasks", label: "Tasks", icon: ListTodo },
   { href: "/ai-sales", label: "AI Sales", icon: Bot },
   { href: "/certificates", label: "Certificates", icon: Award },

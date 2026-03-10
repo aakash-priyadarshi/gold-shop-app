@@ -22,7 +22,7 @@ export class EmployeeController {
 
   @Post("departments")
   @Roles("ADMIN")
-  createDepartment(@Body() body: { name: string; description?: string }) {
+  createDepartment(@Body() body: { name: string; description?: string; headId?: string }) {
     return this.svc.createDepartment(body);
   }
 
@@ -31,18 +31,29 @@ export class EmployeeController {
     return this.svc.listDepartments();
   }
 
+  @Get("departments/:id")
+  getDepartment(@Param("id") id: string) {
+    return this.svc.getDepartment(id);
+  }
+
   @Put("departments/:id")
   @Roles("ADMIN")
   updateDepartment(@Param("id") id: string, @Body() body: any) {
     return this.svc.updateDepartment(id, body);
   }
 
+  @Delete("departments/:id")
+  @Roles("ADMIN")
+  deleteDepartment(@Param("id") id: string) {
+    return this.svc.deleteDepartment(id);
+  }
+
   /* ─── EMPLOYEES ─── */
 
   @Post()
   @Roles("ADMIN")
-  createEmployee(@Body() body: any) {
-    return this.svc.createEmployee(body);
+  createEmployee(@Body() body: any, @CurrentUser() user: any) {
+    return this.svc.createEmployee(body, user?.id);
   }
 
   @Get()
@@ -67,14 +78,14 @@ export class EmployeeController {
 
   @Put(":id")
   @Roles("ADMIN")
-  updateEmployee(@Param("id") id: string, @Body() body: any) {
-    return this.svc.updateEmployee(id, body);
+  updateEmployee(@Param("id") id: string, @Body() body: any, @CurrentUser() user: any) {
+    return this.svc.updateEmployee(id, body, user?.id);
   }
 
   @Patch(":id/terminate")
   @Roles("ADMIN")
-  terminateEmployee(@Param("id") id: string) {
-    return this.svc.terminateEmployee(id);
+  terminateEmployee(@Param("id") id: string, @Body() body: any, @CurrentUser() user: any) {
+    return this.svc.terminateEmployee(id, body?.reason, user?.id);
   }
 
   /* ─── ATTENDANCE ─── */
@@ -152,14 +163,15 @@ export class EmployeeController {
 
   /* ─── DOCUMENTS ─── */
 
-  @Post(":id/documents")
-  addDocument(@Param("id") id: string, @Body() body: { name: string; type: string; fileUrl: string }) {
-    return this.svc.addDocument(id, body);
+  @Post(":empId/documents")
+  @Roles("ADMIN")
+  addDocument(@Param("empId") empId: string, @Body() body: any) {
+    return this.svc.addDocument(empId, body);
   }
 
-  @Get(":id/documents")
-  getDocuments(@Param("id") id: string) {
-    return this.svc.getDocuments(id);
+  @Get(":empId/documents")
+  getDocuments(@Param("empId") empId: string) {
+    return this.svc.getDocuments(empId);
   }
 
   @Delete("documents/:id")
@@ -171,7 +183,7 @@ export class EmployeeController {
   /* ─── KPI ─── */
 
   @Post("kpi")
-  @Roles("ADMIN")
+  @Roles("ADMIN", "MANAGER")
   upsertKPI(@Body() body: any) {
     return this.svc.upsertKPI(body);
   }
@@ -179,5 +191,49 @@ export class EmployeeController {
   @Get(":id/kpi")
   getKPIs(@Param("id") id: string, @Query("period") period?: string) {
     return this.svc.getKPIs(id, period);
+  }
+
+  /* ─── ROLE PERMISSIONS ─── */
+
+  @Get("role-permissions/list")
+  @Roles("ADMIN")
+  listRolePermissions(@Query("role") role?: string) {
+    return this.svc.listRolePermissions(role);
+  }
+
+  @Get("role-permissions/:role")
+  @Roles("ADMIN")
+  getPermissionsForRole(@Param("role") role: string) {
+    return this.svc.getPermissionsForRole(role);
+  }
+
+  @Post("role-permissions")
+  @Roles("ADMIN")
+  upsertRolePermission(@Body() body: any) {
+    return this.svc.upsertRolePermission(body);
+  }
+
+  @Post("role-permissions/bulk")
+  @Roles("ADMIN")
+  bulkUpsertRolePermissions(@Body() body: { permissions: any[] }) {
+    return this.svc.bulkUpsertRolePermissions(body.permissions);
+  }
+
+  @Delete("role-permissions/:id")
+  @Roles("ADMIN")
+  deleteRolePermission(@Param("id") id: string) {
+    return this.svc.deleteRolePermission(id);
+  }
+
+  /* ─── ACTIVITY LOG ─── */
+
+  @Get("activity-logs")
+  @Roles("ADMIN")
+  getActivityLogs(
+    @Query("module") module?: string,
+    @Query("employeeId") employeeId?: string,
+    @Query("limit") limit?: string,
+  ) {
+    return this.svc.getActivityLogs({ module, employeeId, limit: limit ? parseInt(limit) : undefined });
   }
 }

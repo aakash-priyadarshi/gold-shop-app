@@ -30,17 +30,25 @@ api.interceptors.response.use(
 
 // ─── Employee ───
 export const employeeApi = {
+  // Departments
   listDepartments: () => api.get("/employees/departments"),
-  createDepartment: (data: { name: string; description?: string }) =>
+  getDepartment: (id: string) => api.get(`/employees/departments/${id}`),
+  createDepartment: (data: { name: string; description?: string; headId?: string }) =>
     api.post("/employees/departments", data),
   updateDepartment: (id: string, data: Record<string, unknown>) =>
     api.put(`/employees/departments/${id}`, data),
+  deleteDepartment: (id: string) => api.delete(`/employees/departments/${id}`),
+
+  // Employees
   list: (params?: Record<string, string>) => api.get("/employees", { params }),
   getById: (id: string) => api.get(`/employees/${id}`),
   create: (data: Record<string, unknown>) => api.post("/employees", data),
   update: (id: string, data: Record<string, unknown>) =>
     api.put(`/employees/${id}`, data),
-  terminate: (id: string) => api.patch(`/employees/${id}/terminate`),
+  terminate: (id: string, reason?: string) =>
+    api.patch(`/employees/${id}/terminate`, { reason }),
+
+  // Attendance
   clockIn: (employeeId: string) =>
     api.post("/employees/attendance/clock-in", { employeeId }),
   clockOut: (employeeId: string) =>
@@ -49,17 +57,23 @@ export const employeeApi = {
     api.get("/employees/attendance/summary", { params: { date } }),
   getAttendance: (id: string, month: number, year: number) =>
     api.get(`/employees/${id}/attendance`, { params: { month, year } }),
+
+  // Leave
   createLeave: (data: Record<string, unknown>) =>
     api.post("/employees/leave", data),
   listLeaves: (params?: Record<string, string>) =>
     api.get("/employees/leave/requests", { params }),
   approveLeave: (id: string) => api.patch(`/employees/leave/${id}/approve`),
   rejectLeave: (id: string) => api.patch(`/employees/leave/${id}/reject`),
+
+  // Payroll
   createPayroll: (data: Record<string, unknown>) =>
     api.post("/employees/payroll", data),
   getPayroll: (month: number, year: number) =>
     api.get("/employees/payroll", { params: { month, year } }),
   markPayrollPaid: (id: string) => api.patch(`/employees/payroll/${id}/paid`),
+
+  // Documents
   addDocument: (
     employeeId: string,
     data: { name: string; type: string; fileUrl: string },
@@ -67,10 +81,28 @@ export const employeeApi = {
   getDocuments: (employeeId: string) =>
     api.get(`/employees/${employeeId}/documents`),
   deleteDocument: (id: string) => api.delete(`/employees/documents/${id}`),
+
+  // KPI
   upsertKPI: (data: Record<string, unknown>) =>
     api.post("/employees/kpi", data),
   getKPIs: (id: string, period?: string) =>
     api.get(`/employees/${id}/kpi`, { params: { period } }),
+
+  // Role Permissions
+  listRolePermissions: (role?: string) =>
+    api.get("/employees/role-permissions/list", { params: { role } }),
+  getPermissionsForRole: (role: string) =>
+    api.get(`/employees/role-permissions/${role}`),
+  upsertRolePermission: (data: Record<string, unknown>) =>
+    api.post("/employees/role-permissions", data),
+  bulkUpsertRolePermissions: (permissions: Record<string, unknown>[]) =>
+    api.post("/employees/role-permissions/bulk", { permissions }),
+  deleteRolePermission: (id: string) =>
+    api.delete(`/employees/role-permissions/${id}`),
+
+  // Activity Logs
+  getActivityLogs: (params?: Record<string, string>) =>
+    api.get("/employees/activity-logs", { params }),
 };
 
 // ─── Tasks ───
