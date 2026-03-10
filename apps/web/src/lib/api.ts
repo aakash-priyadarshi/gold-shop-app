@@ -584,7 +584,7 @@ export const sellerPerformanceApi = {
     api.post("/seller-performance/admin/reviews/send-reminders"),
   // Referrals (seller)
   getMyReferrals: () => api.get("/seller-performance/referrals"),
-  createReferral: (data: { refereeEmail: string; rewardType: string }) =>
+  createReferral: (data: { refereeEmail: string }) =>
     api.post("/seller-performance/referrals", data),
   // Admin: referrals
   getAdminReferrals: (status?: string) =>
@@ -596,8 +596,8 @@ export const sellerPerformanceApi = {
   getReferralSettings: () =>
     api.get("/seller-performance/admin/referral-settings"),
   updateReferralSettings: (data: {
-    proMonths?: number;
-    proPlusMonths?: number;
+    freeMonths?: number;
+    aiCreditsReward?: number;
     expirationDays?: number;
     maxReferralsPerShop?: number;
     isActive?: boolean;

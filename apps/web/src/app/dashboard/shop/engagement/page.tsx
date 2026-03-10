@@ -29,15 +29,19 @@ import {
   CheckCircle,
   ChevronDown,
   ChevronUp,
+  Copy,
   Crown,
+  ExternalLink,
   Eye,
   FileCheck,
+  Gift,
   Globe,
   Heart,
   HelpCircle,
   Info,
   Loader2,
   MessageSquare,
+  Send,
   Settings,
   Shield,
   Star,
@@ -45,13 +49,9 @@ import {
   TrendingUp,
   Trophy,
   Upload,
+  Users,
   XCircle,
   Zap,
-  ExternalLink,
-  Gift,
-  Copy,
-  Users,
-  Send,
 } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
@@ -133,8 +133,7 @@ interface ReferralEntry {
   id: string;
   refereeEmail: string;
   referralCode: string;
-  rewardType: "PRO_3_MONTHS" | "PRO_PLUS_1_5_MONTHS";
-  status: "PENDING" | "SIGNED_UP" | "COMPLETED" | "EXPIRED";
+  status: "PENDING" | "SIGNED_UP" | "PLAN_PURCHASED" | "COMPLETED" | "EXPIRED";
   invitedAt: string;
   signedUpAt: string | null;
   completedAt: string | null;
@@ -143,21 +142,27 @@ interface ReferralEntry {
 }
 
 interface ReferralSettings {
-  proMonths: number;
-  proPlusMonths: number;
+  freeMonths: number;
+  aiCreditsReward: number;
   maxReferrals: number;
   isActive: boolean;
 }
 
-const REWARD_LABELS: Record<string, string> = {
-  PRO_3_MONTHS: "3 months Pro",
-  PRO_PLUS_1_5_MONTHS: "1.5 months Pro+",
-};
-
-const PLATFORM_DISPLAY: Record<string, { name: string; url: string; logo: string }> = {
-  saashub: { name: "SaaSHub", url: "https://www.saashub.com/orivraa-alternatives", logo: "🔍" },
+const PLATFORM_DISPLAY: Record<
+  string,
+  { name: string; url: string; logo: string }
+> = {
+  saashub: {
+    name: "SaaSHub",
+    url: "https://www.saashub.com/orivraa-alternatives",
+    logo: "🔍",
+  },
   g2: { name: "G2", url: "https://www.g2.com/sellers/orivraa", logo: "⭐" },
-  crunchbase: { name: "Crunchbase", url: "https://www.crunchbase.com/organization/orivraa", logo: "📊" },
+  crunchbase: {
+    name: "Crunchbase",
+    url: "https://www.crunchbase.com/organization/orivraa",
+    logo: "📊",
+  },
 };
 
 interface TierDashboard {
@@ -669,13 +674,15 @@ export default function ShopEngagementPage() {
   const [showExplainer, setShowExplainer] = useState(false);
 
   // Platform reviews state
-  const [platformReviews, setPlatformReviews] = useState<PlatformReviewEntry[]>([]);
+  const [platformReviews, setPlatformReviews] = useState<PlatformReviewEntry[]>(
+    [],
+  );
 
   // Referral state
   const [referrals, setReferrals] = useState<ReferralEntry[]>([]);
-  const [referralSettings, setReferralSettings] = useState<ReferralSettings | null>(null);
+  const [referralSettings, setReferralSettings] =
+    useState<ReferralSettings | null>(null);
   const [referralEmail, setReferralEmail] = useState("");
-  const [referralReward, setReferralReward] = useState<string>("PRO_3_MONTHS");
   const [referralSending, setReferralSending] = useState(false);
   const [reviewSubmitting, setReviewSubmitting] = useState<string | null>(null);
   const {
@@ -833,7 +840,6 @@ export default function ShopEngagementPage() {
     try {
       await sellerPerformanceApi.createReferral({
         refereeEmail: referralEmail.trim(),
-        rewardType: referralReward,
       });
       toast({
         title: t("Referral sent!"),
@@ -845,7 +851,8 @@ export default function ShopEngagementPage() {
       toast({
         variant: "destructive",
         title: t("Failed to send referral"),
-        description: error?.response?.data?.message || t("Something went wrong."),
+        description:
+          error?.response?.data?.message || t("Something went wrong."),
       });
     } finally {
       setReferralSending(false);
@@ -1010,7 +1017,10 @@ export default function ShopEngagementPage() {
               <Award className="h-6 w-6" /> <T>Engagement & Growth</T>
             </h1>
             <p className="text-muted-foreground">
-              <T>Track your shop's performance, tiers, milestones, and verification</T>
+              <T>
+                Track your shop's performance, tiers, milestones, and
+                verification
+              </T>
             </p>
           </div>
 
@@ -1042,7 +1052,12 @@ export default function ShopEngagementPage() {
                         <Heart className="h-4 w-4" /> <T>Health Score</T>
                       </h4>
                       <p>
-                        <T>Your shop health score (0-100) measures profile completeness, performance metrics, verification status, capabilities setup, and engagement activity. A higher score means better visibility to customers.</T>
+                        <T>
+                          Your shop health score (0-100) measures profile
+                          completeness, performance metrics, verification
+                          status, capabilities setup, and engagement activity. A
+                          higher score means better visibility to customers.
+                        </T>
                       </p>
                     </div>
                     <div>
@@ -1050,7 +1065,11 @@ export default function ShopEngagementPage() {
                         <Trophy className="h-4 w-4" /> <T>Milestones</T>
                       </h4>
                       <p>
-                        <T>Achieve milestones by completing orders, earning revenue, getting positive reviews, and staying active. Milestones contribute to your overall shop reputation.</T>
+                        <T>
+                          Achieve milestones by completing orders, earning
+                          revenue, getting positive reviews, and staying active.
+                          Milestones contribute to your overall shop reputation.
+                        </T>
                       </p>
                     </div>
                   </div>
@@ -1059,7 +1078,11 @@ export default function ShopEngagementPage() {
                       <TrendingUp className="h-4 w-4" /> <T>Tier System</T>
                     </h4>
                     <p className="mb-2">
-                      <T>Your seller tier determines your making charge cap and marketplace visibility. Progress through tiers by meeting performance criteria:</T>
+                      <T>
+                        Your seller tier determines your making charge cap and
+                        marketplace visibility. Progress through tiers by
+                        meeting performance criteria:
+                      </T>
                     </p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                       {(["STANDARD", "SILVER", "GOLD", "ELITE"] as const).map(
@@ -1086,7 +1109,14 @@ export default function ShopEngagementPage() {
                   </div>
                   <div className="bg-blue-100/50 rounded p-2 text-xs dark:bg-blue-900/30">
                     <Info className="h-3 w-3 inline mr-1" />
-                    <strong><T>Tip:</T></strong>{" "}<T>Complete your KYC verification, maintain a low cancellation rate, and respond to RFQs quickly to climb tiers faster. Making charge settings can be adjusted in</T>{" "}
+                    <strong>
+                      <T>Tip:</T>
+                    </strong>{" "}
+                    <T>
+                      Complete your KYC verification, maintain a low
+                      cancellation rate, and respond to RFQs quickly to climb
+                      tiers faster. Making charge settings can be adjusted in
+                    </T>{" "}
                     <Link
                       href="/dashboard/shop/settings?tab=preferences"
                       className="underline font-medium"
@@ -1177,7 +1207,8 @@ export default function ShopEngagementPage() {
                         <Progress value={pct} className="h-1.5 mt-1" />
                         {item.missing && item.missing.length > 0 && (
                           <p className="text-[10px] text-orange-500 mt-1">
-                            <T>Missing:</T> {item.missing.slice(0, 2).join(", ")}
+                            <T>Missing:</T>{" "}
+                            {item.missing.slice(0, 2).join(", ")}
                             {item.missing.length > 2 ? "..." : ""}
                           </p>
                         )}
@@ -1194,10 +1225,14 @@ export default function ShopEngagementPage() {
             <Card className="border-2">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" /> <T>Seller Tier & Progression</T>
+                  <TrendingUp className="h-5 w-5" />{" "}
+                  <T>Seller Tier & Progression</T>
                 </CardTitle>
                 <CardDescription>
-                  <T>Your tier determines making charge caps and marketplace visibility</T>
+                  <T>
+                    Your tier determines making charge caps and marketplace
+                    visibility
+                  </T>
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -1226,7 +1261,9 @@ export default function ShopEngagementPage() {
                                 ? t("No cap on making charge!")
                                 : cap != null
                                   ? `${t("Making charge cap: up to")} ${cap}%`
-                                  : t("Complete milestones to unlock higher tiers")}
+                                  : t(
+                                      "Complete milestones to unlock higher tiers",
+                                    )}
                             </p>
                           </div>
                         </div>
@@ -1419,27 +1456,39 @@ export default function ShopEngagementPage() {
             <TabsList className="grid grid-cols-6">
               <TabsTrigger value="milestones" className="gap-1">
                 <Trophy className="h-4 w-4" />
-                <span className="hidden sm:inline"><T>Milestones</T></span>
+                <span className="hidden sm:inline">
+                  <T>Milestones</T>
+                </span>
               </TabsTrigger>
               <TabsTrigger value="rfq" className="gap-1">
                 <BarChart3 className="h-4 w-4" />
-                <span className="hidden sm:inline"><T>RFQ Funnel</T></span>
+                <span className="hidden sm:inline">
+                  <T>RFQ Funnel</T>
+                </span>
               </TabsTrigger>
               <TabsTrigger value="reviews" className="gap-1">
                 <Star className="h-4 w-4" />
-                <span className="hidden sm:inline"><T>Reviews</T></span>
+                <span className="hidden sm:inline">
+                  <T>Reviews</T>
+                </span>
               </TabsTrigger>
               <TabsTrigger value="referrals" className="gap-1">
                 <Gift className="h-4 w-4" />
-                <span className="hidden sm:inline"><T>Referrals</T></span>
+                <span className="hidden sm:inline">
+                  <T>Referrals</T>
+                </span>
               </TabsTrigger>
               <TabsTrigger value="kyc" className="gap-1">
                 <FileCheck className="h-4 w-4" />
-                <span className="hidden sm:inline"><T>KYC</T></span>
+                <span className="hidden sm:inline">
+                  <T>KYC</T>
+                </span>
               </TabsTrigger>
               <TabsTrigger value="onboarding" className="gap-1">
                 <CheckCircle className="h-4 w-4" />
-                <span className="hidden sm:inline"><T>Onboarding</T></span>
+                <span className="hidden sm:inline">
+                  <T>Onboarding</T>
+                </span>
               </TabsTrigger>
             </TabsList>
 
@@ -1448,7 +1497,8 @@ export default function ShopEngagementPage() {
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
                   <Trophy className="h-4 w-4 inline mr-1" />
-                  {achievedCount} <T>of</T> {totalMilestones} <T>milestones achieved</T>
+                  {achievedCount} <T>of</T> {totalMilestones}{" "}
+                  <T>milestones achieved</T>
                 </p>
                 <Progress
                   value={
@@ -1675,9 +1725,14 @@ export default function ShopEngagementPage() {
                 <Card>
                   <CardContent className="p-8 text-center">
                     <Target className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-50" />
-                    <p className="text-lg font-medium"><T>No RFQ Data Yet</T></p>
+                    <p className="text-lg font-medium">
+                      <T>No RFQ Data Yet</T>
+                    </p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      <T>When customers send you RFQ requests, your conversion funnel data will appear here.</T>
+                      <T>
+                        When customers send you RFQ requests, your conversion
+                        funnel data will appear here.
+                      </T>
                     </p>
                   </CardContent>
                 </Card>
@@ -1698,13 +1753,33 @@ export default function ShopEngagementPage() {
                         <T>Review & Earn — Get 1 Month Pro Free!</T>
                       </h3>
                       <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">
-                        <T>Leave a review about Orivraa on any of the platforms below and earn 1 month of Pro for each approved review.</T>
+                        <T>
+                          Leave a review about Orivraa on any of the platforms
+                          below and earn 1 month of Pro for each approved
+                          review.
+                        </T>
                       </p>
                       <div className="text-xs text-amber-600 dark:text-amber-400 space-y-1">
-                        <p>1. <T>Visit the platform and write an honest review about your experience.</T></p>
-                        <p>2. <T>Take a screenshot of your published review.</T></p>
-                        <p>3. <T>Upload the screenshot below as proof.</T></p>
-                        <p>4. <T>Our team will verify and award your Pro month within 48 hours.</T></p>
+                        <p>
+                          1.{" "}
+                          <T>
+                            Visit the platform and write an honest review about
+                            your experience.
+                          </T>
+                        </p>
+                        <p>
+                          2. <T>Take a screenshot of your published review.</T>
+                        </p>
+                        <p>
+                          3. <T>Upload the screenshot below as proof.</T>
+                        </p>
+                        <p>
+                          4.{" "}
+                          <T>
+                            Our team will verify and award your Pro month within
+                            48 hours.
+                          </T>
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -1790,7 +1865,9 @@ export default function ShopEngagementPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleReviewSubmit(entry.platform, info.url)}
+                                  onClick={() =>
+                                    handleReviewSubmit(entry.platform, info.url)
+                                  }
                                   disabled={reviewSubmitting === entry.platform}
                                 >
                                   {reviewSubmitting === entry.platform ? (
@@ -1806,7 +1883,9 @@ export default function ShopEngagementPage() {
                               <div className="space-y-2">
                                 <p className="text-sm text-muted-foreground">
                                   <T>Submitted</T>{" "}
-                                  {new Date(review.submittedAt).toLocaleDateString()}
+                                  {new Date(
+                                    review.submittedAt,
+                                  ).toLocaleDateString()}
                                 </p>
                                 {review.proofScreenshot && (
                                   <a
@@ -1824,7 +1903,9 @@ export default function ShopEngagementPage() {
                               <Button
                                 size="sm"
                                 className="w-full"
-                                onClick={() => handleReviewSubmit(entry.platform, info.url)}
+                                onClick={() =>
+                                  handleReviewSubmit(entry.platform, info.url)
+                                }
                                 disabled={reviewSubmitting === entry.platform}
                               >
                                 {reviewSubmitting === entry.platform ? (
@@ -1885,14 +1966,21 @@ export default function ShopEngagementPage() {
                     <span className="text-muted-foreground">
                       <T>Approved reviews</T>:{" "}
                       <span className="font-bold text-green-600">
-                        {platformReviews.filter((r) => r.review?.status === "APPROVED").length}
+                        {
+                          platformReviews.filter(
+                            (r) => r.review?.status === "APPROVED",
+                          ).length
+                        }
                       </span>{" "}
                       / {Object.keys(PLATFORM_DISPLAY).length}
                     </span>
                     <span className="text-muted-foreground">
                       <T>Pro months earned</T>:{" "}
                       <span className="font-bold text-amber-600">
-                        {platformReviews.filter((r) => r.review?.rewardGranted).length}
+                        {
+                          platformReviews.filter((r) => r.review?.rewardGranted)
+                            .length
+                        }
                       </span>
                     </span>
                   </div>
@@ -1911,15 +1999,23 @@ export default function ShopEngagementPage() {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-lg font-bold text-purple-800 dark:text-purple-200 mb-1">
-                        <T>Refer a Seller — You Both Earn Free Plan Time!</T>
+                        <T>Refer a Seller — Both Earn Rewards!</T>
                       </h3>
                       <p className="text-sm text-purple-700 dark:text-purple-300 mb-2">
-                        <T>Invite another jeweller to Orivraa. When they sign up and get verified, both of you earn free plan time!</T>
+                        <T>
+                          Invite another jeweller to Orivraa. When they sign up,
+                          verify, and buy any plan — you both get 1 extra month
+                          free + 50 AI credits!
+                        </T>
                       </p>
                       {referralSettings && (
-                        <div className="text-xs text-purple-600 dark:text-purple-400 space-y-1">
-                          <p><strong><T>Option A:</T></strong> {referralSettings.proMonths} <T>months of Pro — both get it free.</T></p>
-                          <p><strong><T>Option B:</T></strong> {referralSettings.proPlusMonths} <T>months of Pro+ — both get it free.</T></p>
+                        <div className="text-xs text-purple-600 dark:text-purple-400">
+                          <p>
+                            🎁 {referralSettings.freeMonths}{" "}
+                            <T>extra month(s) on your current plan</T> +{" "}
+                            {referralSettings.aiCreditsReward}{" "}
+                            <T>AI credits each</T>
+                          </p>
                         </div>
                       )}
                     </div>
@@ -1939,7 +2035,12 @@ export default function ShopEngagementPage() {
                   <CardContent>
                     <div className="flex flex-col sm:flex-row gap-3">
                       <div className="flex-1">
-                        <Label htmlFor="refEmail" className="text-xs mb-1 block"><T>Seller's Email</T></Label>
+                        <Label
+                          htmlFor="refEmail"
+                          className="text-xs mb-1 block"
+                        >
+                          <T>Seller's Email</T>
+                        </Label>
                         <Input
                           id="refEmail"
                           type="email"
@@ -1947,17 +2048,6 @@ export default function ShopEngagementPage() {
                           value={referralEmail}
                           onChange={(e) => setReferralEmail(e.target.value)}
                         />
-                      </div>
-                      <div className="w-48">
-                        <Label className="text-xs mb-1 block"><T>Reward Choice</T></Label>
-                        <select
-                          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                          value={referralReward}
-                          onChange={(e) => setReferralReward(e.target.value)}
-                        >
-                          <option value="PRO_3_MONTHS">{referralSettings.proMonths} months Pro</option>
-                          <option value="PRO_PLUS_1_5_MONTHS">{referralSettings.proPlusMonths} months Pro+</option>
-                        </select>
                       </div>
                       <div className="flex items-end">
                         <Button
@@ -1983,7 +2073,12 @@ export default function ShopEngagementPage() {
                   <CardTitle className="text-base flex items-center gap-2">
                     <Users className="h-4 w-4" />
                     <T>My Referrals</T>
-                    <Badge variant="secondary" className="ml-auto">{referrals.length}{referralSettings ? ` / ${referralSettings.maxReferrals}` : ""}</Badge>
+                    <Badge variant="secondary" className="ml-auto">
+                      {referrals.length}
+                      {referralSettings
+                        ? ` / ${referralSettings.maxReferrals}`
+                        : ""}
+                    </Badge>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1994,21 +2089,43 @@ export default function ShopEngagementPage() {
                   ) : (
                     <div className="space-y-3">
                       {referrals.map((ref) => (
-                        <div key={ref.id} className="flex items-center justify-between p-3 rounded-lg border">
+                        <div
+                          key={ref.id}
+                          className="flex items-center justify-between p-3 rounded-lg border"
+                        >
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{ref.refereeEmail}</p>
+                            <p className="text-sm font-medium truncate">
+                              {ref.refereeEmail}
+                            </p>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge
-                                variant={ref.status === "COMPLETED" ? "default" : ref.status === "EXPIRED" ? "destructive" : "secondary"}
-                                className={ref.status === "COMPLETED" ? "bg-green-600" : ""}
+                                variant={
+                                  ref.status === "COMPLETED"
+                                    ? "default"
+                                    : ref.status === "EXPIRED"
+                                      ? "destructive"
+                                      : "secondary"
+                                }
+                                className={
+                                  ref.status === "COMPLETED"
+                                    ? "bg-green-600"
+                                    : ""
+                                }
                               >
-                                {ref.status === "PENDING" ? "Invited" : ref.status === "SIGNED_UP" ? "Signed Up" : ref.status === "COMPLETED" ? "Rewarded" : "Expired"}
+                                {ref.status === "PENDING"
+                                  ? "Invited"
+                                  : ref.status === "SIGNED_UP"
+                                    ? "Signed Up"
+                                    : ref.status === "PLAN_PURCHASED"
+                                      ? "Plan Purchased"
+                                      : ref.status === "COMPLETED"
+                                        ? "Rewarded"
+                                        : "Expired"}
                               </Badge>
-                              <span className="text-xs text-muted-foreground">
-                                {REWARD_LABELS[ref.rewardType] || ref.rewardType}
-                              </span>
                               {ref.refereeShop && (
-                                <span className="text-xs text-muted-foreground">— {ref.refereeShop.shopName}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  — {ref.refereeShop.shopName}
+                                </span>
                               )}
                             </div>
                           </div>
@@ -2037,15 +2154,24 @@ export default function ShopEngagementPage() {
               <Card className="bg-muted/30">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground"><T>Completed referrals:</T></span>
+                    <span className="text-muted-foreground">
+                      <T>Completed referrals:</T>
+                    </span>
                     <span className="font-bold text-green-600">
                       {referrals.filter((r) => r.status === "COMPLETED").length}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm mt-1">
-                    <span className="text-muted-foreground"><T>Pending sign-ups:</T></span>
+                    <span className="text-muted-foreground">
+                      <T>Pending sign-ups:</T>
+                    </span>
                     <span className="font-medium">
-                      {referrals.filter((r) => r.status === "PENDING" || r.status === "SIGNED_UP").length}
+                      {
+                        referrals.filter(
+                          (r) =>
+                            r.status === "PENDING" || r.status === "SIGNED_UP",
+                        ).length
+                      }
                     </span>
                   </div>
                 </CardContent>
@@ -2061,7 +2187,8 @@ export default function ShopEngagementPage() {
                   <p className="font-medium text-blue-800 dark:text-blue-200">
                     <T>Your shop country is set to</T>{" "}
                     <strong>{COUNTRY_NAMES[shopCountry] || shopCountry}</strong>{" "}
-                    — <T>showing</T> {COUNTRY_NAMES[shopCountry] || shopCountry} <T>KYC requirements.</T>
+                    — <T>showing</T> {COUNTRY_NAMES[shopCountry] || shopCountry}{" "}
+                    <T>KYC requirements.</T>
                   </p>
                   <p className="text-sm text-blue-700 mt-0.5 dark:text-blue-300">
                     <T>To change your country preference, go to</T>{" "}
@@ -2183,7 +2310,10 @@ export default function ShopEngagementPage() {
                   {/* Save Button */}
                   <div className="flex items-center justify-between pt-4 border-t">
                     <p className="text-xs text-muted-foreground">
-                      <T>Documents are stored securely and reviewed by our verification team.</T>
+                      <T>
+                        Documents are stored securely and reviewed by our
+                        verification team.
+                      </T>
                     </p>
                     <Button
                       onClick={saveKyc}
@@ -2209,9 +2339,16 @@ export default function ShopEngagementPage() {
                     <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 dark:bg-amber-950/30 dark:border-amber-800/50">
                       <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
                       <div className="text-xs text-amber-700 dark:text-amber-300">
-                        <p className="font-medium"><T>Verification Pending</T></p>
+                        <p className="font-medium">
+                          <T>Verification Pending</T>
+                        </p>
                         <p>
-                          <T>Once you submit all required documents, our team will review and verify your shop. Verified shops get priority in seller matching and a verified badge on their profile.</T>
+                          <T>
+                            Once you submit all required documents, our team
+                            will review and verify your shop. Verified shops get
+                            priority in seller matching and a verified badge on
+                            their profile.
+                          </T>
                         </p>
                       </div>
                     </div>
@@ -2228,7 +2365,9 @@ export default function ShopEngagementPage() {
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between mb-4">
                         <div>
-                          <h2 className="text-lg font-bold"><T>Setup Progress</T></h2>
+                          <h2 className="text-lg font-bold">
+                            <T>Setup Progress</T>
+                          </h2>
                           <p className="text-sm text-muted-foreground">
                             {onboarding.completedCount} <T>of</T>{" "}
                             {onboarding.totalCount} <T>steps completed</T>

@@ -3,33 +3,21 @@
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { T } from "@/components/ui/T";
 import { toast } from "@/hooks/use-toast";
 import { sellerPerformanceApi } from "@/lib/api";
 import { useT } from "@/providers/translation-provider";
-import {
-  Copy,
-  Gift,
-  Loader2,
-  Send,
-  Users,
-} from "lucide-react";
+import { Copy, Gift, Loader2, Send, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface ReferralEntry {
   id: string;
   refereeEmail: string;
   referralCode: string;
-  rewardType: "PRO_3_MONTHS" | "PRO_PLUS_1_5_MONTHS";
-  status: "PENDING" | "SIGNED_UP" | "COMPLETED" | "EXPIRED";
+  status: "PENDING" | "SIGNED_UP" | "PLAN_PURCHASED" | "COMPLETED" | "EXPIRED";
   invitedAt: string;
   signedUpAt: string | null;
   completedAt: string | null;
@@ -38,16 +26,11 @@ interface ReferralEntry {
 }
 
 interface ReferralSettings {
-  proMonths: number;
-  proPlusMonths: number;
+  freeMonths: number;
+  aiCreditsReward: number;
   maxReferrals: number;
   isActive: boolean;
 }
-
-const REWARD_LABELS: Record<string, string> = {
-  PRO_3_MONTHS: "3 months Pro",
-  PRO_PLUS_1_5_MONTHS: "1.5 months Pro+",
-};
 
 export default function SellerReferralsPage() {
   const t = useT();
@@ -55,7 +38,6 @@ export default function SellerReferralsPage() {
   const [referralSettings, setReferralSettings] =
     useState<ReferralSettings | null>(null);
   const [referralEmail, setReferralEmail] = useState("");
-  const [referralReward, setReferralReward] = useState<string>("PRO_3_MONTHS");
   const [referralSending, setReferralSending] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -84,7 +66,6 @@ export default function SellerReferralsPage() {
     try {
       await sellerPerformanceApi.createReferral({
         refereeEmail: referralEmail.trim(),
-        rewardType: referralReward,
       });
       toast({
         title: t("Referral sent!"),
@@ -127,8 +108,8 @@ export default function SellerReferralsPage() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             <T>
-              Invite sellers to Orivraa. Both of you earn free plan time when
-              they sign up and get verified!
+              Invite sellers to Orivraa. When they sign up, verify, and buy any
+              plan — you both get 1 extra month free + 50 AI credits!
             </T>
           </p>
         </div>
@@ -146,7 +127,7 @@ export default function SellerReferralsPage() {
                   <T>Send an invitation</T>
                 </p>
                 <p className="text-xs">
-                  <T>Enter the seller's email and pick your reward tier</T>
+                  <T>Enter the seller's email below</T>
                 </p>
               </div>
               <div className="flex flex-col items-center text-center gap-2 p-4 rounded-lg bg-purple-100/50 dark:bg-purple-900/20">
@@ -155,7 +136,7 @@ export default function SellerReferralsPage() {
                   <T>They sign up & verify</T>
                 </p>
                 <p className="text-xs">
-                  <T>When your referral creates a shop and gets KYC verified</T>
+                  <T>When your referral creates a shop, verifies, and buys any plan</T>
                 </p>
               </div>
               <div className="flex flex-col items-center text-center gap-2 p-4 rounded-lg bg-purple-100/50 dark:bg-purple-900/20">
@@ -164,37 +145,18 @@ export default function SellerReferralsPage() {
                   <T>Both earn rewards!</T>
                 </p>
                 <p className="text-xs">
-                  <T>Admin confirms and both of you get free plan time</T>
+                  <T>Both get 1 extra month on your plan + 50 AI credits!</T>
                 </p>
               </div>
             </div>
 
             {referralSettings && (
-              <div className="mt-4 p-3 rounded-lg bg-white/60 dark:bg-gray-900/40 grid sm:grid-cols-2 gap-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant="outline"
-                    className="border-purple-300 text-purple-700 dark:text-purple-300"
-                  >
-                    Option A
-                  </Badge>
-                  <span>
-                    {referralSettings.proMonths}{" "}
-                    <T>months Pro — both get it free</T>
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant="outline"
-                    className="border-purple-300 text-purple-700 dark:text-purple-300"
-                  >
-                    Option B
-                  </Badge>
-                  <span>
-                    {referralSettings.proPlusMonths}{" "}
-                    <T>months Pro+ — both get it free</T>
-                  </span>
-                </div>
+              <div className="mt-4 p-3 rounded-lg bg-white/60 dark:bg-gray-900/40 text-sm text-center">
+                <span className="font-medium text-purple-700 dark:text-purple-300">
+                  🎁 <T>Reward:</T> {referralSettings.freeMonths}{" "}
+                  <T>extra month(s) on your current plan</T> +{" "}
+                  {referralSettings.aiCreditsReward} <T>AI credits each</T>
+                </span>
               </div>
             )}
           </CardContent>
@@ -224,23 +186,6 @@ export default function SellerReferralsPage() {
                     onKeyDown={(e) => e.key === "Enter" && handleSendReferral()}
                   />
                 </div>
-                <div className="w-48">
-                  <Label className="text-xs mb-1 block">
-                    <T>Reward Choice</T>
-                  </Label>
-                  <select
-                    className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                    value={referralReward}
-                    onChange={(e) => setReferralReward(e.target.value)}
-                  >
-                    <option value="PRO_3_MONTHS">
-                      {referralSettings.proMonths} months Pro
-                    </option>
-                    <option value="PRO_PLUS_1_5_MONTHS">
-                      {referralSettings.proPlusMonths} months Pro+
-                    </option>
-                  </select>
-                </div>
                 <div className="flex items-end">
                   <Button
                     onClick={handleSendReferral}
@@ -268,9 +213,7 @@ export default function SellerReferralsPage() {
               <T>My Referrals</T>
               <Badge variant="secondary" className="ml-auto">
                 {referrals.length}
-                {referralSettings
-                  ? ` / ${referralSettings.maxReferrals}`
-                  : ""}
+                {referralSettings ? ` / ${referralSettings.maxReferrals}` : ""}
               </Badge>
             </CardTitle>
           </CardHeader>
@@ -314,13 +257,12 @@ export default function SellerReferralsPage() {
                             ? "Invited"
                             : ref.status === "SIGNED_UP"
                               ? "Signed Up"
-                              : ref.status === "COMPLETED"
-                                ? "Rewarded ✓"
-                                : "Expired"}
+                              : ref.status === "PLAN_PURCHASED"
+                                ? "Plan Purchased"
+                                : ref.status === "COMPLETED"
+                                  ? "Rewarded ✓"
+                                  : "Expired"}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {REWARD_LABELS[ref.rewardType] || ref.rewardType}
-                        </span>
                         {ref.refereeShop && (
                           <span className="text-xs text-muted-foreground">
                             — {ref.refereeShop.shopName}

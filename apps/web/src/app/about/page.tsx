@@ -314,7 +314,10 @@ export default function AboutPage() {
             </motion.h2>
             <div className="h-1 w-20 bg-amber-500 mx-auto mb-6" />
             <p className="text-lg text-gray-600 dark:text-gray-300">
-              <T>Orivraa is listed on leading platforms. Visit our profiles to learn more and leave a review.</T>
+              <T>
+                Orivraa is listed on leading platforms. Visit our profiles to
+                learn more and leave a review.
+              </T>
             </p>
           </div>
           {/* Live profiles */}
@@ -337,7 +340,9 @@ export default function AboutPage() {
                     <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">
                       {platform.name}
                     </h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{platform.category}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {platform.category}
+                    </p>
                     <span className="text-xs text-amber-600 group-hover:underline mt-2 inline-block">
                       <T>Visit Profile</T> →
                     </span>
@@ -416,7 +421,9 @@ export default function AboutPage() {
                         <StarIcon
                           key={i}
                           className={`h-4 w-4 ${
-                            i < testimonial.rating ? "text-amber-500 fill-amber-500" : "text-gray-300"
+                            i < testimonial.rating
+                              ? "text-amber-500 fill-amber-500"
+                              : "text-gray-300"
                           }`}
                         />
                       ))}
@@ -428,8 +435,12 @@ export default function AboutPage() {
                       <p className="font-semibold text-gray-900 dark:text-white text-sm">
                         {testimonial.name}
                       </p>
-                      <p className="text-xs text-gray-500">{testimonial.role}</p>
-                      <p className="text-xs text-gray-400">{testimonial.location}</p>
+                      <p className="text-xs text-gray-500">
+                        {testimonial.role}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {testimonial.location}
+                      </p>
                     </div>
                   </CardContent>
                 </Card>

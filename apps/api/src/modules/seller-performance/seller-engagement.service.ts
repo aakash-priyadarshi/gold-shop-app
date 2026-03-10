@@ -5,10 +5,13 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
-import { PlatformReviewStatus, ReferralReward, ReferralStatus } from "@prisma/client";
+import {
+  PlatformReviewStatus,
+  ReferralStatus,
+} from "@prisma/client";
 import { randomBytes } from "crypto";
-import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../../prisma/prisma.service";
+import { NotificationsService } from "../notifications/notifications.service";
 
 /* ─────────────────────── TYPES ─────────────────────── */
 
@@ -392,7 +395,8 @@ export class SellerEngagementService {
       // First engagement
       {
         key: "platformReview",
-        label: "Leave a review on SaaSHub, G2, or Crunchbase (earn 1 month Pro free!)",
+        label:
+          "Leave a review on SaaSHub, G2, or Crunchbase (earn 1 month Pro free!)",
         completed: approvedReviewCount > 0,
         category: "Engagement",
       },
@@ -1058,9 +1062,7 @@ export class SellerEngagementService {
     reviewUrl?: string,
   ) {
     const normalised = platform.toLowerCase().trim();
-    if (
-      !SellerEngagementService.REVIEW_PLATFORMS.includes(normalised as any)
-    ) {
+    if (!SellerEngagementService.REVIEW_PLATFORMS.includes(normalised as any)) {
       throw new BadRequestException(
         `Invalid platform. Must be one of: ${SellerEngagementService.REVIEW_PLATFORMS.join(", ")}`,
       );
@@ -1183,9 +1185,7 @@ export class SellerEngagementService {
     await this.notifications.create({
       userId: review.shop.userId,
       type: isApproval ? "REVIEW_APPROVED" : "REVIEW_REJECTED",
-      titleKey: isApproval
-        ? "Review approved! 🎉"
-        : "Review submission update",
+      titleKey: isApproval ? "Review approved! 🎉" : "Review submission update",
       bodyKey: isApproval
         ? `Your ${review.platform} review has been verified. 1 month of Pro has been added to your account!`
         : `Your ${review.platform} review submission was not approved.${adminNotes ? ` Reason: ${adminNotes}` : ""}`,
@@ -1199,7 +1199,13 @@ export class SellerEngagementService {
 
   /** Grant 1 month of Pro by extending or creating a subscription. */
   private async grantOneMonthPro(shopId: string, country: string) {
-    return this.grantPlanReward(shopId, country, "PRO", 1, "Review & Earn reward");
+    return this.grantPlanReward(
+      shopId,
+      country,
+      "PRO",
+      1,
+      "Review & Earn reward",
+    );
   }
 
   /**
@@ -1362,7 +1368,6 @@ export class SellerEngagementService {
   async createReferral(
     shopId: string,
     refereeEmail: string,
-    rewardType: ReferralReward,
   ) {
     const settings = await this.getReferralSettings();
     if (!settings.isActive) {
@@ -1402,7 +1407,6 @@ export class SellerEngagementService {
       data: {
         referrerShopId: shopId,
         refereeEmail: refereeEmail.toLowerCase(),
-        rewardType,
         referralCode: this.generateReferralCode(),
       },
     });
@@ -1413,7 +1417,7 @@ export class SellerEngagementService {
         userId: shop.userId,
         type: "REFERRAL_INVITE_SENT",
         titleKey: "Referral invitation sent! 🎉",
-        bodyKey: `You invited ${refereeEmail}. When they sign up and get verified, you'll both earn free plan time!`,
+        bodyKey: `You invited ${refereeEmail}. When they sign up, verify, and buy any plan, you'll both earn 1 extra month + 50 AI credits!`,
         referenceType: "Referral",
         referenceId: referral.id,
         channels: ["IN_APP"],
@@ -1438,8 +1442,8 @@ export class SellerEngagementService {
     return {
       referrals,
       settings: {
-        proMonths: settings.proMonths,
-        proPlusMonths: settings.proPlusMonths,
+        freeMonths: settings.freeMonths,
+        aiCreditsReward: settings.aiCreditsReward,
         maxReferrals: settings.maxReferralsPerShop,
         isActive: settings.isActive,
       },
@@ -1489,7 +1493,7 @@ export class SellerEngagementService {
         userId: referrerShop.userId,
         type: "REFERRAL_SIGNUP",
         titleKey: "Your referral signed up! 🎯",
-        bodyKey: `${refereeEmail} has joined Orivraa! Rewards will be granted once their shop is verified.`,
+        bodyKey: `${refereeEmail} has joined Orivraa! Rewards will be granted once they buy a plan.`,
         referenceType: "Referral",
         referenceId: referral.id,
         channels: ["IN_APP"],
@@ -1499,7 +1503,7 @@ export class SellerEngagementService {
     return updated;
   }
 
-  /** Admin: complete a referral and grant rewards to both parties. */
+  /** Complete a referral and grant rewards (1 extra month + AI credits) to both parties. */
   async completeReferral(referralId: string) {
     const referral = await this.prisma.referral.findUnique({
       where: { id: referralId },
@@ -1518,32 +1522,44 @@ export class SellerEngagementService {
     }
 
     const settings = await this.getReferralSettings();
-    const planName =
-      referral.rewardType === "PRO_3_MONTHS" ? "PRO" : "PRO_PLUS";
-    const months =
-      referral.rewardType === "PRO_3_MONTHS"
-        ? settings.proMonths
-        : settings.proPlusMonths;
-
+    const freeMonths = settings.freeMonths;
+    const aiCredits = settings.aiCreditsReward;
     const now = new Date();
 
-    // Grant reward to referrer
-    await this.grantPlanReward(
-      referral.referrerShop.id,
-      referral.referrerShop.country,
-      planName,
-      months,
-      "Referral reward (referrer)",
-    );
+    // Extend current plan for both parties (whatever plan they are on)
+    for (const shop of [referral.referrerShop, referral.refereeShop]) {
+      if (!shop) continue;
 
-    // Grant reward to referee
-    await this.grantPlanReward(
-      referral.refereeShop.id,
-      referral.refereeShop.country,
-      planName,
-      months,
-      "Referral reward (referee)",
-    );
+      // Find their active subscription to extend
+      const activeSub = await this.prisma.sellerSubscription.findFirst({
+        where: {
+          shopId: shop.id,
+          status: { in: ["ACTIVE", "TRIALING"] },
+        },
+        include: { plan: true },
+      });
+
+      if (activeSub) {
+        // Extend the existing plan
+        const newEnd = new Date(activeSub.currentPeriodEnd);
+        const fullMonths = Math.floor(freeMonths);
+        const extraDays = Math.round((freeMonths - fullMonths) * 30);
+        newEnd.setMonth(newEnd.getMonth() + fullMonths);
+        newEnd.setDate(newEnd.getDate() + extraDays);
+
+        await this.prisma.sellerSubscription.update({
+          where: { id: activeSub.id },
+          data: { currentPeriodEnd: newEnd },
+        });
+
+        this.logger.log(
+          `Extended ${activeSub.plan.name} subscription for shop=${shop.id} until ${newEnd.toISOString()} (Referral reward)`,
+        );
+      }
+
+      // Grant AI credits
+      await this.grantAiCredits(shop.userId, shop.id, aiCredits, `Referral reward (referral ${referralId})`);
+    }
 
     const updated = await this.prisma.referral.update({
       where: { id: referralId },
@@ -1564,7 +1580,7 @@ export class SellerEngagementService {
           userId: party.userId,
           type: "REFERRAL_REWARD_GRANTED",
           titleKey: "Referral reward granted! 🎁",
-          bodyKey: `You've earned ${months} month(s) of ${planName} for free via the referral programme!`,
+          bodyKey: `You've earned ${freeMonths} extra month(s) on your plan + ${aiCredits} AI credits via the referral programme!`,
           referenceType: "Referral",
           referenceId: referralId,
           channels: ["IN_APP"],
@@ -1573,20 +1589,84 @@ export class SellerEngagementService {
     }
 
     this.logger.log(
-      `Completed referral ${referralId}: granted ${months} months of ${planName} to both parties`,
+      `Completed referral ${referralId}: granted ${freeMonths} month(s) extension + ${aiCredits} AI credits to both parties`,
     );
 
     return updated;
   }
 
+  /** Grant AI credits to a user and record in the ledger. */
+  private async grantAiCredits(userId: string, shopId: string, amount: number, reason: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { aiCreditsBalance: true },
+    });
+    if (!user) return;
+
+    const balanceBefore = user.aiCreditsBalance;
+    const balanceAfter = balanceBefore + amount;
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { aiCreditsBalance: balanceAfter },
+      }),
+      this.prisma.aiCreditLedger.create({
+        data: {
+          userId,
+          shopId,
+          action: "GRANT",
+          amount,
+          balanceBefore,
+          balanceAfter,
+          reason,
+        },
+      }),
+    ]);
+
+    this.logger.log(`Granted ${amount} AI credits to user=${userId} (${reason})`);
+  }
+
+  /** Called when a referred seller purchases a plan — auto-complete the referral. */
+  async processReferralPlanPurchase(refereeShopId: string) {
+    const referral = await this.prisma.referral.findFirst({
+      where: {
+        refereeShopId,
+        status: { in: ["SIGNED_UP", "PLAN_PURCHASED"] },
+      },
+    });
+
+    if (!referral) return null;
+
+    // Mark as PLAN_PURCHASED then auto-complete
+    if (referral.status === "SIGNED_UP") {
+      await this.prisma.referral.update({
+        where: { id: referral.id },
+        data: {
+          status: "PLAN_PURCHASED",
+          planPurchasedAt: new Date(),
+        },
+      });
+    }
+
+    // Auto-complete and grant rewards
+    return this.completeReferral(referral.id);
+  }
+
   /** Admin: list all referrals with optional status filter. */
   async listReferrals(status?: string) {
     return this.prisma.referral.findMany({
-      where: status && status !== "ALL" ? { status: status as ReferralStatus } : undefined,
+      where:
+        status && status !== "ALL"
+          ? { status: status as ReferralStatus }
+          : undefined,
       orderBy: { invitedAt: "desc" },
       include: {
         referrerShop: {
-          select: { shopName: true, user: { select: { firstName: true, lastName: true, email: true } } },
+          select: {
+            shopName: true,
+            user: { select: { firstName: true, lastName: true, email: true } },
+          },
         },
         refereeShop: {
           select: { shopName: true, isVerified: true },
@@ -1601,8 +1681,8 @@ export class SellerEngagementService {
   }
 
   async updateReferralSettings(data: {
-    proMonths?: number;
-    proPlusMonths?: number;
+    freeMonths?: number;
+    aiCreditsReward?: number;
     expirationDays?: number;
     maxReferralsPerShop?: number;
     isActive?: boolean;
