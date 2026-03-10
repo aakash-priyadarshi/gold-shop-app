@@ -29,6 +29,15 @@ api.interceptors.response.use(
   }
 );
 
+// ─── Auth ───
+export const authApi = {
+  login: (data: { email: string; password: string }) =>
+    api.post("/auth/login", data),
+  setupPassword: (data: { email: string; setupToken: string; password: string }) =>
+    api.post("/auth/setup-password", data),
+  me: () => api.get("/auth/me"),
+};
+
 // ─── Employee ───
 export const employeeApi = {
   listDepartments: () => api.get("/employees/departments"),

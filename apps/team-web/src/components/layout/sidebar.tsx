@@ -36,7 +36,7 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { employee, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -111,9 +111,10 @@ export function Sidebar() {
 
         {/* Footer */}
         <div className="border-t p-2 space-y-1">
-          {!collapsed && user && (
+          {!collapsed && employee && (
             <div className="px-3 py-2 text-xs text-muted-foreground truncate">
-              {user.firstName} {user.lastName}
+              {employee.firstName} {employee.lastName}
+              <span className="block text-[10px] opacity-60">{employee.role}</span>
             </div>
           )}
           <button
