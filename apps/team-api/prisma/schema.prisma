@@ -335,6 +335,7 @@ model AIAgent {
 
   scripts         AIScript[]
   callSessions    CallSession[]
+  campaigns       Campaign[]
 
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
@@ -365,16 +366,44 @@ model Lead {
   email           String?
   phone           String?
   company         String?
+  role            String?              // job title/role at company
   source          LeadSource @default(MANUAL)
   stage           LeadStage  @default(NEW)
   score           Int        @default(0) // 0-100 heat score
+  temperature     String?    @default("cold") // cold, warm, hot, converted, lost
   notes           String?    @db.Text
   tags            String[]
+
+  // Contact intelligence
+  timezone        String?              // e.g. "Asia/Kolkata"
+  languagePrimary String?    @default("en")
+  countryCode     String?              // +91, +1, etc.
+  bestCallHour    Int?                 // 0-23 in their local time
+  bestCallDay     String?              // monday-sunday
+  doNotCall       Boolean    @default(false)
+
+  // Behavioral data (from website tracking)
+  pagesVisited    Json?      @default("[]")
+  emailsOpened    Int        @default(0)
+  demoWatched     Boolean    @default(false)
+  pricingViews    Int        @default(0)
+
+  // Zero-party data captured during calls
+  zeroPartyData   Json?      @default("{}")
+  // e.g. {"gift_for":"wife", "event":"birthday", "budget":"50k"}
+
+  // Competitor intel
+  competitorsMentioned String[]
+
+  // Predicted concern from AI analysis
+  predictedConcern String?
 
   assignedToId    String?    // employee handling this lead
   lastContactedAt DateTime?
 
   callSessions    CallSession[]
+  campaignLeads   CampaignLead[]
+  callSchedules   CallSchedule[]
 
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
@@ -383,6 +412,8 @@ model Lead {
   @@index([stage])
   @@index([assignedToId])
   @@index([score])
+  @@index([temperature])
+  @@index([doNotCall])
 }
 
 enum LeadSource {
@@ -416,17 +447,47 @@ model CallSession {
   lead            Lead?         @relation(fields: [leadId], references: [id])
   employeeId      String?       // if human-assisted
   employee        Employee?     @relation(fields: [employeeId], references: [id])
+  campaignId      String?
+  campaign        Campaign?     @relation(fields: [campaignId], references: [id])
 
+  // Telephony
+  twilioCallSid   String?       @unique
   direction       CallDirection @default(OUTBOUND)
   status          CallStatus    @default(INITIATED)
   duration        Int?          // seconds
+  fromNumber      String?       // caller number
+  toNumber        String?       // callee number
+
+  // Recording & Transcript
   recordingUrl    String?
   transcriptUrl   String?
   transcript      String?       @db.Text
+  transcriptStructured Json?    // [{speaker, text, timestamp, emotion}]
+
+  // AI Analysis
   sentiment       CallSentiment?
-  summary         String?       @db.Text // AI-generated call summary
-  outcome         String?       // "interested", "callback", "not_interested"
+  summary         String?       @db.Text
+  outcome         String?       // interested, callback, not_interested, converted, etc.
+  emotionArc      Json?         // emotional state snapshots every 30s
+  objectionsEncountered String[] // objections hit during call
+  buyingSignals   String[]      // buying signals detected
+  keyTopics       String[]      // main topics discussed
+  callPhaseReached String?      // WARM_OPEN, DISCOVERY, INSIGHT, SOFT_PITCH, etc.
+
+  // Follow-up
   callbackAt      DateTime?
+  followUpNeeded  Boolean       @default(false)
+  followUpNotes   String?
+
+  // Cost tracking
+  costTwilio      Float?        // Twilio cost in USD
+  costLlm         Float?        // LLM tokens cost
+  costTts         Float?        // TTS cost
+  costStt         Float?        // STT cost
+  totalCost       Float?        // sum of all costs
+
+  // Emotion logs for this call
+  emotionLogs     EmotionLog[]
 
   startedAt       DateTime      @default(now())
   endedAt         DateTime?
@@ -434,7 +495,9 @@ model CallSession {
   @@index([agentId])
   @@index([leadId])
   @@index([employeeId])
+  @@index([campaignId])
   @@index([status])
+  @@index([twilioCallSid])
 }
 
 enum CallDirection {
@@ -458,6 +521,151 @@ enum CallSentiment {
   NEUTRAL
   NEGATIVE
   VERY_NEGATIVE
+}
+
+// ── 4b. CAMPAIGNS & PRODUCTS ────────────────────────────────
+
+model Campaign {
+  id              String         @id @default(uuid())
+  name            String
+  description     String?        @db.Text
+  type            String         @default("outbound") // outbound, follow_up, nurture
+  status          CampaignStatus @default(DRAFT)
+
+  agentId         String?        // default AI agent for this campaign
+  agent           AIAgent?       @relation(fields: [agentId], references: [id])
+  scriptId        String?        // default script
+  productId       String?
+
+  // Scheduling
+  startDate       DateTime?
+  endDate         DateTime?
+  callWindowStart Int?           @default(9)  // hour (0-23)
+  callWindowEnd   Int?           @default(18) // hour (0-23)
+  maxCallsPerDay  Int?           @default(100)
+  callsPerMinute  Int?           @default(2)  // rate limiting
+
+  // Stats (denormalized for fast reads)
+  totalLeads      Int            @default(0)
+  totalCalled     Int            @default(0)
+  totalConnected  Int            @default(0)
+  totalConverted  Int            @default(0)
+
+  campaignLeads   CampaignLead[]
+  callSessions    CallSession[]
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([status])
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+model CampaignLead {
+  id          String   @id @default(uuid())
+  campaignId  String
+  campaign    Campaign @relation(fields: [campaignId], references: [id])
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id])
+
+  status      String   @default("pending") // pending, called, completed, skipped
+  attempts    Int      @default(0)
+  lastCalledAt DateTime?
+  outcome     String?
+
+  createdAt   DateTime @default(now())
+
+  @@unique([campaignId, leadId])
+  @@index([campaignId])
+  @@index([status])
+}
+
+model Product {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?  @db.Text
+  category        String?  // jewelry, bullion, coins, etc.
+  price           Float?
+  pricingDetails  String?  @db.Text // complex pricing explanation
+  keyBenefits     String[] // bullet points
+  targetAudience  String?
+  competitorNotes String?  @db.Text
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Objection {
+  id          String   @id @default(uuid())
+  category    String   // price, timing, competitor, trust, authority, need
+  trigger     String   // phrase that indicates this objection
+  response    String   @db.Text // recommended AI response
+  technique   String?  // absorb_diagnose_reframe, feel_felt_found, etc.
+  severity    String   @default("medium") // low, medium, high
+  winRate     Float?   @default(0) // how often this response leads to positive outcome
+  timesUsed   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+}
+
+model EmotionLog {
+  id              String      @id @default(uuid())
+  callSessionId   String
+  callSession     CallSession @relation(fields: [callSessionId], references: [id])
+
+  timestamp       DateTime    @default(now())
+  emotion         String      // excited, interested, neutral, hesitant, frustrated, etc.
+  secondaryEmotion String?
+  intensity       Float       @default(0.5) // 0-1
+  confidence      Float       @default(0.5) // 0-1
+  source          String      @default("transcript") // hume_ai, transcript, voice_metrics
+
+  // Voice metrics snapshot
+  wordsPerMinute  Float?
+  volumeLevel     Float?
+  pitchMean       Float?
+
+  // What AI action was taken in response
+  adaptationApplied String?   // e.g. "soften_mode", "high_energy", "silence"
+
+  @@index([callSessionId])
+  @@index([emotion])
+}
+
+model CallSchedule {
+  id          String   @id @default(uuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id])
+  agentId     String?
+  campaignId  String?
+  scriptId    String?
+
+  scheduledAt DateTime
+  timezone    String   @default("UTC")
+  priority    Int      @default(0) // higher = call first
+  status      String   @default("pending") // pending, calling, completed, failed, cancelled
+  attempts    Int      @default(0)
+  maxAttempts Int      @default(3)
+  retryAfter  DateTime?
+  notes       String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([scheduledAt])
+  @@index([status])
+  @@index([leadId])
 }
 
 // ── 5. CERTIFICATE MANAGEMENT ───────────────────────────────

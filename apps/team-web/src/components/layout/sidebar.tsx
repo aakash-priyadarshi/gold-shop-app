@@ -5,18 +5,23 @@ import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import {
   Award,
+  BarChart3,
   Bot,
   Building2,
   ChevronLeft,
+  FileText,
   HeadphonesIcon,
   LayoutDashboard,
   ListTodo,
   LogOut,
+  Megaphone,
   Menu,
+  Phone,
   Settings,
   Share2,
   Shield,
   Star,
+  UserCircle,
   Users,
   X,
 } from "lucide-react";
@@ -30,7 +35,19 @@ const navItems = [
   { href: "/departments", label: "Departments", icon: Building2 },
   { href: "/roles", label: "Roles & Permissions", icon: Shield },
   { href: "/tasks", label: "Tasks", icon: ListTodo },
-  { href: "/ai-sales", label: "AI Sales", icon: Bot },
+  {
+    href: "/ai-sales",
+    label: "AI Sales",
+    icon: Bot,
+    subItems: [
+      { href: "/ai-sales/agents", label: "Agents", icon: UserCircle },
+      { href: "/ai-sales/leads", label: "Leads", icon: Users },
+      { href: "/ai-sales/campaigns", label: "Campaigns", icon: Megaphone },
+      { href: "/ai-sales/calls", label: "Calls", icon: Phone },
+      { href: "/ai-sales/scripts", label: "Scripts", icon: FileText },
+      { href: "/ai-sales/analytics", label: "Analytics", icon: BarChart3 },
+    ],
+  },
   { href: "/certificates", label: "Certificates", icon: Award },
   { href: "/social", label: "Social Media", icon: Share2 },
   { href: "/reviews", label: "Reviews", icon: Star },
@@ -101,22 +118,47 @@ export function Sidebar() {
               item.href === "/"
                 ? pathname === "/"
                 : pathname.startsWith(item.href);
+            const hasSubItems = "subItems" in item && item.subItems;
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-gold-500/10 text-gold-600 dark:text-gold-400"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                  collapsed && "justify-center px-2",
+              <div key={item.href}>
+                <Link
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-gold-500/10 text-gold-600 dark:text-gold-400"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                    collapsed && "justify-center px-2",
+                  )}
+                >
+                  <item.icon className="h-5 w-5 shrink-0" />
+                  {!collapsed && <span>{item.label}</span>}
+                </Link>
+                {hasSubItems && isActive && !collapsed && (
+                  <div className="ml-4 mt-0.5 space-y-0.5 border-l pl-3">
+                    {item.subItems!.map((sub) => {
+                      const subActive = pathname === sub.href;
+                      return (
+                        <Link
+                          key={sub.href}
+                          href={sub.href}
+                          onClick={() => setMobileOpen(false)}
+                          className={cn(
+                            "flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
+                            subActive
+                              ? "bg-gold-500/10 text-gold-600 dark:text-gold-400"
+                              : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                          )}
+                        >
+                          <sub.icon className="h-3.5 w-3.5 shrink-0" />
+                          <span>{sub.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
                 )}
-              >
-                <item.icon className="h-5 w-5 shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
-              </Link>
+              </div>
             );
           })}
         </nav>
