@@ -1,6 +1,6 @@
 FROM node:20-slim AS base
 RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
-RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
+RUN corepack enable && corepack prepare pnpm@10.27.0 --activate
 
 # ─── Install dependencies ───
 FROM base AS deps
@@ -30,4 +30,4 @@ COPY --from=build /app/apps/team-api/node_modules ./node_modules
 COPY --from=deps /app/node_modules/.pnpm ./node_modules/.pnpm
 
 EXPOSE 3002
-CMD ["node", "dist/main.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy --schema ./prisma/schema.prisma && node dist/main.js"]
