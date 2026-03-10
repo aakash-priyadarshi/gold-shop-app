@@ -1,4 +1,12 @@
-import { Injectable, Logger, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
+import { PlatformReviewStatus } from "@prisma/client";
+import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../../prisma/prisma.service";
 
 /* ─────────────────────── TYPES ─────────────────────── */
@@ -70,7 +78,10 @@ export interface RfqFunnelData {
 export class SellerEngagementService {
   private readonly logger = new Logger(SellerEngagementService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
 
   /* ═══════════════════════════════════════════════════════
    *  1. SELLER HEALTH SCORE
@@ -253,12 +264,16 @@ export class SellerEngagementService {
    * ═══════════════════════════════════════════════════════ */
 
   async getOnboardingProgress(shopId: string): Promise<OnboardingProgress> {
-    const [shop, performance, hasInventory, hasPricing] = await Promise.all([
-      this.prisma.shop.findUnique({ where: { id: shopId } }),
-      this.prisma.sellerPerformance.findUnique({ where: { shopId } }),
-      this.prisma.inventoryItem.count({ where: { shopId }, take: 1 }),
-      this.prisma.shopFinishPricing.count({ where: { shopId }, take: 1 }),
-    ]);
+    const [shop, performance, hasInventory, hasPricing, approvedReviewCount] =
+      await Promise.all([
+        this.prisma.shop.findUnique({ where: { id: shopId } }),
+        this.prisma.sellerPerformance.findUnique({ where: { shopId } }),
+        this.prisma.inventoryItem.count({ where: { shopId }, take: 1 }),
+        this.prisma.shopFinishPricing.count({ where: { shopId }, take: 1 }),
+        this.prisma.platformReview.count({
+          where: { shopId, status: PlatformReviewStatus.APPROVED },
+        }),
+      ]);
 
     if (!shop) throw new NotFoundException("Shop not found");
 
@@ -374,6 +389,12 @@ export class SellerEngagementService {
       },
 
       // First engagement
+      {
+        key: "platformReview",
+        label: "Leave a review on SaaSHub, G2, or Crunchbase (earn 1 month Pro free!)",
+        completed: approvedReviewCount > 0,
+        category: "Engagement",
+      },
       {
         key: "firstSale",
         label: "Complete your first sale",
@@ -1020,5 +1041,279 @@ export class SellerEngagementService {
       badges: s.badges.map((b) => b.badgeType).join(", "),
       joinDate: s.createdAt.toISOString().split("T")[0],
     }));
+  }
+
+  /* ═══════════════════════════════════════════════════════
+   *  8. PLATFORM REVIEW INCENTIVE ("Review & Earn")
+   * ═══════════════════════════════════════════════════════ */
+
+  static readonly REVIEW_PLATFORMS = ["saashub", "g2", "crunchbase"] as const;
+
+  /** Seller submits proof of a review on an external platform. */
+  async submitPlatformReview(
+    shopId: string,
+    platform: string,
+    proofScreenshot: string,
+    reviewUrl?: string,
+  ) {
+    const normalised = platform.toLowerCase().trim();
+    if (
+      !SellerEngagementService.REVIEW_PLATFORMS.includes(normalised as any)
+    ) {
+      throw new BadRequestException(
+        `Invalid platform. Must be one of: ${SellerEngagementService.REVIEW_PLATFORMS.join(", ")}`,
+      );
+    }
+
+    const existing = await this.prisma.platformReview.findUnique({
+      where: { shopId_platform: { shopId, platform: normalised } },
+    });
+
+    if (existing && existing.status === "APPROVED") {
+      throw new ConflictException(
+        "Your review on this platform has already been approved.",
+      );
+    }
+
+    // Upsert — allow re-submission if previously rejected
+    const review = await this.prisma.platformReview.upsert({
+      where: { shopId_platform: { shopId, platform: normalised } },
+      create: {
+        shopId,
+        platform: normalised,
+        proofScreenshot,
+        reviewUrl: reviewUrl || null,
+        status: "PENDING",
+      },
+      update: {
+        proofScreenshot,
+        reviewUrl: reviewUrl || null,
+        status: "PENDING",
+        submittedAt: new Date(),
+        reviewedAt: null,
+        reviewedBy: null,
+        adminNotes: null,
+      },
+    });
+
+    this.logger.log(
+      `Platform review submitted: shop=${shopId} platform=${normalised}`,
+    );
+
+    return review;
+  }
+
+  /** Get all review submissions for a shop. */
+  async getShopPlatformReviews(shopId: string) {
+    const reviews = await this.prisma.platformReview.findMany({
+      where: { shopId },
+      orderBy: { submittedAt: "desc" },
+    });
+
+    // Return which platforms are available vs submitted
+    const submitted = new Map(reviews.map((r) => [r.platform, r]));
+    return SellerEngagementService.REVIEW_PLATFORMS.map((platform) => ({
+      platform,
+      submitted: submitted.has(platform),
+      review: submitted.get(platform) || null,
+    }));
+  }
+
+  /** Admin: list all pending reviews across all shops. */
+  async listPendingReviews(status?: string) {
+    const where = status
+      ? { status: status as PlatformReviewStatus }
+      : undefined;
+    return this.prisma.platformReview.findMany({
+      where,
+      include: {
+        shop: {
+          select: {
+            id: true,
+            shopName: true,
+            userId: true,
+            user: { select: { firstName: true, lastName: true, email: true } },
+          },
+        },
+      },
+      orderBy: { submittedAt: "desc" },
+    });
+  }
+
+  /** Admin: approve or reject a review submission. */
+  async reviewPlatformSubmission(
+    reviewId: string,
+    adminId: string,
+    action: "approve" | "reject",
+    adminNotes?: string,
+  ) {
+    const review = await this.prisma.platformReview.findUnique({
+      where: { id: reviewId },
+      include: { shop: { select: { userId: true, country: true } } },
+    });
+
+    if (!review) throw new NotFoundException("Review submission not found");
+    if (review.status !== "PENDING") {
+      throw new BadRequestException("This review has already been processed.");
+    }
+
+    const isApproval = action === "approve";
+
+    const updated = await this.prisma.platformReview.update({
+      where: { id: reviewId },
+      data: {
+        status: isApproval ? "APPROVED" : "REJECTED",
+        reviewedAt: new Date(),
+        reviewedBy: adminId,
+        adminNotes: adminNotes || null,
+        ...(isApproval && {
+          rewardGranted: true,
+          rewardGrantedAt: new Date(),
+        }),
+      },
+    });
+
+    // Grant Pro month if approved
+    if (isApproval) {
+      await this.grantOneMonthPro(review.shopId, review.shop.country);
+    }
+
+    // Notify seller
+    await this.notifications.create({
+      userId: review.shop.userId,
+      type: isApproval ? "REVIEW_APPROVED" : "REVIEW_REJECTED",
+      titleKey: isApproval
+        ? "Review approved! 🎉"
+        : "Review submission update",
+      bodyKey: isApproval
+        ? `Your ${review.platform} review has been verified. 1 month of Pro has been added to your account!`
+        : `Your ${review.platform} review submission was not approved.${adminNotes ? ` Reason: ${adminNotes}` : ""}`,
+      referenceType: "PlatformReview",
+      referenceId: reviewId,
+      channels: ["IN_APP"],
+    });
+
+    return updated;
+  }
+
+  /** Grant 1 month of Pro by extending or creating a subscription. */
+  private async grantOneMonthPro(shopId: string, country: string) {
+    // Find the PRO plan for this shop's country
+    const proPlan = await this.prisma.subscriptionPlan.findFirst({
+      where: { name: "PRO", country: country as any, isActive: true },
+    });
+
+    if (!proPlan) {
+      this.logger.warn(
+        `No PRO plan found for country=${country}, cannot grant reward for shop=${shopId}`,
+      );
+      return;
+    }
+
+    const now = new Date();
+    const oneMonthFromNow = new Date(now);
+    oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
+
+    // Check for existing active subscription
+    const existing = await this.prisma.sellerSubscription.findFirst({
+      where: {
+        shopId,
+        status: { in: ["ACTIVE", "TRIALING"] },
+      },
+      include: { plan: true },
+    });
+
+    if (existing && existing.plan.name === "PRO") {
+      // Extend the current PRO subscription by 1 month
+      const newEnd = new Date(existing.currentPeriodEnd);
+      newEnd.setMonth(newEnd.getMonth() + 1);
+
+      await this.prisma.sellerSubscription.update({
+        where: { id: existing.id },
+        data: { currentPeriodEnd: newEnd },
+      });
+
+      this.logger.log(
+        `Extended PRO subscription for shop=${shopId} until ${newEnd.toISOString()}`,
+      );
+    } else {
+      // Cancel existing FREE/other plan, create a new PRO subscription
+      if (existing) {
+        await this.prisma.sellerSubscription.update({
+          where: { id: existing.id },
+          data: {
+            status: "CANCELLED",
+            cancelledAt: now,
+            cancelReason: "Upgraded via Review & Earn reward",
+          },
+        });
+      }
+
+      await this.prisma.sellerSubscription.create({
+        data: {
+          shopId,
+          planId: proPlan.id,
+          status: "ACTIVE",
+          country: country as any,
+          startedAt: now,
+          currentPeriodStart: now,
+          currentPeriodEnd: oneMonthFromNow,
+          autoRenew: false, // reward subscriptions don't auto-renew
+        },
+      });
+
+      this.logger.log(
+        `Created PRO subscription (review reward) for shop=${shopId} until ${oneMonthFromNow.toISOString()}`,
+      );
+    }
+  }
+
+  /** Send review reminders to shops that haven't submitted any reviews yet. */
+  async sendReviewReminders() {
+    const MAX_REMINDERS = 3;
+
+    // Find all active shops that have zero platform reviews
+    const shops = await this.prisma.shop.findMany({
+      where: {
+        isActive: true,
+        isVerified: true,
+        platformReviews: { none: {} },
+      },
+      select: { id: true, userId: true, createdAt: true },
+    });
+
+    let sentCount = 0;
+    for (const shop of shops) {
+      // Only remind shops older than 7 days
+      const shopAge = Date.now() - new Date(shop.createdAt).getTime();
+      if (shopAge < 7 * 24 * 60 * 60 * 1000) continue;
+
+      // Check existing reminder record (we store it as a PlatformReview with platform="__reminder__")
+      // Instead, count notifications of type REVIEW_REMINDER for this user
+      const reminderCount = await this.prisma.notification.count({
+        where: {
+          userId: shop.userId,
+          type: "REVIEW_REMINDER",
+        },
+      });
+
+      if (reminderCount >= MAX_REMINDERS) continue;
+
+      await this.notifications.create({
+        userId: shop.userId,
+        type: "REVIEW_REMINDER",
+        titleKey: "Earn 1 month of Pro for free! ⭐",
+        bodyKey:
+          "Leave a review on SaaSHub, G2, or Crunchbase and get 1 month of Pro — per platform! Go to Engagement → Reviews to submit proof.",
+        referenceType: "ReviewIncentive",
+        referenceId: shop.id,
+        channels: ["IN_APP"],
+      });
+
+      sentCount++;
+    }
+
+    this.logger.log(`Sent ${sentCount} review reminder notifications`);
+    return { sentCount };
   }
 }

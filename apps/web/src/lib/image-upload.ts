@@ -9,7 +9,7 @@
 const WORKER_URL =
   process.env.NEXT_PUBLIC_IMAGE_WORKER_URL || "https://images.orivraa.com";
 
-export type UploadType = "product" | "profile" | "rfq" | "kyc";
+export type UploadType = "product" | "profile" | "rfq" | "kyc" | "review-proof";
 
 export interface UploadResult {
   success: boolean;
@@ -41,6 +41,7 @@ const DEFAULT_OPTIONS: Record<
   profile: { maxWidth: 400, maxHeight: 400, quality: 90 },
   rfq: { maxWidth: 1200, maxHeight: 1200, quality: 90 },
   kyc: { maxWidth: 1600, maxHeight: 1600, quality: 95 },
+  "review-proof": { maxWidth: 1600, maxHeight: 1600, quality: 95 },
 };
 
 /**

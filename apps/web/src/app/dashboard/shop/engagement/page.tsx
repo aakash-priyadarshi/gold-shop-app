@@ -47,6 +47,7 @@ import {
   Upload,
   XCircle,
   Zap,
+  ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
@@ -107,6 +108,28 @@ interface RfqFunnel {
     responded: number;
   }[];
 }
+
+interface PlatformReviewEntry {
+  platform: string;
+  submitted: boolean;
+  review: {
+    id: string;
+    platform: string;
+    reviewUrl: string | null;
+    proofScreenshot: string;
+    status: "PENDING" | "APPROVED" | "REJECTED";
+    submittedAt: string;
+    reviewedAt: string | null;
+    adminNotes: string | null;
+    rewardGranted: boolean;
+  } | null;
+}
+
+const PLATFORM_DISPLAY: Record<string, { name: string; url: string; logo: string }> = {
+  saashub: { name: "SaaSHub", url: "https://www.saashub.com/orivraa-alternatives", logo: "🔍" },
+  g2: { name: "G2", url: "https://www.g2.com/sellers/orivraa", logo: "⭐" },
+  crunchbase: { name: "Crunchbase", url: "https://www.crunchbase.com/organization/orivraa", logo: "📊" },
+};
 
 interface TierDashboard {
   performance: any;
@@ -616,6 +639,24 @@ export default function ShopEngagementPage() {
   // Explainer toggle
   const [showExplainer, setShowExplainer] = useState(false);
 
+  // Platform reviews state
+  const [platformReviews, setPlatformReviews] = useState<PlatformReviewEntry[]>([]);
+  const [reviewSubmitting, setReviewSubmitting] = useState<string | null>(null);
+  const {
+    uploading: reviewUploading,
+    progress: reviewUploadProgress,
+    upload: uploadReviewProof,
+  } = useImageUpload({
+    type: "review-proof",
+    onSuccess: () => {},
+    onError: (err) =>
+      toast({
+        variant: "destructive",
+        title: t("Upload failed"),
+        description: err,
+      }),
+  });
+
   // Image upload for KYC documents
   const {
     uploading: kycUploading,
@@ -700,6 +741,9 @@ export default function ShopEngagementPage() {
 
       // Load tier dashboard
       loadTierDashboard();
+
+      // Load platform reviews
+      loadPlatformReviews();
     } catch (error) {
       console.error("Failed to load engagement data:", error);
       toast({
@@ -720,6 +764,70 @@ export default function ShopEngagementPage() {
       console.error("Failed to load tier:", error);
     } finally {
       setTierLoading(false);
+    }
+  };
+
+  const loadPlatformReviews = async () => {
+    try {
+      const res = await sellerPerformanceApi.getMyReviews();
+      if (res?.data) setPlatformReviews(res.data);
+    } catch (error) {
+      console.warn("Failed to load platform reviews:", error);
+    }
+  };
+
+  const handleReviewSubmit = async (platform: string, reviewUrl: string) => {
+    setReviewSubmitting(platform);
+    try {
+      // Prompt user to upload proof screenshot
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      const file = await new Promise<File | null>((resolve) => {
+        input.onchange = (e) =>
+          resolve((e.target as HTMLInputElement).files?.[0] || null);
+        input.click();
+      });
+
+      if (!file) {
+        setReviewSubmitting(null);
+        return;
+      }
+
+      const result = await uploadReviewProof(file);
+      if (!result.success || !result.url) {
+        toast({
+          variant: "destructive",
+          title: t("Upload failed"),
+          description: t("Could not upload the screenshot."),
+        });
+        setReviewSubmitting(null);
+        return;
+      }
+
+      await sellerPerformanceApi.submitReview({
+        platform,
+        proofScreenshot: result.url,
+        reviewUrl: reviewUrl || undefined,
+      });
+
+      toast({
+        title: t("Review submitted!"),
+        description: t(
+          "We'll verify your review and award the Pro month once approved.",
+        ),
+      });
+
+      loadPlatformReviews();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: t("Submission failed"),
+        description:
+          error?.response?.data?.message || t("Something went wrong."),
+      });
+    } finally {
+      setReviewSubmitting(null);
     }
   };
 
@@ -1227,7 +1335,7 @@ export default function ShopEngagementPage() {
 
           {/* ═══ TABS ═══ */}
           <Tabs defaultValue="milestones" className="w-full">
-            <TabsList className="grid grid-cols-4">
+            <TabsList className="grid grid-cols-5">
               <TabsTrigger value="milestones" className="gap-1">
                 <Trophy className="h-4 w-4" />
                 <span className="hidden sm:inline"><T>Milestones</T></span>
@@ -1235,6 +1343,10 @@ export default function ShopEngagementPage() {
               <TabsTrigger value="rfq" className="gap-1">
                 <BarChart3 className="h-4 w-4" />
                 <span className="hidden sm:inline"><T>RFQ Funnel</T></span>
+              </TabsTrigger>
+              <TabsTrigger value="reviews" className="gap-1">
+                <Star className="h-4 w-4" />
+                <span className="hidden sm:inline"><T>Reviews</T></span>
               </TabsTrigger>
               <TabsTrigger value="kyc" className="gap-1">
                 <FileCheck className="h-4 w-4" />
@@ -1485,6 +1597,222 @@ export default function ShopEngagementPage() {
                   </CardContent>
                 </Card>
               )}
+            </TabsContent>
+
+            {/* ═══ REVIEWS TAB ("Review & Earn") ═══ */}
+            <TabsContent value="reviews" className="space-y-4 mt-4">
+              {/* Banner */}
+              <Card className="border-amber-200 bg-amber-50 dark:border-amber-800/50 dark:bg-amber-950/30">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 rounded-full bg-amber-100 dark:bg-amber-900/40">
+                      <Star className="h-6 w-6 text-amber-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-amber-800 dark:text-amber-200 mb-1">
+                        <T>Review & Earn — Get 1 Month Pro Free!</T>
+                      </h3>
+                      <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">
+                        <T>Leave a review about Orivraa on any of the platforms below and earn 1 month of Pro for each approved review.</T>
+                      </p>
+                      <div className="text-xs text-amber-600 dark:text-amber-400 space-y-1">
+                        <p>1. <T>Visit the platform and write an honest review about your experience.</T></p>
+                        <p>2. <T>Take a screenshot of your published review.</T></p>
+                        <p>3. <T>Upload the screenshot below as proof.</T></p>
+                        <p>4. <T>Our team will verify and award your Pro month within 48 hours.</T></p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Platform Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {platformReviews.length > 0
+                  ? platformReviews.map((entry) => {
+                      const info = PLATFORM_DISPLAY[entry.platform] || {
+                        name: entry.platform,
+                        url: "#",
+                        logo: "⭐",
+                      };
+                      const review = entry.review;
+                      return (
+                        <Card
+                          key={entry.platform}
+                          className={
+                            review?.status === "APPROVED"
+                              ? "border-green-300 dark:border-green-700"
+                              : review?.status === "PENDING"
+                                ? "border-amber-300 dark:border-amber-700"
+                                : ""
+                          }
+                        >
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-base flex items-center gap-2">
+                                <span className="text-2xl">{info.logo}</span>
+                                {info.name}
+                              </CardTitle>
+                              {review && (
+                                <Badge
+                                  variant={
+                                    review.status === "APPROVED"
+                                      ? "default"
+                                      : review.status === "PENDING"
+                                        ? "secondary"
+                                        : "destructive"
+                                  }
+                                  className={
+                                    review.status === "APPROVED"
+                                      ? "bg-green-600"
+                                      : ""
+                                  }
+                                >
+                                  {review.status === "APPROVED"
+                                    ? t("Approved ✓")
+                                    : review.status === "PENDING"
+                                      ? t("Under Review")
+                                      : t("Rejected")}
+                                </Badge>
+                              )}
+                            </div>
+                            <CardDescription>
+                              <a
+                                href={info.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-amber-600 hover:underline inline-flex items-center gap-1"
+                              >
+                                <T>Visit profile to leave review</T>
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            {review?.status === "APPROVED" && (
+                              <div className="flex items-center gap-2 text-sm text-green-600">
+                                <CheckCircle className="h-4 w-4" />
+                                <T>1 month Pro reward granted!</T>
+                              </div>
+                            )}
+                            {review?.status === "REJECTED" && (
+                              <div className="space-y-2">
+                                {review.adminNotes && (
+                                  <p className="text-sm text-red-600 dark:text-red-400">
+                                    {review.adminNotes}
+                                  </p>
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleReviewSubmit(entry.platform, info.url)}
+                                  disabled={reviewSubmitting === entry.platform}
+                                >
+                                  {reviewSubmitting === entry.platform ? (
+                                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                                  ) : (
+                                    <Upload className="h-4 w-4 mr-1" />
+                                  )}
+                                  <T>Re-submit Proof</T>
+                                </Button>
+                              </div>
+                            )}
+                            {review?.status === "PENDING" && (
+                              <div className="space-y-2">
+                                <p className="text-sm text-muted-foreground">
+                                  <T>Submitted</T>{" "}
+                                  {new Date(review.submittedAt).toLocaleDateString()}
+                                </p>
+                                {review.proofScreenshot && (
+                                  <a
+                                    href={review.proofScreenshot}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-600 hover:underline"
+                                  >
+                                    <T>View uploaded proof</T>
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                            {!review && (
+                              <Button
+                                size="sm"
+                                className="w-full"
+                                onClick={() => handleReviewSubmit(entry.platform, info.url)}
+                                disabled={reviewSubmitting === entry.platform}
+                              >
+                                {reviewSubmitting === entry.platform ? (
+                                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                                ) : (
+                                  <Upload className="h-4 w-4 mr-1" />
+                                )}
+                                <T>Upload Review Screenshot</T>
+                              </Button>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })
+                  : // Fallback: show static platform cards if API hasn't loaded
+                    Object.entries(PLATFORM_DISPLAY).map(([key, info]) => (
+                      <Card key={key}>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <span className="text-2xl">{info.logo}</span>
+                            {info.name}
+                          </CardTitle>
+                          <CardDescription>
+                            <a
+                              href={info.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-amber-600 hover:underline inline-flex items-center gap-1"
+                            >
+                              <T>Visit profile to leave review</T>
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <Button
+                            size="sm"
+                            className="w-full"
+                            onClick={() => handleReviewSubmit(key, info.url)}
+                            disabled={reviewSubmitting === key}
+                          >
+                            {reviewSubmitting === key ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                            ) : (
+                              <Upload className="h-4 w-4 mr-1" />
+                            )}
+                            <T>Upload Review Screenshot</T>
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))}
+              </div>
+
+              {/* Summary */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      <T>Approved reviews</T>:{" "}
+                      <span className="font-bold text-green-600">
+                        {platformReviews.filter((r) => r.review?.status === "APPROVED").length}
+                      </span>{" "}
+                      / {Object.keys(PLATFORM_DISPLAY).length}
+                    </span>
+                    <span className="text-muted-foreground">
+                      <T>Pro months earned</T>:{" "}
+                      <span className="font-bold text-amber-600">
+                        {platformReviews.filter((r) => r.review?.rewardGranted).length}
+                      </span>
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* ═══ KYC & VERIFICATION TAB ═══ */}

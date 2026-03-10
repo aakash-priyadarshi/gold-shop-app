@@ -278,6 +278,7 @@ model Shop {
   posSessions             PosSession[]
   stockReservations       StockReservation[]
   subscriptions           SellerSubscription[]
+  platformReviews         PlatformReview[]
   // Enterprise features
   branches                ShopBranch[]
   staffAccounts           StaffAccount[]
@@ -1692,6 +1693,11 @@ enum NotificationType {
   // POS
   POS_SESSION_CREATED
   POS_CHECKOUT_COMPLETED
+  // Platform Review Incentive
+  REVIEW_REMINDER
+  REVIEW_SUBMITTED
+  REVIEW_APPROVED
+  REVIEW_REJECTED
 }
 
 enum WeightCategory {
@@ -3072,6 +3078,40 @@ model DesktopSession {
   @@index([userId])
   @@index([appVersion])
   @@index([lastSeen])
+}
+
+// ── Platform Review Incentive ──────────────────────────────────
+// Tracks seller reviews left on external platforms (G2, SaaSHub, etc.)
+// for the "Review & Earn" programme — 1 approved review = 1 month Pro free.
+model PlatformReview {
+  id                String              @id @default(uuid())
+  shopId            String
+  platform          String              // "saashub" | "g2" | "crunchbase"
+  reviewUrl         String?             // optional link to the review
+  proofScreenshot   String              // uploaded image URL
+  status            PlatformReviewStatus @default(PENDING)
+  submittedAt       DateTime            @default(now())
+  reviewedAt        DateTime?
+  reviewedBy        String?             // admin user ID
+  adminNotes        String?
+  rewardGranted     Boolean             @default(false)
+  rewardGrantedAt   DateTime?
+
+  // Reminder tracking
+  lastRemindedAt    DateTime?
+  reminderCount     Int                 @default(0)
+
+  shop              Shop                @relation(fields: [shopId], references: [id])
+
+  @@unique([shopId, platform])          // one review per platform per shop
+  @@index([status])
+  @@index([shopId])
+}
+
+enum PlatformReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 // ── Blog Posts ─────────────────────────────────────────────────

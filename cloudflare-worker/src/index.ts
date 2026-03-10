@@ -70,6 +70,11 @@ const VARIANTS: Record<string, ImageVariant[]> = {
     { suffix: "_medium", maxWidth: 600, maxHeight: 600, quality: 80 },
     { suffix: "_thumb", maxWidth: 200, maxHeight: 200, quality: 75 },
   ],
+  "review-proof": [
+    { suffix: "", maxWidth: 1600, maxHeight: 1600, quality: 95 }, // Review proof screenshots
+    { suffix: "_medium", maxWidth: 800, maxHeight: 800, quality: 90 },
+    { suffix: "_thumb", maxWidth: 200, maxHeight: 200, quality: 85 },
+  ],
 };
 
 // Allowed MIME types — images, videos, and documents
