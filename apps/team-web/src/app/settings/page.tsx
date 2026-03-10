@@ -1,13 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Save } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { settingsApi } from "@/lib/api";
+import { Save } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
@@ -48,7 +54,9 @@ export default function SettingsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground">Configure your team operations</p>
+          <p className="text-muted-foreground">
+            Configure your team operations
+          </p>
         </div>
         <Button onClick={handleSave} disabled={saving}>
           <Save className="mr-2 h-4 w-4" />
@@ -67,14 +75,18 @@ export default function SettingsPage() {
               <Label>Company Name</Label>
               <Input
                 value={settings.companyName ?? ""}
-                onChange={(e) => setSettings({ ...settings, companyName: e.target.value })}
+                onChange={(e) =>
+                  setSettings({ ...settings, companyName: e.target.value })
+                }
               />
             </div>
             <div>
               <Label>Timezone</Label>
               <Input
                 value={settings.timezone ?? ""}
-                onChange={(e) => setSettings({ ...settings, timezone: e.target.value })}
+                onChange={(e) =>
+                  setSettings({ ...settings, timezone: e.target.value })
+                }
                 placeholder="Asia/Kathmandu"
               />
             </div>
@@ -82,7 +94,9 @@ export default function SettingsPage() {
               <Label>Default Currency</Label>
               <Input
                 value={settings.currency ?? ""}
-                onChange={(e) => setSettings({ ...settings, currency: e.target.value })}
+                onChange={(e) =>
+                  setSettings({ ...settings, currency: e.target.value })
+                }
                 placeholder="NPR"
               />
             </div>
@@ -92,7 +106,9 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Work Hours</CardTitle>
-            <CardDescription>Define standard working hours for attendance tracking</CardDescription>
+            <CardDescription>
+              Define standard working hours for attendance tracking
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div>
@@ -100,7 +116,9 @@ export default function SettingsPage() {
               <Input
                 type="time"
                 value={settings.workStartTime ?? "09:00"}
-                onChange={(e) => setSettings({ ...settings, workStartTime: e.target.value })}
+                onChange={(e) =>
+                  setSettings({ ...settings, workStartTime: e.target.value })
+                }
               />
             </div>
             <div>
@@ -108,7 +126,9 @@ export default function SettingsPage() {
               <Input
                 type="time"
                 value={settings.workEndTime ?? "17:00"}
-                onChange={(e) => setSettings({ ...settings, workEndTime: e.target.value })}
+                onChange={(e) =>
+                  setSettings({ ...settings, workEndTime: e.target.value })
+                }
               />
             </div>
             <div>
@@ -116,7 +136,12 @@ export default function SettingsPage() {
               <Input
                 type="number"
                 value={settings.lateThresholdMinutes ?? 15}
-                onChange={(e) => setSettings({ ...settings, lateThresholdMinutes: parseInt(e.target.value) })}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    lateThresholdMinutes: parseInt(e.target.value),
+                  })
+                }
               />
             </div>
             <div>
@@ -124,7 +149,12 @@ export default function SettingsPage() {
               <Input
                 type="number"
                 value={settings.annualLeaveDays ?? 18}
-                onChange={(e) => setSettings({ ...settings, annualLeaveDays: parseInt(e.target.value) })}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    annualLeaveDays: parseInt(e.target.value),
+                  })
+                }
               />
             </div>
           </CardContent>
@@ -133,7 +163,9 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Notifications</CardTitle>
-            <CardDescription>Configure notification preferences</CardDescription>
+            <CardDescription>
+              Configure notification preferences
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
             <div>
@@ -141,7 +173,12 @@ export default function SettingsPage() {
               <Input
                 type="email"
                 value={settings.notificationEmail ?? ""}
-                onChange={(e) => setSettings({ ...settings, notificationEmail: e.target.value })}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    notificationEmail: e.target.value,
+                  })
+                }
                 placeholder="team@orivraa.com"
               />
             </div>
@@ -149,7 +186,9 @@ export default function SettingsPage() {
               <Label>Webhook URL (optional)</Label>
               <Input
                 value={settings.webhookUrl ?? ""}
-                onChange={(e) => setSettings({ ...settings, webhookUrl: e.target.value })}
+                onChange={(e) =>
+                  setSettings({ ...settings, webhookUrl: e.target.value })
+                }
                 placeholder="https://hooks.slack.com/..."
               />
             </div>
@@ -159,7 +198,9 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>AI Sales Configuration</CardTitle>
-            <CardDescription>Configure AI-powered sales settings</CardDescription>
+            <CardDescription>
+              Configure AI-powered sales settings
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
             <div>
@@ -167,7 +208,9 @@ export default function SettingsPage() {
               <Input
                 type="password"
                 value={settings.elevenLabsApiKey ?? ""}
-                onChange={(e) => setSettings({ ...settings, elevenLabsApiKey: e.target.value })}
+                onChange={(e) =>
+                  setSettings({ ...settings, elevenLabsApiKey: e.target.value })
+                }
                 placeholder="sk-..."
               />
             </div>
@@ -175,7 +218,9 @@ export default function SettingsPage() {
               <Label>Default Sales Greeting</Label>
               <Textarea
                 value={settings.salesGreeting ?? ""}
-                onChange={(e) => setSettings({ ...settings, salesGreeting: e.target.value })}
+                onChange={(e) =>
+                  setSettings({ ...settings, salesGreeting: e.target.value })
+                }
                 placeholder="Welcome to Orivraa! How can I help you today?"
               />
             </div>

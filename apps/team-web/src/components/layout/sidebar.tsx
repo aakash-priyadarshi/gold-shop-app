@@ -1,25 +1,25 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
+import { cn } from "@/lib/utils";
 import {
-  Users,
-  ListTodo,
-  Bot,
   Award,
-  Share2,
-  Star,
+  Bot,
+  ChevronLeft,
   HeadphonesIcon,
-  Settings,
   LayoutDashboard,
+  ListTodo,
   LogOut,
   Menu,
+  Settings,
+  Share2,
+  Star,
+  Users,
   X,
-  ChevronLeft,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 const navItems = [
@@ -36,7 +36,7 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { employee, logout } = useAuth();
+  const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -65,11 +65,16 @@ export function Sidebar() {
         className={cn(
           "fixed inset-y-0 left-0 z-40 flex flex-col border-r bg-card transition-all duration-300",
           collapsed ? "w-16" : "w-64",
-          mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
         {/* Logo */}
-        <div className={cn("flex h-16 items-center border-b px-4", collapsed && "justify-center")}>
+        <div
+          className={cn(
+            "flex h-16 items-center border-b px-4",
+            collapsed && "justify-center",
+          )}
+        >
           {!collapsed && (
             <Link href="/" className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold-500 text-white font-bold text-sm">
@@ -88,7 +93,10 @@ export function Sidebar() {
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto p-2 space-y-1">
           {navItems.map((item) => {
-            const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+            const isActive =
+              item.href === "/"
+                ? pathname === "/"
+                : pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}
@@ -99,7 +107,7 @@ export function Sidebar() {
                   isActive
                     ? "bg-gold-500/10 text-gold-600 dark:text-gold-400"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                  collapsed && "justify-center px-2"
+                  collapsed && "justify-center px-2",
                 )}
               >
                 <item.icon className="h-5 w-5 shrink-0" />
@@ -111,17 +119,19 @@ export function Sidebar() {
 
         {/* Footer */}
         <div className="border-t p-2 space-y-1">
-          {!collapsed && employee && (
+          {!collapsed && user && (
             <div className="px-3 py-2 text-xs text-muted-foreground truncate">
-              {employee.firstName} {employee.lastName}
-              <span className="block text-[10px] opacity-60">{employee.role}</span>
+              {user.email}
+              <span className="block text-[10px] opacity-60">
+                {user.role}
+              </span>
             </div>
           )}
           <button
             onClick={logout}
             className={cn(
               "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors",
-              collapsed && "justify-center px-2"
+              collapsed && "justify-center px-2",
             )}
           >
             <LogOut className="h-5 w-5 shrink-0" />
@@ -133,7 +143,12 @@ export function Sidebar() {
             onClick={() => setCollapsed(!collapsed)}
             className="hidden lg:flex w-full items-center justify-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-accent transition-colors"
           >
-            <ChevronLeft className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
+            <ChevronLeft
+              className={cn(
+                "h-4 w-4 transition-transform",
+                collapsed && "rotate-180",
+              )}
+            />
             {!collapsed && <span className="text-xs">Collapse</span>}
           </button>
         </div>

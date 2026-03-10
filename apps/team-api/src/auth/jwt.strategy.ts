@@ -5,7 +5,8 @@ import { ExtractJwt, Strategy } from "passport-jwt";
 
 /**
  * JWT Strategy for Team API.
- * Validates tokens issued by the Team API itself (employee-based auth).
+ * Validates tokens issued by the MAIN Orivraa API (same JWT_SECRET).
+ * Only ADMIN, SUPPORT, SALES roles from the main app are allowed.
  */
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -22,12 +23,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException("Invalid token");
     }
 
+    const allowedRoles = ["ADMIN", "SUPPORT", "SALES"];
+    if (!allowedRoles.includes(payload.role)) {
+      throw new UnauthorizedException("Access denied. Employee roles only.");
+    }
+
     return {
       id: payload.sub,
       email: payload.email,
-      role: payload.role,         // EmployeeRole: ADMIN, MANAGER, TEAM_LEAD, AGENT, INTERN
-      employeeCode: payload.employeeCode,
-      departmentId: payload.departmentId,
+      role: payload.role,
+      shopId: payload.shopId,
     };
   }
 }

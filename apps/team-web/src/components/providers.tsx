@@ -1,7 +1,7 @@
 "use client";
 
-import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/use-auth";
+import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 
 export function Providers({ children }: { children: React.ReactNode }) {

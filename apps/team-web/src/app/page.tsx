@@ -1,19 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  Users,
-  ListTodo,
-  Bot,
-  Award,
-  Star,
-  HeadphonesIcon,
-  TrendingUp,
-  Clock,
-} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
-import { employeeApi, taskApi, supportApi, reviewApi } from "@/lib/api";
+import { employeeApi, reviewApi, supportApi, taskApi } from "@/lib/api";
+import {
+  Award,
+  Bot,
+  Clock,
+  HeadphonesIcon,
+  ListTodo,
+  Star,
+  TrendingUp,
+  Users,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface DashStats {
   employees: number;
@@ -23,7 +23,7 @@ interface DashStats {
 }
 
 export default function DashboardPage() {
-  const { employee, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const [stats, setStats] = useState<DashStats>({
     employees: 0,
     activeTasks: 0,
@@ -41,10 +41,22 @@ export default function DashboardPage() {
       reviewApi.getDashboard(),
     ]).then(([empRes, taskRes, supportRes, reviewRes]) => {
       setStats({
-        employees: empRes.status === "fulfilled" ? (empRes.value.data?.length ?? empRes.value.data?.total ?? 0) : 0,
-        activeTasks: taskRes.status === "fulfilled" ? (taskRes.value.data?.length ?? taskRes.value.data?.total ?? 0) : 0,
-        openTickets: supportRes.status === "fulfilled" ? (supportRes.value.data?.openTickets ?? 0) : 0,
-        avgRating: reviewRes.status === "fulfilled" ? (reviewRes.value.data?.averageRating ?? 0) : 0,
+        employees:
+          empRes.status === "fulfilled"
+            ? (empRes.value.data?.length ?? empRes.value.data?.total ?? 0)
+            : 0,
+        activeTasks:
+          taskRes.status === "fulfilled"
+            ? (taskRes.value.data?.length ?? taskRes.value.data?.total ?? 0)
+            : 0,
+        openTickets:
+          supportRes.status === "fulfilled"
+            ? (supportRes.value.data?.openTickets ?? 0)
+            : 0,
+        avgRating:
+          reviewRes.status === "fulfilled"
+            ? (reviewRes.value.data?.averageRating ?? 0)
+            : 0,
       });
       setLoading(false);
     });
@@ -73,17 +85,37 @@ export default function DashboardPage() {
   }
 
   const cards = [
-    { title: "Total Employees", value: stats.employees, icon: Users, color: "text-blue-500" },
-    { title: "Active Tasks", value: stats.activeTasks, icon: ListTodo, color: "text-amber-500" },
-    { title: "Open Tickets", value: stats.openTickets, icon: HeadphonesIcon, color: "text-purple-500" },
-    { title: "Avg Rating", value: stats.avgRating ? stats.avgRating.toFixed(1) : "—", icon: Star, color: "text-gold-500" },
+    {
+      title: "Total Employees",
+      value: stats.employees,
+      icon: Users,
+      color: "text-blue-500",
+    },
+    {
+      title: "Active Tasks",
+      value: stats.activeTasks,
+      icon: ListTodo,
+      color: "text-amber-500",
+    },
+    {
+      title: "Open Tickets",
+      value: stats.openTickets,
+      icon: HeadphonesIcon,
+      color: "text-purple-500",
+    },
+    {
+      title: "Avg Rating",
+      value: stats.avgRating ? stats.avgRating.toFixed(1) : "—",
+      icon: Star,
+      color: "text-gold-500",
+    },
   ];
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">
-          Welcome back, {employee?.firstName}
+          Welcome back, {user?.email?.split("@")[0]}
         </h1>
         <p className="text-muted-foreground mt-1">
           Here&apos;s an overview of your team operations.
@@ -94,7 +126,9 @@ export default function DashboardPage() {
         {cards.map((card) => (
           <Card key={card.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                {card.title}
+              </CardTitle>
               <card.icon className={`h-5 w-5 ${card.color}`} />
             </CardHeader>
             <CardContent>
@@ -123,7 +157,11 @@ export default function DashboardPage() {
               { label: "Add Employee", href: "/employees", icon: Users },
               { label: "Create Task", href: "/tasks", icon: ListTodo },
               { label: "View Leads", href: "/ai-sales", icon: Bot },
-              { label: "Issue Certificate", href: "/certificates", icon: Award },
+              {
+                label: "Issue Certificate",
+                href: "/certificates",
+                icon: Award,
+              },
             ].map((action) => (
               <a
                 key={action.label}
@@ -151,7 +189,10 @@ export default function DashboardPage() {
               { label: "AI Sales Engine", status: "Ready" },
               { label: "Certificate Issuer", status: "Active" },
             ].map((item) => (
-              <div key={item.label} className="flex items-center justify-between text-sm">
+              <div
+                key={item.label}
+                className="flex items-center justify-between text-sm"
+              >
                 <span>{item.label}</span>
                 <span className="flex items-center gap-1.5 text-emerald-500">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
