@@ -239,6 +239,18 @@ export const aiSalesApi = {
     api.put(`/ai-sales/voices/${id}`, data),
   deleteVoice: (id: string) => api.delete(`/ai-sales/voices/${id}`),
   seedVoices: () => api.post("/ai-sales/voices/seed"),
+
+  // Playground (test endpoints)
+  testServices: (agentId: string) =>
+    api.get("/ai-sales/playground/test-services", { params: { agentId } }),
+  playgroundChat: (data: { agentId: string; message: string; history?: { role: string; text: string }[] }) =>
+    api.post("/ai-sales/playground/chat", data),
+  playgroundVoice: (formData: FormData) =>
+    api.post("/ai-sales/playground/voice", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  playgroundCall: (data: { agentId: string; phoneNumber: string }) =>
+    api.post("/ai-sales/playground/call", data),
 };
 
 // ─── Certificates ───
