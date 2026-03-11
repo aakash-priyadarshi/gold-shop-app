@@ -48,7 +48,7 @@ export class PostCallProcessor {
 
     try {
       const model = this.genAI.getGenerativeModel({
-        model: "gemini-2.5-flash-lite-preview-06-17",
+        model: "gemini-2.0-flash",
         generationConfig: {
           responseMimeType: "application/json",
           temperature: 0.3,
@@ -96,7 +96,7 @@ Return JSON matching this schema:
 
     try {
       const model = this.genAI.getGenerativeModel({
-        model: "gemini-2.5-flash-lite-preview-06-17",
+        model: "gemini-2.0-flash",
         generationConfig: { temperature: 0.3, maxOutputTokens: 300 },
       });
 
