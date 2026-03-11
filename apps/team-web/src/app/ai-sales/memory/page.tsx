@@ -629,9 +629,9 @@ const ADVANCED_SETTINGS_META: Record<
   stt_provider: {
     label: "STT Provider",
     description:
-      "Speech-to-text routing. 'auto' detects language on first audio chunk — routes Hindi/regional to Sarvam AI, English to Deepgram. 'deepgram' always uses Deepgram (English-only). 'sarvam' always uses Sarvam AI (best for Indian languages).",
+      "Speech-to-text routing. 'auto' detects language on first audio chunk — routes Hindi/regional to Sarvam AI, English to Google STT. 'google' always uses Google Cloud STT (best for Indian English accent). 'sarvam' always uses Sarvam AI (best for Hindi/regional). 'deepgram' is last resort (poor Indian accent support).",
     type: "select",
-    options: ["auto", "deepgram", "sarvam"],
+    options: ["auto", "google", "sarvam", "deepgram"],
   },
   tts_provider: {
     label: "TTS Provider",
@@ -802,8 +802,9 @@ function AdvancedSettingsTab({
           <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-xs text-muted-foreground">
             <span className="font-mono">GEMINI_API_KEY</span><span>Google AI — Gemini Flash-Lite</span>
             <span className="font-mono">ANTHROPIC_API_KEY</span><span>Anthropic — Claude Sonnet</span>
-            <span className="font-mono">DEEPGRAM_API_KEY</span><span>Deepgram — English STT</span>
+            <span className="font-mono">GOOGLE_STT_API_KEY</span><span>Google Cloud — STT (Indian English)</span>
             <span className="font-mono">SARVAM_API_KEY</span><span>Sarvam AI — Indian language STT</span>
+            <span className="font-mono">DEEPGRAM_API_KEY</span><span>Deepgram — fallback STT</span>
             <span className="font-mono">ELEVENLABS_API_KEY</span><span>ElevenLabs — TTS voice</span>
             <span className="font-mono">ELEVENLABS_VOICE_ID</span><span>ElevenLabs voice to use</span>
             <span className="font-mono">TWILIO_ACCOUNT_SID</span><span>Twilio account SID</span>

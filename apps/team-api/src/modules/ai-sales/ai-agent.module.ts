@@ -24,6 +24,7 @@ import { AgentMemoryService } from "./services/agent-memory.service";
 import { BehaviorInsightService } from "./services/behavior-insight.service";
 import { SarvamSTTClient } from "./services/sarvam-stt.service";
 import { STTRouterService } from "./services/stt-router.service";
+import { GoogleSTTClient } from "./services/google-stt.service";
 
 @Module({
   imports: [PrismaModule, ConfigModule],
@@ -50,6 +51,7 @@ import { STTRouterService } from "./services/stt-router.service";
     BehaviorInsightService,
     SarvamSTTClient,
     STTRouterService,
+    GoogleSTTClient,
   ],
   controllers: [AIAgentController],
   exports: [AIAgentService, CallOrchestratorService],
