@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { AgentMemoryService } from "./agent-memory.service";
 
 export interface TTSClient {
   streamFromText(text: string, voiceId: string): AsyncGenerator<Buffer, void, unknown>;
@@ -15,10 +16,13 @@ export interface TTSClient {
 export class InworldTTSClient implements TTSClient {
   private readonly logger = new Logger(InworldTTSClient.name);
 
-  constructor(private config: ConfigService) {}
+  constructor(
+    private config: ConfigService,
+    private memory: AgentMemoryService,
+  ) {}
 
   async *streamFromText(text: string, voiceId: string): AsyncGenerator<Buffer, void, unknown> {
-    const apiKey = this.config.get("INWORLD_API_KEY");
+    const apiKey = this.memory.get("advanced", "inworld_api_key") || this.config.get("INWORLD_API_KEY");
     if (!apiKey) {
       this.logger.debug(`[Inworld TTS stub] ${text}`);
       return;
@@ -55,7 +59,7 @@ export class InworldTTSClient implements TTSClient {
   }
 }
 
-/** Factory function to select TTS provider based on environment variable */
+/** @deprecated — TTS provider is now read from AgentMemory in the gateway */
 export function getTTSProvider(config: ConfigService): "elevenlabs" | "inworld" {
   const provider = config.get("TTS_PROVIDER") || "elevenlabs";
   return provider === "inworld" ? "inworld" : "elevenlabs";

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import Anthropic from "@anthropic-ai/sdk";
+import { AgentMemoryService } from "./agent-memory.service";
 
 /**
  * ModelRouter — routes 99% of turns to Gemini Flash-Lite, escalates ~1% to Claude Sonnet.
@@ -17,7 +18,10 @@ export class ModelRouter {
   private claudeClient: Anthropic | null = null;
   private escalatedSessions = new Set<string>();
 
-  constructor(private config: ConfigService) {}
+  constructor(
+    private config: ConfigService,
+    private memory: AgentMemoryService,
+  ) {}
 
   /** Lazy init Claude client — only when escalation actually happens */
   private getClaudeClient(): Anthropic | null {
@@ -46,7 +50,7 @@ export class ModelRouter {
     // Already escalated — stay on Claude
     if (this.escalatedSessions.has(sessionId)) return true;
 
-    const threshold = Number(this.config.get("CLAUDE_ESCALATION_THRESHOLD")) || 500;
+    const threshold = Number(this.memory.get("advanced", "claude_escalation_threshold")) || 500;
 
     // High-value deal at closing phase with strong buying signals
     const isHighValue = (estimatedDealValue || 0) >= threshold;

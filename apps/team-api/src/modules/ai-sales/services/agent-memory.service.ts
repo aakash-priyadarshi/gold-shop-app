@@ -38,6 +38,14 @@ export class AgentMemoryService implements OnModuleInit {
     "persona:agent_name": "Aria",
     "persona:agent_tone": "warm, professional, conversational",
     "persona:language": "en",
+    // Advanced settings (audio pipeline, escalation, providers)
+    "advanced:audio_mode": "deepgram",
+    "advanced:stt_provider": "auto",
+    "advanced:tts_provider": "elevenlabs",
+    "advanced:claude_escalation_threshold": "500",
+    "advanced:inworld_api_key": "",
+    "advanced:inworld_voice_id": "",
+    "advanced:stt_keywords": "Orivraa,karat,tola,per-gram,hallmark,22K,24K,916,750,mangalsutra,chain,bangle,gold,sona",
   };
 
   constructor(private prisma: PrismaService) {}
@@ -153,6 +161,15 @@ export class AgentMemoryService implements OnModuleInit {
       { category: "persona", key: "agent_name", value: "Aria", label: "AI Agent Name" },
       { category: "persona", key: "agent_tone", value: "warm, professional, conversational", label: "Agent Tone" },
       { category: "persona", key: "language", value: "en", label: "Primary Language" },
+
+      // Advanced settings
+      { category: "advanced", key: "audio_mode", value: "deepgram", label: "Audio Mode (deepgram or gemini_live)" },
+      { category: "advanced", key: "stt_provider", value: "auto", label: "STT Provider (auto, deepgram, or sarvam)" },
+      { category: "advanced", key: "tts_provider", value: "elevenlabs", label: "TTS Provider (elevenlabs or inworld)" },
+      { category: "advanced", key: "claude_escalation_threshold", value: "500", label: "Claude Escalation Threshold ($)" },
+      { category: "advanced", key: "inworld_api_key", value: "", label: "Inworld API Key" },
+      { category: "advanced", key: "inworld_voice_id", value: "", label: "Inworld Voice ID" },
+      { category: "advanced", key: "stt_keywords", value: "Orivraa,karat,tola,per-gram,hallmark,22K,24K,916,750,mangalsutra,chain,bangle,gold,sona", label: "STT Keyword Boosting (comma-separated)" },
     ];
 
     await this.prisma.agentMemory.createMany({ data: seeds });

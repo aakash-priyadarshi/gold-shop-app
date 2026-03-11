@@ -13,13 +13,15 @@ import { ThinkingBudgetManager } from "../services/thinking-budget-manager.servi
 import { PreCallBrainService } from "../services/pre-call-brain.service";
 import { ModelRouter } from "../services/model-router.service";
 import { PostCallProcessor } from "../services/post-call-processor.service";
-import { InworldTTSClient, getTTSProvider } from "../services/inworld-tts.service";
+import { InworldTTSClient } from "../services/inworld-tts.service";
 import { GeminiLiveClient } from "../services/gemini-live.service";
 import { EmotionEngineService } from "../services/emotion-engine.service";
 import { CallOrchestratorService } from "../services/call-orchestrator.service";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { InCallMessagingService } from "../messaging/in-call-messaging-service";
 import { MessagingTriggerDetector } from "../messaging/messaging-trigger-detector";
+import { STTRouterService } from "../services/stt-router.service";
+import { AgentMemoryService } from "../services/agent-memory.service";
 
 /**
  * Audio Pipeline Gateway — handles Twilio Media Streams via WebSocket.
@@ -62,6 +64,8 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
     private prisma: PrismaService,
     private messagingService: InCallMessagingService,
     private triggerDetector: MessagingTriggerDetector,
+    private sttRouter: STTRouterService,
+    private memory: AgentMemoryService,
   ) {}
 
   async handleConnection(client: any) {
@@ -253,35 +257,30 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
   /**
    * Process buffered audio through STT → ThinkingBudget → ModelRouter → LLM → TTS pipeline.
    *
-   * Flow: Deepgram STT → emotion detect → thinking budget → model route →
-   *       Gemini Flash-Lite (99%) or Claude Sonnet (1% high-value) → TTS → Twilio
+   * Flow: STT Router (Deepgram or Sarvam based on language) → emotion detect →
+   *       thinking budget → model route → Gemini Flash-Lite (99%) or Claude Sonnet (1%) → TTS → Twilio
    */
   private async processAudioBuffer(session: ActiveCallSession) {
     const audioData = session.sttBuffer;
     session.sttBuffer = "";
 
-    const deepgramKey = this.config.get("DEEPGRAM_API_KEY");
-    if (!deepgramKey) {
-      // Dev mode: simulate transcription
-      return;
-    }
-
     try {
-      // Use Deepgram Nova-2 for STT ($0.0043/min)
-      const { createClient: createDeepgramClient } = await import("@deepgram/sdk") as any;
-      const deepgram = createDeepgramClient(deepgramKey);
-
       const audioBuffer = Buffer.from(audioData, "base64");
-      const { result } = await deepgram.listen.prerecorded.transcribeFile(audioBuffer, {
-        model: "nova-2",
-        language: session.context.language || "en",
-        smart_format: true,
-        encoding: "mulaw",
-        sample_rate: 8000,
-      });
 
-      const transcript = result?.results?.channels?.[0]?.alternatives?.[0]?.transcript;
+      // Route to best STT provider (Deepgram for English, Sarvam for Hindi/regional, auto-detect)
+      const sttResult = await this.sttRouter.transcribe(
+        audioBuffer,
+        session.sessionId,
+        session.context.language || "en",
+      );
+
+      const transcript = sttResult.transcript;
       if (!transcript || transcript.trim().length === 0) return;
+
+      // Track detected language for this session
+      if (sttResult.detectedLanguage && sttResult.detectedLanguage !== "unknown") {
+        session.detectedLanguage = sttResult.detectedLanguage;
+      }
 
       // Record user utterance
       session.transcript.push({ role: "user", content: transcript, timestamp: Date.now() });
@@ -402,11 +401,11 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
 
   /** Synthesize text to speech and send audio back to Twilio (ElevenLabs or Inworld) */
   private async synthesizeAndSend(session: ActiveCallSession, text: string) {
-    const ttsProvider = getTTSProvider(this.config);
+    const ttsProvider = (this.memory.get("advanced", "tts_provider") || "elevenlabs") as "elevenlabs" | "inworld";
 
     // Inworld TTS path
     if (ttsProvider === "inworld") {
-      const voiceId = this.config.get("INWORLD_VOICE_ID") || "default";
+      const voiceId = this.memory.get("advanced", "inworld_voice_id") || "default";
       for await (const chunk of this.inworldTTS.streamFromText(text, voiceId)) {
         const base64Audio = chunk.toString("base64");
         const mediaMsg = JSON.stringify({
@@ -536,6 +535,7 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
       this.messagingService.sendCallSummary(session.sessionId).catch(() => {});
       // Delay cleanup to allow summary to send
       setTimeout(() => this.messagingService.clearSession(session.sessionId), 5000);
+      this.sttRouter.clearSession(session.sessionId);
 
       if (this.geminiLive.isEnabled()) {
         await this.geminiLive.closeSession();
@@ -627,6 +627,7 @@ interface ActiveCallSession {
   sttBuffer: string;
   tokenCount: { input: number; output: number };
   pendingInjection?: string; // messaging question/confirmation to inject into next AI turn
+  detectedLanguage?: string; // auto-detected from STT (e.g. "hi-IN", "en-IN")
 }
 
 interface TranscriptEntry {

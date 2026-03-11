@@ -25,6 +25,7 @@ import {
   User,
   Sparkles,
   RefreshCcw,
+  Settings2,
 } from "lucide-react";
 
 interface MemoryEntry {
@@ -52,6 +53,7 @@ const CATEGORY_ICONS: Record<string, typeof Brain> = {
   urls: Link2,
   persona: User,
   product: Sparkles,
+  advanced: Settings2,
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -60,6 +62,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   urls: "Links & URLs",
   persona: "AI Persona",
   product: "Product Info",
+  advanced: "Advanced Settings",
 };
 
 const INSIGHT_CATEGORIES = [
@@ -86,7 +89,7 @@ export default function AgentMemoryPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editedMemory, setEditedMemory] = useState<Record<string, string>>({});
-  const [activeTab, setActiveTab] = useState<"memory" | "behavior">("memory");
+  const [activeTab, setActiveTab] = useState<"memory" | "behavior" | "advanced">("memory");
 
   // New entry form
   const [newEntry, setNewEntry] = useState({ category: "company", key: "", value: "", label: "" });
@@ -228,12 +231,17 @@ export default function AgentMemoryPage() {
     }
   };
 
-  // Group memory by category
+  // Group memory by category — separate advanced from others
   const grouped = memory.reduce<Record<string, MemoryEntry[]>>((acc, entry) => {
     if (!acc[entry.category]) acc[entry.category] = [];
     acc[entry.category].push(entry);
     return acc;
   }, {});
+
+  const advancedEntries = grouped["advanced"] || [];
+  const businessGrouped = Object.fromEntries(
+    Object.entries(grouped).filter(([cat]) => cat !== "advanced"),
+  );
 
   if (loading) {
     return (
@@ -295,6 +303,16 @@ export default function AgentMemoryPage() {
         >
           Behavior Insights ({insights.length})
         </button>
+        <button
+          onClick={() => setActiveTab("advanced")}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === "advanced"
+              ? "bg-background shadow text-foreground"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Advanced Settings
+        </button>
       </div>
 
       {/* ─── Memory Tab ─── */}
@@ -314,7 +332,7 @@ export default function AgentMemoryPage() {
           )}
 
           {/* Category cards */}
-          {Object.entries(grouped).map(([category, entries]) => {
+          {Object.entries(businessGrouped).map(([category, entries]) => {
             const IconComp = CATEGORY_ICONS[category] || Brain;
             return (
               <Card key={category}>
@@ -579,6 +597,222 @@ export default function AgentMemoryPage() {
           )}
         </div>
       )}
+
+      {/* ─── Advanced Settings Tab ─── */}
+      {activeTab === "advanced" && (
+        <AdvancedSettingsTab
+          entries={advancedEntries}
+          editedMemory={editedMemory}
+          onMemoryChange={handleMemoryChange}
+          onSave={saveMemoryChanges}
+          saving={saving}
+          hasUnsavedChanges={hasUnsavedChanges}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ─── Advanced Settings Component ─── */
+
+const ADVANCED_SETTINGS_META: Record<
+  string,
+  { label: string; description: string; type: "select" | "number" | "text" | "textarea" | "secret"; options?: string[] }
+> = {
+  audio_mode: {
+    label: "Audio Mode",
+    description:
+      "How audio flows between Twilio and the AI. 'deepgram' uses STT→LLM→TTS pipeline. 'gemini_live' uses native Gemini audio-to-audio (lower latency, less voice control).",
+    type: "select",
+    options: ["deepgram", "gemini_live"],
+  },
+  stt_provider: {
+    label: "STT Provider",
+    description:
+      "Speech-to-text routing. 'auto' detects language on first audio chunk — routes Hindi/regional to Sarvam AI, English to Deepgram. 'deepgram' always uses Deepgram (English-only). 'sarvam' always uses Sarvam AI (best for Indian languages).",
+    type: "select",
+    options: ["auto", "deepgram", "sarvam"],
+  },
+  tts_provider: {
+    label: "TTS Provider",
+    description:
+      "Text-to-speech engine. 'elevenlabs' (default) for high-quality English voices. 'inworld' for Inworld TTS alternative.",
+    type: "select",
+    options: ["elevenlabs", "inworld"],
+  },
+  claude_escalation_threshold: {
+    label: "Claude Escalation Threshold ($)",
+    description:
+      "Minimum estimated deal value to trigger Claude Sonnet takeover during a call. Below this value, Gemini Flash-Lite handles everything. Higher = fewer Claude escalations = lower cost.",
+    type: "number",
+  },
+  inworld_api_key: {
+    label: "Inworld API Key",
+    description: "API key for Inworld TTS. Only needed if TTS Provider is set to 'inworld'.",
+    type: "secret",
+  },
+  inworld_voice_id: {
+    label: "Inworld Voice ID",
+    description: "Inworld voice to use for TTS. Only needed if TTS Provider is set to 'inworld'.",
+    type: "text",
+  },
+  stt_keywords: {
+    label: "STT Keyword Boosting",
+    description:
+      "Comma-separated keywords to boost recognition accuracy in Deepgram. Add your company name, product terms, gold/jewelry jargon. These words will be recognized more accurately during calls.",
+    type: "textarea",
+  },
+};
+
+function AdvancedSettingsTab({
+  entries,
+  editedMemory,
+  onMemoryChange,
+  onSave,
+  saving,
+  hasUnsavedChanges,
+}: {
+  entries: MemoryEntry[];
+  editedMemory: Record<string, string>;
+  onMemoryChange: (id: string, value: string) => void;
+  onSave: () => void;
+  saving: boolean;
+  hasUnsavedChanges: boolean;
+}) {
+  return (
+    <div className="space-y-6">
+      {hasUnsavedChanges && (
+        <div className="flex items-center justify-between bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+          <span className="text-sm text-yellow-800 dark:text-yellow-200">
+            {Object.keys(editedMemory).length} unsaved change(s)
+          </span>
+          <Button onClick={onSave} disabled={saving} size="sm">
+            <Save className="mr-2 h-4 w-4" />
+            {saving ? "Saving..." : "Save All"}
+          </Button>
+        </div>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings2 className="h-5 w-5 text-muted-foreground" />
+            Advanced Settings
+          </CardTitle>
+          <CardDescription>
+            Audio pipeline, STT/TTS providers, AI escalation, and keyword boosting.
+            Changes take effect within 60 seconds — no redeploy needed.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-6">
+          {entries.map((entry) => {
+            const meta = ADVANCED_SETTINGS_META[entry.key];
+            if (!meta) {
+              // Unknown advanced key — render as plain text input
+              return (
+                <div key={entry.id}>
+                  <Label className="text-xs text-muted-foreground">{entry.label || entry.key}</Label>
+                  <Input
+                    value={editedMemory[entry.id] ?? entry.value}
+                    onChange={(e) => onMemoryChange(entry.id, e.target.value)}
+                  />
+                </div>
+              );
+            }
+
+            const currentValue = editedMemory[entry.id] ?? entry.value;
+
+            return (
+              <div key={entry.id} className="space-y-1">
+                <Label className="text-sm font-medium">{meta.label}</Label>
+                <p className="text-xs text-muted-foreground mb-2">{meta.description}</p>
+
+                {meta.type === "select" && (
+                  <select
+                    className="flex h-10 w-full max-w-xs rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={currentValue}
+                    onChange={(e) => onMemoryChange(entry.id, e.target.value)}
+                  >
+                    {meta.options!.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                {meta.type === "number" && (
+                  <Input
+                    type="number"
+                    className="max-w-xs"
+                    value={currentValue}
+                    onChange={(e) => onMemoryChange(entry.id, e.target.value)}
+                  />
+                )}
+
+                {meta.type === "text" && (
+                  <Input
+                    className="max-w-md"
+                    value={currentValue}
+                    onChange={(e) => onMemoryChange(entry.id, e.target.value)}
+                    placeholder={meta.label}
+                  />
+                )}
+
+                {meta.type === "secret" && (
+                  <Input
+                    type="password"
+                    className="max-w-md"
+                    value={currentValue}
+                    onChange={(e) => onMemoryChange(entry.id, e.target.value)}
+                    placeholder="Enter API key..."
+                  />
+                )}
+
+                {meta.type === "textarea" && (
+                  <Textarea
+                    className="max-w-lg"
+                    rows={3}
+                    value={currentValue}
+                    onChange={(e) => onMemoryChange(entry.id, e.target.value)}
+                    placeholder="comma, separated, keywords"
+                  />
+                )}
+              </div>
+            );
+          })}
+
+          {entries.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              <Settings2 className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <p>No advanced settings found. Run &quot;Seed Defaults&quot; from the Business Config tab first.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Environment Variables (set on Railway)</CardTitle>
+          <CardDescription>
+            These API keys stay as environment variables — not editable from the UI.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-xs text-muted-foreground">
+            <span className="font-mono">GEMINI_API_KEY</span><span>Google AI — Gemini Flash-Lite</span>
+            <span className="font-mono">ANTHROPIC_API_KEY</span><span>Anthropic — Claude Sonnet</span>
+            <span className="font-mono">DEEPGRAM_API_KEY</span><span>Deepgram — English STT</span>
+            <span className="font-mono">SARVAM_API_KEY</span><span>Sarvam AI — Indian language STT</span>
+            <span className="font-mono">ELEVENLABS_API_KEY</span><span>ElevenLabs — TTS voice</span>
+            <span className="font-mono">ELEVENLABS_VOICE_ID</span><span>ElevenLabs voice to use</span>
+            <span className="font-mono">TWILIO_ACCOUNT_SID</span><span>Twilio account SID</span>
+            <span className="font-mono">TWILIO_AUTH_TOKEN</span><span>Twilio auth token</span>
+            <span className="font-mono">TWILIO_PHONE_NUMBER</span><span>Your Twilio phone number</span>
+            <span className="font-mono">WEBHOOK_BASE_URL</span><span>Base URL for Twilio webhooks</span>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
