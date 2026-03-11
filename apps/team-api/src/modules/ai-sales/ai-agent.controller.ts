@@ -11,7 +11,10 @@ import {
   Res,
   Header,
   Logger,
+  UseInterceptors,
+  UploadedFile,
 } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import { AIAgentService } from "./ai-agent.service";
 import { Roles } from "../../auth/roles.decorator";
 import { CampaignSchedulerService } from "./services/campaign-scheduler.service";
@@ -30,6 +33,7 @@ import { FollowUpSequencerService } from "./services/follow-up-sequencer.service
 import { ObjectionPlaybookService } from "./services/objection-playbook.service";
 import { WebhookService } from "./services/webhook.service";
 import { CallRecordingService } from "./services/call-recording.service";
+import { STTRouterService } from "./services/stt-router.service";
 
 @Controller("ai-sales")
 export class AIAgentController {
@@ -53,6 +57,7 @@ export class AIAgentController {
     private playbook: ObjectionPlaybookService,
     private webhooks: WebhookService,
     private recordings: CallRecordingService,
+    private sttRouter: STTRouterService,
   ) {}
 
   /* ─── AGENTS ─── */
@@ -533,7 +538,123 @@ export class AIAgentController {
       results.googleSTT = { ok: false, error: err.message };
     }
 
+    // Test Sarvam AI STT
+    try {
+      const start = Date.now();
+      const sarvamKey = this.config.get<string>("SARVAM_API_KEY");
+      if (!sarvamKey) throw new Error("SARVAM_API_KEY not set");
+      const resp = await fetch("https://api.sarvam.ai/speech-to-text", {
+        method: "POST",
+        headers: { "api-subscription-key": sarvamKey },
+        body: new FormData(),
+      });
+      // Any non-401/403 means key is valid (may get 400 for empty audio, that's fine)
+      if (resp.status === 401 || resp.status === 403) throw new Error("Invalid API key");
+      results.sarvamSTT = { ok: true, latencyMs: Date.now() - start };
+    } catch (err: any) {
+      results.sarvamSTT = { ok: false, error: err.message };
+    }
+
     return results;
+  }
+
+  @Post("playground/voice")
+  @UseInterceptors(FileInterceptor("audio"))
+  async playgroundVoice(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: { agentId: string; history?: string },
+  ) {
+    if (!file) throw new Error("No audio file uploaded");
+
+    const agent = await this.svc.getAgent(body.agentId);
+    const history: { role: string; text: string }[] = body.history ? JSON.parse(body.history) : [];
+
+    // 1. STT — transcribe audio
+    const sttStart = Date.now();
+    const sttResult = await this.sttRouter.transcribe(
+      file.buffer,
+      `playground-${Date.now()}`,
+      agent.languages?.[0] || "en",
+    );
+    const sttLatencyMs = Date.now() - sttStart;
+
+    if (!sttResult.transcript) {
+      return {
+        transcript: "",
+        sttProvider: sttResult.provider,
+        sttLatencyMs,
+        reply: "Sorry, I couldn't understand that. Could you try again?",
+        llmProvider: "none",
+        llmLatencyMs: 0,
+      };
+    }
+
+    // 2. LLM — generate response
+    const conversationHistory = history.map((m) => ({
+      role: m.role === "user" ? "user" as const : "assistant" as const,
+      content: m.text,
+    }));
+    conversationHistory.push({ role: "user", content: sttResult.transcript });
+
+    const llmStart = Date.now();
+    const systemPrompt = this.brain.buildSystemPrompt({
+      agentName: agent.name,
+      agentPersonality: agent.personalityDescription || undefined,
+      language: agent.languages?.[0]?.split("-")[0] || "en",
+      greeting: agent.greeting || undefined,
+      conversationHistory,
+    });
+
+    let reply = "";
+    for await (const chunk of this.gemini.streamResponse(sttResult.transcript, systemPrompt, 0)) {
+      reply += chunk;
+    }
+    const llmLatencyMs = Date.now() - llmStart;
+
+    // 3. TTS — synthesize reply
+    let audioBase64: string | undefined;
+    let ttsLatencyMs: number | undefined;
+    let ttsProvider: string | undefined;
+    const apiKey = this.config.get<string>("ELEVENLABS_API_KEY");
+    const voiceId = agent.voiceId || this.agentVoices.getDefaultVoice()?.voiceId;
+    if (apiKey && voiceId && reply) {
+      try {
+        const ttsStart = Date.now();
+        const ttsResp = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+          method: "POST",
+          headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: reply,
+            model_id: "eleven_multilingual_v2",
+            voice_settings: {
+              stability: agent.voiceStability ?? 0.5,
+              similarity_boost: agent.voiceSimilarityBoost ?? 0.75,
+            },
+          }),
+        });
+        if (ttsResp.ok) {
+          const buffer = Buffer.from(await ttsResp.arrayBuffer());
+          audioBase64 = buffer.toString("base64");
+          ttsLatencyMs = Date.now() - ttsStart;
+          ttsProvider = "elevenlabs";
+        }
+      } catch (err: any) {
+        this.logger.warn(`TTS failed: ${err.message}`);
+      }
+    }
+
+    return {
+      transcript: sttResult.transcript,
+      detectedLanguage: sttResult.detectedLanguage,
+      sttProvider: sttResult.provider,
+      sttLatencyMs,
+      reply,
+      llmProvider: "gemini-flash",
+      llmLatencyMs,
+      ttsProvider,
+      ttsLatencyMs,
+      audioBase64,
+    };
   }
 
   @Post("playground/chat")
