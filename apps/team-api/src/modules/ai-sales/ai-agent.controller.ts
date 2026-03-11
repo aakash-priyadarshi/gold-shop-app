@@ -774,7 +774,7 @@ export class AIAgentController {
     @Param("id") id: string,
     @Body() body: { resultSessionId?: string; outcome?: string },
   ) {
-    return this.followUps.completeFollowUp(id, body.resultSessionId ?? '', body.outcome);
+    return this.followUps.completeFollowUp(id, body.resultSessionId ?? '', body.outcome ?? '');
   }
 
   @Patch("follow-ups/:id/cancel")
