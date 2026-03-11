@@ -251,6 +251,28 @@ export const aiSalesApi = {
     }),
   playgroundCall: (data: { agentId: string; phoneNumber: string }) =>
     api.post("/ai-sales/playground/call", data),
+
+  // Central Brain / Intelligence
+  getBrainDashboard: () =>
+    api.get("/ai-sales/intelligence/dashboard"),
+  getLeadInsights: (leadId: string) =>
+    api.get(`/ai-sales/intelligence/lead/${leadId}`),
+  getWinningPatterns: (segment?: string) =>
+    api.get("/ai-sales/intelligence/winning-patterns", { params: segment ? { segment } : {} }),
+  getLostDealPatterns: (segment?: string) =>
+    api.get("/ai-sales/intelligence/lost-patterns", { params: segment ? { segment } : {} }),
+  getConversationMoments: (type?: string) =>
+    api.get("/ai-sales/intelligence/moments", { params: type ? { type } : {} }),
+  getTimingIntelligence: (segment?: string) =>
+    api.get("/ai-sales/intelligence/timing", { params: segment ? { segment } : {} }),
+  getCompetitorTrends: () =>
+    api.get("/ai-sales/intelligence/competitors"),
+  getPersonaPerformance: (personaId?: string) =>
+    api.get("/ai-sales/intelligence/persona-performance", { params: personaId ? { personaId } : {} }),
+  getReEngagementPatterns: () =>
+    api.get("/ai-sales/intelligence/re-engagement"),
+  getCallRemarks: (leadId: string) =>
+    api.get(`/ai-sales/intelligence/call-remarks/${leadId}`),
 };
 
 // ─── Certificates ───

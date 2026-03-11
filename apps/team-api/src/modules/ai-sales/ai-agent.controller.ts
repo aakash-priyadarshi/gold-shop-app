@@ -24,6 +24,7 @@ import { ConversationBrainService } from "./services/conversation-brain.service"
 import { GeminiStreamingClient } from "./services/gemini-streaming.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { ConfigService } from "@nestjs/config";
+import { CentralBrainService } from "./services/central-brain.service";
 
 @Controller("ai-sales")
 export class AIAgentController {
@@ -41,6 +42,7 @@ export class AIAgentController {
     private gemini: GeminiStreamingClient,
     private prisma: PrismaService,
     private config: ConfigService,
+    private centralBrain: CentralBrainService,
   ) {}
 
   /* ─── AGENTS ─── */
@@ -619,5 +621,59 @@ export class AIAgentController {
       sessionId: result.id,
       leadId: lead.id,
     };
+  }
+
+  /* ─── CENTRAL BRAIN / INTELLIGENCE ─── */
+
+  @Get("intelligence/dashboard")
+  getBrainDashboard() {
+    return this.centralBrain.getBrainDashboard();
+  }
+
+  @Get("intelligence/lead/:leadId")
+  async getLeadInsights(@Param("leadId") leadId: string) {
+    const lead = await this.prisma.lead.findUnique({ where: { id: leadId } });
+    if (!lead) return { error: "Lead not found" };
+    return this.centralBrain.queryForLead(lead);
+  }
+
+  @Get("intelligence/winning-patterns")
+  getWinningPatterns(@Query("segment") segment?: string) {
+    return this.centralBrain.getWinningPatterns(segment);
+  }
+
+  @Get("intelligence/lost-patterns")
+  getLostDealPatterns(@Query("segment") segment?: string) {
+    return this.centralBrain.getLostDealPatterns(segment);
+  }
+
+  @Get("intelligence/moments")
+  getConversationMoments(@Query("type") type?: string) {
+    return this.centralBrain.getConversationMoments(type);
+  }
+
+  @Get("intelligence/timing")
+  getTimingIntelligence(@Query("segment") segment?: string) {
+    return this.centralBrain.getTimingIntelligence(segment);
+  }
+
+  @Get("intelligence/competitors")
+  getCompetitorTrends() {
+    return this.centralBrain.getCompetitorTrends();
+  }
+
+  @Get("intelligence/persona-performance")
+  getPersonaPerformance(@Query("personaId") personaId?: string) {
+    return this.centralBrain.getPersonaPerformance(personaId);
+  }
+
+  @Get("intelligence/re-engagement")
+  getReEngagementPatterns() {
+    return this.centralBrain.getReEngagementPatterns();
+  }
+
+  @Get("intelligence/call-remarks/:leadId")
+  getCallRemarks(@Param("leadId") leadId: string) {
+    return this.centralBrain.getCallRemarks(leadId);
   }
 }
