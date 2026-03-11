@@ -561,7 +561,7 @@ export class AIAgentController {
   @Post("playground/voice")
   @UseInterceptors(FileInterceptor("audio"))
   async playgroundVoice(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: { buffer: Buffer; originalname: string; mimetype: string },
     @Body() body: { agentId: string; history?: string },
   ) {
     if (!file) throw new Error("No audio file uploaded");
