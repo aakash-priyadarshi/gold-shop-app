@@ -48,8 +48,8 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup("docs", app, document);
 
-  const port = process.env.PORT || 3003;
-  await app.listen(port);
+  const port = process.env.PORT || 3002;
+  await app.listen(port, "0.0.0.0");
   logger.log(`Team API running on port ${port}`);
   logger.log(`Swagger docs: http://localhost:${port}/docs`);
 }
