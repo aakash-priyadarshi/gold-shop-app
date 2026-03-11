@@ -17,7 +17,7 @@ import {
   ArrowLeft, Mic, Pencil, Plus, Power, Star, Trash2, User,
 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 /* ─── Constants ─── */
@@ -54,6 +54,13 @@ const LANGUAGE_OPTIONS = [
   { code: "pa-IN", label: "Punjabi" },
   { code: "ar", label: "Arabic" },
   { code: "de", label: "German" },
+];
+
+const GREETING_VARIABLES = [
+  { variable: "{{lead_name}}", label: "Lead Name", description: "Customer's name" },
+  { variable: "{{agent_name}}", label: "Agent Name", description: "AI agent's name" },
+  { variable: "{{company_name}}", label: "Company", description: "Your company name" },
+  { variable: "{{current_time}}", label: "Time", description: "Current time of day" },
 ];
 
 /* ─── Empty form shape ─── */
@@ -159,6 +166,7 @@ export default function PersonasPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const greetingRef = useRef<HTMLTextAreaElement>(null);
   const [activeTab, setActiveTab] = useState<"identity" | "personality" | "voice" | "behaviour" | "segments">("identity");
   const [saving, setSaving] = useState(false);
 
@@ -315,8 +323,43 @@ export default function PersonasPage() {
             </div>
             <div>
               <Label>Greeting (opening line for calls)</Label>
-              <Textarea value={form.greeting} onChange={(e) => set("greeting", e.target.value)} placeholder="Hi {{lead_name}}, this is {{agent_name}} from {{company_name}}..." rows={3} />
-              <p className="text-xs text-gray-500 mt-1">Supports template variables: {"{{lead_name}}, {{agent_name}}, {{company_name}}, {{current_time}}"}</p>
+              <Textarea ref={greetingRef} value={form.greeting} onChange={(e) => set("greeting", e.target.value)} placeholder="Hi {{lead_name}}, this is {{agent_name}} from {{company_name}}..." rows={3} />
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {GREETING_VARIABLES.map((v) => (
+                  <button
+                    key={v.variable}
+                    type="button"
+                    title={v.description}
+                    className={`text-xs px-2.5 py-1 rounded-md border transition-colors ${
+                      form.greeting.includes(v.variable)
+                        ? "bg-amber-600/20 text-amber-400 border-amber-600/50"
+                        : "bg-gray-800 text-gray-400 border-gray-700 hover:border-amber-600/50 hover:text-amber-400"
+                    }`}
+                    onClick={() => {
+                      const el = greetingRef.current;
+                      if (el) {
+                        const start = el.selectionStart ?? form.greeting.length;
+                        const end = el.selectionEnd ?? start;
+                        const before = form.greeting.slice(0, start);
+                        const after = form.greeting.slice(end);
+                        const needsSpace = before.length > 0 && !before.endsWith(" ") && !before.endsWith("\n");
+                        const inserted = (needsSpace ? " " : "") + v.variable;
+                        set("greeting", before + inserted + after);
+                        requestAnimationFrame(() => {
+                          const pos = start + inserted.length;
+                          el.focus();
+                          el.setSelectionRange(pos, pos);
+                        });
+                      } else {
+                        set("greeting", form.greeting + (form.greeting ? " " : "") + v.variable);
+                      }
+                    }}
+                  >
+                    {v.label} <span className="opacity-50 ml-0.5">{v.variable}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Click a variable above to insert it at cursor position</p>
             </div>
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 text-sm">
