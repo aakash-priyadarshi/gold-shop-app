@@ -18,6 +18,7 @@ import { CallOrchestratorService } from "./services/call-orchestrator.service";
 import { LeadScoringService } from "./services/lead-scoring.service";
 import { AgentMemoryService } from "./services/agent-memory.service";
 import { BehaviorInsightService } from "./services/behavior-insight.service";
+import { AgentVoiceService } from "./services/agent-voice.service";
 import { ConfigService } from "@nestjs/config";
 
 @Controller("ai-sales")
@@ -29,6 +30,7 @@ export class AIAgentController {
     private scoring: LeadScoringService,
     private agentMemory: AgentMemoryService,
     private behaviorInsights: BehaviorInsightService,
+    private agentVoices: AgentVoiceService,
     private config: ConfigService,
   ) {}
 
@@ -403,5 +405,43 @@ export class AIAgentController {
   @Roles("ADMIN")
   seedBehaviorInsights() {
     return this.behaviorInsights.seedDefaults();
+  }
+
+  /* ─── VOICE AGENTS ─── */
+
+  @Get("voices")
+  listVoices() {
+    return this.agentVoices.list();
+  }
+
+  @Post("voices")
+  @Roles("ADMIN")
+  createVoice(@Body() body: {
+    name: string;
+    voiceId: string;
+    languages: string[];
+    gender?: string;
+    accent?: string;
+    isDefault?: boolean;
+  }) {
+    return this.agentVoices.create(body);
+  }
+
+  @Put("voices/:id")
+  @Roles("ADMIN")
+  updateVoice(@Param("id") id: string, @Body() body: any) {
+    return this.agentVoices.update(id, body);
+  }
+
+  @Delete("voices/:id")
+  @Roles("ADMIN")
+  deleteVoice(@Param("id") id: string) {
+    return this.agentVoices.remove(id);
+  }
+
+  @Post("voices/seed")
+  @Roles("ADMIN")
+  seedVoices() {
+    return this.agentVoices.seedDefaults();
   }
 }

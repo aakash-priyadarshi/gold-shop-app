@@ -22,6 +22,7 @@ import { InCallMessagingService } from "../messaging/in-call-messaging-service";
 import { MessagingTriggerDetector } from "../messaging/messaging-trigger-detector";
 import { STTRouterService } from "../services/stt-router.service";
 import { AgentMemoryService } from "../services/agent-memory.service";
+import { AgentVoiceService } from "../services/agent-voice.service";
 
 /**
  * Audio Pipeline Gateway — handles Twilio Media Streams via WebSocket.
@@ -66,6 +67,7 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
     private triggerDetector: MessagingTriggerDetector,
     private sttRouter: STTRouterService,
     private memory: AgentMemoryService,
+    private voiceService: AgentVoiceService,
   ) {}
 
   async handleConnection(client: any) {
@@ -179,6 +181,20 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
       systemPrompt = this.brain.buildSystemPrompt(context);
     }
 
+    // Inject voice identity into system prompt
+    const voices = this.voiceService.getAllVoices();
+    if (voices.length > 0) {
+      const defaultVoice = this.voiceService.getDefaultVoice();
+      const voiceList = voices.map((v) => `- ${v.name} (${v.gender || "neutral"}, ${v.accent || "neutral"}, speaks ${v.languages.join(", ")})`).join("\n");
+      systemPrompt += `\n\n## YOUR VOICE IDENTITY
+You are currently speaking as "${defaultVoice?.name || voices[0].name}".
+If a customer asks your name, tell them you are ${defaultVoice?.name || voices[0].name}.
+If a customer asks to speak with someone specific, acknowledge the request naturally.
+
+Available voice identities on this team:
+${voiceList}`;
+    }
+
     const session: ActiveCallSession = {
       sessionId,
       client,
@@ -280,6 +296,18 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
       // Track detected language for this session
       if (sttResult.detectedLanguage && sttResult.detectedLanguage !== "unknown") {
         session.detectedLanguage = sttResult.detectedLanguage;
+      }
+
+      // Detect voice-switch request ("I want to talk to Priya", "Can I speak with Raj?")
+      const voiceSwitchMatch = transcript.match(
+        /(?:talk to|speak (?:to|with)|want|give me|connect me (?:to|with)|switch to)\s+([A-Z][a-z]{2,})/i,
+      );
+      if (voiceSwitchMatch) {
+        const requestedVoice = this.voiceService.getVoiceByName(voiceSwitchMatch[1]);
+        if (requestedVoice) {
+          session.activeVoiceName = requestedVoice.name;
+          this.logger.log(`Voice switch → ${requestedVoice.name} (${requestedVoice.voiceId})`);
+        }
       }
 
       // Record user utterance
@@ -422,7 +450,14 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
 
     // ElevenLabs TTS path (default)
     const elevenLabsKey = this.config.get("ELEVENLABS_API_KEY");
-    const voiceId = this.config.get("ELEVENLABS_VOICE_ID") || "21m00Tcm4TlvDq8ikWAM"; // Rachel default
+
+    // Multi-voice: pick voice by name request, then by detected language, then default
+    const namedVoice = session.activeVoiceName
+      ? this.voiceService.getVoiceByName(session.activeVoiceName)
+      : null;
+    const activeVoice = namedVoice || this.voiceService.getVoiceForLanguage(session.detectedLanguage);
+    const voiceId = activeVoice?.voiceId || this.config.get("ELEVENLABS_VOICE_ID") || "21m00Tcm4TlvDq8ikWAM";
+    if (activeVoice) session.activeVoiceName = activeVoice.name;
 
     if (!elevenLabsKey) {
       this.logger.debug(`[TTS stub] ${text}`);
@@ -628,6 +663,7 @@ interface ActiveCallSession {
   tokenCount: { input: number; output: number };
   pendingInjection?: string; // messaging question/confirmation to inject into next AI turn
   detectedLanguage?: string; // auto-detected from STT (e.g. "hi-IN", "en-IN")
+  activeVoiceName?: string;  // current voice identity name (e.g. "Priya")
 }
 
 interface TranscriptEntry {

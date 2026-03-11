@@ -1086,3 +1086,25 @@ model BehaviorInsight {
   @@index([segment])
   @@index([isActive])
 }
+
+// ──────────────────────────────────────────────────────
+// Agent Voices — multi-voice system for language-based auto-selection.
+// Each voice is an identity: name + ElevenLabs voice ID + languages.
+// Customers can request a voice by name ("I want to talk to Priya").
+// ──────────────────────────────────────────────────────
+
+model AgentVoice {
+  id        String   @id @default(uuid())
+  name      String   // voice identity name: "Aria", "Priya", "Raj"
+  voiceId   String   // ElevenLabs voice ID
+  languages String[] // BCP-47 codes: ["en-IN", "hi-IN", "ta-IN"]
+  gender    String?  // "female", "male"
+  accent    String?  // "Indian", "American", "British"
+  isDefault Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([isDefault])
+}

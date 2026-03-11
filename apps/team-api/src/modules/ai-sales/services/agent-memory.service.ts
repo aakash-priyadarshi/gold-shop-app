@@ -51,7 +51,11 @@ export class AgentMemoryService implements OnModuleInit {
   constructor(private prisma: PrismaService) {}
 
   async onModuleInit() {
-    await this.loadAll();
+    try {
+      await this.loadAll();
+    } catch (err: any) {
+      this.logger.warn(`Initial cache load failed (table may not exist yet): ${err.message}`);
+    }
     // Refresh cache every 60 seconds
     this.refreshInterval = setInterval(() => {
       this.loadAll().catch((err) =>

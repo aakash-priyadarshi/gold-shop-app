@@ -230,6 +230,15 @@ export const aiSalesApi = {
   deleteBehaviorInsight: (id: string) =>
     api.delete(`/ai-sales/behavior-insights/${id}`),
   seedBehaviorInsights: () => api.post("/ai-sales/behavior-insights/seed"),
+
+  // Voice Agents (multi-voice system)
+  listVoices: () => api.get("/ai-sales/voices"),
+  createVoice: (data: Record<string, unknown>) =>
+    api.post("/ai-sales/voices", data),
+  updateVoice: (id: string, data: Record<string, unknown>) =>
+    api.put(`/ai-sales/voices/${id}`, data),
+  deleteVoice: (id: string) => api.delete(`/ai-sales/voices/${id}`),
+  seedVoices: () => api.post("/ai-sales/voices/seed"),
 };
 
 // ─── Certificates ───
