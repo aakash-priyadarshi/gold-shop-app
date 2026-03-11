@@ -1047,3 +1047,42 @@ model CallMessage {
   @@index([callId])
   @@index([leadId])
 }
+
+// ──────────────────────────────────────────────────────
+// Agent Memory — mutable business config (phones, URLs, company info)
+// Replaces env vars for data that changes without redeploy.
+// ──────────────────────────────────────────────────────
+
+model AgentMemory {
+  id        String   @id @default(uuid())
+  category  String   // "company", "phones", "urls", "persona", "product", "region"
+  key       String   // "company_name", "twilio_phone", "pricing_url", etc.
+  value     String   @db.Text
+  label     String?  // human-readable label for UI
+  updatedAt DateTime @updatedAt
+
+  @@unique([category, key])
+  @@index([category])
+}
+
+// ──────────────────────────────────────────────────────
+// Behavior Insights — customer behavior patterns by segment
+// What customers respond to, how they react, regional/gender differences.
+// ──────────────────────────────────────────────────────
+
+model BehaviorInsight {
+  id          String   @id @default(uuid())
+  category    String   // "objection_handling", "greeting_response", "buying_signal", "preference", "cultural"
+  segment     String   @default("all") // "region:maharashtra", "gender:female", "age:25-35", "all"
+  pattern     String   @db.Text  // what customers do/say
+  response    String   @db.Text  // what works best as a response
+  confidence  Float    @default(0.5) // 0-1, how reliable this insight is
+  sampleSize  Int      @default(0)   // how many interactions this is based on
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([segment])
+  @@index([isActive])
+}
