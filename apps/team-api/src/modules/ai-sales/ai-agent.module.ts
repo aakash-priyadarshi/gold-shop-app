@@ -22,6 +22,7 @@ import { MessageBuilder } from "./messaging/message-builder";
 import { InCallMessagingService } from "./messaging/in-call-messaging-service";
 import { AgentMemoryService } from "./services/agent-memory.service";
 import { BehaviorInsightService } from "./services/behavior-insight.service";
+import { AgentVoiceService } from "./services/agent-voice.service";
 import { SarvamSTTClient } from "./services/sarvam-stt.service";
 import { STTRouterService } from "./services/stt-router.service";
 import { GoogleSTTClient } from "./services/google-stt.service";
@@ -49,6 +50,7 @@ import { GoogleSTTClient } from "./services/google-stt.service";
     InCallMessagingService,
     AgentMemoryService,
     BehaviorInsightService,
+    AgentVoiceService,
     SarvamSTTClient,
     STTRouterService,
     GoogleSTTClient,

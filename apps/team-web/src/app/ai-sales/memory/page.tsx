@@ -26,6 +26,8 @@ import {
   Sparkles,
   RefreshCcw,
   Settings2,
+  Mic,
+  Edit,
 } from "lucide-react";
 
 interface MemoryEntry {
@@ -44,6 +46,17 @@ interface BehaviorInsight {
   response: string;
   confidence: number;
   sampleSize: number;
+  isActive: boolean;
+}
+
+interface AgentVoice {
+  id: string;
+  name: string;
+  voiceId: string;
+  languages: string[];
+  gender: string | null;
+  accent: string | null;
+  isDefault: boolean;
   isActive: boolean;
 }
 
@@ -86,10 +99,11 @@ const INSIGHT_CATEGORY_LABELS: Record<string, string> = {
 export default function AgentMemoryPage() {
   const [memory, setMemory] = useState<MemoryEntry[]>([]);
   const [insights, setInsights] = useState<BehaviorInsight[]>([]);
+  const [voices, setVoices] = useState<AgentVoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editedMemory, setEditedMemory] = useState<Record<string, string>>({});
-  const [activeTab, setActiveTab] = useState<"memory" | "behavior" | "advanced">("memory");
+  const [activeTab, setActiveTab] = useState<"memory" | "behavior" | "advanced" | "voices">("memory");
 
   // New entry form
   const [newEntry, setNewEntry] = useState({ category: "company", key: "", value: "", label: "" });
@@ -108,12 +122,14 @@ export default function AgentMemoryPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [memRes, insightsRes] = await Promise.all([
+      const [memRes, insightsRes, voicesRes] = await Promise.all([
         aiSalesApi.getMemory(),
         aiSalesApi.listBehaviorInsights(),
+        aiSalesApi.listVoices(),
       ]);
       setMemory(memRes.data || []);
       setInsights(insightsRes.data || []);
+      setVoices(voicesRes.data || []);
       setEditedMemory({});
     } catch {
       toast.error("Failed to load data");
@@ -312,6 +328,16 @@ export default function AgentMemoryPage() {
           }`}
         >
           Advanced Settings
+        </button>
+        <button
+          onClick={() => setActiveTab("voices")}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === "voices"
+              ? "bg-background shadow text-foreground"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Voice Agents ({voices.length})
         </button>
       </div>
 
@@ -609,6 +635,11 @@ export default function AgentMemoryPage() {
           hasUnsavedChanges={hasUnsavedChanges}
         />
       )}
+
+      {/* ─── Voice Agents Tab ─── */}
+      {activeTab === "voices" && (
+        <VoiceAgentsTab voices={voices} onRefresh={loadData} />
+      )}
     </div>
   );
 }
@@ -806,12 +837,346 @@ function AdvancedSettingsTab({
             <span className="font-mono">SARVAM_API_KEY</span><span>Sarvam AI — Indian language STT</span>
             <span className="font-mono">DEEPGRAM_API_KEY</span><span>Deepgram — fallback STT</span>
             <span className="font-mono">ELEVENLABS_API_KEY</span><span>ElevenLabs — TTS voice</span>
-            <span className="font-mono">ELEVENLABS_VOICE_ID</span><span>ElevenLabs voice to use</span>
             <span className="font-mono">TWILIO_ACCOUNT_SID</span><span>Twilio account SID</span>
             <span className="font-mono">TWILIO_AUTH_TOKEN</span><span>Twilio auth token</span>
             <span className="font-mono">TWILIO_PHONE_NUMBER</span><span>Your Twilio phone number</span>
             <span className="font-mono">WEBHOOK_BASE_URL</span><span>Base URL for Twilio webhooks</span>
           </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/* ─── Voice Agents Component ─── */
+
+const AVAILABLE_LANGUAGES = [
+  { code: "en-IN", label: "English (India)" },
+  { code: "en-US", label: "English (US)" },
+  { code: "en-GB", label: "English (UK)" },
+  { code: "hi-IN", label: "Hindi" },
+  { code: "bn-IN", label: "Bengali" },
+  { code: "ta-IN", label: "Tamil" },
+  { code: "te-IN", label: "Telugu" },
+  { code: "mr-IN", label: "Marathi" },
+  { code: "kn-IN", label: "Kannada" },
+  { code: "ml-IN", label: "Malayalam" },
+  { code: "gu-IN", label: "Gujarati" },
+  { code: "pa-IN", label: "Punjabi" },
+  { code: "od-IN", label: "Odia" },
+  { code: "as-IN", label: "Assamese" },
+  { code: "ne-NP", label: "Nepali" },
+];
+
+function VoiceAgentsTab({
+  voices,
+  onRefresh,
+}: {
+  voices: AgentVoice[];
+  onRefresh: () => void;
+}) {
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    name: "",
+    voiceId: "",
+    languages: ["en-IN"] as string[],
+    gender: "female",
+    accent: "Indian",
+    isDefault: false,
+  });
+
+  const resetForm = () => {
+    setForm({ name: "", voiceId: "", languages: ["en-IN"], gender: "female", accent: "Indian", isDefault: false });
+    setEditingId(null);
+    setShowForm(false);
+  };
+
+  const startEdit = (voice: AgentVoice) => {
+    setForm({
+      name: voice.name,
+      voiceId: voice.voiceId,
+      languages: voice.languages,
+      gender: voice.gender || "female",
+      accent: voice.accent || "Indian",
+      isDefault: voice.isDefault,
+    });
+    setEditingId(voice.id);
+    setShowForm(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.name || !form.voiceId) {
+      toast.error("Name and Voice ID are required");
+      return;
+    }
+    try {
+      if (editingId) {
+        await aiSalesApi.updateVoice(editingId, form);
+        toast.success(`Updated ${form.name}`);
+      } else {
+        await aiSalesApi.createVoice(form);
+        toast.success(`Added ${form.name}`);
+      }
+      resetForm();
+      onRefresh();
+    } catch {
+      toast.error("Failed to save voice");
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    try {
+      await aiSalesApi.deleteVoice(id);
+      toast.success(`Deleted ${name}`);
+      onRefresh();
+    } catch {
+      toast.error("Failed to delete");
+    }
+  };
+
+  const toggleActive = async (voice: AgentVoice) => {
+    try {
+      await aiSalesApi.updateVoice(voice.id, { isActive: !voice.isActive });
+      onRefresh();
+    } catch {
+      toast.error("Failed to update");
+    }
+  };
+
+  const setDefault = async (voice: AgentVoice) => {
+    try {
+      await aiSalesApi.updateVoice(voice.id, { isDefault: true });
+      toast.success(`${voice.name} is now the default voice`);
+      onRefresh();
+    } catch {
+      toast.error("Failed to update");
+    }
+  };
+
+  const seedVoices = async () => {
+    try {
+      await aiSalesApi.seedVoices();
+      toast.success("Default voices seeded");
+      onRefresh();
+    } catch {
+      toast.error("Failed to seed voices");
+    }
+  };
+
+  const toggleLanguage = (code: string) => {
+    setForm((prev) => ({
+      ...prev,
+      languages: prev.languages.includes(code)
+        ? prev.languages.filter((l) => l !== code)
+        : [...prev.languages, code],
+    }));
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Mic className="h-5 w-5 text-muted-foreground" />
+                Voice Agents
+              </CardTitle>
+              <CardDescription>
+                Each voice is an identity with a name and languages. The system auto-selects the best voice
+                based on the detected language. Customers can also request a voice by name.
+              </CardDescription>
+            </div>
+            {voices.length === 0 && (
+              <Button variant="outline" onClick={seedVoices}>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Seed Defaults
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Voice list */}
+          {voices.map((voice) => (
+            <div
+              key={voice.id}
+              className={`flex items-center justify-between p-4 rounded-lg border ${
+                !voice.isActive ? "opacity-50 bg-muted/30" : voice.isDefault ? "border-purple-300 dark:border-purple-700 bg-purple-50/50 dark:bg-purple-900/10" : ""
+              }`}
+            >
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-base">{voice.name}</span>
+                  {voice.isDefault && (
+                    <span className="inline-flex items-center rounded-full bg-purple-100 dark:bg-purple-900/30 px-2 py-0.5 text-xs font-medium text-purple-700 dark:text-purple-300">
+                      Default
+                    </span>
+                  )}
+                  {voice.gender && (
+                    <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs text-gray-600 dark:text-gray-400">
+                      {voice.gender}
+                    </span>
+                  )}
+                  {voice.accent && (
+                    <span className="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5 text-xs text-blue-600 dark:text-blue-400">
+                      {voice.accent}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="font-mono">{voice.voiceId}</span>
+                </div>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {voice.languages.map((lang) => (
+                    <span
+                      key={lang}
+                      className="inline-flex items-center rounded bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 text-xs text-green-700 dark:text-green-300"
+                    >
+                      {AVAILABLE_LANGUAGES.find((l) => l.code === lang)?.label || lang}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-1 ml-4">
+                {!voice.isDefault && voice.isActive && (
+                  <Button variant="ghost" size="sm" onClick={() => setDefault(voice)}>
+                    Set Default
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" onClick={() => toggleActive(voice)}>
+                  {voice.isActive ? "Disable" : "Enable"}
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => startEdit(voice)}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-destructive"
+                  onClick={() => handleDelete(voice.id, voice.name)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+
+          {voices.length === 0 && !showForm && (
+            <div className="text-center py-12 text-muted-foreground">
+              <Mic className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No voice agents configured.</p>
+              <p className="text-xs mt-1">Add ElevenLabs voices with names and languages for auto-selection.</p>
+            </div>
+          )}
+
+          {/* Add/Edit form */}
+          {showForm ? (
+            <Card className="border-dashed">
+              <CardHeader>
+                <CardTitle className="text-sm">{editingId ? "Edit Voice" : "Add New Voice"}</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Voice Name (identity)</Label>
+                    <Input
+                      placeholder="e.g. Priya"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Customers can ask for this name</p>
+                  </div>
+                  <div>
+                    <Label>ElevenLabs Voice ID</Label>
+                    <Input
+                      placeholder="e.g. 21m00Tcm4TlvDq8ikWAM"
+                      value={form.voiceId}
+                      onChange={(e) => setForm({ ...form, voiceId: e.target.value })}
+                      className="font-mono text-xs"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label>Gender</Label>
+                    <select
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      value={form.gender}
+                      onChange={(e) => setForm({ ...form, gender: e.target.value })}
+                    >
+                      <option value="female">Female</option>
+                      <option value="male">Male</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Accent</Label>
+                    <Input
+                      placeholder="e.g. Indian, American"
+                      value={form.accent}
+                      onChange={(e) => setForm({ ...form, accent: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={form.isDefault}
+                        onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
+                        className="rounded border-gray-300"
+                      />
+                      Default voice
+                    </label>
+                  </div>
+                </div>
+                <div>
+                  <Label>Languages this voice speaks</Label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {AVAILABLE_LANGUAGES.map((lang) => (
+                      <button
+                        key={lang.code}
+                        type="button"
+                        onClick={() => toggleLanguage(lang.code)}
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                          form.languages.includes(lang.code)
+                            ? "bg-purple-100 dark:bg-purple-900/40 border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300"
+                            : "bg-background border-input text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        {lang.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={resetForm}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSave}>
+                    <Save className="mr-2 h-4 w-4" />
+                    {editingId ? "Update" : "Add"} Voice
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Button variant="outline" onClick={() => setShowForm(true)} className="w-full">
+              <Plus className="mr-2 h-4 w-4" />
+              Add New Voice
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">How Multi-Voice Works</CardTitle>
+        </CardHeader>
+        <CardContent className="text-xs text-muted-foreground space-y-2">
+          <p><strong>Auto-selection:</strong> When a call starts, the system detects the customer&apos;s language and picks the best matching voice automatically.</p>
+          <p><strong>Voice by name:</strong> If a customer says &quot;I want to talk to Priya&quot;, the system switches to Priya&apos;s voice mid-call.</p>
+          <p><strong>Default fallback:</strong> If no language match is found, the default voice (marked with purple badge) is used.</p>
+          <p><strong>ElevenLabs Voice IDs:</strong> Get these from your ElevenLabs dashboard → Voices → Click a voice → Copy Voice ID.</p>
         </CardContent>
       </Card>
     </div>
