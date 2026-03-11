@@ -19,7 +19,7 @@ import {
   Pencil, Brain, Heart, ShoppingCart, Clock, MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 const STAGES = ["NEW", "CONTACTED", "QUALIFIED", "DEMO", "PROPOSAL", "NEGOTIATION", "WON", "LOST"];
@@ -54,6 +54,8 @@ export default function LeadsPage() {
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [editLead, setEditLead] = useState<any>(null);
   const [scoring, setScoring] = useState(false);
+  const [callRemarks, setCallRemarks] = useState<any[]>([]);
+  const [remarksLoading, setRemarksLoading] = useState(false);
 
   const [form, setForm] = useState({ ...EMPTY_FORM });
 
@@ -167,6 +169,15 @@ export default function LeadsPage() {
       setSelectedLead((prev: any) => prev ? { ...prev, score: res.data } : prev);
     } catch { toast.error("Failed to load score"); }
   };
+
+  const loadCallRemarks = useCallback(async (leadId: string) => {
+    setRemarksLoading(true);
+    try {
+      const res = await aiSalesApi.getCallRemarks(leadId);
+      setCallRemarks(Array.isArray(res.data) ? res.data : []);
+    } catch { setCallRemarks([]); }
+    setRemarksLoading(false);
+  }, []);
 
   const tempColor = (t: string): "destructive" | "warning" | "secondary" =>
     t === "hot" ? "destructive" : t === "warm" ? "warning" : "secondary";
@@ -462,12 +473,13 @@ export default function LeadsPage() {
           </DialogHeader>
           {selectedLead && (
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
                 <TabsTrigger value="personality" className="text-xs">Personality</TabsTrigger>
                 <TabsTrigger value="personal" className="text-xs">Personal</TabsTrigger>
                 <TabsTrigger value="buying" className="text-xs">Buying</TabsTrigger>
                 <TabsTrigger value="ai-notes" className="text-xs">AI Notes</TabsTrigger>
+                <TabsTrigger value="call-history" className="text-xs" onClick={() => loadCallRemarks(selectedLead.id)}>Call History</TabsTrigger>
               </TabsList>
 
               {/* Overview */}
@@ -637,6 +649,72 @@ export default function LeadsPage() {
                         </ul>
                       </div>
                     )}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Call History (Remarks Timeline) */}
+              <TabsContent value="call-history" className="space-y-4 mt-4">
+                <div className="flex items-center gap-2 text-sm font-medium mb-2">
+                  <Clock className="h-4 w-4 text-purple-500" />
+                  Call-by-Call AI Remarks
+                </div>
+                {remarksLoading ? (
+                  <p className="text-sm text-muted-foreground py-8 text-center">Loading call remarks...</p>
+                ) : callRemarks.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-8 text-center">No call remarks yet — they are generated after each AI call.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {callRemarks.map((r: any) => (
+                      <Card key={r.id} className="border-l-4 border-l-purple-500">
+                        <CardContent className="p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <Badge variant="outline" className="text-xs">Call #{r.callNumber}</Badge>
+                            <span className="text-xs text-muted-foreground">{new Date(r.createdAt).toLocaleString()}</span>
+                          </div>
+                          {r.personaUsed && <p className="text-xs text-muted-foreground">Persona: {r.personaUsed}</p>}
+                          {r.summary && <p className="text-sm">{r.summary}</p>}
+                          {r.keyTopics?.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {r.keyTopics.map((t: string, i: number) => (
+                                <Badge key={i} variant="secondary" className="text-xs">{t}</Badge>
+                              ))}
+                            </div>
+                          )}
+                          {r.objectionsRaised?.length > 0 && (
+                            <div>
+                              <p className="text-xs text-muted-foreground font-medium">Objections</p>
+                              <div className="flex flex-wrap gap-1 mt-0.5">
+                                {r.objectionsRaised.map((o: string, i: number) => (
+                                  <Badge key={i} variant="destructive" className="text-xs">{o}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {r.buyingSignals?.length > 0 && (
+                            <div>
+                              <p className="text-xs text-muted-foreground font-medium">Buying Signals</p>
+                              <div className="flex flex-wrap gap-1 mt-0.5">
+                                {r.buyingSignals.map((s: string, i: number) => (
+                                  <Badge key={i} className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 text-xs">{s}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {r.whatWorked?.length > 0 && (
+                            <div><p className="text-xs text-green-600 font-medium">What Worked: {r.whatWorked.join(", ")}</p></div>
+                          )}
+                          {r.whatDidntWork?.length > 0 && (
+                            <div><p className="text-xs text-red-500 font-medium">What Didn&apos;t Work: {r.whatDidntWork.join(", ")}</p></div>
+                          )}
+                          {r.nextCallStrategy && (
+                            <div className="bg-blue-50 dark:bg-blue-950/20 rounded p-2 text-xs">
+                              <strong>Next Call Strategy:</strong> {r.nextCallStrategy}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
                 )}
               </TabsContent>

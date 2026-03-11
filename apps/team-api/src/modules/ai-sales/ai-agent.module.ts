@@ -26,6 +26,7 @@ import { AgentVoiceService } from "./services/agent-voice.service";
 import { SarvamSTTClient } from "./services/sarvam-stt.service";
 import { STTRouterService } from "./services/stt-router.service";
 import { GoogleSTTClient } from "./services/google-stt.service";
+import { CentralBrainService } from "./services/central-brain.service";
 
 @Module({
   imports: [PrismaModule, ConfigModule],
@@ -54,8 +55,9 @@ import { GoogleSTTClient } from "./services/google-stt.service";
     SarvamSTTClient,
     STTRouterService,
     GoogleSTTClient,
+    CentralBrainService,
   ],
   controllers: [AIAgentController],
-  exports: [AIAgentService, CallOrchestratorService],
+  exports: [AIAgentService, CallOrchestratorService, CentralBrainService],
 })
 export class AIAgentModule {}

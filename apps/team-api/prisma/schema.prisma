@@ -446,6 +446,7 @@ model Lead {
   campaignLeads   CampaignLead[]
   callSchedules   CallSchedule[]
   callMessages    CallMessage[]
+  callRemarks     CallRemark[]
 
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
@@ -1178,4 +1179,206 @@ model AgentVoice {
 
   @@index([isActive])
   @@index([isDefault])
+}
+
+// ══════════════════════════════════════════════════════════════
+// CALL REMARKS — The AI's memory of each call interaction.
+// Written by PostCallProcessor after every call.
+// Read by PreCallBrainService before the next call.
+// This is the institutional memory of each customer relationship.
+// ══════════════════════════════════════════════════════════════
+
+model CallRemark {
+  id              String   @id @default(uuid())
+  leadId          String
+  lead            Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  callSessionId   String?  // link back to the call
+  callNumber      Int      @default(1) // which call this is (1st, 2nd, etc.)
+
+  // Persona used
+  personaUsed     String?  // persona name
+  personaId       String?  // AgentVoice id
+
+  // Mood & emotional state
+  moodStart       String?  // "neutral", "curious", "skeptical", "anxious"
+  moodEnd         String?  // mood at end of call
+  moodShiftMoment String?  @db.Text // what caused the mood to shift
+
+  // What happened
+  summary         String   @db.Text  // overall call summary
+  keyTopics       String[] // main topics discussed
+  objectionsRaised String[] // objections that came up
+  objectionsResolved String[] // objections that were handled
+  buyingSignals   String[] // signals detected
+
+  // What worked / didn't work
+  whatWorked       String[] // approaches that landed well
+  whatDidntWork    String[] // approaches that fell flat
+  whatToAvoidNext  String[] // specific things to NOT do next call
+
+  // Customer intelligence captured this call
+  personalDetailsCaptured String[] // new zero-party data from this call
+  notableQuotesThisCall   String[] // exact customer phrases worth remembering
+  competitorUpdateThisCall String? @db.Text // any competitor mentions/updates
+
+  // Open loops — unfinished threads customer cares about
+  openLoops       Json?    @default("[]") // [{topic, status, context}]
+
+  // Forward-looking
+  nextCallStrategy String? @db.Text // AI's recommended approach for next call
+  predictedNextObjection String? // what they'll likely push back on
+  predictedMood   String?  // expected mood next call
+  recommendedNextTiming String? // when to call next
+  commitments     Json?    @default("[]") // [{what, by_whom, deadline}]
+
+  createdAt       DateTime @default(now())
+
+  @@index([leadId])
+  @@index([callSessionId])
+  @@index([createdAt])
+}
+
+// ══════════════════════════════════════════════════════════════
+// CENTRAL BRAIN — Cross-call institutional intelligence.
+// Learns from ALL calls across ALL leads.
+// Individual calls adapt to one person; the brain learns what
+// works across thousands of conversations.
+// ══════════════════════════════════════════════════════════════
+
+// Winning patterns per segment — what approaches convert best
+model WinningPattern {
+  id            String   @id @default(uuid())
+  segmentKey    String   // e.g. "IN:saas:startup:founder"
+  openingStyle  String?  // rapport, direct, question, story
+  rapportMinutes Float?  // approx minutes before first pitch
+  pitchStyle    String?  // how the product was introduced
+  storyUsed     String?  // which customer story/case study was mentioned
+  closingApproach String? // how the AI tried to close
+  keyObjection  String?  // main objection raised
+  objectionResponse String? @db.Text  // how it was handled
+
+  conversionRate Float   @default(0) // % of calls with this pattern that converted
+  sampleSize    Int      @default(1) // how many calls this pattern is based on
+  confidence    Float    @default(0) // 0-1 confidence score
+  isActive      Boolean  @default(true)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([segmentKey])
+  @@index([conversionRate])
+}
+
+// Lost deal patterns — what preceded a lost deal
+model LostDealPattern {
+  id              String   @id @default(uuid())
+  segmentKey      String   // same format as WinningPattern
+  lostReason      String?  // why the deal was lost
+  precedingSignals String[] // signals that appeared before the loss
+  whatAIDid       String?  @db.Text // what the AI did that didn't help
+  whatToDoInstead String?  @db.Text // alternative approach
+  signalFirstSeen Int?     // which call number warning signs appeared
+
+  sampleSize      Int      @default(1)
+  confidence      Float    @default(0)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([segmentKey])
+}
+
+// Conversation moments — exact phrases that changed the trajectory of calls
+model ConversationMoment {
+  id             String   @id @default(uuid())
+  momentType     String   // "golden_moment", "recovery_moment", "closing_moment", "rapport_break"
+  segmentKey     String?
+  triggerPhrase  String?  @db.Text // what the customer said right before
+  aiResponse     String   @db.Text // what the AI said that caused the shift
+  sentimentBefore String?  // sentiment before this moment
+  sentimentAfter  String?  // sentiment after this moment
+  outcome        String?  // did the call convert? "converted", "callback", "lost"
+
+  timesUsed      Int      @default(1)
+  successRate    Float    @default(0) // % of times using this led to conversion
+  confidence     Float    @default(0)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([momentType])
+  @@index([segmentKey])
+  @@index([successRate])
+}
+
+// Timing intelligence — best time/day to call per segment
+model TimingIntelligence {
+  id            String   @id @default(uuid())
+  segmentKey    String
+  dayOfWeek     String   // "monday", "tuesday", etc.
+  hourSlot      Int      // 0-23 (in lead's local time)
+  answerRate    Float    @default(0) // % of calls answered
+  conversionRate Float   @default(0) // % of answered calls that converted
+  avgCallDuration Float? // average call duration in seconds
+  sampleSize    Int      @default(0)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([segmentKey, dayOfWeek, hourSlot])
+  @@index([segmentKey])
+  @@index([answerRate])
+}
+
+// Competitor mentions log — tracks what customers say about competitors
+model CompetitorMention {
+  id             String   @id @default(uuid())
+  competitorName String
+  segmentKey     String?
+  sentiment      String?  // "positive", "negative", "neutral"
+  context        String?  @db.Text // what they said about the competitor
+  leadId         String?  // which lead mentioned it
+  callSessionId  String?  // which call it was mentioned in
+
+  createdAt      DateTime @default(now())
+
+  @@index([competitorName])
+  @@index([segmentKey])
+  @@index([createdAt])
+}
+
+// Re-engagement patterns — when/how to re-engage dormant leads
+model ReEngagementPattern {
+  id              String  @id @default(uuid())
+  segmentKey      String
+  dormantDays     Int     // how many days since last contact
+  reEngageMethod  String  // "call", "whatsapp", "sms", "email"
+  reEngageMessage String? @db.Text // best opening line
+  successRate     Float   @default(0)
+  sampleSize      Int     @default(0)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([segmentKey])
+}
+
+// Persona segment performance — which persona converts which segment
+model PersonaSegmentPerformance {
+  id             String   @id @default(uuid())
+  personaId      String   // AgentVoice id
+  personaName    String
+  segmentKey     String
+  totalCalls     Int      @default(0)
+  totalConversions Int    @default(0)
+  conversionRate Float    @default(0)
+  avgSatisfaction Float?
+  avgCallDuration Float?  // seconds
+  confidence     Float    @default(0)
+
+  updatedAt      DateTime @updatedAt
+
+  @@unique([personaId, segmentKey])
+  @@index([segmentKey])
+  @@index([conversionRate])
 }
