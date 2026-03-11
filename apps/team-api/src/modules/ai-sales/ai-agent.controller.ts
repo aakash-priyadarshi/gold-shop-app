@@ -774,7 +774,7 @@ export class AIAgentController {
     @Param("id") id: string,
     @Body() body: { resultSessionId?: string; outcome?: string },
   ) {
-    return this.followUps.completeFollowUp(id, body.resultSessionId, body.outcome);
+    return this.followUps.completeFollowUp(id, body.resultSessionId ?? '', body.outcome);
   }
 
   @Patch("follow-ups/:id/cancel")
@@ -784,7 +784,7 @@ export class AIAgentController {
 
   @Post("follow-ups/re-engage")
   scheduleReEngagement(@Body() body: { leadId: string; dormantDays: number; segmentKey?: string }) {
-    return this.followUps.scheduleReEngagement(body.leadId, body.dormantDays, body.segmentKey);
+    return this.followUps.scheduleReEngagement(body.leadId, body.dormantDays, body.segmentKey ?? '');
   }
 
   /* ─── OBJECTION PLAYBOOK ─── */
@@ -996,12 +996,12 @@ export class AIAgentController {
   async getLiveSentiment() {
     // Get active calls with recent emotion logs
     const activeCalls = await this.prisma.callSession.findMany({
-      where: { status: "in_progress" },
+      where: { status: "IN_PROGRESS" },
       include: {
-        lead: { select: { name: true, phone: true, segment: true } },
+        lead: { select: { name: true, phone: true } },
         agent: { select: { name: true } },
         emotionLogs: {
-          orderBy: { createdAt: "desc" },
+          orderBy: { timestamp: "desc" },
           take: 5,
         },
       },
@@ -1027,7 +1027,7 @@ export class AIAgentController {
   async getCallSentimentHistory(@Param("callSessionId") id: string) {
     const emotions = await this.prisma.emotionLog.findMany({
       where: { callSessionId: id },
-      orderBy: { createdAt: "asc" },
+      orderBy: { timestamp: "asc" },
     });
     return emotions;
   }

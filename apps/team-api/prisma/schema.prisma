@@ -519,6 +519,9 @@ model CallSession {
   // Messages sent during this call
   callMessages    CallMessage[]
 
+  // Recording
+  recording       CallRecording?
+
   startedAt       DateTime      @default(now())
   endedAt         DateTime?
 
@@ -1284,6 +1287,8 @@ model LostDealPattern {
 // Conversation moments — exact phrases that changed the trajectory of calls
 model ConversationMoment {
   id             String   @id @default(uuid())
+  callSessionId  String?
+  momentIndex    Int?
   momentType     String   // "golden_moment", "recovery_moment", "closing_moment", "rapport_break"
   segmentKey     String?
   triggerPhrase  String?  @db.Text // what the customer said right before
@@ -1569,6 +1574,7 @@ model WebhookDelivery {
 model CallRecording {
   id              String   @id @default(uuid())
   callSessionId   String   @unique
+  callSession     CallSession @relation(fields: [callSessionId], references: [id])
   recordingUrl    String   // Twilio recording URL
   recordingSid    String?  // Twilio recording SID
   duration        Int?     // seconds
