@@ -1,6 +1,7 @@
 import { Logger, ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { NestExpressApplication } from "@nestjs/platform-express";
+import { WsAdapter } from "@nestjs/platform-ws";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import compression from "compression";
 import helmet from "helmet";
@@ -11,6 +12,9 @@ async function bootstrap() {
     bodyParser: true,
   });
   const logger = new Logger("Bootstrap");
+
+  // Use raw WebSocket adapter (ws) instead of default socket.io
+  app.useWebSocketAdapter(new WsAdapter(app));
 
   // Security
   app.use(helmet());
