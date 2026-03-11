@@ -18,6 +18,8 @@ import { GeminiLiveClient } from "../services/gemini-live.service";
 import { EmotionEngineService } from "../services/emotion-engine.service";
 import { CallOrchestratorService } from "../services/call-orchestrator.service";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { InCallMessagingService } from "../messaging/in-call-messaging-service";
+import { MessagingTriggerDetector } from "../messaging/messaging-trigger-detector";
 
 /**
  * Audio Pipeline Gateway — handles Twilio Media Streams via WebSocket.
@@ -58,6 +60,8 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
     private emotion: EmotionEngineService,
     private callOrchestrator: CallOrchestratorService,
     private prisma: PrismaService,
+    private messagingService: InCallMessagingService,
+    private triggerDetector: MessagingTriggerDetector,
   ) {}
 
   async handleConnection(client: any) {
@@ -186,6 +190,16 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
     this.activeSessions.set(sessionId, session);
     this.logger.log(`Audio session started for call ${sessionId}`);
 
+    // Initialize in-call messaging for this session
+    const leadPhone = callSession.lead?.phone || callSession.toNumber || "";
+    const firstName = (callSession.lead?.name || "there").split(" ")[0];
+    this.messagingService.initSession(sessionId, {
+      callId: sessionId,
+      leadId: callSession.leadId || "",
+      leadPhone,
+      firstName,
+    });
+
     // Initialize Gemini Live mode if enabled
     if (this.geminiLive.isEnabled()) {
       const opened = await this.geminiLive.openSession(systemPrompt, context.language || "en");
@@ -310,6 +324,14 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
         await this.synthesizeAndSend(session, fillerText);
       }
 
+      // Inject pending messaging question if any (e.g. "Should I send this on WhatsApp?")
+      let effectiveTranscript = transcript;
+      if (session.pendingInjection) {
+        const injectionHint = `[SYSTEM: After responding to the customer, naturally ask: "${session.pendingInjection}"]`;
+        effectiveTranscript = transcript + " " + injectionHint;
+        session.pendingInjection = undefined;
+      }
+
       // Route: Claude Sonnet for high-value closes, Gemini Flash-Lite for everything else
       const buyingIntentScore = emotionState.primary === "buying" ? 0.85 : emotionState.primary === "excited" ? 0.7 : 0.3;
       const useClaude = this.modelRouter.shouldEscalateToClaude(
@@ -322,11 +344,11 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
       let responseText = "";
       const responseStream = useClaude
         ? this.modelRouter.escalateToClaudeSonnet(
-            transcript,
+            effectiveTranscript,
             session.systemPrompt,
             session.context.conversationHistory.slice(0, -1) as { role: "user" | "assistant"; content: string }[],
           )
-        : this.gemini.streamResponse(transcript, session.systemPrompt, budget);
+        : this.gemini.streamResponse(effectiveTranscript, session.systemPrompt, budget);
 
       for await (const chunk of responseStream) {
         responseText += chunk;
@@ -344,6 +366,34 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
         await this.synthesizeAndSend(session, responseText.trim());
         session.transcript.push({ role: "assistant", content: responseText.trim(), timestamp: Date.now() });
         session.context.conversationHistory.push({ role: "assistant", content: responseText.trim() });
+      }
+
+      // Check AI response for messaging triggers (fire-and-forget)
+      const fullAiResponse = session.transcript
+        .filter((t) => t.role === "assistant")
+        .slice(-3)
+        .map((t) => t.content)
+        .join(" ");
+      const triggerType = this.triggerDetector.detect(fullAiResponse);
+      if (triggerType) {
+        // If waiting for channel confirmation, process customer's answer instead
+        if (this.messagingService.isWaitingForChannelConfirmation(session.sessionId)) {
+          const result = await this.messagingService.processChannelResponse(session.sessionId, transcript);
+          if (result?.aiLine) {
+            session.pendingInjection = result.aiLine;
+          }
+        } else {
+          const question = await this.messagingService.handleTrigger(session.sessionId, triggerType);
+          if (question) {
+            session.pendingInjection = question;
+          }
+        }
+      } else if (this.messagingService.isWaitingForChannelConfirmation(session.sessionId)) {
+        // No trigger but waiting for answer — process this utterance as channel response
+        const result = await this.messagingService.processChannelResponse(session.sessionId, transcript);
+        if (result?.aiLine) {
+          session.pendingInjection = result.aiLine;
+        }
       }
     } catch (err: any) {
       this.logger.error(`Audio processing error: ${err.message}`);
@@ -481,6 +531,12 @@ export class AudioPipelineGateway implements OnGatewayConnection, OnGatewayDisco
       this.emotion.clearCallHistory(session.sessionId);
       this.modelRouter.clearSession(session.sessionId);
       this.gemini.resetHistory();
+
+      // Send end-of-call summary via messaging (fire-and-forget)
+      this.messagingService.sendCallSummary(session.sessionId).catch(() => {});
+      // Delay cleanup to allow summary to send
+      setTimeout(() => this.messagingService.clearSession(session.sessionId), 5000);
+
       if (this.geminiLive.isEnabled()) {
         await this.geminiLive.closeSession();
       }
@@ -570,6 +626,7 @@ interface ActiveCallSession {
   startTime: number;
   sttBuffer: string;
   tokenCount: { input: number; output: number };
+  pendingInjection?: string; // messaging question/confirmation to inject into next AI turn
 }
 
 interface TranscriptEntry {

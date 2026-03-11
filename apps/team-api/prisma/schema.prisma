@@ -398,12 +398,17 @@ model Lead {
   // Predicted concern from AI analysis
   predictedConcern String?
 
+  // Messaging preference (WhatsApp vs SMS)
+  messagingPreference           String?    // 'whatsapp' or 'sms'
+  messagingPreferenceDetectedAt DateTime?
+
   assignedToId    String?    // employee handling this lead
   lastContactedAt DateTime?
 
   callSessions    CallSession[]
   campaignLeads   CampaignLead[]
   callSchedules   CallSchedule[]
+  callMessages    CallMessage[]
 
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
@@ -488,6 +493,9 @@ model CallSession {
 
   // Emotion logs for this call
   emotionLogs     EmotionLog[]
+
+  // Messages sent during this call
+  callMessages    CallMessage[]
 
   startedAt       DateTime      @default(now())
   endedAt         DateTime?
@@ -1017,4 +1025,25 @@ model TeamSettings {
   mainApiUrl            String?  // URL to main orivraa API for cross-service calls
   mainApiReadOnlyDsn    String?  // read-only connection to main DB (Neon)
   updatedAt             DateTime @updatedAt
+}
+
+// ──────────────────────────────────────────────────────
+// In-Call Messaging
+// ──────────────────────────────────────────────────────
+
+model CallMessage {
+  id          String   @id @default(uuid())
+  callId      String?
+  call        CallSession? @relation(fields: [callId], references: [id])
+  leadId      String?
+  lead        Lead?    @relation(fields: [leadId], references: [id])
+  messageType String   // pricing, demo_booking, case_study, competitor_comparison, call_summary, contract_link
+  channel     String   // whatsapp or sms
+  sentAt      DateTime @default(now())
+  preview     String?  @db.VarChar(100) // first 100 chars of message body
+  delivered   Boolean? // null = unknown, true/false from webhook
+  read        Boolean? // null = unknown, true/false from webhook
+
+  @@index([callId])
+  @@index([leadId])
 }
