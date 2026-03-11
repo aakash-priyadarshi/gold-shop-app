@@ -22,6 +22,8 @@ import { MessageBuilder } from "./messaging/message-builder";
 import { InCallMessagingService } from "./messaging/in-call-messaging-service";
 import { AgentMemoryService } from "./services/agent-memory.service";
 import { BehaviorInsightService } from "./services/behavior-insight.service";
+import { SarvamSTTClient } from "./services/sarvam-stt.service";
+import { STTRouterService } from "./services/stt-router.service";
 
 @Module({
   imports: [PrismaModule, ConfigModule],
@@ -46,6 +48,8 @@ import { BehaviorInsightService } from "./services/behavior-insight.service";
     InCallMessagingService,
     AgentMemoryService,
     BehaviorInsightService,
+    SarvamSTTClient,
+    STTRouterService,
   ],
   controllers: [AIAgentController],
   exports: [AIAgentService, CallOrchestratorService],

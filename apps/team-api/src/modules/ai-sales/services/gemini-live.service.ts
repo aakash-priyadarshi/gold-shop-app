@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import WebSocket from "ws";
+import { AgentMemoryService } from "./agent-memory.service";
 
 /**
  * GeminiLiveClient — optional mode using Gemini Live API for native audio-to-audio.
@@ -20,10 +21,13 @@ export class GeminiLiveClient {
   private responseCallback: ((audio: Buffer) => void) | null = null;
   private isSessionOpen = false;
 
-  constructor(private config: ConfigService) {}
+  constructor(
+    private config: ConfigService,
+    private memory: AgentMemoryService,
+  ) {}
 
   isEnabled(): boolean {
-    return this.config.get("AUDIO_MODE") === "gemini_live";
+    return this.memory.get("advanced", "audio_mode") === "gemini_live";
   }
 
   async openSession(systemPrompt: string, language: string = "en"): Promise<boolean> {

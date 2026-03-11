@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import Anthropic from "@anthropic-ai/sdk";
+import { AgentMemoryService } from "./agent-memory.service";
 
 export interface PreCallBrief {
   openingStrategy: string;
@@ -32,7 +33,10 @@ export class PreCallBrainService {
   private readonly logger = new Logger(PreCallBrainService.name);
   private client: Anthropic | null = null;
 
-  constructor(private config: ConfigService) {
+  constructor(
+    private config: ConfigService,
+    private memory: AgentMemoryService,
+  ) {
     const apiKey = this.config.get<string>("ANTHROPIC_API_KEY");
     if (apiKey) {
       this.client = new Anthropic({ apiKey });
@@ -110,8 +114,8 @@ Return ONLY valid JSON matching this schema (no markdown):
     product: { name?: string; description?: string; benefits?: string[]; pricing?: string },
     culturalProfile?: string,
   ): string {
-    const agentName = this.config.get("AGENT_NAME") || "Sales Agent";
-    const companyName = this.config.get("COMPANY_NAME") || "Orivraa Gold";
+    const agentName = this.memory.get("persona", "agent_name") || "Sales Agent";
+    const companyName = this.memory.get("company", "name") || "Orivraa Gold";
 
     return `You are ${agentName}, a sales representative at ${companyName}.
 You are making a phone call — this is VOICE, not text.
