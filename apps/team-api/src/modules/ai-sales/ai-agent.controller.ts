@@ -571,7 +571,7 @@ export class AIAgentController {
 
     // 1. STT — transcribe audio
     const sttStart = Date.now();
-    const sttResult = await this.sttRouter.transcribe(
+    const sttResult = await this.sttRouter.transcribeBrowserAudio(
       file.buffer,
       `playground-${Date.now()}`,
       agent.languages?.[0] || "en",

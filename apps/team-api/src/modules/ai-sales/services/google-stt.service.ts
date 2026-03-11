@@ -98,6 +98,71 @@ export class GoogleSTTClient {
   }
 
   /**
+   * Transcribe browser-recorded audio (WebM OPUS).
+   * Unlike telephony audio, browser recordings use WEBM_OPUS at 48kHz.
+   */
+  async transcribeBrowserAudio(
+    audioBuffer: Buffer,
+    languageCode: string = "en-IN",
+    alternativeLanguages?: string[],
+  ): Promise<GoogleSTTResult> {
+    const apiKey = this.config.get<string>("GOOGLE_STT_API_KEY");
+    if (!apiKey) {
+      this.logger.warn("GOOGLE_STT_API_KEY not set — cannot transcribe");
+      return { transcript: "", confidence: 0, detectedLanguage: languageCode };
+    }
+
+    try {
+      const audioContent = audioBuffer.toString("base64");
+
+      const requestBody: Record<string, unknown> = {
+        config: {
+          encoding: "WEBM_OPUS",
+          languageCode,
+          ...(alternativeLanguages?.length && {
+            alternativeLanguageCodes: alternativeLanguages,
+          }),
+          model: "default",
+          useEnhanced: true,
+          enableAutomaticPunctuation: true,
+        },
+        audio: { content: audioContent },
+      };
+
+      const url = `${this.apiUrl}?key=${encodeURIComponent(apiKey)}`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        this.logger.error(`Google STT (browser) failed: ${response.status} — ${errText}`);
+        return { transcript: "", confidence: 0, detectedLanguage: languageCode };
+      }
+
+      const result = (await response.json()) as {
+        results?: Array<{
+          alternatives?: Array<{ transcript?: string; confidence?: number }>;
+          languageCode?: string;
+        }>;
+      };
+      const topResult = result.results?.[0]?.alternatives?.[0];
+      const detected = result.results?.[0]?.languageCode || languageCode;
+
+      return {
+        transcript: topResult?.transcript || "",
+        confidence: topResult?.confidence || 0,
+        detectedLanguage: detected,
+      };
+    } catch (err: any) {
+      this.logger.error(`Google STT (browser) error: ${err.message}`);
+      return { transcript: "", confidence: 0, detectedLanguage: languageCode };
+    }
+  }
+
+  /**
    * Transcribe with auto language detection.
    * Uses en-IN as primary with Hindi + common Indian languages as alternatives.
    */

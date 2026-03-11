@@ -25,6 +25,44 @@ export class SarvamSTTClient {
 
   constructor(private config: ConfigService) {}
 
+  /** Transcribe browser audio (WebM) — sends directly without mulaw wrapping */
+  async transcribeBrowserAudio(audioBuffer: Buffer, languageCode?: string): Promise<SarvamSTTResult> {
+    const apiKey = this.config.get<string>("SARVAM_API_KEY");
+    if (!apiKey) {
+      return { transcript: "", languageCode: languageCode || "unknown" };
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append("file", new Blob([new Uint8Array(audioBuffer)], { type: "audio/webm" }), "audio.webm");
+      formData.append("model", "saarika:v2.5");
+      if (languageCode) {
+        formData.append("language_code", languageCode);
+      }
+
+      const response = await fetch(this.apiUrl, {
+        method: "POST",
+        headers: { "api-subscription-key": apiKey },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        this.logger.error(`Sarvam STT (browser) failed: ${response.status} — ${errText}`);
+        return { transcript: "", languageCode: languageCode || "unknown" };
+      }
+
+      const result = await response.json() as Record<string, string>;
+      return {
+        transcript: result.transcript || "",
+        languageCode: result.language_code || languageCode || "unknown",
+      };
+    } catch (err: any) {
+      this.logger.error(`Sarvam STT (browser) error: ${err.message}`);
+      return { transcript: "", languageCode: languageCode || "unknown" };
+    }
+  }
+
   /** Transcribe audio — optionally pass languageCode for better accuracy, or omit for auto-detect */
   async transcribe(audioBuffer: Buffer, languageCode?: string): Promise<SarvamSTTResult> {
     const apiKey = this.config.get<string>("SARVAM_API_KEY");
@@ -37,7 +75,7 @@ export class SarvamSTTClient {
       const wavBuffer = this.wrapMulawAsWav(audioBuffer);
       const formData = new FormData();
       formData.append("file", new Blob([new Uint8Array(wavBuffer)], { type: "audio/wav" }), "audio.wav");
-      formData.append("model", "saarika:v2");
+      formData.append("model", "saarika:v2.5");
       if (languageCode) {
         formData.append("language_code", languageCode);
       }
@@ -78,7 +116,7 @@ export class SarvamSTTClient {
       const wavBuffer = this.wrapMulawAsWav(audioBuffer);
       const formData = new FormData();
       formData.append("file", new Blob([new Uint8Array(wavBuffer)], { type: "audio/wav" }), "audio.wav");
-      formData.append("model", "saarika:v2");
+      formData.append("model", "saarika:v2.5");
 
       const response = await fetch(this.translateUrl, {
         method: "POST",

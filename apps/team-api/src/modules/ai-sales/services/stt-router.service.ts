@@ -118,6 +118,89 @@ export class STTRouterService {
     return this.transcribeWithDeepgram(audioBuffer, hintLanguage);
   }
 
+  /**
+   * Transcribe browser-recorded audio (WebM OPUS format).
+   * Used by the playground voice endpoint — NOT Twilio telephony.
+   */
+  async transcribeBrowserAudio(
+    audioBuffer: Buffer,
+    sessionId: string,
+    hintLanguage: string = "en",
+  ): Promise<STTResult> {
+    // Try Sarvam first (handles WebM natively)
+    const hasSarvam = !!this.config.get<string>("SARVAM_API_KEY");
+    if (hasSarvam) {
+      try {
+        const result = await this.sarvam.transcribeBrowserAudio(audioBuffer, hintLanguage.includes("-") ? hintLanguage : undefined);
+        if (result.transcript) {
+          return {
+            transcript: result.transcript,
+            detectedLanguage: result.languageCode,
+            provider: "sarvam",
+          };
+        }
+      } catch (err: any) {
+        this.logger.warn(`Sarvam browser STT failed: ${err.message}`);
+      }
+    }
+
+    // Try Google STT with WEBM_OPUS encoding
+    const hasGoogle = !!this.config.get<string>("GOOGLE_STT_API_KEY");
+    if (hasGoogle) {
+      try {
+        const langCode = hintLanguage.includes("-") ? hintLanguage : `${hintLanguage}-IN`;
+        const result = await this.googleSTT.transcribeBrowserAudio(audioBuffer, langCode, [
+          "hi-IN", "ta-IN", "te-IN", "bn-IN",
+        ]);
+        if (result.transcript) {
+          return {
+            transcript: result.transcript,
+            detectedLanguage: result.detectedLanguage,
+            provider: "google",
+          };
+        }
+      } catch (err: any) {
+        this.logger.warn(`Google browser STT failed: ${err.message}`);
+      }
+    }
+
+    // Deepgram fallback (handles WebM natively)
+    return this.transcribeWithDeepgramBrowser(audioBuffer, hintLanguage);
+  }
+
+  private async transcribeWithDeepgramBrowser(
+    audioBuffer: Buffer,
+    language: string,
+  ): Promise<STTResult> {
+    const deepgramKey = this.config.get("DEEPGRAM_API_KEY");
+    if (!deepgramKey) {
+      return { transcript: "", detectedLanguage: language, provider: "deepgram" };
+    }
+
+    try {
+      const sdk = await import("@deepgram/sdk") as any;
+      const createFn = sdk.createClient || sdk.createDeepgramClient || sdk.default?.createClient;
+      if (!createFn) throw new Error("Could not find Deepgram createClient export");
+      const deepgram = createFn(deepgramKey);
+
+      const { result } = await deepgram.listen.prerecorded.transcribeFile(
+        audioBuffer,
+        {
+          model: "nova-2",
+          language: language.split("-")[0] || "en",
+          smart_format: true,
+        },
+      );
+
+      const transcript =
+        result?.results?.channels?.[0]?.alternatives?.[0]?.transcript || "";
+      return { transcript, detectedLanguage: language, provider: "deepgram" };
+    } catch (err: any) {
+      this.logger.error(`Deepgram browser STT error: ${err.message}`);
+      return { transcript: "", detectedLanguage: language, provider: "deepgram" };
+    }
+  }
+
   /** Google Cloud STT — primary for English (en-IN), also supports Indian languages */
   private async transcribeWithGoogle(
     audioBuffer: Buffer,
@@ -182,10 +265,10 @@ export class STTRouterService {
     }
 
     try {
-      const { createClient: createDeepgramClient } = await import(
-        "@deepgram/sdk"
-      ) as any;
-      const deepgram = createDeepgramClient(deepgramKey);
+      const sdk = await import("@deepgram/sdk") as any;
+      const createFn = sdk.createClient || sdk.createDeepgramClient || sdk.default?.createClient;
+      if (!createFn) throw new Error("Could not find Deepgram createClient export");
+      const deepgram = createFn(deepgramKey);
 
       const keywords = this.getKeywords();
       const options: Record<string, unknown> = {
