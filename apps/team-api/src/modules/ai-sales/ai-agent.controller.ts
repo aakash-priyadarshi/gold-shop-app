@@ -425,14 +425,7 @@ export class AIAgentController {
 
   @Post("voices")
   @Roles("ADMIN")
-  createVoice(@Body() body: {
-    name: string;
-    voiceId: string;
-    languages: string[];
-    gender?: string;
-    accent?: string;
-    isDefault?: boolean;
-  }) {
+  createVoice(@Body() body: Record<string, any>) {
     return this.agentVoices.create(body);
   }
 

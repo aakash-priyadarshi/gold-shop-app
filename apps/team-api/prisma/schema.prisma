@@ -1139,6 +1139,40 @@ model AgentVoice {
   accent    String?  // "Indian", "American", "British"
   isDefault Boolean  @default(false)
   isActive  Boolean  @default(true)
+
+  // ── Persona Identity ──
+  personalityDescription String? @db.Text  // Full personality brief the AI reads to "become" this persona
+  speciality             String? // "rapport", "technical", "closing", "enterprise", "retention"
+  backstory              String? @db.Text  // Rich character backstory (AI reads before calls)
+  age                    String? // Display age: "28", "35-40"
+
+  // ── Conversation Behaviour ──
+  signaturePhrases       String[] // Phrases this persona uses often
+  bannedPhrases          String[] // Phrases this persona must never say
+  handoffIntro           String?  @db.Text  // What this persona says when taking over a call
+  handoffOutro           String?  @db.Text  // What this persona says when handing off to another
+  systemPromptTemplate   String?  @db.Text  // Custom system prompt override for this persona
+
+  // ── Voice Settings ──
+  voiceStability         Float?   @default(0.5) // ElevenLabs stability 0-1
+  voiceSimilarityBoost   Float?   @default(0.75)
+  voiceStyle             Float?   @default(0.0)
+  voiceUseSpeakerBoost   Boolean? @default(true)
+
+  // ── Emotion-specific voice overrides (JSON) ──
+  // e.g. { "frustrated": { "stability": 0.7, "speed": 0.85 }, "excited": { "speed": 1.15 } }
+  emotionVoiceSettings   Json?
+
+  // ── Segment Specialization ──
+  targetSegments         String[] // e.g. ["region:india", "industry:saas", "size:startup"]
+  languageAffinities     Json?    // { "hi-IN": 5, "en-IN": 4, "ta-IN": 3 } — quality rating 1-5
+
+  // ── Performance Tracking ──
+  totalCalls             Int      @default(0)
+  totalConversions       Int      @default(0)
+  avgSatisfactionScore   Float?
+  avgCallDurationSecs    Float?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
