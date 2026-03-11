@@ -48,11 +48,12 @@ export class PostCallProcessor {
 
     try {
       const model = this.genAI.getGenerativeModel({
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash-lite",
         generationConfig: {
           responseMimeType: "application/json",
           temperature: 0.3,
           maxOutputTokens: 800,
+          thinkingConfig: { thinkingBudget: 1024 },
         } as any,
       });
 
@@ -96,9 +97,9 @@ Return JSON matching this schema:
 
     try {
       const model = this.genAI.getGenerativeModel({
-        model: "gemini-2.0-flash",
-        generationConfig: { temperature: 0.3, maxOutputTokens: 300 },
-      });
+        model: "gemini-2.5-flash-lite",
+        generationConfig: { temperature: 0.3, maxOutputTokens: 300, thinkingConfig: { thinkingBudget: 0 } },
+      } as any);
 
       const result = await model.generateContent(
         `Summarize this sales call concisely (2-3 sentences). Include: key topics, customer sentiment, and recommended next steps.\n\n${transcript}`,
