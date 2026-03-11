@@ -16,6 +16,10 @@ import { CallOrchestratorService } from "./services/call-orchestrator.service";
 import { CampaignSchedulerService } from "./services/campaign-scheduler.service";
 import { LeadScoringService } from "./services/lead-scoring.service";
 import { AudioPipelineGateway } from "./gateways/audio-pipeline.gateway";
+import { ChannelPreferenceManager } from "./messaging/channel-preference-manager";
+import { MessagingTriggerDetector } from "./messaging/messaging-trigger-detector";
+import { MessageBuilder } from "./messaging/message-builder";
+import { InCallMessagingService } from "./messaging/in-call-messaging-service";
 
 @Module({
   imports: [PrismaModule, ConfigModule],
@@ -34,6 +38,10 @@ import { AudioPipelineGateway } from "./gateways/audio-pipeline.gateway";
     CampaignSchedulerService,
     LeadScoringService,
     AudioPipelineGateway,
+    ChannelPreferenceManager,
+    MessagingTriggerDetector,
+    MessageBuilder,
+    InCallMessagingService,
   ],
   controllers: [AIAgentController],
   exports: [AIAgentService, CallOrchestratorService],
