@@ -63,6 +63,7 @@ export default function PlaygroundPage() {
   // ── Service diagnostics ──
   const [services, setServices] = useState<ServiceCheck[]>([
     { name: "Google STT", description: "Speech-to-Text recognition", status: "idle" },
+    { name: "Sarvam STT", description: "Speech-to-Text (Indian languages)", status: "idle" },
     { name: "ElevenLabs TTS", description: "Text-to-Speech synthesis", status: "idle" },
     { name: "Gemini Flash", description: "Conversation LLM (live turns)", status: "idle" },
     { name: "Claude Sonnet", description: "Strategy LLM (pre-call brain)", status: "idle" },
@@ -124,6 +125,13 @@ export default function PlaygroundPage() {
           status: results.googleSTT?.ok ? "pass" : "fail",
           latency: results.googleSTT?.latencyMs,
           error: results.googleSTT?.error,
+        },
+        {
+          name: "Sarvam STT",
+          description: "Speech-to-Text (Indian languages)",
+          status: results.sarvamSTT?.ok ? "pass" : "fail",
+          latency: results.sarvamSTT?.latencyMs,
+          error: results.sarvamSTT?.error,
         },
         {
           name: "ElevenLabs TTS",
@@ -373,7 +381,7 @@ export default function PlaygroundPage() {
                 <div>
                   <CardTitle className="text-lg">Service Health Check</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Test that Google STT, ElevenLabs, Gemini, Claude, and the database are all working
+                    Test that Google STT, Sarvam STT, ElevenLabs, Gemini, Claude, and the database are all working
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
