@@ -1382,3 +1382,232 @@ model PersonaSegmentPerformance {
   @@index([segmentKey])
   @@index([conversionRate])
 }
+
+// ══════════════════════════════════════════════════════════════
+// A/B TESTING ENGINE — Split-test personas, scripts, openings
+// on the same segment. Auto-promote winners after statistical
+// significance is reached.
+// ══════════════════════════════════════════════════════════════
+
+model ABExperiment {
+  id              String   @id @default(uuid())
+  name            String   // "Aria vs Priya — Indian SaaS founders"
+  description     String?  @db.Text
+  status          String   @default("draft") // draft, active, paused, completed, cancelled
+  experimentType  String   // "persona", "script", "opening", "timing"
+
+  // Segment targeting (which leads enter this experiment)
+  segmentFilter   Json?    // { countryCode: "IN", role: "founder" }
+  segmentKey      String?  // cached segment key for fast match
+
+  // Variants
+  variantA        Json     // { personaId: "xxx", label: "Aria (Rapport)" }
+  variantB        Json     // { personaId: "yyy", label: "Priya (Cultural)" }
+
+  // Results — updated after each call
+  variantACalls       Int  @default(0)
+  variantAConversions Int  @default(0)
+  variantARate        Float @default(0)
+  variantBCalls       Int  @default(0)
+  variantBConversions Int  @default(0)
+  variantBRate        Float @default(0)
+
+  // Statistical significance
+  confidenceLevel  Float  @default(0) // 0-1, auto-promote at 0.95
+  winner           String? // "A", "B", or null if not yet determined
+  autoPromote      Boolean @default(true) // auto-apply winner when confident
+
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  assignments     ABAssignment[]
+
+  @@index([status])
+  @@index([experimentType])
+  @@index([segmentKey])
+}
+
+model ABAssignment {
+  id              String   @id @default(uuid())
+  experimentId    String
+  experiment      ABExperiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  leadId          String
+  callSessionId   String?
+  variant         String   // "A" or "B"
+  outcome         String?  // "converted", "lost", "callback", "no_answer", etc.
+  callDuration    Int?     // seconds
+
+  createdAt       DateTime @default(now())
+
+  @@index([experimentId])
+  @@index([leadId])
+  @@unique([experimentId, callSessionId])
+}
+
+// ══════════════════════════════════════════════════════════════
+// SMART FOLLOW-UP SEQUENCER — Auto-schedule optimal follow-ups
+// using brain data: best timing, best persona, addressing open loops.
+// ══════════════════════════════════════════════════════════════
+
+model FollowUpSequence {
+  id              String   @id @default(uuid())
+  leadId          String
+  callSessionId   String?  // triggering call
+  status          String   @default("pending") // pending, scheduled, completed, cancelled, expired
+
+  // Scheduling — determined by brain
+  scheduledAt     DateTime // when to make the follow-up call
+  scheduledDay    String?  // day of week
+  scheduledHour   Int?     // hour slot (0-23)
+
+  // What to do
+  personaId       String?  // recommended persona
+  personaName     String?
+  scriptVariant   String?  // which script/approach to use
+  openLoopsToAddress Json? @default("[]") // specific open loops to address
+  strategyNotes   String?  @db.Text // AI-generated approach notes
+
+  // After execution
+  executedAt      DateTime?
+  resultSessionId String?  // the follow-up call session
+  outcome         String?  // result of the follow-up
+
+  // Re-engagement specific
+  dormantDays     Int?     // days since last contact (if re-engagement)
+  reEngageMethod  String?  // "call", "whatsapp", "sms"
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([leadId])
+  @@index([status])
+  @@index([scheduledAt])
+}
+
+// ══════════════════════════════════════════════════════════════
+// OBJECTION PLAYBOOK — Admin-curated winning objection responses.
+// The AI references these as "approved responses" instead of
+// improvising, reducing hallucination risk.
+// ══════════════════════════════════════════════════════════════
+
+model ObjectionPlaybook {
+  id              String   @id @default(uuid())
+  category        String   // price, timing, competitor, trust, authority, need, feature
+  objectionPhrase String   @db.Text // exact phrase or pattern ("too expensive", "not in budget")
+  segmentKey      String?  // optional segment-specific response
+
+  // Responses (ranked by effectiveness)
+  responses       Json     @default("[]") // [{ technique, text, winRate, timesUsed }]
+
+  // Best response (cached)
+  bestResponse    String?  @db.Text
+  bestTechnique   String?  // feel_felt_found, absorb_reframe, etc.
+  bestWinRate     Float    @default(0)
+
+  // Metadata
+  totalTimesRaised Int     @default(0)
+  totalTimesWon    Int     @default(0)
+  isApproved      Boolean  @default(true)  // admin-approved
+  isActive        Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([category])
+  @@index([segmentKey])
+  @@index([bestWinRate])
+}
+
+// ══════════════════════════════════════════════════════════════
+// WEBHOOK INTEGRATIONS — Push call outcomes, lead updates, and
+// intelligence to external CRMs (HubSpot, Salesforce, etc.)
+// ══════════════════════════════════════════════════════════════
+
+model WebhookEndpoint {
+  id              String   @id @default(uuid())
+  name            String   // "HubSpot CRM Push", "Salesforce Sync"
+  url             String   // https://hooks.hubspot.com/...
+  secret          String?  // HMAC signing secret for verification
+  events          String[] // ["call.completed", "lead.converted", "lead.scored"]
+  isActive        Boolean  @default(true)
+  headers         Json?    @default("{}") // custom headers to send
+
+  // Health tracking
+  lastSuccessAt   DateTime?
+  lastFailureAt   DateTime?
+  consecutiveFailures Int @default(0)
+  totalDelivered  Int      @default(0)
+  totalFailed     Int      @default(0)
+
+  deliveries      WebhookDelivery[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model WebhookDelivery {
+  id              String   @id @default(uuid())
+  endpointId      String
+  endpoint        WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  event           String   // "call.completed"
+  payload         Json     // the full payload sent
+  statusCode      Int?     // HTTP response status
+  responseBody    String?  @db.Text
+  deliveredAt     DateTime?
+  error           String?
+  attempts        Int      @default(1)
+
+  createdAt       DateTime @default(now())
+
+  @@index([endpointId])
+  @@index([event])
+  @@index([createdAt])
+}
+
+// ══════════════════════════════════════════════════════════════
+// CALL RECORDINGS & ANNOTATIONS — Store Twilio recordings,
+// allow playback + human annotations that feed back into brain.
+// ══════════════════════════════════════════════════════════════
+
+model CallRecording {
+  id              String   @id @default(uuid())
+  callSessionId   String   @unique
+  recordingUrl    String   // Twilio recording URL
+  recordingSid    String?  // Twilio recording SID
+  duration        Int?     // seconds
+  fileSize        Int?     // bytes
+  format          String   @default("mp3") // mp3, wav
+
+  // Transcript sync
+  transcriptSynced Boolean @default(false)
+
+  // Annotations
+  annotations     CallAnnotation[]
+
+  createdAt       DateTime @default(now())
+
+  @@index([callSessionId])
+}
+
+model CallAnnotation {
+  id              String   @id @default(uuid())
+  recordingId     String
+  recording       CallRecording @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+
+  timestampSec    Float    // position in recording (seconds)
+  endTimestampSec Float?   // end of annotated section
+  annotationType  String   // "golden_moment", "mistake", "objection_handled", "rapport_built", "coaching_note"
+  text            String   @db.Text // the annotation text
+  sentiment       String?  // positive, negative, neutral
+  createdBy       String?  // employee id who annotated
+  isVerified      Boolean  @default(false) // admin-verified = higher confidence in brain
+
+  createdAt       DateTime @default(now())
+
+  @@index([recordingId])
+  @@index([annotationType])
+}
