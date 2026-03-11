@@ -209,6 +209,27 @@ export const aiSalesApi = {
 
   // Analytics
   getAnalyticsDashboard: () => api.get("/ai-sales/analytics/dashboard"),
+
+  // Agent Memory (DB-backed config)
+  getMemory: () => api.get("/ai-sales/memory"),
+  setMemory: (data: { category: string; key: string; value: string; label?: string }) =>
+    api.post("/ai-sales/memory", data),
+  bulkSetMemory: (entries: Array<{ category: string; key: string; value: string; label?: string }>) =>
+    api.post("/ai-sales/memory/bulk", { entries }),
+  deleteMemory: (category: string, key: string) =>
+    api.delete(`/ai-sales/memory/${category}/${key}`),
+  seedMemory: () => api.post("/ai-sales/memory/seed"),
+
+  // Behavior Insights
+  listBehaviorInsights: (params?: { category?: string; segment?: string }) =>
+    api.get("/ai-sales/behavior-insights", { params }),
+  createBehaviorInsight: (data: Record<string, unknown>) =>
+    api.post("/ai-sales/behavior-insights", data),
+  updateBehaviorInsight: (id: string, data: Record<string, unknown>) =>
+    api.put(`/ai-sales/behavior-insights/${id}`, data),
+  deleteBehaviorInsight: (id: string) =>
+    api.delete(`/ai-sales/behavior-insights/${id}`),
+  seedBehaviorInsights: () => api.post("/ai-sales/behavior-insights/seed"),
 };
 
 // ─── Certificates ───

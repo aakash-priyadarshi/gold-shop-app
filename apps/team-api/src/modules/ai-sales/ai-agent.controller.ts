@@ -16,6 +16,8 @@ import { Roles } from "../../auth/roles.decorator";
 import { CampaignSchedulerService } from "./services/campaign-scheduler.service";
 import { CallOrchestratorService } from "./services/call-orchestrator.service";
 import { LeadScoringService } from "./services/lead-scoring.service";
+import { AgentMemoryService } from "./services/agent-memory.service";
+import { BehaviorInsightService } from "./services/behavior-insight.service";
 import { ConfigService } from "@nestjs/config";
 
 @Controller("ai-sales")
@@ -25,6 +27,8 @@ export class AIAgentController {
     private campaigns: CampaignSchedulerService,
     private calls: CallOrchestratorService,
     private scoring: LeadScoringService,
+    private agentMemory: AgentMemoryService,
+    private behaviorInsights: BehaviorInsightService,
     private config: ConfigService,
   ) {}
 
@@ -327,5 +331,77 @@ export class AIAgentController {
     @Body() body: { CallStatus: string; CallSid: string },
   ) {
     return this.calls.handleStatusCallback(sessionId, body.CallStatus, body.CallSid);
+  }
+
+  /* ─── AGENT MEMORY (DB-backed config) ─── */
+
+  @Get("memory")
+  getMemory() {
+    return this.agentMemory.getAll();
+  }
+
+  @Post("memory")
+  @Roles("ADMIN")
+  setMemory(@Body() body: { category: string; key: string; value: string; label?: string }) {
+    return this.agentMemory.set(body.category, body.key, body.value, body.label);
+  }
+
+  @Post("memory/bulk")
+  @Roles("ADMIN")
+  bulkSetMemory(@Body() body: { entries: Array<{ category: string; key: string; value: string; label?: string }> }) {
+    return this.agentMemory.bulkSet(body.entries);
+  }
+
+  @Delete("memory/:category/:key")
+  @Roles("ADMIN")
+  deleteMemory(@Param("category") category: string, @Param("key") key: string) {
+    return this.agentMemory.remove(category, key);
+  }
+
+  @Post("memory/seed")
+  @Roles("ADMIN")
+  seedMemory() {
+    return this.agentMemory.seedDefaults();
+  }
+
+  /* ─── BEHAVIOR INSIGHTS ─── */
+
+  @Get("behavior-insights")
+  listBehaviorInsights(
+    @Query("category") category?: string,
+    @Query("segment") segment?: string,
+  ) {
+    return this.behaviorInsights.list({ category, segment });
+  }
+
+  @Post("behavior-insights")
+  @Roles("ADMIN")
+  createBehaviorInsight(@Body() body: {
+    category: string;
+    segment?: string;
+    pattern: string;
+    response: string;
+    confidence?: number;
+    sampleSize?: number;
+  }) {
+    return this.behaviorInsights.create(body);
+  }
+
+  @Put("behavior-insights/:id")
+  @Roles("ADMIN")
+  updateBehaviorInsight(@Param("id") id: string, @Body() body: any) {
+    return this.behaviorInsights.update(id, body);
+  }
+
+  @Delete("behavior-insights/:id")
+  @Roles("ADMIN")
+  deleteBehaviorInsight(@Param("id") id: string) {
+    return this.behaviorInsights.remove(id);
+  }
+
+  @Post("behavior-insights/seed")
+  @Roles("ADMIN")
+  seedBehaviorInsights() {
+    return this.behaviorInsights.seedDefaults();
   }
 }

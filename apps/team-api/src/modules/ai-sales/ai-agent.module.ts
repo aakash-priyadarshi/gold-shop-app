@@ -20,6 +20,8 @@ import { ChannelPreferenceManager } from "./messaging/channel-preference-manager
 import { MessagingTriggerDetector } from "./messaging/messaging-trigger-detector";
 import { MessageBuilder } from "./messaging/message-builder";
 import { InCallMessagingService } from "./messaging/in-call-messaging-service";
+import { AgentMemoryService } from "./services/agent-memory.service";
+import { BehaviorInsightService } from "./services/behavior-insight.service";
 
 @Module({
   imports: [PrismaModule, ConfigModule],
@@ -42,6 +44,8 @@ import { InCallMessagingService } from "./messaging/in-call-messaging-service";
     MessagingTriggerDetector,
     MessageBuilder,
     InCallMessagingService,
+    AgentMemoryService,
+    BehaviorInsightService,
   ],
   controllers: [AIAgentController],
   exports: [AIAgentService, CallOrchestratorService],

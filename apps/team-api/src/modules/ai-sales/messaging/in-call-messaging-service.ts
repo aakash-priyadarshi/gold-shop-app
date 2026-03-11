@@ -4,6 +4,7 @@ import { PrismaService } from "../../../prisma/prisma.service";
 import { ChannelPreferenceManager } from "./channel-preference-manager";
 import { MessageBuilder, MessageContext } from "./message-builder";
 import { MessageType } from "./messaging-trigger-detector";
+import { AgentMemoryService } from "../services/agent-memory.service";
 
 interface CallContext {
   callId: string;
@@ -47,6 +48,7 @@ export class InCallMessagingService {
     private prisma: PrismaService,
     private channelPrefManager: ChannelPreferenceManager,
     private messageBuilder: MessageBuilder,
+    private memory: AgentMemoryService,
   ) {}
 
   /** Initialize messaging state for a new call session */
@@ -235,7 +237,7 @@ export class InCallMessagingService {
     const client = Twilio(twilioSid, twilioAuth);
 
     if (channel === "whatsapp") {
-      const whatsappNumber = this.config.get("WHATSAPP_NUMBER");
+      const whatsappNumber = this.memory.get("phones", "whatsapp_number");
       await client.messages.create({
         from: `whatsapp:${whatsappNumber}`,
         to: `whatsapp:${ctx.leadPhone}`,
@@ -243,7 +245,7 @@ export class InCallMessagingService {
         ...(message.mediaUrl && { mediaUrl: [message.mediaUrl] }),
       });
     } else {
-      const twilioPhone = this.config.get("TWILIO_PHONE_NUMBER");
+      const twilioPhone = this.memory.get("phones", "twilio_phone");
       await client.messages.create({
         from: twilioPhone,
         to: ctx.leadPhone,

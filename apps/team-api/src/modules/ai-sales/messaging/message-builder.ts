@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
+import { AgentMemoryService } from "../services/agent-memory.service";
 import { MessageType } from "./messaging-trigger-detector";
 
 export interface BuiltMessage {
@@ -31,7 +31,7 @@ export interface MessageContext {
  */
 @Injectable()
 export class MessageBuilder {
-  constructor(private config: ConfigService) {}
+  constructor(private memory: AgentMemoryService) {}
 
   build(type: MessageType, channel: "whatsapp" | "sms", ctx: MessageContext): BuiltMessage {
     return channel === "whatsapp" ? this.whatsapp(type, ctx) : this.sms(type, ctx);
@@ -41,12 +41,12 @@ export class MessageBuilder {
     return {
       firstName,
       leadPhone,
-      pricingUrl: this.config.get("PRICING_URL") || "https://orivraa.com/pricing",
-      calendarUrl: this.config.get("CALENDAR_URL") || "https://orivraa.com/book",
-      caseStudyUrl: this.config.get("CASE_STUDY_URL") || "https://orivraa.com/case-studies",
-      comparisonUrl: this.config.get("COMPARISON_URL") || "https://orivraa.com/compare",
-      contractUrl: this.config.get("CONTRACT_URL") || "https://orivraa.com/agreement",
-      summaryUrl: this.config.get("SUMMARY_URL") || "https://orivraa.com/summary",
+      pricingUrl: this.memory.get("urls", "pricing_url"),
+      calendarUrl: this.memory.get("urls", "calendar_url"),
+      caseStudyUrl: this.memory.get("urls", "case_study_url"),
+      comparisonUrl: this.memory.get("urls", "comparison_url"),
+      contractUrl: this.memory.get("urls", "contract_url"),
+      summaryUrl: this.memory.get("urls", "summary_url"),
       competitor: "",
       pricingImageUrl: null,
       caseStudyImageUrl: null,
